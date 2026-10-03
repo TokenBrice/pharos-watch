@@ -2,9 +2,9 @@
   "id": "zchf-frankencoin",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
-    "summary": "Frankencoin has no owner; minting is performed by minter plugins and positions that pass the protocol's veto-governed minter registry.",
+    "summary": "Frankencoin is immutable and ownerless, but anyone can propose an arbitrary minter, paying 1000 ZCHF and waiting at least 14 days unless qualified FPS holders veto. After activation, mint(address,uint256) checks only minter registration, not collateral or a durable supply ceiling. Negative-consent FPS veto is not exclusive affirmative on-chain token governance, so D14 is unbounded and D29 is not certified.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
@@ -34,12 +34,12 @@
         "label": "Frankencoin minter registry",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "cap-limited",
+        "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Approved minters and their registered positions can mint; new minters are subject to the application period and qualified pool-share holder veto.",
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095946,
+        "capDescription": "The 1209600-second minter application period is an authorization delay with FPS veto, not a collateral check or durable total-supply bound.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26113561,
         "sources": [
           {
             "label": "Sourcify Frankencoin source",
@@ -50,10 +50,10 @@
             "url": "https://docs.frankencoin.com/"
           }
         ],
-        "evidence": "Source review showed suggestMinter, denyMinter, registerPosition, mintWithReserve, and mint guarded by minterOnly; no owner() was present. Contract comments describe arbitrary minting plugins accepted unless qualified pool-share holders veto."
+        "evidence": "At Ethereum block 26113561 (hash 0xf8669491a2d5c3e0dfe4c4233ed6861dcbe45f046fac9804a60c40ae5ee6846e), MIN_APPLICATION_PERIOD() remains 1209600 and supply is already nonzero, closing the initialize bootstrap path. Verified suggestMinter accepts any nonregistered address for at least MIN_FEE and MIN_APPLICATION_PERIOD, then sets minters[address] to the activation timestamp; isMinter activates it automatically once that time is reached unless qualified FPS holders deny it. Verified mint(address,uint256) performs only minterOnly authorization followed by _mint, with no collateral or durable bound. A one-ZCHF mint eth_call from active minter 0xa1304e5aaf83cdb7c2b367f50b99bb0647ed8c58 to chosen recipient 0x000000000000000000000000000000000000beef succeeded with no collateral calldata. No affirmative governor vote is needed to authorize a new minter."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
@@ -81,11 +81,15 @@
         {
           "label": "Deployed legacy Equity verified source (runtime bytecode matched at block 26096162)",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1ba26788dfde592fec8bcb0eaff472a42be341b2"
+        },
+        {
+          "label": "Verified deployed Frankencoin: public automatic minter admission and collateral-unchecked mint",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb58e61c3098d85632df34eecfb899a1ed80921cb"
         }
       ],
-      "evidence": "Re-reviewed 2026-07-17 against the pinned source and on-chain state: Frankencoin has no owner; minting runs through minter plugins and their registered positions. Anyone can propose a minter via suggestMinter (MIN_FEE 1000 ZCHF; on-chain MIN_APPLICATION_PERIOD 1209600 seconds = 14 days at block 25551030), and qualified pool-share holders (at least 2% of holding-period-weighted votes, enforced by the deployed Equity.checkQualified) can veto during the application period via denyMinter. The deployed token contract has no proxy, and its own NatSpec states that the contract is not upgradable, so mint logic cannot change; the governed surface is limited to accepting or vetoing new minting plugins. Economic-posture fields reviewed 2026-08-15: immutable code and a 14-day broad-holder veto govern new minters, issuance is on-chain collateralized, and no regulator or independent attestor is evidenced. Validation 2026-10-01 at Ethereum block 26096162: reserve() resolves to 0x1ba26788dfde592fec8bcb0eaff472a42be341b2; its runtime bytecode exactly matches the Blockscout verified Equity source, which defines private QUORUM = 200 basis points and rejects only votes below that threshold. The private constant has no QUORUM() getter. Current governance documentation describes a 1% shared quorum, but does not override this deployed legacy contract's 2% rule.",
-      "reviewer": "KIMI ANCHOR-EV Safety Score V9 mint-authority review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "Historical 2026-07-17 review established immutable, ownerless Frankencoin with public suggestMinter, a 1000-ZCHF fee and a minimum 1209600-second application period. The 2026-10-01 verified/runtime-matched legacy Equity review established its 2% holding-period-weighted veto quorum, rather than the current documentation's 1% module rule. D14/D29 sweep 2026-10-03 at Ethereum block 26113561 (hash 0xf8669491a2d5c3e0dfe4c4233ed6861dcbe45f046fac9804a60c40ae5ee6846e): MIN_APPLICATION_PERIOD() remains 1209600 and totalSupply() is nonzero, so the initial zero-supply initialize path cannot be reused. Verified Frankencoin.suggestMinter accepts an arbitrary address and sets its activation timestamp after fee payment; absent an FPS veto, isMinter becomes true automatically at the end of the application period. mint(address,uint256) and mintWithReserve then mint to chosen recipients without checking deposited collateral; reservePPM/feesPPM are minter arguments, not collateral enforcement. A one-ZCHF eth_call from active minter 0xa1304e5aaf83cdb7c2b367f50b99bb0647ed8c58 to 0x000000000000000000000000000000000000beef succeeded without collateral calldata; no transaction was submitted. Thus arbitrary authorization can produce durable unbacked ZCHF: the previous raiseable inference from collateralized existing plugins and the veto window is superseded. D29 G1 fails because public applicants, not exclusively an affirmative on-chain token governor, control minter proposals; qualified FPS holders can reject but need not vote to admit. Fourteen days exceeds the delay threshold for new proposals but active minter paths have no such unavoidable delay, and every-plugin/caller execution closure is uncertified. No governedIssuance or capSemanticsReview is authored. Not-applicable reconciliation and no supervision yield unbounded-unreconciled.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U6GovAmbiguousB)",
+      "reviewedAt": "2026-10-03"
     }
   }
 }

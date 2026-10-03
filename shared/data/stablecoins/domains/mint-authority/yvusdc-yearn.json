@@ -2,11 +2,11 @@
   "id": "yvusdc-yearn",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "none-resolved-mint",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
-    "summary": "yvUSDC-1 is a Yearn vault share over USDC; vault shares mint against deposited USDC while base USDC mint authority is inherited from Circle.",
+    "summary": "The fixed YearnV3Vault implementation is not deposit-only: role_manager can assign ACCOUNTANT_MANAGER and REPORTING_MANAGER; set_accountant accepts a chosen contract. _process_report trusts its arbitrary total_fees, converts them to total_fees_shares without a source-enforced fee ceiling, and _issue_shares credits the chosen accountant. Repeated reports can therefore dilute holders without matching USDC deposits. Immutable bytecode and the DEPOSIT_LIMIT_MANAGER cap do not bound this authorization-powered local fee mint path. Parent usdc-circle issuance remains inherited through the dependency.",
     "inheritedFrom": "usdc-circle",
-    "economicCapSemantics": "bounded",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "upgradeability": {
@@ -57,11 +57,11 @@
         "label": "Yearn v3 USDC vault role manager",
         "role": "minter-admin",
         "authorityType": "contract",
-        "directMintAbility": "parameter-only",
+        "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095933,
+        "observedAt": "2026-10-03",
+        "observedBlock": 26113624,
         "sources": [
           {
             "label": "Yearn v3 USDC vault (verified source)",
@@ -72,11 +72,13 @@
             "url": "https://docs.yearn.fi/getting-started/products/yvaults/v3"
           }
         ],
-        "evidence": "At Ethereum block 26095933, role_manager() returned 0xb3bd6b2e61753c311efbcf0111f75d29706d9a41. The verified YearnV3Vault source allows that manager to assign roles, including DEPOSIT_LIMIT_MANAGER, but does not provide it a direct share-mint method outside deposit/mint accounting."
+        "evidence": "At Ethereum block 26113624, role_manager() returned 0xb3bd6b2e61753c311efbcf0111f75d29706d9a41 and accountant() returned 0x5a74cb32d36f2f517db6f7b0a0591e09b22cde69. The fixed YearnV3Vault implementation is not deposit-only: role_manager can assign ACCOUNTANT_MANAGER and REPORTING_MANAGER; set_accountant accepts a chosen contract. _process_report trusts its arbitrary total_fees, converts them to total_fees_shares without a source-enforced fee ceiling, and _issue_shares credits the chosen accountant. Repeated reports can therefore dilute holders without matching USDC deposits. Immutable bytecode and the DEPOSIT_LIMIT_MANAGER cap do not bound this authorization-powered local fee mint path."
       }
     ],
     "review": {
       "sources": [
+        {"label": "Verified current local mint implementation/source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1ab62413e0cf2ebeb73da7d40c70e7202ae14467"},
+        {"label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2", "url": "https://etherscan.io/block/26113624"},
         {
           "label": "Yearn v3 vault docs",
           "url": "https://docs.yearn.fi/getting-started/products/yvaults/v3"
@@ -86,9 +88,9 @@
           "url": "https://developers.circle.com/stablecoins/what-is-usdc"
         }
       ],
-      "evidence": "At Ethereum block 25573280, the vault's asset() was USDC, apiVersion() was 3.0.2, and EIP-1967 implementation, admin, and beacon slots were zero. The direct YearnV3Vault source makes share creation deposit-only; the observed role manager can administer vault parameters but cannot create shares outside that flow. Durable USDC issuance remains inherited from Circle, with no separate wrapper reserve reconciliation or named prudential supervisor.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
+      "evidence": "D14/A7/A10 review 2026-10-03, pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). The fixed YearnV3Vault implementation is not deposit-only: role_manager can assign ACCOUNTANT_MANAGER and REPORTING_MANAGER; set_accountant accepts a chosen contract. _process_report trusts its arbitrary total_fees, converts them to total_fees_shares without a source-enforced fee ceiling, and _issue_shares credits the chosen accountant. Repeated reports can therefore dilute holders without matching USDC deposits. Immutable bytecode and the DEPOSIT_LIMIT_MANAGER cap do not bound this authorization-powered local fee mint path.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable"
     }
   }

@@ -2,7 +2,7 @@
   "id": "eurr-stablr",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "compromised",
     "confidence": "verified",
     "summary": "EURR canonical issuance is verified on Ethereum. The owner-controlled mint path remains direct and unbounded, with the May 2026 unauthorized issuance and continued mint/redeem suspension preserved as adverse evidence; the separately listed Solana deployment is unresolved and is not counted as native Mint Authority.",
     "mintIncidents": [

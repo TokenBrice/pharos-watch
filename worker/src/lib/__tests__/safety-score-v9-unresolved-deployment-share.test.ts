@@ -342,7 +342,7 @@ describe("unresolved deployment share pricing", () => {
     const healthy = scenario("none").result;
     const compromised = scenario("active").result;
     expect(compromised.control.components).toContainEqual(expect.objectContaining({
-      componentKey: "mint", posture: "unbounded-or-compromised", binding: false,
+      componentKey: "mint", posture: "compromised", binding: false,
       controlKeys: ["mint:satellite"],
     }));
     expect(compromised.trace.structuralSignals).toContainEqual(expect.objectContaining({

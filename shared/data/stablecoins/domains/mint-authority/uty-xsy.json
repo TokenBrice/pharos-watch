@@ -2,7 +2,7 @@
   "id": "uty-xsy",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "Base is the sole native UTY issuance chain: the UUPS ERC-7540 vault accepts Base USDC through collateralized deposit()/mint() and has a mutable maxTotalAssets cap. The Base owner is a 3-of-4 Safe with no observed modules or guard; any of the three Base MANAGER_ROLE members can also raise the cap without delay. Avalanche and Katana are LayerZero OFT bridge representations and their bridge administration is assessed under Bridge Risk.",
     "upgradeability": {

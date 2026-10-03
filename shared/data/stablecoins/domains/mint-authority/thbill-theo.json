@@ -144,13 +144,29 @@
       }
     ],
     "economicCapSemantics": "raiseable",
+    "capSemanticsReview": {
+      "verdict": "raiseable-collateral-only",
+      "rationale": "D14/A7 review on 2026-10-03 at ethereum block 26113622 (0x5f41a07faa7b201ebd6180fd900a8e50989c7d3ac2f09c64d5b5d6272ad71cb9): the UUPS implementation remains 0x325478a069b0dbbdfbee909fa3741f84259ba519. Verified ERC4626MultiAsset.deposit/mint call _deposit, which transfers each accepted asset from the caller before _mint; a pinned mint simulation without allowance reverted ERC20InsufficientAllowance. No public administrator raw-mint entry point exists. DEFAULT_ADMIN_ROLE can change deposit-asset/configuration admission and authorize UUPS upgrades, but those powers do not bypass the current deposit workflow; collateral admission and upgrade authority alone are excluded D14 triggers. Retain raiseable and add raiseable-collateral-only proof, without asserting off-chain Treasury reconciliation or D29 governance qualification.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12bNativeCapReviews)",
+      "sources": [
+        {
+          "label": "Verified thBILL deposit-constrained implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x325478a069b0dbbdfbee909fa3741f84259ba519"
+        }
+      ]
+    },
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25712112, direct reads and verified source established that canonical thBILL is a UUPS ERC-4626 multi-asset vault, correcting the prior issuer-backend and immutable-proxy claims. Its public deposit/mint flow transfers supported collateral before internal share minting and exposes no privileged raw-mint entry point. The current implementation is 0x325478a069b0dbbdfbee909fa3741f84259ba519; sole DEFAULT_ADMIN_ROLE holder timelock 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02 has a 172800-second minimum delay, not zero. Safe 0x94877640dd9e6f1e3cb56bf7b5665b7152601295 holds proposer, executor, and canceller roles and was 4-of-6 with no modules or guard. Current share creation is collateral-transfer constrained, while governance can change deposit configuration or implementation after the delay, so the posture is partially bounded and economic cap semantics are raiseable. Economic-posture fields reviewed 2026-08-15: upgrades traverse the two-day timelock, but repo evidence does not reconcile the off-chain fund claim and all spoke supply, and no issuer supervisor or independent attestor is evidenced.",
-      "reviewer": "OpenAI Codex C03 control review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At Ethereum block 25712112, direct reads and verified source established that canonical thBILL is a UUPS ERC-4626 multi-asset vault, correcting the prior issuer-backend and immutable-proxy claims. Its public deposit/mint flow transfers supported collateral before internal share minting and exposes no privileged raw-mint entry point. The current implementation is 0x325478a069b0dbbdfbee909fa3741f84259ba519; sole DEFAULT_ADMIN_ROLE holder timelock 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02 has a 172800-second minimum delay, not zero. Safe 0x94877640dd9e6f1e3cb56bf7b5665b7152601295 holds proposer, executor, and canceller roles and was 4-of-6 with no modules or guard. Current share creation is collateral-transfer constrained, while governance can change deposit configuration or implementation after the delay, so the posture is partially bounded and economic cap semantics are raiseable. Economic-posture fields reviewed 2026-08-15: upgrades traverse the two-day timelock, but repo evidence does not reconcile the off-chain fund claim and all spoke supply, and no issuer supervisor or independent attestor is evidenced. D14/A7 review on 2026-10-03 at ethereum block 26113622 (0x5f41a07faa7b201ebd6180fd900a8e50989c7d3ac2f09c64d5b5d6272ad71cb9): the UUPS implementation remains 0x325478a069b0dbbdfbee909fa3741f84259ba519. Verified ERC4626MultiAsset.deposit/mint call _deposit, which transfers each accepted asset from the caller before _mint; a pinned mint simulation without allowance reverted ERC20InsufficientAllowance. No public administrator raw-mint entry point exists. DEFAULT_ADMIN_ROLE can change deposit-asset/configuration admission and authorize UUPS upgrades, but those powers do not bypass the current deposit workflow; collateral admission and upgrade authority alone are excluded D14 triggers. Retain raiseable and add raiseable-collateral-only proof, without asserting off-chain Treasury reconciliation or D29 governance qualification. This D14 refresh does not re-date older quorum or reserve-reconciliation observations.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12bNativeCapReviews)",
+      "reviewedAt": "2026-10-03",
       "sources": [
+        {
+          "label": "Verified thBILL deposit-constrained implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x325478a069b0dbbdfbee909fa3741f84259ba519"
+        },
         {
           "label": "Blockscout thBILL UUPS proxy",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5fa487bca6158c64046b2813623e20755091da0b"

@@ -1,8 +1,24 @@
 {
   "id": "syzusd-yuzu",
   "mintAuthority": {
+    "capSemanticsReview": {
+      "verdict": "raiseable-collateral-only",
+      "rationale": "Pinned plasma block 34111127 (hash 0x3d242fef9e16c848eda5d8b53a6200e33c27e79c7f02173c18735bdfe0fac5e6). The pinned verified StakedYuzuUSDV3 source delegates deposit/mint to ERC4626 _deposit, which transfers yzUSD before share creation. Role-managed mint throttles, min-deposit and redemption settings alter admission limits, not privileged recipient issuance; no separate arbitrary local share mint was found. The Safe and 48-hour timelock control ProxyAdmin upgrades, which can replace accounting but are upgrade-only outside the unchanged D14 trigger. Inherited controls concern yzusd-yuzu, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "sources": [
+        {
+          "label": "Verified current local mint implementation/source",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e"
+        },
+        {
+          "label": "plasma D14 observation block 34111127, hash 0x3d242fef9e16c848eda5d8b53a6200e33c27e79c7f02173c18735bdfe0fac5e6",
+          "url": "https://rpc.plasma.to"
+        }
+      ]
+    },
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
     "inheritedFrom": "yzusd-yuzu",
     "summary": "syzUSD is Yuzu's staking wrapper of yzUSD. Plasma is the reviewed native ERC-4626 deployment, with share issuance against deposited yzUSD. Its ProxyAdmin is now owned by a 48-hour TimelockController; the previously direct 4-of-5 Safe holds proposer, executor, and canceller roles on that timelock. Satellite bridge administration remains in Bridge Risk. Parent yzUSD mint authority remains inherited through the tracked dependency.",
@@ -127,11 +143,13 @@
     "reconciliation": "not-applicable",
     "supervision": "unknown",
     "review": {
-      "evidence": "At Plasma block 33896602 on 2026-10-01, the canonical syzUSD vault resolves to verified StakedYuzuUSDV3 implementation 0x4ad9f1db810146b660eb863cc6f56649e0824a6e and asset() yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc. The immutable proxy admin remains 0x7392751a860a51694231c7a0b4a9c853f8169cf0; its owner is now TimelockController 0x2130457539612ae9838e0314cda1a8abbdb7cfbc with getMinDelay() 172800 seconds, also the vault default admin. The 4-of-5 Safe now proposes, executes, and cancels scheduled operations rather than directly owning the ProxyAdmin. Historical 2026-08-16 V2/no-delay observations are superseded by this pinned state. Wrapper shares remain backed by deposited yzUSD; satellite bridge powers stay in Bridge Risk and parent yzUSD issuance is inherited rather than duplicated.",
-      "reviewer": "Sol curation pass 2026-10-01 (CurA64syzUSD)",
-      "reviewedAt": "2026-10-01",
+      "evidence": "At Plasma block 33896602 on 2026-10-01, the canonical syzUSD vault resolves to verified StakedYuzuUSDV3 implementation 0x4ad9f1db810146b660eb863cc6f56649e0824a6e and asset() yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc. The immutable proxy admin remains 0x7392751a860a51694231c7a0b4a9c853f8169cf0; its owner is now TimelockController 0x2130457539612ae9838e0314cda1a8abbdb7cfbc with getMinDelay() 172800 seconds, also the vault default admin. The 4-of-5 Safe now proposes, executes, and cancels scheduled operations rather than directly owning the ProxyAdmin. Historical 2026-08-16 V2/no-delay observations are superseded by this pinned state. Wrapper shares remain backed by deposited yzUSD; satellite bridge powers stay in Bridge Risk and parent yzUSD issuance is inherited rather than duplicated. D14/A7/A10 review 2026-10-03, pinned plasma block 34111127 (hash 0x3d242fef9e16c848eda5d8b53a6200e33c27e79c7f02173c18735bdfe0fac5e6). The pinned verified StakedYuzuUSDV3 source delegates deposit/mint to ERC4626 _deposit, which transfers yzUSD before share creation. Role-managed mint throttles, min-deposit and redemption settings alter admission limits, not privileged recipient issuance; no separate arbitrary local share mint was found. The Safe and 48-hour timelock control ProxyAdmin upgrades, which can replace accounting but are upgrade-only outside the unchanged D14 trigger. Inherited controls concern yzusd-yuzu, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
       "sources": [
+        {"label": "Verified current local mint implementation/source", "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e"},
+        {"label": "plasma D14 observation block 34111127, hash 0x3d242fef9e16c848eda5d8b53a6200e33c27e79c7f02173c18735bdfe0fac5e6", "url": "https://rpc.plasma.to"},
         {
           "label": "Yuzu syzUSD docs",
           "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd"

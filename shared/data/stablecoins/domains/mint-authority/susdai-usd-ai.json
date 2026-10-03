@@ -1,6 +1,22 @@
 {
   "id": "susdai-usd-ai",
   "mintAuthority": {
+    "capSemanticsReview": {
+      "verdict": "raiseable-collateral-only",
+      "rationale": "Pinned arbitrum block 511381065 (hash 0x742a908012ae932727a3051c4789339771dbeaa342de71120780231622544950). The pinned current StakedUSDai implementation creates native shares via _mintAndDeposit with USDai safeTransferFrom in the same transaction. Its only privileged mint(address,uint256) is immutable-bridge-adapter-only and atomically decrements previously recorded bridgedSupply, reverting on excess; it relocates existing share liability rather than creating new unbacked liability. Deposit/valuation parameters do not expose an arbitrary extra local share mint. DVNTimelock and proposer Safe can replace implementation through ProxyAdmin, an upgrade-only power outside the unchanged D14 trigger. Inherited controls concern usdai-usd-ai, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "sources": [
+        {
+          "label": "Verified current local mint implementation/source",
+          "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x4637193852df85b7ac05dd052b187460d81551f6"
+        },
+        {
+          "label": "arbitrum D14 observation block 511381065, hash 0x742a908012ae932727a3051c4789339771dbeaa342de71120780231622544950",
+          "url": "https://arb1.arbitrum.io/rpc"
+        }
+      ]
+    },
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
@@ -164,6 +180,8 @@
     "supervision": "none",
     "review": {
       "sources": [
+        {"label": "Verified current local mint implementation/source", "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x4637193852df85b7ac05dd052b187460d81551f6"},
+        {"label": "arbitrum D14 observation block 511381065, hash 0x742a908012ae932727a3051c4789339771dbeaa342de71120780231622544950", "url": "https://arb1.arbitrum.io/rpc"},
         {
           "label": "Arbitrum verified StakedUSDai implementation",
           "url": "https://arbitrum.blockscout.com/address/0x88a233b8746da5dfd9c5e82c8a9f9f91b737198b?tab=contract"
@@ -185,9 +203,9 @@
           "url": "https://arbitrum.blockscout.com/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b?tab=contract"
         }
       ],
-      "evidence": "Canonical-chain review at Arbitrum block 495160622 (2026-08-16T13:58:25Z): sUSDai proxy 0x0b2b2b2076d95dda7817e785989fe353fe955ef9 resolved to source-verified implementation 0x88a233b8746da5dfd9c5e82c8a9f9f91b737198b and ProxyAdmin 0x0b3296b6f50611b28d466a6d5a49754dad4d8d9f. Native deposit issuance pulled USDai into the vault at the current share price. The contract reported 322311292.875311971 totalShares, defined as local totalSupply plus bridgedSupply plus pending redemption shares, against 356350865.420782685 USDai-denominated totalAssets; depositSharePrice was 1.105610969006254479. This continuously reconciles the complete canonical share liability to the vault's on-chain asset accounting. Adapter return minting is bounded by previously recorded outbound burns. The ProxyAdmin owner remained the 172800-second DVNTimelock; its sole proposer and canceller remained the reviewed 3-of-3 Safe. Current issuance constraints can therefore be replaced only after the governed delay, supporting raiseable economic-cap semantics and a partially bounded admin posture. The inherited USDai review remains relevant to the vault's deposited base asset. Satellite OToken role administration and LayerZero message-mint exposure are intentionally excluded from Mint Authority and retained in bridgeRouteRisk, preventing the same bridge control from being assessed in both modules. No named prudential regulator supervises USD.AI.",
-      "reviewer": "Codex sUSDai canonical mint-authority correction",
-      "reviewedAt": "2026-08-16",
+      "evidence": "Canonical-chain review at Arbitrum block 495160622 (2026-08-16T13:58:25Z): sUSDai proxy 0x0b2b2b2076d95dda7817e785989fe353fe955ef9 resolved to source-verified implementation 0x88a233b8746da5dfd9c5e82c8a9f9f91b737198b and ProxyAdmin 0x0b3296b6f50611b28d466a6d5a49754dad4d8d9f. Native deposit issuance pulled USDai into the vault at the current share price. The contract reported 322311292.875311971 totalShares, defined as local totalSupply plus bridgedSupply plus pending redemption shares, against 356350865.420782685 USDai-denominated totalAssets; depositSharePrice was 1.105610969006254479. This continuously reconciles the complete canonical share liability to the vault's on-chain asset accounting. Adapter return minting is bounded by previously recorded outbound burns. The ProxyAdmin owner remained the 172800-second DVNTimelock; its sole proposer and canceller remained the reviewed 3-of-3 Safe. Current issuance constraints can therefore be replaced only after the governed delay, supporting raiseable economic-cap semantics and a partially bounded admin posture. The inherited USDai review remains relevant to the vault's deposited base asset. Satellite OToken role administration and LayerZero message-mint exposure are intentionally excluded from Mint Authority and retained in bridgeRouteRisk, preventing the same bridge control from being assessed in both modules. No named prudential regulator supervises USD.AI. D14/A7/A10 review 2026-10-03, pinned arbitrum block 511381065 (hash 0x742a908012ae932727a3051c4789339771dbeaa342de71120780231622544950). The pinned current StakedUSDai implementation creates native shares via _mintAndDeposit with USDai safeTransferFrom in the same transaction. Its only privileged mint(address,uint256) is immutable-bridge-adapter-only and atomically decrements previously recorded bridgedSupply, reverting on excess; it relocates existing share liability rather than creating new unbacked liability. Deposit/valuation parameters do not expose an arbitrary extra local share mint. DVNTimelock and proposer Safe can replace implementation through ProxyAdmin, an upgrade-only power outside the unchanged D14 trigger. Inherited controls concern usdai-usd-ai, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable"
     }
   }

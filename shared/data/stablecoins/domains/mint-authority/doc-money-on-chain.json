@@ -157,14 +157,54 @@
       }
     ],
     "economicCapSemantics": "raiseable",
+    "capSemanticsReview": {
+      "verdict": "raiseable-collateral-only",
+      "rationale": "D14/A7 review on 2026-10-03 at rootstock block 9293853 (0x33330f12e35b94bb12703d90bff4aedd62d54bf8c3ef26c76585ef64bffdd8d4): the zeppelinOS implementation slot still resolves MoCExchange to 0x9bfbbdb1bf118e15249bb70460a1f4886511b53c; DoCToken.owner() and the complete explorer MinterAdded/MinterRemoved census identify MoCExchange as the sole live minter. Verified MoC.mintDocVendors requires the RBTC cost through transferCommissions; a mintDoc(1e18) simulation without msg.value reverted 'amount is not enough'. MoCExchange.mintDoc is connector-whitelisted and clamps issuance to absoluteMaxDoc; the verified connector exposes no public whitelist addition, and the current Exchange exposes no addMinter forwarding or arbitrary execution. Parameter capacity changes expand this collateral-checked route. Governance upgrades and collateral/oracle changes are not standalone D14 triggers. Retain raiseable with a raiseable-collateral-only review; no D29 certificate is authored.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12bNativeCapReviews)",
+      "sources": [
+        {
+          "label": "Verified MoCExchange current implementation",
+          "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0x9bfbbdb1bf118e15249bb70460a1f4886511b53c"
+        },
+        {
+          "label": "Verified DOC collateral entrypoint implementation",
+          "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0xfaf8b802c934af857b58471b6daa66dc5d8a7d07"
+        },
+        {
+          "label": "Verified DoCToken mint-role source",
+          "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0xe700691da7b9851f2f35f8b8182c69c53ccad9db"
+        },
+        {
+          "label": "Verified MoCConnector whitelist construction",
+          "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0xce2a128cc73e5d98355aafb2595647f2d3171faa"
+        }
+      ]
+    },
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
       "disposition": "scoreable",
-      "evidence": "Authority graph re-derived on-chain on 2026-07-14 via eth_call and eth_getStorageAt on https://public-node.rsk.co, then cross-checked against Money On Chain's published mainnet contract list and verified explorer source: DoCToken 0xe700691d (not a proxy; owner() = MoCExchange 0x6acb83bb) -> MoCExchange transparent proxy (zeppelinOS implementation slot = 0x9bfbbdb1, admin slot = Admin 0x009c51e1) -> Admin.owner() = Upgrade Delegator 0x5ce577f6 -> UpgradeDelegator.governor() = Governor 0x3b8853df -> Governor.owner() = VotingMachine proxy 0x65a5681b. At block 9051414, the VotingMachine points back to that Governor, verified source shows stake-weighted voting followed by executeChange(winnerProposal), and its EIP-1967 admin is ProxyAdmin 0x1a1824f3. ProxyAdmin.owner() is UpgradeDelegator proxy 0x13156470, whose verified implementation is governed by that same Governor and which shares the ProxyAdmin, completing a cyclic on-chain governance/upgrade path. This review corrects both the 2026-06-11 implementation-slot error and the later misclassification of the VotingMachine as an unidentified off-chain keyholder contract. The posture remains partially-bounded because an accepted governance proposal can change collateral parameters or mint-critical logic. Economic-posture fields reviewed 2026-08-15: rBTC-collateralized minting is bounded in the live contracts but stake-weighted on-chain governance can change parameters or logic, with no off-chain reserve claim or prudential supervisor.",
-      "reviewer": "owner-triage; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Authority graph re-derived on-chain on 2026-07-14 via eth_call and eth_getStorageAt on https://public-node.rsk.co, then cross-checked against Money On Chain's published mainnet contract list and verified explorer source: DoCToken 0xe700691d (not a proxy; owner() = MoCExchange 0x6acb83bb) -> MoCExchange transparent proxy (zeppelinOS implementation slot = 0x9bfbbdb1, admin slot = Admin 0x009c51e1) -> Admin.owner() = Upgrade Delegator 0x5ce577f6 -> UpgradeDelegator.governor() = Governor 0x3b8853df -> Governor.owner() = VotingMachine proxy 0x65a5681b. At block 9051414, the VotingMachine points back to that Governor, verified source shows stake-weighted voting followed by executeChange(winnerProposal), and its EIP-1967 admin is ProxyAdmin 0x1a1824f3. ProxyAdmin.owner() is UpgradeDelegator proxy 0x13156470, whose verified implementation is governed by that same Governor and which shares the ProxyAdmin, completing a cyclic on-chain governance/upgrade path. This review corrects both the 2026-06-11 implementation-slot error and the later misclassification of the VotingMachine as an unidentified off-chain keyholder contract. The posture remains partially-bounded because an accepted governance proposal can change collateral parameters or mint-critical logic. Economic-posture fields reviewed 2026-08-15: rBTC-collateralized minting is bounded in the live contracts but stake-weighted on-chain governance can change parameters or logic, with no off-chain reserve claim or prudential supervisor. D14/A7 review on 2026-10-03 at rootstock block 9293853 (0x33330f12e35b94bb12703d90bff4aedd62d54bf8c3ef26c76585ef64bffdd8d4): the zeppelinOS implementation slot still resolves MoCExchange to 0x9bfbbdb1bf118e15249bb70460a1f4886511b53c; DoCToken.owner() and the complete explorer MinterAdded/MinterRemoved census identify MoCExchange as the sole live minter. Verified MoC.mintDocVendors requires the RBTC cost through transferCommissions; a mintDoc(1e18) simulation without msg.value reverted 'amount is not enough'. MoCExchange.mintDoc is connector-whitelisted and clamps issuance to absoluteMaxDoc; the verified connector exposes no public whitelist addition, and the current Exchange exposes no addMinter forwarding or arbitrary execution. Parameter capacity changes expand this collateral-checked route. Governance upgrades and collateral/oracle changes are not standalone D14 triggers. Retain raiseable with a raiseable-collateral-only review; no D29 certificate is authored. This D14 refresh does not re-date older quorum or reserve-reconciliation observations.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12bNativeCapReviews)",
+      "reviewedAt": "2026-10-03",
       "sources": [
+        {
+          "label": "Verified MoCExchange current implementation",
+          "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0x9bfbbdb1bf118e15249bb70460a1f4886511b53c"
+        },
+        {
+          "label": "Verified DOC collateral entrypoint implementation",
+          "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0xfaf8b802c934af857b58471b6daa66dc5d8a7d07"
+        },
+        {
+          "label": "Verified DoCToken mint-role source",
+          "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0xe700691da7b9851f2f35f8b8182c69c53ccad9db"
+        },
+        {
+          "label": "Verified MoCConnector whitelist construction",
+          "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0xce2a128cc73e5d98355aafb2595647f2d3171faa"
+        },
         {
           "label": "Money On Chain published mainnet contract list (Governor, Upgrade Delegator, Admin, MoCExchange, DoCToken)",
           "url": "https://docs.moneyonchain.com/main-rbtc-contract/smart-contracts/contracts-verification"

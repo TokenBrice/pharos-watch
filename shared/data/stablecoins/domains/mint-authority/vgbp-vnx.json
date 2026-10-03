@@ -2,7 +2,7 @@
   "id": "vgbp-vnx",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "VGBP has three independently mintable native deployments. Base and Celo use VNXCToken proxies whose chain-local VNXManager role-0 bearers can grant the minter role and set arbitrary per-minter allowances with no delay; 0xb65a...09c6 currently has a 1 billion VGBP allowance and all three roles on each chain, while 0xacc5...311a remains a role-0 bearer. Solana uses the classic SPL Token program with one unrestricted mint authority. No on-chain multisig, timelock, global supply cap, or disclosed MPC/HSM custody was found at the current cutoff. Bridge-only mechanics are not included in Mint Authority; the reviewed route inventory classifies all three deployments as native issuance.",
     "controls": [

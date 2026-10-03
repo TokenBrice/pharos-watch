@@ -2,9 +2,9 @@
   "id": "stbt-matrixdock",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciliation-unknown",
     "confidence": "verified",
-    "summary": "STBT's custom proxy has selector-specific timelock delays: 24-hour mint-logic/issuer replacement and four-hour mint/rebase scheduling, despite getMinDelay() returning zero.",
+    "summary": "STBT's custom proxy has selector-specific timelock delays: 24-hour mint-logic/issuer replacement and four-hour mint/rebase scheduling, despite getMinDelay() returning zero. D14: The issuer can issue against its mutable reserve budget without an atomic collateral deposit; issuance is economically unbounded.",
     "controls": [
       {
         "chain": "ethereum",
@@ -64,14 +64,18 @@
         }
       ]
     },
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "unknown",
     "review": {
       "reviewedAt": "2026-10-03",
-      "reviewer": "Refine04 pinned selector-delay and role census",
+      "reviewer": "Sol v10.02 D14/D29 sweep (MiscRaiseable)",
       "disposition": "scoreable",
       "sources": [
+        {
+          "label": "Verified STBT issuer-only issue and mutable reserve-budget semantics",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"
+        },
         {
           "label": "Deployed mint implementation",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"
@@ -101,7 +105,7 @@
           "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/treasury-bill-token-stbt/token-features"
         }
       ],
-      "evidence": "Full controller RoleGranted/RoleRevoked/RoleAdminChanged replay from deployment through block 26110197 and hasRole checks resolve all current members: admin is the controller itself; proposers are 0x65ff5a67d8d7292bd4ea7b6cd863d9f3ca14f046 and 0xca241823d4bfe8b29610709db617407fbc9ae02b (verified user Minter); executor 0xd32a1441872774f30ec9c453983cf5c95a720123; canceller 0x520839e886a285e196c8fa3d161797b4bafabe94. The Minter owner is the executor EOA. Selector reads and verified override establish 86400s implementation/issuer replacement and 14400s issue/rebase/role changes. Issuer reserve budget remains mutable, so this is not immutable collateral gating. Organizational signing and financial reconciliation remain undisclosed. Organizational key-custody/independence of proposer, executor and canceller EOAs and current independent STBT reserve-to-liability reconciliation remain undisclosed. Sibling comparison on 2026-10-03: XAUm/XAGm's attestation-only supervision and periodic reconciliation cite Matrixdock's July 2026 Bureau Veritas physical gold/silver inventory verification and issuer-published token-supply comparison. That release explicitly extends the existing XAUm audit to XAGm for the first time and describes monthly reserve statements and on-chain proof of reserves for precious-metal products; it does not include STBT's Treasury/debt reserve book. STBT's public dashboard supplies issuer reserve NAV and asset composition, while its token-specific transparency documentation says underlying-asset reporting documents may be uploaded, not that the bullion attestation series covers STBT. Holding some BUIDL/USTB reserve assets likewise does not reconcile the whole STBT liability. No current STBT-specific recurring independent reserve/token-liability verification was established in the reviewed primary sources. Reconciliation and supervision therefore remain unknown, and the concentrated-admin posture is not promoted by borrowing the siblings' product-scoped assurance.",
+      "evidence": "Full controller RoleGranted/RoleRevoked/RoleAdminChanged replay from deployment through block 26110197 and hasRole checks resolve all current members: admin is the controller itself; proposers are 0x65ff5a67d8d7292bd4ea7b6cd863d9f3ca14f046 and 0xca241823d4bfe8b29610709db617407fbc9ae02b (verified user Minter); executor 0xd32a1441872774f30ec9c453983cf5c95a720123; canceller 0x520839e886a285e196c8fa3d161797b4bafabe94. The Minter owner is the executor EOA. Selector reads and verified override establish 86400s implementation/issuer replacement and 14400s issue/rebase/role changes. Issuer reserve budget remains mutable, so this is not immutable collateral gating. Organizational signing and financial reconciliation remain undisclosed. Organizational key-custody/independence of proposer, executor and canceller EOAs and current independent STBT reserve-to-liability reconciliation remain undisclosed. Sibling comparison on 2026-10-03: XAUm/XAGm's attestation-only supervision and periodic reconciliation cite Matrixdock's July 2026 Bureau Veritas physical gold/silver inventory verification and issuer-published token-supply comparison. That release explicitly extends the existing XAUm audit to XAGm for the first time and describes monthly reserve statements and on-chain proof of reserves for precious-metal products; it does not include STBT's Treasury/debt reserve book. STBT's public dashboard supplies issuer reserve NAV and asset composition, while its token-specific transparency documentation says underlying-asset reporting documents may be uploaded, not that the bullion attestation series covers STBT. Holding some BUIDL/USTB reserve assets likewise does not reconcile the whole STBT liability. No current STBT-specific recurring independent reserve/token-liability verification was established in the reviewed primary sources. Reconciliation and supervision therefore remain unknown, and the concentrated-admin posture is not promoted by borrowing the siblings' product-scoped assurance. D14/D29 sweep (2026-10-03): Verified STBT.issue(tokenHolder,value,data) is onlyIssuer and uses reserveFeed.latestRoundData as an issuer-reserve ceiling, not an atomic deposit/collateral-transfer requirement; the initial-supply branch also bypasses the reserve check. Existing pinned reviewed evidence identifies the issuer/owner controller and mutable reserve budget. The 14400-second selector-specific issue delay does not make issuance deposit-bound or economically capped against the controlling root. This is unbounded with reconciliation unknown, not D29 token governance. Pinned block hashes read this review: ethereum 26110197 0xa6bec96f66d0e4511728dd49fc828851fd28d75eb4b75dc24a2acfc9dec3cfd8. No transaction was sent; no governed-issuance qualification is claimed.",
       "unresolvedQuestions": [],
       "scopedQuestions": [
         {

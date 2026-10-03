@@ -2,7 +2,7 @@
   "id": "cusd-celo",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "USDm has one canonical native issuance deployment on Celo. The Mento Broker and ReserveLiquidityStrategy are active Celo minters; the Broker is Timelock-backed for configuration while the token owner Safe can authorize minters and replace StableTokenV3 immediately. Monad NTT, NEAR, Ethereum, Solana, and Klaytn are bridge representations and are excluded from Mint Authority. Native Celo issuance remains economically unbounded because the owner can authorize additional minters or replace mint-critical logic.",
     "upgradeability": {

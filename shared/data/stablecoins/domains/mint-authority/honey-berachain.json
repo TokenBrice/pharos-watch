@@ -2,7 +2,7 @@
   "id": "honey-berachain",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "Bera USD (BUSD, formerly HONEY) is minted by the Berachain HoneyFactory against whitelisted collateral vaults. Both the token and HoneyFactory are UUPS proxies, and the same 3/5 Berachain Safe retains DEFAULT_ADMIN_ROLE for immediate upgrades and HoneyFactory parameter administration.",
     "upgradeability": {

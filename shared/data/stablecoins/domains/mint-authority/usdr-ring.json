@@ -2,7 +2,7 @@
   "id": "usdr-ring",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "At Ethereum block 26103180, Ring USD's Core enumerates four MINTER_ROLE holders: three EOAs and RingLaunchpad. AssetToken permits an authorized minter to mint any amount to any address without a collateral or cap check. GOVERN_ROLE contains Core and two EOAs; PCV_CONTROLLER_ROLE and BURNER_ROLE have no current members.",
     "controls": [

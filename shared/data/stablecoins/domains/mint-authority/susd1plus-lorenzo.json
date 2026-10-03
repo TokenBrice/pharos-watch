@@ -2,7 +2,7 @@
   "id": "susd1plus-lorenzo",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "sUSD1+ is a Lorenzo strategy-vault receipt whose base USD1 authority is inherited from the reviewed parent, while the canonical BSC wrapper's local share issuance and mint logic are controlled by Lorenzo's CeDeFiManager. Its terminal BOSS_ROLE holder is a 2-of-3 Safe that also holds the manager's MANAGER_ROLE and CREATE_VAULT_ROLE, so it can immediately authorize local minters/signers or replace the UUPS logic. This Mint Authority profile covers the native BSC issuance path only; Lorenzo's unresolved Interport route is recorded separately in Bridge Risk and is not counted here.",
     "inheritedFrom": "usd1-world-liberty-financial",

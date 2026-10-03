@@ -2,7 +2,7 @@
   "id": "gtusdc-gauntlet",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "bounded-admin",
     "confidence": "verified",
     "summary": "gtUSDC is an immutable MetaMorpho V1 vault (no proxy); shares minted only against USDC deposits. Vault owner is a Gauntlet Safe 4/7 (v1.3.0). No upgrade path. Base USDC issuance inherited from Circle.",
     "inheritedFrom": "usdc-circle",
@@ -70,6 +70,18 @@
       }
     ],
     "economicCapSemantics": "bounded",
+    "capSemanticsReview": {
+      "verdict": "bounded-by-construction",
+      "rationale": "At Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a), verified MetaMorpho runtime matches the deployed code and asset() is USDC. deposit/mint call _deposit and the inherited ERC-4626 implementation transfers the required USDC before minting shares. _accrueFee mints only formula-computed performance fee shares against positive vault interest; owner fee/recipient and curator market-cap changes cannot select an arbitrary mint amount or authorize another share minter. These fee shares dilute existing backed claims rather than manufacture unbacked assets. Inherited issuer controls describe parent issuance carried by the serial-claim dependency edge, not wrapper-local share minting; parent D14 risk is not charged twice.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U10BoundedWrappersA)",
+      "sources": [
+        {
+          "label": "Verified wrapper source reviewed for D14",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdd0f28e19C1780eb6396170735D45153D261490D"
+        }
+      ]
+    },
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
@@ -96,9 +108,9 @@
           "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
         }
       ],
-      "evidence": "At Ethereum block 25295208: vault is immutable (no EIP-1967 proxy slots), asset()=USDC confirmed, owner=Safe 4/7 v1.3.0 (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec), no modules. Shares minted deposit-only. Base USDC mint authority remains with Circle. Economic-control evidence reviewed 2026-07-15: the immutable MetaMorpho vault can mint shares only against deposited USDC; the inherited base issuer publishes monthly Deloitte reserve examinations. The latest USDC report covers May 2026, and the NYDFS list matches Circle Internet Financial, LLC. M-2 evidence review 2026-08-08: supervision and reconciliation downgraded to the wrapper-level convention (steakusdc precedent) - the coin's issuer of record is the vault curator, which no named prudential regime supervises (jurisdiction is correspondingly empty), and the deposit-only share wrapper is not a separate issuer reserve regime. Circle's NYDFS supervision and monthly Deloitte examinations are facts of the underlying USDC, credited on usdc-circle, not of this wrapper. Economic-posture fields reviewed 2026-08-15: the immutable vault mints shares only against deposited USDC, with no local attestation or prudential regime.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "At Ethereum block 25295208: vault is immutable (no EIP-1967 proxy slots), asset()=USDC confirmed, owner=Safe 4/7 v1.3.0 (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec), no modules. Shares minted deposit-only. Base USDC mint authority remains with Circle. Economic-control evidence reviewed 2026-07-15: the immutable MetaMorpho vault can mint shares only against deposited USDC; the inherited base issuer publishes monthly Deloitte reserve examinations. The latest USDC report covers May 2026, and the NYDFS list matches Circle Internet Financial, LLC. M-2 evidence review 2026-08-08: supervision and reconciliation downgraded to the wrapper-level convention (steakusdc precedent) - the coin's issuer of record is the vault curator, which no named prudential regime supervises (jurisdiction is correspondingly empty), and the deposit-only share wrapper is not a separate issuer reserve regime. Circle's NYDFS supervision and monthly Deloitte examinations are facts of the underlying USDC, credited on usdc-circle, not of this wrapper. Economic-posture fields reviewed 2026-08-15: the immutable vault mints shares only against deposited USDC, with no local attestation or prudential regime. D14/D29 sweep 2026-10-03: At Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a), verified MetaMorpho runtime matches the deployed code and asset() is USDC. deposit/mint call _deposit and the inherited ERC-4626 implementation transfers the required USDC before minting shares. _accrueFee mints only formula-computed performance fee shares against positive vault interest; owner fee/recipient and curator market-cap changes cannot select an arbitrary mint amount or authorize another share minter. These fee shares dilute existing backed claims rather than manufacture unbacked assets. Inherited issuer controls describe parent issuance carried by the serial-claim dependency edge, not wrapper-local share minting; parent D14 risk is not charged twice.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U10BoundedWrappersA)",
+      "reviewedAt": "2026-10-03"
     }
   }
 }

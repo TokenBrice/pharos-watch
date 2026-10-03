@@ -1,6 +1,22 @@
 {
   "id": "steakeurcv-steakhouse",
   "mintAuthority": {
+    "capSemanticsReview": {
+      "verdict": "bounded-by-construction",
+      "rationale": "Pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). The pinned immutable VaultV2 source routes deposit/mint through enter(), which transfers underlying assets before createShares(). Curator increaseAbsoluteCap/increaseRelativeCap and addAdapter govern allocation limits, not arbitrary recipient minting; owner/curator, deposit-gate and fee-recipient settings cannot bypass this accounting. accrueInterest() separately creates fee shares under immutable MAX_PERFORMANCE_FEE (50% of interest) and MAX_MANAGEMENT_FEE (5% annualized) limits, not discretionary arbitrary-share issuance. There is no local upgrade entrypoint. Inherited controls concern eurcv-societe-generale-forge, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "sources": [
+        {
+          "label": "Verified current local mint implementation/source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+        },
+        {
+          "label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2",
+          "url": "https://etherscan.io/block/26113624"
+        }
+      ]
+    },
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
@@ -201,6 +217,8 @@
     ],
     "review": {
       "sources": [
+        {"label": "Verified current local mint implementation/source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"},
+        {"label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2", "url": "https://etherscan.io/block/26113624"},
         {
           "label": "Morpho exact Steakhouse Prime EURCV deployment",
           "url": "https://app.morpho.org/ethereum/vault/0xbeef0C075Da5D01112AE5cF34d257074fB5DDB2f"
@@ -234,8 +252,8 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x31ca6fddc0c36cc84760d7e6a43ac6c7ccc210cb"
         }
       ],
-      "evidence": "Fixed-block state and matched exact VaultV2 source bound asset-backed mint, fee-share mint and burn/redeem at ethereum block 26107702. Parent mint authority remains inherited. Owner/curator control addresses and selector delays are current; internal authorization closure receives no favorable assumption. Refinement pin 26110187: supervisor getGuardians(vault) returned 0x31ca6fddc0c36cc84760d7e6a43ac6c7ccc210cb. Supervisor TIMELOCK=1209600 seconds applies to setOwner/removeGuardian; setCurator remains immediate. Guardian veto is verified. Exact Guardian 0x31ca6fddc0c36cc84760d7e6a43ac6c7ccc210cb is an ERC1967Proxy whose current EIP-1967 implementation is the verified Aragon DAO 0x58c1f7bc62bb63fb137bc8f6d8ea6321a0501d29. Its complete voting-plugin/permission census and depositor-weighting configuration remain unverified; the documentation default is not treated as exact-vault proof. Morpho creationTimestamp=1765822487 and creationBlockNumber=24019726 identify this exact vault, not the issuer founding date. Calibration 2026-10-03: non-census disclosure observations retained outside the umbrella mint-path flag: Human independence and operational key-custody procedures behind the enumerated signing addresses are not publicly established. No exact-vault independent financial assurance or enforceable statutory holder priority has been published.",
-      "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+      "evidence": "Fixed-block state and matched exact VaultV2 source bound asset-backed mint, fee-share mint and burn/redeem at ethereum block 26107702. Parent mint authority remains inherited. Owner/curator control addresses and selector delays are current; internal authorization closure receives no favorable assumption. Refinement pin 26110187: supervisor getGuardians(vault) returned 0x31ca6fddc0c36cc84760d7e6a43ac6c7ccc210cb. Supervisor TIMELOCK=1209600 seconds applies to setOwner/removeGuardian; setCurator remains immediate. Guardian veto is verified. Exact Guardian 0x31ca6fddc0c36cc84760d7e6a43ac6c7ccc210cb is an ERC1967Proxy whose current EIP-1967 implementation is the verified Aragon DAO 0x58c1f7bc62bb63fb137bc8f6d8ea6321a0501d29. Its complete voting-plugin/permission census and depositor-weighting configuration remain unverified; the documentation default is not treated as exact-vault proof. Morpho creationTimestamp=1765822487 and creationBlockNumber=24019726 identify this exact vault, not the issuer founding date. Calibration 2026-10-03: non-census disclosure observations retained outside the umbrella mint-path flag: Human independence and operational key-custody procedures behind the enumerated signing addresses are not publicly established. No exact-vault independent financial assurance or enforceable statutory holder priority has been published. D14/A7/A10 review 2026-10-03, pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). The pinned immutable VaultV2 source routes deposit/mint through enter(), which transfers underlying assets before createShares(). Curator increaseAbsoluteCap/increaseRelativeCap and addAdapter govern allocation limits, not arbitrary recipient minting; owner/curator, deposit-gate and fee-recipient settings cannot bypass this accounting. accrueInterest() separately creates fee shares under immutable MAX_PERFORMANCE_FEE (50% of interest) and MAX_MANAGEMENT_FEE (5% annualized) limits, not discretionary arbitrary-share issuance. There is no local upgrade entrypoint. Inherited controls concern eurcv-societe-generale-forge, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
       "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
       "unresolvedQuestions": [],

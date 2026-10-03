@@ -2,7 +2,7 @@
   "id": "usdp-parallel",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "USDp is natively issued through the Parallelizer collateral basket on all 23 reviewed deployments. Their chain-local ParallelAccessManagers assign mint(address,uint256) to role 110, with the Ethereum diamond and the reviewed non-Ethereum minter inventory behind those gates. Parallel 5/8 Safes hold the manager admin path: the Ethereum Safe, shared Safe 0xc5201ffe on 18 routes, and chain-specific Safes on Polygon, Plume, Fraxtal, and Sei. These admins can re-authorize role 110 and change mint-critical diamond logic without a configured delay, so canonical mint risk remains economically unbounded; the exact current role-110 holder is unresolved on Sonic and Polygon and incomplete on other routes.",
     "upgradeability": {

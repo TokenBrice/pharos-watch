@@ -2,7 +2,7 @@
   "id": "usdon-ondo",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "USDon has three issuer-native issuance surfaces. Ethereum and BNB Chain use separate upgradeable AccessControlEnumerable proxies with chain-local GMTokenManager and Safe MINTER_ROLE holders plus 2-hour Timelock-controlled admin/upgrade paths; Solana uses an Ondo Global Markets program with a Token-2022 mint-authority PDA, role-gated mint_usdon, pause/config authorities, and a separately governed BPF upgrade authority. These native controls are reviewed per deployment and are not bridge controls.",
     "upgradeability": {

@@ -2,9 +2,9 @@
   "id": "gbpm-mento",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
-    "summary": "GBPm has native collateral-bound issuance only on Celo through Mento's Liquity V2 BorrowerOperations path. The Monad StableTokenSpoke is a Wormhole NTT burn/mint representation and its ProxyAdmin is scored under Bridge Risk; the Celo 4-of-6 Mento Safe can replace native mint logic or authorize minter changes.",
+    "summary": "GBPm has native collateral-bound issuance only on Celo through Mento's Liquity V2 BorrowerOperations path. The Monad StableTokenSpoke is a Wormhole NTT burn/mint representation and its ProxyAdmin is scored under Bridge Risk; the Celo 4-of-6 Mento Safe can replace native mint logic or authorize minter changes. D14: native issuance is economically unbounded because the immediate 4/6 Safe can authorize an arbitrary minter that bypasses the normal CDP collateral checks.",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
@@ -112,11 +112,19 @@
         "evidence": "At Celo block 75026011, owner() on GBPm and its EIP-1967 proxy admin slot returned the 4-of-6 Mento Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458. Current Safe service reads show six owners, threshold 4, no enabled modules, and a zero guard. This Safe can change the native token's authorized minters and replace mint-critical proxy logic, so the ordinary BorrowerOperations path is partially bounded but raiseable."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
       "sources": [
+        {
+          "label": "Pinned Celo block",
+          "url": "https://celo.blockscout.com/block/79142378"
+        },
+        {
+          "label": "Verified token implementation",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x815795c30d0758a297b08cd4e0643620c974c318"
+        },
         {
           "label": "Mento V3 deployment addresses",
           "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
@@ -142,9 +150,9 @@
           "url": "https://raw.githubusercontent.com/mento-protocol/deployments-v2/main/script/config/wormhole/NTTConfig.sol"
         }
       ],
-      "evidence": "At Celo block 75026011, the verified StableTokenV3 implementation reported isMinter=true for BorrowerOperations 0x8ec9A81871F816F1EF007a82293703057A943B8A and false for the deprecated Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD. BorrowerOperations enforces the collateral and debt checks for the normal Celo CDP mint route; current SystemParams reads were MCR 110%, CCR 135%, SCR 110%, and minimum debt 1000e18. The Celo token owner and proxy admin are the same 4-of-6 Mento Safe, which can change minters or replace mint logic, so native issuance is partially-bounded-admin with raiseable economic semantics. Mento's MGP-14 and official NTT configuration identify Monad GBPm as the Wormhole NTT burn/mint representation of Celo GBPm; its ProxyAdmin and NTT controls are therefore excluded from Mint Authority and scored under bridgeRouteRisk. Reconciliation is not-applicable because the reviewed path is on-chain CDP and conserved NTT route accounting rather than an off-chain reserve claim.",
-      "reviewer": "Codex mint-bridge boundary migration",
-      "reviewedAt": "2026-08-16"
+      "evidence": "At Celo block 75026011, the verified StableTokenV3 implementation reported isMinter=true for BorrowerOperations 0x8ec9A81871F816F1EF007a82293703057A943B8A and false for the deprecated Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD. BorrowerOperations enforces the collateral and debt checks for the normal Celo CDP mint route; current SystemParams reads were MCR 110%, CCR 135%, SCR 110%, and minimum debt 1000e18. The Celo token owner and proxy admin are the same 4-of-6 Mento Safe, which can change minters or replace mint logic, so native issuance is partially-bounded-admin with raiseable economic semantics. Mento's MGP-14 and official NTT configuration identify Monad GBPm as the Wormhole NTT burn/mint representation of Celo GBPm; its ProxyAdmin and NTT controls are therefore excluded from Mint Authority and scored under bridgeRouteRisk. Reconciliation is not-applicable because the reviewed path is on-chain CDP and conserved NTT route accounting rather than an off-chain reserve claim. D14/D29 review 2026-10-03 at Celo block 79142378 (hash 0xe5ac3917c420c5f097992356e3a8934c336d354a139b8a1207fe547af3569c6c): owner(), _getOwner(), and the EIP-1967 admin slot resolve to immediate 4/6 Safe 0x58099b74f4acd642da77b4b7966b4138ec5ba458; the implementation slot resolves to verified StableTokenV3 0x815795c30d0758a297b08cd4e0643620c974c318. Read-only setMinter(0x000000000000000000000000000000000000dead,true) from the Safe succeeds. Verified setMinter accepts an arbitrary address and mint(address,uint256) checks only minter membership, not collateral, deposit, or an economic ceiling. The Safe can therefore authorize durable unbacked issuance to a chosen recipient without an enforced delay; normal CDP constraints do not bound this root. No governance-delayed claim is authored. This D14 verdict supersedes any earlier raiseable/partially-bounded economic inference; reconciliation and supervision are unchanged.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U4MentoFamily)",
+      "reviewedAt": "2026-10-03"
     }
   }
 }

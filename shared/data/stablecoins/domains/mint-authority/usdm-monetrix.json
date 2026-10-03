@@ -113,10 +113,34 @@
       }
     ],
     "economicCapSemantics": "raiseable",
+    "capSemanticsReview": {
+      "verdict": "raiseable-collateral-only",
+      "rationale": "At HyperEVM block 47575022 the vault and token implementations are 0x08f69c88c47ef1c5274fc11bfe350561252c77f2 and 0x05faf9cfa7143804e7fb0db423fde8330cd586df. Exact-match verified token source allows mint onlyVault and setVault only once; vault() remains 0x5586c2c8223c73ec0b41d6352748e6c173372e11. Verified vault deposit transfers USDC before mint; distributeYield requires an actual USDC balance increase from escrow before minting its user share. Raising deposit/max-TVL limits does not remove these USDC-transfer gates. Governor accounting/escrow/routing parameters are Backing controls; UUPS changes remain Upgrade Risk, not D14.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (MiscRaiseable)",
+      "sources": [
+        {
+          "label": "Exact-match MonetrixVault deposited-USDC mint source, D14 reviewed 2026-10-03",
+          "url": "https://sourcify.dev/server/v2/contract/999/0x08F69C88C47ef1C5274fc11bfE350561252c77F2?fields=sources,compilation"
+        },
+        {
+          "label": "Exact-match USDM token onlyVault and once-only setVault source",
+          "url": "https://hyperevmscan.io/address/0x05faf9cfa7143804e7fb0db423fde8330cd586df#code"
+        }
+      ]
+    },
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
       "sources": [
+        {
+          "label": "Exact-match MonetrixVault deposited-USDC mint source, D14 reviewed 2026-10-03",
+          "url": "https://sourcify.dev/server/v2/contract/999/0x08F69C88C47ef1C5274fc11bfE350561252c77F2?fields=sources,compilation"
+        },
+        {
+          "label": "Exact-match USDM token onlyVault and once-only setVault source",
+          "url": "https://hyperevmscan.io/address/0x05faf9cfa7143804e7fb0db423fde8330cd586df#code"
+        },
         {
           "label": "Monetrix architecture",
           "url": "https://doc.monetrix.xyz/how-it-works/architecture"
@@ -142,9 +166,9 @@
           "url": "https://api.monetrix.xyz/data/api/protocol/overview"
         }
       ],
-      "evidence": "Primary docs identify the user deposit path and deployed contracts. HyperEVM reads at block 40308120 confirm the USDM UUPS implementation, vault address, central ACL, the 24-hour GOVERNOR timelock, and the 48-hour UPGRADER timelock. Economic-posture fields reviewed 2026-08-15: enforced timelocks govern cap and mint-logic changes, while the self-reported dashboard does not establish whole-supply reserve reconciliation and no prudential supervisor or independent attestor is documented. Wave 2 external research reviewed 2026-08-15: Monetrix's public live collateral and protocol-overview APIs compare total backing with the complete on-chain USDM supply on its sole deployment and expose component balances and freshness, establishing continuous issuer-operated whole-supply reconciliation; no independent reserve attestor or prudential supervisor is identified.",
-      "reviewer": "Pharos P7 control review; Sol economic-posture batch 2026-08-15; Sol Wave 2 external research 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Primary docs identify the user deposit path and deployed contracts. HyperEVM reads at block 40308120 confirm the USDM UUPS implementation, vault address, central ACL, the 24-hour GOVERNOR timelock, and the 48-hour UPGRADER timelock. Economic-posture fields reviewed 2026-08-15: enforced timelocks govern cap and mint-logic changes, while the self-reported dashboard does not establish whole-supply reserve reconciliation and no prudential supervisor or independent attestor is documented. Wave 2 external research reviewed 2026-08-15: Monetrix's public live collateral and protocol-overview APIs compare total backing with the complete on-chain USDM supply on its sole deployment and expose component balances and freshness, establishing continuous issuer-operated whole-supply reconciliation; no independent reserve attestor or prudential supervisor is identified. D14/D29 sweep (2026-10-03): At HyperEVM block 47575022 the vault and token implementations are 0x08f69c88c47ef1c5274fc11bfe350561252c77f2 and 0x05faf9cfa7143804e7fb0db423fde8330cd586df. Exact-match verified token source allows mint onlyVault and setVault only once; vault() remains 0x5586c2c8223c73ec0b41d6352748e6c173372e11. Verified vault deposit transfers USDC before mint; distributeYield requires an actual USDC balance increase from escrow before minting its user share. Raising deposit/max-TVL limits does not remove these USDC-transfer gates. Governor accounting/escrow/routing parameters are Backing controls; UUPS changes remain Upgrade Risk, not D14. Pinned block hashes read this review: hyperevm 40308120 0xb0effbe123d6aff610a29f510ddc2134e8394df11cfe2743965587dad556236d; hyperevm 47575022 0x4a7d0ff6ca063882fa51ba31dda140cb314698b764eef477fd7e1586b56ff379. No transaction was sent; no governed-issuance qualification is claimed.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (MiscRaiseable)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable"
     }
   }

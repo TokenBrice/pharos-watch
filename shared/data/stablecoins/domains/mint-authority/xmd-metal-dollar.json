@@ -2,7 +2,7 @@
   "id": "xmd-metal-dollar",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "XMD is minted/redeemed 1:1 by users depositing whitelisted reserve stablecoins into the xmd.treasury smart contract on XPR Network (Antelope). On-chain reads on 2026-07-20 via the public XPR Network API resolved the full authority chain: the token contract xmd.token names xmd.treasury as issuer, and both contracts' owner permission resolves to swapscold, a 2-of-4 Antelope account multisig of Metallicus operator accounts. Basket composition is governed on-chain by the xmd.treasury settoken/removetoken/setglobals actions under that same authority; no separate MTL token-holder governor contract appears in the permission chain.",
     "controls": [

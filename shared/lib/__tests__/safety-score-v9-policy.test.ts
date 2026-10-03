@@ -85,6 +85,20 @@ describe("Safety Score v9 methodology policy", () => {
     expect(() => loadV9MethodologyPolicy(invalidBridgeThreshold)).toThrow();
   });
 
+  it.each([
+    { minUnavoidableDelaySec: 0, admissibleVotingPower: ["lock-escrowed"] },
+    { minUnavoidableDelaySec: 172800.5, admissibleVotingPower: ["lock-escrowed"] },
+    { minUnavoidableDelaySec: 172800, admissibleVotingPower: ["live-balance"] },
+    { minUnavoidableDelaySec: 172800, admissibleVotingPower: [] },
+    { minUnavoidableDelaySec: 172800, admissibleVotingPower: ["lock-escrowed"], bypass: true },
+  ])("rejects inadmissible governed issuance policy %j", (governedIssuance) => {
+    const policy = candidateClone();
+    expect(() => loadV9MethodologyPolicy({
+      ...policy,
+      semantic: { ...policy.semantic, control: { ...policy.semantic.control, governedIssuance } },
+    })).toThrow();
+  });
+
   const semanticMutations: [string, (policy: V9MethodologyPolicy) => void][] = [
     ["withhold score", (policy) => { policy.semantic.formula.withhold.maxScoreExclusive = 54; }],
     ["danger floor", (policy) => { policy.semantic.formula.danger.fGatePegMultiplierFloor = 0.79; }],
@@ -92,6 +106,8 @@ describe("Safety Score v9 methodology policy", () => {
     ["bridge materiality", (policy) => { policy.semantic.control.materialBridgeHighShareThreshold = 0.24; }],
     ["collateral gated", (policy) => { policy.semantic.control.mintPostureQuality["collateral-gated"] = 51; policy.semantic.control.mintPostureQuality.unknown = 51; }],
     ["seasoned credit ceiling", (policy) => { policy.semantic.control.mintPostureGrading.adverseSeasonedCreditCeiling = 40; }],
+    ["governed issuance delay", (policy) => { policy.semantic.control.governedIssuance.minUnavoidableDelaySec += 1; }],
+    ["governed issuance voting power", (policy) => { policy.semantic.control.governedIssuance.admissibleVotingPower = ["lock-escrowed"]; }],
     ["allocation required scope", (policy) => { policy.semantic.formula.wrapperAllocationScope.requiredScopes.privateCredit.leverage.push("immediate-custodian"); }],
     ["allocation leverage assessment", (policy) => { policy.semantic.formula.wrapperAllocationScope.leverageAssessments["bounded-up-to-1.5x"] = "high"; }],
     ["allocation custody assessment", (policy) => { policy.semantic.formula.wrapperAllocationScope.custodyAssessments["unsegregated"] = "critical"; }],
@@ -337,8 +353,11 @@ describe("Safety Score v9 methodology policy", () => {
     const quality = V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintPostureQuality;
     expect(signalLimits.high).not.toBeNull();
     expect(signalLimits.moderate).not.toBeNull();
-    expect(25 + formula.controlCompensabilityHeadroom).toBeLessThanOrEqual(signalLimits.high!);
+    expect(quality["unbounded-unreconciled"] + formula.controlCompensabilityHeadroom).toBeLessThanOrEqual(signalLimits.high!);
     expect(quality["unbounded-reconciliation-unknown"]).toBeLessThan(signalLimits.high!);
     expect(quality["collateral-gated"]).toBeLessThan(signalLimits.moderate!);
+    expect(quality["concentrated-admin"]).toBeLessThan(quality["unbounded-governed"]);
+    expect(quality["unbounded-governed"]).toBeLessThan(quality["partially-bounded-admin"]);
+    expect(quality["unbounded-governed"]).toBeLessThan(signalLimits.moderate!);
   });
 });

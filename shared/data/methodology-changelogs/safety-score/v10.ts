@@ -2,6 +2,28 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V10: readonly MethodologyChangelogEntry[] = [
   {
+    version: "10.02",
+    title: "Governed unbounded issuance and uniform D14",
+    date: "2026-10-03",
+    effectiveAt: 1791158400,
+    summary:
+      "Safety Score v10.02 implements owner ruling D29: D14's unchanged economic-bound question and the actor's issuance process are separate axes. Positively proven, delayed, flash-resistant on-chain token governance can derive unbounded-governed without making issuance economically bounded. The release splits active compromise from unreconciled unbounded issuance, adds the 60-point mint-quality rung, and applies a uniformly sourced D14 sweep with fail-closed governance and cap-review validators. On the captured 331-card production base, 88 cards change and 34 grades flip; every change is declared.",
+    impact: [
+      "The new derived posture unbounded-governed has quality 60, a low centralized-mint signal with cap 83, public band Governed, ordinary seasoning ceiling 69, and membership in both DDR fragile and unbounded sets. Qualification requires complete runtime/signer-bound execution-scope certificates on every authored mint control; the minimum, never summed, unavoidable delay across all reachable unbounded issuance paths must meet the policy-owned 172800-second floor.",
+      "Every governance gate must be positively proven: structured, chain-qualified governor rooting admits only the token-vote governor or authored contract execution hops in certificate signer identities, with no multisig or threshold phrasing; voting power must be lock-escrowed or past-block checkpointed; issuance must be enumerable; the review must be fresh and closed; and there must be no active incident. Unknown evidence fails closed. Governor references are EVM-only in v10.02.",
+      "Removes unbounded-or-compromised in favor of compromised, reserved for active incidents with a critical centralized-mint signal, and unbounded-unreconciled, without an active incident and with a high signal and adverse seasoning ceiling 39. Both postures have quality 25. Public labels are updated; posture strings remain opaque in published payloads, and screener band keys are unchanged.",
+      "The mint-quality ladder now includes 60. Both seasoned and positive merged-signal credits on 55-base postures clip at 59: frax-frax and home-homecoin move 65 to 59; eurs-stasis and xusd-babelfish move 64 to 58; ousd-origin-protocol moves 76 to 56 with its D14 reclassification and merged-credit correction; brz-transfero moves 53 to 47.",
+      "The uniform D14 anti-drift validator requires a sourced capSemanticsReview on every raiseable, bounded or collateral-gated record with a direct or can-authorize control, or any canRaiseCap: true control. Governed evidence is invalid on wrappers: under D08, wrapper D14 concerns only wrapper-local minting, while inherited parent issuance follows the serial-claim dependency.",
+      "Across 232 changed records, 47 flip to unbounded (39 from raiseable and 8 from bounded), plus thUSD from collateral-gated; 7 become unknown where bounded construction could not be verified; and 55 carry a sourced capSemanticsReview. sUSDS reverts to bounded under D08 parity with sDAI. The sweep renames 85 curated annotations and aligns 71 to derived postures. Every research unit was independently verified by GLM verifiers.",
+      "Release impact uses the 2026-10-03 18:17:59 UTC production capture: clockSec 1791051479, sourceGeneration report-cards:10.01:1791051364, baseInputGenerationId report-cards-input:v1:11decc5045c479694536d051041e05de2a3e53f4b7ded8f7057baa59fd91ca5b, and 331 cards. There are 88 changed cards and 34 grade flips, all declared. crvUSD is the only asset qualifying as governed, moving 44/D to 69/B-; scrvUSD moves 42 to 63.",
+      "DAI moves 81/A- to 53/C- and USDS 81/A- to 44/D because their governance paths could not be certified: 129 live Vat wards lack complete certificates. sDAI, stUSDS, sUSDS and Spark sUSDC/sUSDT follow their parent caps. GHO moves 72/B to 42/D after verification of an independent Risk Council 2/3 Safe direct-facilitator mint path; ZCHF moves 81/A- to 44/D because permissionless minter applications execute unless vetoed; fxUSD moves 71/B to 44/D because pool registration is unvalidated.",
+      "Other declared changes include cUSD 79 to 59 and yvUSDC 78 to 45, plus the Safe/timelock-rooted cohort including Mento GBPm, dUSD Alto, Polymarket pUSD, Resupply reUSD, Rings scUSD, dEURO and others. Grade distribution changes are A- 4 to 1, B+ 11 to 9, B 18 to 14, B- 10 to 8, C+ 36 to 26, C 48 to 53, D 88 to 94, F 38 to 49 and NR 17 to 16; JPYm is newly rated.",
+      "42 assets join the DDR fragile and unbounded sets; sUSDS leaves them under the D08 reversal. Neither DDR nor the mint-authority lane receives a version bump. Six pre-existing curated-versus-derived annotation disagreements remain: five unreviewed curated unknown annotations and fusd-finchain's unresolved derivation.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "10.01",
     title: "Cause-aware evidence: pipeline gaps are not asset risk",
     date: "2026-10-03",

@@ -2,9 +2,9 @@
   "id": "jpym-mento",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "JPYm native issuance is anchored on Celo's JPYm-specific Mento V3 CDP branch. BorrowerOperationsv300JPYm and ActivePoolv300JPYm are the native minters, while the 4-of-6 Mento Safe can authorize minters and replace the Celo token implementation without delay; Monad is a Wormhole NTT representation assessed under Bridge Risk.",
+    "summary": "JPYm native issuance is anchored on Celo's JPYm-specific Mento V3 CDP branch. BorrowerOperationsv300JPYm and ActivePoolv300JPYm are the native minters, while the 4-of-6 Mento Safe can authorize minters and replace the Celo token implementation without delay; Monad is a Wormhole NTT representation assessed under Bridge Risk. D14: native issuance is economically unbounded because the immediate 4/6 Safe can authorize an arbitrary minter that bypasses the normal CDP collateral checks.",
     "controls": [
       {
         "chain": "celo",
@@ -142,10 +142,18 @@
       ]
     },
     "review": {
-      "evidence": "At Celo block 75605575, JPYm.isMinter(0x4944Fc84D675a0Cc4758A8098C1619A2E4724a7F) and isMinter(0x90b8A5Ad63bDB2a3DC636DA926aB5c039EA426a4) returned true, while generic BorrowerOperations 0x8ec9A81871F816F1EF007a82293703057A943B8A returned false. BorrowerOperationsv300JPYm activePool() returned 0x90b8A5Ad63bDB2a3DC636DA926aB5c039EA426a4, the branch MCR/CCR reads were 110%/135%, SystemParams MIN_DEBT() returned 200000000000000000000000, and getEntireBranchColl()/getEntireBranchDebt() returned 141473592486500429213293 / 11728408441677083383552400. The verified BorrowerOperations source enforces collateral/debt health checks before debt minting; the verified ActivePool source restricts aggregate-interest minting to protocol callers and derives it from aggregate trove debt. JPYm.owner(), _getOwner(), and the EIP-1967 admin slot returned the 4-of-6 Mento Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458; its module list was empty and the current guard probe reverted. Celo is the sole native issuance chain: the current CDP and ActivePool paths are collateral/accounting-bound, but the immediate Safe can authorize another native minter and replace the Celo token implementation without an independent delay or independently enforced global supply cap. Monad's NTT manager, spoke-token roles, ProxyAdmin, transceiver, peers, pause, and route limits are Bridge Risk facts and are not included in this Mint Authority scope. reconciliation remains continuous because JPYm CDP collateral and debt are observable on-chain, and supervision remains none because no named prudential supervisor was identified.",
-      "reviewer": "Codex mint-bridge boundary migration",
-      "reviewedAt": "2026-08-16",
+      "evidence": "At Celo block 75605575, JPYm.isMinter(0x4944Fc84D675a0Cc4758A8098C1619A2E4724a7F) and isMinter(0x90b8A5Ad63bDB2a3DC636DA926aB5c039EA426a4) returned true, while generic BorrowerOperations 0x8ec9A81871F816F1EF007a82293703057A943B8A returned false. BorrowerOperationsv300JPYm activePool() returned 0x90b8A5Ad63bDB2a3DC636DA926aB5c039EA426a4, the branch MCR/CCR reads were 110%/135%, SystemParams MIN_DEBT() returned 200000000000000000000000, and getEntireBranchColl()/getEntireBranchDebt() returned 141473592486500429213293 / 11728408441677083383552400. The verified BorrowerOperations source enforces collateral/debt health checks before debt minting; the verified ActivePool source restricts aggregate-interest minting to protocol callers and derives it from aggregate trove debt. JPYm.owner(), _getOwner(), and the EIP-1967 admin slot returned the 4-of-6 Mento Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458; its module list was empty and the current guard probe reverted. Celo is the sole native issuance chain: the current CDP and ActivePool paths are collateral/accounting-bound, but the immediate Safe can authorize another native minter and replace the Celo token implementation without an independent delay or independently enforced global supply cap. Monad's NTT manager, spoke-token roles, ProxyAdmin, transceiver, peers, pause, and route limits are Bridge Risk facts and are not included in this Mint Authority scope. reconciliation remains continuous because JPYm CDP collateral and debt are observable on-chain, and supervision remains none because no named prudential supervisor was identified. D14/D29 review 2026-10-03 at Celo block 79142378 (hash 0xe5ac3917c420c5f097992356e3a8934c336d354a139b8a1207fe547af3569c6c): owner(), _getOwner(), and the EIP-1967 admin slot resolve to immediate 4/6 Safe 0x58099b74f4acd642da77b4b7966b4138ec5ba458; the implementation slot resolves to verified StableTokenV3 0x815795c30d0758a297b08cd4e0643620c974c318. Read-only setMinter(0x000000000000000000000000000000000000dead,true) from the Safe succeeds. Verified setMinter accepts an arbitrary address and mint(address,uint256) checks only minter membership, not collateral, deposit, or an economic ceiling. The Safe can therefore authorize durable unbacked issuance to a chosen recipient without an enforced delay; normal CDP constraints do not bound this root. No governance-delayed claim is authored. This D14 verdict supersedes any earlier raiseable/partially-bounded economic inference; reconciliation and supervision are unchanged.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U4MentoFamily)",
+      "reviewedAt": "2026-10-03",
       "sources": [
+        {
+          "label": "Pinned Celo block",
+          "url": "https://celo.blockscout.com/block/79142378"
+        },
+        {
+          "label": "Verified token implementation",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x815795c30d0758a297b08cd4e0643620c974c318"
+        },
         {
           "label": "Mento deployments registry",
           "url": "https://github.com/mento-protocol/deployments-v2/blob/main/packages/contracts/contracts.json"
@@ -164,7 +172,7 @@
         }
       ]
     },
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "continuous",
     "supervision": "none"
   }

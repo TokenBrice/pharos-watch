@@ -126,10 +126,26 @@
       }
     ],
     "economicCapSemantics": "raiseable",
+    "capSemanticsReview": {
+      "verdict": "raiseable-collateral-only",
+      "rationale": "D14/A7 review on 2026-10-03 at ethereum block 26113622 (0x5f41a07faa7b201ebd6180fd900a8e50989c7d3ac2f09c64d5b5d6272ad71cb9): the canonical implementation remains 0x496a4a33b6181f4536203488d9a05ac1429e702c, and pyusdx() remains 0xebdb0942ce16386ab90718c7bd10c91cdb66b14d. Verified Extension._wrap transfers PYUSDx before minting; MultiMint._wrapAsset pulls the admitted asset, checks its received balance delta and only then mints the scaled amount. setAssetCap admits/expands deposit capacity but does not introduce a raw-mint entry point. PYUSDx yield and M-yield minting are constrained to actual excess token balances; disabled version-pinning cannot bypass these paths. A direct wrap simulation outside the SwapFacility reverted. Collateral admission and upgrade powers alone are excluded D14 triggers. Retain raiseable with raiseable-collateral-only proof; wrapper-local funding is assessed without reclassifying PYUSDx parent issuance, and no D29 certificate is authored.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12bNativeCapReviews)",
+      "sources": [
+        {
+          "label": "Verified current USDat funded MultiMint implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x496a4a33b6181f4536203488d9a05ac1429e702c"
+        }
+      ]
+    },
     "reconciliation": "continuous",
     "supervision": "unknown",
     "review": {
       "sources": [
+        {
+          "label": "Verified current USDat funded MultiMint implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x496a4a33b6181f4536203488d9a05ac1429e702c"
+        },
         {
           "label": "Saturn pinned PYUSDx migration runbook",
           "url": "https://github.com/saturn-organization/saturn-dollar/blob/67a27eba1e7dcd944415d28b21bf107f119d47ee/plans/usdat-pyusdx-migration-runbook.md"
@@ -143,9 +159,9 @@
           "url": "https://app.saturn.credit/insights/saturn-protocol"
         }
       ],
-      "evidence": "Current native issuance was re-verified at Ethereum block 26095799: USDat is the PYUSDx-backed MultiMint implementation 0x496a4a33b6181f4536203488d9a05ac1429e702c, using PYUSDx SwapFacility 0x0bc305e7e13113caed3f5486849e9518a1cc4173. PYUSDx held by the proxy equals USDat totalSupply at 85,981,412.404485 units, while actual and tracked M balances and the M asset cap are zero. The enabled compliance whitelist gates wrapping and unwrapping. Separate five-day USDat proxy-upgrade and alternative-asset-cap timelocks remain active. The PYUSDx SwapFacility's ProxyAdmin is directly owned by a verified 3-of-5 Safe with no enabled modules or guard; it does not inherit the old M SwapFacility's three-day timelock. USDat's current verified Extension code transfers PYUSDx from the facility before minting. Historical MinterGateway and M SwapFacility control claims were removed from the current USDat path after the evidenced migration; their historical M0 facts are not evidence of current USDat supervision.",
-      "reviewer": "Sol curation pass 2026-10-01 (CurA17EURSAFO)",
-      "reviewedAt": "2026-10-01"
+      "evidence": "Current native issuance was re-verified at Ethereum block 26095799: USDat is the PYUSDx-backed MultiMint implementation 0x496a4a33b6181f4536203488d9a05ac1429e702c, using PYUSDx SwapFacility 0x0bc305e7e13113caed3f5486849e9518a1cc4173. PYUSDx held by the proxy equals USDat totalSupply at 85,981,412.404485 units, while actual and tracked M balances and the M asset cap are zero. The enabled compliance whitelist gates wrapping and unwrapping. Separate five-day USDat proxy-upgrade and alternative-asset-cap timelocks remain active. The PYUSDx SwapFacility's ProxyAdmin is directly owned by a verified 3-of-5 Safe with no enabled modules or guard; it does not inherit the old M SwapFacility's three-day timelock. USDat's current verified Extension code transfers PYUSDx from the facility before minting. Historical MinterGateway and M SwapFacility control claims were removed from the current USDat path after the evidenced migration; their historical M0 facts are not evidence of current USDat supervision. D14/A7 review on 2026-10-03 at ethereum block 26113622 (0x5f41a07faa7b201ebd6180fd900a8e50989c7d3ac2f09c64d5b5d6272ad71cb9): the canonical implementation remains 0x496a4a33b6181f4536203488d9a05ac1429e702c, and pyusdx() remains 0xebdb0942ce16386ab90718c7bd10c91cdb66b14d. Verified Extension._wrap transfers PYUSDx before minting; MultiMint._wrapAsset pulls the admitted asset, checks its received balance delta and only then mints the scaled amount. setAssetCap admits/expands deposit capacity but does not introduce a raw-mint entry point. PYUSDx yield and M-yield minting are constrained to actual excess token balances; disabled version-pinning cannot bypass these paths. A direct wrap simulation outside the SwapFacility reverted. Collateral admission and upgrade powers alone are excluded D14 triggers. Retain raiseable with raiseable-collateral-only proof; wrapper-local funding is assessed without reclassifying PYUSDx parent issuance, and no D29 certificate is authored. This D14 refresh does not re-date older quorum or reserve-reconciliation observations.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12bNativeCapReviews)",
+      "reviewedAt": "2026-10-03"
     },
     "upgradeability": {
       "model": "transparent-proxy",

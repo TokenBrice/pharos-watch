@@ -2,7 +2,7 @@
   "id": "btcusd-btcfi",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "manual-review",
     "summary": "BtcUSD's canonical issuance is confined to the Bifrost native BtcUSD deployment: the BTCFi BtcUSD CDP handler 0x682143652b6e305730dd12b0dc7c38d5048fb647 holds the token's keccak(\"Minter\") role and mints against deposited BTC-variant collateral, while token owner/default admin 0xa4247099c1462f9d9121a1809d001c1a6cc70dd5 can authorize additional minters but cannot mint directly. At Bifrost block 38078242, the handler's custom delegated target is pinned to 0x79eb3f72d930971a815d45f185961e39023799e8 and its owner slot to 0xf357a08c8d4a385cebddb517a44b210a0f6b3393; the owner-gated initialize path can replace that target immediately without a timelock. Base is a Bifrost Bridge representation and its owner/admin/proxy controls are authored under Bridge Risk. Bifrost AccessControl membership and the handler/target source remain unverified, so this review stays at manual-review despite the custom upgrade path being resolved.",
     "upgradeability": {

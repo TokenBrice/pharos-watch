@@ -727,6 +727,35 @@ export const MintAuthorityProfileSchema = z
     mintIncidents: z.array(MintAuthorityIncidentSchema).min(1).optional(),
     controls: z.array(MintAuthorityControlSchema).optional(),
     economicCapSemantics: z.enum(MINT_AUTHORITY_ECONOMIC_CAP_SEMANTICS_VALUES).optional(),
+    governedIssuance: z
+      .object({
+        governorControlRef: z.string().regex(/^[a-z0-9][a-z0-9-]*:0x[0-9a-f]{40}$/, "Expected a chain:lowercase EVM address governor reference"),
+        votingPower: z.enum(["lock-escrowed", "past-block-checkpoint", "live-balance", "unknown"]),
+        votingPowerEvidence: z.string().trim().min(40),
+        enumerability: z
+          .object({
+            authorizationEvents: z.array(z.string().min(1)).min(1),
+            capacityReads: z.array(z.string().min(1)).min(1),
+          })
+          .strict(),
+        observedAt: ReviewDateSchema,
+        observedBlock: PositiveIntegerSchema,
+        reviewedAt: ReviewDateSchema,
+        reviewer: z.string().min(1),
+        sources: z.array(StablecoinLinkSchema).min(1),
+      })
+      .strict()
+      .optional(),
+    capSemanticsReview: z
+      .object({
+        verdict: z.enum(["bounded-by-construction", "raiseable-collateral-only"]),
+        rationale: z.string().trim().min(80),
+        reviewedAt: ReviewDateSchema,
+        reviewer: z.string().min(1),
+        sources: z.array(StablecoinLinkSchema).min(1),
+      })
+      .strict()
+      .optional(),
     reconciliation: z.enum(MINT_AUTHORITY_RECONCILIATION_VALUES).optional(),
     supervision: z.enum(MINT_AUTHORITY_SUPERVISION_VALUES).optional(),
     review: MintAuthorityReviewSchema,

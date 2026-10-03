@@ -166,8 +166,12 @@ const AUTHORITY_POSTURE_LABELS: Record<string, string> = {
   "bounded-admin": "Bounded admin",
   "partially-bounded-admin": "Partially bounded admin",
   "unbounded-reconciled": "Unbounded, supervised & reconciled",
+  "unbounded-governed": "Unbounded, governance-delayed",
   "concentrated-admin": "Concentrated admin",
-  "unbounded-or-compromised": "Unbounded or compromised",
+  "collateral-gated": "Collateral-gated admin",
+  "unbounded-reconciliation-unknown": "Unbounded, reconciliation unverified",
+  "unbounded-unreconciled": "Unbounded, unreconciled",
+  compromised: "Compromised (active incident)",
   unknown: "Unknown",
 };
 
@@ -181,8 +185,12 @@ const AUTHORITY_POSTURE_TONES: Record<string, MintAuthorityPostureTone> = {
   // Same elevated tone as the rest of the unbounded/concentrated tier: the
   // supervision is real, but the minting is still economically unbounded.
   "unbounded-reconciled": "elevated",
+  "unbounded-governed": "neutral",
   "concentrated-admin": "elevated",
-  "unbounded-or-compromised": "elevated",
+  "collateral-gated": "elevated",
+  "unbounded-reconciliation-unknown": "elevated",
+  "unbounded-unreconciled": "elevated",
+  compromised: "elevated",
   unknown: "neutral",
 };
 

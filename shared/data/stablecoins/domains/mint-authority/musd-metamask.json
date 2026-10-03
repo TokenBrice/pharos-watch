@@ -2,7 +2,7 @@
   "id": "musd-metamask",
   "mintAuthority": {
     "mintPath": "m0-permissioned-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "MetaMask USD is an M0-backed extension with one canonical native issuance route on Ethereum. Base M issuance remains on the Ethereum MinterGateway, and Ethereum MUSD wrapping routes through the M0 SwapFacility. Linea and Monad MUSD are M0 Portal-backed representations; their token, SwapFacility, Portal, adapter, and validator controls are assessed under bridgeRouteRisk and are excluded from native Mint Authority posture.",
     "upgradeability": {

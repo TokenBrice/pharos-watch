@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
-    "summary": "Ondo GM native managers issue GLDon on Ethereum, BNB and Solana; EVM beacon-owner timelocks can replace mint logic. OFT representation powers are segregated into Bridge Risk.",
+    "summary": "Ondo GM native managers issue GLDon on Ethereum, BNB and Solana; EVM beacon-owner timelocks can replace mint logic. OFT representation powers are segregated into Bridge Risk. D14: Native adminProcessMint can mint to a registered recipient without on-chain deposit or custody-attestation validation; issuance is economically unbounded.",
     "controls": [
       {
         "label": "GLDon ethereum native GMTokenManager",
@@ -237,11 +237,15 @@
         }
       ]
     },
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
       "sources": [
+        {
+          "label": "Verified native GMTokenManager adminProcessMint without posted deposit or custody attestation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c"
+        },
         {
           "label": "Shared Ondo tokenized-stocks Ankura daily verification and monthly reconciliation scope",
           "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md"
@@ -319,8 +323,8 @@
           "url": "https://cdn.sanity.io/files/8k2tqa6n/production/ae1f1ca8ce2c2197a45b563e3e9add041924a249.pdf"
         }
       ],
-      "evidence": "Exact native role membership, EVM beacon owners, timelock proposer/executor/canceller/admin rosters and wallet quorums are identified. Fresh Ethereum block 26110184 and BNB block 125441304 reads additionally show no modules or guards on the proposer/admin Safes and the standard Safe fallback handler; verified timelock and singleton source closes the previously recorded executable bypass questions. Final Terms allow increasing nominal issue volume. GLDon belongs to the same Ondo Global Markets issuer/product family as IAUon and SLVon: the shared Trust & Transparency disclosure appoints Ankura as daily verification agent for all tokenized-stock holdings, expressly confirms investor-liability/fund-reserve reconciliation, and publishes a monthly reconciliation series. This is the identical program-scoped evidence used by the siblings, so periodic reconciliation, attestation-only supervision and unbounded-reconciled posture are aligned. This does not establish issuer prudential supervision, exact GLDon reserve weights, or GLDon-specific Other Collateral allocation in the retrieved aggregate reports; those backing gaps remain. Program code audits cover stated commits, not current financial assurance. Human signer independence/key custody remain unverified. Solana upgrade authority 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM is off-curve under canonical Ed25519 point decompression, despite being system-program-owned; its program-signing provenance remains unresolved and is not authored as an EOA.",
-      "reviewer": "Refine06 primary-source and pinned RPC review",
+      "evidence": "Exact native role membership, EVM beacon owners, timelock proposer/executor/canceller/admin rosters and wallet quorums are identified. Fresh Ethereum block 26110184 and BNB block 125441304 reads additionally show no modules or guards on the proposer/admin Safes and the standard Safe fallback handler; verified timelock and singleton source closes the previously recorded executable bypass questions. Final Terms allow increasing nominal issue volume. GLDon belongs to the same Ondo Global Markets issuer/product family as IAUon and SLVon: the shared Trust & Transparency disclosure appoints Ankura as daily verification agent for all tokenized-stock holdings, expressly confirms investor-liability/fund-reserve reconciliation, and publishes a monthly reconciliation series. This is the identical program-scoped evidence used by the siblings, so periodic reconciliation, attestation-only supervision and unbounded-reconciled posture are aligned. This does not establish issuer prudential supervision, exact GLDon reserve weights, or GLDon-specific Other Collateral allocation in the retrieved aggregate reports; those backing gaps remain. Program code audits cover stated commits, not current financial assurance. Human signer independence/key custody remain unverified. Solana upgrade authority 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM is off-curve under canonical Ed25519 point decompression, despite being system-program-owned; its program-signing provenance remains unresolved and is not authored as an EOA. D14/D29 sweep (2026-10-03): Verified native GMTokenManager ordinary mintWithAttestation transfers/burns USDon, but adminProcessMint(gmToken,recipient,amount,metadata) separately calls token.mint after only ADMIN_MINT_ROLE, accepted-token and registered-recipient checks. Its comment refers to an off-system deposit; executable code does not require custody attestation or a posted deposit. This direct administrative mint path is economically unbounded despite the product being a tokenized gold-ETF claim and despite periodic reconciliation. No D29 certificate is authored. Pinned block hashes read this review: bsc 125374463 0xf23e6fc88b7d5b47a847c77d3c130c980c5a5e7dbfef50ab6bd1ba01919abbf9; ethereum 26110184 0x297d56c41c8ab9797c999a738a007c72439f48f625074bc2d4cb4202f59b5341; ethereum 26107702 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6; bsc 125441304 0x467abaa630f181137dff3b5a0f0a7457250adbf26c5cfe225211ea11e040e442. No transaction was sent; no governed-issuance qualification is claimed.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (MiscRaiseable)",
       "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
       "unresolvedQuestions": [],

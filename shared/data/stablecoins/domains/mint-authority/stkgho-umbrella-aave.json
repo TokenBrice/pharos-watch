@@ -4,7 +4,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "stkGHO.v1 is an ERC-4626-style Umbrella staking receipt over GHO; wrapper minting is deposit/share accounting while durable GHO mint authority is inherited from reviewed Aave facilitator controls. The proxy is upgradeable via Aave Governance V3 Level-1 Executor, a bounded on-chain governance path.",
+    "summary": "stkGHO.v1 is an ERC-4626 Umbrella staking receipt over GHO. Its current implementation mints shares only after transferring deposited GHO; no wrapper-local role can authorize deposit-free share minting. Parent GHO issuance is carried by the inherited dependency, not charged again at this wrapper boundary. Aave governance controls proxy upgrades, while the Umbrella Safes retain separate local slashing-configuration and pause powers.",
     "inheritedFrom": "gho-aave",
     "upgradeability": {
       "model": "transparent-proxy",
@@ -215,6 +215,26 @@
       }
     ],
     "economicCapSemantics": "raiseable",
+    "capSemanticsReview": {
+      "verdict": "raiseable-collateral-only",
+      "rationale": "At Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a), the stkGHO EIP-1967 implementation slot resolves to verified UmbrellaStakeToken 0x75e8ac0c063b6966e2a9954adedf39bde9370197, whose deployed runtime exactly matches the pinned bytecode. Inherited ERC4626Upgradeable.deposit and mint both call _deposit; its SafeERC20.safeTransferFrom(asset,caller,vault,assets) precedes _mint(receiver,shares). ERC4626StakeTokenUpgradeable._deposit preserves that transfer-first workflow and updates totalAssets; depositWithPermit delegates to deposit. StakeToken's owner-only slash, pause, cooldown and unstake-window methods do not mint shares or authorize a minter. The 3/5 DEFAULT_ADMIN Safe changes slashing configuration, oracle, fees, deficit offsets, exit timing and role grants; the 4/7 PAUSE_GUARDIAN Safe pauses access, not issuance. The executor's can-authorize annotation describes its proxy upgrade power, which is not a D14 trigger. Parent GHO's arbitrary facilitator authorization and Council minting are parent issuance carried by inheritedFrom and the serial-claim dependency edge, not a wrapper-local deposit bypass.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+      "sources": [
+        {
+          "label": "Verified UmbrellaStakeToken and complete inherited deposit/share implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x75e8ac0c063b6966e2a9954adedf39bde9370197"
+        },
+        {
+          "label": "Verified Umbrella local configuration and pause permissions",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x929e21d24d3f2a529621adc248d227012b72646d?fields=sources,abi"
+        },
+        {
+          "label": "Pinned Ethereum block 26112822",
+          "url": "https://etherscan.io/block/26112822"
+        }
+      ]
+    },
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
@@ -230,11 +250,15 @@
         {
           "label": "Verified deployed Umbrella slashing and emergency-control source",
           "url": "https://sourcify.dev/server/v2/contract/1/0x929e21d24d3f2a529621adc248d227012b72646d?fields=sources,abi"
+        },
+        {
+          "label": "Verified deposit-only stkGHO implementation matched at block 26112822",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x75e8ac0c063b6966e2a9954adedf39bde9370197"
         }
       ],
-      "evidence": "At Ethereum block 25295167: asset() = GHO 0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f confirmed; proxy impl = 0x75e8ac0c063b6966e2a9954adedf39bde9370197; ProxyAdmin 0xDE9F8379a5a972100d0373103a849E8ABdf56a9a owned by Aave Governance V3 Level-1 Executor 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A. Upgrade admin surface confirmed and bounded by on-chain governance. Durable mint authority inherits from reviewed parent GHO. stkGHO shares are minted only against deposited GHO, and changing the wrapper's mint economics requires the Aave Governance executor; the encoding-derived unbounded value is therefore superseded by raiseable economic semantics. 2026-07-21 gap-fill pass: the mintAuthority.upgradeability object was added, structuring this same already-verified EIP-1967 proxy/ProxyAdmin/executor evidence into the record's canChangeMintLogic/controlRef fields; no new on-chain read was required. Economic-posture fields reviewed 2026-08-15: deposit-gated shares can be altered only through Aave governance, while local reconciliation is not applicable and no local attestor or prudential supervisor is evidenced.",
-      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "Prior reviewed evidence identifies the stkGHO proxy, its Aave executor-owned ProxyAdmin and the separate Umbrella 3/5 DEFAULT_ADMIN and 4/7 PAUSE_GUARDIAN Safes at block 26101008. D14/D29 review on 2026-10-03 re-read Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a): asset() is canonical GHO; owner() is Umbrella 0xd400fc38ed4732893174325693a63c30ee3881a8; EIP-1967 implementation is 0x75e8ac0c063b6966e2a9954adedf39bde9370197 and admin is 0xde9f8379a5a972100d0373103a849e8abdf56a9a. That implementation's bytecode exactly matches verified source. Its only share-creation workflow is ERC4626Upgradeable._deposit, which transfers the caller's GHO before _mint; depositWithPermit cannot bypass it. Owner slashing/configuration and Safe pause/configuration powers create no local mint authorization. Pinned eth_call mint(1e18,0x000000000000000000000000000000000000dead) from the executor and each Umbrella Safe reverted without deposited/approved GHO; source, not those samples, establishes the deposit-only invariant. Keep raiseable with the sourced capSemanticsReview: parent GHO's D14 unbounded issuance travels through the inherited dependency and is not charged twice. No governed-issuance claim is made for this wrapper; upgrades remain separately classified and are not a D14 trigger.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+      "reviewedAt": "2026-10-03"
     }
   }
 }

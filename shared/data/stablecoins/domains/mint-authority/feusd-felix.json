@@ -2,7 +2,7 @@
   "id": "feusd-felix",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "Native feUSD issuance is confined to the HyperEVM Liquity-v2-fork CDPs against HYPE, kHYPE, wstHYPE, and bridged BTC at user-set interest rates. Each of the four active branches authorizes its BorrowerOperations and ActivePool contracts to mint feUSD, for eight current token-level minters. The feUSD token (0x02c6a2fa) is an EIP-1967 proxy whose ProxyAdmin (0x44a600c0) is owned by a central admin proxy (0xf42fdd95). That admin proxy's own ProxyAdmin (0xdf1293b4) is owned by a Gnosis Safe 1.3.0 multisig (0x699090e7, 3-of-6, no modules, no guard). HyperCore FEUSD is a noncanonical linked representation assessed separately in Bridge Risk; no HyperCore minter is included here.",
     "upgradeability": {

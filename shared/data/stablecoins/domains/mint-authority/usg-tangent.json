@@ -2,7 +2,7 @@
   "id": "usg-tangent",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "USG has three mint routes. At Ethereum block 26096134, the complete authorized market census is 16 markets: the prior 13 plus msETH/OETH, cbBTC/WBTC and reUSD/sDOLA. Thirteen have positive debt shares; authorized markets can remain paused or empty. mintDebt requires isMinter, mintIR requires the sole IRCalculator role and mints to the ControlTower fee treasury, and mintPegKeeper lets the owner mint uncapped USG into either registered peg keeper. USG, ControlTower and MarketCreator share a 3-of-5 Safe (v1.4.1, empty modules, zero guard) with a custom FeeTreasuryFallbackHandler. The owner can authorize arbitrary minters and change role assignments, so the economic authority remains unbounded.",
     "upgradeability": {

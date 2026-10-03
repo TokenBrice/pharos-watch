@@ -7,6 +7,22 @@
     "summary": "stcUSD is an ERC-4626 UUPS wrapper over Cap cUSD. Wrapper minting remains deposit/share accounting with no separate privileged mint path, while live upgrade authority routes through Cap's external AccessControl and one-day TimelockController to the 3-of-5 Cap governance Safe. Durable cUSD mint authority is inherited from the reviewed Cap vault controls.",
     "inheritedFrom": "cusd-cap",
     "economicCapSemantics": "raiseable",
+    "capSemanticsReview": {
+      "verdict": "raiseable-collateral-only",
+      "rationale": "D14/D29 review on 2026-10-03 re-read implementation and asset() at Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a) and audited verified StakedCap plus inherited ERC4626Upgradeable source. All wrapper-local share issuance transfers deposited cUSD before _mint; no wrapper-local minter authorization exists. Inherited cUSD controls describe parent issuance carried by the serial-claim dependency edge, not duplicate wrapper issuance. Live upgrade authority is not a D14 trigger. The sourced capSemanticsReview retains raiseable semantics; no D29 governance certificate is claimed. StakedCap overrides _deposit only to update storedTotal after the inherited deposit; ERC4626Upgradeable.safeTransferFrom of cUSD precedes share minting. The complete verified wrapper source exposes no privileged share-mint or new-minter path.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U7SafeRootedFloorA)",
+      "sources": [
+        {
+          "label": "Verified StakedCap and inherited ERC4626Upgradeable source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x42c0e0ef7c2f35de073f4d6f9c0e4483429c3d31"
+        },
+        {
+          "label": "stcUSD proxy",
+          "url": "https://etherscan.io/address/0x88887be419578051ff9f4eb6c858a951921d8888"
+        }
+      ]
+    },
     "reconciliation": "not-applicable",
     "supervision": "none",
     "upgradeability": {
@@ -183,9 +199,9 @@
           "url": "https://ethereum-rpc.publicnode.com"
         }
       ],
-      "evidence": "At Ethereum block 25531350, stcUSD remained an ERC-4626 UUPS wrapper whose asset() was cUSD 0xcCcc62962d17b8914c62D74FfB843d73B2a3cccC. Deposits mint wrapper shares through ERC-4626 accounting, while the verified StakedCap implementation authorizes upgrades through the external AccessControl contract. Its DEFAULT_ADMIN was the one-day TimelockController, which retained self-admin authority; the 3-of-5 Cap governance Safe actively held proposer, executor, and canceller roles and had no enabled modules. The wrapper upgrade path is live, while durable base-asset mint authority remains inherited from the separately reviewed cUSD parent.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
+      "evidence": "At Ethereum block 25531350, stcUSD remained an ERC-4626 UUPS wrapper whose asset() was cUSD 0xcCcc62962d17b8914c62D74FfB843d73B2a3cccC. Deposits mint wrapper shares through ERC-4626 accounting, while the verified StakedCap implementation authorizes upgrades through the external AccessControl contract. Its DEFAULT_ADMIN was the one-day TimelockController, which retained self-admin authority; the 3-of-5 Cap governance Safe actively held proposer, executor, and canceller roles and had no enabled modules. The wrapper upgrade path is live, while durable base-asset mint authority remains inherited from the separately reviewed cUSD parent. D14/D29 review on 2026-10-03 re-read implementation and asset() at Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a) and audited verified StakedCap plus inherited ERC4626Upgradeable source. All wrapper-local share issuance transfers deposited cUSD before _mint; no wrapper-local minter authorization exists. Inherited cUSD controls describe parent issuance carried by the serial-claim dependency edge, not duplicate wrapper issuance. Live upgrade authority is not a D14 trigger. The sourced capSemanticsReview retains raiseable semantics; no D29 governance certificate is claimed.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U7SafeRootedFloorA)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable"
     }
   }

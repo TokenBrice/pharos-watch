@@ -2,7 +2,7 @@
   "id": "xusd-babelfish",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "XUSD is BabelFish's meta-stablecoin aggregator on Rootstock: any user mints XUSD 1:1 by depositing an accepted bAsset stablecoin (DLLR, USDT, USDC, DAI, DOC) and redeems back, subject to basket-balance constraints and fees. The masset manager (0x1440) is proxy-admin'd by a 2-of-5 Gnosis Safe and its owner is a 3-of-5 Gnosis Safe, together controlling the accepted-asset basket.",
     "controls": [

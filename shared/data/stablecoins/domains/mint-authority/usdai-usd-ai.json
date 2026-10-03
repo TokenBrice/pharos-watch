@@ -159,10 +159,34 @@
       }
     ],
     "economicCapSemantics": "raiseable",
+    "capSemanticsReview": {
+      "verdict": "raiseable-collateral-only",
+      "rationale": "D14/A7 review on 2026-10-03 at arbitrum block 511380969 (0x2a6cd4d58d54b2283a17efb0c64ebd708de7775b1fbe872c0fe2acf4c23cb661): the canonical implementation remains 0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9, with immutable PYUSD, escrow and bridge-adapter identities. Verified _deposit scales only the base-token amount and atomically transfers matching PYUSD; harvest mints only while calling the fixed escrow's harvest, whose current verified implementation 0x3eff54373bce60adac42daf8892684f5911d8acb transfers matching PYUSD. The hub's bridge mint reduces recorded bridged supply with checked subtraction, so it reallocates already-accounted liabilities rather than creating new aggregate backing-free supply. A pinned mint from the actual immutable bridge adapter for bridgedSupply()+1 reverted arithmetic underflow; an unpaid deposit also reverted. Current administrative roles cannot replace these immutable identities or expose raw native minting without an implementation upgrade, which is excluded as a standalone D14 trigger. Retain raiseable with raiseable-collateral-only review; no D29 claim is authored.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12bNativeCapReviews)",
+      "sources": [
+        {
+          "label": "Verified current USDai v1.7 implementation",
+          "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9"
+        },
+        {
+          "label": "Verified current USDai base-yield escrow implementation",
+          "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x3eff54373bce60adac42daf8892684f5911d8acb"
+        }
+      ]
+    },
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
       "sources": [
+        {
+          "label": "Verified current USDai v1.7 implementation",
+          "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9"
+        },
+        {
+          "label": "Verified current USDai base-yield escrow implementation",
+          "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x3eff54373bce60adac42daf8892684f5911d8acb"
+        },
         {
           "label": "Arbitrum verified USDai v1.5 implementation",
           "url": "https://arbitrum.blockscout.com/address/0x0ab74df531c0d8f1c46643e404b3d14723bbc212?tab=contract"
@@ -184,9 +208,9 @@
           "url": "https://arbitrum.blockscout.com/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b?tab=contract"
         }
       ],
-      "evidence": "Canonical-chain review at Arbitrum block 495109986 (2026-08-16T10:25:57Z): USDai proxy 0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef resolved to source-verified v1.5 implementation 0x0ab74df531c0d8f1c46643e404b3d14723bbc212 and ProxyAdmin 0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c. Native deposit issuance is bounded by PYUSD received by the hub, and base-yield issuance pulls matching PYUSD from escrow. The hub held 174219797.575409 PYUSD against 173248199.986009703234096152 canonical USDai plus 971597.576938 recorded bridged USDai liabilities, a combined 174219797.562947703234096152. This continuously reconciles the complete hub liability at the observation block. The ProxyAdmin owner remained the 172800-second DVNTimelock; its sole proposer and canceller remained the reviewed 3-of-3 Safe. Current collateral constraints can therefore be replaced only after the governed delay, supporting raiseable economic-cap semantics and a partially bounded admin posture. Satellite OToken role administration and LayerZero message-mint exposure are intentionally excluded from Mint Authority and retained in bridgeRouteRisk, preventing the same bridge control from being assessed in both modules. No named prudential regulator supervises USD.AI.",
-      "reviewer": "Codex USDai canonical mint-authority correction; Sol curation pass 2026-10-01 (CurA27A7A5)",
-      "reviewedAt": "2026-10-01",
+      "evidence": "Canonical-chain review at Arbitrum block 495109986 (2026-08-16T10:25:57Z): USDai proxy 0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef resolved to source-verified v1.5 implementation 0x0ab74df531c0d8f1c46643e404b3d14723bbc212 and ProxyAdmin 0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c. Native deposit issuance is bounded by PYUSD received by the hub, and base-yield issuance pulls matching PYUSD from escrow. The hub held 174219797.575409 PYUSD against 173248199.986009703234096152 canonical USDai plus 971597.576938 recorded bridged USDai liabilities, a combined 174219797.562947703234096152. This continuously reconciles the complete hub liability at the observation block. The ProxyAdmin owner remained the 172800-second DVNTimelock; its sole proposer and canceller remained the reviewed 3-of-3 Safe. Current collateral constraints can therefore be replaced only after the governed delay, supporting raiseable economic-cap semantics and a partially bounded admin posture. Satellite OToken role administration and LayerZero message-mint exposure are intentionally excluded from Mint Authority and retained in bridgeRouteRisk, preventing the same bridge control from being assessed in both modules. No named prudential regulator supervises USD.AI. D14/A7 review on 2026-10-03 at arbitrum block 511380969 (0x2a6cd4d58d54b2283a17efb0c64ebd708de7775b1fbe872c0fe2acf4c23cb661): the canonical implementation remains 0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9, with immutable PYUSD, escrow and bridge-adapter identities. Verified _deposit scales only the base-token amount and atomically transfers matching PYUSD; harvest mints only while calling the fixed escrow's harvest, whose current verified implementation 0x3eff54373bce60adac42daf8892684f5911d8acb transfers matching PYUSD. The hub's bridge mint reduces recorded bridged supply with checked subtraction, so it reallocates already-accounted liabilities rather than creating new aggregate backing-free supply. A pinned mint from the actual immutable bridge adapter for bridgedSupply()+1 reverted arithmetic underflow; an unpaid deposit also reverted. Current administrative roles cannot replace these immutable identities or expose raw native minting without an implementation upgrade, which is excluded as a standalone D14 trigger. Retain raiseable with raiseable-collateral-only review; no D29 claim is authored. This D14 refresh does not re-date older quorum or reserve-reconciliation observations.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12bNativeCapReviews)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable"
     }
   }

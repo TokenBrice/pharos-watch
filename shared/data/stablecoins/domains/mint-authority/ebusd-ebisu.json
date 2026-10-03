@@ -3,8 +3,8 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "verified",
-    "summary": "ebUSD is minted from Liquity-v2-style CDP branches when users open troves. The BoldToken is an OZ ERC1967Proxy; after setCollateralRegistry() the BoldToken owner was renounced (owner()=0x0). Upgrades are governed by a Gnosis Safe 2/3 (3 EOA owners) via EbisuUpgradeableV2 with a mandatory 7-day on-chain timelock. No pending upgrade exists. CCIP token pools are locked. CDP branches (BorrowerOperations) are the only mint path and their addresses are immutable in the CollateralRegistry.",
+    "confidence": "manual-review",
+    "summary": "ebUSD's documented issuance uses Liquity-v2-style CDP branches. Current Ethereum token reads confirm renounced ownership and locked CCIP token pools, while historical reviewed upgrades traverse a 2-of-3 Safe and seven-day timelock. The current BorrowerOperations implementation is not source-verified, and the complete Ethereum/Plasma collateral construction cannot be certified in this review. Economic cap semantics are therefore unknown rather than presumed collateral-only; the existing control encoding still derives partially-bounded-admin.",
     "controls": [
       {
         "label": "Ebisu CDP BorrowerOperations contracts (collateral mint)",
@@ -81,14 +81,26 @@
         ]
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unknown",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25295272: BoldToken (ebUSD) is an ERC1967Proxy (0x09fd37d9...) with impl BoldToken (0xa5ae6f43...). Source-confirmed: setCollateralRegistry() renounces ownership (owner()=0x0 at slot 101). Upgrade admin is Gnosis Safe 2/3 (0x25b85831..., 3 EOA owners, no modules, Safe 1.3.0) gated by 7-day on-chain UPGRADE_TIMELOCK in EbisuUpgradeableV2. No pending upgrade (pendingImplementation=0x0). ccipTokenPoolsLocked=true; the CCIP pool path is therefore a locked native-token guard, not an active bridge mint route. Mint is CDP-only via BorrowerOperations addresses set at init and unreachable without an upgrade through the 7-day timelock. LayerZero OFT adapters are transfer machinery reviewed separately under Bridge Risk and do not replace the native CDP controls. Economic-posture fields reviewed 2026-08-15: collateral-gated CDP issuance can be changed only through the enforced seven-day upgrade timelock, requires no off-chain reconciliation, and has no supervisor or attestor.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-16",
+      "evidence": "At Ethereum block 25295272: BoldToken (ebUSD) is an ERC1967Proxy (0x09fd37d9...) with impl BoldToken (0xa5ae6f43...). Source-confirmed: setCollateralRegistry() renounces ownership (owner()=0x0 at slot 101). Upgrade admin is Gnosis Safe 2/3 (0x25b85831..., 3 EOA owners, no modules, Safe 1.3.0) gated by 7-day on-chain UPGRADE_TIMELOCK in EbisuUpgradeableV2. No pending upgrade (pendingImplementation=0x0). ccipTokenPoolsLocked=true; the CCIP pool path is therefore a locked native-token guard, not an active bridge mint route. Mint is CDP-only via BorrowerOperations addresses set at init and unreachable without an upgrade through the 7-day timelock. LayerZero OFT adapters are transfer machinery reviewed separately under Bridge Risk and do not replace the native CDP controls. Economic-posture fields reviewed 2026-08-15: collateral-gated CDP issuance can be changed only through the enforced seven-day upgrade timelock, requires no off-chain reconciliation, and has no supervisor or attestor. D14/A7 review on 2026-10-03 at ethereum block 26113622 (0x5f41a07faa7b201ebd6180fd900a8e50989c7d3ac2f09c64d5b5d6272ad71cb9): the BoldToken implementation remains 0xa5ae6f430e89b2c571ebf091a20a3d74a28cb726, owner() is zero and ccipTokenPoolsLocked() is true. Its verified source restricts minting to BO/AP/CCIP callers, but the authored BorrowerOperations proxy currently resolves to 0x28fb5fd228b872c1c808637e8b85935c73e92cfb, whose source is unverified on both Etherscan and Blockscout and absent from Sourcify. Live bytecode and a token caller guard do not certify that branch's collateral enforcement, nor close the Plasma branch. A11 therefore changes economicCapSemantics to unknown without capSemanticsReview; the existing cap-limited minter plus separate same-chain cap raiser still encodes raiseable and derives partially-bounded-admin. Upgrade power alone is not evidence of arbitrary unbacked minting. No D29 claim is made. This D14 refresh does not re-date older quorum or reserve-reconciliation observations.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12bNativeCapReviews)",
+      "reviewedAt": "2026-10-03",
       "sources": [
+        {
+          "label": "Verified current ebUSD token implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa5ae6f430e89b2c571ebf091a20a3d74a28cb726"
+        },
+        {
+          "label": "Current unverified BorrowerOperations implementation",
+          "url": "https://etherscan.io/address/0x28fb5fd228b872c1c808637e8b85935c73e92cfb#code"
+        },
+        {
+          "label": "BorrowerOperations implementation verification status",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x28fb5fd228b872c1c808637e8b85935c73e92cfb"
+        },
         {
           "label": "Liquity Friendly Fork Program",
           "url": "https://docs.liquity.org/v2-documentation/friendly-fork-program"

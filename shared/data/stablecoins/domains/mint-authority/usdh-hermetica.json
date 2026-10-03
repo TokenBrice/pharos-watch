@@ -2,9 +2,9 @@
   "id": "usdh-hermetica",
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
-    "summary": "USDh's sole authored Stacks deployment is the canonical native-issuance route. Mints require a two-step backend attestation: a KYC-whitelisted minter calls request-mint and deposits BTC, then Hermetica's trader opens the delta-neutral hedge off-chain and calls confirm-mint to release USDh, making supply gated by Hermetica's off-chain operator. No bridge representation or bridge administrator is evidenced, so bridge machinery is outside Mint Authority.",
+    "summary": "USDh's sole authored Stacks deployment is the canonical native-issuance route. Mints require a two-step backend attestation: a KYC-whitelisted minter calls request-mint and deposits BTC, then Hermetica's trader opens the delta-neutral hedge off-chain and calls confirm-mint to release USDh, making supply gated by Hermetica's off-chain operator. No bridge representation or bridge administrator is evidenced, so bridge machinery is outside Mint Authority. D14 review 2026-10-03 reuses pinned owner evidence at Stacks height 9106999 (index hash 0x6211b0574e113e7ae2cdb5d4c8bf08caec41aab7c9829483e20e2c8b214b5c36), which establishes the owner as 2-of-3. The owner can authorize a replacement minting contract after 1008 burn blocks rather than only increase deposit-backed OTC capacity; the current OTC window is not a hard economic supply bound. Economic semantics are unbounded with periodic reconciliation. Multisig/backend roots do not qualify for D29 token governance.",
     "upgradeability": {
       "model": "custom",
       "implementationAddresses": [
@@ -121,13 +121,13 @@
         ]
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "none",
     "review": {
-      "evidence": "Pinned Hiro API reads at Stacks height 9101379 (index block 0x1e6c41a0dc2c44e0df3eea451b67078185990c09bfc27f604955bc83aa6eda8c) identify owner SMJSVT0J9K2DKM8QWXSHXPVTYPJBV4CC5P1ZXAW0; signer identities and threshold are not established. minting-otc-v1-1 and emergency-recover-v1 remain active, while minting-auto-v1-1 is inactive. The whitelist is enabled and token migration has not started. The fetched source retains the 1008-burn-block delay for owner changes and minting-contract additions; the OTC route remains capped at 1,000,000 USDh per 1,200-second reset window, while governance can authorize a replacement minting contract. The latest fetched monthly report is the August 20, 2026 snapshot published August 26, 2026.",
-      "reviewer": "Sol curation pass 2026-10-01 (CurB13XUSD)",
-      "reviewedAt": "2026-10-01",
+      "evidence": "Pinned Hiro API reads at Stacks height 9101379 (index block 0x1e6c41a0dc2c44e0df3eea451b67078185990c09bfc27f604955bc83aa6eda8c) identify owner SMJSVT0J9K2DKM8QWXSHXPVTYPJBV4CC5P1ZXAW0; signer identities and threshold are not established. minting-otc-v1-1 and emergency-recover-v1 remain active, while minting-auto-v1-1 is inactive. The whitelist is enabled and token migration has not started. The fetched source retains the 1008-burn-block delay for owner changes and minting-contract additions; the OTC route remains capped at 1,000,000 USDh per 1,200-second reset window, while governance can authorize a replacement minting contract. The latest fetched monthly report is the August 20, 2026 snapshot published August 26, 2026. D14 review 2026-10-03 reuses pinned owner evidence at Stacks height 9106999 (index hash 0x6211b0574e113e7ae2cdb5d4c8bf08caec41aab7c9829483e20e2c8b214b5c36), which establishes the owner as 2-of-3. The owner can authorize a replacement minting contract after 1008 burn blocks rather than only increase deposit-backed OTC capacity; the current OTC window is not a hard economic supply bound. Economic semantics are unbounded with periodic reconciliation. Multisig/backend roots do not qualify for D29 token governance.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U8SafeRootedFloorB)",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "Hermetica mint mechanism",

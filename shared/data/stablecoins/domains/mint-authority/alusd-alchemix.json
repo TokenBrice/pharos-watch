@@ -2,7 +2,7 @@
   "id": "alusd-alchemix",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "unknown",
     "summary": "Current Alchemix V3 native alUSD Alchemists are deployed on Ethereum, Arbitrum and Optimism and use USDC-denominated MYT collateral. The April 2026 migration supersedes the previous description of V2 as the current issuance mechanism. Legacy V2/token controls remain recorded where their permissions have not been disproved; V3 minter identity and proxy state are pinned, with remaining L2 cap and upgrade-envelope questions explicit. Metis remains a bridge representation.",
     "controls": [

@@ -2,9 +2,9 @@
   "id": "spusd-soulpeg",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciliation-unknown",
     "confidence": "verified",
-    "summary": "spUSD is a role-gated BSC wrapper: the SoulPeg wrapper contract (0x0e8fb2e…) holds MINTER_ROLE and BURNER_ROLE on-chain; DEFAULT_ADMIN_ROLE is held by EOA 0xf683ab3…. MAX_SUPPLY is an immutable constant at 1B tokens.",
+    "summary": "D14 review 2026-10-03: verified SPUSD.mint(address,uint256) checks only MINTER_ROLE and nominal MAX_SUPPLY, with no deposit/collateral check. AccessControl DEFAULT_ADMIN_ROLE can grant MINTER_ROLE to a recipient-controlled account. A one-billion nominal ceiling does not prevent durable unbacked supply reaching a chosen recipient; economic cap is unbounded and unknown reconciliation yields unbounded-reconciliation-unknown.",
     "controls": [
       {
         "label": "SoulPeg spUSD wrapper contract (MINTER_ROLE / BURNER_ROLE)",
@@ -74,13 +74,13 @@
         }
       ]
     },
-    "economicCapSemantics": "bounded",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At BSC block 103632643: hasRole(MINTER_ROLE, wrapper 0x0e8fb2e…) = true; hasRole(BURNER_ROLE, wrapper) = true; hasRole(DEFAULT_ADMIN_ROLE, EOA 0xf683ab3…) = true; wrapper owner() = 0xf683ab3… (EOA confirmed via eth_getCode). MAX_SUPPLY() = 1,000,000,000 tokens (immutable constant, no setter function). SoulPeg (spUSD) is a BNB Chain protocol with no disclosed registered entity; its own documentation states the contracts have not undergone a formal third-party audit and no reserve attestation or proof-of-reserves is published (reserves are on-chain USDC routed into Venus lending), so reconciliation is unknown. No named financial regulator, charter, or registry entry for any SoulPeg entity was found, so supervision is none. Economic-posture fields reviewed 2026-08-15: immutable token logic enforces the 1 billion maximum supply, but the operator-controlled sUSDC/Venus route has no whole-supply reconciliation and no regulator or independent attestor is evidenced.",
-      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At BSC block 103632643: hasRole(MINTER_ROLE, wrapper 0x0e8fb2e…) = true; hasRole(BURNER_ROLE, wrapper) = true; hasRole(DEFAULT_ADMIN_ROLE, EOA 0xf683ab3…) = true; wrapper owner() = 0xf683ab3… (EOA confirmed via eth_getCode). MAX_SUPPLY() = 1,000,000,000 tokens (immutable constant, no setter function). SoulPeg (spUSD) is a BNB Chain protocol with no disclosed registered entity; its own documentation states the contracts have not undergone a formal third-party audit and no reserve attestation or proof-of-reserves is published (reserves are on-chain USDC routed into Venus lending), so reconciliation is unknown. No named financial regulator, charter, or registry entry for any SoulPeg entity was found, so supervision is none. Economic-posture fields reviewed 2026-08-15: immutable token logic enforces the 1 billion maximum supply, but the operator-controlled sUSDC/Venus route has no whole-supply reconciliation and no regulator or independent attestor is evidenced. D14 review 2026-10-03: verified SPUSD.mint(address,uint256) checks only MINTER_ROLE and nominal MAX_SUPPLY, with no deposit/collateral check. AccessControl DEFAULT_ADMIN_ROLE can grant MINTER_ROLE to a recipient-controlled account. A one-billion nominal ceiling does not prevent durable unbacked supply reaching a chosen recipient; economic cap is unbounded and unknown reconciliation yields unbounded-reconciliation-unknown.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U11BoundedB)",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "SoulPeg docs",

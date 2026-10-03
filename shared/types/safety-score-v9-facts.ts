@@ -768,6 +768,27 @@ const V9ModulesOrGuardsSchema = z.enum(["present", "none-detected", "not-applica
 
 const V9IncidentStateSchema = z.enum(["none", "active", "resolved", "unknown"]);
 
+const V9IssuanceGovernanceSchema = z
+  .object({
+    coverage: z.enum(["complete", "incomplete"]),
+    incompleteReasons: CanonicalStringArraySchema,
+    governorAuthorityKey: CanonicalTextSchema,
+    minUnavoidableDelaySec: z.number().finite().int().nonnegative().nullable(),
+    votingPower: z.enum(["lock-escrowed", "past-block-checkpoint", "live-balance", "unknown"]),
+    enumerable: z.boolean(),
+    nonGovernorUnboundedPathKeys: CanonicalStringArraySchema,
+  })
+  .strict()
+  .superRefine((governance, ctx) => {
+    if ((governance.coverage === "complete") !== (governance.incompleteReasons.length === 0)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Issuance governance incompleteReasons must be empty if and only if coverage is complete",
+        path: ["incompleteReasons"],
+      });
+    }
+  });
+
 /**
  * Reviewed control posture shared by the compiled control fact
  * (`V9DeploymentControlFactV2`) and the producer-side control review overlay
@@ -803,6 +824,7 @@ export const V9DeploymentControlFactBaseSchema = z
     executionScopeComplete: z.boolean().optional(),
     scopeDiagnostics: CanonicalStringArraySchema.optional(),
     moduleImpact: V9ExactControlPolicySchema.shape.moduleImpactStates.element.optional(),
+    issuanceGovernance: V9IssuanceGovernanceSchema.optional(),
     incidentState: V9IncidentStateSchema,
     failureDomains: CanonicalFailureDomainsSchema,
   })

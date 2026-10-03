@@ -1119,12 +1119,18 @@
         "none-resolved": 100,
         "bounded-admin": 85,
         "partially-bounded-admin": 70,
+        "unbounded-governed": 60,
         "concentrated-admin": 55,
         "collateral-gated": 50,
         "unbounded-reconciled": 55,
         "unbounded-reconciliation-unknown": 55,
-        "unbounded-or-compromised": 25,
+        "unbounded-unreconciled": 25,
+        "compromised": 25,
         "unknown": 50
+      },
+      "governedIssuance": {
+        "minUnavoidableDelaySec": 172800,
+        "admissibleVotingPower": ["lock-escrowed", "past-block-checkpoint"]
       },
       "mintPostureGrading": {
         "prudentialReconciled": 80,

@@ -2,7 +2,7 @@
   "id": "wclp-ripio",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "WCLP has seven reviewed native issuer deployments on Ethereum, Base, Worldchain, BSC, Polygon, Gnosis, and HyperEVM. Ripio's issuer EOA directly holds MINTER_ROLE and UPGRADER_ROLE on the first six tokens; HyperEVM's deployment initializer assigns MINTER_ROLE, UPGRADER_ROLE, and every other privileged role to the reviewed 4-of-7 Ripio Safe. The LimitedMinter contract is an additional bounded-but-raiseable issuer minter on four native deployments. The separate LimitedMinterBridge burn/mint adapter is reviewed only in Bridge Risk.",
     "upgradeability": {

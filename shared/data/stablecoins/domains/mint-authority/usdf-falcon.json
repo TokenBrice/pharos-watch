@@ -2,7 +2,7 @@
   "id": "usdf-falcon",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "USDf has one proven native issuance deployment on Ethereum. Its transparent proxy is administered through a zero-delay ProxyAdmin owned by a 4/6 Safe, while the Ethereum PreCollateralizedMinter authorizes native minting through signed requests without an on-chain collateral check or supply cap; BSC, Base, and XDC transfer-rail controls are reviewed separately under Bridge Risk.",
     "upgradeability": {

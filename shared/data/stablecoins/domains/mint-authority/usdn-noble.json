@@ -2,7 +2,7 @@
   "id": "usdn-noble",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
     "summary": "Noble USDN is the Noble representation of M0's M, not an independently issued Noble-native liability. The inherited parent issuance rail is M0's Ethereum MinterGateway; the Noble uusdn route, Portal, Portal owner Safe, pauser, peers, and module administration are bridge machinery reviewed under Bridge Risk.",
     "inheritedFrom": "m-m0",

@@ -87,10 +87,26 @@
       }
     ],
     "economicCapSemantics": "raiseable",
+    "capSemanticsReview": {
+      "verdict": "raiseable-collateral-only",
+      "rationale": "Exact-match StakedmsUSD and ERC4626Upgradeable source exposes share minting through deposit/mint, whose _deposit transfers MSUSD from the caller before _mint(receiver,shares). Owner deposit/cooldown/coverage/rewarder/fee-silo parameters do not add a share minter. mintRewards invokes parent MSUSD minting into the vault/fee silo, not msY share minting; that parent issuance risk, including the authored inherited direct-minter row, belongs to the MSUSD serial-claim dependency. UUPS replacement is separate Upgrade Risk, not a D14 trigger.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (MiscRaiseable)",
+      "sources": [
+        {
+          "label": "Exact-match StakedmsUSD and inherited ERC4626 share mint source, D14 reviewed 2026-10-03",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x843e3a09675e5fa00951c55727f8b0f2076c0d2c?fields=sources,compilation"
+        }
+      ]
+    },
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
       "sources": [
+        {
+          "label": "Exact-match StakedmsUSD and inherited ERC4626 share mint source, D14 reviewed 2026-10-03",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x843e3a09675e5fa00951c55727f8b0f2076c0d2c?fields=sources,compilation"
+        },
         {
           "label": "Main Street docs",
           "url": "https://mainstreet-finance.gitbook.io/mainstreet.finance/"
@@ -112,9 +128,9 @@
           "url": "https://ethereum-rpc.publicnode.com"
         }
       ],
-      "evidence": "Local variant metadata, parent MSUSD mintAuthority, and Ethereum RPC/source reads show msY as a wrapper over MSUSD rather than a separate base stablecoin mint path. At block 25295174: Safe API confirmed guard=0x0 (no guard), enabledModules=[], threshold=3 of 4 owners. The owner Safe has parameter-only influence (deposit toggles and cooldown settings); share issuance follows only MSUSD deposits into the vault. Economic-posture fields reviewed 2026-08-15: local msY shares are minted only against deposited MSUSD, but repo evidence does not resolve upgradeability or every possible mint bypass; reconciliation is not applicable and no local attestor or prudential supervisor is evidenced. Wave 2 external review 2026-08-15: exact-match StakedmsUSD source and Ethereum state at block 25762225 resolve msY as a UUPS proxy whose ordinary shares remain asset-deposit-gated and whose owner upgrade path must be scheduled through an enforced delay; the current zero delay value invokes the one-day default, and the owner cannot configure less than one hour, supporting raiseable semantics.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "Local variant metadata, parent MSUSD mintAuthority, and Ethereum RPC/source reads show msY as a wrapper over MSUSD rather than a separate base stablecoin mint path. At block 25295174: Safe API confirmed guard=0x0 (no guard), enabledModules=[], threshold=3 of 4 owners. The owner Safe has parameter-only influence (deposit toggles and cooldown settings); share issuance follows only MSUSD deposits into the vault. Economic-posture fields reviewed 2026-08-15: local msY shares are minted only against deposited MSUSD, but repo evidence does not resolve upgradeability or every possible mint bypass; reconciliation is not applicable and no local attestor or prudential supervisor is evidenced. Wave 2 external review 2026-08-15: exact-match StakedmsUSD source and Ethereum state at block 25762225 resolve msY as a UUPS proxy whose ordinary shares remain asset-deposit-gated and whose owner upgrade path must be scheduled through an enforced delay; the current zero delay value invokes the one-day default, and the owner cannot configure less than one hour, supporting raiseable semantics. D14/D29 sweep (2026-10-03): Exact-match StakedmsUSD and ERC4626Upgradeable source exposes share minting through deposit/mint, whose _deposit transfers MSUSD from the caller before _mint(receiver,shares). Owner deposit/cooldown/coverage/rewarder/fee-silo parameters do not add a share minter. mintRewards invokes parent MSUSD minting into the vault/fee silo, not msY share minting; that parent issuance risk, including the authored inherited direct-minter row, belongs to the MSUSD serial-claim dependency. UUPS replacement is separate Upgrade Risk, not a D14 trigger. Pinned block hashes read this review: ethereum 25295174 0x3720d4bd36629a6d523578717573c292cc1a681c82b87015bc305c4129b26fcb. No transaction was sent; no governed-issuance qualification is claimed.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (MiscRaiseable)",
+      "reviewedAt": "2026-10-03"
     }
   }
 }

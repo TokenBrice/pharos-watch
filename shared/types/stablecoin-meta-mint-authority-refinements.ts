@@ -264,16 +264,134 @@ function validateEconomicControlEvidence({ profile, ctx, profileHasSourceLinks }
   }
 }
 
+function validateGovernedIssuance({ profile, ctx, controls }: MintAuthorityRefinementState): void {
+  const governed = profile.governedIssuance;
+  if (governed) {
+    if (profile.economicCapSemantics !== "unbounded") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "governedIssuance requires economicCapSemantics unbounded",
+        path: ["economicCapSemantics"],
+      });
+    }
+    if (profile.inheritedFrom != null || profile.mintPath === "wrapped-or-variant-inherited") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "governedIssuance is not allowed on inherited or wrapped mint profiles",
+        path: ["governedIssuance"],
+      });
+    }
+    if (!controls.some((control) => control.executionScope?.paths.some(
+      (path) => path.capSemantics.kind === "unbounded" || path.capSemantics.kind === "unknown" ||
+        path.claimImpairment === "unbounded" || path.claimImpairment === "unknown",
+    ))) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "governedIssuance requires an unbounded or unknown execution-scope path",
+        path: ["governedIssuance"],
+      });
+    }
+    const matchingControls = controls.filter(
+      (control) => control.chain != null && control.address != null &&
+        `${control.chain}:${control.address.toLowerCase()}` === governed.governorControlRef,
+    );
+    if (matchingControls.length !== 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "governedIssuance.governorControlRef must resolve to exactly one authored EVM control",
+        path: ["governedIssuance", "governorControlRef"],
+      });
+    } else {
+      const governor = matchingControls[0]!;
+      if (governor.authorityType !== "dao-governor") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "governedIssuance.governorControlRef must name a dao-governor control",
+          path: ["governedIssuance", "governorControlRef"],
+        });
+      }
+      if ((governed.votingPower === "lock-escrowed" || governed.votingPower === "past-block-checkpoint") &&
+          (governor.weightedQuorum != null || governor.threshold != null || governor.signerCount != null)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "governedIssuance token-voting governor must not carry weightedQuorum, threshold or signerCount",
+          path: ["governedIssuance", "governorControlRef"],
+        });
+      }
+      if (!governor.executionScope) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "governedIssuance governor control requires executionScope",
+          path: ["controls", controls.indexOf(governor), "executionScope"],
+        });
+      }
+    }
+  }
+  if (profile.authorityPosture === "unbounded-governed" && !governed) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "authorityPosture unbounded-governed requires governedIssuance",
+      path: ["governedIssuance"],
+    });
+  }
+}
+
+function validateCapSemanticsReview({ profile, ctx, controls }: MintAuthorityRefinementState): void {
+  const cap = profile.economicCapSemantics;
+  const capReview = profile.capSemanticsReview;
+  const hasIssuanceAuthority = controls.some(
+    (control) => control.directMintAbility === "direct" ||
+      control.directMintAbility === "can-authorize" ||
+      control.canRaiseCap === true,
+  );
+  if ((cap === "raiseable" || cap === "bounded" || cap === "collateral-gated") && hasIssuanceAuthority) {
+    const requiredVerdict = cap === "raiseable" ? "raiseable-collateral-only" : "bounded-by-construction";
+    if (!capReview) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `economicCapSemantics ${cap} with issuance authority requires capSemanticsReview`,
+        path: ["capSemanticsReview"],
+      });
+    } else if (capReview.verdict !== requiredVerdict) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `economicCapSemantics ${cap} requires capSemanticsReview verdict ${requiredVerdict}`,
+        path: ["capSemanticsReview", "verdict"],
+      });
+    }
+  }
+  if (capReview && (cap === "unbounded" || cap === "unknown")) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `capSemanticsReview is not allowed with economicCapSemantics ${cap}`,
+      path: ["capSemanticsReview"],
+    });
+  }
+}
+
+function validateActiveIncidentPosture({ profile, ctx }: MintAuthorityRefinementState): void {
+  const activeIncident = profile.mintIncidents?.some((incident) => incident.status === "active") ?? false;
+  if ((profile.authorityPosture === "compromised") !== activeIncident) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: activeIncident
+        ? "active mint incidents require authorityPosture compromised"
+        : "authorityPosture compromised requires an active mint incident",
+      path: ["authorityPosture"],
+    });
+  }
+}
+
 function validateMintPathPostureConsistency({ profile, ctx }: MintAuthorityRefinementState): void {
   if (
     profile.mintPath === "unknown" &&
     profile.authorityPosture !== "unknown" &&
-    profile.authorityPosture !== "unbounded-or-compromised"
+    profile.authorityPosture !== "unbounded-unreconciled"
   ) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message:
-        "mintPath unknown should use authorityPosture unknown unless evidence supports unbounded-or-compromised",
+        "mintPath unknown should use authorityPosture unknown unless evidence supports unbounded-unreconciled",
       path: ["authorityPosture"],
     });
   }
@@ -291,5 +409,8 @@ export function validateMintAuthorityProfile(profile: MintAuthorityProfile, ctx:
   validateAuthoredControls(state);
   validateAuthorityPosture(state);
   validateEconomicControlEvidence(state);
+  validateGovernedIssuance(state);
+  validateCapSemanticsReview(state);
+  validateActiveIncidentPosture(state);
   validateMintPathPostureConsistency(state);
 }

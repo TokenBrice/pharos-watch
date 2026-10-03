@@ -1,6 +1,22 @@
 {
   "id": "sxsrlusd-sentora",
   "mintAuthority": {
+    "capSemanticsReview": {
+      "verdict": "bounded-by-construction",
+      "rationale": "Pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). The pinned immutable VaultV2 source routes deposit/mint through enter(), which transfers underlying assets before createShares(). Curator increaseAbsoluteCap/increaseRelativeCap and addAdapter govern allocation limits, not arbitrary recipient minting; owner/curator, deposit-gate and fee-recipient settings cannot bypass this accounting. accrueInterest() separately creates fee shares under immutable MAX_PERFORMANCE_FEE (50% of interest) and MAX_MANAGEMENT_FEE (5% annualized) limits, not discretionary arbitrary-share issuance. There is no local upgrade entrypoint. Inherited controls concern rlusd-ripple, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "sources": [
+        {
+          "label": "Verified current local mint implementation/source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+        },
+        {
+          "label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2",
+          "url": "https://etherscan.io/block/26113624"
+        }
+      ]
+    },
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
@@ -200,6 +216,8 @@
     "review": {
       "disposition": "scoreable",
       "sources": [
+        {"label": "Verified current local mint implementation/source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"},
+        {"label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2", "url": "https://etherscan.io/block/26113624"},
         {
           "label": "Exact Sentora vault",
           "url": "https://app.morpho.org/ethereum/vault/0xfc8c624b6080a0a780583799f2a862de936f6e22"
@@ -237,8 +255,8 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbe286431454714f511008713973d3b053a2d38f3"
         }
       ],
-      "evidence": "The technical local mint/parameter inventory is reverified at Ethereum block 26110183: immutable exact VaultV2 issues deposit-backed and accrued fee shares; governance cannot replace its bytecode. Owner is Spark SPARK_PROXY with current DSPauseProxy/StarGuard governance execution converging on Chief-authorized DSPause (172800-second scheduling), plus revocation-only ESM. Curator is the listed 2-of-2 Safe with re-read 1-of-1 and 1-of-2 nested branches; adapter/cap increases wait 604800 seconds and fee changes 259200 seconds. Governance payload/ward/delay changes and parameter-driven economic loss remain powers, not unknown identities or immutable protections. Human signer independence and key custody are not established or credited. Missing financial assurance and legal insolvency priority remain in Backing evidence, not an unresolved native mint identity.",
-      "reviewer": "Sol refinement 2026-10-03 (Refine13)",
+      "evidence": "The technical local mint/parameter inventory is reverified at Ethereum block 26110183: immutable exact VaultV2 issues deposit-backed and accrued fee shares; governance cannot replace its bytecode. Owner is Spark SPARK_PROXY with current DSPauseProxy/StarGuard governance execution converging on Chief-authorized DSPause (172800-second scheduling), plus revocation-only ESM. Curator is the listed 2-of-2 Safe with re-read 1-of-1 and 1-of-2 nested branches; adapter/cap increases wait 604800 seconds and fee changes 259200 seconds. Governance payload/ward/delay changes and parameter-driven economic loss remain powers, not unknown identities or immutable protections. Human signer independence and key custody are not established or credited. Missing financial assurance and legal insolvency priority remain in Backing evidence, not an unresolved native mint identity. D14/A7/A10 review 2026-10-03, pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). The pinned immutable VaultV2 source routes deposit/mint through enter(), which transfers underlying assets before createShares(). Curator increaseAbsoluteCap/increaseRelativeCap and addAdapter govern allocation limits, not arbitrary recipient minting; owner/curator, deposit-gate and fee-recipient settings cannot bypass this accounting. accrueInterest() separately creates fee shares under immutable MAX_PERFORMANCE_FEE (50% of interest) and MAX_MANAGEMENT_FEE (5% annualized) limits, not discretionary arbitrary-share issuance. There is no local upgrade entrypoint. Inherited controls concern rlusd-ripple, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
       "reviewedAt": "2026-10-03",
       "scopedQuestions": [
         {

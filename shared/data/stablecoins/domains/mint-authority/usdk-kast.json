@@ -2,7 +2,7 @@
   "id": "usdk-kast",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
     "summary": "USDK is an M0-backed Solana representation, not an independently issued canonical native USDK deployment. Issuance exposure is inherited from the Ethereum M0 MinterGateway; the Solana Portal, USDK extension PDA, extension admin, and mutable extension program are representation-route machinery reviewed under Bridge Risk.",
     "inheritedFrom": "m-m0",

@@ -2,7 +2,7 @@
   "id": "iusd-indigo-protocol",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "bounded-admin",
     "confidence": "verified",
     "summary": "iUSD is minted on Cardano through Indigo's overcollateralized CDPs and its documented 1:1 Peg Stabilization Module swaps against approved stable collateral. INDY token holders govern collateral onboarding, parameters and PSM pairs, including enabling or disabling minting and redemption directions.",
     "controls": [

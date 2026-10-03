@@ -2,9 +2,9 @@
   "id": "reusd-resupply",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
-    "summary": "REUSD mint() accepts the immutable Core owner or an authorized token operator. At Ethereum block 26095801, Registry 0x10101010e0c3171d894b71b3400668af311e7d94 is an active direct mint operator; its mint() accepts registered lending pairs. Core.voter() resolves to 0x11111111063874ce8dc6232cb5c1c849359476e6, with a seven-day voting period and one-day execution delay. Core can authorize additional operators through governance; the earlier claim that no direct operators were set is incorrect.",
+    "summary": "REUSD's immutable token accepts its Core owner or authorized operators for minting without collateral checks or a durable supply ceiling. Core's Voter currently uses a seven-day voting period followed by a one-day execution delay, but Core can directly mint or authorize arbitrary operators through its execution path. Exhaustive operator, hook, guardian and registered-pair closure is not certified, so D14 is unbounded and D29 is withheld; reconciliation is not-applicable.",
     "upgradeability": {
       "model": "immutable",
       "implementationAddresses": [
@@ -89,7 +89,7 @@
         "evidence": "At Ethereum block 26095801, REUSD operators(Registry) returned true. Registry mint(receiver,amount) requires pairsByName[IERC20Metadata(msg.sender).name()] == msg.sender, then invokes token.mint(receiver,amount). The current pair registry returns 22 addresses. This is native issuance through registered collateral pairs, not a bridge controller."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
@@ -113,11 +113,31 @@
         {
           "label": "Resupply multisig and admin permissions",
           "url": "https://docs.resupply.finance/faq/multisig-and-admin-permissions.md"
+        },
+        {
+          "label": "Verified Stablecoin unchecked owner/operator mint",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x57ab1e0003f623289cd798b1824be09a793e4bec"
+        },
+        {
+          "label": "Verified Core arbitrary Voter and selector-operator execution",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc07e000044f95655c11fda4cd37f70a94d7e0a7d"
+        },
+        {
+          "label": "Verified Voter execution clock and mutable governance parameters",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11111111063874ce8dc6232cb5c1c849359476e6"
+        },
+        {
+          "label": "Pinned Core OperatorSet history through block 26113561",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=26113561&address=0xc07e000044f95655c11fda4cd37f70a94d7e0a7d&topic0=0xea1c80a55152994df103f78d348a42089784a75528faa5b2c312d7cf8b886d6d"
+        },
+        {
+          "label": "Verified GovStaker epoch accounting",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x22222222e9fe38f6f1fc8c61b25228adb4d8b953"
         }
       ],
-      "evidence": "At Ethereum block 25321527: REUSD mint() is gated by owner (Core 0xc07e…) or direct stablecoin operators; Core.voter() returns 0x11111111063874ce8dc6232cb5c1c849359476e6. The Voter contract enforces token-weighted proposal execution with 30% quorum, a 7-day voting period, and a 1-day execution delay. Resupply's docs state contracts are owned by Core and governed through on-chain voting. The current GuardianUpgradeable proxy is controlled by a 3-of-5 Safe and has bounded emergency/operator permissions, but the active implementation does not expose the older revertVoter path and does not hold direct REUSD mint authority. Mint authority is therefore DAO-governed with emergency multisig controls. reUSD minting is over-collateralised issuance gated by owner (the Resupply Core governance contract) or explicitly set operators; at block 25321527 Core execution is controlled by the token-weighted Voter contract enforcing a 30% quorum, a 7-day voting period and a 1-day execution delay, so authorising new mint capacity requires on-chain governance behind an independently enforced delay. The encoding-derived direct-mint cap is therefore economically raiseable rather than unbounded, placing reUSD outside the fiat-custodial centralized-mint scope. Economic-posture fields reviewed 2026-08-15: token-weighted governance and its one-day execution delay bound new mint authority, current issuance is on-chain CDP collateral, and no supervisor or attestor is evidenced.",
-      "reviewer": "Codex governance review; Claude SOL-V mint-tier mop-up; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "Historical governance review at Ethereum block 25321527 identified Core ownership, the token-weighted Voter with 30% quorum, seven-day voting and one-day execution delay, and emergency multisig permissions; the 2026-10-01 review corrected the earlier no-direct-operator claim by proving Registry is an active token operator for registered lending pairs. D14/D29 sweep 2026-10-03 at Ethereum block 26113561 (hash 0xf8669491a2d5c3e0dfe4c4233ed6861dcbe45f046fac9804a60c40ae5ee6846e): verified Stablecoin.mint allows Core owner or operators to mint any amount to any recipient without checking posted collateral or a durable bound; only Core can set token operators. A one-REUSD eth_call from Core to 0x000000000000000000000000000000000000beef succeeded without collateral calldata; no transaction was submitted. Core.execute admits arbitrary Voter calls and selector-permitted operator calls, so the old inference that collateralized current pairs or a governance delay makes root mint capacity raiseable is superseded: D14 is unbounded. Core.voter(), votingPeriod(), executionDelay() and quorumPct() remain 0x11111111063874ce8dc6232cb5c1c849359476e6, 604800, 86400 and 3000 respectively. There is no separate Core TimelockController: Voter._canExecute itself enforces createdAt + votingPeriod + executionDelay. Source permits Core to alter those parameters, replace Voter and authorize selector-level operators. OperatorSet history replay resolved 23 active permission tuples, including global selector and upgrade grants. GovStaker epoch weights are sourced, but admission to the allowed voting-power modes and every runtime/signer-bound execution path are not certified. D29 is withheld because global operator selector reach, hook behavior, guardian upgrades, parameter-reduction paths and all registered-pair/direct-operator mint paths lack complete closure certificates. Current seven-plus-one-day timing is not falsely promoted to a minimum unavoidable delay across all roots. No governedIssuance or unbounded-governed posture is authored; not-applicable reconciliation and no supervision yield unbounded-unreconciled.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U6GovAmbiguousB)",
+      "reviewedAt": "2026-10-03"
     }
   }
 }

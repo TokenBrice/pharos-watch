@@ -2,9 +2,9 @@
   "id": "gho-aave",
   "mintAuthority": {
     "mintPath": "facilitator-bucket-mint",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
-    "summary": "GHO minting depends on DAO-approved facilitator contracts and bucket capacity rather than unrestricted issuer minting.",
+    "summary": "GHO has economically unbounded native issuance authority: the DAO executor can add arbitrary EOA facilitators without a collateral check, and the independent 2-of-3 Risk Council can raise the mainnet direct facilitator bucket and mint to any recipient without a deposit. Current buckets are numeric limits, not economic backing constraints. Governance V3 uses past-block storage proofs and a delayed ordinary execution path, but the Council path prevents governance-only qualification; no active mint compromise is alleged.",
     "upgradeability": {
       "model": "immutable",
       "implementationAddresses": [
@@ -54,6 +54,90 @@
             "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readContract"
           }
         ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5300a1a15135ea4dc7ad5a167152c01efc9b192a"
+            },
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+            },
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x58bcb647c4beff253b4b6996c62f737b783f2cdd"
+            },
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7222182cb9c5320587b5148bf03eee107ad64578"
+            }
+          ],
+          "pin": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:8c604a38d041e5836c3eb1960ee826eca38582abae736bd27684984cea506216",
+            "signerIdentity": "PayloadsController 0xdabad81af85554e9ae636395611c58f7ec1aaec5 is executor owner; ordinary Governance V3 route uses past-block proofs; cross-chain infrastructure, upgrades and emergency bypass closure not certified"
+          },
+          "observedState": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:8c604a38d041e5836c3eb1960ee826eca38582abae736bd27684984cea506216",
+            "signerIdentity": "PayloadsController 0xdabad81af85554e9ae636395611c58f7ec1aaec5 is executor owner; ordinary Governance V3 route uses past-block proofs; cross-chain infrastructure, upgrades and emergency bypass closure not certified"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "ordinary-governance-facilitator-authorization",
+              "targetDeployment": "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x7fc24def",
+                "0xaf93df57",
+                "0x2f2ff15d"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 432003,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "gho-aave"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "evidence": "At Ethereum block 26095800, hasRole() returned true for this executor under DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, and BUCKET_MANAGER_ROLE. getFacilitatorsList() returned eight facilitator contracts."
       },
       {
@@ -77,6 +161,80 @@
             "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
           }
         ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x5513224daaeabca31af5280727878d52097afa05",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5513224daaeabca31af5280727878d52097afa05"
+            },
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe4c958de49303c9be571e00582cf9454586de76f"
+            }
+          ],
+          "pin": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:bced558b5edce6bcf0f79c6dc74ceca089ff6be9431515895b02fb828f451a8f;implementation:0xe4c958de49303c9be571e00582cf9454586de76f;sha256:bf23554839e3f633fbf56eb76f978370b787c13346191745fd3d9c2711604fef",
+            "signerIdentity": "owner 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; guardian 0x8513e6f37dbc52de87b166980fa3f50639694b60; onlyOwnerOrGuardian admits both; pool lending/configuration and proxy-upgrade closure not certified"
+          },
+          "observedState": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:bced558b5edce6bcf0f79c6dc74ceca089ff6be9431515895b02fb828f451a8f;implementation:0xe4c958de49303c9be571e00582cf9454586de76f;sha256:bf23554839e3f633fbf56eb76f978370b787c13346191745fd3d9c2711604fef",
+            "signerIdentity": "owner 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; guardian 0x8513e6f37dbc52de87b166980fa3f50639694b60; onlyOwnerOrGuardian admits both; pool lending/configuration and proxy-upgrade closure not certified"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "council-or-owner-pool-prefunding",
+              "targetDeployment": "ethereum:0x5513224daaeabca31af5280727878d52097afa05",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x749b1e8b"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "raiseable",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "gho-aave"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 250,000,000 GHO capacity and 135,000,000 GHO level."
       },
       {
@@ -100,6 +258,80 @@
             "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
           }
         ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xb639d208bcf0589d54fac24e655c79ec529762b8",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb639d208bcf0589d54fac24e655c79ec529762b8"
+            }
+          ],
+          "pin": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:f82aa2521daceb45649f1a7248bcaa230167b9f72890cfff0f15dfe16a7751a0",
+            "signerIdentity": "flashLoan public; principal transferFrom and burn mandatory in same transaction; ACL pool-admin fee/treasury permission closure not certified"
+          },
+          "observedState": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:f82aa2521daceb45649f1a7248bcaa230167b9f72890cfff0f15dfe16a7751a0",
+            "signerIdentity": "flashLoan public; principal transferFrom and burn mandatory in same transaction; ACL pool-admin fee/treasury permission closure not certified"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "atomic-flash-mint",
+              "targetDeployment": "ethereum:0xb639d208bcf0589d54fac24e655c79ec529762b8",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x5cffe9de"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn"
+              ],
+              "capSemantics": {
+                "kind": "bounded",
+                "bound": {
+                  "amount": 2000000,
+                  "unit": "token-units"
+                }
+              },
+              "claimImpairment": "none",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "gho-aave"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 2,000,000 GHO capacity and zero GHO level."
       },
       {
@@ -123,6 +355,80 @@
             "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
           }
         ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x2bd010ab5393ab51b601b99c4b33ba148d9466e9",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2bd010ab5393ab51b601b99c4b33ba148d9466e9"
+            },
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+            }
+          ],
+          "pin": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:8ae4454d78278df2c1db9f6f9ed0fa8dde5e81b1c63e1e9e85118f38b93db8db",
+            "signerIdentity": "DEFAULT_ADMIN and MINTER 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; full facilitator role grant/revoke history checked at pin; upstream executor bypass closure not certified"
+          },
+          "observedState": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:8ae4454d78278df2c1db9f6f9ed0fa8dde5e81b1c63e1e9e85118f38b93db8db",
+            "signerIdentity": "DEFAULT_ADMIN and MINTER 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; full facilitator role grant/revoke history checked at pin; upstream executor bypass closure not certified"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "role-authorized-arbitrary-recipient-mint",
+              "targetDeployment": "ethereum:0x2bd010ab5393ab51b601b99c4b33ba148d9466e9",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 432003,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "gho-aave"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 50,000,000 GHO capacity and 50,000,000 GHO level."
       },
       {
@@ -146,6 +452,84 @@
             "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
           }
         ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe9ac5231faecb633da0fe85fcb2785b8363427d2"
+            },
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+            },
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x46aa1063e5265b43663e81329333b47c517a5409"
+            }
+          ],
+          "pin": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:8ae4454d78278df2c1db9f6f9ed0fa8dde5e81b1c63e1e9e85118f38b93db8db",
+            "signerIdentity": "DEFAULT_ADMIN and MINTER 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; additional MINTER 0x8513e6f37dbc52de87b166980fa3f50639694b60 with no delay; capacity can be raised by Council through Bucket Steward"
+          },
+          "observedState": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:8ae4454d78278df2c1db9f6f9ed0fa8dde5e81b1c63e1e9e85118f38b93db8db",
+            "signerIdentity": "DEFAULT_ADMIN and MINTER 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; additional MINTER 0x8513e6f37dbc52de87b166980fa3f50639694b60 with no delay; capacity can be raised by Council through Bucket Steward"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "role-authorized-arbitrary-recipient-mint",
+              "targetDeployment": "ethereum:0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "gho-aave"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 310,000,000 GHO capacity and 310,000,000 GHO level."
       },
       {
@@ -169,6 +553,80 @@
             "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
           }
         ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x2ce01c87fec1b71a9041c52caed46fc5f4807285",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2ce01c87fec1b71a9041c52caed46fc5f4807285"
+            },
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc718786a7e45353835de634897385b3371a749f0"
+            }
+          ],
+          "pin": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:932478c708ab90ad297875ae984f9707d13e22db8b536d102285975874c399b5;implementation:0xc718786a7e45353835de634897385b3371a749f0;sha256:3a6723c10cac95f1a4a1043cad069e9ae9d6eae884b27cdf63b6c5a2b30b3e95",
+            "signerIdentity": "owner 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; guardian 0x8513e6f37dbc52de87b166980fa3f50639694b60; onlyOwnerOrGuardian admits both; pool lending/configuration and proxy-upgrade closure not certified"
+          },
+          "observedState": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:932478c708ab90ad297875ae984f9707d13e22db8b536d102285975874c399b5;implementation:0xc718786a7e45353835de634897385b3371a749f0;sha256:3a6723c10cac95f1a4a1043cad069e9ae9d6eae884b27cdf63b6c5a2b30b3e95",
+            "signerIdentity": "owner 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; guardian 0x8513e6f37dbc52de87b166980fa3f50639694b60; onlyOwnerOrGuardian admits both; pool lending/configuration and proxy-upgrade closure not certified"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "council-or-owner-pool-prefunding",
+              "targetDeployment": "ethereum:0x2ce01c87fec1b71a9041c52caed46fc5f4807285",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x749b1e8b"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "raiseable",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "gho-aave"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 175,000,000 GHO capacity and 45,000,000 GHO level."
       },
       {
@@ -192,6 +650,80 @@
             "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
           }
         ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea"
+            },
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x68807d04df1f1bb74bb7498b1e832d2ce356cd18"
+            }
+          ],
+          "pin": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:0e40808f1ddd94722c78590a7ac9de7fb79a4261dd207fd7a0942a92f0285319;implementation:0x68807d04df1f1bb74bb7498b1e832d2ce356cd18;sha256:4c777ea06dd7f5de15924eef965975c3b36b15697863f0d53c5b33b8fdc382b8",
+            "signerIdentity": "owner 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; guardian 0x8513e6f37dbc52de87b166980fa3f50639694b60; onlyOwnerOrGuardian admits both; pool lending/configuration and proxy-upgrade closure not certified"
+          },
+          "observedState": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:0e40808f1ddd94722c78590a7ac9de7fb79a4261dd207fd7a0942a92f0285319;implementation:0x68807d04df1f1bb74bb7498b1e832d2ce356cd18;sha256:4c777ea06dd7f5de15924eef965975c3b36b15697863f0d53c5b33b8fdc382b8",
+            "signerIdentity": "owner 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; guardian 0x8513e6f37dbc52de87b166980fa3f50639694b60; onlyOwnerOrGuardian admits both; pool lending/configuration and proxy-upgrade closure not certified"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "council-or-owner-pool-prefunding",
+              "targetDeployment": "ethereum:0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x749b1e8b"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "raiseable",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "gho-aave"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 80,000,000 GHO capacity and 59,000,000 GHO level."
       },
       {
@@ -215,6 +747,80 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
           }
         ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x436dccc028322afc355f608cf582b7d7f19fdfed",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x436dccc028322afc355f608cf582b7d7f19fdfed"
+            },
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+            }
+          ],
+          "pin": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:4306746e84ca6ca5d28179073fdba4de12fb5968274b6f9cd35a770794fe5172",
+            "signerIdentity": "DEFAULT_ADMIN and MINTER 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; full facilitator role grant/revoke history checked at pin; upstream executor bypass closure not certified"
+          },
+          "observedState": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:4306746e84ca6ca5d28179073fdba4de12fb5968274b6f9cd35a770794fe5172",
+            "signerIdentity": "DEFAULT_ADMIN and MINTER 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; full facilitator role grant/revoke history checked at pin; upstream executor bypass closure not certified"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "role-authorized-arbitrary-recipient-mint",
+              "targetDeployment": "ethereum:0x436dccc028322afc355f608cf582b7d7f19fdfed",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 432003,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "gho-aave"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "evidence": "At Ethereum block 26095800, getFacilitatorsList() included this Ethereum address, getFacilitator() returned the label GhoDirectFacilitator GSM Arbitrum, and getFacilitatorBucket() returned 50,000,000 GHO capacity and 50,000,000 GHO level. This control records native Ethereum bucket issuance, not the remote bridge capabilities."
       },
       {
@@ -238,6 +844,80 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
           }
         ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134"
+            },
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+            }
+          ],
+          "pin": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:4306746e84ca6ca5d28179073fdba4de12fb5968274b6f9cd35a770794fe5172",
+            "signerIdentity": "DEFAULT_ADMIN and MINTER 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; full facilitator role grant/revoke history checked at pin; upstream executor bypass closure not certified"
+          },
+          "observedState": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:4306746e84ca6ca5d28179073fdba4de12fb5968274b6f9cd35a770794fe5172",
+            "signerIdentity": "DEFAULT_ADMIN and MINTER 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; full facilitator role grant/revoke history checked at pin; upstream executor bypass closure not certified"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "role-authorized-arbitrary-recipient-mint",
+              "targetDeployment": "ethereum:0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 432003,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "gho-aave"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "evidence": "At Ethereum block 26095800, getFacilitatorsList() included this Ethereum address, getFacilitator() returned the label GhoDirectFacilitator GSM Monad, and getFacilitatorBucket() returned 50,000,000 GHO capacity and 50,000,000 GHO level. This control records native Ethereum bucket issuance, not the remote bridge capabilities."
       },
       {
@@ -265,10 +945,330 @@
             "url": "https://raw.githubusercontent.com/bgd-labs/aave-address-book/main/src/GhoEthereum.sol"
           }
         ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x46aa1063e5265b43663e81329333b47c517a5409"
+            },
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe9ac5231faecb633da0fe85fcb2785b8363427d2"
+            }
+          ],
+          "pin": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:c0a49993c08c34c75dac3b2fc005a98c5a527937eb45f8e505ef38142e4b1efa",
+            "signerIdentity": "owner 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; RISK_COUNCIL 0x8513e6f37dbc52de87b166980fa3f50639694b60; capacity updates are Council-only; elapsed debounce does not delay a new arbitrary mint; Council and downstream paths prevent governance-only certification"
+          },
+          "observedState": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:c0a49993c08c34c75dac3b2fc005a98c5a527937eb45f8e505ef38142e4b1efa",
+            "signerIdentity": "owner 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; RISK_COUNCIL 0x8513e6f37dbc52de87b166980fa3f50639694b60; capacity updates are Council-only; elapsed debounce does not delay a new arbitrary mint; Council and downstream paths prevent governance-only certification"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "council-raises-noncollateral-gsm-mint-capacity",
+              "targetDeployment": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x5e107b9c"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change",
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "gho-aave"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "governor-controls-facilitator-allowlist",
+              "targetDeployment": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x5ae6fb3a"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change",
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 432003,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "gho-aave"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "evidence": "At Ethereum block 26095800, canonical GHO hasRole(BUCKET_MANAGER_ROLE, steward) returned true and hasRole(FACILITATOR_MANAGER_ROLE, steward) returned false. The steward's bytecode matched its verified source, GHO_TOKEN() returned canonical GHO, owner() returned 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a, and RISK_COUNCIL() returned 0x8513e6f37dbc52de87b166980fa3f50639694b60. getControlledFacilitators() returned Core, Horizon, mainnet GSM and Lido facilitators; MINIMUM_DELAY() returned 86400."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x8513e6f37dbc52de87b166980fa3f50639694b60",
+        "deploymentRefs": [
+          "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+        ],
+        "label": "Aave Risk Council Safe (2-of-3; native GHO GSM minter)",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 3,
+        "timelockDelaySec": 0,
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x4b752551fc6345a7de82f76fd7a5015ca16d1a74",
+            "0xb291232f480f41c75802c4a60f1d2ac03404afef",
+            "0x9de1d45e2786b03498289959203f25b29b4d1193"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": null,
+          "moduleGuard": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 26112822,
+          "observedAt": "2026-10-03",
+          "source": "onchain"
+        },
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "Independent MINTER_ROLE at mainnet GhoDirectFacilitator, with arbitrary-recipient minting and no deposit check. As Bucket Steward RISK_COUNCIL it can raise the same facilitator capacity up to double per elapsed one-day debounce; no new governance vote or execution timelock is required.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26112822,
+        "sources": [
+          {
+            "label": "Verified deployed source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8513e6f37dbc52de87b166980fa3f50639694b60"
+          },
+          {
+            "label": "Verified deployed source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x41675c099f32341bf84bfc5382af534df5c7461a"
+          },
+          {
+            "label": "Verified deployed source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x46aa1063e5265b43663e81329333b47c517a5409"
+          },
+          {
+            "label": "Verified deployed source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe9ac5231faecb633da0fe85fcb2785b8363427d2"
+          }
+        ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x8513e6f37dbc52de87b166980fa3f50639694b60",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8513e6f37dbc52de87b166980fa3f50639694b60"
+            },
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x41675c099f32341bf84bfc5382af534df5c7461a"
+            },
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x46aa1063e5265b43663e81329333b47c517a5409"
+            },
+            {
+              "label": "Verified deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe9ac5231faecb633da0fe85fcb2785b8363427d2"
+            }
+          ],
+          "pin": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:5b8bff324e02136edb0775bd77aa0fe773c1e23092305fe63f50a9e92f5b8faf;implementation:0x41675c099f32341bf84bfc5382af534df5c7461a",
+            "signerIdentity": "2-of-3 Safe: 0x4b752551fc6345a7de82f76fd7a5015ca16d1a74,0xb291232f480f41c75802c4a60f1d2ac03404afef,0x9de1d45e2786b03498289959203f25b29b4d1193; independent MINTER at mainnet GSM and RISK_COUNCIL at steward; not solely governor-rooted"
+          },
+          "observedState": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:5b8bff324e02136edb0775bd77aa0fe773c1e23092305fe63f50a9e92f5b8faf;implementation:0x41675c099f32341bf84bfc5382af534df5c7461a",
+            "signerIdentity": "2-of-3 Safe: 0x4b752551fc6345a7de82f76fd7a5015ca16d1a74,0xb291232f480f41c75802c4a60f1d2ac03404afef,0x9de1d45e2786b03498289959203f25b29b4d1193; independent MINTER at mainnet GSM and RISK_COUNCIL at steward; not solely governor-rooted"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "council-arbitrary-recipient-gsm-mint",
+              "targetDeployment": "ethereum:0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "gho-aave"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "council-enables-capacity-growth",
+              "targetDeployment": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x5e107b9c"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change",
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "gho-aave"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "evidence": "At Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a), full RoleGranted/RoleRevoked reconstruction and hasRole(MINTER_ROLE,council) identify this independent live minter at mainnet GhoDirectFacilitator 0xe9ac5231faecb633da0fe85fcb2785b8363427d2. Verified bytecode-matched mint(account,amount) checks only MINTER_ROLE before calling GHO_TOKEN.mint; it requires no asset deposit. getThreshold() is 2, getOwners() returns three owners, VERSION() is 1.4.1, the pinned singleton is 0x41675c099f32341bf84bfc5382af534df5c7461a, module pagination terminates empty and guard/module-guard slots are zero. Pinned eth_call from this Council to Bucket Steward.updateFacilitatorBucketCapacity(mainnetGSM,311000000e18) succeeded against the current 310000000e18 capacity. This is a positive non-governor unbacked issuance route, not an allegation of compromise. The partial executionScope does not certify the entire Safe/upstream closure."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
+    "governedIssuance": {
+      "governorControlRef": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+      "votingPower": "past-block-checkpoint",
+      "votingPowerEvidence": "GovernanceCore.activateVoting snapshots blockhash(block.number - 1), stores proposal.snapshotBlockHash and forwards that hash to the selected VotingMachine. VotingMachineWithProofs validates voting-asset storage proofs against the proposal block hash before VotingStrategy.getVotingPower; balances and delegations are historical Ethereum snapshot state, not transaction-live balances. This voting-power condition is met, but the independently authorized Risk Council mint path and incomplete execution closure make this governed attempt ineligible.",
+      "enumerability": {
+        "authorizationEvents": [
+          "FacilitatorAdded(address,bytes32,uint256)",
+          "FacilitatorRemoved(address)",
+          "RoleGranted(bytes32,address,address)",
+          "RoleRevoked(bytes32,address,address)",
+          "FacilitatorBucketCapacityUpdated(address,uint256,uint256)"
+        ],
+        "capacityReads": [
+          "getFacilitatorsList()",
+          "getFacilitatorBucket(address)",
+          "getControlledFacilitators()",
+          "hasRole(bytes32,address)"
+        ]
+      },
+      "observedAt": "2026-10-03",
+      "observedBlock": 26112822,
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+      "sources": [
+        {
+          "label": "Verified deployed source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x58bcb647c4beff253b4b6996c62f737b783f2cdd"
+        },
+        {
+          "label": "Verified deployed source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x617332a777780f546261247f621051d0b98975eb"
+        },
+        {
+          "label": "Verified deployed source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+        },
+        {
+          "label": "Aave Governance V3 historical storage-proof snapshots",
+          "url": "https://aave.com/docs/ecosystem/governance"
+        }
+      ]
+    },
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
@@ -284,11 +1284,27 @@
         {
           "label": "Verified GhoToken source matched to Ethereum block 26095800",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+        },
+        {
+          "label": "Verified noncollateral mainnet direct facilitator",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe9ac5231faecb633da0fe85fcb2785b8363427d2"
+        },
+        {
+          "label": "Verified Council-only bucket capacity increases",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x46aa1063e5265b43663e81329333b47c517a5409"
+        },
+        {
+          "label": "Verified governance timing and past-block snapshots",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x58bcb647c4beff253b4b6996c62f737b783f2cdd"
+        },
+        {
+          "label": "Pinned Ethereum block 26112822",
+          "url": "https://etherscan.io/block/26112822"
         }
       ],
-      "evidence": "At Ethereum block 26095800 (2026-10-01), canonical GHO bytecode matched the verified GhoToken deployment and its EIP-1967 implementation and correct admin slots were zero. The ACL Admin executor retained DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, and BUCKET_MANAGER_ROLE. getFacilitatorsList() returned eight registered facilitators and totalSupply() returned 699,000,000 GHO; the Arbitrum and Monad GSM facilitators each had 50,000,000 GHO capacity and level. The token's verified mint function enforces each facilitator's bucket capacity, while DAO-authorized administration can add facilitators or raise capacities. The separately verified GHO Bucket Steward also holds BUCKET_MANAGER_ROLE and can increase approved native facilitator capacities under its own Risk Council and debounce checks. Contract-governed issuance has no off-chain reserve reconciliation requirement; no prudential supervision of this native mint boundary is evidenced in the reviewed protocol disclosures.",
-      "reviewer": "Sol curation pass 2026-10-01 (CurA24GHO)",
-      "reviewedAt": "2026-10-01"
+      "evidence": "At Ethereum block 26095800 (2026-10-01), canonical GHO bytecode matched the verified GhoToken deployment and its EIP-1967 implementation and correct admin slots were zero. The ACL Admin executor retained DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, and BUCKET_MANAGER_ROLE. getFacilitatorsList() returned eight registered facilitators and totalSupply() returned 699,000,000 GHO; the Arbitrum and Monad GSM facilitators each had 50,000,000 GHO capacity and level. The token's verified mint function enforces each facilitator's bucket capacity, while DAO-authorized administration can add facilitators or raise capacities. The separately verified GHO Bucket Steward also holds BUCKET_MANAGER_ROLE and can increase approved native facilitator capacities under its own Risk Council and debounce checks. Contract-governed issuance has no off-chain reserve reconciliation requirement; no prudential supervision of this native mint boundary is evidenced in the reviewed protocol disclosures. D14/D29 review on 2026-10-03 reuses the successful executor addFacilitator(0x000000000000000000000000000000000000dead,\"parity\",uint128.max) simulation at Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a). GhoToken.mint checks facilitator bucket capacity/level, not collateral or code identity, so the economic cap is unbounded. At the same pin, getFacilitatorsList and every getFacilitatorBucket confirm all eight existing capacities/levels. Bucket Steward.getControlledFacilitators returns Core 0x5513224daaeabca31af5280727878d52097afa05, Horizon 0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea, mainnet GSMs 0xe9ac5231faecb633da0fe85fcb2785b8363427d2 and Lido 0x2ce01c87fec1b71a9041c52caed46fc5f4807285. Pinned EIP-1967 slots and exact source/runtime matches bind the three pool minters to their verified GhoDirectMinter implementations; mintAndSupply mints first and deposits the newly minted GHO into the pool, rather than checking a new borrower collateral deposit at this boundary. Their owner is the executor and guardian is the Risk Council. Critically, mainnet GSMs is verified GhoDirectFacilitator, not a deposit-checking GSM contract: mint(account,amount) checks only MINTER_ROLE. Full grant/revoke history plus hasRole reads identify both executor and Risk Council as live MINTER_ROLE holders there. Council is a 2/3 Safe; its pinned eth_call raising that bucket from 310M to 311M succeeds immediately. Thus Council can increase capacity and cause durable arbitrary-recipient issuance without collateral, defeating the delegated-collateral-only and governor-only gates. Its one-day debounce limits repeat updates, not the unavoidable delay before an eligible new update; the Council issuance path minimum is 0 seconds. Ordinary Level-1 governance at this pin has coolDownBeforeVotingStart=86400, votingDuration=259200, COOLDOWN_PERIOD=0 and payload delay=86400. Sequential activation (>86400), queueing (>259200 after activation) and payload execution (>86400 after its queue) impose an integer-timestamp lower bound of 432003 seconds; the zero core cooldown adds nothing, and no overlapping clocks are summed. Cross-chain transport may add latency but is not a certified lower-bound component. Past-block storage-proof voting and facilitator/capacity enumeration are evidenced, yet all authored scopes remain partial because global infrastructure, mutable permission/upgrade/bypass and downstream liability closure are not certified; Council is explicitly independent, not governor-rooted. The curated fallback is unbounded-unreconciled: reconciliation remains not-applicable and supervision none. No active mint incident is evidenced.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+      "reviewedAt": "2026-10-03"
     }
   }
 }

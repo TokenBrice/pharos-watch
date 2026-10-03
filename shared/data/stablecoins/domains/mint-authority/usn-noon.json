@@ -2,7 +2,7 @@
   "id": "usn-noon",
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "Ethereum USN minting is routed through the verified MinterHandlerV2 contract. Whitelisted direct mints and MINTER_ROLE order mints are capped on-chain, while the 3-of-6 Noon admin Safe holds both MINTER_ROLE and DEFAULT_ADMIN_ROLE and can raise those caps. The current USN transparent proxy implementation is separately upgradeable through a Safe-owned 48-hour timelock. Outside any timelock, the same Safe holds USN owner-only pause and blacklistAccount powers that freeze a holder's transfers immediately, including the USN claim leg paid to sUSN withdrawers after their 7-day wait, and three of its six keys are shared with the 4-of-5 collateral Safe, exactly matching the admin threshold. These structured controls cover issuer-originated Ethereum minting only; Noon documents USN on Sophon, zkSync, TAC, and Starknet as cross-chain burn/mint representations whose Hyperlane and LayerZero messaging and peer authority are separately scored under bridgeRouteRisk.",
     "upgradeability": {

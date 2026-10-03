@@ -2,7 +2,7 @@
   "id": "wcop-ripio",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "WCOP has six reviewed independent native issuance deployments on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis. Ripio's issuer EOA directly holds MINTER_ROLE on each deployment, the 4-of-7 Safe holds DEFAULT_ADMIN_ROLE and can regrant native roles, and the separate LimitedMinter contract is an additional Ethereum native minter facility. The LimitedMinterBridge burn/mint adapter is bridge machinery reviewed only under Bridge Risk.",
     "upgradeability": {

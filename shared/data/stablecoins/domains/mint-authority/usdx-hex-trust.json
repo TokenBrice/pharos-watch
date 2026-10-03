@@ -2,7 +2,7 @@
   "id": "usdx-hex-trust",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "manual-review",
     "summary": "USDX has independent native issuer issuance on Ethereum, Flare, and Songbird. The active MINTER_ROLE set is two EOAs on Ethereum and one shared EOA on Flare and Songbird; the default admin can grant native roles, while a secondary UPGRADE_ADMIN_ROLE EOA is also present on Ethereum and Flare. Ethereum and Flare's LayerZero OFT bridge machinery is assessed in bridgeRouteRisk and is not duplicated as native mint authority.",
     "upgradeability": {

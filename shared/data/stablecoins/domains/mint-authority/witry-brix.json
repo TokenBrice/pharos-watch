@@ -2,7 +2,7 @@
   "id": "witry-brix",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "wiTRY is Brix's yield-bearing staking wrapper over iTRY. At Ethereum block 26095937, the wrapper owner is contract 0x15bf1ac31c5b8c0e0960d656de02ba5593b19c47, whose owner is Brix Safe 0x7ac3bb10225a4ef27134bcf54454d545a1738662. The underlying iTRY owner remains Safe 0xbdb430adf64ff1c8201c10221ddb846fa62613b6. Both terminal Safes remain 3-of-5 with the same signer set. The wrapper's immediate owner is therefore not the Safe itself; issuer control remains concentrated through the intermediate contract.",
     "upgradeability": {

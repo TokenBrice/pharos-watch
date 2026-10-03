@@ -2,7 +2,7 @@
   "id": "inalpha-nest",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "inALPHA is a non-upgradeable BoringVault on Ethereum and Plume. Shares are minted only via the enter() function, which requires authorization from a RolesAuthority contract (0x5e500500968388a13b3ff885c3eed7158a5d82ef). The current authorized Teller is TellerWithMultiAssetSupportPredicateProxy (0x20428f901a50ec69f5a2b56d313491cc686fafff) on both deployments. Vault owner is a 3-of-6 Gnosis Safe (0xa08a0dc480bd60d1d56c8eec6c722125eafea982). Native issuance is assessed here; Nest's separate LayerZero OFT share route belongs in Bridge Risk and remains unresolved pending exact route addresses.",
     "upgradeability": {

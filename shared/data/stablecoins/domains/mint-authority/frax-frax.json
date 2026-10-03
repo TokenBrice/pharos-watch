@@ -2,7 +2,7 @@
   "id": "frax-frax",
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "FRAX native issuance is Ethereum-only and includes six currently authorized pools/AMOs. The token and main AMO Minter are direct contracts, but the authorized Convex AMO is a transparent proxy controlled by the Frax Comptroller 3-of-5 Safe. Satellite deployments remain bridge representations.",
     "upgradeability": {

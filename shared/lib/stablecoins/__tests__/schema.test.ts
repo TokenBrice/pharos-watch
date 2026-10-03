@@ -5,7 +5,9 @@ import {
   StablecoinMintAuthoritySidecarSchema,
   StablecoinRiskReviewSidecarSchema,
 } from "../schema";
-import { OracleRiskProfileSchema } from "../../../types/stablecoin-meta-control-schemas";
+import { MintAuthorityProfileSchema, OracleRiskProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
+import { V9DeploymentControlFactBaseSchema } from "@shared/types/safety-score-v9-facts";
+import { reviewedScope, SCOPE_CONTROLLER } from "@shared/lib/__tests__/safety-score-v9-control-scope.test-support";
 import { CANONICAL_STABLECOIN_FLAGS, makeRawStablecoinMeta as makeCoin } from "./test-support";
 import { makeSafeControl } from "./schema.test-support";
 
@@ -142,6 +144,332 @@ function makeMintAuthority(overrides: Record<string, unknown> = {}): Record<stri
     ...overrides,
   };
 }
+
+function governedMintAuthority() {
+  const executionScope = reviewedScope();
+  executionScope.paths[0]!.capSemantics = { kind: "unbounded", bound: null };
+  return MintAuthorityProfileSchema.parse(makeMintAuthority({
+    authorityPosture: "unbounded-governed",
+    economicCapSemantics: "unbounded",
+    controls: [{
+      chain: "ethereum",
+      address: SCOPE_CONTROLLER.split(":")[1],
+      label: "Token governor",
+      role: "governor",
+      authorityType: "dao-governor",
+      directMintAbility: "can-authorize",
+      executionScope,
+    }],
+    governedIssuance: {
+      governorControlRef: SCOPE_CONTROLLER,
+      votingPower: "lock-escrowed",
+      votingPowerEvidence: "Voting weight is escrowed for the entire voting and execution interval.",
+      enumerability: { authorizationEvents: ["MinterAuthorized(address)"], capacityReads: ["mintCapacity(address)"] },
+      observedAt: "2026-10-01",
+      observedBlock: 100,
+      reviewedAt: "2026-10-01",
+      reviewer: "Fixture Reviewer",
+      sources: [mintAuthoritySource],
+    },
+  }));
+}
+
+const capSemanticsReview = {
+  verdict: "bounded-by-construction" as const,
+  rationale: "The verified mint implementation requires a matching collateral deposit before every issuance, including issuances authorized by administrators.",
+  reviewedAt: "2026-10-01",
+  reviewer: "Fixture Reviewer",
+  sources: [mintAuthoritySource],
+};
+
+describe("Mint authority D14/D29 evidence admission", () => {
+  it("admits sourced governance for an exact authored governor with execution scope", () => {
+    const profile = governedMintAuthority();
+    expect(profile.authorityPosture).toBe("unbounded-governed");
+    expect(profile.governedIssuance?.governorControlRef).toBe(SCOPE_CONTROLLER);
+  });
+
+  it.each(["bounded", "raiseable", "collateral-gated", "unknown", undefined] as const)(
+    "rejects governed issuance without unbounded economics (%s)", (economicCapSemantics) => {
+      const profile = { ...governedMintAuthority(), economicCapSemantics };
+      expect(MintAuthorityProfileSchema.safeParse(profile).error?.issues).toContainEqual(expect.objectContaining({
+        path: ["economicCapSemantics"], message: "governedIssuance requires economicCapSemantics unbounded",
+      }));
+    },
+  );
+
+  it("requires the governor reference to resolve exactly once", () => {
+    const profile = governedMintAuthority();
+    for (const controls of [[], [...profile.controls!, profile.controls![0]!]]) {
+      expect(MintAuthorityProfileSchema.safeParse({ ...profile, controls }).error?.issues).toContainEqual(expect.objectContaining({
+        path: ["governedIssuance", "governorControlRef"],
+        message: "governedIssuance.governorControlRef must resolve to exactly one authored EVM control",
+      }));
+    }
+  });
+
+  it("rejects a non-governor reference and a governor without an execution certificate", () => {
+    const profile = governedMintAuthority();
+    const governor = profile.controls![0]!;
+    expect(MintAuthorityProfileSchema.safeParse({
+      ...profile, controls: [{ ...governor, authorityType: "contract" }],
+    }).error?.issues).toContainEqual(expect.objectContaining({
+      path: ["governedIssuance", "governorControlRef"],
+      message: "governedIssuance.governorControlRef must name a dao-governor control",
+    }));
+    expect(MintAuthorityProfileSchema.safeParse({
+      ...profile, controls: [{ ...governor, executionScope: undefined }],
+    }).error?.issues).toContainEqual(expect.objectContaining({
+      path: ["controls", 0, "executionScope"],
+      message: "governedIssuance governor control requires executionScope",
+    }));
+  });
+
+  it.each(["lock-escrowed", "past-block-checkpoint"] as const)(
+    "rejects signer-quorum claims on a %s governor", (votingPower) => {
+      const profile = governedMintAuthority();
+      const governor = profile.controls![0]!;
+      const weightedQuorum = {
+        scheme: "contract", deployment: SCOPE_CONTROLLER,
+        signers: [{ account: governor.address!, weight: 1 }], quorum: 1,
+        pin: governor.executionScope!.pin, status: "verified",
+        reviewedAt: "2026-10-01", expiresAt: "2026-10-31",
+        reviewer: "Fixture Reviewer", sources: [mintAuthoritySource],
+      };
+      for (const quorum of [{ threshold: 1 }, { signerCount: 1 }, { weightedQuorum }]) {
+        expect(MintAuthorityProfileSchema.safeParse({
+          ...profile,
+          controls: [{ ...governor, ...quorum }],
+          governedIssuance: { ...profile.governedIssuance!, votingPower },
+        }).error?.issues).toContainEqual(expect.objectContaining({
+          path: ["governedIssuance", "governorControlRef"],
+        }));
+      }
+    },
+  );
+
+  it.each(["live-balance", "unknown"] as const)(
+    "does not apply the token-voting quorum prohibition to %s voting power", (votingPower) => {
+      const profile = governedMintAuthority();
+      expect(MintAuthorityProfileSchema.parse({
+        ...profile,
+        controls: [{ ...profile.controls![0]!, threshold: 1, signerCount: 1 }],
+        governedIssuance: { ...profile.governedIssuance!, votingPower },
+      }).governedIssuance?.votingPower).toBe(votingPower);
+    },
+  );
+
+  it.each([
+    { inheritedFrom: "parent-fixture" },
+    { mintPath: "wrapped-or-variant-inherited" },
+    { inheritedFrom: "parent-fixture", mintPath: "wrapped-or-variant-inherited" },
+  ])("rejects governed issuance on inherited or wrapped profiles (%j)", (inherited) => {
+    expect(MintAuthorityProfileSchema.safeParse({
+      ...governedMintAuthority(), ...inherited,
+    }).error?.issues).toContainEqual(expect.objectContaining({ path: ["governedIssuance"] }));
+  });
+
+  it("rejects governed issuance when every authored execution path is bounded", () => {
+    const profile = governedMintAuthority();
+    profile.controls![0]!.executionScope!.paths[0]!.capSemantics = {
+      kind: "bounded", bound: { amount: 1, unit: "supply-fraction" },
+    };
+    expect(MintAuthorityProfileSchema.safeParse(profile).error?.issues).toContainEqual(
+      expect.objectContaining({ path: ["governedIssuance"] }),
+    );
+  });
+
+  it.each([
+    { capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "none" },
+    { capSemantics: { kind: "unknown", bound: null }, claimImpairment: "none" },
+    { capSemantics: { kind: "not-applicable", bound: null }, claimImpairment: "unbounded" },
+    { capSemantics: { kind: "not-applicable", bound: null }, claimImpairment: "unknown" },
+  ] as const)("admits unbounded economics on another authored control's parameter path (%j)", (economics) => {
+    const profile = governedMintAuthority();
+    const governor = profile.controls![0]!;
+    governor.executionScope!.paths[0]!.capSemantics = {
+      kind: "bounded", bound: { amount: 1, unit: "supply-fraction" },
+    };
+    const deployment = "ethereum:0x2222222222222222222222222222222222222222";
+    const scope = reviewedScope({ controllerDeployment: deployment });
+    scope.paths[0] = {
+      ...scope.paths[0]!, targetDeployment: deployment,
+      capabilities: ["parameter-change"], ...economics,
+    };
+    profile.controls!.push({
+      ...governor, address: deployment.split(":")[1], label: "Governed parameter control",
+      authorityType: "contract", directMintAbility: "parameter-only", executionScope: scope,
+    });
+    expect(MintAuthorityProfileSchema.parse(profile).governedIssuance?.governorControlRef).toBe(SCOPE_CONTROLLER);
+  });
+
+  it.each([
+    "xrpl:rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK",
+    "solana:11111111111111111111111111111111",
+  ])("rejects a non-EVM governor reference (%s)", (governorControlRef) => {
+    const profile = governedMintAuthority();
+    expect(MintAuthorityProfileSchema.safeParse({
+      ...profile, governedIssuance: { ...profile.governedIssuance!, governorControlRef },
+    }).error?.issues).toContainEqual(expect.objectContaining({
+      path: ["governedIssuance", "governorControlRef"],
+      message: expect.stringContaining("EVM"),
+    }));
+  });
+
+  it("requires a governed evidence block only for the governed posture", () => {
+    const profile = governedMintAuthority();
+    expect(MintAuthorityProfileSchema.safeParse({ ...profile, governedIssuance: undefined }).error?.issues).toContainEqual(
+      expect.objectContaining({ path: ["governedIssuance"] }),
+    );
+    expect(MintAuthorityProfileSchema.parse({
+      ...profile, authorityPosture: "unbounded-unreconciled", governedIssuance: undefined,
+    }).authorityPosture).toBe("unbounded-unreconciled");
+  });
+
+  it.each(["raiseable", "bounded", "collateral-gated"] as const)(
+    "requires the correct sourced D14 verdict for %s issuance authority", (economicCapSemantics) => {
+      const verdict = economicCapSemantics === "raiseable" ? "raiseable-collateral-only" : "bounded-by-construction";
+      for (const ability of [
+        { directMintAbility: "direct" }, { directMintAbility: "can-authorize" },
+        { directMintAbility: "cap-limited", canRaiseCap: true },
+        { directMintAbility: "parameter-only", canRaiseCap: true },
+        { directMintAbility: "upgrade-only", canRaiseCap: true },
+        { directMintAbility: "none", canRaiseCap: true },
+        { directMintAbility: "unknown", canRaiseCap: true },
+      ]) {
+        const profile = makeMintAuthority({
+          economicCapSemantics, controls: [makeSafeControl(ability)],
+        });
+        expect(MintAuthorityProfileSchema.safeParse(profile).error?.issues).toContainEqual(
+          expect.objectContaining({ path: ["capSemanticsReview"] }),
+        );
+        expect(MintAuthorityProfileSchema.parse({
+          ...profile, capSemanticsReview: { ...capSemanticsReview, verdict },
+        }).capSemanticsReview?.verdict).toBe(verdict);
+        expect(MintAuthorityProfileSchema.safeParse({
+          ...profile,
+          capSemanticsReview: {
+            ...capSemanticsReview,
+            verdict: verdict === "bounded-by-construction" ? "raiseable-collateral-only" : "bounded-by-construction",
+          },
+        }).error?.issues).toContainEqual(expect.objectContaining({ path: ["capSemanticsReview", "verdict"] }));
+      }
+    },
+  );
+
+  it.each([
+    { directMintAbility: "cap-limited", canRaiseCap: false },
+    { directMintAbility: "cap-limited", canRaiseCap: "unknown" },
+    { directMintAbility: "parameter-only", canRaiseCap: false },
+    { directMintAbility: "parameter-only", canRaiseCap: "unknown" },
+    { directMintAbility: "upgrade-only", canRaiseCap: false },
+    { directMintAbility: "none" },
+  ])("does not invent a D14 issuance trigger for %j", (ability) => {
+    expect(MintAuthorityProfileSchema.parse(makeMintAuthority({
+      economicCapSemantics: "bounded", controls: [makeSafeControl(ability)],
+    })).capSemanticsReview).toBeUndefined();
+  });
+
+  it.each(["unbounded", "unknown"] as const)("rejects a cap review on %s economics", (economicCapSemantics) => {
+    expect(MintAuthorityProfileSchema.safeParse(makeMintAuthority({
+      economicCapSemantics, capSemanticsReview,
+    })).error?.issues).toContainEqual(expect.objectContaining({ path: ["capSemanticsReview"] }));
+  });
+
+  it("reserves compromised posture for an active incident in both directions", () => {
+    const incident = { date: "2026-05-20", status: "active", summary: "The mint key remains compromised.", sources: [mintAuthoritySource] };
+    expect(MintAuthorityProfileSchema.parse(makeMintAuthority({
+      authorityPosture: "compromised", mintIncidents: [incident],
+    })).mintIncidents?.[0]?.status).toBe("active");
+    for (const overrides of [
+      { authorityPosture: "compromised" },
+      { authorityPosture: "compromised", mintIncidents: [{ ...incident, status: "resolved", resolvedAt: "2026-05-21" }] },
+      { authorityPosture: "unbounded-unreconciled", mintIncidents: [incident] },
+    ]) {
+      expect(MintAuthorityProfileSchema.safeParse(makeMintAuthority(overrides)).error?.issues).toContainEqual(
+        expect.objectContaining({ path: ["authorityPosture"] }),
+      );
+    }
+    expect(MintAuthorityProfileSchema.parse(makeMintAuthority({
+      mintIncidents: [{ ...incident, status: "resolved", resolvedAt: "2026-05-21" }],
+    })).authorityPosture).toBe("partially-bounded-admin");
+  });
+
+  it.each(["unknown", "unbounded-unreconciled"] as const)("admits %s for an unknown mint path", (authorityPosture) => {
+    expect(MintAuthorityProfileSchema.parse(makeMintAuthority({
+      mintPath: "unknown", authorityPosture, confidence: "unknown", controls: [],
+    })).authorityPosture).toBe(authorityPosture);
+  });
+
+  it("rejects a governed posture on an unknown mint path", () => {
+    expect(MintAuthorityProfileSchema.safeParse({ ...governedMintAuthority(), mintPath: "unknown" }).error?.issues).toContainEqual(
+      expect.objectContaining({ path: ["authorityPosture"] }),
+    );
+  });
+
+  it("trims evidence and rejects undersourced or non-strict evidence blocks", () => {
+    const profile = governedMintAuthority();
+    const governedIssuance = profile.governedIssuance!;
+    expect(MintAuthorityProfileSchema.parse({
+      ...profile, governedIssuance: { ...governedIssuance, votingPowerEvidence: `  ${governedIssuance.votingPowerEvidence}  ` },
+    }).governedIssuance?.votingPowerEvidence).toBe(governedIssuance.votingPowerEvidence);
+    for (const change of [
+      { votingPowerEvidence: ` ${"x".repeat(39)} ` }, { sources: [] }, { observedBlock: 0 },
+      { governorControlRef: SCOPE_CONTROLLER.replace("ethereum", "Ethereum") },
+      { enumerability: { authorizationEvents: [], capacityReads: ["capacity()"] } },
+      { unexpected: true },
+    ]) {
+      expect(MintAuthorityProfileSchema.safeParse({
+        ...profile, governedIssuance: { ...governedIssuance, ...change },
+      }).success).toBe(false);
+    }
+    for (const change of [{ rationale: ` ${"x".repeat(79)} ` }, { sources: [] }, { unexpected: true }]) {
+      expect(MintAuthorityProfileSchema.safeParse(makeMintAuthority({
+        economicCapSemantics: "bounded", capSemanticsReview: { ...capSemanticsReview, ...change },
+      })).success).toBe(false);
+    }
+  });
+});
+
+describe("Compiled issuance governance contract", () => {
+  const schema = V9DeploymentControlFactBaseSchema.shape.issuanceGovernance;
+  const complete = {
+    coverage: "complete",
+    incompleteReasons: [],
+    governorAuthorityKey: SCOPE_CONTROLLER,
+    minUnavoidableDelaySec: 172800,
+    votingPower: "past-block-checkpoint",
+    enumerable: true,
+    nonGovernorUnboundedPathKeys: [],
+  };
+
+  it("preserves absent evidence and a nullable minimum without inventing completeness", () => {
+    expect(schema.parse(undefined)).toBeUndefined();
+    expect(schema.parse({ ...complete, coverage: "incomplete", incompleteReasons: ["review-incomplete"], minUnavoidableDelaySec: null }))
+      .toMatchObject({ coverage: "incomplete", incompleteReasons: ["review-incomplete"], minUnavoidableDelaySec: null });
+  });
+
+  it("sorts canonical coverage reasons and non-governor path keys", () => {
+    expect(schema.parse({
+      ...complete, coverage: "incomplete", incompleteReasons: ["z", "a"],
+      nonGovernorUnboundedPathKeys: ["z:issuance", "a:issuance"],
+    })).toMatchObject({
+      incompleteReasons: ["a", "z"], nonGovernorUnboundedPathKeys: ["a:issuance", "z:issuance"],
+    });
+  });
+
+  it("rejects inconsistent coverage, duplicate keys, invalid delays, and unknown fields", () => {
+    for (const change of [
+      { coverage: "incomplete" }, { incompleteReasons: ["review-incomplete"] },
+      { coverage: "incomplete", incompleteReasons: ["a", "a"] },
+      { nonGovernorUnboundedPathKeys: ["a:issuance", "a:issuance"] },
+      { minUnavoidableDelaySec: -1 }, { minUnavoidableDelaySec: 0.5 },
+      { votingPower: "instant-snapshot" }, { unexpected: true },
+    ]) {
+      expect(schema.safeParse({ ...complete, ...change }).success).toBe(false);
+    }
+  });
+});
 
 function makeInheritanceChain(ids: string[], terminal = makeCoin({
   id: "terminal",
@@ -697,7 +1025,7 @@ describe("StablecoinMeta schema — mint authority", () => {
     ], "fixture")).not.toThrow();
   });
 
-  it("keeps unknown mint paths paired with unknown posture unless evidence supports compromise", () => {
+  it("keeps unknown mint paths paired with unknown posture unless evidence supports unreconciled issuance", () => {
     expect(() => parseStablecoinMetaAssets([
       makeCoin({
         id: "fixture-mint-unknown",

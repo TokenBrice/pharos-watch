@@ -2,9 +2,9 @@
   "id": "zarm-mento",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "ZARm uses reserve-backed StableTokenV2, not a BorrowerOperations CDP. Minting is restricted to the configured broker, validator and exchange addresses; the current exchange address is zero. The token owner is the Mento Timelock (2-day delay; historical review identified MentoGovernor as sole proposer and an open executor).",
+    "summary": "ZARm uses reserve-backed StableTokenV2, not a BorrowerOperations CDP. Minting is restricted to the configured broker, validator and exchange addresses; the current exchange address is zero. The token owner is the Mento Timelock (2-day delay; historical review identified MentoGovernor as sole proposer and an open executor). D14: issuance is economically unbounded because the token owner can set an arbitrary Broker/minter with no token-level collateral check; the two-day delay does not bound the amount. D29 is not certified because the authorized Validators proxy has separate Celo Governance upgrade authority.",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -76,14 +76,34 @@
         "evidence": "At Celo block 78939406, ZARm owner() and its EIP-1967 admin slot returned this Timelock, and getMinDelay() returned 172800 seconds. Historical block 69291577 role reads identified MentoGovernor as proposer and an open executor; that complete membership was not re-enumerated in this read."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "At Celo block 69291577, ZARm owner() resolved to the 172800-second Mento Timelock. At block 72127033, the ZARm EIP-1967 implementation slot resolved to StableTokenV2 implementation 0x434563b0...850e and the EIP-1967 admin slot resolved directly to the same Mento Timelock, which can replace mint-critical token logic after its two-day delay. The implementation, admin, owner and delay were re-confirmed at block 78939406 on 2026-10-01. ZARm is reserve-backed; the former BorrowerOperations immutability assertion was not applicable to this deployment. Economic-posture fields reviewed 2026-08-15: cap or minter replacement runs through the enforced two-day Mento Timelock, the live full-composition Mento reserve feed provides continuous reconciliation, and no regulator or independent attestor is evidenced.",
-      "reviewer": "Codex CTRL root batch 05; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At Celo block 69291577, ZARm owner() resolved to the 172800-second Mento Timelock. At block 72127033, the ZARm EIP-1967 implementation slot resolved to StableTokenV2 implementation 0x434563b0...850e and the EIP-1967 admin slot resolved directly to the same Mento Timelock, which can replace mint-critical token logic after its two-day delay. The implementation, admin, owner and delay were re-confirmed at block 78939406 on 2026-10-01. ZARm is reserve-backed; the former BorrowerOperations immutability assertion was not applicable to this deployment. Economic-posture fields reviewed 2026-08-15: cap or minter replacement runs through the enforced two-day Mento Timelock, the live full-composition Mento reserve feed provides continuous reconciliation, and no regulator or independent attestor is evidenced. D14/D29 review 2026-10-03 at Celo block 79142378 (hash 0xe5ac3917c420c5f097992356e3a8934c336d354a139b8a1207fe547af3569c6c): owner(), _getOwner(), and the EIP-1967 admin slot resolve to Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147, not the migration Safe; the implementation slot resolves to verified StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e. Read-only setBroker(0x000000000000000000000000000000000000dead) from that owner succeeds, and mint(chosenRecipient,1e18) from the configured Broker succeeds. Verified setBroker accepts an arbitrary address; onlyMinter gates mint by caller identity and imposes no collateral/deposit check or economic ceiling. The 172800-second Timelock delay does not make arbitrary minter authorization economically bounded. D29 screening confirms MentoGovernor proposer/canceller membership, open execution, Timelock administration, and no such Safe roles; the separately observed canceller 0xe6951c4176aab41097c6f5fe11e9c515b7108acd is not asserted to have mint power. The governor uses the verified lock-escrowed veMENTO contract. However validators() on this token resolves to 0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58, whose proxy owner is separate Celo Governance 0xd533ca259b330c7a88f74e000a3faea2d63b7972: independently replacing this token-authorized implementation is not rooted in MentoGovernor. Current Validators targets registry USDm, not this token; that observation does not close its independent upgrade path. Complete governor-only issuance closure is therefore not certified and no governedIssuance or complete executionScope is authored. This D14 verdict supersedes any earlier raiseable/partially-bounded economic inference; reconciliation and supervision are unchanged.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U4MentoFamily)",
+      "reviewedAt": "2026-10-03",
       "sources": [
+        {
+          "label": "Pinned Celo block",
+          "url": "https://celo.blockscout.com/block/79142378"
+        },
+        {
+          "label": "Verified token implementation",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+        },
+        {
+          "label": "veMENTO locking implementation (D29 voting-power screen)",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x5a2c50efa0f63f0f97da9f002fefef3f64ed7d46"
+        },
+        {
+          "label": "Timelock full-history role grants through pinned block",
+          "url": "https://celo.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=79142378&address=0x890db8a597940165901372dd7db61c9f246e2147&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        },
+        {
+          "label": "Timelock full-history role revocations through pinned block",
+          "url": "https://celo.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=79142378&address=0x890db8a597940165901372dd7db61c9f246e2147&topic0=0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b"
+        },
         {
           "label": "Mento V3 docs",
           "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"

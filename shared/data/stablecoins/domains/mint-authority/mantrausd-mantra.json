@@ -187,10 +187,26 @@
       ]
     },
     "economicCapSemantics": "raiseable",
+    "capSemanticsReview": {
+      "verdict": "raiseable-collateral-only",
+      "rationale": "The extension-local verified MantraUSD/MYieldToOne/MExtension code exposes only immutable-SwapFacility wrap/unwrap and claimYield issuance: wrap transfers the matching M before _mint; claimYield mints at most max(M custody minus existing supply, 0). DEFAULT_ADMIN can assign freeze/yield-recipient roles, not a deposit-free minter. Parent M issuance is inherited through the serial-claim dependency, not charged again here. Proxy replacement remains an Upgrade Risk power and is not a D14 trigger.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (MiscRaiseable)",
+      "sources": [
+        {
+          "label": "Verified MantraUSD implementation and inherited MExtension/MYieldToOne source, D14 reviewed 2026-10-03",
+          "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8"
+        }
+      ]
+    },
     "reconciliation": "continuous",
     "supervision": "unknown",
     "review": {
       "sources": [
+        {
+          "label": "Verified MantraUSD implementation and inherited MExtension/MYieldToOne source, D14 reviewed 2026-10-03",
+          "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8"
+        },
         {
           "label": "M0 independently readable MANTRA platform deployment inventory",
           "url": "https://docs.m0.org/resources/addresses/m0-platform"
@@ -220,8 +236,8 @@
           "url": "https://github.com/m0-foundation/evm-m-extensions/blob/main/audits/JMI/M0_EVM-M_Extensions_Review_report.pdf"
         }
       ],
-      "evidence": "At mantra block 18531313, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 439,646.447844 M against 434,703.845695 mantraUSD supply. M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right. Local role/proxy reach is authored separately from inherited M authority and the parent bridge layer. Calibration provenance (2026-10-03): original umbrella observations retained verbatim: [\"EOA upgrade-owner operational key custody is undisclosed; no enforceable delay has been established.\", \"Close all local role holders and SwapFacility governance; Safe owner/threshold and terminal module pagination are enumerated, but executable fallback-handler noninterference and signer independence remain unestablished.\"]. Human independence and key custody remain unverified and are priced by their dedicated control signals; financial/legal safeguards remain Backing-domain gaps. Calibration v2 (2026-10-03) reconsidered every prior removal and scoped move. Prior scoped observations retained verbatim: [\"No enforceable delay on the named mantraUSD ProxyAdmin-owner upgrade path has been established; operational key custody is a separate, preserved disclosure gap.\", \"Close the current mantraUSD local SwapFacility governance, permission and upgrade-control reach at mantra:0xb6807116b3b1b321a390594e31ecd6e0076f6278.\"]. Genuine unknown implementation, controller authorization and unreadable execution state are retained as umbrella questions; identified-signer custody/independence is recorded per control, not asserted to be independently scored or resolved. Field re-justification: reconciliation=continuous describes the cited local parent-token custody and wrap/custodian supply-accounting mechanism only. It does not certify the upstream fiat/Treasury book, independent assurance or holder insolvency priority; supervision=unknown supplies no prudential or attestation-based credit.",
-      "reviewer": "Refine07 calibration v2 2026-10-03",
+      "evidence": "At mantra block 18531313, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 439,646.447844 M against 434,703.845695 mantraUSD supply. M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right. Local role/proxy reach is authored separately from inherited M authority and the parent bridge layer. Calibration provenance (2026-10-03): original umbrella observations retained verbatim: [\"EOA upgrade-owner operational key custody is undisclosed; no enforceable delay has been established.\", \"Close all local role holders and SwapFacility governance; Safe owner/threshold and terminal module pagination are enumerated, but executable fallback-handler noninterference and signer independence remain unestablished.\"]. Human independence and key custody remain unverified and are priced by their dedicated control signals; financial/legal safeguards remain Backing-domain gaps. Calibration v2 (2026-10-03) reconsidered every prior removal and scoped move. Prior scoped observations retained verbatim: [\"No enforceable delay on the named mantraUSD ProxyAdmin-owner upgrade path has been established; operational key custody is a separate, preserved disclosure gap.\", \"Close the current mantraUSD local SwapFacility governance, permission and upgrade-control reach at mantra:0xb6807116b3b1b321a390594e31ecd6e0076f6278.\"]. Genuine unknown implementation, controller authorization and unreadable execution state are retained as umbrella questions; identified-signer custody/independence is recorded per control, not asserted to be independently scored or resolved. Field re-justification: reconciliation=continuous describes the cited local parent-token custody and wrap/custodian supply-accounting mechanism only. It does not certify the upstream fiat/Treasury book, independent assurance or holder insolvency priority; supervision=unknown supplies no prudential or attestation-based credit. D14/D29 sweep (2026-10-03): The extension-local verified MantraUSD/MYieldToOne/MExtension code exposes only immutable-SwapFacility wrap/unwrap and claimYield issuance: wrap transfers the matching M before _mint; claimYield mints at most max(M custody minus existing supply, 0). DEFAULT_ADMIN can assign freeze/yield-recipient roles, not a deposit-free minter. Parent M issuance is inherited through the serial-claim dependency, not charged again here. Proxy replacement remains an Upgrade Risk power and is not a D14 trigger. Pinned block hashes read this review: mantra 18540330 0x0c37c60ea7c05ae167b94eaf61c6869a70d0a863890bbecd85ce1a655f96e3fb; mantra 18531313 0x370a627e349b11079b602ddd68e08e563a9b5422bc4040ac8a4edff450940f37. No transaction was sent; no governed-issuance qualification is claimed.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (MiscRaiseable)",
       "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
       "unresolvedQuestions": [
