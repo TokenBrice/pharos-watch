@@ -3251,6 +3251,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "suiusde-sui",
+      "reviewedAt": "2026-10-03T22:46:01Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "W1R55 primary-source unknown review",
+      "notes": "Exact asset live-history lower bound only; no independently verified throughput, stress recovery, financial reconciliation or incident-free history asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Exact asset launch / creation evidence",
+          "publisher": "Sui Foundation",
+          "publishedAt": "2026-02-11",
+          "url": "https://blog.sui.io/esui-dollar-suiusde-deepbook-margin/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 7,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdsui-sui",
+      "reviewedAt": "2026-10-03T22:46:01Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "W1R55 primary-source unknown review",
+      "notes": "Exact asset live-history lower bound only; no independently verified throughput, stress recovery, financial reconciliation or incident-free history asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Exact asset launch / creation evidence",
+          "publisher": "Sui Foundation",
+          "publishedAt": "2026-03-04",
+          "url": "https://blog.sui.io/sui-dollar-launch-bridge/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 6,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "hyperusdca-hyperithm",
+      "reviewedAt": "2026-10-03T22:46:01Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "W1R55 primary-source unknown review",
+      "notes": "Exact asset live-history lower bound only; no independently verified throughput, stress recovery, financial reconciliation or incident-free history asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Exact asset launch / creation evidence",
+          "publisher": "Morpho",
+          "publishedAt": "2026-01-09",
+          "url": "https://blue-api.morpho.org/graphql",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 8,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdv-solomon",
+      "reviewedAt": "2026-10-03T22:46:01Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "W1R55 primary-source unknown review",
+      "notes": "Exact asset live-history lower bound only; no independently verified throughput, stress recovery, financial reconciliation or incident-free history asserted. Legacy Solomon history is not successor-token history.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Exact asset launch / creation evidence",
+          "publisher": "Solomon Labs",
+          "publishedAt": "2025-11-07",
+          "url": "https://blog.solomonlabs.org/p/introducing-solomon",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 10,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdh-hubble",
+      "reviewedAt": "2026-10-03T22:46:01Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "W1R55 primary-source unknown review",
+      "notes": "Exact asset live-history lower bound only; no independently verified throughput, stress recovery, financial reconciliation or incident-free history asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Exact asset launch / creation evidence",
+          "publisher": "Hubble",
+          "publishedAt": "2022-01-29",
+          "url": "https://www.accesswire.com/686225/Hubble-Protocol-and-USDH-Launch-on-Solana-Mainnet-Friday-January-28th",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 56,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

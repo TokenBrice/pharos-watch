@@ -7012,6 +7012,322 @@
         "https://onlineportal.anchorx.org/login"
       ],
       "rationale": "Public issuer homepage, rendered legal terms, risk/about pages and transparency archive disclose par redemption and discretionary fees but no AxCNH redemption tariff, applicable percentage/formula, minimum or all-in bank/intermediary charges. Professional-investor portal is login-gated; no public fee schedule located. No inference of zero cost from 1:1 redemption."
+    },
+    {
+      "id": "uw-suiusde-sui-3db7f74f6276d7be",
+      "assetId": "suiusde-sui",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:307254215894779e1640e7d8",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://www.esuidollar.io/legal/mint-user-agreement",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": null,
+          "location": "Sections 1 and 3, reserves and service availability; last updated April 2026",
+          "excerpt": "The Issuer does not guarantee that minting or redemption will always be available.",
+          "assertion": "Issuer describes primarily USDe reserves, institutional custody and discretionary redemption, but no complete slice-specific realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.esuidollar.io/",
+        "https://www.esuidollar.io/legal/mint-user-agreement",
+        "https://www.esuidollar.io/legal/terms-of-service",
+        "https://whitelabel.ethena.fi/",
+        "https://whitelabel.ethena.fi/transparency",
+        "https://whitelabel.ethena.fi/api/transparency"
+      ],
+      "rationale": "No complete liquidityHorizon is published for the Coinbase Prime off-chain USDC, USDe, or other USDC reserve slices. The live transparency endpoint gives amounts and custodian locations, not whole-slice withdrawal or liquidation maxima. Unified USDe liquidity and issuer pro-rata redemption do not establish each custody slice's liquidity horizon; legal terms permit suspension and supply no timing bound."
+    },
+    {
+      "id": "uw-suiusde-sui-9feca9a1ada5eba0",
+      "assetId": "suiusde-sui",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:3932ebed0fe9d1fb275fdca0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://www.esuidollar.io/legal/mint-user-agreement",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": null,
+          "location": "Sections 1 and 3, reserves and service availability; last updated April 2026",
+          "excerpt": "The Issuer does not guarantee that minting or redemption will always be available.",
+          "assertion": "Issuer describes primarily USDe reserves, institutional custody and discretionary redemption, but no complete slice-specific realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.esuidollar.io/",
+        "https://www.esuidollar.io/legal/mint-user-agreement",
+        "https://www.esuidollar.io/legal/terms-of-service",
+        "https://whitelabel.ethena.fi/",
+        "https://whitelabel.ethena.fi/transparency",
+        "https://whitelabel.ethena.fi/api/transparency"
+      ],
+      "rationale": "No complete liquidityHorizon is published for the Coinbase Prime off-chain USDC, USDe, or other USDC reserve slices. The live transparency endpoint gives amounts and custodian locations, not whole-slice withdrawal or liquidation maxima. Unified USDe liquidity and issuer pro-rata redemption do not establish each custody slice's liquidity horizon; legal terms permit suspension and supply no timing bound."
+    },
+    {
+      "id": "uw-suiusde-sui-87abe6688d6d92b7",
+      "assetId": "suiusde-sui",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:8278fc97cbe0fe9c83e2aee2",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://www.esuidollar.io/legal/mint-user-agreement",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": null,
+          "location": "Sections 1 and 3, reserves and service availability; last updated April 2026",
+          "excerpt": "The Issuer does not guarantee that minting or redemption will always be available.",
+          "assertion": "Issuer describes primarily USDe reserves, institutional custody and discretionary redemption, but no complete slice-specific realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.esuidollar.io/",
+        "https://www.esuidollar.io/legal/mint-user-agreement",
+        "https://www.esuidollar.io/legal/terms-of-service",
+        "https://whitelabel.ethena.fi/",
+        "https://whitelabel.ethena.fi/transparency",
+        "https://whitelabel.ethena.fi/api/transparency"
+      ],
+      "rationale": "No complete liquidityHorizon is published for the Coinbase Prime off-chain USDC, USDe, or other USDC reserve slices. The live transparency endpoint gives amounts and custodian locations, not whole-slice withdrawal or liquidation maxima. Unified USDe liquidity and issuer pro-rata redemption do not establish each custody slice's liquidity horizon; legal terms permit suspension and supply no timing bound."
+    },
+    {
+      "id": "uw-usdsui-sui-0887556cd31999f8",
+      "assetId": "usdsui-sui",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdsui-sui:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://www.bridge.xyz/legal/fee-disclosure-statement/overview",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": null,
+          "location": "Fee Disclosure Statement, section 1",
+          "excerpt": "The decision to impose such a charge, including its amount, is determined solely by the Partner.",
+          "assertion": "The partner charge is not quantified; gas pass-through and currency-conversion spreads do not specify the complete USDsui-to-USD redemption charge."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.sui.io/sui-dollar-launch-bridge/",
+        "https://apidocs.bridge.xyz/platform/issuance/minting-and-burning",
+        "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency",
+        "https://transparency.bridge.xyz/v0/stablecoins/usd_sui",
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "https://www.bridge.xyz/legal/fee-disclosure-statement/overview"
+      ],
+      "rationale": "No public numeric all-in cost or complete evaluable fee formula for USDsui direct fiat redemption was found. Bridge leaves a partner's applicable charge and amount to that partner and discloses variable gas, not an exact USDsui schedule. The up-to-1% currency-conversion spread is not a USD-to-USD redemption fee. This is missing cost disclosure, not an unrepresentable complete formula."
+    },
+    {
+      "id": "uw-usdsui-sui-524c959d309062ba",
+      "assetId": "usdsui-sui",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdsui-sui:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": null,
+          "location": "Section 3, Bridge Stablecoin Redemption Rights",
+          "excerpt": "we will process your sale/redemption Order within two (2) Business Days following our determination that your Order complies with the applicable User Terms",
+          "assertion": "This bounds processing after Bridge determines compliance, not final USD delivery after submission; the sentence additionally excepts factors outside reasonable control."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "https://www.bridge.xyz/legal/overview",
+        "https://apidocs.bridge.xyz/platform/issuance/minting-and-burning",
+        "https://apidocs.bridge.xyz/platform/issuance/reserve-management",
+        "https://transparency.bridge.xyz/v0/stablecoins/usd_sui"
+      ],
+      "rationale": "A maximum final-settlement SLA for USDsui redemption into USD is not disclosed. The two-business-day legal commitment is order processing starting only after compliance determination, and expressly permits external delays. Treasury realization within one business day is a different reserve-side datum. Neither bounds final fiat receipt for the modeled redemption route."
+    },
+    {
+      "id": "uw-usdsui-sui-44a3944854d7c15a",
+      "assetId": "usdsui-sui",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1c4dd3588a3d275a0d87b130",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": null,
+          "location": "Section 2, permitted reserve asset classes",
+          "excerpt": "(c) U.S. government money-market funds; (d) deposit accounts; (e) tokenized versions of the assets set forth herein",
+          "assertion": "The three-month Treasury-bill limit does not bound every claim in the aggregate Treasury basket; permitted fund shares and tokenized claims are distinct."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://transparency.bridge.xyz/v0/stablecoins/usd_sui",
+        "https://apidocs.bridge.xyz/platform/issuance/reserve-management",
+        "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency",
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc"
+      ],
+      "rationale": "No maturityDaysMax for the entire current USDsui aggregate Treasury slice is publicly disclosed. Bridge permits bills, overnight repo, government MMFs and tokenized versions; its reserve docs list BlackRock, Fidelity, USTB and BUIDL, while the exact USDsui API supplies only aggregate cash/Treasury amounts. Applying the three-month bill restriction across this opaque mixed basket would invent a whole-slice maximum."
+    },
+    {
+      "id": "uw-usdv-solomon-eafa6333f01f1224",
+      "assetId": "usdv-solomon",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://blog.solomonlabs.org/p/custodian-attestation-of-assets-backing",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": "2026-03-01",
+          "location": "Scope of a custodial attestation",
+          "excerpt": "It is not a full reserve report, financial statement audit, or comprehensive reconciliation of all system assets, liabilities, income, or exposures.",
+          "assertion": "Monthly Ceffu reporting is expressly a limited custody snapshot, not comprehensive recurring legacy mint-supply/backing reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.solomonlabs.org/p/introducing-solomon",
+        "https://blog.solomonlabs.org/p/winding-down-the-original-usdv",
+        "https://blog.solomonlabs.org/p/custodian-attestation-of-assets-backing",
+        "https://api.github.com/repos/SolomonLabs/attestations/git/trees/main?recursive=1",
+        "https://docs.solomonlabs.org/usdv/transparency-and-risk",
+        "https://data.solomonlabs.io/api/solomon-protocol/protocol-data",
+        "https://solomonlabs.org/terms-of-use",
+        "https://solscan.io/account/D4AiKFxjZBrhd6MeRAAj6wNxFcZJuRMBrXW9UpqeS8Ax"
+      ],
+      "rationale": "No public complete recurring reconciliation process/cadence covering legacy USDv minted liabilities against all custody, exchange and on-chain backing was found. The archive ends with an April 2026 Ceffu-only snapshot; March's issuer explanation expressly excludes full reconciliation. Wind-down says positions had to remain reconciled without disclosing control cadence or independent whole-book reconciliation. Successor USDv evidence cannot establish legacy reconciliation."
+    },
+    {
+      "id": "uw-usdv-solomon-116dff134f42785d",
+      "assetId": "usdv-solomon",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://blog.solomonlabs.org/p/custodian-attestation-of-assets-backing",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": "2026-03-01",
+          "location": "Attestation introduction and scope",
+          "excerpt": "Those components are not fully captured by this custodial attestation alone.",
+          "assertion": "The legacy attestation acknowledges omitted exchange and on-chain balances and does not supply a current whole-legacy-denominator composition."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.solomonlabs.org/p/winding-down-the-original-usdv",
+        "https://blog.solomonlabs.org/p/custodian-attestation-of-assets-backing",
+        "https://api.github.com/repos/SolomonLabs/attestations/git/trees/main?recursive=1",
+        "https://app.solomonlabs.org/stats",
+        "https://data.solomonlabs.io/api/solomon-protocol/protocol-data",
+        "https://docs.solomonlabs.org/usdv/transparency-and-risk",
+        "https://solomonlabs.org/terms-of-use"
+      ],
+      "rationale": "A current complete reserve composition and denominator for the exact legacy Ex5DaKY USDv mint remain undisclosed. The original delta-neutral system is explicitly separate from replacement USDv. Archived attestations cover only Ceffu custody; current stats/API and docs describe the replacement model and cannot be joined to legacy liabilities. Neither public surface gives fresh whole-legacy custody/exchange/hedge/on-chain weights."
+    },
+    {
+      "id": "uw-usdv-solomon-800cd0e64a265940",
+      "assetId": "usdv-solomon",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdv-solomon:stablecoin-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://blog.solomonlabs.org/p/winding-down-the-original-usdv",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": "2026-08-28",
+          "location": "Legacy/new token distinction",
+          "excerpt": "There will be no automatic conversion.",
+          "assertion": "Legacy holders must exit separately; successor mint/redeem pricing and venue swap quotes cannot stand in for the legacy direct-redemption fee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.solomonlabs.org/p/introducing-solomon",
+        "https://blog.solomonlabs.org/p/winding-down-the-original-usdv",
+        "https://docs.solomonlabs.org/usdv/usdv-and-susdv/minting-usdv",
+        "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming",
+        "https://solomonlabs.org/terms-of-use",
+        "https://app.solomonlabs.org/stats",
+        "https://solscan.io/account/D4AiKFxjZBrhd6MeRAAj6wNxFcZJuRMBrXW9UpqeS8Ax"
+      ],
+      "rationale": "No public exact all-in fee schedule or complete cost formula for the legacy USDv direct USDC redemption route was found. The legacy announcement describes qualified-holder mint/burn/redeem without a fee schedule; wind-down recommends market swaps without promising a direct-redemption price. Current docs and transaction fee UI concern the separate new token. Interface terms do not define the legacy API/direct-redemption schedule."
     }
   ]
 }

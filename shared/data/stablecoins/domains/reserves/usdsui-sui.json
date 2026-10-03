@@ -17,6 +17,7 @@
     },
     {
       "name": "Treasury",
+      "sourceKey": "bridge-transparency:treasury",
       "pct": 89.7073,
       "risk": "very-low",
       "assetClass": "treasury-bill",
@@ -32,8 +33,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (RuleC21)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W1R55 exact live-key and Treasury liquidity metadata review; composition unchanged",
     "confidence": "probable",
     "sources": [
       {
@@ -43,6 +44,10 @@
       {
         "label": "Bridge reporting and transparency documentation",
         "url": "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency"
+      },
+      {
+        "label": "Bridge reserve management: Treasury reserves redeemable within one business day; reviewed 2026-10-03",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/reserve-management"
       }
     ],
     "rationale": "Bridge's USDsui transparency response at 2026-10-01T11:10:40Z reports total reserves and total on-chain amount of $76,870,543.20, comprising cash $7,912,081.32 and Treasury $68,958,461.88, with collateralization ratio 1.0. The disclosed amounts sum exactly to the denominator. Independent integer-ratio and Decimal division, rounded to four decimal places, reproduce 10.2927% cash and 89.7073% Treasury. D01 admits the percentage/date refresh only: the existing risk tiers and asset classes are not upgraded or newly validated, and aggregate Treasury remains insufficient to settle the separate instrument-classification proposal.",
