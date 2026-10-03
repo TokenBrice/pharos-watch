@@ -18,12 +18,12 @@
         "market",
         "legal"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated); W1R23 native liquidity review",
     "confidence": "verified",
     "sources": [
       {
@@ -41,9 +41,13 @@
       {
         "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
         "url": "https://etherscan.io/block/26107704"
+      },
+      {
+        "label": "Ethereum block 26114896, native immediate underlying coverage observation",
+        "url": "https://etherscan.io/block/26114896"
       }
     ],
-    "rationale": "At Ethereum block 26107704 (2026-10-02T22:44:11Z), asset() is 0x57ab1e0003f623289cd798b1824be09a793e4bec; decimals() is 18, totalSupply() is 27269498.885603778064 shares, totalAssets() is 28218576.035466793925 REUSD, and balanceOf(vault) is 28224015.272168319672 REUSD. convertToAssets(1e18) and previewRedeem(1e18) return 1.034803615345 REUSD. The complete local reserve envelope is the named parent token; unvested rewards are excluded from redeemable totalAssets until released. No upstream reserve percentages or financial-assurance claims are assigned to the child.",
+    "rationale": "Original composition pin retained: at Ethereum block 26107704 (2026-10-02T22:44:11Z), the complete local reserve envelope was the named REUSD parent token; unvested rewards are excluded from redeemable totalAssets until released. Native liquidity rechecked at Ethereum block 26114896 (2026-10-03T22:46:59Z): asset is REUSD 0x57ab1e0003f623289cd798b1824be09a793e4bec, totalAssets is 28221691.589077238279605815 REUSD, underlying balance is 28226052.220988060148038707 REUSD and convertToAssets(1e18) is 1.034843053044086092 REUSD. Complete verified SavingsReUSD, LinearRewardsErc4626 and ERC4626 source uses synchronous burn-and-transfer underlying withdrawals with no lockup, queue, local penalty or asset deployment elsewhere. Immediate means native REUSD availability only, not guaranteed USD sale, upstream collateral realization, bridge operation or stress execution. Fee-distribution dependency and parent/governance risks remain separately assessed.",
     "compositionBasis": "Official single-asset vault documentation, verified accounting source and fixed-block Ethereum reads at 26107704",
     "compositionAsOf": "2026-10-02",
     "scope": "full-composition",

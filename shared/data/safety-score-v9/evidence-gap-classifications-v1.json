@@ -8941,6 +8941,375 @@
         "https://tempo.xyz/developers/docs/protocol/exchange/quote-tokens"
       ],
       "rationale": "Exact all-in pathUSD-to-USDC issuer-redemption cost is not public. The Bridge fee disclosure leaves partner service-charge amounts to the partner, passes variable gas through, and directs users to account-specific fees. Neither issuance FAQ nor pathUSD docs/API supplies a numeric schedule or evaluable complete formula."
+    },
+    {
+      "id": "uw-reusd-resupply-9e42f91c4cab374d",
+      "assetId": "reusd-resupply",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:8cea120bb135ceadd42d289b",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
+      "sources": [
+        {
+          "url": "https://docs.resupply.finance/how-to-guides/using-resupply/repaying-withdrawing-collateral.md",
+          "observedAt": "2026-10-03T22:55:17Z",
+          "datumAsOf": null,
+          "location": "Public issuer disclosure",
+          "excerpt": "After repaying above your LTV, you may withdraw the freed collateral.",
+          "assertion": "Repayment releases collateral but does not time-bound full Curve/Fraxlend lending-position unwind."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.resupply.finance/how-to-guides/using-resupply/repaying-withdrawing-collateral.md",
+        "https://docs.resupply.finance/resupply-protocol/collateralized-debt-positions.md",
+        "https://docs.resupply.finance/faq/risks.md",
+        "https://docs.resupply.finance/how-to-guides/using-resupply/selecting-a-lending-market.md",
+        "https://docs.curve.finance/developer/lending/contracts/vault/",
+        "https://docs.frax.finance/fraxlend/key-concepts",
+        "https://raw.githubusercontent.com/resupplyfi/resupply/main/deployment/contracts.json"
+      ],
+      "rationale": "Exact liquidityHorizon of the two aggregate Curve Lend and Fraxlend collateral-position slices is not published. Withdrawal depends on collateral/LTV and available liquidity in each underlying market. Docs disclose redeemability and utilization, not a fixed whole-slice horizon or complete liquid-fraction packet. Do not infer immediate from ERC4626 or guess a delay."
+    },
+    {
+      "id": "uw-reusd-resupply-208e3227bc19411f",
+      "assetId": "reusd-resupply",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:a7c7ee296c1d6b7922c8f1b2",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
+      "sources": [
+        {
+          "url": "https://docs.resupply.finance/how-to-guides/using-resupply/repaying-withdrawing-collateral.md",
+          "observedAt": "2026-10-03T22:55:17Z",
+          "datumAsOf": null,
+          "location": "Public issuer disclosure",
+          "excerpt": "After repaying above your LTV, you may withdraw the freed collateral.",
+          "assertion": "Repayment releases collateral but does not time-bound full Curve/Fraxlend lending-position unwind."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.resupply.finance/how-to-guides/using-resupply/repaying-withdrawing-collateral.md",
+        "https://docs.resupply.finance/resupply-protocol/collateralized-debt-positions.md",
+        "https://docs.resupply.finance/faq/risks.md",
+        "https://docs.resupply.finance/how-to-guides/using-resupply/selecting-a-lending-market.md",
+        "https://docs.curve.finance/developer/lending/contracts/vault/",
+        "https://docs.frax.finance/fraxlend/key-concepts",
+        "https://raw.githubusercontent.com/resupplyfi/resupply/main/deployment/contracts.json"
+      ],
+      "rationale": "Exact liquidityHorizon of the two aggregate Curve Lend and Fraxlend collateral-position slices is not published. Withdrawal depends on collateral/LTV and available liquidity in each underlying market. Docs disclose redeemability and utilization, not a fixed whole-slice horizon or complete liquid-fraction packet. Do not infer immediate from ERC4626 or guess a delay."
+    },
+    {
+      "id": "uw-jaaa-janus-henderson-anemoy-6b0116947477a4c3",
+      "assetId": "jaaa-janus-henderson-anemoy",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:4a82d397df2ecd3c6575e829",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
+      "sources": [
+        {
+          "url": "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le",
+          "observedAt": "2026-10-03T22:55:17Z",
+          "datumAsOf": "2026-06-30",
+          "location": "June 2026 factsheet, Overview and Key Facts",
+          "excerpt": "Open ended BVI licensed fund for non-US Professional Investors",
+          "assertion": "Exact JAAA is an open-ended fund share, not the similarly named US ETF or each underlying CLO."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le",
+        "https://www.anemoy.io/funds/jaaa",
+        "https://www.anemoy.io/news/janus-henderson-anemoy-aaa-clo-onchain",
+        "https://docs.centrifuge.io/user/investor/",
+        "https://docs.centrifuge.io/developer/protocol/architecture/vaults/",
+        "https://www.bvifsc.vg/regulated-entities/anemoy-capital-spc-limited",
+        "https://data.chain.link/feeds/ethereum/mainnet/jaaa-nav-v2"
+      ],
+      "rationale": "Maximum maturityDaysMax of the exact JAAA tokenized fund-share exposure is not disclosed. June factsheet provides open-ended structure, daily liquidity and CLO credit risks but no all-in-scope maximum share termination date or complete underlying legal-final maturity ladder. Inception, averages and redemption dates are not maxima."
+    },
+    {
+      "id": "uw-jaaa-janus-henderson-anemoy-5eb9ebd6fb0d3a03",
+      "assetId": "jaaa-janus-henderson-anemoy",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:jaaa-janus-henderson-anemoy:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
+      "sources": [
+        {
+          "url": "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le",
+          "observedAt": "2026-10-03T22:55:17Z",
+          "datumAsOf": "2026-06-30",
+          "location": "June 2026 factsheet, description and Key Facts",
+          "excerpt": "Investments and redemptions are processed in stablecoins.",
+          "assertion": "Disclosure publishes entry fee and annual management/provider fees, not a fixed redemption fee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le",
+        "https://www.anemoy.io/funds/jaaa",
+        "https://www.anemoy.io/news/janus-henderson-anemoy-aaa-clo-onchain",
+        "https://docs.centrifuge.io/user/investor/",
+        "https://docs.centrifuge.io/developer/protocol/architecture/vaults/",
+        "https://www.bvifsc.vg/regulated-entities/anemoy-capital-spc-limited",
+        "https://data.chain.link/feeds/ethereum/mainnet/jaaa-nav-v2"
+      ],
+      "rationale": "Exact JAAA same-notional redemption cost is not published on accessible fund, factsheet, investor and legal/regulatory surfaces. Entry fee $0 is not an exit-fee guarantee, and annual 50bp management or provider expenses cannot substitute for a per-redemption fee. No public exact exit tariff was found."
+    },
+    {
+      "id": "uw-jaaa-janus-henderson-anemoy-57a8e97cc5a413f3",
+      "assetId": "jaaa-janus-henderson-anemoy",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
+      "sources": [
+        {
+          "url": "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le",
+          "observedAt": "2026-10-03T22:55:17Z",
+          "datumAsOf": "2026-06-30",
+          "location": "June 2026 factsheet, fund description",
+          "excerpt": "CLOs are held directly by the Fund and Asset Under Management (AUM) can be checked onchain.",
+          "assertion": "NAV/AUM, provider identities and issuance mechanics are not matched liability/backing cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le",
+        "https://www.anemoy.io/funds/jaaa",
+        "https://www.anemoy.io/news/janus-henderson-anemoy-aaa-clo-onchain",
+        "https://docs.centrifuge.io/user/investor/",
+        "https://docs.centrifuge.io/developer/protocol/architecture/vaults/",
+        "https://www.bvifsc.vg/regulated-entities/anemoy-capital-spc-limited",
+        "https://data.chain.link/feeds/ethereum/mainnet/jaaa-nav-v2"
+      ],
+      "rationale": "Exact whole-supply mint/backing reconciliation process and cadence are not public for JAAA. Fund page, June factsheet, NAV feed, protocol accounting and FSC register disclose NAV, custody, administrator and investments, but no dated cross-chain share-liability/mint-burn/register-to-assets procedure on a common clock."
+    },
+    {
+      "id": "uw-brla-brla-digital-11987ddf1dbfb820",
+      "assetId": "brla-brla-digital",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:brla-brla-digital:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
+      "sources": [
+        {
+          "url": "https://app.avenia.io/Avenia-TC.pdf",
+          "observedAt": "2026-10-03T22:55:17Z",
+          "datumAsOf": "2025-06-23",
+          "location": "Avenia terms, page 33, section 12.1",
+          "excerpt": "Any applicable fee will be displayed at the time of the Transaction or in a manner convenient to the User.",
+          "assertion": "Terms allow a changeable intermediation fee disclosed at transaction time, not a fixed redemption tariff."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://app.avenia.io/Avenia-TC.pdf",
+        "https://avenia.io/brla",
+        "https://integration-guide.avenia.io/docs/Operations/quotesAndTickets",
+        "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a"
+      ],
+      "rationale": "Exact BRLA same-notional redemption cost is not publicly fixed. Avenia terms section 12.1 and quote/ticket docs make fees transaction-specific and discretionary. Product/transparency surfaces describe collateral and 1:1 design, not a redemption tariff. Parity or a quote endpoint cannot establish zero fee."
+    },
+    {
+      "id": "uw-pgold-pleasing-7e3f9e5a140e30b3",
+      "assetId": "pgold-pleasing",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
+      "sources": [
+        {
+          "url": "https://217962626-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FtBZ74QEzHbSbwx0W0nBo%2Fuploads%2FfLypB8MTfIw1Jrd2LT65%2FPleaseing%20Gold%20Assurance%20Report%2025%20June%202026.pdf?alt=media&token=df75631f-9b3c-4524-81e4-f69b6baaf1e5",
+          "observedAt": "2026-10-03T22:55:17Z",
+          "datumAsOf": "2026-06-25",
+          "location": "Visto CPA assurance report, page 2, procedure 8",
+          "excerpt": "Checking on-chain total supply of PGOLD tokens as of 25 June 2026.",
+          "assertion": "Visto checks supply at a single report date, not a documented recurring whole-supply cross-chain reconciliation cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://217962626-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FtBZ74QEzHbSbwx0W0nBo%2Fuploads%2FfLypB8MTfIw1Jrd2LT65%2FPleaseing%20Gold%20Assurance%20Report%2025%20June%202026.pdf?alt=media&token=df75631f-9b3c-4524-81e4-f69b6baaf1e5",
+        "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
+        "https://pleasing.gitbook.io/docs/llms.txt",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/reserve-report.md",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features.md",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/how-pgold-works.md",
+        "https://pleasing.gitbook.io/docs/user-guide/redeem-physical-gold.md",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/licenses-and-certificates.md",
+        "https://pleasing.gitbook.io/docs/legal/terms-of-use.md",
+        "https://arbiscan.io/address/0x3e76bb02286bfeaa89dd35f11253f2cbce634f91"
+      ],
+      "rationale": "Exact recurring whole-supply mint/backing reconciliation cadence is not disclosed. The Visto report observes physical stock and Arbitrum PGOLD supply on June 25, but states point-in-time scope and excludes other dates. Terms say periodic reports may be provided; no actual recurring procedure covering all minted/bridged liabilities and backing on a common clock was found. A single report cannot establish periodic reconciliation."
+    },
+    {
+      "id": "uw-pgold-pleasing-31428003f5bb0850",
+      "assetId": "pgold-pleasing",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:pgold-pleasing:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
+      "sources": [
+        {
+          "url": "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
+          "observedAt": "2026-10-03T22:55:17Z",
+          "datumAsOf": null,
+          "location": "Terms of Sale, section 4, Fees",
+          "excerpt": "Redemption, handling, insurance, and delivery fees per the **Fee Schedule**.",
+          "assertion": "Fees are referenced but the complete numerical schedule is not linked or reproduced."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
+        "https://pleasing.gitbook.io/docs/llms.txt",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/reserve-report.md",
+        "https://217962626-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FtBZ74QEzHbSbwx0W0nBo%2Fuploads%2FfLypB8MTfIw1Jrd2LT65%2FPleaseing%20Gold%20Assurance%20Report%2025%20June%202026.pdf?alt=media&token=df75631f-9b3c-4524-81e4-f69b6baaf1e5",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features.md",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/how-pgold-works.md",
+        "https://pleasing.gitbook.io/docs/user-guide/redeem-physical-gold.md",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/licenses-and-certificates.md",
+        "https://pleasing.gitbook.io/docs/legal/terms-of-use.md",
+        "https://arbiscan.io/address/0x3e76bb02286bfeaa89dd35f11253f2cbce634f91"
+      ],
+      "rationale": "Exact PGOLD physical-redemption cost is not published. Terms refer to a Fee Schedule for redemption/handling/insurance/delivery, but the complete documentation index, terms, product and redemption pages do not publish that numerical schedule. The 0.5% app/conversion charge does not establish all physical delivery fees."
+    },
+    {
+      "id": "uw-pgold-pleasing-b992a4d26cb423c8",
+      "assetId": "pgold-pleasing",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:pgold-pleasing"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
+      "sources": [
+        {
+          "url": "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
+          "observedAt": "2026-10-03T22:55:17Z",
+          "datumAsOf": null,
+          "location": "Terms of Sale, section 4, Timing",
+          "excerpt": "We use commercially reasonable efforts; delays may occur due to market/liquidity, logistics, regulatory, or force-majeure events.",
+          "assertion": "Terms disclose nonbounded effort-based physical timing, not maximum settlement for either physical delivery or issuer cash-sale leg."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
+        "https://pleasing.gitbook.io/docs/llms.txt",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/reserve-report.md",
+        "https://217962626-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FtBZ74QEzHbSbwx0W0nBo%2Fuploads%2FfLypB8MTfIw1Jrd2LT65%2FPleaseing%20Gold%20Assurance%20Report%2025%20June%202026.pdf?alt=media&token=df75631f-9b3c-4524-81e4-f69b6baaf1e5",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features.md",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/how-pgold-works.md",
+        "https://pleasing.gitbook.io/docs/user-guide/redeem-physical-gold.md",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/licenses-and-certificates.md",
+        "https://pleasing.gitbook.io/docs/legal/terms-of-use.md",
+        "https://arbiscan.io/address/0x3e76bb02286bfeaa89dd35f11253f2cbce634f91"
+      ],
+      "rationale": "Exact maximum settlement SLA for PGOLD physical issuer redemption and the distinct physical-to-USD issuer cash-sale route is not published. Terms list effort-based delivery with delays and the guide requires waiting for customer support. Instant onchain PUSD/USDT spot settlement is a different route and is not a fiat issuer cash-out maximum."
+    },
+    {
+      "id": "uw-pgold-pleasing-a372f31a4f0747be",
+      "assetId": "pgold-pleasing",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:pgold-pleasing:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
+      "sources": [
+        {
+          "url": "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
+          "observedAt": "2026-10-03T22:55:17Z",
+          "datumAsOf": null,
+          "location": "Terms of Sale, section 4, Timing",
+          "excerpt": "We use commercially reasonable efforts; delays may occur due to market/liquidity, logistics, regulatory, or force-majeure events.",
+          "assertion": "Terms disclose nonbounded effort-based physical timing, not maximum settlement for either physical delivery or issuer cash-sale leg."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
+        "https://pleasing.gitbook.io/docs/llms.txt",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/reserve-report.md",
+        "https://217962626-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FtBZ74QEzHbSbwx0W0nBo%2Fuploads%2FfLypB8MTfIw1Jrd2LT65%2FPleaseing%20Gold%20Assurance%20Report%2025%20June%202026.pdf?alt=media&token=df75631f-9b3c-4524-81e4-f69b6baaf1e5",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features.md",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/how-pgold-works.md",
+        "https://pleasing.gitbook.io/docs/user-guide/redeem-physical-gold.md",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/licenses-and-certificates.md",
+        "https://pleasing.gitbook.io/docs/legal/terms-of-use.md",
+        "https://arbiscan.io/address/0x3e76bb02286bfeaa89dd35f11253f2cbce634f91"
+      ],
+      "rationale": "Exact maximum settlement SLA for PGOLD physical issuer redemption and the distinct physical-to-USD issuer cash-sale route is not published. Terms list effort-based delivery with delays and the guide requires waiting for customer support. Instant onchain PUSD/USDT spot settlement is a different route and is not a fiat issuer cash-out maximum."
     }
   ]
 }

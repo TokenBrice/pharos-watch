@@ -4224,6 +4224,44 @@
           "url": "https://developers.skyeco.com/protocol/tokens/susds/"
         }
       ]
+    },
+    {
+      "assetId": "sreusd-resupply",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-02",
+      "reviewer": "W1R23 unknown-wave",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "Verified native Ethereum SavingsReUSD and both ERC4626 bases hold only immutable reUSD. The full source exposes deposits, withdrawals, rewards and OFT share escrow, not asset lending, borrowing, arbitrary asset calls or allocation management. At the pinned block all redeemable totalAssets are covered by idle reUSD; excess is undistributed rewards. Parent reUSD lending collateral and governance/LayerZero share controls remain upstream/separate risks, not wrapper-local reserve reuse or offchain custody.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0x557ab1e003951a73c12d16f0fea8490e39c33c35",
+          "function": "asset()/totalAssets()/totalSupply()/reUSD.balanceOf(vault)/convertToAssets(1e18)",
+          "value": "asset=500498237864466430089442769161915436460503092204; totalAssets=28221691589077238279605815; totalSupply=27271470302729032016147565; convertToAssets=1034843053044086092; underlyingBalance=28226052220988060148038707",
+          "block": 26114896
+        }
+      ],
+      "sources": [
+        {
+          "label": "Verified SavingsReUSD with complete LinearRewardsErc4626 and ERC4626 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x557ab1e003951a73c12d16f0fea8490e39c33c35"
+        },
+        {
+          "label": "Resupply savings terms",
+          "url": "https://docs.resupply.finance/resupply-protocol/savings-reusd.md"
+        },
+        {
+          "label": "Pinned Ethereum allocation block",
+          "url": "https://etherscan.io/block/26114896"
+        },
+        {
+          "label": "Ethereum publicnode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
     }
   ]
 }

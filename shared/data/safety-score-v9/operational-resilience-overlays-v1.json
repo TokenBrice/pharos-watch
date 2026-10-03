@@ -4076,6 +4076,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "sreusd-resupply",
+      "reviewedAt": "2026-10-03T22:47:43Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "W1R23 unknown-wave",
+      "notes": "Dated exact-token live operation establishes only a conservative operating-history lower bound. No independently verified performance, redemption throughput, reconciliation continuity or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Successful native sreUSD deposit and share mint at block 23359531",
+          "publisher": "resupply",
+          "publishedAt": "2025-09-14",
+          "url": "https://etherscan.io/tx/0x9f094c5de7092e472e5e0e2f74d386c9e5096e21c901d5bae34e0bbf09541dda",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 12,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "pgold-pleasing",
+      "reviewedAt": "2026-10-03T22:47:43Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "W1R23 unknown-wave",
+      "notes": "Dated exact-token live operation establishes only a conservative operating-history lower bound. No independently verified performance, redemption throughput, reconciliation continuity or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Pleasing issuer PGOLD live trading and launch release",
+          "publisher": "pleasing",
+          "publishedAt": "2025-10-29",
+          "url": "https://www.globenewswire.com/news-release/2025/10/29/3176301/0/en/pleasing-international-launches-rwa-platform-pleasing-golden-introducing-tokenized-gold-pgold-and-synthetic-dollar-pusd.html",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 11,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "reusd-resupply",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "W1R23 unknown-wave",
+      "notes": "Dated exact-token live operation establishes only a conservative operating-history lower bound. No independently verified performance, redemption throughput, reconciliation continuity or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Exact native REUSD creation transaction",
+          "publisher": "reusd-resupply",
+          "publishedAt": "2025-03-13",
+          "url": "https://etherscan.io/tx/0xec897982c3678db12c12cc4096fdc522617f2fe134f57b2f0e074dc59118a69f",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 18,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "brla-brla-digital",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "W1R23 unknown-wave",
+      "notes": "Dated exact-token live operation establishes only a conservative operating-history lower bound. No independently verified performance, redemption throughput, reconciliation continuity or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Exact native BRLA Polygon token creation",
+          "publisher": "brla-brla-digital",
+          "publishedAt": "2023-04-18",
+          "url": "https://polygonscan.com/tx/0x452aaac0631325b83aa86bbc141979699a147dde7e0459e4c57eda3a18ce334a",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 41,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "jaaa-janus-henderson-anemoy",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "W1R23 unknown-wave",
+      "notes": "Dated exact-token live operation establishes only a conservative operating-history lower bound. No independently verified performance, redemption throughput, reconciliation continuity or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Centrifuge JAAA tokenized CLO fund now-live announcement",
+          "publisher": "jaaa-janus-henderson-anemoy",
+          "publishedAt": "2025-06-25",
+          "url": "https://www.centrifuge.io/blog/centrifuge-janus-henderson-grove-tokenized-aaa-clo-fund",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 15,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
