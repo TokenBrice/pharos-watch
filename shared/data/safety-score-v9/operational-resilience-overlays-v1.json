@@ -8036,6 +8036,72 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "senpathusd-sentora",
+      "reviewedAt": "2026-10-03T22:50:06Z",
+      "expiresAt": "2027-10-03T22:50:06Z",
+      "reviewer": "Unknown wave W1R29 primary-source research",
+      "notes": "Exact Tempo VaultV2 creation timestamp 1778092871, block 18585504, is a lower bound of four full calendar months to review. Current exact-vault deposits and accounting were observed at Tempo block 42479418. This is issuer/protocol-reported operating evidence only; no stress redemption performance, financial reconciliation, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-vault-creation",
+          "label": "Morpho GraphQL vaultV2ByAddress, chainId 4217, exact senpathUSD deployment",
+          "publisher": "Morpho",
+          "publishedAt": "2026-05-06",
+          "url": "https://api.morpho.org/graphql",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 4,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-vault-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "senpyusdmain-sentora",
+      "reviewedAt": "2026-10-03T22:50:06Z",
+      "expiresAt": "2027-10-03T22:50:06Z",
+      "reviewer": "Unknown wave W1R29 primary-source research",
+      "notes": "Exact Ethereum VaultV2 creation timestamp 1765886495, block 24025034, is a lower bound of nine full calendar months to review. Current exact-vault deposits and accounting were observed at Ethereum block 26114898. This is issuer/protocol-reported operating evidence only; no stress redemption performance, financial reconciliation, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-vault-creation",
+          "label": "Morpho GraphQL vaultV2ByAddress, chainId 1, exact senPYUSDmain deployment",
+          "publisher": "Morpho",
+          "publishedAt": "2025-12-16",
+          "url": "https://api.morpho.org/graphql",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 9,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-vault-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

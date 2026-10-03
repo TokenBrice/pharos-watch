@@ -17435,6 +17435,454 @@
         "https://cache.accountable.capital/dashboard/neutrl"
       ],
       "rationale": "Whole-liability reconciliation scope/cadence for material offchain OTC/custody positions is undisclosed. FAQ describes eventual offchain proof-of-reserve, audits are contract-security engagements, and current solvency panels withhold measured coverage. Neither historical Dashboard claims nor chain custody movements prove ongoing reconciliation of all reserves to total NUSD liabilities."
+    },
+    {
+      "id": "uw-senpathusd-sentora-64da7e24a9cf2053",
+      "assetId": "senpathusd-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senpathusd-sentora:0be9de1df3571f0fc4f8",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:senpathusd-sentora:0be9de1df3571f0fc4f8",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R29)",
+      "sources": [
+        {
+          "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2",
+          "observedAt": "2026-10-03T22:53:03Z",
+          "datumAsOf": null,
+          "location": "Core roles table",
+          "excerpt": "| owner | 0xe8C9C99EcaD0686A14A00d8521c572281E938008 |",
+          "assertion": "Publishes the exact owner Safe address, not the human/organizational signer identity, independent key custody or signing policy."
+        },
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T22:53:00Z",
+          "datumAsOf": null,
+          "location": "Section 3.5, No Key Recovery or Transaction Reversal; last updated June 2026",
+          "excerpt": "Sentora does not store, control, or have access to your private keys",
+          "assertion": "Describes users' wallet keys; does not identify the operational Safe signers or attest their independence/key controls."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/about",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/legal/terms-of-use",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2",
+        "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626",
+        "https://eth.drpc.org",
+        "https://rpc.tempo.xyz",
+        "https://etherscan.io/address/0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
+        "https://etherscan.io/address/0x992592e073aa9b98daed79ee05c4af832e1d0abe"
+      ],
+      "rationale": "The exact scoped questions ask for the human or organizational controller, signer independence and independently attested operational-key custody/signing policy of the owner and curator 1-of-1 Safes. Pinned reads on both chains reconfirm sole signers 0x295d\u2026d7e9 and 0x9925\u20260abe, thresholds 1 and no modules. The issuer site, terms, product pages, protocol audit archive and exact-address searches publish no identity or attestation answering those questions. This C does not replace known onchain quorum facts or establish incident absence."
+    },
+    {
+      "id": "uw-senpathusd-sentora-10fdcea14c6bb83e",
+      "assetId": "senpathusd-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senpathusd-sentora:f129e922d91358168744",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:senpathusd-sentora:f129e922d91358168744",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R29)",
+      "sources": [
+        {
+          "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2",
+          "observedAt": "2026-10-03T22:53:03Z",
+          "datumAsOf": null,
+          "location": "Core roles table",
+          "excerpt": "| owner | 0xe8C9C99EcaD0686A14A00d8521c572281E938008 |",
+          "assertion": "Publishes the exact owner Safe address, not the human/organizational signer identity, independent key custody or signing policy."
+        },
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T22:53:00Z",
+          "datumAsOf": null,
+          "location": "Section 3.5, No Key Recovery or Transaction Reversal; last updated June 2026",
+          "excerpt": "Sentora does not store, control, or have access to your private keys",
+          "assertion": "Describes users' wallet keys; does not identify the operational Safe signers or attest their independence/key controls."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/about",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/legal/terms-of-use",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2",
+        "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626",
+        "https://eth.drpc.org",
+        "https://rpc.tempo.xyz",
+        "https://etherscan.io/address/0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
+        "https://etherscan.io/address/0x992592e073aa9b98daed79ee05c4af832e1d0abe"
+      ],
+      "rationale": "The exact scoped questions ask for the human or organizational controller, signer independence and independently attested operational-key custody/signing policy of the owner and curator 1-of-1 Safes. Pinned reads on both chains reconfirm sole signers 0x295d\u2026d7e9 and 0x9925\u20260abe, thresholds 1 and no modules. The issuer site, terms, product pages, protocol audit archive and exact-address searches publish no identity or attestation answering those questions. This C does not replace known onchain quorum facts or establish incident absence."
+    },
+    {
+      "id": "uw-senpyusdmain-sentora-db77127e9abe7eed",
+      "assetId": "senpyusdmain-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senpyusdmain-sentora:5fe96ee55ec0810c61bb",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:senpyusdmain-sentora:5fe96ee55ec0810c61bb",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R29)",
+      "sources": [
+        {
+          "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2",
+          "observedAt": "2026-10-03T22:53:03Z",
+          "datumAsOf": null,
+          "location": "Core roles table",
+          "excerpt": "| owner | 0xe8C9C99EcaD0686A14A00d8521c572281E938008 |",
+          "assertion": "Publishes the exact owner Safe address, not the human/organizational signer identity, independent key custody or signing policy."
+        },
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T22:53:00Z",
+          "datumAsOf": null,
+          "location": "Section 3.5, No Key Recovery or Transaction Reversal; last updated June 2026",
+          "excerpt": "Sentora does not store, control, or have access to your private keys",
+          "assertion": "Describes users' wallet keys; does not identify the operational Safe signers or attest their independence/key controls."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/about",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/legal/terms-of-use",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2",
+        "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626",
+        "https://eth.drpc.org",
+        "https://rpc.tempo.xyz",
+        "https://etherscan.io/address/0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
+        "https://etherscan.io/address/0x992592e073aa9b98daed79ee05c4af832e1d0abe"
+      ],
+      "rationale": "The exact scoped questions ask for the human or organizational controller, signer independence and independently attested operational-key custody/signing policy of the owner and curator 1-of-1 Safes. Pinned reads on both chains reconfirm sole signers 0x295d\u2026d7e9 and 0x9925\u20260abe, thresholds 1 and no modules. The issuer site, terms, product pages, protocol audit archive and exact-address searches publish no identity or attestation answering those questions. This C does not replace known onchain quorum facts or establish incident absence."
+    },
+    {
+      "id": "uw-senpyusdmain-sentora-65228b544ee5d8d0",
+      "assetId": "senpyusdmain-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senpyusdmain-sentora:ec580e6b0049c5f56713",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:senpyusdmain-sentora:ec580e6b0049c5f56713",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R29)",
+      "sources": [
+        {
+          "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2",
+          "observedAt": "2026-10-03T22:53:03Z",
+          "datumAsOf": null,
+          "location": "Core roles table",
+          "excerpt": "| owner | 0xe8C9C99EcaD0686A14A00d8521c572281E938008 |",
+          "assertion": "Publishes the exact owner Safe address, not the human/organizational signer identity, independent key custody or signing policy."
+        },
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T22:53:00Z",
+          "datumAsOf": null,
+          "location": "Section 3.5, No Key Recovery or Transaction Reversal; last updated June 2026",
+          "excerpt": "Sentora does not store, control, or have access to your private keys",
+          "assertion": "Describes users' wallet keys; does not identify the operational Safe signers or attest their independence/key controls."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/about",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/legal/terms-of-use",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2",
+        "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626",
+        "https://eth.drpc.org",
+        "https://rpc.tempo.xyz",
+        "https://etherscan.io/address/0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
+        "https://etherscan.io/address/0x992592e073aa9b98daed79ee05c4af832e1d0abe"
+      ],
+      "rationale": "The exact scoped questions ask for the human or organizational controller, signer independence and independently attested operational-key custody/signing policy of the owner and curator 1-of-1 Safes. Pinned reads on both chains reconfirm sole signers 0x295d\u2026d7e9 and 0x9925\u20260abe, thresholds 1 and no modules. The issuer site, terms, product pages, protocol audit archive and exact-address searches publish no identity or attestation answering those questions. This C does not replace known onchain quorum facts or establish incident absence."
+    },
+    {
+      "id": "uw-senpathusd-sentora-0c5cdc6d23a83132",
+      "assetId": "senpathusd-sentora",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1e2e44890906a1e503f9d8ac",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R29)",
+      "sources": [
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T22:53:02Z",
+          "datumAsOf": null,
+          "location": "Core Non-Custodial Mechanisms, In-Kind Redemptions",
+          "excerpt": "It does not withdraw assets out of the Morpho protocol; instead, it shifts the user\u2019s exposure from the vault to the underlying positions, even when those positions are illiquid.",
+          "assertion": "In-kind position exit is disclosed, but not a guaranteed realization horizon for the entire underlying-token-denominated lending slice."
+        },
+        {
+          "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2",
+          "observedAt": "2026-10-03T22:53:03Z",
+          "datumAsOf": null,
+          "location": "Metrics table",
+          "excerpt": "| Liquidity USD | $69,966,063.12 |",
+          "assertion": "Reports current available liquidity, not a time bound to realize the entire deployed slice; this observation is not curated as reserve weights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://api.morpho.org/graphql",
+        "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2",
+        "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+      ],
+      "rationale": "No contractual maximum time to realize the whole pathUSD idle-plus-lending slice or whole PYUSD deployed-strategy slice is published in issuer terms, exact vault dashboards/API, withdrawal source or protocol liquidity documentation. Ordinary withdrawal requires sufficient idle/configured-adapter liquidity; borrowed capital depends on borrower repayment or liquidation. Force-deallocation can exchange into underlying positions but is not a whole-slice cash realization guarantee. Current liquidity amounts and transaction speed cannot establish immediate liquidity."
+    },
+    {
+      "id": "uw-senpyusdmain-sentora-c7a08f2b6c6fc932",
+      "assetId": "senpyusdmain-sentora",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:df8d4183f120155e2cf8ec4f",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R29)",
+      "sources": [
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T22:53:02Z",
+          "datumAsOf": null,
+          "location": "Core Non-Custodial Mechanisms, In-Kind Redemptions",
+          "excerpt": "It does not withdraw assets out of the Morpho protocol; instead, it shifts the user\u2019s exposure from the vault to the underlying positions, even when those positions are illiquid.",
+          "assertion": "In-kind position exit is disclosed, but not a guaranteed realization horizon for the entire underlying-token-denominated lending slice."
+        },
+        {
+          "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2",
+          "observedAt": "2026-10-03T22:53:03Z",
+          "datumAsOf": null,
+          "location": "Metrics table",
+          "excerpt": "| Liquidity USD | $69,966,063.12 |",
+          "assertion": "Reports current available liquidity, not a time bound to realize the entire deployed slice; this observation is not curated as reserve weights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://api.morpho.org/graphql",
+        "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2",
+        "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+      ],
+      "rationale": "No contractual maximum time to realize the whole pathUSD idle-plus-lending slice or whole PYUSD deployed-strategy slice is published in issuer terms, exact vault dashboards/API, withdrawal source or protocol liquidity documentation. Ordinary withdrawal requires sufficient idle/configured-adapter liquidity; borrowed capital depends on borrower repayment or liquidation. Force-deallocation can exchange into underlying positions but is not a whole-slice cash realization guarantee. Current liquidity amounts and transaction speed cannot establish immediate liquidity."
+    },
+    {
+      "id": "uw-senpyusdmain-sentora-05ef76edb2b9d265",
+      "assetId": "senpyusdmain-sentora",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R29)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T22:53:00Z",
+          "datumAsOf": null,
+          "location": "Section 4.10, No Fiduciary or Advisory Role; last updated June 2026",
+          "excerpt": "Sentora does not act as your broker, intermediary, agent, adviser, custodian, trustee, or fiduciary",
+          "assertion": "Discloses the curator's non-custodial role, not exact vault-share insolvency priority, borrower/SPV segregation or an exhaustive borrowing-authority bound."
+        },
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T22:53:02Z",
+          "datumAsOf": null,
+          "location": "Adapter Model",
+          "excerpt": "New adapters can be developed and enabled by the `Curator` at any time",
+          "assertion": "Documents the strategy's extensible allocation surface; a contract-only lender snapshot is not a whole-book legal custody or leverage covenant."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/about",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/case-studies",
+        "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2",
+        "https://api.morpho.org/graphql",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+      ],
+      "rationale": "The missing scope is the whole deployed lending book's legal custody/escrow and borrower/collateral-layer leverage, not PYUSD reserve custody or current vault borrowing. Public Sentora legal/product disclosures and Morpho source/audits identify non-custodial contract positions and lending reuse, but publish no exact-share legal segregation/insolvency rights or exhaustive underlying borrower/SPV borrowing-authority and leverage covenant. Parent-token safeguards, generic protocol audits and zero current local borrowing do not answer these exact whole-book questions."
+    },
+    {
+      "id": "uw-senpyusdmain-sentora-e61566521b71fa0e",
+      "assetId": "senpyusdmain-sentora",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "leverage",
+        "pillar": "backing",
+        "requiredDatum": "leverage",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R29)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T22:53:00Z",
+          "datumAsOf": null,
+          "location": "Section 4.10, No Fiduciary or Advisory Role; last updated June 2026",
+          "excerpt": "Sentora does not act as your broker, intermediary, agent, adviser, custodian, trustee, or fiduciary",
+          "assertion": "Discloses the curator's non-custodial role, not exact vault-share insolvency priority, borrower/SPV segregation or an exhaustive borrowing-authority bound."
+        },
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T22:53:02Z",
+          "datumAsOf": null,
+          "location": "Adapter Model",
+          "excerpt": "New adapters can be developed and enabled by the `Curator` at any time",
+          "assertion": "Documents the strategy's extensible allocation surface; a contract-only lender snapshot is not a whole-book legal custody or leverage covenant."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/about",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/case-studies",
+        "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2",
+        "https://api.morpho.org/graphql",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+      ],
+      "rationale": "The missing scope is the whole deployed lending book's legal custody/escrow and borrower/collateral-layer leverage, not PYUSD reserve custody or current vault borrowing. Public Sentora legal/product disclosures and Morpho source/audits identify non-custodial contract positions and lending reuse, but publish no exact-share legal segregation/insolvency rights or exhaustive underlying borrower/SPV borrowing-authority and leverage covenant. Parent-token safeguards, generic protocol audits and zero current local borrowing do not answer these exact whole-book questions."
+    },
+    {
+      "id": "uw-senpathusd-sentora-a58443934f9f45f6",
+      "assetId": "senpathusd-sentora",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "contractMutability",
+        "pillar": "backing",
+        "requiredDatum": "contractMutability",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:00:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R29)",
+      "sources": [
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2",
+          "observedAt": "2026-10-03T22:58:33Z",
+          "datumAsOf": null,
+          "location": "Exact verified VaultV2 source and deployed_bytecode, matched to Ethereum block 26114898 and Tempo block 42479418",
+          "excerpt": "contract VaultV2 is IVaultV2",
+          "assertion": "Pinned Ethereum runtime exactly matches verified source; Tempo differs only in immutable asset. Neither has upgrades. Already encoded immutable upgrade is blocked by fact-set-wrapper.ts:306's aggregate mint-known gate, unrelated registry/delegation questions. Compiler change required."
+        },
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T22:53:02Z",
+          "datumAsOf": null,
+          "location": "Immutable Contracts",
+          "excerpt": "All vault contracts are immutable-no upgrades can change the core noncustodial guarantees after deployment.",
+          "assertion": "Confirms core-contract immutability, not immutable allocation/fee policy. Schema already represents this exact datum; the compiler suppresses it because separate mint-review questions remain open."
+        }
+      ]
+    },
+    {
+      "id": "uw-senpyusdmain-sentora-eed5221a21d6f24f",
+      "assetId": "senpyusdmain-sentora",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "contractMutability",
+        "pillar": "backing",
+        "requiredDatum": "contractMutability",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:00:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R29)",
+      "sources": [
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2",
+          "observedAt": "2026-10-03T22:58:33Z",
+          "datumAsOf": null,
+          "location": "Exact verified VaultV2 source and deployed_bytecode, matched to Ethereum block 26114898 and Tempo block 42479418",
+          "excerpt": "contract VaultV2 is IVaultV2",
+          "assertion": "Pinned Ethereum runtime exactly matches verified source; Tempo differs only in immutable asset. Neither has upgrades. Already encoded immutable upgrade is blocked by fact-set-wrapper.ts:306's aggregate mint-known gate, unrelated registry/delegation questions. Compiler change required."
+        },
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T22:53:02Z",
+          "datumAsOf": null,
+          "location": "Immutable Contracts",
+          "excerpt": "All vault contracts are immutable-no upgrades can change the core noncustodial guarantees after deployment.",
+          "assertion": "Confirms core-contract immutability, not immutable allocation/fee policy. Schema already represents this exact datum; the compiler suppresses it because separate mint-review questions remain open."
+        }
+      ]
     }
   ]
 }
