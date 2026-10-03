@@ -13685,457 +13685,6 @@
       ]
     },
     {
-      "id": "uw-syzusd-yuzu-b45e0adc37ed058e",
-      "assetId": "syzusd-yuzu",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "supervision",
-        "pillar": "control",
-        "requiredDatum": "supervision",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:03:54Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
-      "sources": [
-        {
-          "url": "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md",
-          "observedAt": "2026-10-03T23:03:10Z",
-          "datumAsOf": "2026-04-15",
-          "location": "Introduction 1.1",
-          "excerpt": "operated by YUZU FINTECH LLC, a Virtual Asset Service Provider licensed under the Kutaisi Free Industrial Zone",
-          "assertion": "Issuer names a Georgian FEZ VASP status, not a named prudential supervisor for native syzUSD issuance."
-        },
-        {
-          "url": "https://nbg.gov.ge/en/page/virtual-asset-service-providers-vasps",
-          "observedAt": "2026-10-03T23:03:11Z",
-          "datumAsOf": null,
-          "location": "REGISTER and stablecoin issuance rule",
-          "excerpt": "For additional requirements related to the Stablecoin Initial Coin Offering (incl. issuance)",
-          "assertion": "NBG publishes a distinct stablecoin issuance rule and VASP register; the 16 September 2026 register has no Yuzu Fintech entry."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://yuzu.money/",
-        "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md",
-        "https://yuzu-money.gitbook.io/yuzu-money/transparency/accountable.md",
-        "https://nbg.gov.ge/en/page/virtual-asset-service-providers-vasps",
-        "https://nbg.gov.ge/fm/%E1%83%A1%E1%83%90%E1%83%92%E1%83%90%E1%83%93%E1%83%90%E1%83%AE%E1%83%93%E1%83%9D/vasps/%E1%83%A0%E1%83%94%E1%83%94%E1%83%A1%E1%83%A2%E1%83%A0%E1%83%98/vasps-eng-16-09-2026.xlsx",
-        "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses.md"
-      ],
-      "rationale": "The exact syzUSD native mint supervision datum is not disclosed. Issuer FEZ VASP language neither establishes prudential token issuance supervision nor identifies the applicable supervisor; the current NBG register does not identify Yuzu Fintech. Do not infer supervision:none or an authorization breach from this mismatch."
-    },
-    {
-      "id": "uw-syzusd-yuzu-9fa8402715c41797",
-      "assetId": "syzusd-yuzu",
-      "scope": {
-        "componentKey": "access:graph:unresolved:yzusd-underlying-strategy-claims",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "access:graph:unresolved:yzusd-underlying-strategy-claims",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:03:54Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
-      "sources": [
-        {
-          "url": "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies.md",
-          "observedAt": "2026-10-03T23:03:10Z",
-          "datumAsOf": null,
-          "location": "Strategy breakdown introduction",
-          "excerpt": "A live view of underlying strategies exposure is available on Yuzu Money's **Accountable dashboard**",
-          "assertion": "Issuer discloses named strategy buckets but not the complete held claim contract/controller census."
-        },
-        {
-          "url": "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md",
-          "observedAt": "2026-10-03T23:03:10Z",
-          "datumAsOf": "2026-04-15",
-          "location": "4.5 Transparency",
-          "excerpt": "displays may be delayed, estimated or incomplete and are provided as-is",
-          "assertion": "Dashboard exposure labels are not complete legal or contract-level claim identities."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://yuzu.money/",
-        "https://yuzu-money.gitbook.io/yuzu-money/llms.txt",
-        "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies.md",
-        "https://yuzu-money.gitbook.io/yuzu-money/transparency/accountable.md",
-        "https://cache.accountable.capital/dashboard/yuzu",
-        "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses.md",
-        "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md"
-      ],
-      "rationale": "The exact underlying strategy claim/controller access graph is undisclosed: current exposure_split provides labels and amounts but not all chain/contract/expiry identifiers, gross versus net loop accounting, or enforceable controller reach into each held claim. Native yzUSD/syzUSD pause authorities are separately verified; they do not establish the upstream strategy graph."
-    },
-    {
-      "id": "uw-yzusd-yuzu-09ca669209e389c7",
-      "assetId": "yzusd-yuzu",
-      "scope": {
-        "componentKey": "access:graph:unresolved:yzusd-underlying-strategy-claims",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "access:graph:unresolved:yzusd-underlying-strategy-claims",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:03:54Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
-      "sources": [
-        {
-          "url": "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies.md",
-          "observedAt": "2026-10-03T23:03:10Z",
-          "datumAsOf": null,
-          "location": "Strategy breakdown introduction",
-          "excerpt": "A live view of underlying strategies exposure is available on Yuzu Money's **Accountable dashboard**",
-          "assertion": "Issuer discloses named strategy buckets but not the complete held claim contract/controller census."
-        },
-        {
-          "url": "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md",
-          "observedAt": "2026-10-03T23:03:10Z",
-          "datumAsOf": "2026-04-15",
-          "location": "4.5 Transparency",
-          "excerpt": "displays may be delayed, estimated or incomplete and are provided as-is",
-          "assertion": "Dashboard exposure labels are not complete legal or contract-level claim identities."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://yuzu.money/",
-        "https://yuzu-money.gitbook.io/yuzu-money/llms.txt",
-        "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies.md",
-        "https://yuzu-money.gitbook.io/yuzu-money/transparency/accountable.md",
-        "https://cache.accountable.capital/dashboard/yuzu",
-        "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses.md",
-        "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md"
-      ],
-      "rationale": "The exact underlying strategy claim/controller access graph is undisclosed: current exposure_split provides labels and amounts but not all chain/contract/expiry identifiers, gross versus net loop accounting, or enforceable controller reach into each held claim. Native yzUSD/syzUSD pause authorities are separately verified; they do not establish the upstream strategy graph."
-    },
-    {
-      "id": "uw-yzusd-yuzu-6716612e8204a82a",
-      "assetId": "yzusd-yuzu",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:yzusd-yuzu:queue-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:03:54Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
-      "sources": [
-        {
-          "url": "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md",
-          "observedAt": "2026-10-03T23:03:10Z",
-          "datumAsOf": "2026-04-15",
-          "location": "7.2",
-          "excerpt": "Yuzu does not guarantee yields, reserve sufficiency, redemption timing, or continuous access to the Platform.",
-          "assertion": "No maximum time from queued yzUSD redemption request to settled output is promised."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://yuzu.money/",
-        "https://app.yuzu.money/",
-        "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/mint-and-redeem.md",
-        "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd.md",
-        "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md",
-        "https://yuzu-money.gitbook.io/yuzu-money/transparency/accountable.md",
-        "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5"
-      ],
-      "rationale": "The queued yzUSD route has no published maximum request-to-final-settlement SLA. Docs describe eligibility and flows; legal terms allow queues, throttles and discretionary pauses. Current source has order filling by privileged roles but no forced deadline. The separate yzPP thirty-day waiting period is not yzUSD settlement."
-    },
-    {
-      "id": "uw-hbusdt-hyperbeat-d3884734885f40fb",
-      "assetId": "hbusdt-hyperbeat",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "custodyEscrow",
-        "pillar": "backing",
-        "requiredDatum": "custodyEscrow",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:03:54Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
-      "sources": [
-        {
-          "url": "https://hyperbeat.org/terms",
-          "observedAt": "2026-10-03T23:03:10Z",
-          "datumAsOf": "2026-03-01",
-          "location": "Services / Earn",
-          "excerpt": "automated non-custodial DeFi strategy Vaults, which may be co-operated or co-managed by third parties in conjunction with us",
-          "assertion": "Non-custodial marketing identifies strategy vaults, not enforceable whole-allocation segregation, bankruptcy-remoteness or asset-reuse terms."
-        },
-        {
-          "url": "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt.md",
-          "observedAt": "2026-10-03T23:03:10Z",
-          "datumAsOf": null,
-          "location": "General Vault Information",
-          "excerpt": "**Vault Token Symbol:** hbUSDT",
-          "assertion": "Exact hbUSDT integration identifies issuance/redemption contracts but no legal asset-protection/reuse covenant for the full strategy portfolio."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://hyperbeat.org/",
-        "https://hyperbeat.org/terms",
-        "https://docs.hyperbeat.org/llms.txt",
-        "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault.md",
-        "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt.md",
-        "https://docs.hyperbeat.org/resources/legal.md",
-        "https://docs.hyperbeat.org/resources/proof-of-solvency.md",
-        "https://hyperevmscan.io/address/0xbe8a4f1a312b94a712f8e5367b02ae6e378e6f19#code"
-      ],
-      "rationale": "Exact hbUSDT whole-allocation legal segregation/bankruptcy-remoteness and rehypothecation correlation safeguards are not published on reachable issuer terms, vault docs or verified deposit machinery. Insurance/redemption smart contracts are not legal custodians; non-custodial wallet statements and user-side collateral borrowing do not prove the strategy assets' reuse restrictions."
-    },
-    {
-      "id": "uw-hbusdt-hyperbeat-fdf07ef6b6af67da",
-      "assetId": "hbusdt-hyperbeat",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "rehypothecationCorrelation",
-        "pillar": "backing",
-        "requiredDatum": "rehypothecationCorrelation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:03:54Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
-      "sources": [
-        {
-          "url": "https://hyperbeat.org/terms",
-          "observedAt": "2026-10-03T23:03:10Z",
-          "datumAsOf": "2026-03-01",
-          "location": "Services / Earn",
-          "excerpt": "automated non-custodial DeFi strategy Vaults, which may be co-operated or co-managed by third parties in conjunction with us",
-          "assertion": "Non-custodial marketing identifies strategy vaults, not enforceable whole-allocation segregation, bankruptcy-remoteness or asset-reuse terms."
-        },
-        {
-          "url": "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt.md",
-          "observedAt": "2026-10-03T23:03:10Z",
-          "datumAsOf": null,
-          "location": "General Vault Information",
-          "excerpt": "**Vault Token Symbol:** hbUSDT",
-          "assertion": "Exact hbUSDT integration identifies issuance/redemption contracts but no legal asset-protection/reuse covenant for the full strategy portfolio."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://hyperbeat.org/",
-        "https://hyperbeat.org/terms",
-        "https://docs.hyperbeat.org/llms.txt",
-        "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault.md",
-        "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt.md",
-        "https://docs.hyperbeat.org/resources/legal.md",
-        "https://docs.hyperbeat.org/resources/proof-of-solvency.md",
-        "https://hyperevmscan.io/address/0xbe8a4f1a312b94a712f8e5367b02ae6e378e6f19#code"
-      ],
-      "rationale": "Exact hbUSDT whole-allocation legal segregation/bankruptcy-remoteness and rehypothecation correlation safeguards are not published on reachable issuer terms, vault docs or verified deposit machinery. Insurance/redemption smart contracts are not legal custodians; non-custodial wallet statements and user-side collateral borrowing do not prove the strategy assets' reuse restrictions."
-    },
-    {
-      "id": "uw-hbusdt-hyperbeat-771a15dd651cf52b",
-      "assetId": "hbusdt-hyperbeat",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "leverage",
-        "pillar": "backing",
-        "requiredDatum": "leverage",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:03:54Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
-      "sources": [
-        {
-          "url": "https://hyperbeat.org/terms",
-          "observedAt": "2026-10-03T23:03:10Z",
-          "datumAsOf": "2026-03-01",
-          "location": "Services / Earn",
-          "excerpt": "Such Digital Assets may be deployed across HyperEVM protocols or any of our partner protocols to earn yield and rewards.",
-          "assertion": "The mandate allows strategy deployment without disclosing hbUSDT's current gross/net leverage or a binding allocation-level leverage cap."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://hyperbeat.org/",
-        "https://hyperbeat.org/terms",
-        "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault.md",
-        "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt.md",
-        "https://docs.hyperbeat.org/resources/proof-of-solvency.md",
-        "https://docs.hyperbeat.org/morphobeat/collateral-assets",
-        "https://hyperevmscan.io/address/0xbe8a4f1a312b94a712f8e5367b02ae6e378e6f19#code"
-      ],
-      "rationale": "The exact wrapper-local hbUSDT strategy leverage posture is undisclosed on reachable materials: no current debt/assets ratio, complete strategy debt census, or binding whole-allocation no-leverage policy. Users borrowing against hbUSDT in Morpho is separate from leverage inside hbUSDT and cannot be used to author a strategy posture."
-    },
-    {
-      "id": "uw-hlscope-hamilton-lane-2df01571ee16b074",
-      "assetId": "hlscope-hamilton-lane",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:03:54Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
-      "sources": [
-        {
-          "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
-          "observedAt": "2026-10-03T23:03:10Z",
-          "datumAsOf": "2023-05-04",
-          "location": "Launch announcement",
-          "excerpt": "today launched a new feeder fund offering tokenized exposure to an evergreen private credit fund",
-          "assertion": "Feeder identity is disclosed; a current dated feeder asset/liability composition and independent token-to-LP reconciliation are not."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.hamiltonlane.com/en-us/strategies/evergreen/global/senior-credit-opportunities-fund",
-        "https://www.hamiltonlane.com/en-us/fact-sheet-archive/scope-row",
-        "https://securitize.io/primary-market/hl-scope",
-        "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
-        "https://www.sec.gov/Archives/edgar/data/1976710/000197671025000002/primary_doc.xml",
-        "https://www.hamiltonlane.com/getContentAsset/f266e02e-c9a9-42f7-a85a-4d5ece6100bf/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/HL-SCOPE-SA-SICAV-RAIF-PPM-December-2025.pdf?language=en-US",
-        "https://investors.securitize.io/news/news-details/2025/Hamilton-Lane-and-Securitizes-SCOPE-Gains-Instant-RLUSD-Liquidity-by-integrating-with-VBILLs-Onchain-Facility-11-05-2025/default.aspx"
-      ],
-      "rationale": "Exact HLSCOPE tokenized-feeder current composition and mint reconciliation are not disclosed. Public Main Fund NAV/performance and PPM describe a different Luxembourg fund, not a current feeder holdings/liability denominator or independent reconciliation of minted token supply to LP ownership. The VBILL liquidity sleeve announcement also supplies no feeder balance weights. Retain historical structure rather than renewing its composition date."
-    },
-    {
-      "id": "uw-hlscope-hamilton-lane-500f041959edcfde",
-      "assetId": "hlscope-hamilton-lane",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:03:54Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
-      "sources": [
-        {
-          "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
-          "observedAt": "2026-10-03T23:03:10Z",
-          "datumAsOf": "2023-05-04",
-          "location": "Launch announcement",
-          "excerpt": "today launched a new feeder fund offering tokenized exposure to an evergreen private credit fund",
-          "assertion": "Feeder identity is disclosed; a current dated feeder asset/liability composition and independent token-to-LP reconciliation are not."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.hamiltonlane.com/en-us/strategies/evergreen/global/senior-credit-opportunities-fund",
-        "https://www.hamiltonlane.com/en-us/fact-sheet-archive/scope-row",
-        "https://securitize.io/primary-market/hl-scope",
-        "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
-        "https://www.sec.gov/Archives/edgar/data/1976710/000197671025000002/primary_doc.xml",
-        "https://www.hamiltonlane.com/getContentAsset/f266e02e-c9a9-42f7-a85a-4d5ece6100bf/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/HL-SCOPE-SA-SICAV-RAIF-PPM-December-2025.pdf?language=en-US",
-        "https://investors.securitize.io/news/news-details/2025/Hamilton-Lane-and-Securitizes-SCOPE-Gains-Instant-RLUSD-Liquidity-by-integrating-with-VBILLs-Onchain-Facility-11-05-2025/default.aspx"
-      ],
-      "rationale": "Exact HLSCOPE tokenized-feeder current composition and mint reconciliation are not disclosed. Public Main Fund NAV/performance and PPM describe a different Luxembourg fund, not a current feeder holdings/liability denominator or independent reconciliation of minted token supply to LP ownership. The VBILL liquidity sleeve announcement also supplies no feeder balance weights. Retain historical structure rather than renewing its composition date."
-    },
-    {
-      "id": "uw-hlscope-hamilton-lane-68b3c35ade81ac2b",
-      "assetId": "hlscope-hamilton-lane",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:hlscope-hamilton-lane:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:03:54Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
-      "sources": [
-        {
-          "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
-          "observedAt": "2026-10-03T23:03:10Z",
-          "datumAsOf": "2023-05-04",
-          "location": "Redemption paragraph and footnote",
-          "excerpt": "with no transaction fees from Securitize*",
-          "assertion": "The explicit footnote says other fees apply; zero Securitize transaction fee does not establish all-in holder costs."
-        },
-        {
-          "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
-          "observedAt": "2026-10-03T23:03:10Z",
-          "datumAsOf": "2023-05-04",
-          "location": "Redemption paragraph",
-          "excerpt": "Investors in the SCOPE feeder fund will generally have the option to redeem their shares on demand at the previous quarter\u2019s Net Asset Value per share",
-          "assertion": "On-demand request availability is not a maximum elapsed time to final fiat settlement."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
-        "https://securitize.io/primary-market/hl-scope",
-        "https://www.hamiltonlane.com/en-us/fact-sheet-archive/scope-row",
-        "https://www.hamiltonlane.com/getContentAsset/f266e02e-c9a9-42f7-a85a-4d5ece6100bf/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/HL-SCOPE-SA-SICAV-RAIF-PPM-December-2025.pdf?language=en-US",
-        "https://www.sec.gov/Archives/edgar/data/1976710/000197671025000002/primary_doc.xml",
-        "https://investors.securitize.io/news/news-details/2025/Hamilton-Lane-and-Securitizes-SCOPE-Gains-Instant-RLUSD-Liquidity-by-integrating-with-VBILLs-Onchain-Facility-11-05-2025/default.aspx"
-      ],
-      "rationale": "No current exact HLSCOPE offchain-issuer all-in redemption fee schedule or request-to-final-fiat-settlement maximum is published. The historical no-Securitize-transaction-fee statement expressly excludes other fees. Main Fund PPM terms cannot be applied to the separate feeder, and instant RLUSD liquidity is a distinct rail from the modeled fiat route."
-    },
-    {
-      "id": "uw-hlscope-hamilton-lane-1c0533015c19bf71",
-      "assetId": "hlscope-hamilton-lane",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:hlscope-hamilton-lane:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:03:54Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
-      "sources": [
-        {
-          "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
-          "observedAt": "2026-10-03T23:03:10Z",
-          "datumAsOf": "2023-05-04",
-          "location": "Redemption paragraph and footnote",
-          "excerpt": "with no transaction fees from Securitize*",
-          "assertion": "The explicit footnote says other fees apply; zero Securitize transaction fee does not establish all-in holder costs."
-        },
-        {
-          "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
-          "observedAt": "2026-10-03T23:03:10Z",
-          "datumAsOf": "2023-05-04",
-          "location": "Redemption paragraph",
-          "excerpt": "Investors in the SCOPE feeder fund will generally have the option to redeem their shares on demand at the previous quarter\u2019s Net Asset Value per share",
-          "assertion": "On-demand request availability is not a maximum elapsed time to final fiat settlement."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
-        "https://securitize.io/primary-market/hl-scope",
-        "https://www.hamiltonlane.com/en-us/fact-sheet-archive/scope-row",
-        "https://www.hamiltonlane.com/getContentAsset/f266e02e-c9a9-42f7-a85a-4d5ece6100bf/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/HL-SCOPE-SA-SICAV-RAIF-PPM-December-2025.pdf?language=en-US",
-        "https://www.sec.gov/Archives/edgar/data/1976710/000197671025000002/primary_doc.xml",
-        "https://investors.securitize.io/news/news-details/2025/Hamilton-Lane-and-Securitizes-SCOPE-Gains-Instant-RLUSD-Liquidity-by-integrating-with-VBILLs-Onchain-Facility-11-05-2025/default.aspx"
-      ],
-      "rationale": "No current exact HLSCOPE offchain-issuer all-in redemption fee schedule or request-to-final-fiat-settlement maximum is published. The historical no-Securitize-transaction-fee statement expressly excludes other fees. Main Fund PPM terms cannot be applied to the separate feeder, and instant RLUSD liquidity is a distinct rail from the modeled fiat route."
-    },
-    {
       "id": "uw-usdr-rise-68cc82cb18727d2c",
       "assetId": "usdr-rise",
       "scope": {
@@ -16021,316 +15570,6 @@
         "https://docs.rings.money/"
       ],
       "rationale": "No maximum final stablecoin delivery time is disclosed for scUSD queue redemption. Current issuer documentation contradicts itself on three versus five-day cooldown; neither is a completion SLA. Exact published queue source enforces maturity, expiry, pause and authorized solver calls, not guaranteed solving/funding. The old Rings docs redirect to a GitBook shell; current Trevee docs and exact queue source are the substantive reviewed surfaces."
-    },
-    {
-      "id": "uw-usdr-ring-2d61c37ad62ec8f7",
-      "assetId": "usdr-ring",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:08:41Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R74)",
-      "sources": [
-        {
-          "url": "https://docs.ring.exchange/concepts/overview",
-          "observedAt": "2026-10-03T23:08:41Z",
-          "datumAsOf": null,
-          "location": "Published documentation",
-          "excerpt": "Ring Protocol uses a wrapped asset layer called FEW to connect assets to trading and liquidity systems.",
-          "assertion": "Current product map discloses FEW and Ring Swap, not a current USDR backing/claim book."
-        },
-        {
-          "url": "https://raw.githubusercontent.com/RingProtocol/docs/a7061d4fd0b539fca55db53871d193a386e086ad/docs/concepts/usdr-mint.md",
-          "observedAt": "2026-10-03T23:08:41Z",
-          "datumAsOf": null,
-          "location": "Published documentation",
-          "excerpt": "The mint contract does not redeem USDR back to stablecoins.",
-          "assertion": "Draft describes minting, not a deployed mainnet reserve inventory or liability reconciliation."
-        },
-        {
-          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913",
-          "observedAt": "2026-10-03T23:08:41Z",
-          "datumAsOf": null,
-          "location": "source_code AssetToken.mint",
-          "excerpt": "function mint(address account, uint256 amount) external override onlyMinter {",
-          "assertion": "Exact USDR source has role-gated minting without a reserve-ledger or holder-redemption operation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.ring.exchange/llms.txt",
-        "https://docs.ring.exchange/concepts/overview",
-        "https://docs.ring.exchange/contracts/v2/deployments",
-        "https://docs.ring.exchange/security-and-risk",
-        "https://github.com/RingProtocol/audits",
-        "https://raw.githubusercontent.com/RingProtocol/docs/a7061d4fd0b539fca55db53871d193a386e086ad/docs/concepts/usdr-mint.md",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913"
-      ],
-      "rationale": "No dated whole-supply USDR liability-to-backing reconciliation procedure or cadence is disclosed. Token mint/burn code and FewToken unwrap accounting are not a financial supply/backing reconciliation; current docs and audit index do not publish that exact regime."
-    },
-    {
-      "id": "uw-usdr-ring-0691a6ffcb520a64",
-      "assetId": "usdr-ring",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:08:41Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R74)",
-      "sources": [
-        {
-          "url": "https://docs.ring.exchange/concepts/overview",
-          "observedAt": "2026-10-03T23:08:41Z",
-          "datumAsOf": null,
-          "location": "Published documentation",
-          "excerpt": "Ring Protocol uses a wrapped asset layer called FEW to connect assets to trading and liquidity systems.",
-          "assertion": "Current product map discloses FEW and Ring Swap, not a current USDR backing/claim book."
-        },
-        {
-          "url": "https://raw.githubusercontent.com/RingProtocol/docs/a7061d4fd0b539fca55db53871d193a386e086ad/docs/concepts/usdr-mint.md",
-          "observedAt": "2026-10-03T23:08:41Z",
-          "datumAsOf": null,
-          "location": "Published documentation",
-          "excerpt": "The mint contract does not redeem USDR back to stablecoins.",
-          "assertion": "Draft describes minting, not a deployed mainnet reserve inventory or liability reconciliation."
-        },
-        {
-          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913",
-          "observedAt": "2026-10-03T23:08:41Z",
-          "datumAsOf": null,
-          "location": "source_code AssetToken.mint",
-          "excerpt": "function mint(address account, uint256 amount) external override onlyMinter {",
-          "assertion": "Exact USDR source has role-gated minting without a reserve-ledger or holder-redemption operation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.ring.exchange/llms.txt",
-        "https://docs.ring.exchange/concepts/overview",
-        "https://docs.ring.exchange/contracts/v2/deployments",
-        "https://docs.ring.exchange/security-and-risk",
-        "https://github.com/RingProtocol/audits",
-        "https://raw.githubusercontent.com/RingProtocol/docs/a7061d4fd0b539fca55db53871d193a386e086ad/docs/concepts/usdr-mint.md",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913"
-      ],
-      "rationale": "No current whole-asset reserve inventory, allocation weights, reserve-address denominator or financial reserve report for tracked mainnet USDR is disclosed. The draft names input stablecoins without a mainnet deployment or measured backing book; legacy RUSD and FewToken underlying balances cannot be substituted."
-    },
-    {
-      "id": "uw-usdr-ring-f2d26a6969d7f5c3",
-      "assetId": "usdr-ring",
-      "scope": {
-        "componentKey": "mechanism-risk-review",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "mechanism-risk-review",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:08:41Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R74)",
-      "sources": [
-        {
-          "url": "https://docs.ring.exchange/concepts/overview",
-          "observedAt": "2026-10-03T23:08:41Z",
-          "datumAsOf": null,
-          "location": "Published documentation",
-          "excerpt": "Ring Protocol uses a wrapped asset layer called FEW to connect assets to trading and liquidity systems.",
-          "assertion": "Current product map discloses FEW and Ring Swap, not a current USDR backing/claim book."
-        },
-        {
-          "url": "https://raw.githubusercontent.com/RingProtocol/docs/a7061d4fd0b539fca55db53871d193a386e086ad/docs/concepts/usdr-mint.md",
-          "observedAt": "2026-10-03T23:08:41Z",
-          "datumAsOf": null,
-          "location": "Published documentation",
-          "excerpt": "The mint contract does not redeem USDR back to stablecoins.",
-          "assertion": "Draft describes minting, not a deployed mainnet reserve inventory or liability reconciliation."
-        },
-        {
-          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913",
-          "observedAt": "2026-10-03T23:08:41Z",
-          "datumAsOf": null,
-          "location": "source_code AssetToken.mint",
-          "excerpt": "function mint(address account, uint256 amount) external override onlyMinter {",
-          "assertion": "Exact USDR source has role-gated minting without a reserve-ledger or holder-redemption operation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.ring.exchange/llms.txt",
-        "https://docs.ring.exchange/concepts/overview",
-        "https://docs.ring.exchange/contracts/v2/deployments",
-        "https://docs.ring.exchange/security-and-risk",
-        "https://github.com/RingProtocol/audits",
-        "https://raw.githubusercontent.com/RingProtocol/docs/a7061d4fd0b539fca55db53871d193a386e086ad/docs/concepts/usdr-mint.md",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913"
-      ],
-      "rationale": "The tracked AssetToken/Core issuance is public, but the current economic holder claim and backing/redemption model remain undisclosed. The recovered draft has no mainnet deployment binding; current maintained product and deployment docs identify FEW/Ring Swap rather than a mainnet USDR reserve mechanism. Preserve unresolved archetype."
-    },
-    {
-      "id": "uw-audd-novatti-c9d17c22c07f5277",
-      "assetId": "audd-novatti",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:529fe21608ba96a8f9148ef2",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:08:41Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R74)",
-      "sources": [
-        {
-          "url": "https://www.audd.digital/wp-content/uploads/2026/02/202602_AUDD-PDS.pdf",
-          "observedAt": "2026-10-03T23:08:41Z",
-          "datumAsOf": "2026-02-10",
-          "location": "PDS section 2.2",
-          "excerpt": "All AUDD reserve funds are held as either cash in Australian dollars (in bank accounts with Australian authorised deposit-taking institutions or foreign banks) or cash equivalents denominated in Australian dollars (such as Australian government bonds).",
-          "assertion": "Permitted cash/cash-equivalent categories do not disclose maximum contractual tenor of the bank deposits."
-        },
-        {
-          "url": "https://www.audd.digital/wp-content/uploads/2026/09/AUDC-Agreed-upon-procedures-report-Aug26_.pdf",
-          "observedAt": "2026-10-03T23:08:41Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Reserve schedule p.4",
-          "excerpt": "100% cash",
-          "assertion": "Current scoped bank holdings disclosed without deposit term/maturity schedule."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.audd.digital/",
-        "https://www.audd.digital/transparency/",
-        "https://www.audd.digital/wp-content/uploads/2026/02/202602_AUDD-PDS.pdf",
-        "https://www.audd.digital/audd-terms-of-service/",
-        "https://devhub.audd.digital/docs/supported-blockchains"
-      ],
-      "rationale": "AUD bank-deposit slice maximum contractual maturity is not published in the current AUP schedule, PDS reserve mandate, terms or issuer technical/transparency disclosures. The published 100% cash classification and liquid-bank-balance statement are not proof of a zero-day or other maximum deposit tenor."
-    },
-    {
-      "id": "uw-audd-novatti-351fc5695980df93",
-      "assetId": "audd-novatti",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:audd-novatti:offchain-issuer"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T23:08:41Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R74)",
-      "sources": [
-        {
-          "url": "https://www.audd.digital/wp-content/uploads/2026/02/202602_AUDD-PDS.pdf",
-          "observedAt": "2026-10-03T23:08:41Z",
-          "datumAsOf": "2026-02-10",
-          "location": "PDS section 3.1(b)",
-          "excerpt": "For redemptions via AUDD Digital (or directly from AUDC when redemption via a Distributor is unavailable), redemption fees to an external bank account will range from 0.10% to 1.00%.",
-          "assertion": "W15: published applicable variable payout schedule is not evaluated at the captured holder/notional; configuration carries documentedVariableFee without a selected payout charge."
-        }
-      ]
-    },
-    {
-      "id": "uw-usdso-somnia-5e82239f76f9212e",
-      "assetId": "usdso-somnia",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "supervision",
-        "pillar": "control",
-        "requiredDatum": "supervision",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:09:56Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R74)",
-      "sources": [
-        {
-          "url": "https://somnia.network/usdso-terms-of-service",
-          "observedAt": "2026-10-03T23:09:56Z",
-          "datumAsOf": "2026-05-05",
-          "location": "section 3.1",
-          "excerpt": "USDso is issued exclusively by Frax Inc. and/or its affiliates (collectively, \u201cFrax\u201d).",
-          "assertion": "Legal issuer identity is Frax; the Somnia operator expressly disclaims issuer authorization."
-        },
-        {
-          "url": "https://gov.frax.finance/t/fip-432-transfer-of-compliance-collateral-management-of-frxusd-to-frax-inc/3748",
-          "observedAt": "2026-10-03T23:09:56Z",
-          "datumAsOf": "2025-07-07",
-          "location": "Background and Motivation",
-          "excerpt": "supporting FRAX Inc\u2019s pursuit of a payment stablecoin license",
-          "assertion": "Public governance describes pursuing licensing, not a granted supervised USDso issuing regime."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://somnia.network/usdso-stablecoin",
-        "https://somnia.network/usdso-terms-of-service",
-        "https://docs.frax.com/protocol/assets/frxusd/frxusd",
-        "https://gov.frax.finance/t/fip-432-transfer-of-compliance-collateral-management-of-frxusd-to-frax-inc/3748",
-        "https://www.occ.gov/",
-        "https://www.dfs.ny.gov/"
-      ],
-      "rationale": "Exact Frax Inc/affiliate issuer supervision applicable to USDso remains undisclosed: own terms identify Frax but no granted licence/activity, Frax issuer docs identify delegated compliance and regulated reserve custodians, and OCC/NYDFS name searches found no matching issuer approval. GENIUS-compatible and regulated underlying custodians are not issuer prudential supervision."
-    },
-    {
-      "id": "uw-usdso-somnia-6ca1a6049ebf7558",
-      "assetId": "usdso-somnia",
-      "scope": {
-        "componentKey": "control:mint-meta:usdso-somnia:41487c7fcef92f13148c",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:usdso-somnia:41487c7fcef92f13148c",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:09:56Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R74)",
-      "sources": [
-        {
-          "url": "https://somnia.network/usdso-terms-of-service",
-          "observedAt": "2026-10-03T23:09:56Z",
-          "datumAsOf": "2026-05-05",
-          "location": "section 5.3",
-          "excerpt": "The Company does not develop, deploy, audit, or maintain these smart contracts.",
-          "assertion": "Somnia terms disclaim contract responsibility; they do not disclose named Safe operators or signing custody policies."
-        },
-        {
-          "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian",
-          "observedAt": "2026-10-03T23:09:56Z",
-          "datumAsOf": null,
-          "location": "Published documentation",
-          "excerpt": "Configurable mint and redeem fees",
-          "assertion": "Technical docs explain protocol configuration rather than independently evidenced human key custody/signing policy."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://somnia.network/usdso-stablecoin",
-        "https://somnia.network/usdso-terms-of-service",
-        "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian",
-        "https://docs.frax.com/protocol/assets/frxusd/frxusd",
-        "https://explorer.somnia.network/api/v2/smart-contracts/0x690575465af47835b72c5b74c334234624cfd942",
-        "https://explorer.somnia.network/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
-      ],
-      "rationale": "The named scoped question asks independent human control, operational key custody and signing policy of the identified USDso 3-of-6 owner Safe. Issuer/product/terms/technical and exact implementation disclosures do not publish operator identities, independence or custody/signing attestation. Public address/quorum code is not those safeguards. Other incident and execution uncertainties remain U."
     },
     {
       "id": "uw-wcop-ripio-08688d04a82f3b7b",
@@ -25586,261 +24825,6 @@
       "rationale": "Current whole-token reserve composition/denominator remains undisclosed. Live app shows collateral TVL and circulation; Prime/Smart docs also describe internal minted liabilities and custodial/external strategies without reconciled holdings and obligations. Gross product deposits cannot be normalized into whole-token backing weights. Preserve selected-slices status and historical evidence; no fabricated remainder."
     },
     {
-      "id": "uw-usn-noon-1d0dcf83f4438985",
-      "assetId": "usn-noon",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:878aaf9408af28c9ce0d9622",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:10:27Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R66)",
-      "sources": [
-        {
-          "url": "https://docs.noon.capital/llms-full.txt",
-          "observedAt": "2026-10-03T23:02:55Z",
-          "datumAsOf": null,
-          "location": "Private Credit, fund duration disclosure",
-          "excerpt": "The average maturity runs around 126 days, which keeps the book short and continuously re-underwritten.",
-          "assertion": "Publishes average maturity, not a maximum term for Noon's F-TAC claim or every underlying loan."
-        },
-        {
-          "url": "https://forum.noon.capital/t/risk-assessment-f-tac-private-credit/52",
-          "observedAt": "2026-10-03T23:09:34Z",
-          "datumAsOf": "2025-06-25",
-          "location": "Post 3, issuer response",
-          "excerpt": "We receive and review this on a monthly basis.",
-          "assertion": "Issuer receives detailed private fund reports; public assessment supplies no hard maximum maturity."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.noon.capital/llms-full.txt",
-        "https://forum.noon.capital/t/risk-assessment-f-tac-private-credit/52",
-        "https://cache.accountable.capital/dashboard/noon",
-        "https://docs.noon.capital/7.-terms-and-policies/asset-terms-usn-terms-of-service.md",
-        "https://www.fasanara.com/"
-      ],
-      "rationale": "Noon names F-TAC, discloses a 126-day average and quarterly normal redemption, and says it receives detailed monthly reports. The public strategy assessment, legal terms and Accountable allocation do not disclose the maximum maturity of this fund claim or an exhaustive all-loans bound. Average maturity and PLMS liquidity are not that datum."
-    },
-    {
-      "id": "uw-usn-noon-b41518b68c665835",
-      "assetId": "usn-noon",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:fe16475caece8845570d092c",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:10:27Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R66)",
-      "sources": [
-        {
-          "url": "https://docs.dinari.com/docs/what-is-usd.md",
-          "observedAt": "2026-10-03T23:05:24Z",
-          "datumAsOf": null,
-          "location": "USD+ description and redemption",
-          "excerpt": "Redemptions settle in 0\u20133 days depending on size.",
-          "assertion": "Redeemability and short-term Treasury backing are disclosed; no terminal maturity of the USD+ claim is stated."
-        },
-        {
-          "url": "https://www.janushenderson.com/en-us/advisor/product/jaaa-aaa-clo-etf/",
-          "observedAt": "2026-10-03T23:09:41Z",
-          "datumAsOf": "2026-10-01",
-          "location": "Portfolio characteristics",
-          "excerpt": "Weighted Average Maturity",
-          "assertion": "Underlying ETF publishes weighted average and holdings; this is not the maturity maximum of Noon's Dinari tokenized ETF share claim."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.noon.capital/llms-full.txt",
-        "https://cache.accountable.capital/dashboard/noon",
-        "https://docs.noon.capital/7.-terms-and-policies/asset-terms-usn-terms-of-service.md",
-        "https://docs.dinari.com/llms.txt",
-        "https://docs.dinari.com/docs/what-is-usd.md",
-        "https://usd.dinari.com/transparency",
-        "https://www.janushenderson.com/en-us/advisor/product/jaaa-aaa-clo-etf/"
-      ],
-      "rationale": "These slices are Dinari USD+ and tokenized JAAA shares, not direct dated bonds. Public product, allocation, legal and underlying fund disclosures provide redemption windows, holdings and average duration but no hard terminal maturity for these exact token claims. Underlying bond maxima cannot be substituted for share-claim maturity."
-    },
-    {
-      "id": "uw-uty-xsy-4f6cf7bdcc8b1490",
-      "assetId": "uty-xsy",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:1da542f24809a6dfd64a6927",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:10:27Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R66)",
-      "sources": [
-        {
-          "url": "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
-          "observedAt": "2026-10-03T23:05:24Z",
-          "datumAsOf": null,
-          "location": "Protocol Mechanics, Strategy modules",
-          "excerpt": "These modules are rules-driven and can be updated through governance and risk review as new opportunities or venues emerge.",
-          "assertion": "Mixed strategy families are disclosed without instrument roster or hard per-chain maximum maturity."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.yieldpoint.io/llms-full.txt",
-        "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
-        "https://cache.accountable.capital/dashboard/xsy",
-        "https://base.blockscout.com/api/v2/smart-contracts/0xba515304d8153c4b162dc79f867e152df9c127eb",
-        "https://xsy-1.gitbook.io/xsy-main/risks"
-      ],
-      "rationale": "Accountable chain allocations identify Ethereum/Base/Avalanche buckets, not exhaustive instruments. Both issuer doc corpora disclose managed custody and derivatives, lending and structured modules but no all-in-scope maturity maximum for any chain bucket. The UTY redemption cooldown does not establish the backing instruments' maturity."
-    },
-    {
-      "id": "uw-uty-xsy-8f707a3cf4a3d261",
-      "assetId": "uty-xsy",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:acf62e89a3ea38f7893c34f9",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:10:27Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R66)",
-      "sources": [
-        {
-          "url": "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
-          "observedAt": "2026-10-03T23:05:24Z",
-          "datumAsOf": null,
-          "location": "Protocol Mechanics, Strategy modules",
-          "excerpt": "These modules are rules-driven and can be updated through governance and risk review as new opportunities or venues emerge.",
-          "assertion": "Mixed strategy families are disclosed without instrument roster or hard per-chain maximum maturity."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.yieldpoint.io/llms-full.txt",
-        "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
-        "https://cache.accountable.capital/dashboard/xsy",
-        "https://base.blockscout.com/api/v2/smart-contracts/0xba515304d8153c4b162dc79f867e152df9c127eb",
-        "https://xsy-1.gitbook.io/xsy-main/risks"
-      ],
-      "rationale": "Accountable chain allocations identify Ethereum/Base/Avalanche buckets, not exhaustive instruments. Both issuer doc corpora disclose managed custody and derivatives, lending and structured modules but no all-in-scope maturity maximum for any chain bucket. The UTY redemption cooldown does not establish the backing instruments' maturity."
-    },
-    {
-      "id": "uw-uty-xsy-74ab90dbabfaaeb8",
-      "assetId": "uty-xsy",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:e5505e912713faf4de2cb15b",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:10:27Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R66)",
-      "sources": [
-        {
-          "url": "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
-          "observedAt": "2026-10-03T23:05:24Z",
-          "datumAsOf": null,
-          "location": "Protocol Mechanics, Strategy modules",
-          "excerpt": "These modules are rules-driven and can be updated through governance and risk review as new opportunities or venues emerge.",
-          "assertion": "Mixed strategy families are disclosed without instrument roster or hard per-chain maximum maturity."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.yieldpoint.io/llms-full.txt",
-        "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
-        "https://cache.accountable.capital/dashboard/xsy",
-        "https://base.blockscout.com/api/v2/smart-contracts/0xba515304d8153c4b162dc79f867e152df9c127eb",
-        "https://xsy-1.gitbook.io/xsy-main/risks"
-      ],
-      "rationale": "Accountable chain allocations identify Ethereum/Base/Avalanche buckets, not exhaustive instruments. Both issuer doc corpora disclose managed custody and derivatives, lending and structured modules but no all-in-scope maturity maximum for any chain bucket. The UTY redemption cooldown does not establish the backing instruments' maturity."
-    },
-    {
-      "id": "uw-uty-xsy-cc5f8b73500b96ea",
-      "assetId": "uty-xsy",
-      "scope": {
-        "componentKey": "economic-control:oracle",
-        "exposureId": null,
-        "factorKey": "tier",
-        "pillar": "control",
-        "requiredDatum": "tier",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:10:27Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R66)",
-      "sources": [
-        {
-          "url": "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
-          "observedAt": "2026-10-03T23:05:24Z",
-          "datumAsOf": null,
-          "location": "Risks, Liquidation Risk",
-          "excerpt": "XSY uses assets to back short perpetual futures positions.",
-          "assertion": "Managed hedge pricing is material; exact feed topology, freshness and fallback controllers are not disclosed."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.yieldpoint.io/llms-full.txt",
-        "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
-        "https://cache.accountable.capital/dashboard/xsy",
-        "https://base.blockscout.com/api/v2/smart-contracts/0xba515304d8153c4b162dc79f867e152df9c127eb"
-      ],
-      "rationale": "The vault's fixed USDC accounting does not identify the offchain managed hedge pricing authority. Architecture, integration, risks, security and public allocation surfaces do not publish the exact strategy feed/provider census, staleness and fallback topology needed to establish a nonopaque tier. No oracleless exemption is inferred from fixed mint parity."
-    },
-    {
-      "id": "uw-uty-xsy-1c6a68b33ccd42b2",
-      "assetId": "uty-xsy",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:uty-xsy:queue-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:10:27Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R66)",
-      "sources": [
-        {
-          "url": "https://docs.yieldpoint.io/llms-full.txt",
-          "observedAt": "2026-10-03T23:02:55Z",
-          "datumAsOf": null,
-          "location": "Core flows, UTY redemption",
-          "excerpt": "Once the bonding period elapses, you call `redeemById(requestId)` to receive USDC from the vault's on-chain buffer.",
-          "assertion": "Seven days is an unlock minimum; final claim still depends on funded buffer."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.yieldpoint.io/llms-full.txt",
-        "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
-        "https://docs.yieldpoint.io/protocol/integration/base-operations",
-        "https://docs.yieldpoint.io/protocol/integration/gotchas",
-        "https://base.blockscout.com/api/v2/smart-contracts/0xba515304d8153c4b162dc79f867e152df9c127eb"
-      ],
-      "rationale": "Issuer publishes a seven-day bonding minimum and buffer-dependent claim, but no guaranteed funding or end-to-end final delivery deadline for the queue route. The full contract architecture and integration corpus contain no maximum funded settlement SLA. Do not turn an unlock minimum into a completion maximum."
-    },
-    {
       "id": "uw-xo-exodus-43bdf208a4f5aba4",
       "assetId": "xo-exodus",
       "scope": {
@@ -27005,464 +25989,6 @@
         "https://raw.githubusercontent.com/mento-protocol/bold/main/README.md"
       ],
       "rationale": "The exact missing datum is liquidityHorizon for the entire USDm CDP-collateral slice backing CHFm. Issuer site/legal navigation, full docs index, reserve dashboard/API, collateral withdrawal/redemption terms and fork mechanics disclose USDm collateral, debt repayment, collateral-ratio constraints, conditional amounts and weekend/holiday gates, but no whole-position maximum realization horizon. Stability Pool withdraw-anytime language concerns debt-token deposits, not the locked USDm collateral slice. No maximum is invented from transaction atomicity or ordinary market reopening."
-    },
-    {
-      "id": "uw-susdai-usd-ai-e8118e1b3aee991c",
-      "assetId": "susdai-usd-ai",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:susdai-usd-ai:queue-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:51:36Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
-      "sources": [
-        {
-          "url": "https://docs.usd.ai/depositor/susdai.md",
-          "observedAt": "2026-10-03T22:51:36Z",
-          "datumAsOf": null,
-          "location": "Queue Processing and Critical Constraints",
-          "excerpt": "Unfulfilled requests carry to the next 30-day epoch",
-          "assertion": "FIFO may roll over indefinitely; 30 days is an epoch, not final settlement maximum."
-        },
-        {
-          "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
-          "observedAt": "2026-10-03T22:51:36Z",
-          "datumAsOf": "2026-09-25",
-          "location": "Nature of Holder Rights",
-          "excerpt": "or a guaranteed return, redemption date, exchange rate, or market price.",
-          "assertion": "Terms do not promise a final completion maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
-        "https://docs.usd.ai/depositor/susdai.md",
-        "https://docs.usd.ai/depositor/susdai/susdai-withdrawal-estimates.md",
-        "https://docs.usd.ai/technical-overview/technical-protocol-overview.md",
-        "https://docs.usd.ai/borrower/onchain-offchain-interplay.md",
-        "https://docs.usd.ai/usdai/proof-of-loans.md",
-        "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161"
-      ],
-      "rationale": "The exact maximum from sUSDai queue request to completed USDai delivery is not published. Cash-constrained FIFO requests roll across epochs; the 30-day timer is not an end-to-end bound. Terms expressly deny a guaranteed redemption date."
-    },
-    {
-      "id": "uw-susdai-usd-ai-bf46541ab25c84e7",
-      "assetId": "susdai-usd-ai",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:susdai-usd-ai:queue-redeem"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T22:51:36Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
-      "sources": [
-        {
-          "url": "https://docs.usd.ai/depositor/susdai/susdai-withdrawal-estimates.md",
-          "observedAt": "2026-10-03T22:51:36Z",
-          "datumAsOf": null,
-          "location": "Dynamic forward pricing explanation",
-          "excerpt": "sUSDai instead uses dynamic forward pricing to make the pricing more economically accurate.",
-          "assertion": "Disclosed deposit/redemption NAV spread depends on repayments; current same-notional route producer does not evaluate the public pricing formula."
-        },
-        {
-          "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview.md",
-          "observedAt": "2026-10-03T22:51:36Z",
-          "datumAsOf": null,
-          "location": "Share Pricing - Net Asset Value",
-          "excerpt": "The **deposit share price** is computed from the **optimistic net asset value**, while the **redemption share price** is computed from the **conservative net asset value**.",
-          "assertion": "A variable valuation formula, not an undisclosed fixed exit fee. Existing cost producer needs exact evaluated same-notional pricing."
-        }
-      ]
-    },
-    {
-      "id": "uw-susdai-usd-ai-de8d56099af9d868",
-      "assetId": "susdai-usd-ai",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "custodyEscrow",
-        "pillar": "backing",
-        "requiredDatum": "custodyEscrow",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:25Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
-      "sources": [
-        {
-          "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
-          "observedAt": "2026-10-03T22:51:36Z",
-          "datumAsOf": "2026-09-25",
-          "location": "Nature of Holder Rights",
-          "excerpt": "a User does not obtain direct ownership of a specific GPU or other physical asset, a direct contractual claim against a specific borrower",
-          "assertion": "Holder rights differ from conditional loan-level legal protections."
-        },
-        {
-          "url": "https://docs.usd.ai/borrower/onchain-offchain-interplay.md",
-          "observedAt": "2026-10-03T22:51:36Z",
-          "datumAsOf": null,
-          "location": "Capital Flow, Funding",
-          "excerpt": "The remainder is transferred into an offchain escrow account at the Escrow Agent, where it earns a reduced rate pending release.",
-          "assertion": "Mixed offchain escrow/loan layers prevent blanket fully-onchain allocation proof."
-        },
-        {
-          "url": "https://docs.usd.ai/usdai/proof-of-loans.md",
-          "observedAt": "2026-10-03T22:51:36Z",
-          "datumAsOf": "2026-07-15",
-          "location": "Scope of the Report",
-          "excerpt": "The engagement is not a financial statement audit or review",
-          "assertion": "Loan attribute AUP is not whole-vault borrowing, insolvency or reuse certification."
-        },
-        {
-          "url": "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyihtTguEhuWiLBn09qwl%2Fuploads%2FR0FeqBaE9BClO1cNw37T%2FUSD.AI%20Issued%20Attestation%20Report%20as%20of%20July%2015%2C%202026.pdf?alt=media&token=34ae6ee1-5f94-4ce9-87e8-c98bcec11762",
-          "observedAt": "2026-10-03T22:54:25Z",
-          "datumAsOf": "2026-07-15",
-          "location": "Independent Accountant Report, page 2",
-          "excerpt": "We did not perform any procedures regarding the operating effectiveness of the Foundation's, Permian Labs\u2019, or GPU Finance's internal controls.",
-          "assertion": "Loan attributes are inspected, but complete wrapper-layer controls/borrowing/encumbrance protections are not verified."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
-        "https://docs.usd.ai/depositor/susdai.md",
-        "https://docs.usd.ai/depositor/susdai/susdai-withdrawal-estimates.md",
-        "https://docs.usd.ai/technical-overview/technical-protocol-overview.md",
-        "https://docs.usd.ai/borrower/onchain-offchain-interplay.md",
-        "https://docs.usd.ai/usdai/proof-of-loans.md",
-        "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161",
-        "https://docs.usd.ai/borrower/faq.md",
-        "https://raw.githubusercontent.com/usdai-foundation/usdai-contracts/66e974e884cc62ab755b144d140e9eab4f03ed79/src/StakedUSDai.sol",
-        "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyihtTguEhuWiLBn09qwl%2Fuploads%2FR0FeqBaE9BClO1cNw37T%2FUSD.AI%20Issued%20Attestation%20Report%20as%20of%20July%2015%2C%202026.pdf?alt=media&token=34ae6ee1-5f94-4ce9-87e8-c98bcec11762"
-      ],
-      "rationale": "Whole-vault sUSDai segregation, holder insolvency remoteness and layer allocation remain undisclosed. Wilmington escrow and borrower-SPV protections are conditional loan-layer facts, not protection for the whole vault or holders."
-    },
-    {
-      "id": "uw-susdai-usd-ai-01a7c7a653048d9c",
-      "assetId": "susdai-usd-ai",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "rehypothecationCorrelation",
-        "pillar": "backing",
-        "requiredDatum": "rehypothecationCorrelation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:25Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
-      "sources": [
-        {
-          "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
-          "observedAt": "2026-10-03T22:51:36Z",
-          "datumAsOf": "2026-09-25",
-          "location": "Nature of Holder Rights",
-          "excerpt": "a User does not obtain direct ownership of a specific GPU or other physical asset, a direct contractual claim against a specific borrower",
-          "assertion": "Holder rights differ from conditional loan-level legal protections."
-        },
-        {
-          "url": "https://docs.usd.ai/borrower/onchain-offchain-interplay.md",
-          "observedAt": "2026-10-03T22:51:36Z",
-          "datumAsOf": null,
-          "location": "Capital Flow, Funding",
-          "excerpt": "The remainder is transferred into an offchain escrow account at the Escrow Agent, where it earns a reduced rate pending release.",
-          "assertion": "Mixed offchain escrow/loan layers prevent blanket fully-onchain allocation proof."
-        },
-        {
-          "url": "https://docs.usd.ai/usdai/proof-of-loans.md",
-          "observedAt": "2026-10-03T22:51:36Z",
-          "datumAsOf": "2026-07-15",
-          "location": "Scope of the Report",
-          "excerpt": "The engagement is not a financial statement audit or review",
-          "assertion": "Loan attribute AUP is not whole-vault borrowing, insolvency or reuse certification."
-        },
-        {
-          "url": "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyihtTguEhuWiLBn09qwl%2Fuploads%2FR0FeqBaE9BClO1cNw37T%2FUSD.AI%20Issued%20Attestation%20Report%20as%20of%20July%2015%2C%202026.pdf?alt=media&token=34ae6ee1-5f94-4ce9-87e8-c98bcec11762",
-          "observedAt": "2026-10-03T22:54:25Z",
-          "datumAsOf": "2026-07-15",
-          "location": "Independent Accountant Report, page 2",
-          "excerpt": "We did not perform any procedures regarding the operating effectiveness of the Foundation's, Permian Labs\u2019, or GPU Finance's internal controls.",
-          "assertion": "Loan attributes are inspected, but complete wrapper-layer controls/borrowing/encumbrance protections are not verified."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
-        "https://docs.usd.ai/depositor/susdai.md",
-        "https://docs.usd.ai/depositor/susdai/susdai-withdrawal-estimates.md",
-        "https://docs.usd.ai/technical-overview/technical-protocol-overview.md",
-        "https://docs.usd.ai/borrower/onchain-offchain-interplay.md",
-        "https://docs.usd.ai/usdai/proof-of-loans.md",
-        "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161",
-        "https://docs.usd.ai/borrower/faq.md",
-        "https://raw.githubusercontent.com/usdai-foundation/usdai-contracts/66e974e884cc62ab755b144d140e9eab4f03ed79/src/StakedUSDai.sol",
-        "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyihtTguEhuWiLBn09qwl%2Fuploads%2FR0FeqBaE9BClO1cNw37T%2FUSD.AI%20Issued%20Attestation%20Report%20as%20of%20July%2015%2C%202026.pdf?alt=media&token=34ae6ee1-5f94-4ce9-87e8-c98bcec11762"
-      ],
-      "rationale": "No complete sUSDai whole-book pledge/reuse covenant, lender-of-record encumbrance roster or correlation allocation is published. Onchain lending and conditional SPV security are disclosed, but do not establish whole-dimension capital reuse."
-    },
-    {
-      "id": "uw-susdai-usd-ai-703a98fe71abdfa4",
-      "assetId": "susdai-usd-ai",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "leverage",
-        "pillar": "backing",
-        "requiredDatum": "leverage",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:25Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
-      "sources": [
-        {
-          "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
-          "observedAt": "2026-10-03T22:51:36Z",
-          "datumAsOf": "2026-09-25",
-          "location": "Nature of Holder Rights",
-          "excerpt": "a User does not obtain direct ownership of a specific GPU or other physical asset, a direct contractual claim against a specific borrower",
-          "assertion": "Holder rights differ from conditional loan-level legal protections."
-        },
-        {
-          "url": "https://docs.usd.ai/borrower/onchain-offchain-interplay.md",
-          "observedAt": "2026-10-03T22:51:36Z",
-          "datumAsOf": null,
-          "location": "Capital Flow, Funding",
-          "excerpt": "The remainder is transferred into an offchain escrow account at the Escrow Agent, where it earns a reduced rate pending release.",
-          "assertion": "Mixed offchain escrow/loan layers prevent blanket fully-onchain allocation proof."
-        },
-        {
-          "url": "https://docs.usd.ai/usdai/proof-of-loans.md",
-          "observedAt": "2026-10-03T22:51:36Z",
-          "datumAsOf": "2026-07-15",
-          "location": "Scope of the Report",
-          "excerpt": "The engagement is not a financial statement audit or review",
-          "assertion": "Loan attribute AUP is not whole-vault borrowing, insolvency or reuse certification."
-        },
-        {
-          "url": "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyihtTguEhuWiLBn09qwl%2Fuploads%2FR0FeqBaE9BClO1cNw37T%2FUSD.AI%20Issued%20Attestation%20Report%20as%20of%20July%2015%2C%202026.pdf?alt=media&token=34ae6ee1-5f94-4ce9-87e8-c98bcec11762",
-          "observedAt": "2026-10-03T22:54:25Z",
-          "datumAsOf": "2026-07-15",
-          "location": "Independent Accountant Report, page 2",
-          "excerpt": "We did not perform any procedures regarding the operating effectiveness of the Foundation's, Permian Labs\u2019, or GPU Finance's internal controls.",
-          "assertion": "Loan attributes are inspected, but complete wrapper-layer controls/borrowing/encumbrance protections are not verified."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
-        "https://docs.usd.ai/depositor/susdai.md",
-        "https://docs.usd.ai/depositor/susdai/susdai-withdrawal-estimates.md",
-        "https://docs.usd.ai/technical-overview/technical-protocol-overview.md",
-        "https://docs.usd.ai/borrower/onchain-offchain-interplay.md",
-        "https://docs.usd.ai/usdai/proof-of-loans.md",
-        "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161",
-        "https://docs.usd.ai/borrower/faq.md",
-        "https://raw.githubusercontent.com/usdai-foundation/usdai-contracts/66e974e884cc62ab755b144d140e9eab4f03ed79/src/StakedUSDai.sol",
-        "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyihtTguEhuWiLBn09qwl%2Fuploads%2FR0FeqBaE9BClO1cNw37T%2FUSD.AI%20Issued%20Attestation%20Report%20as%20of%20July%2015%2C%202026.pdf?alt=media&token=34ae6ee1-5f94-4ce9-87e8-c98bcec11762"
-      ],
-      "rationale": "No whole-book sUSDai borrowing/guarantee/encumbrance census or binding local leverage maximum is disclosed. GPU borrower LTV and the vault share-price formula are not the wrapper layer leverage bound; the AUP does not test entity solvency or controls."
-    },
-    {
-      "id": "uw-moveusd-cfx-b217e002b2419dbb",
-      "assetId": "moveusd-cfx",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:14Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
-      "sources": [
-        {
-          "url": "https://cfx.to/treasury",
-          "observedAt": "2026-10-03T22:53:14Z",
-          "datumAsOf": null,
-          "location": "How it works, Reconcile",
-          "excerpt": "Every entry reconciles continuously, with an audit trail.",
-          "assertion": "This describes internal bank/customer ledger entries, not total MOVEUSD and offchain liability reconciliation to same-clock reserve balances."
-        },
-        {
-          "url": "https://docs.cfx.to/reference/get_v1-ledger-accounts-id.md",
-          "observedAt": "2026-10-03T22:53:14Z",
-          "datumAsOf": "2026-06-29",
-          "location": "Ledger Account API description",
-          "excerpt": "Each account holds a MoveUSD balance, is backed by an on-chain Solana account",
-          "assertion": "Individual balances are exposed; aggregate bank reserve reconciliation cadence and coverage are not."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://cfx.to/",
-        "https://trust.cfx.to/",
-        "https://cfx.to/treasury",
-        "https://cfx.to/on-chain",
-        "https://cfx.to/legal/terms-and-conditions",
-        "https://docs.cfx.to/llms.txt",
-        "https://docs.cfx.to/docs/key-features.md",
-        "https://docs.cfx.to/reference/get_v1-ledger-accounts-id.md",
-        "https://docs.cfx.to/reference/get_v1-withdrawal-estimate.md",
-        "https://docs.cfx.to/reference/post_v1-withdrawal-quote.md",
-        "https://explorer.solana.com/address/3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm"
-      ],
-      "rationale": "The dated whole-supply MOVEUSD reserve-to-on/off-chain-liabilities procedure, cadence and exceptions are not published. Continuous customer-ledger matching and the 1:1 bank-deposit assertion do not establish total token/backing reconciliation. No public dated financial report or supply-to-bank reconciliation was located."
-    },
-    {
-      "id": "uw-moveusd-cfx-62988acf2c72d54d",
-      "assetId": "moveusd-cfx",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:14Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
-      "sources": [
-        {
-          "url": "https://cfx.to/",
-          "observedAt": "2026-10-03T22:53:14Z",
-          "datumAsOf": null,
-          "location": "Hero reserve assertion",
-          "excerpt": "Every dollar is a cash deposit placed across 3,000+ FDIC-insured banks and tokenized 1:1, one token per deposited dollar.",
-          "assertion": "Standing category claim has no dated actual reserve balance/whole-book denominator."
-        },
-        {
-          "url": "https://trust.cfx.to/",
-          "observedAt": "2026-10-03T22:53:14Z",
-          "datumAsOf": null,
-          "location": "Issuer custody description",
-          "excerpt": "Customer funds are held in segregated custodial accounts with FDIC-member banks",
-          "assertion": "Names neither reserve banks nor current amounts. No dated composition report is available."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://cfx.to/",
-        "https://trust.cfx.to/",
-        "https://cfx.to/treasury",
-        "https://cfx.to/on-chain",
-        "https://cfx.to/legal/terms-and-conditions",
-        "https://docs.cfx.to/llms.txt",
-        "https://docs.cfx.to/docs/key-features.md",
-        "https://docs.cfx.to/reference/get_v1-ledger-accounts-id.md",
-        "https://docs.cfx.to/reference/get_v1-withdrawal-estimate.md",
-        "https://docs.cfx.to/reference/post_v1-withdrawal-quote.md",
-        "https://explorer.solana.com/address/3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm"
-      ],
-      "rationale": "The current dated whole-asset MOVEUSD reserve composition and balance denominator are undisclosed. The issuer standing 1:1 bank-deposit category claim and customer ledger API are not a current financial reserve snapshot; existing July static composition cannot be honestly date-refreshed."
-    },
-    {
-      "id": "uw-moveusd-cfx-8d6670102e106bd6",
-      "assetId": "moveusd-cfx",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:moveusd-cfx:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:14Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
-      "sources": [
-        {
-          "url": "https://docs.cfx.to/reference/post_v1-withdrawal-quote.md",
-          "observedAt": "2026-10-03T22:53:14Z",
-          "datumAsOf": "2026-05-08",
-          "location": "Withdrawal quote introduction",
-          "excerpt": "This Create Quote generates a binding quote, which includes an unsigned Solana transaction facilitating the transfer of funds from the nominated user wallet into a CFX withdrawal wallet.",
-          "assertion": "Exact fees are private authenticated quote outputs, not a public applicable fee schedule."
-        },
-        {
-          "url": "https://docs.cfx.to/reference/get_v1-withdrawal-estimate.md",
-          "observedAt": "2026-10-03T22:53:14Z",
-          "datumAsOf": null,
-          "location": "Fee type enum",
-          "excerpt": "CFX_VARIABLE_FEE_PCT",
-          "assertion": "Fee taxonomy is disclosed without a public rate/minimum/cap for the scoped USD off-ramp."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://cfx.to/",
-        "https://trust.cfx.to/",
-        "https://cfx.to/treasury",
-        "https://cfx.to/on-chain",
-        "https://cfx.to/legal/terms-and-conditions",
-        "https://docs.cfx.to/llms.txt",
-        "https://docs.cfx.to/docs/key-features.md",
-        "https://docs.cfx.to/reference/get_v1-ledger-accounts-id.md",
-        "https://docs.cfx.to/reference/get_v1-withdrawal-estimate.md",
-        "https://docs.cfx.to/reference/post_v1-withdrawal-quote.md",
-        "https://explorer.solana.com/address/3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm"
-      ],
-      "rationale": "No public numeric or evaluable fee schedule for MOVEUSD-to-USD designated-channel redemption was located. CFX publishes fee classes and authenticated binding quotes, not applicable customer/provider rates or all-in caps. A demonstration $0 swap is neither a redemption fee schedule nor same-notional cost."
-    },
-    {
-      "id": "uw-pathusd-bridge-c6b196689ec6c5d1",
-      "assetId": "pathusd-bridge",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:pathusd-bridge:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:14Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
-      "sources": [
-        {
-          "url": "https://www.bridge.xyz/legal/fee-disclosure-statement/overview",
-          "observedAt": "2026-10-03T22:53:14Z",
-          "datumAsOf": null,
-          "location": "Service Charge",
-          "excerpt": "The decision to impose such a charge, including its amount, is determined solely by the Partner.",
-          "assertion": "No pathUSD applicable partner fee amount/rate/cap is published."
-        },
-        {
-          "url": "https://www.bridge.xyz/legal/row-user-terms/bridge-building-limited",
-          "observedAt": "2026-10-03T22:53:14Z",
-          "datumAsOf": "2026-05-05",
-          "location": "7.1 Fees",
-          "excerpt": "You can access the fees we charge for Orders through your Partner Account",
-          "assertion": "Fees are account-specific, not a public same-notional pathUSD schedule."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.bridge.xyz/",
-        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
-        "https://www.bridge.xyz/legal/fee-disclosure-statement/overview",
-        "https://www.bridge.xyz/legal/row-user-terms/bridge-building-limited",
-        "https://apidocs.bridge.xyz/platform/issuance/faq",
-        "https://apidocs.bridge.xyz/platform/issuance/reserve-management",
-        "https://apidocs.bridge.xyz/platform/issuance/reserves",
-        "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency",
-        "https://transparency.bridge.xyz/v0/stablecoins/path_usd",
-        "https://tempo.xyz/developers/docs/protocol/exchange/quote-tokens"
-      ],
-      "rationale": "Exact all-in pathUSD-to-USDC issuer-redemption cost is not public. The Bridge fee disclosure leaves partner service-charge amounts to the partner, passes variable gas through, and directs users to account-specific fees. Neither issuance FAQ nor pathUSD docs/API supplies a numeric schedule or evaluable complete formula."
     },
     {
       "id": "uw-gtusdcp-gauntlet-5645f77a228f1912",
@@ -32601,6 +31127,1621 @@
         "https://solscan.io/account/D4AiKFxjZBrhd6MeRAAj6wNxFcZJuRMBrXW9UpqeS8Ax"
       ],
       "rationale": "No public exact all-in fee schedule or complete cost formula for the legacy USDv direct USDC redemption route was found. The legacy announcement describes qualified-holder mint/burn/redeem without a fee schedule; wind-down recommends market swaps without promising a direct-redemption price. Current docs and transaction fee UI concern the separate new token. Interface terms do not define the legacy API/direct-redemption schedule."
+    },
+    {
+      "id": "uw-pathusd-bridge-8f866c2e3db79615",
+      "assetId": "pathusd-bridge",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1c4dd3588a3d275a0d87b130",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:47:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R29)",
+      "sources": [
+        {
+          "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+          "observedAt": "2026-10-03T23:47:12Z",
+          "datumAsOf": null,
+          "location": "Section 2, reserve classes",
+          "excerpt": "(a) U.S. Treasury bills three months or less from their respective maturities;",
+          "assertion": "Three-month limit governs bills only, not money-market-fund shares or tokenized fund claims permitted in the same reserve."
+        },
+        {
+          "url": "https://transparency.bridge.xyz/v0/stablecoins/path_usd",
+          "observedAt": "2026-10-03T23:47:12Z",
+          "datumAsOf": "2026-10-03",
+          "location": "reserves[1]",
+          "excerpt": "\"type\": \"treasury\"",
+          "assertion": "PathUSD public API discloses a pooled Treasury amount but no constituent claim identities or whole-bucket maturity maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.bridge.xyz/",
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "https://www.bridge.xyz/legal/licenses/us-licenses-and-registrations",
+        "https://apidocs.bridge.xyz/platform/issuance/reserve-management",
+        "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency",
+        "https://transparency.bridge.xyz/v0/stablecoins/path_usd"
+      ],
+      "rationale": "The exact maximum maturity of the entire pathUSD treasury bucket is undisclosed. Legal terms distinguish bills, repos, MMFs and tokenized claims; the reserve API gives only cash/treasury amounts. Named partner products are eligible alternatives, not a pathUSD holdings census. Therefore neither the bill mandate nor an underlying fund's duration can be applied to the aggregate claim bucket. This is missing issuer attribution, not an unread document or a failed fetch."
+    },
+    {
+      "id": "uw-yzusd-yuzu-331ecf24566eae41",
+      "assetId": "yzusd-yuzu",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R29)",
+      "sources": [
+        {
+          "url": "https://cache.accountable.capital/dashboard/yuzu",
+          "observedAt": "2026-10-03T23:47:12Z",
+          "datumAsOf": "2026-10-02",
+          "location": "exposure.exposure_split and exposure_split_ts",
+          "excerpt": "\"exposure_split_ts\": \"2026.10.02 03:26:02 UTC\"",
+          "assertion": "Latest split is public, but labeled leveraged loops have no held claim/debt identities or reconciliation to the attested collateral denominator."
+        },
+        {
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/llms-full.txt",
+          "observedAt": "2026-10-03T23:47:12Z",
+          "datumAsOf": null,
+          "location": "Collateral Pool (Backing Assets)",
+          "excerpt": "The Collateral Pool consists of curated onchain strategies and assets.",
+          "assertion": "Docs define backing and direct users to Accountable, but do not provide a complete current instrument-level allocation with net-debt accounting."
+        },
+        {
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/transparency/accountable.md",
+          "observedAt": "2026-10-03T23:50:07Z",
+          "datumAsOf": null,
+          "location": "Accountable privacy-preserving verification",
+          "excerpt": "without exposing private positions or trading strategies.",
+          "assertion": "Issuer explicitly identifies private-position confidentiality in the solvency disclosure; public strategy labels are not a complete held-position/debt census."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://yuzu.money/",
+        "https://yuzu-money.gitbook.io/yuzu-money/llms-full.txt",
+        "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies.md",
+        "https://yuzu-money.gitbook.io/yuzu-money/transparency/accountable.md",
+        "https://cache.accountable.capital/dashboard/yuzu",
+        "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md",
+        "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses.md",
+        "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5"
+      ],
+      "rationale": "No usable current whole-yzUSD composition is disclosed: Accountable publishes aggregate solvency and label-only exposure_split (separately exposure_split_rwa) but not the holdings/debt census and attribution reconciling these to one yzUSD collateral denominator. The official full docs and terms disclose backing policy, whitelist and portfolio wallets, not that reconciliation. KNOWN cannot normalize opaque loops or merge overlapping Alpha/Prime books. Exact current claim-level whole-book allocation is issuer non-disclosure, distinct from public raw balances."
+    },
+    {
+      "id": "uw-cjpy-yamato-ee61da693d3895b8",
+      "assetId": "cjpy-yamato",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c7238f59cea65961d26ca8ac",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R29)",
+      "sources": [
+        {
+          "url": "https://docs.yamato.fi/en/features/redemption-by-user-or-protocol.md",
+          "observedAt": "2026-10-03T23:50:07Z",
+          "datumAsOf": null,
+          "location": "Redemption eligibility",
+          "excerpt": "Only Pledges with health rate of less than 130% are eligible for redemption.",
+          "assertion": "Collateral realization is eligibility-gated; no maximum whole-ETH-slice realization time is specified."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd869dd57566daf8f160090fc0f3ff362f953a019",
+          "observedAt": "2026-10-03T23:50:07Z",
+          "datumAsOf": null,
+          "location": "YamatoRedeemerV5 runRedeem, prior pinned verified implementation",
+          "excerpt": "vars._maxCount = IYamatoV4(yamato()).maxRedeemableCount();",
+          "assertion": "Redeemer enumerates bounded eligible pledges; code supplies a transaction count bound, not a time-to-realize the entire collateral book."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://app.yamato.fi/",
+        "https://docs.yamato.fi/llms-full.txt",
+        "https://docs.yamato.fi/en/features/deposit-and-withdrawal-eth.md",
+        "https://docs.yamato.fi/en/features/redemption-by-user-or-protocol.md",
+        "https://docs.yamato.fi/en/readme/disclaimer.md",
+        "https://docs.yamato.fi/en/readme/contract-addresses.md",
+        "https://docs.yamato.fi/en/audit.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd869dd57566daf8f160090fc0f3ff362f953a019"
+      ],
+      "rationale": "The maximum realization horizon for the whole ETH reserve slice is not published. Complete English/Japanese docs, withdrawal/redemption rules, disclaimer and verified redeemer disclose health/debt restrictions and count-limited execution, but no contractual whole-book time bound. Eligibility measurements would establish a conditional currently-liquid fraction, not this absent whole-slice maximum. Freely transferable ETH and transaction speed do not support immediate."
+    },
+    {
+      "id": "uw-susdai-usd-ai-e8118e1b3aee991c",
+      "assetId": "susdai-usd-ai",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:susdai-usd-ai:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
+      "sources": [
+        {
+          "url": "https://docs.usd.ai/depositor/susdai.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": null,
+          "location": "Queue Processing and Critical Constraints",
+          "excerpt": "Unfulfilled requests carry to the next 30-day epoch",
+          "assertion": "FIFO may roll over indefinitely; 30 days is an epoch, not final settlement maximum."
+        },
+        {
+          "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": "2026-09-25",
+          "location": "Nature of Holder Rights",
+          "excerpt": "or a guaranteed return, redemption date, exchange rate, or market price.",
+          "assertion": "Terms do not promise a final completion maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
+        "https://docs.usd.ai/depositor/susdai.md",
+        "https://docs.usd.ai/depositor/susdai/susdai-withdrawal-estimates.md",
+        "https://docs.usd.ai/technical-overview/technical-protocol-overview.md",
+        "https://docs.usd.ai/borrower/onchain-offchain-interplay.md",
+        "https://docs.usd.ai/usdai/proof-of-loans.md",
+        "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161"
+      ],
+      "rationale": "The exact maximum from sUSDai queue request to completed USDai delivery is not published. Cash-constrained FIFO requests roll across epochs; the 30-day timer is not an end-to-end bound. Terms expressly deny a guaranteed redemption date."
+    },
+    {
+      "id": "uw-susdai-usd-ai-bf46541ab25c84e7",
+      "assetId": "susdai-usd-ai",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:susdai-usd-ai:queue-redeem"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:51:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
+      "sources": [
+        {
+          "url": "https://docs.usd.ai/depositor/susdai/susdai-withdrawal-estimates.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": null,
+          "location": "Dynamic forward pricing explanation",
+          "excerpt": "sUSDai instead uses dynamic forward pricing to make the pricing more economically accurate.",
+          "assertion": "Disclosed deposit/redemption NAV spread depends on repayments; current same-notional route producer does not evaluate the public pricing formula."
+        },
+        {
+          "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": null,
+          "location": "Share Pricing - Net Asset Value",
+          "excerpt": "The **deposit share price** is computed from the **optimistic net asset value**, while the **redemption share price** is computed from the **conservative net asset value**.",
+          "assertion": "A variable valuation formula, not an undisclosed fixed exit fee. Existing cost producer needs exact evaluated same-notional pricing."
+        }
+      ]
+    },
+    {
+      "id": "uw-susdai-usd-ai-de8d56099af9d868",
+      "assetId": "susdai-usd-ai",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:25Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
+      "sources": [
+        {
+          "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": "2026-09-25",
+          "location": "Nature of Holder Rights",
+          "excerpt": "a User does not obtain direct ownership of a specific GPU or other physical asset, a direct contractual claim against a specific borrower",
+          "assertion": "Holder rights differ from conditional loan-level legal protections."
+        },
+        {
+          "url": "https://docs.usd.ai/borrower/onchain-offchain-interplay.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": null,
+          "location": "Capital Flow, Funding",
+          "excerpt": "The remainder is transferred into an offchain escrow account at the Escrow Agent, where it earns a reduced rate pending release.",
+          "assertion": "Mixed offchain escrow/loan layers prevent blanket fully-onchain allocation proof."
+        },
+        {
+          "url": "https://docs.usd.ai/usdai/proof-of-loans.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": "2026-07-15",
+          "location": "Scope of the Report",
+          "excerpt": "The engagement is not a financial statement audit or review",
+          "assertion": "Loan attribute AUP is not whole-vault borrowing, insolvency or reuse certification."
+        },
+        {
+          "url": "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyihtTguEhuWiLBn09qwl%2Fuploads%2FR0FeqBaE9BClO1cNw37T%2FUSD.AI%20Issued%20Attestation%20Report%20as%20of%20July%2015%2C%202026.pdf?alt=media&token=34ae6ee1-5f94-4ce9-87e8-c98bcec11762",
+          "observedAt": "2026-10-03T22:54:25Z",
+          "datumAsOf": "2026-07-15",
+          "location": "Independent Accountant Report, page 2",
+          "excerpt": "We did not perform any procedures regarding the operating effectiveness of the Foundation's, Permian Labs\u2019, or GPU Finance's internal controls.",
+          "assertion": "Loan attributes are inspected, but complete wrapper-layer controls/borrowing/encumbrance protections are not verified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
+        "https://docs.usd.ai/depositor/susdai.md",
+        "https://docs.usd.ai/depositor/susdai/susdai-withdrawal-estimates.md",
+        "https://docs.usd.ai/technical-overview/technical-protocol-overview.md",
+        "https://docs.usd.ai/borrower/onchain-offchain-interplay.md",
+        "https://docs.usd.ai/usdai/proof-of-loans.md",
+        "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161",
+        "https://docs.usd.ai/borrower/faq.md",
+        "https://raw.githubusercontent.com/usdai-foundation/usdai-contracts/66e974e884cc62ab755b144d140e9eab4f03ed79/src/StakedUSDai.sol",
+        "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyihtTguEhuWiLBn09qwl%2Fuploads%2FR0FeqBaE9BClO1cNw37T%2FUSD.AI%20Issued%20Attestation%20Report%20as%20of%20July%2015%2C%202026.pdf?alt=media&token=34ae6ee1-5f94-4ce9-87e8-c98bcec11762"
+      ],
+      "rationale": "Whole-vault sUSDai segregation, holder insolvency remoteness and layer allocation remain undisclosed. Wilmington escrow and borrower-SPV protections are conditional loan-layer facts, not protection for the whole vault or holders."
+    },
+    {
+      "id": "uw-susdai-usd-ai-01a7c7a653048d9c",
+      "assetId": "susdai-usd-ai",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "rehypothecationCorrelation",
+        "pillar": "backing",
+        "requiredDatum": "rehypothecationCorrelation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:25Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
+      "sources": [
+        {
+          "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": "2026-09-25",
+          "location": "Nature of Holder Rights",
+          "excerpt": "a User does not obtain direct ownership of a specific GPU or other physical asset, a direct contractual claim against a specific borrower",
+          "assertion": "Holder rights differ from conditional loan-level legal protections."
+        },
+        {
+          "url": "https://docs.usd.ai/borrower/onchain-offchain-interplay.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": null,
+          "location": "Capital Flow, Funding",
+          "excerpt": "The remainder is transferred into an offchain escrow account at the Escrow Agent, where it earns a reduced rate pending release.",
+          "assertion": "Mixed offchain escrow/loan layers prevent blanket fully-onchain allocation proof."
+        },
+        {
+          "url": "https://docs.usd.ai/usdai/proof-of-loans.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": "2026-07-15",
+          "location": "Scope of the Report",
+          "excerpt": "The engagement is not a financial statement audit or review",
+          "assertion": "Loan attribute AUP is not whole-vault borrowing, insolvency or reuse certification."
+        },
+        {
+          "url": "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyihtTguEhuWiLBn09qwl%2Fuploads%2FR0FeqBaE9BClO1cNw37T%2FUSD.AI%20Issued%20Attestation%20Report%20as%20of%20July%2015%2C%202026.pdf?alt=media&token=34ae6ee1-5f94-4ce9-87e8-c98bcec11762",
+          "observedAt": "2026-10-03T22:54:25Z",
+          "datumAsOf": "2026-07-15",
+          "location": "Independent Accountant Report, page 2",
+          "excerpt": "We did not perform any procedures regarding the operating effectiveness of the Foundation's, Permian Labs\u2019, or GPU Finance's internal controls.",
+          "assertion": "Loan attributes are inspected, but complete wrapper-layer controls/borrowing/encumbrance protections are not verified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
+        "https://docs.usd.ai/depositor/susdai.md",
+        "https://docs.usd.ai/depositor/susdai/susdai-withdrawal-estimates.md",
+        "https://docs.usd.ai/technical-overview/technical-protocol-overview.md",
+        "https://docs.usd.ai/borrower/onchain-offchain-interplay.md",
+        "https://docs.usd.ai/usdai/proof-of-loans.md",
+        "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161",
+        "https://docs.usd.ai/borrower/faq.md",
+        "https://raw.githubusercontent.com/usdai-foundation/usdai-contracts/66e974e884cc62ab755b144d140e9eab4f03ed79/src/StakedUSDai.sol",
+        "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyihtTguEhuWiLBn09qwl%2Fuploads%2FR0FeqBaE9BClO1cNw37T%2FUSD.AI%20Issued%20Attestation%20Report%20as%20of%20July%2015%2C%202026.pdf?alt=media&token=34ae6ee1-5f94-4ce9-87e8-c98bcec11762"
+      ],
+      "rationale": "No complete sUSDai whole-book pledge/reuse covenant, lender-of-record encumbrance roster or correlation allocation is published. Onchain lending and conditional SPV security are disclosed, but do not establish whole-dimension capital reuse."
+    },
+    {
+      "id": "uw-susdai-usd-ai-703a98fe71abdfa4",
+      "assetId": "susdai-usd-ai",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "leverage",
+        "pillar": "backing",
+        "requiredDatum": "leverage",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:25Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
+      "sources": [
+        {
+          "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": "2026-09-25",
+          "location": "Nature of Holder Rights",
+          "excerpt": "a User does not obtain direct ownership of a specific GPU or other physical asset, a direct contractual claim against a specific borrower",
+          "assertion": "Holder rights differ from conditional loan-level legal protections."
+        },
+        {
+          "url": "https://docs.usd.ai/borrower/onchain-offchain-interplay.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": null,
+          "location": "Capital Flow, Funding",
+          "excerpt": "The remainder is transferred into an offchain escrow account at the Escrow Agent, where it earns a reduced rate pending release.",
+          "assertion": "Mixed offchain escrow/loan layers prevent blanket fully-onchain allocation proof."
+        },
+        {
+          "url": "https://docs.usd.ai/usdai/proof-of-loans.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": "2026-07-15",
+          "location": "Scope of the Report",
+          "excerpt": "The engagement is not a financial statement audit or review",
+          "assertion": "Loan attribute AUP is not whole-vault borrowing, insolvency or reuse certification."
+        },
+        {
+          "url": "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyihtTguEhuWiLBn09qwl%2Fuploads%2FR0FeqBaE9BClO1cNw37T%2FUSD.AI%20Issued%20Attestation%20Report%20as%20of%20July%2015%2C%202026.pdf?alt=media&token=34ae6ee1-5f94-4ce9-87e8-c98bcec11762",
+          "observedAt": "2026-10-03T22:54:25Z",
+          "datumAsOf": "2026-07-15",
+          "location": "Independent Accountant Report, page 2",
+          "excerpt": "We did not perform any procedures regarding the operating effectiveness of the Foundation's, Permian Labs\u2019, or GPU Finance's internal controls.",
+          "assertion": "Loan attributes are inspected, but complete wrapper-layer controls/borrowing/encumbrance protections are not verified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
+        "https://docs.usd.ai/depositor/susdai.md",
+        "https://docs.usd.ai/depositor/susdai/susdai-withdrawal-estimates.md",
+        "https://docs.usd.ai/technical-overview/technical-protocol-overview.md",
+        "https://docs.usd.ai/borrower/onchain-offchain-interplay.md",
+        "https://docs.usd.ai/usdai/proof-of-loans.md",
+        "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161",
+        "https://docs.usd.ai/borrower/faq.md",
+        "https://raw.githubusercontent.com/usdai-foundation/usdai-contracts/66e974e884cc62ab755b144d140e9eab4f03ed79/src/StakedUSDai.sol",
+        "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyihtTguEhuWiLBn09qwl%2Fuploads%2FR0FeqBaE9BClO1cNw37T%2FUSD.AI%20Issued%20Attestation%20Report%20as%20of%20July%2015%2C%202026.pdf?alt=media&token=34ae6ee1-5f94-4ce9-87e8-c98bcec11762"
+      ],
+      "rationale": "No whole-book sUSDai borrowing/guarantee/encumbrance census or binding local leverage maximum is disclosed. GPU borrower LTV and the vault share-price formula are not the wrapper layer leverage bound; the AUP does not test entity solvency or controls."
+    },
+    {
+      "id": "uw-moveusd-cfx-b217e002b2419dbb",
+      "assetId": "moveusd-cfx",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:14Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
+      "sources": [
+        {
+          "url": "https://cfx.to/treasury",
+          "observedAt": "2026-10-03T22:53:14Z",
+          "datumAsOf": null,
+          "location": "How it works, Reconcile",
+          "excerpt": "Every entry reconciles continuously, with an audit trail.",
+          "assertion": "This describes internal bank/customer ledger entries, not total MOVEUSD and offchain liability reconciliation to same-clock reserve balances."
+        },
+        {
+          "url": "https://docs.cfx.to/reference/get_v1-ledger-accounts-id.md",
+          "observedAt": "2026-10-03T22:53:14Z",
+          "datumAsOf": "2026-06-29",
+          "location": "Ledger Account API description",
+          "excerpt": "Each account holds a MoveUSD balance, is backed by an on-chain Solana account",
+          "assertion": "Individual balances are exposed; aggregate bank reserve reconciliation cadence and coverage are not."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://cfx.to/",
+        "https://trust.cfx.to/",
+        "https://cfx.to/treasury",
+        "https://cfx.to/on-chain",
+        "https://cfx.to/legal/terms-and-conditions",
+        "https://docs.cfx.to/llms.txt",
+        "https://docs.cfx.to/docs/key-features.md",
+        "https://docs.cfx.to/reference/get_v1-ledger-accounts-id.md",
+        "https://docs.cfx.to/reference/get_v1-withdrawal-estimate.md",
+        "https://docs.cfx.to/reference/post_v1-withdrawal-quote.md",
+        "https://explorer.solana.com/address/3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm"
+      ],
+      "rationale": "The dated whole-supply MOVEUSD reserve-to-on/off-chain-liabilities procedure, cadence and exceptions are not published. Continuous customer-ledger matching and the 1:1 bank-deposit assertion do not establish total token/backing reconciliation. No public dated financial report or supply-to-bank reconciliation was located."
+    },
+    {
+      "id": "uw-moveusd-cfx-62988acf2c72d54d",
+      "assetId": "moveusd-cfx",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:14Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
+      "sources": [
+        {
+          "url": "https://cfx.to/",
+          "observedAt": "2026-10-03T22:53:14Z",
+          "datumAsOf": null,
+          "location": "Hero reserve assertion",
+          "excerpt": "Every dollar is a cash deposit placed across 3,000+ FDIC-insured banks and tokenized 1:1, one token per deposited dollar.",
+          "assertion": "Standing category claim has no dated actual reserve balance/whole-book denominator."
+        },
+        {
+          "url": "https://trust.cfx.to/",
+          "observedAt": "2026-10-03T22:53:14Z",
+          "datumAsOf": null,
+          "location": "Issuer custody description",
+          "excerpt": "Customer funds are held in segregated custodial accounts with FDIC-member banks",
+          "assertion": "Names neither reserve banks nor current amounts. No dated composition report is available."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://cfx.to/",
+        "https://trust.cfx.to/",
+        "https://cfx.to/treasury",
+        "https://cfx.to/on-chain",
+        "https://cfx.to/legal/terms-and-conditions",
+        "https://docs.cfx.to/llms.txt",
+        "https://docs.cfx.to/docs/key-features.md",
+        "https://docs.cfx.to/reference/get_v1-ledger-accounts-id.md",
+        "https://docs.cfx.to/reference/get_v1-withdrawal-estimate.md",
+        "https://docs.cfx.to/reference/post_v1-withdrawal-quote.md",
+        "https://explorer.solana.com/address/3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm"
+      ],
+      "rationale": "The current dated whole-asset MOVEUSD reserve composition and balance denominator are undisclosed. The issuer standing 1:1 bank-deposit category claim and customer ledger API are not a current financial reserve snapshot; existing July static composition cannot be honestly date-refreshed."
+    },
+    {
+      "id": "uw-moveusd-cfx-8d6670102e106bd6",
+      "assetId": "moveusd-cfx",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:moveusd-cfx:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:14Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
+      "sources": [
+        {
+          "url": "https://docs.cfx.to/reference/post_v1-withdrawal-quote.md",
+          "observedAt": "2026-10-03T22:53:14Z",
+          "datumAsOf": "2026-05-08",
+          "location": "Withdrawal quote introduction",
+          "excerpt": "This Create Quote generates a binding quote, which includes an unsigned Solana transaction facilitating the transfer of funds from the nominated user wallet into a CFX withdrawal wallet.",
+          "assertion": "Exact fees are private authenticated quote outputs, not a public applicable fee schedule."
+        },
+        {
+          "url": "https://docs.cfx.to/reference/get_v1-withdrawal-estimate.md",
+          "observedAt": "2026-10-03T22:53:14Z",
+          "datumAsOf": null,
+          "location": "Fee type enum",
+          "excerpt": "CFX_VARIABLE_FEE_PCT",
+          "assertion": "Fee taxonomy is disclosed without a public rate/minimum/cap for the scoped USD off-ramp."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://cfx.to/",
+        "https://trust.cfx.to/",
+        "https://cfx.to/treasury",
+        "https://cfx.to/on-chain",
+        "https://cfx.to/legal/terms-and-conditions",
+        "https://docs.cfx.to/llms.txt",
+        "https://docs.cfx.to/docs/key-features.md",
+        "https://docs.cfx.to/reference/get_v1-ledger-accounts-id.md",
+        "https://docs.cfx.to/reference/get_v1-withdrawal-estimate.md",
+        "https://docs.cfx.to/reference/post_v1-withdrawal-quote.md",
+        "https://explorer.solana.com/address/3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm"
+      ],
+      "rationale": "No public numeric or evaluable fee schedule for MOVEUSD-to-USD designated-channel redemption was located. CFX publishes fee classes and authenticated binding quotes, not applicable customer/provider rates or all-in caps. A demonstration $0 swap is neither a redemption fee schedule nor same-notional cost."
+    },
+    {
+      "id": "uw-pathusd-bridge-c6b196689ec6c5d1",
+      "assetId": "pathusd-bridge",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:pathusd-bridge:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:14Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
+      "sources": [
+        {
+          "url": "https://www.bridge.xyz/legal/fee-disclosure-statement/overview",
+          "observedAt": "2026-10-03T22:53:14Z",
+          "datumAsOf": null,
+          "location": "Service Charge",
+          "excerpt": "The decision to impose such a charge, including its amount, is determined solely by the Partner.",
+          "assertion": "No pathUSD applicable partner fee amount/rate/cap is published."
+        },
+        {
+          "url": "https://www.bridge.xyz/legal/row-user-terms/bridge-building-limited",
+          "observedAt": "2026-10-03T22:53:14Z",
+          "datumAsOf": "2026-05-05",
+          "location": "7.1 Fees",
+          "excerpt": "You can access the fees we charge for Orders through your Partner Account",
+          "assertion": "Fees are account-specific, not a public same-notional pathUSD schedule."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.bridge.xyz/",
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "https://www.bridge.xyz/legal/fee-disclosure-statement/overview",
+        "https://www.bridge.xyz/legal/row-user-terms/bridge-building-limited",
+        "https://apidocs.bridge.xyz/platform/issuance/faq",
+        "https://apidocs.bridge.xyz/platform/issuance/reserve-management",
+        "https://apidocs.bridge.xyz/platform/issuance/reserves",
+        "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency",
+        "https://transparency.bridge.xyz/v0/stablecoins/path_usd",
+        "https://tempo.xyz/developers/docs/protocol/exchange/quote-tokens"
+      ],
+      "rationale": "Exact all-in pathUSD-to-USDC issuer-redemption cost is not public. The Bridge fee disclosure leaves partner service-charge amounts to the partner, passes variable gas through, and directs users to account-specific fees. Neither issuance FAQ nor pathUSD docs/API supplies a numeric schedule or evaluable complete formula."
+    },
+    {
+      "id": "uw-syzusd-yuzu-b45e0adc37ed058e",
+      "assetId": "syzusd-yuzu",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "supervision",
+        "pillar": "control",
+        "requiredDatum": "supervision",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:54Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
+      "sources": [
+        {
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2026-04-15",
+          "location": "Introduction 1.1",
+          "excerpt": "operated by YUZU FINTECH LLC, a Virtual Asset Service Provider licensed under the Kutaisi Free Industrial Zone",
+          "assertion": "Issuer names a Georgian FEZ VASP status, not a named prudential supervisor for native syzUSD issuance."
+        },
+        {
+          "url": "https://nbg.gov.ge/en/page/virtual-asset-service-providers-vasps",
+          "observedAt": "2026-10-03T23:03:11Z",
+          "datumAsOf": null,
+          "location": "REGISTER and stablecoin issuance rule",
+          "excerpt": "For additional requirements related to the Stablecoin Initial Coin Offering (incl. issuance)",
+          "assertion": "NBG publishes a distinct stablecoin issuance rule and VASP register; the 16 September 2026 register has no Yuzu Fintech entry."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://yuzu.money/",
+        "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md",
+        "https://yuzu-money.gitbook.io/yuzu-money/transparency/accountable.md",
+        "https://nbg.gov.ge/en/page/virtual-asset-service-providers-vasps",
+        "https://nbg.gov.ge/fm/%E1%83%A1%E1%83%90%E1%83%92%E1%83%90%E1%83%93%E1%83%90%E1%83%AE%E1%83%93%E1%83%9D/vasps/%E1%83%A0%E1%83%94%E1%83%94%E1%83%A1%E1%83%A2%E1%83%A0%E1%83%98/vasps-eng-16-09-2026.xlsx",
+        "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses.md"
+      ],
+      "rationale": "The exact syzUSD native mint supervision datum is not disclosed. Issuer FEZ VASP language neither establishes prudential token issuance supervision nor identifies the applicable supervisor; the current NBG register does not identify Yuzu Fintech. Do not infer supervision:none or an authorization breach from this mismatch."
+    },
+    {
+      "id": "uw-syzusd-yuzu-9fa8402715c41797",
+      "assetId": "syzusd-yuzu",
+      "scope": {
+        "componentKey": "access:graph:unresolved:yzusd-underlying-strategy-claims",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "access:graph:unresolved:yzusd-underlying-strategy-claims",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:54Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
+      "sources": [
+        {
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies.md",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": null,
+          "location": "Strategy breakdown introduction",
+          "excerpt": "A live view of underlying strategies exposure is available on Yuzu Money's **Accountable dashboard**",
+          "assertion": "Issuer discloses named strategy buckets but not the complete held claim contract/controller census."
+        },
+        {
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2026-04-15",
+          "location": "4.5 Transparency",
+          "excerpt": "displays may be delayed, estimated or incomplete and are provided as-is",
+          "assertion": "Dashboard exposure labels are not complete legal or contract-level claim identities."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://yuzu.money/",
+        "https://yuzu-money.gitbook.io/yuzu-money/llms.txt",
+        "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies.md",
+        "https://yuzu-money.gitbook.io/yuzu-money/transparency/accountable.md",
+        "https://cache.accountable.capital/dashboard/yuzu",
+        "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses.md",
+        "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md"
+      ],
+      "rationale": "The exact underlying strategy claim/controller access graph is undisclosed: current exposure_split provides labels and amounts but not all chain/contract/expiry identifiers, gross versus net loop accounting, or enforceable controller reach into each held claim. Native yzUSD/syzUSD pause authorities are separately verified; they do not establish the upstream strategy graph."
+    },
+    {
+      "id": "uw-yzusd-yuzu-09ca669209e389c7",
+      "assetId": "yzusd-yuzu",
+      "scope": {
+        "componentKey": "access:graph:unresolved:yzusd-underlying-strategy-claims",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "access:graph:unresolved:yzusd-underlying-strategy-claims",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:54Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
+      "sources": [
+        {
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies.md",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": null,
+          "location": "Strategy breakdown introduction",
+          "excerpt": "A live view of underlying strategies exposure is available on Yuzu Money's **Accountable dashboard**",
+          "assertion": "Issuer discloses named strategy buckets but not the complete held claim contract/controller census."
+        },
+        {
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2026-04-15",
+          "location": "4.5 Transparency",
+          "excerpt": "displays may be delayed, estimated or incomplete and are provided as-is",
+          "assertion": "Dashboard exposure labels are not complete legal or contract-level claim identities."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://yuzu.money/",
+        "https://yuzu-money.gitbook.io/yuzu-money/llms.txt",
+        "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies.md",
+        "https://yuzu-money.gitbook.io/yuzu-money/transparency/accountable.md",
+        "https://cache.accountable.capital/dashboard/yuzu",
+        "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses.md",
+        "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md"
+      ],
+      "rationale": "The exact underlying strategy claim/controller access graph is undisclosed: current exposure_split provides labels and amounts but not all chain/contract/expiry identifiers, gross versus net loop accounting, or enforceable controller reach into each held claim. Native yzUSD/syzUSD pause authorities are separately verified; they do not establish the upstream strategy graph."
+    },
+    {
+      "id": "uw-yzusd-yuzu-6716612e8204a82a",
+      "assetId": "yzusd-yuzu",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:yzusd-yuzu:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:54Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
+      "sources": [
+        {
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2026-04-15",
+          "location": "7.2",
+          "excerpt": "Yuzu does not guarantee yields, reserve sufficiency, redemption timing, or continuous access to the Platform.",
+          "assertion": "No maximum time from queued yzUSD redemption request to settled output is promised."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://yuzu.money/",
+        "https://app.yuzu.money/",
+        "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/mint-and-redeem.md",
+        "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd.md",
+        "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md",
+        "https://yuzu-money.gitbook.io/yuzu-money/transparency/accountable.md",
+        "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5"
+      ],
+      "rationale": "The queued yzUSD route has no published maximum request-to-final-settlement SLA. Docs describe eligibility and flows; legal terms allow queues, throttles and discretionary pauses. Current source has order filling by privileged roles but no forced deadline. The separate yzPP thirty-day waiting period is not yzUSD settlement."
+    },
+    {
+      "id": "uw-hbusdt-hyperbeat-d3884734885f40fb",
+      "assetId": "hbusdt-hyperbeat",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:54Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
+      "sources": [
+        {
+          "url": "https://hyperbeat.org/terms",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2026-03-01",
+          "location": "Services / Earn",
+          "excerpt": "automated non-custodial DeFi strategy Vaults, which may be co-operated or co-managed by third parties in conjunction with us",
+          "assertion": "Non-custodial marketing identifies strategy vaults, not enforceable whole-allocation segregation, bankruptcy-remoteness or asset-reuse terms."
+        },
+        {
+          "url": "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt.md",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": null,
+          "location": "General Vault Information",
+          "excerpt": "**Vault Token Symbol:** hbUSDT",
+          "assertion": "Exact hbUSDT integration identifies issuance/redemption contracts but no legal asset-protection/reuse covenant for the full strategy portfolio."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://hyperbeat.org/",
+        "https://hyperbeat.org/terms",
+        "https://docs.hyperbeat.org/llms.txt",
+        "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault.md",
+        "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt.md",
+        "https://docs.hyperbeat.org/resources/legal.md",
+        "https://docs.hyperbeat.org/resources/proof-of-solvency.md",
+        "https://hyperevmscan.io/address/0xbe8a4f1a312b94a712f8e5367b02ae6e378e6f19#code"
+      ],
+      "rationale": "Exact hbUSDT whole-allocation legal segregation/bankruptcy-remoteness and rehypothecation correlation safeguards are not published on reachable issuer terms, vault docs or verified deposit machinery. Insurance/redemption smart contracts are not legal custodians; non-custodial wallet statements and user-side collateral borrowing do not prove the strategy assets' reuse restrictions."
+    },
+    {
+      "id": "uw-hbusdt-hyperbeat-fdf07ef6b6af67da",
+      "assetId": "hbusdt-hyperbeat",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "rehypothecationCorrelation",
+        "pillar": "backing",
+        "requiredDatum": "rehypothecationCorrelation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:54Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
+      "sources": [
+        {
+          "url": "https://hyperbeat.org/terms",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2026-03-01",
+          "location": "Services / Earn",
+          "excerpt": "automated non-custodial DeFi strategy Vaults, which may be co-operated or co-managed by third parties in conjunction with us",
+          "assertion": "Non-custodial marketing identifies strategy vaults, not enforceable whole-allocation segregation, bankruptcy-remoteness or asset-reuse terms."
+        },
+        {
+          "url": "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt.md",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": null,
+          "location": "General Vault Information",
+          "excerpt": "**Vault Token Symbol:** hbUSDT",
+          "assertion": "Exact hbUSDT integration identifies issuance/redemption contracts but no legal asset-protection/reuse covenant for the full strategy portfolio."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://hyperbeat.org/",
+        "https://hyperbeat.org/terms",
+        "https://docs.hyperbeat.org/llms.txt",
+        "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault.md",
+        "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt.md",
+        "https://docs.hyperbeat.org/resources/legal.md",
+        "https://docs.hyperbeat.org/resources/proof-of-solvency.md",
+        "https://hyperevmscan.io/address/0xbe8a4f1a312b94a712f8e5367b02ae6e378e6f19#code"
+      ],
+      "rationale": "Exact hbUSDT whole-allocation legal segregation/bankruptcy-remoteness and rehypothecation correlation safeguards are not published on reachable issuer terms, vault docs or verified deposit machinery. Insurance/redemption smart contracts are not legal custodians; non-custodial wallet statements and user-side collateral borrowing do not prove the strategy assets' reuse restrictions."
+    },
+    {
+      "id": "uw-hbusdt-hyperbeat-771a15dd651cf52b",
+      "assetId": "hbusdt-hyperbeat",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "leverage",
+        "pillar": "backing",
+        "requiredDatum": "leverage",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:54Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
+      "sources": [
+        {
+          "url": "https://hyperbeat.org/terms",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2026-03-01",
+          "location": "Services / Earn",
+          "excerpt": "Such Digital Assets may be deployed across HyperEVM protocols or any of our partner protocols to earn yield and rewards.",
+          "assertion": "The mandate allows strategy deployment without disclosing hbUSDT's current gross/net leverage or a binding allocation-level leverage cap."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://hyperbeat.org/",
+        "https://hyperbeat.org/terms",
+        "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault.md",
+        "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt.md",
+        "https://docs.hyperbeat.org/resources/proof-of-solvency.md",
+        "https://docs.hyperbeat.org/morphobeat/collateral-assets",
+        "https://hyperevmscan.io/address/0xbe8a4f1a312b94a712f8e5367b02ae6e378e6f19#code"
+      ],
+      "rationale": "The exact wrapper-local hbUSDT strategy leverage posture is undisclosed on reachable materials: no current debt/assets ratio, complete strategy debt census, or binding whole-allocation no-leverage policy. Users borrowing against hbUSDT in Morpho is separate from leverage inside hbUSDT and cannot be used to author a strategy posture."
+    },
+    {
+      "id": "uw-hlscope-hamilton-lane-2df01571ee16b074",
+      "assetId": "hlscope-hamilton-lane",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:54Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
+      "sources": [
+        {
+          "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2023-05-04",
+          "location": "Launch announcement",
+          "excerpt": "today launched a new feeder fund offering tokenized exposure to an evergreen private credit fund",
+          "assertion": "Feeder identity is disclosed; a current dated feeder asset/liability composition and independent token-to-LP reconciliation are not."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.hamiltonlane.com/en-us/strategies/evergreen/global/senior-credit-opportunities-fund",
+        "https://www.hamiltonlane.com/en-us/fact-sheet-archive/scope-row",
+        "https://securitize.io/primary-market/hl-scope",
+        "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+        "https://www.sec.gov/Archives/edgar/data/1976710/000197671025000002/primary_doc.xml",
+        "https://www.hamiltonlane.com/getContentAsset/f266e02e-c9a9-42f7-a85a-4d5ece6100bf/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/HL-SCOPE-SA-SICAV-RAIF-PPM-December-2025.pdf?language=en-US",
+        "https://investors.securitize.io/news/news-details/2025/Hamilton-Lane-and-Securitizes-SCOPE-Gains-Instant-RLUSD-Liquidity-by-integrating-with-VBILLs-Onchain-Facility-11-05-2025/default.aspx"
+      ],
+      "rationale": "Exact HLSCOPE tokenized-feeder current composition and mint reconciliation are not disclosed. Public Main Fund NAV/performance and PPM describe a different Luxembourg fund, not a current feeder holdings/liability denominator or independent reconciliation of minted token supply to LP ownership. The VBILL liquidity sleeve announcement also supplies no feeder balance weights. Retain historical structure rather than renewing its composition date."
+    },
+    {
+      "id": "uw-hlscope-hamilton-lane-500f041959edcfde",
+      "assetId": "hlscope-hamilton-lane",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:54Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
+      "sources": [
+        {
+          "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2023-05-04",
+          "location": "Launch announcement",
+          "excerpt": "today launched a new feeder fund offering tokenized exposure to an evergreen private credit fund",
+          "assertion": "Feeder identity is disclosed; a current dated feeder asset/liability composition and independent token-to-LP reconciliation are not."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.hamiltonlane.com/en-us/strategies/evergreen/global/senior-credit-opportunities-fund",
+        "https://www.hamiltonlane.com/en-us/fact-sheet-archive/scope-row",
+        "https://securitize.io/primary-market/hl-scope",
+        "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+        "https://www.sec.gov/Archives/edgar/data/1976710/000197671025000002/primary_doc.xml",
+        "https://www.hamiltonlane.com/getContentAsset/f266e02e-c9a9-42f7-a85a-4d5ece6100bf/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/HL-SCOPE-SA-SICAV-RAIF-PPM-December-2025.pdf?language=en-US",
+        "https://investors.securitize.io/news/news-details/2025/Hamilton-Lane-and-Securitizes-SCOPE-Gains-Instant-RLUSD-Liquidity-by-integrating-with-VBILLs-Onchain-Facility-11-05-2025/default.aspx"
+      ],
+      "rationale": "Exact HLSCOPE tokenized-feeder current composition and mint reconciliation are not disclosed. Public Main Fund NAV/performance and PPM describe a different Luxembourg fund, not a current feeder holdings/liability denominator or independent reconciliation of minted token supply to LP ownership. The VBILL liquidity sleeve announcement also supplies no feeder balance weights. Retain historical structure rather than renewing its composition date."
+    },
+    {
+      "id": "uw-hlscope-hamilton-lane-68b3c35ade81ac2b",
+      "assetId": "hlscope-hamilton-lane",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:hlscope-hamilton-lane:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:54Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
+      "sources": [
+        {
+          "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2023-05-04",
+          "location": "Redemption paragraph and footnote",
+          "excerpt": "with no transaction fees from Securitize*",
+          "assertion": "The explicit footnote says other fees apply; zero Securitize transaction fee does not establish all-in holder costs."
+        },
+        {
+          "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2023-05-04",
+          "location": "Redemption paragraph",
+          "excerpt": "Investors in the SCOPE feeder fund will generally have the option to redeem their shares on demand at the previous quarter\u2019s Net Asset Value per share",
+          "assertion": "On-demand request availability is not a maximum elapsed time to final fiat settlement."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+        "https://securitize.io/primary-market/hl-scope",
+        "https://www.hamiltonlane.com/en-us/fact-sheet-archive/scope-row",
+        "https://www.hamiltonlane.com/getContentAsset/f266e02e-c9a9-42f7-a85a-4d5ece6100bf/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/HL-SCOPE-SA-SICAV-RAIF-PPM-December-2025.pdf?language=en-US",
+        "https://www.sec.gov/Archives/edgar/data/1976710/000197671025000002/primary_doc.xml",
+        "https://investors.securitize.io/news/news-details/2025/Hamilton-Lane-and-Securitizes-SCOPE-Gains-Instant-RLUSD-Liquidity-by-integrating-with-VBILLs-Onchain-Facility-11-05-2025/default.aspx"
+      ],
+      "rationale": "No current exact HLSCOPE offchain-issuer all-in redemption fee schedule or request-to-final-fiat-settlement maximum is published. The historical no-Securitize-transaction-fee statement expressly excludes other fees. Main Fund PPM terms cannot be applied to the separate feeder, and instant RLUSD liquidity is a distinct rail from the modeled fiat route."
+    },
+    {
+      "id": "uw-hlscope-hamilton-lane-1c0533015c19bf71",
+      "assetId": "hlscope-hamilton-lane",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:hlscope-hamilton-lane:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:54Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
+      "sources": [
+        {
+          "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2023-05-04",
+          "location": "Redemption paragraph and footnote",
+          "excerpt": "with no transaction fees from Securitize*",
+          "assertion": "The explicit footnote says other fees apply; zero Securitize transaction fee does not establish all-in holder costs."
+        },
+        {
+          "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2023-05-04",
+          "location": "Redemption paragraph",
+          "excerpt": "Investors in the SCOPE feeder fund will generally have the option to redeem their shares on demand at the previous quarter\u2019s Net Asset Value per share",
+          "assertion": "On-demand request availability is not a maximum elapsed time to final fiat settlement."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+        "https://securitize.io/primary-market/hl-scope",
+        "https://www.hamiltonlane.com/en-us/fact-sheet-archive/scope-row",
+        "https://www.hamiltonlane.com/getContentAsset/f266e02e-c9a9-42f7-a85a-4d5ece6100bf/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/HL-SCOPE-SA-SICAV-RAIF-PPM-December-2025.pdf?language=en-US",
+        "https://www.sec.gov/Archives/edgar/data/1976710/000197671025000002/primary_doc.xml",
+        "https://investors.securitize.io/news/news-details/2025/Hamilton-Lane-and-Securitizes-SCOPE-Gains-Instant-RLUSD-Liquidity-by-integrating-with-VBILLs-Onchain-Facility-11-05-2025/default.aspx"
+      ],
+      "rationale": "No current exact HLSCOPE offchain-issuer all-in redemption fee schedule or request-to-final-fiat-settlement maximum is published. The historical no-Securitize-transaction-fee statement expressly excludes other fees. Main Fund PPM terms cannot be applied to the separate feeder, and instant RLUSD liquidity is a distinct rail from the modeled fiat route."
+    },
+    {
+      "id": "uw-usn-noon-1d0dcf83f4438985",
+      "assetId": "usn-noon",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:878aaf9408af28c9ce0d9622",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:10:27Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R66)",
+      "sources": [
+        {
+          "url": "https://docs.noon.capital/llms-full.txt",
+          "observedAt": "2026-10-03T23:02:55Z",
+          "datumAsOf": null,
+          "location": "Private Credit, fund duration disclosure",
+          "excerpt": "The average maturity runs around 126 days, which keeps the book short and continuously re-underwritten.",
+          "assertion": "Publishes average maturity, not a maximum term for Noon's F-TAC claim or every underlying loan."
+        },
+        {
+          "url": "https://forum.noon.capital/t/risk-assessment-f-tac-private-credit/52",
+          "observedAt": "2026-10-03T23:09:34Z",
+          "datumAsOf": "2025-06-25",
+          "location": "Post 3, issuer response",
+          "excerpt": "We receive and review this on a monthly basis.",
+          "assertion": "Issuer receives detailed private fund reports; public assessment supplies no hard maximum maturity."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.noon.capital/llms-full.txt",
+        "https://forum.noon.capital/t/risk-assessment-f-tac-private-credit/52",
+        "https://cache.accountable.capital/dashboard/noon",
+        "https://docs.noon.capital/7.-terms-and-policies/asset-terms-usn-terms-of-service.md",
+        "https://www.fasanara.com/"
+      ],
+      "rationale": "Noon names F-TAC, discloses a 126-day average and quarterly normal redemption, and says it receives detailed monthly reports. The public strategy assessment, legal terms and Accountable allocation do not disclose the maximum maturity of this fund claim or an exhaustive all-loans bound. Average maturity and PLMS liquidity are not that datum."
+    },
+    {
+      "id": "uw-usn-noon-b41518b68c665835",
+      "assetId": "usn-noon",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:fe16475caece8845570d092c",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:10:27Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R66)",
+      "sources": [
+        {
+          "url": "https://docs.dinari.com/docs/what-is-usd.md",
+          "observedAt": "2026-10-03T23:05:24Z",
+          "datumAsOf": null,
+          "location": "USD+ description and redemption",
+          "excerpt": "Redemptions settle in 0\u20133 days depending on size.",
+          "assertion": "Redeemability and short-term Treasury backing are disclosed; no terminal maturity of the USD+ claim is stated."
+        },
+        {
+          "url": "https://www.janushenderson.com/en-us/advisor/product/jaaa-aaa-clo-etf/",
+          "observedAt": "2026-10-03T23:09:41Z",
+          "datumAsOf": "2026-10-01",
+          "location": "Portfolio characteristics",
+          "excerpt": "Weighted Average Maturity",
+          "assertion": "Underlying ETF publishes weighted average and holdings; this is not the maturity maximum of Noon's Dinari tokenized ETF share claim."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.noon.capital/llms-full.txt",
+        "https://cache.accountable.capital/dashboard/noon",
+        "https://docs.noon.capital/7.-terms-and-policies/asset-terms-usn-terms-of-service.md",
+        "https://docs.dinari.com/llms.txt",
+        "https://docs.dinari.com/docs/what-is-usd.md",
+        "https://usd.dinari.com/transparency",
+        "https://www.janushenderson.com/en-us/advisor/product/jaaa-aaa-clo-etf/"
+      ],
+      "rationale": "These slices are Dinari USD+ and tokenized JAAA shares, not direct dated bonds. Public product, allocation, legal and underlying fund disclosures provide redemption windows, holdings and average duration but no hard terminal maturity for these exact token claims. Underlying bond maxima cannot be substituted for share-claim maturity."
+    },
+    {
+      "id": "uw-uty-xsy-4f6cf7bdcc8b1490",
+      "assetId": "uty-xsy",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1da542f24809a6dfd64a6927",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:10:27Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R66)",
+      "sources": [
+        {
+          "url": "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
+          "observedAt": "2026-10-03T23:05:24Z",
+          "datumAsOf": null,
+          "location": "Protocol Mechanics, Strategy modules",
+          "excerpt": "These modules are rules-driven and can be updated through governance and risk review as new opportunities or venues emerge.",
+          "assertion": "Mixed strategy families are disclosed without instrument roster or hard per-chain maximum maturity."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.yieldpoint.io/llms-full.txt",
+        "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
+        "https://cache.accountable.capital/dashboard/xsy",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xba515304d8153c4b162dc79f867e152df9c127eb",
+        "https://xsy-1.gitbook.io/xsy-main/risks"
+      ],
+      "rationale": "Accountable chain allocations identify Ethereum/Base/Avalanche buckets, not exhaustive instruments. Both issuer doc corpora disclose managed custody and derivatives, lending and structured modules but no all-in-scope maturity maximum for any chain bucket. The UTY redemption cooldown does not establish the backing instruments' maturity."
+    },
+    {
+      "id": "uw-uty-xsy-8f707a3cf4a3d261",
+      "assetId": "uty-xsy",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:acf62e89a3ea38f7893c34f9",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:10:27Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R66)",
+      "sources": [
+        {
+          "url": "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
+          "observedAt": "2026-10-03T23:05:24Z",
+          "datumAsOf": null,
+          "location": "Protocol Mechanics, Strategy modules",
+          "excerpt": "These modules are rules-driven and can be updated through governance and risk review as new opportunities or venues emerge.",
+          "assertion": "Mixed strategy families are disclosed without instrument roster or hard per-chain maximum maturity."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.yieldpoint.io/llms-full.txt",
+        "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
+        "https://cache.accountable.capital/dashboard/xsy",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xba515304d8153c4b162dc79f867e152df9c127eb",
+        "https://xsy-1.gitbook.io/xsy-main/risks"
+      ],
+      "rationale": "Accountable chain allocations identify Ethereum/Base/Avalanche buckets, not exhaustive instruments. Both issuer doc corpora disclose managed custody and derivatives, lending and structured modules but no all-in-scope maturity maximum for any chain bucket. The UTY redemption cooldown does not establish the backing instruments' maturity."
+    },
+    {
+      "id": "uw-uty-xsy-74ab90dbabfaaeb8",
+      "assetId": "uty-xsy",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e5505e912713faf4de2cb15b",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:10:27Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R66)",
+      "sources": [
+        {
+          "url": "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
+          "observedAt": "2026-10-03T23:05:24Z",
+          "datumAsOf": null,
+          "location": "Protocol Mechanics, Strategy modules",
+          "excerpt": "These modules are rules-driven and can be updated through governance and risk review as new opportunities or venues emerge.",
+          "assertion": "Mixed strategy families are disclosed without instrument roster or hard per-chain maximum maturity."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.yieldpoint.io/llms-full.txt",
+        "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
+        "https://cache.accountable.capital/dashboard/xsy",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xba515304d8153c4b162dc79f867e152df9c127eb",
+        "https://xsy-1.gitbook.io/xsy-main/risks"
+      ],
+      "rationale": "Accountable chain allocations identify Ethereum/Base/Avalanche buckets, not exhaustive instruments. Both issuer doc corpora disclose managed custody and derivatives, lending and structured modules but no all-in-scope maturity maximum for any chain bucket. The UTY redemption cooldown does not establish the backing instruments' maturity."
+    },
+    {
+      "id": "uw-uty-xsy-cc5f8b73500b96ea",
+      "assetId": "uty-xsy",
+      "scope": {
+        "componentKey": "economic-control:oracle",
+        "exposureId": null,
+        "factorKey": "tier",
+        "pillar": "control",
+        "requiredDatum": "tier",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:10:27Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R66)",
+      "sources": [
+        {
+          "url": "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
+          "observedAt": "2026-10-03T23:05:24Z",
+          "datumAsOf": null,
+          "location": "Risks, Liquidation Risk",
+          "excerpt": "XSY uses assets to back short perpetual futures positions.",
+          "assertion": "Managed hedge pricing is material; exact feed topology, freshness and fallback controllers are not disclosed."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.yieldpoint.io/llms-full.txt",
+        "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
+        "https://cache.accountable.capital/dashboard/xsy",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xba515304d8153c4b162dc79f867e152df9c127eb"
+      ],
+      "rationale": "The vault's fixed USDC accounting does not identify the offchain managed hedge pricing authority. Architecture, integration, risks, security and public allocation surfaces do not publish the exact strategy feed/provider census, staleness and fallback topology needed to establish a nonopaque tier. No oracleless exemption is inferred from fixed mint parity."
+    },
+    {
+      "id": "uw-uty-xsy-1c6a68b33ccd42b2",
+      "assetId": "uty-xsy",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:uty-xsy:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:10:27Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R66)",
+      "sources": [
+        {
+          "url": "https://docs.yieldpoint.io/llms-full.txt",
+          "observedAt": "2026-10-03T23:02:55Z",
+          "datumAsOf": null,
+          "location": "Core flows, UTY redemption",
+          "excerpt": "Once the bonding period elapses, you call `redeemById(requestId)` to receive USDC from the vault's on-chain buffer.",
+          "assertion": "Seven days is an unlock minimum; final claim still depends on funded buffer."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.yieldpoint.io/llms-full.txt",
+        "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
+        "https://docs.yieldpoint.io/protocol/integration/base-operations",
+        "https://docs.yieldpoint.io/protocol/integration/gotchas",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xba515304d8153c4b162dc79f867e152df9c127eb"
+      ],
+      "rationale": "Issuer publishes a seven-day bonding minimum and buffer-dependent claim, but no guaranteed funding or end-to-end final delivery deadline for the queue route. The full contract architecture and integration corpus contain no maximum funded settlement SLA. Do not turn an unlock minimum into a completion maximum."
+    },
+    {
+      "id": "uw-usdr-ring-2d61c37ad62ec8f7",
+      "assetId": "usdr-ring",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:08:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R74)",
+      "sources": [
+        {
+          "url": "https://docs.ring.exchange/concepts/overview",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": null,
+          "location": "Published documentation",
+          "excerpt": "Ring Protocol uses a wrapped asset layer called FEW to connect assets to trading and liquidity systems.",
+          "assertion": "Current product map discloses FEW and Ring Swap, not a current USDR backing/claim book."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/RingProtocol/docs/a7061d4fd0b539fca55db53871d193a386e086ad/docs/concepts/usdr-mint.md",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": null,
+          "location": "Published documentation",
+          "excerpt": "The mint contract does not redeem USDR back to stablecoins.",
+          "assertion": "Draft describes minting, not a deployed mainnet reserve inventory or liability reconciliation."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": null,
+          "location": "source_code AssetToken.mint",
+          "excerpt": "function mint(address account, uint256 amount) external override onlyMinter {",
+          "assertion": "Exact USDR source has role-gated minting without a reserve-ledger or holder-redemption operation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ring.exchange/llms.txt",
+        "https://docs.ring.exchange/concepts/overview",
+        "https://docs.ring.exchange/contracts/v2/deployments",
+        "https://docs.ring.exchange/security-and-risk",
+        "https://github.com/RingProtocol/audits",
+        "https://raw.githubusercontent.com/RingProtocol/docs/a7061d4fd0b539fca55db53871d193a386e086ad/docs/concepts/usdr-mint.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913"
+      ],
+      "rationale": "No dated whole-supply USDR liability-to-backing reconciliation procedure or cadence is disclosed. Token mint/burn code and FewToken unwrap accounting are not a financial supply/backing reconciliation; current docs and audit index do not publish that exact regime."
+    },
+    {
+      "id": "uw-usdr-ring-0691a6ffcb520a64",
+      "assetId": "usdr-ring",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:08:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R74)",
+      "sources": [
+        {
+          "url": "https://docs.ring.exchange/concepts/overview",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": null,
+          "location": "Published documentation",
+          "excerpt": "Ring Protocol uses a wrapped asset layer called FEW to connect assets to trading and liquidity systems.",
+          "assertion": "Current product map discloses FEW and Ring Swap, not a current USDR backing/claim book."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/RingProtocol/docs/a7061d4fd0b539fca55db53871d193a386e086ad/docs/concepts/usdr-mint.md",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": null,
+          "location": "Published documentation",
+          "excerpt": "The mint contract does not redeem USDR back to stablecoins.",
+          "assertion": "Draft describes minting, not a deployed mainnet reserve inventory or liability reconciliation."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": null,
+          "location": "source_code AssetToken.mint",
+          "excerpt": "function mint(address account, uint256 amount) external override onlyMinter {",
+          "assertion": "Exact USDR source has role-gated minting without a reserve-ledger or holder-redemption operation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ring.exchange/llms.txt",
+        "https://docs.ring.exchange/concepts/overview",
+        "https://docs.ring.exchange/contracts/v2/deployments",
+        "https://docs.ring.exchange/security-and-risk",
+        "https://github.com/RingProtocol/audits",
+        "https://raw.githubusercontent.com/RingProtocol/docs/a7061d4fd0b539fca55db53871d193a386e086ad/docs/concepts/usdr-mint.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913"
+      ],
+      "rationale": "No current whole-asset reserve inventory, allocation weights, reserve-address denominator or financial reserve report for tracked mainnet USDR is disclosed. The draft names input stablecoins without a mainnet deployment or measured backing book; legacy RUSD and FewToken underlying balances cannot be substituted."
+    },
+    {
+      "id": "uw-usdr-ring-f2d26a6969d7f5c3",
+      "assetId": "usdr-ring",
+      "scope": {
+        "componentKey": "mechanism-risk-review",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "mechanism-risk-review",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:08:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R74)",
+      "sources": [
+        {
+          "url": "https://docs.ring.exchange/concepts/overview",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": null,
+          "location": "Published documentation",
+          "excerpt": "Ring Protocol uses a wrapped asset layer called FEW to connect assets to trading and liquidity systems.",
+          "assertion": "Current product map discloses FEW and Ring Swap, not a current USDR backing/claim book."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/RingProtocol/docs/a7061d4fd0b539fca55db53871d193a386e086ad/docs/concepts/usdr-mint.md",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": null,
+          "location": "Published documentation",
+          "excerpt": "The mint contract does not redeem USDR back to stablecoins.",
+          "assertion": "Draft describes minting, not a deployed mainnet reserve inventory or liability reconciliation."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": null,
+          "location": "source_code AssetToken.mint",
+          "excerpt": "function mint(address account, uint256 amount) external override onlyMinter {",
+          "assertion": "Exact USDR source has role-gated minting without a reserve-ledger or holder-redemption operation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ring.exchange/llms.txt",
+        "https://docs.ring.exchange/concepts/overview",
+        "https://docs.ring.exchange/contracts/v2/deployments",
+        "https://docs.ring.exchange/security-and-risk",
+        "https://github.com/RingProtocol/audits",
+        "https://raw.githubusercontent.com/RingProtocol/docs/a7061d4fd0b539fca55db53871d193a386e086ad/docs/concepts/usdr-mint.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913"
+      ],
+      "rationale": "The tracked AssetToken/Core issuance is public, but the current economic holder claim and backing/redemption model remain undisclosed. The recovered draft has no mainnet deployment binding; current maintained product and deployment docs identify FEW/Ring Swap rather than a mainnet USDR reserve mechanism. Preserve unresolved archetype."
+    },
+    {
+      "id": "uw-audd-novatti-c9d17c22c07f5277",
+      "assetId": "audd-novatti",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:529fe21608ba96a8f9148ef2",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:08:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R74)",
+      "sources": [
+        {
+          "url": "https://www.audd.digital/wp-content/uploads/2026/02/202602_AUDD-PDS.pdf",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": "2026-02-10",
+          "location": "PDS section 2.2",
+          "excerpt": "All AUDD reserve funds are held as either cash in Australian dollars (in bank accounts with Australian authorised deposit-taking institutions or foreign banks) or cash equivalents denominated in Australian dollars (such as Australian government bonds).",
+          "assertion": "Permitted cash/cash-equivalent categories do not disclose maximum contractual tenor of the bank deposits."
+        },
+        {
+          "url": "https://www.audd.digital/wp-content/uploads/2026/09/AUDC-Agreed-upon-procedures-report-Aug26_.pdf",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Reserve schedule p.4",
+          "excerpt": "100% cash",
+          "assertion": "Current scoped bank holdings disclosed without deposit term/maturity schedule."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.audd.digital/",
+        "https://www.audd.digital/transparency/",
+        "https://www.audd.digital/wp-content/uploads/2026/02/202602_AUDD-PDS.pdf",
+        "https://www.audd.digital/audd-terms-of-service/",
+        "https://devhub.audd.digital/docs/supported-blockchains"
+      ],
+      "rationale": "AUD bank-deposit slice maximum contractual maturity is not published in the current AUP schedule, PDS reserve mandate, terms or issuer technical/transparency disclosures. The published 100% cash classification and liquid-bank-balance statement are not proof of a zero-day or other maximum deposit tenor."
+    },
+    {
+      "id": "uw-audd-novatti-351fc5695980df93",
+      "assetId": "audd-novatti",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:audd-novatti:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:08:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R74)",
+      "sources": [
+        {
+          "url": "https://www.audd.digital/wp-content/uploads/2026/02/202602_AUDD-PDS.pdf",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": "2026-02-10",
+          "location": "PDS section 3.1(b)",
+          "excerpt": "For redemptions via AUDD Digital (or directly from AUDC when redemption via a Distributor is unavailable), redemption fees to an external bank account will range from 0.10% to 1.00%.",
+          "assertion": "W15: published applicable variable payout schedule is not evaluated at the captured holder/notional; configuration carries documentedVariableFee without a selected payout charge."
+        }
+      ]
+    },
+    {
+      "id": "uw-usdso-somnia-5e82239f76f9212e",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "supervision",
+        "pillar": "control",
+        "requiredDatum": "supervision",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R74)",
+      "sources": [
+        {
+          "url": "https://somnia.network/usdso-terms-of-service",
+          "observedAt": "2026-10-03T23:09:56Z",
+          "datumAsOf": "2026-05-05",
+          "location": "section 3.1",
+          "excerpt": "USDso is issued exclusively by Frax Inc. and/or its affiliates (collectively, \u201cFrax\u201d).",
+          "assertion": "Legal issuer identity is Frax; the Somnia operator expressly disclaims issuer authorization."
+        },
+        {
+          "url": "https://gov.frax.finance/t/fip-432-transfer-of-compliance-collateral-management-of-frxusd-to-frax-inc/3748",
+          "observedAt": "2026-10-03T23:09:56Z",
+          "datumAsOf": "2025-07-07",
+          "location": "Background and Motivation",
+          "excerpt": "supporting FRAX Inc\u2019s pursuit of a payment stablecoin license",
+          "assertion": "Public governance describes pursuing licensing, not a granted supervised USDso issuing regime."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://somnia.network/usdso-stablecoin",
+        "https://somnia.network/usdso-terms-of-service",
+        "https://docs.frax.com/protocol/assets/frxusd/frxusd",
+        "https://gov.frax.finance/t/fip-432-transfer-of-compliance-collateral-management-of-frxusd-to-frax-inc/3748",
+        "https://www.occ.gov/",
+        "https://www.dfs.ny.gov/"
+      ],
+      "rationale": "Exact Frax Inc/affiliate issuer supervision applicable to USDso remains undisclosed: own terms identify Frax but no granted licence/activity, Frax issuer docs identify delegated compliance and regulated reserve custodians, and OCC/NYDFS name searches found no matching issuer approval. GENIUS-compatible and regulated underlying custodians are not issuer prudential supervision."
+    },
+    {
+      "id": "uw-usdso-somnia-6ca1a6049ebf7558",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "componentKey": "control:mint-meta:usdso-somnia:41487c7fcef92f13148c",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:usdso-somnia:41487c7fcef92f13148c",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R74)",
+      "sources": [
+        {
+          "url": "https://somnia.network/usdso-terms-of-service",
+          "observedAt": "2026-10-03T23:09:56Z",
+          "datumAsOf": "2026-05-05",
+          "location": "section 5.3",
+          "excerpt": "The Company does not develop, deploy, audit, or maintain these smart contracts.",
+          "assertion": "Somnia terms disclaim contract responsibility; they do not disclose named Safe operators or signing custody policies."
+        },
+        {
+          "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian",
+          "observedAt": "2026-10-03T23:09:56Z",
+          "datumAsOf": null,
+          "location": "Published documentation",
+          "excerpt": "Configurable mint and redeem fees",
+          "assertion": "Technical docs explain protocol configuration rather than independently evidenced human key custody/signing policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://somnia.network/usdso-stablecoin",
+        "https://somnia.network/usdso-terms-of-service",
+        "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian",
+        "https://docs.frax.com/protocol/assets/frxusd/frxusd",
+        "https://explorer.somnia.network/api/v2/smart-contracts/0x690575465af47835b72c5b74c334234624cfd942",
+        "https://explorer.somnia.network/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+      ],
+      "rationale": "The named scoped question asks independent human control, operational key custody and signing policy of the identified USDso 3-of-6 owner Safe. Issuer/product/terms/technical and exact implementation disclosures do not publish operator identities, independence or custody/signing attestation. Public address/quorum code is not those safeguards. Other incident and execution uncertainties remain U."
     }
   ]
 }

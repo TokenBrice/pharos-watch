@@ -8108,20 +8108,20 @@
       "reviewedAt": "2026-10-03T22:57:32Z",
       "expiresAt": "2027-10-03T22:57:32Z",
       "reviewer": "W1R60 unknown-resolver",
-      "notes": "Exact native wrapper deployment provides a 12-full-month lower bound. No independent continuity, redemption performance, stress recovery, financial assurance or incident-free history is asserted.",
+      "notes": "Exact native wrapper deployment provides an 11-full-month lower bound. No independent continuity, redemption performance, stress recovery, financial assurance or incident-free history is asserted.",
       "sources": [
         {
           "sourceId": "native-wrapper-creation",
-          "label": "Plasma deployment transaction for native Yuzu Alpha contracts",
+          "label": "Plasma deployment transaction for native syzUSD vault",
           "publisher": "PlasmaScan",
-          "publishedAt": "2025-10-01",
-          "url": "https://plasmascan.to/tx/0xe2f4bcaf4ba6a5b1d01d01e8da06ba942c93373d464267755cd68384480e0cec1",
+          "publishedAt": "2025-10-10",
+          "url": "https://plasmascan.to/tx/0x2f4bcaf4ba6a5b1d01d01e8da06ba942c93373d464267755cd68384480e0cec1",
           "confidence": "issuer-reported"
         }
       ],
       "eligibility": {
         "liveHistory": {
-          "minimumLiveHistoryMonths": 12,
+          "minimumLiveHistoryMonths": 11,
           "observedAt": "2026-10-03",
           "treatment": "eligibility-only",
           "sourceIds": [
@@ -8141,20 +8141,20 @@
       "reviewedAt": "2026-10-03T22:57:32Z",
       "expiresAt": "2027-10-03T22:57:32Z",
       "reviewer": "W1R60 unknown-resolver",
-      "notes": "Exact native token deployment provides a 12-full-month lower bound. No independent continuity, redemption performance, stress recovery, financial assurance or incident-free history is asserted.",
+      "notes": "Exact native token deployment provides an 11-full-month lower bound. No independent continuity, redemption performance, stress recovery, financial assurance or incident-free history is asserted.",
       "sources": [
         {
           "sourceId": "native-token-creation",
-          "label": "Plasma deployment transaction for native Yuzu Alpha contracts",
+          "label": "Plasma deployment transaction for native yzUSD token",
           "publisher": "PlasmaScan",
-          "publishedAt": "2025-10-01",
-          "url": "https://plasmascan.to/tx/0xe2f4bcaf4ba6a5b1d01d01e8da06ba942c93373d464267755cd68384480e0cec1",
+          "publishedAt": "2025-10-10",
+          "url": "https://plasmascan.to/tx/0x53b57e597db63f938d8e6f0ac85ab4510120f6793db8eb4c9af0efc7a80f9ca9",
           "confidence": "issuer-reported"
         }
       ],
       "eligibility": {
         "liveHistory": {
-          "minimumLiveHistoryMonths": 12,
+          "minimumLiveHistoryMonths": 11,
           "observedAt": "2026-10-03",
           "treatment": "eligibility-only",
           "sourceIds": [
