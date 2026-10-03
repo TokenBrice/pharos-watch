@@ -6782,6 +6782,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "susdat-saturn",
+      "reviewedAt": "2026-10-03T22:46:32Z",
+      "expiresAt": "2027-10-03T22:46:32Z",
+      "reviewer": "Unknown wave W1R52",
+      "notes": "Eligibility-only lower bound from exact token deployment/live operation. Proxy history includes implementation changes and does not prove current implementation seasoning, uninterrupted operation, independently verified performance, redemption throughput, reconciliation or absence of incidents.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Canonical sUSDat proxy creation",
+          "publisher": "Ethereum explorer",
+          "publishedAt": "2026-03-10",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0xc4615dbc25d1aea6442f64e08b3308972817a17bc092b3368e3589589106102b",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 6,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdat-saturn",
+      "reviewedAt": "2026-10-03T22:46:32Z",
+      "expiresAt": "2027-10-03T22:46:32Z",
+      "reviewer": "Unknown wave W1R52",
+      "notes": "Eligibility-only lower bound from exact token deployment/live operation. Proxy history includes implementation changes and does not prove current implementation seasoning, uninterrupted operation, independently verified performance, redemption throughput, reconciliation or absence of incidents.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Canonical USDat proxy creation",
+          "publisher": "Ethereum explorer",
+          "publishedAt": "2026-03-10",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x2969fa27d8c25a8dd1e479b3981306fba33b4b0073a48f4bf59e5f8dbdb84273",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 6,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "uusd-youves",
+      "reviewedAt": "2026-10-03T22:46:32Z",
+      "expiresAt": "2027-10-03T22:46:32Z",
+      "reviewer": "Unknown wave W1R52",
+      "notes": "Eligibility-only lower bound from exact token deployment/live operation. Proxy history includes implementation changes and does not prove current implementation seasoning, uninterrupted operation, independently verified performance, redemption throughput, reconciliation or absence of incidents.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Youves issuer mainnet/uUSD launch recap",
+          "publisher": "youves",
+          "publishedAt": "2022-01-06",
+          "url": "https://medium.com/@youves/youves-2021-recap-and-its-a-wrap-here-s-our-year-in-review-28ae0d49f7ec",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 62,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "cadc-cad-coin",
+      "reviewedAt": "2026-10-03T22:46:32Z",
+      "expiresAt": "2027-10-03T22:46:32Z",
+      "reviewer": "Unknown wave W1R52",
+      "notes": "Eligibility-only lower bound from exact token deployment/live operation. Proxy history includes implementation changes and does not prove current implementation seasoning, uninterrupted operation, independently verified performance, redemption throughput, reconciliation or absence of incidents.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "CADC live Base expansion announcement",
+          "publisher": "Paytrie AB Inc",
+          "publishedAt": "2025-02-19",
+          "url": "https://www.einpresswire.com/article/786764431/paytrie-expands-canadian-dollar-stablecoin-cadc-to-base-network-for-faster-low-cost-onchain-transactions",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 19,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

@@ -4499,6 +4499,47 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xef4cb7e87f212f128f0b24cf35861e52b3c78a6a"
         }
       ]
+    },
+    {
+      "assetId": "usdat-saturn",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2027-01-01",
+      "reviewer": "Unknown wave W1R52",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "Canonical USDat holds PYUSDx directly. At Ethereum block 26114896, PYUSDx balance equals totalSupply 91356083161065 (six-decimal units) and MultiMint totalAssets (alternative-asset accounting) is zero. The EIP1967 implementation is verified USDat 0x496a4a33b6181f4536203488d9a05ac1429e702c. Exact USDat/MultiMint/YieldToOne/Extension source wraps funded tokens, keeps collateral at the token, and exposes no borrowing, strategy delegatecall or lending allocation; replaceAsset requires incoming PYUSDx and removes alternative assets. Native token logic disables version pin/unpin; proxy replacement risk remains in its existing upgrade controls. This is local token custody/accounting only: MoonPay/PYUSD/Paxos offchain custody, legal claim, insolvency and reuse risks are not asserted absent. CCIP representations are not additional independent reserve books.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0x23238f20b894f29041f48d88ee91131c395aaa71",
+          "function": "totalSupply()/totalAssets()/EIP1967 implementation",
+          "value": "totalSupply=91356083161065; totalAssets=0; implementation=0x496a4a33b6181f4536203488d9a05ac1429e702c",
+          "block": 26114896
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+          "function": "balanceOf(USDat)",
+          "value": "91356083161065",
+          "block": 26114896
+        }
+      ],
+      "sources": [
+        {
+          "label": "Verified USDat including full MultiMint, YieldToOne and Extension source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x496a4a33b6181f4536203488d9a05ac1429e702c"
+        },
+        {
+          "label": "Pinned Ethereum RPC observation block 26114896",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Saturn backing custody statement",
+          "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits.md"
+        }
+      ]
     }
   ]
 }
