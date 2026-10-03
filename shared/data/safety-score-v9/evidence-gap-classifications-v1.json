@@ -2704,6 +2704,302 @@
         "https://www.anchorage.com/platform/usat-reserve-attestations"
       ],
       "rationale": "Exact USAT issuer redemption fee schedule is not publicly supplied on issuer legal center, USAT policies, supported-stablecoin docs, website terms or reserve archive. The public covered-stablecoin fee table only specifies USDtb/USDPT/USDGO; USAT requires separate onboarding. Neither par redemption nor other assets zero fees establishes USAT cost."
+    },
+    {
+      "id": "uw-usde-ethena-e5e042b07e93180e",
+      "assetId": "usde-ethena",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:f9906611cba344777f696480",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:48Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R03)",
+      "sources": [
+        {
+          "url": "https://gov.ethenafoundation.com/t/proposal-maple-and-anchorage-digital-as-direct-lending-partners/756",
+          "observedAt": "2026-10-03T22:49:40Z",
+          "datumAsOf": "2026-03-10",
+          "location": "Ethena Labs Research proposal, Summary",
+          "excerpt": "While the specific terms of the agreements can\u2019t be shared publicly for confidentiality reasons",
+          "assertion": "Institutional lending agreements embedded in Liquid Cash are confidential; no whole-basket maximum maturity or realization horizon is disclosed."
+        },
+        {
+          "url": "https://docs.ethena.fi/backing-assets/institutional-lending.md",
+          "observedAt": "2026-10-03T22:49:40Z",
+          "datumAsOf": null,
+          "location": "Institutional lending mechanics",
+          "excerpt": "Under these arrangements, an institutional borrower receives a loan of stable assets and posts collateral worth more than the value borrowed.",
+          "assertion": "Loans are actual claims, not immediately liquid cash merely because their pledged collateral is liquid."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ethena.fi/llms.txt",
+        "https://docs.ethena.fi/backing-assets/overview.md",
+        "https://docs.ethena.fi/backing-assets/institutional-lending.md",
+        "https://docs.ethena.fi/backing-assets/liquid-stablecoins.md",
+        "https://docs.ethena.fi/backing-assets/defi-lending.md",
+        "https://docs.ethena.fi/backing-assets/real-world-assets-rwa.md",
+        "https://gov.ethenafoundation.com/t/ethena-s-june-2026-governance-update/808",
+        "https://gov.ethenafoundation.com/t/announcement-ethena-foundation-risk-committee-re-election-aug-2026/811",
+        "https://gov.ethenafoundation.com/t/proposal-maple-and-anchorage-digital-as-direct-lending-partners/756",
+        "https://docs.ethena.fi/resources/custodian-attestations.md",
+        "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
+        "https://app.ethena.fi/api/positions/current/collateral",
+        "https://app.ethena.fi/api/collateral-breakdown",
+        "https://docs.ethena.fi/resources/usde-terms-and-conditions.md",
+        "https://docs.ethena.fi/technical-design/key-addresses.md"
+      ],
+      "rationale": "The exact Liquid Cash bucket combines stables, DeFi lending, RWA and institutional loans. Public collateral amounts and category descriptions do not provide a reconciled holding-level maturity or whole-basket realization bound. Governance explicitly withholds lending-agreement terms. Liquid collateral, nominal daily redemption and rolling settlement cannot establish the maximum maturityDaysMax or liquidityHorizon of every claim in this bucket."
+    },
+    {
+      "id": "uw-usde-ethena-e2679eac55a24103",
+      "assetId": "usde-ethena",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:f9906611cba344777f696480",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:48Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R03)",
+      "sources": [
+        {
+          "url": "https://gov.ethenafoundation.com/t/proposal-maple-and-anchorage-digital-as-direct-lending-partners/756",
+          "observedAt": "2026-10-03T22:49:40Z",
+          "datumAsOf": "2026-03-10",
+          "location": "Ethena Labs Research proposal, Summary",
+          "excerpt": "While the specific terms of the agreements can\u2019t be shared publicly for confidentiality reasons",
+          "assertion": "Institutional lending agreements embedded in Liquid Cash are confidential; no whole-basket maximum maturity or realization horizon is disclosed."
+        },
+        {
+          "url": "https://docs.ethena.fi/backing-assets/institutional-lending.md",
+          "observedAt": "2026-10-03T22:49:40Z",
+          "datumAsOf": null,
+          "location": "Institutional lending mechanics",
+          "excerpt": "Under these arrangements, an institutional borrower receives a loan of stable assets and posts collateral worth more than the value borrowed.",
+          "assertion": "Loans are actual claims, not immediately liquid cash merely because their pledged collateral is liquid."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ethena.fi/llms.txt",
+        "https://docs.ethena.fi/backing-assets/overview.md",
+        "https://docs.ethena.fi/backing-assets/institutional-lending.md",
+        "https://docs.ethena.fi/backing-assets/liquid-stablecoins.md",
+        "https://docs.ethena.fi/backing-assets/defi-lending.md",
+        "https://docs.ethena.fi/backing-assets/real-world-assets-rwa.md",
+        "https://gov.ethenafoundation.com/t/ethena-s-june-2026-governance-update/808",
+        "https://gov.ethenafoundation.com/t/announcement-ethena-foundation-risk-committee-re-election-aug-2026/811",
+        "https://gov.ethenafoundation.com/t/proposal-maple-and-anchorage-digital-as-direct-lending-partners/756",
+        "https://docs.ethena.fi/resources/custodian-attestations.md",
+        "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
+        "https://app.ethena.fi/api/positions/current/collateral",
+        "https://app.ethena.fi/api/collateral-breakdown",
+        "https://docs.ethena.fi/resources/usde-terms-and-conditions.md",
+        "https://docs.ethena.fi/technical-design/key-addresses.md"
+      ],
+      "rationale": "The exact Liquid Cash bucket combines stables, DeFi lending, RWA and institutional loans. Public collateral amounts and category descriptions do not provide a reconciled holding-level maturity or whole-basket realization bound. Governance explicitly withholds lending-agreement terms. Liquid collateral, nominal daily redemption and rolling settlement cannot establish the maximum maturityDaysMax or liquidityHorizon of every claim in this bucket."
+    },
+    {
+      "id": "uw-usde-ethena-beee4f4c9f30ad53",
+      "assetId": "usde-ethena",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:b2e79de8a96c1e38f1f81206",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R03)",
+      "sources": [
+        {
+          "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
+          "observedAt": "2026-10-03T22:49:40Z",
+          "datumAsOf": null,
+          "location": "Management of Risks, accessibility and availability",
+          "excerpt": "Any of these abilities being unavailable or degraded would impede the trading workflows & availability of the **mint**/**redeem** *USDe* functionality.",
+          "assertion": "Custodial access and closeout depend on external operations; rolling four-hour PnL settlement is not a whole-position realization maximum."
+        },
+        {
+          "url": "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
+          "observedAt": "2026-10-03T22:52:31Z",
+          "datumAsOf": null,
+          "location": "Non-crypto basis trade",
+          "excerpt": "A perpetual contract referencing the spot price of a commodity is treated differently from a cash-settled synthetic contract",
+          "assertion": "The other bucket includes heterogeneous crypto and Gold; generic proposed hedges do not identify every current claim or its term maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ethena.fi/llms.txt",
+        "https://docs.ethena.fi/backing-assets/overview.md",
+        "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
+        "https://docs.ethena.fi/protocol-overview/underlying-derivatives/futures-vs-perpetuals.md",
+        "https://docs.ethena.fi/protocol-overview/risks/backing-assets-risk.md",
+        "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
+        "https://docs.ethena.fi/resources/custodian-attestations.md",
+        "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
+        "https://app.ethena.fi/api/positions/current/collateral",
+        "https://docs.ethena.fi/resources/usde-terms-and-conditions.md",
+        "https://docs.ethena.fi/technical-design/key-addresses.md"
+      ],
+      "rationale": "The ETH/LST, BTC and SOL/XRP/BNB/Gold positions are disclosed as aggregate assets and venues, not complete realization/closeout schedules. No enforceable whole-slice liquidity horizon is published. The mixed Other claim retains class other because Gold identity and per-position hedge instrument scope remain unitemized; its exact maximum term cannot be established. ETH/BTC maturity is separately left structural N/A, not C. Native transferability, proposed hedges and typical PnL cycles are not whole-position USD liquidity bounds."
+    },
+    {
+      "id": "uw-usde-ethena-eeec74201933296f",
+      "assetId": "usde-ethena",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e92594f8416eb5673a729835",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R03)",
+      "sources": [
+        {
+          "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
+          "observedAt": "2026-10-03T22:49:40Z",
+          "datumAsOf": null,
+          "location": "Management of Risks, accessibility and availability",
+          "excerpt": "Any of these abilities being unavailable or degraded would impede the trading workflows & availability of the **mint**/**redeem** *USDe* functionality.",
+          "assertion": "Custodial access and closeout depend on external operations; rolling four-hour PnL settlement is not a whole-position realization maximum."
+        },
+        {
+          "url": "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
+          "observedAt": "2026-10-03T22:52:31Z",
+          "datumAsOf": null,
+          "location": "Non-crypto basis trade",
+          "excerpt": "A perpetual contract referencing the spot price of a commodity is treated differently from a cash-settled synthetic contract",
+          "assertion": "The other bucket includes heterogeneous crypto and Gold; generic proposed hedges do not identify every current claim or its term maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ethena.fi/llms.txt",
+        "https://docs.ethena.fi/backing-assets/overview.md",
+        "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
+        "https://docs.ethena.fi/protocol-overview/underlying-derivatives/futures-vs-perpetuals.md",
+        "https://docs.ethena.fi/protocol-overview/risks/backing-assets-risk.md",
+        "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
+        "https://docs.ethena.fi/resources/custodian-attestations.md",
+        "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
+        "https://app.ethena.fi/api/positions/current/collateral",
+        "https://docs.ethena.fi/resources/usde-terms-and-conditions.md",
+        "https://docs.ethena.fi/technical-design/key-addresses.md"
+      ],
+      "rationale": "The ETH/LST, BTC and SOL/XRP/BNB/Gold positions are disclosed as aggregate assets and venues, not complete realization/closeout schedules. No enforceable whole-slice liquidity horizon is published. The mixed Other claim retains class other because Gold identity and per-position hedge instrument scope remain unitemized; its exact maximum term cannot be established. ETH/BTC maturity is separately left structural N/A, not C. Native transferability, proposed hedges and typical PnL cycles are not whole-position USD liquidity bounds."
+    },
+    {
+      "id": "uw-usde-ethena-4bdf71b9045455b3",
+      "assetId": "usde-ethena",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:0df9df38a7bd2ec6072c6c60",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R03)",
+      "sources": [
+        {
+          "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
+          "observedAt": "2026-10-03T22:49:40Z",
+          "datumAsOf": null,
+          "location": "Management of Risks, accessibility and availability",
+          "excerpt": "Any of these abilities being unavailable or degraded would impede the trading workflows & availability of the **mint**/**redeem** *USDe* functionality.",
+          "assertion": "Custodial access and closeout depend on external operations; rolling four-hour PnL settlement is not a whole-position realization maximum."
+        },
+        {
+          "url": "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
+          "observedAt": "2026-10-03T22:52:31Z",
+          "datumAsOf": null,
+          "location": "Non-crypto basis trade",
+          "excerpt": "A perpetual contract referencing the spot price of a commodity is treated differently from a cash-settled synthetic contract",
+          "assertion": "The other bucket includes heterogeneous crypto and Gold; generic proposed hedges do not identify every current claim or its term maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ethena.fi/llms.txt",
+        "https://docs.ethena.fi/backing-assets/overview.md",
+        "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
+        "https://docs.ethena.fi/protocol-overview/underlying-derivatives/futures-vs-perpetuals.md",
+        "https://docs.ethena.fi/protocol-overview/risks/backing-assets-risk.md",
+        "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
+        "https://docs.ethena.fi/resources/custodian-attestations.md",
+        "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
+        "https://app.ethena.fi/api/positions/current/collateral",
+        "https://docs.ethena.fi/resources/usde-terms-and-conditions.md",
+        "https://docs.ethena.fi/technical-design/key-addresses.md"
+      ],
+      "rationale": "The ETH/LST, BTC and SOL/XRP/BNB/Gold positions are disclosed as aggregate assets and venues, not complete realization/closeout schedules. No enforceable whole-slice liquidity horizon is published. The mixed Other claim retains class other because Gold identity and per-position hedge instrument scope remain unitemized; its exact maximum term cannot be established. ETH/BTC maturity is separately left structural N/A, not C. Native transferability, proposed hedges and typical PnL cycles are not whole-position USD liquidity bounds."
+    },
+    {
+      "id": "uw-usde-ethena-51c42686afbaa4b5",
+      "assetId": "usde-ethena",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:0df9df38a7bd2ec6072c6c60",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R03)",
+      "sources": [
+        {
+          "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
+          "observedAt": "2026-10-03T22:49:40Z",
+          "datumAsOf": null,
+          "location": "Management of Risks, accessibility and availability",
+          "excerpt": "Any of these abilities being unavailable or degraded would impede the trading workflows & availability of the **mint**/**redeem** *USDe* functionality.",
+          "assertion": "Custodial access and closeout depend on external operations; rolling four-hour PnL settlement is not a whole-position realization maximum."
+        },
+        {
+          "url": "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
+          "observedAt": "2026-10-03T22:52:31Z",
+          "datumAsOf": null,
+          "location": "Non-crypto basis trade",
+          "excerpt": "A perpetual contract referencing the spot price of a commodity is treated differently from a cash-settled synthetic contract",
+          "assertion": "The other bucket includes heterogeneous crypto and Gold; generic proposed hedges do not identify every current claim or its term maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ethena.fi/llms.txt",
+        "https://docs.ethena.fi/backing-assets/overview.md",
+        "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
+        "https://docs.ethena.fi/protocol-overview/underlying-derivatives/futures-vs-perpetuals.md",
+        "https://docs.ethena.fi/protocol-overview/risks/backing-assets-risk.md",
+        "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
+        "https://docs.ethena.fi/resources/custodian-attestations.md",
+        "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
+        "https://app.ethena.fi/api/positions/current/collateral",
+        "https://docs.ethena.fi/resources/usde-terms-and-conditions.md",
+        "https://docs.ethena.fi/technical-design/key-addresses.md"
+      ],
+      "rationale": "The ETH/LST, BTC and SOL/XRP/BNB/Gold positions are disclosed as aggregate assets and venues, not complete realization/closeout schedules. No enforceable whole-slice liquidity horizon is published. The mixed Other claim retains class other because Gold identity and per-position hedge instrument scope remain unitemized; its exact maximum term cannot be established. ETH/BTC maturity is separately left structural N/A, not C. Native transferability, proposed hedges and typical PnL cycles are not whole-position USD liquidity bounds."
     }
   ]
 }

@@ -1262,6 +1262,105 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "susde-ethena",
+      "reviewedAt": "2026-10-03T22:47:38Z",
+      "expiresAt": "2027-10-03T22:47:38Z",
+      "reviewer": "W1R03 primary-source research",
+      "notes": "Dated exact-token creation or outstanding issuance establishes a conservative live-history lower bound only. No independently verified uninterrupted operations, throughput, reconciliation continuity, recovery or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-evidence",
+          "label": "Exact StakedUSDeV2 creation transaction",
+          "publisher": "Ethereum deployment",
+          "publishedAt": "2023-11-14",
+          "url": "https://eth.blockscout.com/tx/0x9b099ba3c8e64ea8904cc6de83f2245e309e0f91c3ce1f976328b601e4dda314",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 34,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usde-ethena",
+      "reviewedAt": "2026-10-03T22:47:38Z",
+      "expiresAt": "2027-10-03T22:47:38Z",
+      "reviewer": "W1R03 primary-source research",
+      "notes": "Dated exact-token creation or outstanding issuance establishes a conservative live-history lower bound only. No independently verified uninterrupted operations, throughput, reconciliation continuity, recovery or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-evidence",
+          "label": "First USDe custodian report with outstanding supply",
+          "publisher": "Ethena Labs",
+          "publishedAt": "2024-04-15",
+          "url": "https://paragraph.com/@ethena-labs/gfL3fLDo5ghIZcXDDqLU",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 29,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdtb-ethena",
+      "reviewedAt": "2026-10-03T22:47:38Z",
+      "expiresAt": "2027-10-03T22:47:38Z",
+      "reviewer": "W1R03 primary-source research",
+      "notes": "Dated exact-token creation or outstanding issuance establishes a conservative live-history lower bound only. No independently verified uninterrupted operations, throughput, reconciliation continuity, recovery or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-evidence",
+          "label": "USDtb issuance by Anchorage Digital Bank",
+          "publisher": "Anchorage Digital",
+          "publishedAt": "2025-10-14",
+          "url": "https://www.anchorage.com/press-room/anchorage-digital-issues-usdtb-americas-first-federally-regulated-stablecoin",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 11,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

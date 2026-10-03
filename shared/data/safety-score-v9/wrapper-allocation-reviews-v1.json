@@ -3843,6 +3843,47 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b9681015a1fa2225d1fc8ae40538d3d64c58290"
         }
       ]
+    },
+    {
+      "assetId": "susde-ethena",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2027-01-01",
+      "reviewer": "W1R03 exact-source and pinned accounting review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "Wrapper-local scope only: verified nonproxy StakedUSDeV2 and inherited StakedUSDe/USDeSilo contain no strategy, borrowing or lending dispatch. The vault holds USDe; totalAssets equals USDe.balanceOf(vault) minus unvested rewards exactly at the pin. Cooldown burns shares and transfers USDe into the immutable silo, whose sole external path transfers USDe under vault authorization. rescueTokens excludes USDe. Blacklist/reallocation powers remain separately scored. Offchain reserve custody and hedge/reuse risk belongs to serial USDe parent and is not waived.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+          "function": "asset()/totalAssets()/getUnvestedAmount()/USDe.balanceOf(vault)/silo()/cooldownDuration()",
+          "value": "asset=0x4c9edd5852cd905f086c759e8383e09bff1e68b3; totalAssets=1246532460963512692646677486; unvested=28038918298611111111111; balance=1246560499881811303757788597; silo=0x7fc7c91d556b400afa565013e3f32055a0713425; cooldownDuration=86400; blockHash=0xdd2174d94eaf019f321208133cdb3c7869dad76d5dfa4429b9bdf03c0c5c33aa; runtimeSha256=4ef7631314ff56c84fc45b5bbff1d2ee56a6ce1746d9f494bad8939822ecb0e7",
+          "block": 26114890
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x7fc7c91d556b400afa565013e3f32055a0713425",
+          "function": "USDe.balanceOf(silo)",
+          "value": "15978297426974948572565045",
+          "block": 26114890
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact verified staking source and inherited dependencies",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9d39a5de30e57443bff2a8307a4256c8797a3497"
+        },
+        {
+          "label": "Ethena staking mechanics",
+          "url": "https://docs.ethena.fi/technical-design/staking-usde"
+        },
+        {
+          "label": "Pinned Ethereum RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
     }
   ]
 }
