@@ -7046,6 +7046,72 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "senrlusdv2-sentora",
+      "reviewedAt": "2026-10-03T22:46:01Z",
+      "expiresAt": "2027-10-03T22:46:01Z",
+      "reviewer": "Unknown wave W1R24 primary-source review",
+      "notes": "Exact wrapper contract creation establishes a conservative deployment-history lower bound only. No continuous independent operation, settled stress redemptions, whole-supply reserve reconciliation or incident-free history is asserted. Parent-token history is excluded.",
+      "sources": [
+        {
+          "sourceId": "exact-vault-creation",
+          "label": "Exact VaultV2 creation transaction and block timestamp",
+          "publisher": "Ethereum / Blockscout",
+          "publishedAt": "2026-03-04",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x6a748a0fa1d95b1cf20e2039a79f5e51cf0f1bdb38251f0e5b8e08017fbce4e3",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 6,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-vault-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "senpyusdprimev2-sentora",
+      "reviewedAt": "2026-10-03T22:46:01Z",
+      "expiresAt": "2027-10-03T22:46:01Z",
+      "reviewer": "Unknown wave W1R24 primary-source review",
+      "notes": "Exact wrapper contract creation establishes a conservative deployment-history lower bound only. No continuous independent operation, settled stress redemptions, whole-supply reserve reconciliation or incident-free history is asserted. Parent-token history is excluded.",
+      "sources": [
+        {
+          "sourceId": "exact-vault-creation",
+          "label": "Exact VaultV2 creation transaction and block timestamp",
+          "publisher": "Ethereum / Blockscout",
+          "publishedAt": "2026-05-08",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x897c5d5d324d1966e64c430fb73e5cc9c4e76891ca26fdd33425747983f8cd72",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 4,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-vault-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

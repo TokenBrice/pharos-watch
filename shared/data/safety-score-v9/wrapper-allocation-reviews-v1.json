@@ -3105,146 +3105,47 @@
       ]
     },
     {
-      "scopeKind": "per-dimension",
       "assetId": "senpyusdprimev2-sentora",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "rationale": "Exact contract lender positions are identified, but the precedent fully-onchain-no-offchain-custodian whole-book exemption cannot be claimed for this mixed or residential-credit collateral book. Unknown legal-layer custody and borrowing remain bounded.",
-      "claims": [
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "Unknown wave W1R24 pinned exact-source review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "long-tail-overcollateralized-lending",
+      "rationale": "Exact pinned block 26114894, hash 0x41c1bba8d166f0293e51d435a4c76d26de77842bf66aa9ac007b35dc283c1d2f. Entire wrapper asset book is idle underlying plus one immutable adapter holding 1 Morpho lender positions. Both runtime bytecodes exactly match verified deployed_bytecode. Adapter allocate/deallocate expose supply/withdraw only; no borrow, supplyCollateral, arbitrary target calls or delegatecall surface. All lender positions have zero borrow shares and collateral. No contract-local borrowing surface in the currently enabled allocation. Collateral includes non-bluechip claims, so reuse is long-tail, not none. Fully-onchain custody describes the wrapper held idle token and lender positions only; it does not attest collateral issuer segregation, insolvency priority or parent-token custody. Future curator-approved adapters can change the allocation, and unresolved registry/signer control questions remain.",
+      "observations": [
         {
-          "claimKey": "senpyusdprimev2-sentora-underlying-custodyescrow",
-          "dimension": "custodyEscrow",
-          "layer": "borrower-spv",
-          "target": {
-            "kind": "reserve-leg",
-            "sourceKey": "erc4626-single-asset:ethereum:0xc21b08c16458202593d4d9b26b9984ee67b38bbd:deployed",
-            "providerOrEntity": "Sentora-curated Morpho borrowers",
-            "applicability": "conditional",
-            "conditions": "Applies to underlying borrower/collateral legal layers while this deployed strategy exposure remains allocated."
-          },
-          "coverage": {
-            "kind": "conditional",
-            "condition": "While the reviewed deployed lending exposure remains allocated; no complete current legal-layer denominator is asserted.",
-            "shareFraction": null
-          },
-          "disposition": "issuer-undisclosed",
-          "statement": "legal-scope-undisclosed",
-          "rationale": "Pinned current vault/adapter lender positions do not establish ultimate collateral custody, all borrower/SPV borrowing authority or complete latent authorization closure. No favorable whole-book exemption is asserted.",
-          "reviewedAt": "2026-10-02",
-          "observedAtSec": 1790981027,
-          "expiresAtSec": 1793573027,
-          "sources": [
-            {
-              "label": "Sentora PRIME Main exact vault",
-              "url": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
-            },
-            {
-              "label": "Exact verified VaultV2 source",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
-            },
-            {
-              "label": "Exact current MorphoMarketV1AdapterV2 source",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89"
-            },
-            {
-              "label": "Morpho Vault V2 accounting and redemption mechanics",
-              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
-            },
-            {
-              "label": "Ethereum RPC, pinned block 26107702",
-              "url": "https://ethereum-rpc.publicnode.com"
-            },
-            {
-              "label": "Morpho exact-vault portfolio API",
-              "url": "https://api.morpho.org/graphql"
-            },
-            {
-              "label": "Sentora PRIME residential-credit case study",
-              "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
-            },
-            {
-              "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
-              "url": "https://sentora.com/legal/terms-of-use"
-            },
-            {
-              "label": "Morpho Vault V2 and MarketV1AdapterV2 security audits; no financial assurance",
-              "url": "https://docs.morpho.org/get-started/resources/audits/"
-            }
-          ],
-          "observations": [
-            {
-              "sourceUrl": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
-              "observedAtSec": 1790981027,
-              "description": "Exact current lending adapter 0x93d6393e66b56449b7926b9abfeb37606732de89; 1 lender positions with zero local borrow shares and posted collateral at block 26107702, without proof of every underlying legal layer."
-            }
-          ]
+          "chain": "ethereum",
+          "address": "0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
+          "function": "asset()/totalAssets()/adaptersLength()/adapters(0)/underlying.balanceOf(vault)",
+          "value": "asset=0x6c3ea9036406852006290770bedfcaba0e23a0e8; totalAssets=220608647973249; adaptersLength=1; adapters(0)=0x93d6393e66b56449b7926b9abfeb37606732de89; idleUnderlying=10598647229702; idle+realAssets=220608647973249",
+          "block": 26114894
         },
         {
-          "claimKey": "senpyusdprimev2-sentora-underlying-leverage",
-          "dimension": "leverage",
-          "layer": "borrower-spv",
-          "target": {
-            "kind": "reserve-leg",
-            "sourceKey": "erc4626-single-asset:ethereum:0xc21b08c16458202593d4d9b26b9984ee67b38bbd:deployed",
-            "providerOrEntity": "Sentora-curated Morpho borrowers",
-            "applicability": "conditional",
-            "conditions": "Applies to underlying borrower/collateral legal layers while this deployed strategy exposure remains allocated."
-          },
-          "coverage": {
-            "kind": "conditional",
-            "condition": "While the reviewed deployed lending exposure remains allocated; no complete current legal-layer denominator is asserted.",
-            "shareFraction": null
-          },
-          "disposition": "issuer-undisclosed",
-          "statement": "legal-scope-undisclosed",
-          "rationale": "Pinned current vault/adapter lender positions do not establish ultimate collateral custody, all borrower/SPV borrowing authority or complete latent authorization closure. No favorable whole-book exemption is asserted.",
-          "reviewedAt": "2026-10-02",
-          "observedAtSec": 1790981027,
-          "expiresAtSec": 1793573027,
-          "sources": [
-            {
-              "label": "Sentora PRIME Main exact vault",
-              "url": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
-            },
-            {
-              "label": "Exact verified VaultV2 source",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
-            },
-            {
-              "label": "Exact current MorphoMarketV1AdapterV2 source",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89"
-            },
-            {
-              "label": "Morpho Vault V2 accounting and redemption mechanics",
-              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
-            },
-            {
-              "label": "Ethereum RPC, pinned block 26107702",
-              "url": "https://ethereum-rpc.publicnode.com"
-            },
-            {
-              "label": "Morpho exact-vault portfolio API",
-              "url": "https://api.morpho.org/graphql"
-            },
-            {
-              "label": "Sentora PRIME residential-credit case study",
-              "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
-            },
-            {
-              "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
-              "url": "https://sentora.com/legal/terms-of-use"
-            },
-            {
-              "label": "Morpho Vault V2 and MarketV1AdapterV2 security audits; no financial assurance",
-              "url": "https://docs.morpho.org/get-started/resources/audits/"
-            }
-          ],
-          "observations": [
-            {
-              "sourceUrl": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
-              "observedAtSec": 1790981027,
-              "description": "Exact current lending adapter 0x93d6393e66b56449b7926b9abfeb37606732de89; 1 lender positions with zero local borrow shares and posted collateral at block 26107702, without proof of every underlying legal layer."
-            }
-          ]
+          "chain": "ethereum",
+          "address": "0x93d6393e66b56449b7926b9abfeb37606732de89",
+          "function": "parentVault()/realAssets()/marketIdsLength()/marketIds(i)/Morpho.position(id,adapter)/deployed bytecode",
+          "value": "parentVault=0xc21b08c16458202593d4d9b26b9984ee67b38bbd; realAssets=210010000743547; marketIdsLength=1; complete roster examined; every position borrowShares=0,collateral=0; adapter supplies are exactly supplyShares(id); source-matched runtime; no borrowing selector or generic-call reach.",
+          "block": 26114894
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact bytecode-matched VaultV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+        },
+        {
+          "label": "Exact bytecode-matched sole MorphoMarketV1AdapterV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89"
+        },
+        {
+          "label": "Morpho Vault V2 documented adapters and role architecture",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Ethereum observed block 26114894",
+          "url": "https://etherscan.io/block/26114894"
         }
       ]
     },
@@ -3385,138 +3286,47 @@
       ]
     },
     {
-      "scopeKind": "per-dimension",
       "assetId": "senrlusdv2-sentora",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "rationale": "Exact contract lender positions are identified, but the precedent fully-onchain-no-offchain-custodian whole-book exemption cannot be claimed for this mixed or residential-credit collateral book. Unknown legal-layer custody and borrowing remain bounded.",
-      "claims": [
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "Unknown wave W1R24 pinned exact-source review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "long-tail-overcollateralized-lending",
+      "rationale": "Exact pinned block 26114894, hash 0x41c1bba8d166f0293e51d435a4c76d26de77842bf66aa9ac007b35dc283c1d2f. Entire wrapper asset book is idle underlying plus one immutable adapter holding 10 Morpho lender positions. Both runtime bytecodes exactly match verified deployed_bytecode. Adapter allocate/deallocate expose supply/withdraw only; no borrow, supplyCollateral, arbitrary target calls or delegatecall surface. All lender positions have zero borrow shares and collateral. No contract-local borrowing surface in the currently enabled allocation. Collateral includes non-bluechip claims, so reuse is long-tail, not none. Fully-onchain custody describes the wrapper held idle token and lender positions only; it does not attest collateral issuer segregation, insolvency priority or parent-token custody. Future curator-approved adapters can change the allocation, and unresolved registry/signer control questions remain.",
+      "observations": [
         {
-          "claimKey": "senrlusdv2-sentora-underlying-custodyescrow",
-          "dimension": "custodyEscrow",
-          "layer": "borrower-spv",
-          "target": {
-            "kind": "reserve-leg",
-            "sourceKey": "erc4626-single-asset:ethereum:0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf:deployed",
-            "providerOrEntity": "Sentora-curated Morpho borrowers",
-            "applicability": "conditional",
-            "conditions": "Applies to underlying borrower/collateral legal layers while this deployed strategy exposure remains allocated."
-          },
-          "coverage": {
-            "kind": "conditional",
-            "condition": "While the reviewed deployed lending exposure remains allocated; no complete current legal-layer denominator is asserted.",
-            "shareFraction": null
-          },
-          "disposition": "issuer-undisclosed",
-          "statement": "legal-scope-undisclosed",
-          "rationale": "Pinned current vault/adapter lender positions do not establish ultimate collateral custody, all borrower/SPV borrowing authority or complete latent authorization closure. No favorable whole-book exemption is asserted.",
-          "reviewedAt": "2026-10-02",
-          "observedAtSec": 1790981027,
-          "expiresAtSec": 1793573027,
-          "sources": [
-            {
-              "label": "Sentora RLUSD Main exact vault",
-              "url": "https://app.morpho.org/ethereum/vault/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
-            },
-            {
-              "label": "Exact verified VaultV2 source",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
-            },
-            {
-              "label": "Exact current MorphoMarketV1AdapterV2 source",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff"
-            },
-            {
-              "label": "Morpho Vault V2 accounting and redemption mechanics",
-              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
-            },
-            {
-              "label": "Ethereum RPC, pinned block 26107702",
-              "url": "https://ethereum-rpc.publicnode.com"
-            },
-            {
-              "label": "Morpho exact-vault portfolio API",
-              "url": "https://api.morpho.org/graphql"
-            },
-            {
-              "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
-              "url": "https://sentora.com/legal/terms-of-use"
-            },
-            {
-              "label": "Morpho Vault V2 and MarketV1AdapterV2 security audits; no financial assurance",
-              "url": "https://docs.morpho.org/get-started/resources/audits/"
-            }
-          ],
-          "observations": [
-            {
-              "sourceUrl": "https://app.morpho.org/ethereum/vault/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
-              "observedAtSec": 1790981027,
-              "description": "Exact current lending adapter 0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff; 10 lender positions with zero local borrow shares and posted collateral at block 26107702, without proof of every underlying legal layer."
-            }
-          ]
+          "chain": "ethereum",
+          "address": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+          "function": "asset()/totalAssets()/adaptersLength()/adapters(0)/underlying.balanceOf(vault)",
+          "value": "asset=0x8292bb45bf1ee4d140127049757c2e0ff06317ed; totalAssets=465103167785840553231594669; adaptersLength=1; adapters(0)=0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff; idleUnderlying=61716649789222071285272547; idle+realAssets=465103167785840553231594669",
+          "block": 26114894
         },
         {
-          "claimKey": "senrlusdv2-sentora-underlying-leverage",
-          "dimension": "leverage",
-          "layer": "borrower-spv",
-          "target": {
-            "kind": "reserve-leg",
-            "sourceKey": "erc4626-single-asset:ethereum:0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf:deployed",
-            "providerOrEntity": "Sentora-curated Morpho borrowers",
-            "applicability": "conditional",
-            "conditions": "Applies to underlying borrower/collateral legal layers while this deployed strategy exposure remains allocated."
-          },
-          "coverage": {
-            "kind": "conditional",
-            "condition": "While the reviewed deployed lending exposure remains allocated; no complete current legal-layer denominator is asserted.",
-            "shareFraction": null
-          },
-          "disposition": "issuer-undisclosed",
-          "statement": "legal-scope-undisclosed",
-          "rationale": "Pinned current vault/adapter lender positions do not establish ultimate collateral custody, all borrower/SPV borrowing authority or complete latent authorization closure. No favorable whole-book exemption is asserted.",
-          "reviewedAt": "2026-10-02",
-          "observedAtSec": 1790981027,
-          "expiresAtSec": 1793573027,
-          "sources": [
-            {
-              "label": "Sentora RLUSD Main exact vault",
-              "url": "https://app.morpho.org/ethereum/vault/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
-            },
-            {
-              "label": "Exact verified VaultV2 source",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
-            },
-            {
-              "label": "Exact current MorphoMarketV1AdapterV2 source",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff"
-            },
-            {
-              "label": "Morpho Vault V2 accounting and redemption mechanics",
-              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
-            },
-            {
-              "label": "Ethereum RPC, pinned block 26107702",
-              "url": "https://ethereum-rpc.publicnode.com"
-            },
-            {
-              "label": "Morpho exact-vault portfolio API",
-              "url": "https://api.morpho.org/graphql"
-            },
-            {
-              "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
-              "url": "https://sentora.com/legal/terms-of-use"
-            },
-            {
-              "label": "Morpho Vault V2 and MarketV1AdapterV2 security audits; no financial assurance",
-              "url": "https://docs.morpho.org/get-started/resources/audits/"
-            }
-          ],
-          "observations": [
-            {
-              "sourceUrl": "https://app.morpho.org/ethereum/vault/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
-              "observedAtSec": 1790981027,
-              "description": "Exact current lending adapter 0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff; 10 lender positions with zero local borrow shares and posted collateral at block 26107702, without proof of every underlying legal layer."
-            }
-          ]
+          "chain": "ethereum",
+          "address": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+          "function": "parentVault()/realAssets()/marketIdsLength()/marketIds(i)/Morpho.position(id,adapter)/deployed bytecode",
+          "value": "parentVault=0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf; realAssets=403386517996618481946322122; marketIdsLength=10; complete roster examined; every position borrowShares=0,collateral=0; adapter supplies are exactly supplyShares(id); source-matched runtime; no borrowing selector or generic-call reach.",
+          "block": 26114894
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact bytecode-matched VaultV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
+        },
+        {
+          "label": "Exact bytecode-matched sole MorphoMarketV1AdapterV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff"
+        },
+        {
+          "label": "Morpho Vault V2 documented adapters and role architecture",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Ethereum observed block 26114894",
+          "url": "https://etherscan.io/block/26114894"
         }
       ]
     },
