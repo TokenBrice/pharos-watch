@@ -24882,6 +24882,99 @@
         "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview"
       ],
       "rationale": "No current whole-issued-AID composition is disclosed across product/API/terms, rendered dashboard and recovered September 1 deployment attestation. Cash ratio divides redeemer/minter cash by only circulating AID, excluding staked liabilities; GPU report totals assets without AID-specific attribution. Cannot normalize those scoped quantities to 100% of all issued AID."
+    },
+    {
+      "id": "uw-nxusd-nereus-2cf669e993693ebe",
+      "assetId": "nxusd-nereus",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R88)",
+      "sources": [
+        {
+          "url": "https://medium.com/nereus-protocol/the-nxusd-genesis-event-41d22f8b2020?source=collection_home---4------0-----------------------",
+          "observedAt": "2026-10-03T23:03:39Z",
+          "datumAsOf": "2022-05-20",
+          "location": "NXUSD Genesis Event",
+          "excerpt": "15 million NXUSDs were minted and collateralized with 4 billion WXTs.",
+          "assertion": "A historical genesis issuance/backing pair is disclosed, not a current recurring whole-supply reconciliation across native deployments."
+        },
+        {
+          "url": "https://resources.cryptocompare.com/asset-management/558/1692883376123.pdf",
+          "observedAt": "2026-10-03T23:09:43Z",
+          "datumAsOf": null,
+          "location": "November 2022 audit, p.1, Introduction",
+          "excerpt": "The scope of the audit is NXUSDV2, ProtocolAddressesProvider, TokenOracle, NXUSDStakingOneTier and NXUSDStakingOneTierCalculation contracts.",
+          "assertion": "The located independent audit is scoped to code, not financial reserve/liability reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.nereus.finance/",
+        "https://docs.nereus.finance/",
+        "https://www.nereus.finance/blog",
+        "https://nxusd.nereus.finance/",
+        "https://nxusd.nereus.finance/js/app.60bde321.js",
+        "https://github.com/nereusfinance/nereus-stablecoin-core",
+        "https://sourcify.dev/server/v2/contract/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387?fields=abi,sources",
+        "https://resources.cryptocompare.com/asset-management/558/1692883376123.pdf"
+      ],
+      "rationale": "No dated whole-supply mint/burn-to-backing reconciliation procedure or cadence covering Avalanche and Polygon native NXUSD and collateral was located. Genesis collateral, owner-only mint throttles, individual Cauldron debt accounting and code assurance do not prove that exact datum. Current issuer/docs redirect and disclaimer, application bundle, repository/deployments and audit disclose operating machinery but no common-clock whole-supply reconciliation. Preserve reconciliation unknown, not none."
+    },
+    {
+      "id": "uw-home-homecoin-62c98762ed768d3a",
+      "assetId": "home-homecoin",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R88)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/homecoin-finance/gitbook/live/getting-started/faq.md",
+          "observedAt": "2026-10-03T23:09:43Z",
+          "datumAsOf": null,
+          "location": "Are there a predetermined amount of HOME tokens?",
+          "excerpt": "HOME is minted when a home owner takes out a loan. There\u2019s not a predetermined number of HOME available.",
+          "assertion": "Mint origination is described; a current recurring whole-supply/backing reconciliation is not."
+        },
+        {
+          "url": "https://social-feed-media.s3.ap-southeast-1.amazonaws.com/pdfs/1674044427141-BACON.pdf",
+          "observedAt": "2026-10-03T23:04:08Z",
+          "datumAsOf": "2022-07-25",
+          "location": "Whitepaper v1.4, Pans, p.6",
+          "excerpt": "The amount of USDC in the Pan plus the amount of outstanding loans is always equal to the amount of outstanding HOME.",
+          "assertion": "Historical design invariant, not a dated procedure/cadence reconciling current lien validity, borrower payment status and all HOME liabilities."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.homecoin.finance/",
+        "https://www.homecoin.finance/home-benefits",
+        "https://github.com/homecoin-finance/gitbook",
+        "https://raw.githubusercontent.com/homecoin-finance/gitbook/live/SUMMARY.md",
+        "https://raw.githubusercontent.com/homecoin-finance/gitbook/live/getting-started/faq.md",
+        "https://social-feed-media.s3.ap-southeast-1.amazonaws.com/pdfs/1674044427141-BACON.pdf",
+        "https://app.homecoin.finance/",
+        "https://etherscan.io/address/0xb8919522331c59f5c16bdfaa6a121a6e03a91f62",
+        "https://raw.githubusercontent.com/homecoin-finance/HomeDAO/e2742bb707aa6d75eb310ed8729c3ca04f91d296/contracts/PoolCore/Pool16.sol",
+        "https://files.baconcoin.com/baconcoin-blocksec-audit.pdf",
+        "https://files.baconcoin.finance/bacon-protocol-full-audit.pdf"
+      ],
+      "rationale": "No dated recurring reconciliation of all HOME liabilities/mint-burn movements against current USDC, outstanding loan balances and enforceable lien backing is disclosed in the issuer website, complete docs index/FAQ, whitepaper or Pool16 accounting source. Public lien descriptors and a historical design equality are not this datum. Linked code-audit hosts fail DNS; those failures are not evidence of financial non-disclosure. Preserve unknown, not none."
     }
   ]
 }

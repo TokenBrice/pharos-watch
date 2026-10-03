@@ -11441,6 +11441,72 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "nxusd-nereus",
+      "reviewedAt": "2026-10-03T23:04:08Z",
+      "expiresAt": "2027-10-03T23:04:08Z",
+      "reviewer": "W1R88",
+      "notes": "The issuer's genesis announcement proves Avalanche NXUSD live by May 2022; use 52 full months as a conservative lower bound. No claim of independently verified continuous operation, redemption throughput, report continuity or incident-free history is made.",
+      "sources": [
+        {
+          "sourceId": "nxusd-genesis",
+          "label": "Nereus: The NXUSD Genesis Event",
+          "publisher": "Nereus Protocol",
+          "publishedAt": "2022-05-20",
+          "url": "https://medium.com/nereus-protocol/the-nxusd-genesis-event-41d22f8b2020?source=collection_home---4------0-----------------------",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 52,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "nxusd-genesis"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "home-homecoin",
+      "reviewedAt": "2026-10-03T23:04:08Z",
+      "expiresAt": "2027-10-03T23:04:08Z",
+      "reviewer": "W1R88",
+      "notes": "Exact HOME proxy creation at Ethereum block 12916875 on 2021-07-28 establishes 62 full calendar months of deployment history as a lower bound under the wave's creation-evidence rule. No independent operating-performance, redemption-throughput, reconciliation-continuity or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "home-deployment",
+          "label": "Canonical HOME proxy creation transaction",
+          "publisher": "Ethereum blockchain via Etherscan",
+          "publishedAt": "2021-07-28",
+          "url": "https://etherscan.io/tx/0xa26f1506913086d6cc64921f61ba6ab3d65d6f7040aba2ed22182fd893c4383c",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 62,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "home-deployment"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
