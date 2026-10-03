@@ -3000,6 +3000,164 @@
         "https://docs.ethena.fi/technical-design/key-addresses.md"
       ],
       "rationale": "The ETH/LST, BTC and SOL/XRP/BNB/Gold positions are disclosed as aggregate assets and venues, not complete realization/closeout schedules. No enforceable whole-slice liquidity horizon is published. The mixed Other claim retains class other because Gold identity and per-position hedge instrument scope remain unitemized; its exact maximum term cannot be established. ETH/BTC maturity is separately left structural N/A, not C. Native transferability, proposed hedges and typical PnL cycles are not whole-position USD liquidity bounds."
+    },
+    {
+      "id": "uw-usdx-hex-trust-e6ef208a803d361c",
+      "assetId": "usdx-hex-trust",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R04)",
+      "sources": [
+        {
+          "url": "https://flare.network/news/flare-confidential-compute-makes-private-institutional-data-usable-onchain-starting-with-hex-trusts-usdx",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": "2026-09-30",
+          "location": "First application: Proof of Reserves for USDX",
+          "excerpt": "Only that result is published.",
+          "assertion": "Coverage conclusion is published, not reserve components or a dated category allocation."
+        },
+        {
+          "url": "https://www.htdigitalassets.com/",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": null,
+          "location": "Current Reserves in USD",
+          "excerpt": "Updating Reserves in USD",
+          "assertion": "Issuer publishes a placeholder, not a current composition."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.htdigitalassets.com/",
+        "https://www.htdigitalassets.com/disclaimer",
+        "https://flare.network/news/flare-confidential-compute-makes-private-institutional-data-usable-onchain-starting-with-hex-trusts-usdx",
+        "https://api.htdigitalassets.com/alm-stablecoin-db/metrics/current_reserves_amount",
+        "https://www.hextrust.com/resources-collection/hex-trusts-usdx-launches-with-clearpool-on-flare-network"
+      ],
+      "rationale": "Current whole-book reserve composition and category weights remain undisclosed. Issuer describes Treasury/cash backing; the September 30 FCC mechanism deliberately keeps component balances private and publishes only coverage. The public bond-reserve API is an aggregate, not a complete dated holdings denominator."
+    },
+    {
+      "id": "uw-usdx-hex-trust-6eee7f74d6aad2de",
+      "assetId": "usdx-hex-trust",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdx-hex-trust:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R04)",
+      "sources": [
+        {
+          "url": "https://www.htdigitalassets.com/disclaimer",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": null,
+          "location": "Disclaimer 2",
+          "excerpt": "Minting and Redemption of USDX requires the successful completion of HTMI\u2019s onboarding procedures",
+          "assertion": "Direct issuer redemption requires separately executed agreements, with no published applicable fee schedule."
+        },
+        {
+          "url": "https://www.htdigitalassets.com/",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": null,
+          "location": "Redeem 1:1 Anytime",
+          "excerpt": "USDX is tradable on exchanges and redeemable 1:1 by approved parties anytime.",
+          "assertion": "Par redemption statement does not establish complete same-notional fees."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.htdigitalassets.com/",
+        "https://www.htdigitalassets.com/disclaimer",
+        "https://www.hextrust.com/legal-privacy/aura-terms-of-service"
+      ],
+      "rationale": "Exact direct HTMI offchain USDX redemption cost is not published: issuer/FAQ/disclaimer and Hex Trust help/legal surfaces disclose approved-party redemption and separate agreements but no applicable numeric or formula fee schedule. Aura account withdrawal charges are another rail and cannot establish direct issuer fees."
+    },
+    {
+      "id": "uw-sbc-brale-c61f7ea3be2d1264",
+      "assetId": "sbc-brale",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:sbc-brale:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:51:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R04)",
+      "sources": [
+        {
+          "url": "https://brale.xyz/pricing",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": null,
+          "location": "Pricing FAQ",
+          "excerpt": "Brale charges 0 bps on standard money movement.",
+          "assertion": "Published fee schedule requires rail-specific flat payout fees plus actual gas +20%; existing captured generic route does not evaluate this same-notional schedule."
+        },
+        {
+          "url": "https://brale.xyz/pricing",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": null,
+          "location": "API product features",
+          "excerpt": "Offchain transfersSend RTP, wire, or ACH payouts$2per RTP$20per Wire25\u00a2per ACH",
+          "assertion": "Exact applicable public variable schedule is not a uniform fixed-bps route cost."
+        }
+      ]
+    },
+    {
+      "id": "uw-usdx-hex-trust-e73b8d341ef3c196",
+      "assetId": "usdx-hex-trust",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R04)",
+      "sources": [
+        {
+          "url": "https://flare.network/news/flare-confidential-compute-makes-private-institutional-data-usable-onchain-starting-with-hex-trusts-usdx",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": "2026-09-30",
+          "location": "First application: Proof of Reserves for USDX",
+          "excerpt": "The extension reads both inside the TEE, checks their combined total against USDX supply across the ecosystem, and signs a result showing whether USDX is backed 1:1 or better.",
+          "assertion": "A reserve-coverage check is disclosed, but common-clock input reconciliation, mint/burn movements and a recurring whole-supply procedure cadence are not."
+        },
+        {
+          "url": "https://www.htdigitalassets.com/disclaimer",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": null,
+          "location": "Disclaimer 15",
+          "excerpt": "we strive to provide accurate and up-to-date information regarding the reserves backing our assets",
+          "assertion": "Issuer does not guarantee real-time availability of reserve disclosures."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.htdigitalassets.com/",
+        "https://www.htdigitalassets.com/disclaimer",
+        "https://flare.network/news/flare-confidential-compute-makes-private-institutional-data-usable-onchain-starting-with-hex-trusts-usdx",
+        "https://songbird-systems-explorer.flare.rocks/price-feeds/custom?feed=0x21555344582f555344000000000000000000000000&endTime=1790772738",
+        "https://api.htdigitalassets.com/alm-stablecoin-db/metrics/current_reserves_amount"
+      ],
+      "rationale": "FCC discloses an ecosystem coverage calculation, not the exact required recurring common-clock mint/burn and liability-to-backing reconciliation cadence. Its feed sums three token supplies and public bonds plus restricted cash; input timestamps, restricted-cash reconciliation controls and complete movement procedure remain unpublished. Do not misclassify this as no reconciliation or dismiss the new coverage mechanism."
     }
   ]
 }

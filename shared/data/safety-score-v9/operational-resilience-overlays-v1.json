@@ -1361,6 +1361,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "dai-makerdao",
+      "reviewedAt": "2026-10-03T22:47:07Z",
+      "expiresAt": "2027-10-03T22:47:07Z",
+      "reviewer": "Pharos unknown-wave W1R04",
+      "notes": "Dated exact-token operating evidence establishes a conservative live-history lower bound only. No settled stress throughput, uninterrupted report cadence, peg recovery, or incident-free history is asserted. SBC history starts at report publication conservatively, later than its evidenced circulation date.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "Exact Multi-Collateral Dai launch (not predecessor Sai)",
+          "publisher": "MakerDAO",
+          "publishedAt": "2019-11-18",
+          "url": "https://www.prnewswire.com/news-releases/multi-collateral-dai-launches-and-introduces-the-dai-savings-rate-300960077.html",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 82,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "xo-exodus",
+      "reviewedAt": "2026-10-03T22:47:07Z",
+      "expiresAt": "2027-10-03T22:47:07Z",
+      "reviewer": "Pharos unknown-wave W1R04",
+      "notes": "Dated exact-token operating evidence establishes a conservative live-history lower bound only. No settled stress throughput, uninterrupted report cadence, peg recovery, or incident-free history is asserted. SBC history starts at report publication conservatively, later than its evidenced circulation date.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "XO Cash live on Solana",
+          "publisher": "Exodus",
+          "publishedAt": "2026-05-08",
+          "url": "https://www.exodus.com/investors/news-events/press-releases/detail/112/exodus-launches-xo-cash-as-the-first-stablecoin-built-for-ai-agents",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 4,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "sbc-brale",
+      "reviewedAt": "2026-10-03T22:47:07Z",
+      "expiresAt": "2027-10-03T22:47:07Z",
+      "reviewer": "Pharos unknown-wave W1R04",
+      "notes": "Dated exact-token operating evidence establishes a conservative live-history lower bound only. No settled stress throughput, uninterrupted report cadence, peg recovery, or incident-free history is asserted. SBC history starts at report publication conservatively, later than its evidenced circulation date.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "Published SBC report establishing circulating supply by October 31, 2023",
+          "publisher": "Brale / Abdo",
+          "publishedAt": "2023-11-30",
+          "url": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-10-2023.pdf",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 34,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdx-hex-trust",
+      "reviewedAt": "2026-10-03T22:47:07Z",
+      "expiresAt": "2027-10-03T22:47:07Z",
+      "reviewer": "Pharos unknown-wave W1R04",
+      "notes": "Dated exact-token operating evidence establishes a conservative live-history lower bound only. No settled stress throughput, uninterrupted report cadence, peg recovery, or incident-free history is asserted. SBC history starts at report publication conservatively, later than its evidenced circulation date.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "USDX native Flare launch",
+          "publisher": "Flare / Hex Trust",
+          "publishedAt": "2024-05-20",
+          "url": "https://flare.network/news/defi-on-flare-boosted-by-hex-trusts-usdx-stablecoin-and-clearpool-yield-vault",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 28,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
