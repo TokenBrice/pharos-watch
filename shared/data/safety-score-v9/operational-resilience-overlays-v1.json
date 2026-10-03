@@ -8102,6 +8102,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "syzusd-yuzu",
+      "reviewedAt": "2026-10-03T22:57:32Z",
+      "expiresAt": "2027-10-03T22:57:32Z",
+      "reviewer": "W1R60 unknown-resolver",
+      "notes": "Exact native wrapper deployment provides a 12-full-month lower bound. No independent continuity, redemption performance, stress recovery, financial assurance or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "native-wrapper-creation",
+          "label": "Plasma deployment transaction for native Yuzu Alpha contracts",
+          "publisher": "PlasmaScan",
+          "publishedAt": "2025-10-01",
+          "url": "https://plasmascan.to/tx/0xe2f4bcaf4ba6a5b1d01d01e8da06ba942c93373d464267755cd68384480e0cec1",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 12,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "native-wrapper-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "yzusd-yuzu",
+      "reviewedAt": "2026-10-03T22:57:32Z",
+      "expiresAt": "2027-10-03T22:57:32Z",
+      "reviewer": "W1R60 unknown-resolver",
+      "notes": "Exact native token deployment provides a 12-full-month lower bound. No independent continuity, redemption performance, stress recovery, financial assurance or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "native-token-creation",
+          "label": "Plasma deployment transaction for native Yuzu Alpha contracts",
+          "publisher": "PlasmaScan",
+          "publishedAt": "2025-10-01",
+          "url": "https://plasmascan.to/tx/0xe2f4bcaf4ba6a5b1d01d01e8da06ba942c93373d464267755cd68384480e0cec1",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 12,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "native-token-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "hbusdt-hyperbeat",
+      "reviewedAt": "2026-10-03T22:57:32Z",
+      "expiresAt": "2027-10-03T22:57:32Z",
+      "reviewer": "W1R60 unknown-resolver",
+      "notes": "Exact hbUSDT vault token deployment provides a 17-full-month lower bound; no Tether parent history is inherited. No redemption stress performance, assurance continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "vault-token-creation",
+          "label": "Hyperbeat USDT vault token contract creation transaction",
+          "publisher": "HyperEVMScan",
+          "publishedAt": "2025-05-02",
+          "url": "https://hyperevmscan.io/tx/0x99ea9968412a0da66f7ec8d18a77da4a914981f8125382f61a0829cdac84c1ca",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 17,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "vault-token-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "hlscope-hamilton-lane",
+      "reviewedAt": "2026-10-03T22:57:32Z",
+      "expiresAt": "2027-10-03T22:57:32Z",
+      "reviewer": "W1R60 unknown-resolver",
+      "notes": "Issuer's exact tokenized feeder launch, not the Main Fund inception, establishes 40 full months as a lower bound. Age is eligibility-only; no settled stress redemptions, assurance continuity or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "tokenized-feeder-launch",
+          "label": "Hamilton Lane and Securitize launch the Polygon tokenized SCOPE feeder",
+          "publisher": "Hamilton Lane",
+          "publishedAt": "2023-05-04",
+          "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 40,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "tokenized-feeder-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

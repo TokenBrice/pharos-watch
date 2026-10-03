@@ -1423,14 +1423,12 @@
           "assetId": "syzusd-yuzu",
           "noCurrentReach": false,
           "review": {
-            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "reviewedAt": "2026-10-03T22:57:32Z",
             "sources": [
               "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses.md",
-              "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd.md",
-              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e",
               "https://rpc.plasma.to"
             ],
-            "responsibility": "integration-missing"
+            "responsibility": "measured-adverse"
           }
         },
         {
@@ -1442,13 +1440,12 @@
           "assetId": "yzusd-yuzu",
           "noCurrentReach": false,
           "review": {
-            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "reviewedAt": "2026-10-03T22:57:32Z",
             "sources": [
               "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses.md",
-              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
               "https://rpc.plasma.to"
             ],
-            "responsibility": "integration-missing"
+            "responsibility": "measured-adverse"
           }
         }
       ],
@@ -1469,17 +1466,134 @@
           "reachesHeldClaim": true,
           "enabled": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "reviewedAt": "2026-10-03T22:57:32Z",
             "sources": [
               "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd.md",
               "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e",
               "https://rpc.plasma.to"
             ],
-            "responsibility": "integration-missing"
+            "responsibility": "measured-adverse"
           }
         }
       ],
-      "authorities": [],
+      "authorities": [
+        {
+          "authorityKey": "syzusd-native-pauser",
+          "nodeKey": "plasma-syzusd",
+          "actingDeployment": {
+            "chainId": "plasma",
+            "claimAddress": "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
+          },
+          "controllerKey": "plasma:0xe61ad2de346db42879b6ee3c7cf0c6a2cdc0530d",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "chain",
+              "key": "plasma"
+            },
+            {
+              "kind": "reserve-issuer",
+              "key": "yuzu"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-03T22:57:32Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e",
+              "https://rpc.plasma.to"
+            ],
+            "responsibility": "measured-adverse"
+          }
+        },
+        {
+          "authorityKey": "syzusd-native-secondary-pauser",
+          "nodeKey": "plasma-syzusd",
+          "actingDeployment": {
+            "chainId": "plasma",
+            "claimAddress": "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
+          },
+          "controllerKey": "plasma:0x6b7c65cfd456453aaf495c2d0f9536c308a75030",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "chain",
+              "key": "plasma"
+            },
+            {
+              "kind": "reserve-issuer",
+              "key": "yuzu"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-03T22:57:32Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e",
+              "https://rpc.plasma.to"
+            ],
+            "responsibility": "measured-adverse"
+          }
+        },
+        {
+          "authorityKey": "yzusd-native-pauser",
+          "nodeKey": "plasma-yzusd",
+          "actingDeployment": {
+            "chainId": "plasma",
+            "claimAddress": "0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+          },
+          "controllerKey": "plasma:0xe61ad2de346db42879b6ee3c7cf0c6a2cdc0530d",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "chain",
+              "key": "plasma"
+            },
+            {
+              "kind": "reserve-issuer",
+              "key": "yuzu"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-03T22:57:32Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
+              "https://rpc.plasma.to"
+            ],
+            "responsibility": "measured-adverse"
+          }
+        },
+        {
+          "authorityKey": "yzusd-native-secondary-pauser",
+          "nodeKey": "plasma-yzusd",
+          "actingDeployment": {
+            "chainId": "plasma",
+            "claimAddress": "0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+          },
+          "controllerKey": "plasma:0x6b7c65cfd456453aaf495c2d0f9536c308a75030",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "chain",
+              "key": "plasma"
+            },
+            {
+              "kind": "reserve-issuer",
+              "key": "yuzu"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-03T22:57:32Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
+              "https://rpc.plasma.to"
+            ],
+            "responsibility": "measured-adverse"
+          }
+        }
+      ],
       "partitions": [
         {
           "partitionKey": "plasma-syzusd-native-claim",
@@ -1487,31 +1601,16 @@
           "disjoint": true,
           "complete": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "reviewedAt": "2026-10-03T22:57:32Z",
             "sources": [
               "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd.md",
-              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e",
               "https://rpc.plasma.to"
             ],
-            "responsibility": "integration-missing"
+            "responsibility": "measured-adverse"
           }
         }
       ],
       "unresolved": [
-        {
-          "branchKey": "syzusd-native-access",
-          "nodeKey": "plasma-syzusd",
-          "reason": "research-incomplete",
-          "responsibility": "integration-missing",
-          "review": {
-            "reviewedAt": "2026-10-01T23:22:36.860Z",
-            "sources": [
-              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e",
-              "https://rpc.plasma.to"
-            ],
-            "responsibility": "integration-missing"
-          }
-        },
         {
           "branchKey": "syzusd-satellite-materiality",
           "nodeKey": "plasma-syzusd",
@@ -1527,29 +1626,15 @@
           }
         },
         {
-          "branchKey": "yzusd-originating-access",
-          "nodeKey": "plasma-yzusd",
-          "reason": "research-incomplete",
-          "responsibility": "integration-missing",
-          "review": {
-            "reviewedAt": "2026-10-01T23:22:36.860Z",
-            "sources": [
-              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
-              "https://yuzu-money.gitbook.io/yuzu-money/security-infrastructure/hypernative-sentinel"
-            ],
-            "responsibility": "integration-missing"
-          }
-        },
-        {
           "branchKey": "yzusd-underlying-strategy-claims",
           "nodeKey": "plasma-yzusd",
           "reason": "issuer-undisclosed",
           "responsibility": "issuer-undisclosed",
           "review": {
-            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "reviewedAt": "2026-10-03T22:57:32Z",
             "sources": [
               "https://cache.accountable.capital/dashboard/yuzu",
-              "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies"
+              "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies.md"
             ],
             "responsibility": "issuer-undisclosed"
           }
@@ -1570,44 +1655,88 @@
           "assetId": "yzusd-yuzu",
           "noCurrentReach": false,
           "review": {
-            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "reviewedAt": "2026-10-03T22:57:32Z",
             "sources": [
               "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses.md",
-              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
               "https://rpc.plasma.to"
             ],
-            "responsibility": "integration-missing"
+            "responsibility": "measured-adverse"
           }
         }
       ],
       "edges": [],
-      "authorities": [],
-      "partitions": [],
-      "unresolved": [
+      "authorities": [
         {
-          "branchKey": "yzusd-originating-access",
+          "authorityKey": "yzusd-native-pauser",
           "nodeKey": "plasma-yzusd",
-          "reason": "research-incomplete",
-          "responsibility": "integration-missing",
+          "actingDeployment": {
+            "chainId": "plasma",
+            "claimAddress": "0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+          },
+          "controllerKey": "plasma:0xe61ad2de346db42879b6ee3c7cf0c6a2cdc0530d",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "chain",
+              "key": "plasma"
+            },
+            {
+              "kind": "reserve-issuer",
+              "key": "yuzu"
+            }
+          ],
           "review": {
-            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "reviewedAt": "2026-10-03T22:57:32Z",
             "sources": [
               "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
-              "https://yuzu-money.gitbook.io/yuzu-money/security-infrastructure/hypernative-sentinel"
+              "https://rpc.plasma.to"
             ],
-            "responsibility": "integration-missing"
+            "responsibility": "measured-adverse"
           }
         },
+        {
+          "authorityKey": "yzusd-native-secondary-pauser",
+          "nodeKey": "plasma-yzusd",
+          "actingDeployment": {
+            "chainId": "plasma",
+            "claimAddress": "0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+          },
+          "controllerKey": "plasma:0x6b7c65cfd456453aaf495c2d0f9536c308a75030",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "chain",
+              "key": "plasma"
+            },
+            {
+              "kind": "reserve-issuer",
+              "key": "yuzu"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-03T22:57:32Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
+              "https://rpc.plasma.to"
+            ],
+            "responsibility": "measured-adverse"
+          }
+        }
+      ],
+      "partitions": [],
+      "unresolved": [
         {
           "branchKey": "yzusd-underlying-strategy-claims",
           "nodeKey": "plasma-yzusd",
           "reason": "issuer-undisclosed",
           "responsibility": "issuer-undisclosed",
           "review": {
-            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "reviewedAt": "2026-10-03T22:57:32Z",
             "sources": [
               "https://cache.accountable.capital/dashboard/yuzu",
-              "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies"
+              "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies.md"
             ],
             "responsibility": "issuer-undisclosed"
           }

@@ -17883,6 +17883,457 @@
           "assertion": "Confirms core-contract immutability, not immutable allocation/fee policy. Schema already represents this exact datum; the compiler suppresses it because separate mint-review questions remain open."
         }
       ]
+    },
+    {
+      "id": "uw-syzusd-yuzu-b45e0adc37ed058e",
+      "assetId": "syzusd-yuzu",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "supervision",
+        "pillar": "control",
+        "requiredDatum": "supervision",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:54Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
+      "sources": [
+        {
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2026-04-15",
+          "location": "Introduction 1.1",
+          "excerpt": "operated by YUZU FINTECH LLC, a Virtual Asset Service Provider licensed under the Kutaisi Free Industrial Zone",
+          "assertion": "Issuer names a Georgian FEZ VASP status, not a named prudential supervisor for native syzUSD issuance."
+        },
+        {
+          "url": "https://nbg.gov.ge/en/page/virtual-asset-service-providers-vasps",
+          "observedAt": "2026-10-03T23:03:11Z",
+          "datumAsOf": null,
+          "location": "REGISTER and stablecoin issuance rule",
+          "excerpt": "For additional requirements related to the Stablecoin Initial Coin Offering (incl. issuance)",
+          "assertion": "NBG publishes a distinct stablecoin issuance rule and VASP register; the 16 September 2026 register has no Yuzu Fintech entry."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://yuzu.money/",
+        "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md",
+        "https://yuzu-money.gitbook.io/yuzu-money/transparency/accountable.md",
+        "https://nbg.gov.ge/en/page/virtual-asset-service-providers-vasps",
+        "https://nbg.gov.ge/fm/%E1%83%A1%E1%83%90%E1%83%92%E1%83%90%E1%83%93%E1%83%90%E1%83%AE%E1%83%93%E1%83%9D/vasps/%E1%83%A0%E1%83%94%E1%83%94%E1%83%A1%E1%83%A2%E1%83%A0%E1%83%98/vasps-eng-16-09-2026.xlsx",
+        "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses.md"
+      ],
+      "rationale": "The exact syzUSD native mint supervision datum is not disclosed. Issuer FEZ VASP language neither establishes prudential token issuance supervision nor identifies the applicable supervisor; the current NBG register does not identify Yuzu Fintech. Do not infer supervision:none or an authorization breach from this mismatch."
+    },
+    {
+      "id": "uw-syzusd-yuzu-9fa8402715c41797",
+      "assetId": "syzusd-yuzu",
+      "scope": {
+        "componentKey": "access:graph:unresolved:yzusd-underlying-strategy-claims",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "access:graph:unresolved:yzusd-underlying-strategy-claims",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:54Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
+      "sources": [
+        {
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies.md",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": null,
+          "location": "Strategy breakdown introduction",
+          "excerpt": "A live view of underlying strategies exposure is available on Yuzu Money's **Accountable dashboard**",
+          "assertion": "Issuer discloses named strategy buckets but not the complete held claim contract/controller census."
+        },
+        {
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2026-04-15",
+          "location": "4.5 Transparency",
+          "excerpt": "displays may be delayed, estimated or incomplete and are provided as-is",
+          "assertion": "Dashboard exposure labels are not complete legal or contract-level claim identities."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://yuzu.money/",
+        "https://yuzu-money.gitbook.io/yuzu-money/llms.txt",
+        "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies.md",
+        "https://yuzu-money.gitbook.io/yuzu-money/transparency/accountable.md",
+        "https://cache.accountable.capital/dashboard/yuzu",
+        "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses.md",
+        "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md"
+      ],
+      "rationale": "The exact underlying strategy claim/controller access graph is undisclosed: current exposure_split provides labels and amounts but not all chain/contract/expiry identifiers, gross versus net loop accounting, or enforceable controller reach into each held claim. Native yzUSD/syzUSD pause authorities are separately verified; they do not establish the upstream strategy graph."
+    },
+    {
+      "id": "uw-yzusd-yuzu-09ca669209e389c7",
+      "assetId": "yzusd-yuzu",
+      "scope": {
+        "componentKey": "access:graph:unresolved:yzusd-underlying-strategy-claims",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "access:graph:unresolved:yzusd-underlying-strategy-claims",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:54Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
+      "sources": [
+        {
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies.md",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": null,
+          "location": "Strategy breakdown introduction",
+          "excerpt": "A live view of underlying strategies exposure is available on Yuzu Money's **Accountable dashboard**",
+          "assertion": "Issuer discloses named strategy buckets but not the complete held claim contract/controller census."
+        },
+        {
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2026-04-15",
+          "location": "4.5 Transparency",
+          "excerpt": "displays may be delayed, estimated or incomplete and are provided as-is",
+          "assertion": "Dashboard exposure labels are not complete legal or contract-level claim identities."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://yuzu.money/",
+        "https://yuzu-money.gitbook.io/yuzu-money/llms.txt",
+        "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies.md",
+        "https://yuzu-money.gitbook.io/yuzu-money/transparency/accountable.md",
+        "https://cache.accountable.capital/dashboard/yuzu",
+        "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses.md",
+        "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md"
+      ],
+      "rationale": "The exact underlying strategy claim/controller access graph is undisclosed: current exposure_split provides labels and amounts but not all chain/contract/expiry identifiers, gross versus net loop accounting, or enforceable controller reach into each held claim. Native yzUSD/syzUSD pause authorities are separately verified; they do not establish the upstream strategy graph."
+    },
+    {
+      "id": "uw-yzusd-yuzu-6716612e8204a82a",
+      "assetId": "yzusd-yuzu",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:yzusd-yuzu:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:54Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
+      "sources": [
+        {
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2026-04-15",
+          "location": "7.2",
+          "excerpt": "Yuzu does not guarantee yields, reserve sufficiency, redemption timing, or continuous access to the Platform.",
+          "assertion": "No maximum time from queued yzUSD redemption request to settled output is promised."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://yuzu.money/",
+        "https://app.yuzu.money/",
+        "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/mint-and-redeem.md",
+        "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd.md",
+        "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md",
+        "https://yuzu-money.gitbook.io/yuzu-money/transparency/accountable.md",
+        "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5"
+      ],
+      "rationale": "The queued yzUSD route has no published maximum request-to-final-settlement SLA. Docs describe eligibility and flows; legal terms allow queues, throttles and discretionary pauses. Current source has order filling by privileged roles but no forced deadline. The separate yzPP thirty-day waiting period is not yzUSD settlement."
+    },
+    {
+      "id": "uw-hbusdt-hyperbeat-d3884734885f40fb",
+      "assetId": "hbusdt-hyperbeat",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:54Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
+      "sources": [
+        {
+          "url": "https://hyperbeat.org/terms",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2026-03-01",
+          "location": "Services / Earn",
+          "excerpt": "automated non-custodial DeFi strategy Vaults, which may be co-operated or co-managed by third parties in conjunction with us",
+          "assertion": "Non-custodial marketing identifies strategy vaults, not enforceable whole-allocation segregation, bankruptcy-remoteness or asset-reuse terms."
+        },
+        {
+          "url": "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt.md",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": null,
+          "location": "General Vault Information",
+          "excerpt": "**Vault Token Symbol:** hbUSDT",
+          "assertion": "Exact hbUSDT integration identifies issuance/redemption contracts but no legal asset-protection/reuse covenant for the full strategy portfolio."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://hyperbeat.org/",
+        "https://hyperbeat.org/terms",
+        "https://docs.hyperbeat.org/llms.txt",
+        "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault.md",
+        "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt.md",
+        "https://docs.hyperbeat.org/resources/legal.md",
+        "https://docs.hyperbeat.org/resources/proof-of-solvency.md",
+        "https://hyperevmscan.io/address/0xbe8a4f1a312b94a712f8e5367b02ae6e378e6f19#code"
+      ],
+      "rationale": "Exact hbUSDT whole-allocation legal segregation/bankruptcy-remoteness and rehypothecation correlation safeguards are not published on reachable issuer terms, vault docs or verified deposit machinery. Insurance/redemption smart contracts are not legal custodians; non-custodial wallet statements and user-side collateral borrowing do not prove the strategy assets' reuse restrictions."
+    },
+    {
+      "id": "uw-hbusdt-hyperbeat-fdf07ef6b6af67da",
+      "assetId": "hbusdt-hyperbeat",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "rehypothecationCorrelation",
+        "pillar": "backing",
+        "requiredDatum": "rehypothecationCorrelation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:54Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
+      "sources": [
+        {
+          "url": "https://hyperbeat.org/terms",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2026-03-01",
+          "location": "Services / Earn",
+          "excerpt": "automated non-custodial DeFi strategy Vaults, which may be co-operated or co-managed by third parties in conjunction with us",
+          "assertion": "Non-custodial marketing identifies strategy vaults, not enforceable whole-allocation segregation, bankruptcy-remoteness or asset-reuse terms."
+        },
+        {
+          "url": "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt.md",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": null,
+          "location": "General Vault Information",
+          "excerpt": "**Vault Token Symbol:** hbUSDT",
+          "assertion": "Exact hbUSDT integration identifies issuance/redemption contracts but no legal asset-protection/reuse covenant for the full strategy portfolio."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://hyperbeat.org/",
+        "https://hyperbeat.org/terms",
+        "https://docs.hyperbeat.org/llms.txt",
+        "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault.md",
+        "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt.md",
+        "https://docs.hyperbeat.org/resources/legal.md",
+        "https://docs.hyperbeat.org/resources/proof-of-solvency.md",
+        "https://hyperevmscan.io/address/0xbe8a4f1a312b94a712f8e5367b02ae6e378e6f19#code"
+      ],
+      "rationale": "Exact hbUSDT whole-allocation legal segregation/bankruptcy-remoteness and rehypothecation correlation safeguards are not published on reachable issuer terms, vault docs or verified deposit machinery. Insurance/redemption smart contracts are not legal custodians; non-custodial wallet statements and user-side collateral borrowing do not prove the strategy assets' reuse restrictions."
+    },
+    {
+      "id": "uw-hbusdt-hyperbeat-771a15dd651cf52b",
+      "assetId": "hbusdt-hyperbeat",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "leverage",
+        "pillar": "backing",
+        "requiredDatum": "leverage",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:54Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
+      "sources": [
+        {
+          "url": "https://hyperbeat.org/terms",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2026-03-01",
+          "location": "Services / Earn",
+          "excerpt": "Such Digital Assets may be deployed across HyperEVM protocols or any of our partner protocols to earn yield and rewards.",
+          "assertion": "The mandate allows strategy deployment without disclosing hbUSDT's current gross/net leverage or a binding allocation-level leverage cap."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://hyperbeat.org/",
+        "https://hyperbeat.org/terms",
+        "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault.md",
+        "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt.md",
+        "https://docs.hyperbeat.org/resources/proof-of-solvency.md",
+        "https://docs.hyperbeat.org/morphobeat/collateral-assets",
+        "https://hyperevmscan.io/address/0xbe8a4f1a312b94a712f8e5367b02ae6e378e6f19#code"
+      ],
+      "rationale": "The exact wrapper-local hbUSDT strategy leverage posture is undisclosed on reachable materials: no current debt/assets ratio, complete strategy debt census, or binding whole-allocation no-leverage policy. Users borrowing against hbUSDT in Morpho is separate from leverage inside hbUSDT and cannot be used to author a strategy posture."
+    },
+    {
+      "id": "uw-hlscope-hamilton-lane-2df01571ee16b074",
+      "assetId": "hlscope-hamilton-lane",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:54Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
+      "sources": [
+        {
+          "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2023-05-04",
+          "location": "Launch announcement",
+          "excerpt": "today launched a new feeder fund offering tokenized exposure to an evergreen private credit fund",
+          "assertion": "Feeder identity is disclosed; a current dated feeder asset/liability composition and independent token-to-LP reconciliation are not."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.hamiltonlane.com/en-us/strategies/evergreen/global/senior-credit-opportunities-fund",
+        "https://www.hamiltonlane.com/en-us/fact-sheet-archive/scope-row",
+        "https://securitize.io/primary-market/hl-scope",
+        "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+        "https://www.sec.gov/Archives/edgar/data/1976710/000197671025000002/primary_doc.xml",
+        "https://www.hamiltonlane.com/getContentAsset/f266e02e-c9a9-42f7-a85a-4d5ece6100bf/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/HL-SCOPE-SA-SICAV-RAIF-PPM-December-2025.pdf?language=en-US",
+        "https://investors.securitize.io/news/news-details/2025/Hamilton-Lane-and-Securitizes-SCOPE-Gains-Instant-RLUSD-Liquidity-by-integrating-with-VBILLs-Onchain-Facility-11-05-2025/default.aspx"
+      ],
+      "rationale": "Exact HLSCOPE tokenized-feeder current composition and mint reconciliation are not disclosed. Public Main Fund NAV/performance and PPM describe a different Luxembourg fund, not a current feeder holdings/liability denominator or independent reconciliation of minted token supply to LP ownership. The VBILL liquidity sleeve announcement also supplies no feeder balance weights. Retain historical structure rather than renewing its composition date."
+    },
+    {
+      "id": "uw-hlscope-hamilton-lane-500f041959edcfde",
+      "assetId": "hlscope-hamilton-lane",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:54Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
+      "sources": [
+        {
+          "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2023-05-04",
+          "location": "Launch announcement",
+          "excerpt": "today launched a new feeder fund offering tokenized exposure to an evergreen private credit fund",
+          "assertion": "Feeder identity is disclosed; a current dated feeder asset/liability composition and independent token-to-LP reconciliation are not."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.hamiltonlane.com/en-us/strategies/evergreen/global/senior-credit-opportunities-fund",
+        "https://www.hamiltonlane.com/en-us/fact-sheet-archive/scope-row",
+        "https://securitize.io/primary-market/hl-scope",
+        "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+        "https://www.sec.gov/Archives/edgar/data/1976710/000197671025000002/primary_doc.xml",
+        "https://www.hamiltonlane.com/getContentAsset/f266e02e-c9a9-42f7-a85a-4d5ece6100bf/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/HL-SCOPE-SA-SICAV-RAIF-PPM-December-2025.pdf?language=en-US",
+        "https://investors.securitize.io/news/news-details/2025/Hamilton-Lane-and-Securitizes-SCOPE-Gains-Instant-RLUSD-Liquidity-by-integrating-with-VBILLs-Onchain-Facility-11-05-2025/default.aspx"
+      ],
+      "rationale": "Exact HLSCOPE tokenized-feeder current composition and mint reconciliation are not disclosed. Public Main Fund NAV/performance and PPM describe a different Luxembourg fund, not a current feeder holdings/liability denominator or independent reconciliation of minted token supply to LP ownership. The VBILL liquidity sleeve announcement also supplies no feeder balance weights. Retain historical structure rather than renewing its composition date."
+    },
+    {
+      "id": "uw-hlscope-hamilton-lane-68b3c35ade81ac2b",
+      "assetId": "hlscope-hamilton-lane",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:hlscope-hamilton-lane:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:54Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
+      "sources": [
+        {
+          "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2023-05-04",
+          "location": "Redemption paragraph and footnote",
+          "excerpt": "with no transaction fees from Securitize*",
+          "assertion": "The explicit footnote says other fees apply; zero Securitize transaction fee does not establish all-in holder costs."
+        },
+        {
+          "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2023-05-04",
+          "location": "Redemption paragraph",
+          "excerpt": "Investors in the SCOPE feeder fund will generally have the option to redeem their shares on demand at the previous quarter\u2019s Net Asset Value per share",
+          "assertion": "On-demand request availability is not a maximum elapsed time to final fiat settlement."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+        "https://securitize.io/primary-market/hl-scope",
+        "https://www.hamiltonlane.com/en-us/fact-sheet-archive/scope-row",
+        "https://www.hamiltonlane.com/getContentAsset/f266e02e-c9a9-42f7-a85a-4d5ece6100bf/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/HL-SCOPE-SA-SICAV-RAIF-PPM-December-2025.pdf?language=en-US",
+        "https://www.sec.gov/Archives/edgar/data/1976710/000197671025000002/primary_doc.xml",
+        "https://investors.securitize.io/news/news-details/2025/Hamilton-Lane-and-Securitizes-SCOPE-Gains-Instant-RLUSD-Liquidity-by-integrating-with-VBILLs-Onchain-Facility-11-05-2025/default.aspx"
+      ],
+      "rationale": "No current exact HLSCOPE offchain-issuer all-in redemption fee schedule or request-to-final-fiat-settlement maximum is published. The historical no-Securitize-transaction-fee statement expressly excludes other fees. Main Fund PPM terms cannot be applied to the separate feeder, and instant RLUSD liquidity is a distinct rail from the modeled fiat route."
+    },
+    {
+      "id": "uw-hlscope-hamilton-lane-1c0533015c19bf71",
+      "assetId": "hlscope-hamilton-lane",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:hlscope-hamilton-lane:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:54Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
+      "sources": [
+        {
+          "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2023-05-04",
+          "location": "Redemption paragraph and footnote",
+          "excerpt": "with no transaction fees from Securitize*",
+          "assertion": "The explicit footnote says other fees apply; zero Securitize transaction fee does not establish all-in holder costs."
+        },
+        {
+          "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+          "observedAt": "2026-10-03T23:03:10Z",
+          "datumAsOf": "2023-05-04",
+          "location": "Redemption paragraph",
+          "excerpt": "Investors in the SCOPE feeder fund will generally have the option to redeem their shares on demand at the previous quarter\u2019s Net Asset Value per share",
+          "assertion": "On-demand request availability is not a maximum elapsed time to final fiat settlement."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+        "https://securitize.io/primary-market/hl-scope",
+        "https://www.hamiltonlane.com/en-us/fact-sheet-archive/scope-row",
+        "https://www.hamiltonlane.com/getContentAsset/f266e02e-c9a9-42f7-a85a-4d5ece6100bf/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/HL-SCOPE-SA-SICAV-RAIF-PPM-December-2025.pdf?language=en-US",
+        "https://www.sec.gov/Archives/edgar/data/1976710/000197671025000002/primary_doc.xml",
+        "https://investors.securitize.io/news/news-details/2025/Hamilton-Lane-and-Securitizes-SCOPE-Gains-Instant-RLUSD-Liquidity-by-integrating-with-VBILLs-Onchain-Facility-11-05-2025/default.aspx"
+      ],
+      "rationale": "No current exact HLSCOPE offchain-issuer all-in redemption fee schedule or request-to-final-fiat-settlement maximum is published. The historical no-Securitize-transaction-fee statement expressly excludes other fees. Main Fund PPM terms cannot be applied to the separate feeder, and instant RLUSD liquidity is a distinct rail from the modeled fiat route."
     }
   ]
 }

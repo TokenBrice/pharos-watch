@@ -17,12 +17,12 @@
         "counterparty",
         "custody"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA64syzUSD)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W1R60 unknown-resolver exact native wrapper review",
     "confidence": "verified",
     "sources": [
       {
@@ -36,9 +36,17 @@
       {
         "label": "syzUSD Plasma vault",
         "url": "https://plasmascan.to/address/0xc8a8df9b210243c55d31c73090f06787ad0a1bf6#code"
+      },
+      {
+        "label": "Current syzUSD V3 verified implementation source",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e"
+      },
+      {
+        "label": "Plasma pinned block 34126349: asset(), redeemDelay() = 0 and redeemFeePpm() = 0",
+        "url": "https://rpc.plasma.to"
       }
     ],
-    "rationale": "At Plasma block 33896602 on 2026-10-01, the current V3 vault's asset() remains yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc. The exact direct reserve remains one protocol position, not a look-through duplication of yzUSD's portfolio. Parent portfolio, controllers, custody and primary redemption risks remain inherited; no risk factor or unknown liquidity horizon is removed.",
+    "rationale": "At Plasma block 34126349 (2026-10-03), asset() remains yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc, redeemDelay() and redeemFeePpm() are zero, and paused() is false. Current issuer documentation says unstaking back to yzUSD completes almost instantly; one-day liquidity describes ordinary native wrapper-to-parent realization, not upstream USDT redemption, measured capacity or a promise against role-managed pauses and throttles. The exact direct reserve remains one protocol position, not a duplication of yzUSD's portfolio.",
     "compositionBasis": "Standing ERC-4626 single-asset composition confirmed by asset() at Plasma block 33896602 and current issuer wrapper documentation; not a dated financial attestation",
     "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
