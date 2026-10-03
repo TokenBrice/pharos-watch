@@ -361,6 +361,24 @@
         "evidence": "The enabled Zodiac Roles module 0xc3a8702bc57e0b787bd62d429a993265f596be1e assigns this EOA to MORPHO_MONITORING_AGENT; current enabled-member pagination matches the grant events and eth_getCode returned 0x. Public events grant exact-vault selectors setForceDeallocatePenalty(address,uint256), setLiquidityAdapterAndData(address,bytes), submit(bytes). Allowed functions execute through the curator Safe. submit(bytes) may schedule arbitrary curator changes subject to vault selector timelocks and irreversible abdications; the Safe can mutate role grants and unwrap targets. No independent-human attribution, key-custody assurance, exhaustive executable permission certificate or arbitrary USDC minting is established."
       }
     ],
+    "mintIncidents": [
+      {
+        "date": "2026-06-21",
+        "status": "resolved",
+        "resolvedAt": "2026-06-21",
+        "summary": "A forceDeallocate griefing campaign temporarily disrupted KPK USDC Yield VaultV2 allocations. KPK documented mitigation by raising the force-deallocation fee to 0.5%, making further griefing economically prohibitive; this is a local share-burning/deallocation control incident, not arbitrary USDC minting or the separate Resolv collateral exploit.",
+        "sources": [
+          {
+            "label": "KPK monitoring-agent disclosure: June 21 forceDeallocate griefing and same-day fee mitigation",
+            "url": "https://docs.kpk.io/vaults/infrastructure/automation.md"
+          },
+          {
+            "label": "Exact mitigation transaction at block 25369252 on 2026-06-21T23:27:35Z; logs bind fee change to Yield VaultV2 0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13 and adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550",
+            "url": "https://eth.blockscout.com/api/v2/transactions/0x6601b8ffa2a8b6b302f45f3f30e999fcdc3920579e041e4990c0d1b46579ef4b/logs"
+          }
+        ]
+      }
+    ],
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,

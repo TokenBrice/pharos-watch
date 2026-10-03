@@ -23,9 +23,9 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "confidence": "probable",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W1R82 exact historical denominator and adapter-source review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Exact KPK USDC Prime Morpho Vault V2 deployment",
@@ -50,6 +50,14 @@
       {
         "label": "Exact current MorphoMarketV1AdapterV2 source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1d511811aca9d8817a3e50f29cadff6243a02902"
+      },
+      {
+        "label": "W1R82 independently repeated asset, adapter census, market expectedSupplyAssets sum, realAssets and USDC balance at original block 26107704 on 2026-10-03; weights and composition date unchanged",
+        "url": "https://eth-mainnet.g.alchemy.com"
+      },
+      {
+        "label": "Issuer exact Prime vault, adapter and strategy documentation",
+        "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md"
       }
     ],
     "rationale": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=28097145082426439535141891 raw 18-decimal shares and totalAssets()=29100078912490 raw 6-decimal USDC. One adapter 0x1d511811aca9d8817a3e50f29cadff6243a02902 enumerates 8 current market IDs; summed expectedSupplyAssets=29100078910236, idle underlying=2254; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. The 100% slice identifies the denomination and standing parent dependency across idle and deployed lending positions; it does not assert that every asset is idle cash or invent borrower-collateral reserve weights.",

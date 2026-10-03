@@ -12431,6 +12431,72 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "kpkusdcprime-kpk",
+      "reviewedAt": "2026-10-03T23:06:59Z",
+      "expiresAt": "2027-10-03T23:06:59Z",
+      "reviewer": "W1R82 exact-wrapper creation review",
+      "notes": "Exact Prime VaultV2 creation is 2025-10-23 at Ethereum block 23641853. Eleven full calendar months is a lower bound as of review. No parent history, stress performance, independent reconciliation or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "prime-exact-creation",
+          "label": "Exact Prime VaultV2 creation transaction and timestamp",
+          "publisher": "Ethereum contract creation via Blockscout",
+          "publishedAt": "2025-10-23",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x7f254a736cdf2f0a2a01045f889569752b6038e159857702db33b9ed61366c63",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 11,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "prime-exact-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "kpkusdcyield-kpk",
+      "reviewedAt": "2026-10-03T23:06:59Z",
+      "expiresAt": "2027-10-03T23:06:59Z",
+      "reviewer": "W1R82 exact-wrapper creation review",
+      "notes": "Exact Yield VaultV2 creation is 2025-12-30 at Ethereum block 24125461. Nine full calendar months is a lower bound as of review. No legacy Yield or parent history, stress performance, independent reconciliation or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "yield-exact-creation",
+          "label": "Exact Yield VaultV2 creation transaction and timestamp",
+          "publisher": "Ethereum contract creation via Blockscout",
+          "publishedAt": "2025-12-30",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x3a6041e6583339606ee67d3755e61a636e7db6b5f9553fb1a4b33beafeb6f5dc",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 9,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "yield-exact-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

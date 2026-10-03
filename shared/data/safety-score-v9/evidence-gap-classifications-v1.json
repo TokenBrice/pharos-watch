@@ -28199,6 +28199,261 @@
         "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
       ],
       "rationale": "The admitted August 30 composition exposes five previously masked reserve gaps. Current issuer snapshot, complete USDQ whitepaper, archive, terms, deployments and regulator register do not disclose the unexplained 1% composition, cash-bank identities, deposit/bond maximum maturity days or exact bond-slice realization bound. Do not attribute the 1% to rounding, identify a Tier 1 bank by inference, convert short-term to a numeric cap, or reuse issuer processing/wind-down schedules as a reserve-asset liquidation guarantee."
+    },
+    {
+      "id": "uw-kpkusdcprime-kpk-45c4592b28ce00dc",
+      "assetId": "kpkusdcprime-kpk",
+      "scope": {
+        "componentKey": "control:mint-meta:kpkusdcprime-kpk:24331f596e6740ef6dbd",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:kpkusdcprime-kpk:24331f596e6740ef6dbd",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:13:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R82)",
+      "sources": [
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-03T23:13:55Z",
+          "datumAsOf": null,
+          "location": "Manual signers and Per-vault Curator Safe",
+          "excerpt": "Beyond automation, the remaining signers on Curator Safes are **KPK team members**.",
+          "assertion": "Publishes team membership, hardware-wallet/hash inspection practices and shared signer set, but not an address-to-person roster or evidence of independent human/key control for the exact manual EOAs and Safe signers."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/vaults/morpho.md",
+          "observedAt": "2026-10-03T23:13:55Z",
+          "datumAsOf": null,
+          "location": "Governance and control / Key settings and roles",
+          "excerpt": "**Owner and sentinel:** Security Council Safe (5/8)",
+          "assertion": "Names the exact Security Council, curator quorum and Deployer 1/2/3 addresses, but no independently controlled human signer roster or per-address key custody attestation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kpk.io/about",
+        "https://kpk.io/reports",
+        "https://kpk.io/terms-of-service",
+        "https://kpk.io/blog/permissions-layer",
+        "https://docs.kpk.io/llms.txt",
+        "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+        "https://docs.kpk.io/vaults/infrastructure/automation.md",
+        "https://docs.kpk.io/vaults/vaults/morpho.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
+        "https://docs.kpk.io/changelog/readme.md",
+        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+      ],
+      "rationale": "The exact scoped questions ask for independent human signers/operators and actual key custody. KPK discloses manual team signers, named deployer addresses, shared curator signer sets, quorum and signing practices. Its issuer site, reports index, legal terms, complete docs index, signer/automation architecture and governance archive do not map all exact manual/Security Council signer addresses to independently controlled people or provide per-key custody evidence. Automation EOAs are excluded because their signer-vault custody is positively disclosed."
+    },
+    {
+      "id": "uw-kpkusdcprime-kpk-d3c201a0d2db06da",
+      "assetId": "kpkusdcprime-kpk",
+      "scope": {
+        "componentKey": "control:mint-meta:kpkusdcprime-kpk:5c24ae0d92003a4b2ade",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:kpkusdcprime-kpk:5c24ae0d92003a4b2ade",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:13:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R82)",
+      "sources": [
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-03T23:13:55Z",
+          "datumAsOf": null,
+          "location": "Manual signers and Per-vault Curator Safe",
+          "excerpt": "Beyond automation, the remaining signers on Curator Safes are **KPK team members**.",
+          "assertion": "Publishes team membership, hardware-wallet/hash inspection practices and shared signer set, but not an address-to-person roster or evidence of independent human/key control for the exact manual EOAs and Safe signers."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/vaults/morpho.md",
+          "observedAt": "2026-10-03T23:13:55Z",
+          "datumAsOf": null,
+          "location": "Governance and control / Key settings and roles",
+          "excerpt": "**Owner and sentinel:** Security Council Safe (5/8)",
+          "assertion": "Names the exact Security Council, curator quorum and Deployer 1/2/3 addresses, but no independently controlled human signer roster or per-address key custody attestation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kpk.io/about",
+        "https://kpk.io/reports",
+        "https://kpk.io/terms-of-service",
+        "https://kpk.io/blog/permissions-layer",
+        "https://docs.kpk.io/llms.txt",
+        "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+        "https://docs.kpk.io/vaults/infrastructure/automation.md",
+        "https://docs.kpk.io/vaults/vaults/morpho.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
+        "https://docs.kpk.io/changelog/readme.md",
+        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+      ],
+      "rationale": "The exact scoped questions ask for independent human signers/operators and actual key custody. KPK discloses manual team signers, named deployer addresses, shared curator signer sets, quorum and signing practices. Its issuer site, reports index, legal terms, complete docs index, signer/automation architecture and governance archive do not map all exact manual/Security Council signer addresses to independently controlled people or provide per-key custody evidence. Automation EOAs are excluded because their signer-vault custody is positively disclosed."
+    },
+    {
+      "id": "uw-kpkusdcprime-kpk-c681589bc26a80cb",
+      "assetId": "kpkusdcprime-kpk",
+      "scope": {
+        "componentKey": "control:mint-meta:kpkusdcprime-kpk:649994baf2e468d6620f",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:kpkusdcprime-kpk:649994baf2e468d6620f",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:13:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R82)",
+      "sources": [
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-03T23:13:55Z",
+          "datumAsOf": null,
+          "location": "Manual signers and Per-vault Curator Safe",
+          "excerpt": "Beyond automation, the remaining signers on Curator Safes are **KPK team members**.",
+          "assertion": "Publishes team membership, hardware-wallet/hash inspection practices and shared signer set, but not an address-to-person roster or evidence of independent human/key control for the exact manual EOAs and Safe signers."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/vaults/morpho.md",
+          "observedAt": "2026-10-03T23:13:55Z",
+          "datumAsOf": null,
+          "location": "Governance and control / Key settings and roles",
+          "excerpt": "**Owner and sentinel:** Security Council Safe (5/8)",
+          "assertion": "Names the exact Security Council, curator quorum and Deployer 1/2/3 addresses, but no independently controlled human signer roster or per-address key custody attestation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kpk.io/about",
+        "https://kpk.io/reports",
+        "https://kpk.io/terms-of-service",
+        "https://kpk.io/blog/permissions-layer",
+        "https://docs.kpk.io/llms.txt",
+        "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+        "https://docs.kpk.io/vaults/infrastructure/automation.md",
+        "https://docs.kpk.io/vaults/vaults/morpho.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
+        "https://docs.kpk.io/changelog/readme.md",
+        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+      ],
+      "rationale": "The exact scoped questions ask for independent human signers/operators and actual key custody. KPK discloses manual team signers, named deployer addresses, shared curator signer sets, quorum and signing practices. Its issuer site, reports index, legal terms, complete docs index, signer/automation architecture and governance archive do not map all exact manual/Security Council signer addresses to independently controlled people or provide per-key custody evidence. Automation EOAs are excluded because their signer-vault custody is positively disclosed."
+    },
+    {
+      "id": "uw-kpkusdcprime-kpk-7766d1e6d398e034",
+      "assetId": "kpkusdcprime-kpk",
+      "scope": {
+        "componentKey": "control:mint-meta:kpkusdcprime-kpk:bdbe200d7a58feec6700",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:kpkusdcprime-kpk:bdbe200d7a58feec6700",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:13:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R82)",
+      "sources": [
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-03T23:13:55Z",
+          "datumAsOf": null,
+          "location": "Manual signers and Per-vault Curator Safe",
+          "excerpt": "Beyond automation, the remaining signers on Curator Safes are **KPK team members**.",
+          "assertion": "Publishes team membership, hardware-wallet/hash inspection practices and shared signer set, but not an address-to-person roster or evidence of independent human/key control for the exact manual EOAs and Safe signers."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/vaults/morpho.md",
+          "observedAt": "2026-10-03T23:13:55Z",
+          "datumAsOf": null,
+          "location": "Governance and control / Key settings and roles",
+          "excerpt": "**Owner and sentinel:** Security Council Safe (5/8)",
+          "assertion": "Names the exact Security Council, curator quorum and Deployer 1/2/3 addresses, but no independently controlled human signer roster or per-address key custody attestation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kpk.io/about",
+        "https://kpk.io/reports",
+        "https://kpk.io/terms-of-service",
+        "https://kpk.io/blog/permissions-layer",
+        "https://docs.kpk.io/llms.txt",
+        "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+        "https://docs.kpk.io/vaults/infrastructure/automation.md",
+        "https://docs.kpk.io/vaults/vaults/morpho.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
+        "https://docs.kpk.io/changelog/readme.md",
+        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+      ],
+      "rationale": "The exact scoped questions ask for independent human signers/operators and actual key custody. KPK discloses manual team signers, named deployer addresses, shared curator signer sets, quorum and signing practices. Its issuer site, reports index, legal terms, complete docs index, signer/automation architecture and governance archive do not map all exact manual/Security Council signer addresses to independently controlled people or provide per-key custody evidence. Automation EOAs are excluded because their signer-vault custody is positively disclosed."
+    },
+    {
+      "id": "uw-kpkusdcprime-kpk-97f3ddbaff9309e3",
+      "assetId": "kpkusdcprime-kpk",
+      "scope": {
+        "componentKey": "control:mint-meta:kpkusdcprime-kpk:c7e4a54684495b41d32c",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:kpkusdcprime-kpk:c7e4a54684495b41d32c",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:13:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R82)",
+      "sources": [
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-03T23:13:55Z",
+          "datumAsOf": null,
+          "location": "Manual signers and Per-vault Curator Safe",
+          "excerpt": "Beyond automation, the remaining signers on Curator Safes are **KPK team members**.",
+          "assertion": "Publishes team membership, hardware-wallet/hash inspection practices and shared signer set, but not an address-to-person roster or evidence of independent human/key control for the exact manual EOAs and Safe signers."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/vaults/morpho.md",
+          "observedAt": "2026-10-03T23:13:55Z",
+          "datumAsOf": null,
+          "location": "Governance and control / Key settings and roles",
+          "excerpt": "**Owner and sentinel:** Security Council Safe (5/8)",
+          "assertion": "Names the exact Security Council, curator quorum and Deployer 1/2/3 addresses, but no independently controlled human signer roster or per-address key custody attestation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kpk.io/about",
+        "https://kpk.io/reports",
+        "https://kpk.io/terms-of-service",
+        "https://kpk.io/blog/permissions-layer",
+        "https://docs.kpk.io/llms.txt",
+        "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+        "https://docs.kpk.io/vaults/infrastructure/automation.md",
+        "https://docs.kpk.io/vaults/vaults/morpho.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
+        "https://docs.kpk.io/changelog/readme.md",
+        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+      ],
+      "rationale": "The exact scoped questions ask for independent human signers/operators and actual key custody. KPK discloses manual team signers, named deployer addresses, shared curator signer sets, quorum and signing practices. Its issuer site, reports index, legal terms, complete docs index, signer/automation architecture and governance archive do not map all exact manual/Security Council signer addresses to independently controlled people or provide per-key custody evidence. Automation EOAs are excluded because their signer-vault custody is positively disclosed."
     }
   ]
 }
