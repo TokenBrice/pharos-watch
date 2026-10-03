@@ -12,11 +12,22 @@
       "issuerOrObligor": "Auto Finance Autopool strategy and configured DeFi destinations",
       "riskFactors": ["credit", "liquidity", "custody", "counterparty", "smart-contract", "market", "concentration"],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "name": "Auto Finance autoUSD idle underlying",
+      "pct": 0,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle",
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Unknown resolver W1R39",
     "confidence": "verified",
     "sources": [
       {
@@ -26,12 +37,24 @@
       {
         "label": "Auto Finance autoUSD contract registry",
         "url": "https://docs.auto.finance/developer-docs/contracts-overview/contract-addresses"
+      },
+      {
+        "label": "Auto Finance large withdrawals: idle assets require no swaps",
+        "url": "https://docs.auto.finance/developer-docs/integrating/large-withdrawals"
+      },
+      {
+        "label": "Pinned Ethereum observation block 26114891",
+        "url": "https://eth.blockscout.com/block/26114891"
+      },
+      {
+        "label": "Verified AutopoolETH implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfb2ebdedc38a7d19080e44ab1d621bc9afad0695"
       }
     ],
-    "rationale": "Auto Finance documents Autopools as ERC-4626-style receipt tokens whose base asset is deployed across one or more configured destination vaults and returned in the base asset on withdrawal. The official registry identifies autoUSD at 0xa7569A44f348d3D70d8ad5889e50F78E33d80D35; the position is therefore retained as a full USDC wrapper exposure while the strategy-level destination allocation remains inside the aggregate protocol position.",
-    "compositionBasis": "Auto Finance autoUSD Autopool architecture and official contract registry",
+    "rationale": "Metadata-only review of the exact keyed live deployed and idle categories; historical authored deployed percentage is unchanged and the zero-percent keyed idle row supplies classification only, never a new measured allocation. At Ethereum block 26114891 (2026-10-03T22:45:59Z), asset() identifies USDC and paused() is false. Official large-withdrawal documentation states that enough idle assets require no swaps, while deployed assets depend on withdrawal-queue destinations and available swap liquidity. Immediate liquidity applies only to the idle underlying slice, not to the deployed strategy position or final fiat redemption.",
+    "compositionBasis": "Historical authored allocation retained; exact keyed live metadata supplemented from official withdrawal mechanics and pinned Ethereum contract reads",
     "scope": "full-composition",
-    "knownUnknownExposure": "The base USDC dependency and Autopool structure are explicit, but current destination vaults, allocation weights, unwind times, and strategy counterparties are not published in the reviewed static documentation.",
+    "knownUnknownExposure": "The USDC base asset, 18 registered destinations and four withdrawal-queue destinations were observed at block 26114891. Full strategy-level allocation, legal custody rights and deployed-position unwind bounds are not established by this metadata review.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

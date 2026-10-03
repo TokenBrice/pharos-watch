@@ -5476,6 +5476,97 @@
         "https://miniapp.gate.com/announcements/article/100710"
       ],
       "rationale": "Gate publishes the per-currency historical mint-minus-redemption fee-free quota formula and zero fees inside quota. The exact standard redemption rate/formula outside quota, including a holder acquiring GUSD on spot, is not disclosed on product/help/legal/announcement surfaces; the final confirmation screen is referenced. Do not apply subscriber zero fees to an arbitrary same-notional holder or classify the quota formula as a complete public fee schedule."
+    },
+    {
+      "id": "uw-autousd-auto-finance-96d721f0ddb6e20d",
+      "assetId": "autousd-auto-finance",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R39)",
+      "sources": [
+        {
+          "url": "https://app.auto.finance/terms",
+          "observedAt": "2026-10-03T22:50:44Z",
+          "datumAsOf": null,
+          "location": "Section 7, No Fiduciary Duties; retrieved through https://r.jina.ai/https://app.auto.finance/terms",
+          "excerpt": "The Terms are not intended to, and does not, create or impose any fiduciary duties on Auto Finance.",
+          "assertion": "Terms define interface/protocol responsibilities but no enforceable holder segregation or bankruptcy-remoteness for the autoUSD book."
+        },
+        {
+          "url": "https://docs.auto.finance/developer-docs/contracts-overview/autopool-eth-contracts-overview/autopool-contracts-and-systems/autopools",
+          "observedAt": "2026-10-03T22:50:44Z",
+          "datumAsOf": null,
+          "location": "Tracked Tokens",
+          "excerpt": "This would include the base asset and any DestinationVault shares that it currently holds.",
+          "assertion": "Technical token separation is disclosed, not legal segregation, insolvency rights or complete custodial look-through."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://app.auto.finance/terms",
+        "https://r.jina.ai/https://app.auto.finance/terms",
+        "https://docs.auto.finance/llms.txt",
+        "https://docs.auto.finance/developer-docs/contracts-overview/autopool-eth-contracts-overview/autopool-contracts-and-systems/autopools",
+        "https://docs.auto.finance/developer-docs/contracts-overview/contract-addresses",
+        "https://docs.auto.finance/developer-docs/security-and-audits",
+        "https://blog.auto.finance/post/the-stablecoin-autopool-autousd-is-now-live",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xfb2ebdedc38a7d19080e44ab1d621bc9afad0695",
+        "https://ethereum-rpc.publicnode.com"
+      ],
+      "rationale": "Exact custodyEscrow legal datum: enforceable holder asset segregation and bankruptcy-remoteness across the autoUSD allocation are not published in the official terms, technical/security/audit index and deployment disclosures reviewed. Terms disclaim fiduciary duties; documentation describes tracked on-chain assets. Neither those mechanics nor pinned asset/destination reads establish insolvency protections. The alternative whole-allocation on-chain N/A route is not asserted without complete reachable-target reconciliation."
+    },
+    {
+      "id": "uw-autousd-auto-finance-7e25441719f0748c",
+      "assetId": "autousd-auto-finance",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:3e6304f79891728ba1c0ba74",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R39)",
+      "sources": [
+        {
+          "url": "https://docs.auto.finance/developer-docs/integrating/large-withdrawals",
+          "observedAt": "2026-10-03T22:50:44Z",
+          "datumAsOf": null,
+          "location": "Large Withdrawals, opening mechanics",
+          "excerpt": "However the quality of trade-execution back into the base asset is limited by the liquidity present in the configured routes that are on-chain.",
+          "assertion": "Deployed strategy withdrawal depends on destination/swap liquidity; no guaranteed whole-slice realization-time maximum is disclosed."
+        },
+        {
+          "url": "https://app.auto.finance/terms",
+          "observedAt": "2026-10-03T22:50:44Z",
+          "datumAsOf": null,
+          "location": "Section 11, Assumption of Risk; alternate reader",
+          "excerpt": "The User acknowledges and accept that the cost and speed of transacting with cryptographic and blockchain-based systems such as Ethereum are variable and may increase dramatically at any time.",
+          "assertion": "Terms allocate variable execution risk to users, without a contractual deployed-position liquidity horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://app.auto.finance/terms",
+        "https://r.jina.ai/https://app.auto.finance/terms",
+        "https://docs.auto.finance/llms.txt",
+        "https://docs.auto.finance/developer-docs/integrating/large-withdrawals",
+        "https://docs.auto.finance/developer-docs/contracts-overview/autopool-eth-contracts-overview/autopool-contracts-and-systems/autopools",
+        "https://docs.auto.finance/developer-docs/contracts-overview/autopool-eth-contracts-overview/autopool-contracts-and-systems/destination-vaults",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xfb2ebdedc38a7d19080e44ab1d621bc9afad0695",
+        "https://ethereum-rpc.publicnode.com"
+      ],
+      "rationale": "For the exact aggregate deployed protocol-position slice, no enforceable or unconditional one-day/seven-day whole-position realization bound is disclosed. The official withdrawal guide offers on-demand attempts but explicitly conditions execution on configured market liquidity and slippage; security docs allow local/global pauses. The 18 current registered destinations and four queue entries do not turn that conditional mechanism into a guaranteed maximum. Idle underlying is separately curated and is not generalized to this slice."
     }
   ]
 }

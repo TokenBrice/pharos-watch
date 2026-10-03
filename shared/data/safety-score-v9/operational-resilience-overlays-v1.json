@@ -2558,6 +2558,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "safo-spiko-usd",
+      "reviewedAt": "2026-10-03T22:44:33Z",
+      "expiresAt": "2027-10-03T22:44:33Z",
+      "reviewer": "Unknown resolver W1R39",
+      "notes": "Exact token live announcement establishes only a conservative full-calendar-month operating-history lower bound. No redemption throughput, stress recovery, independent reserve reconciliation or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "token-launch",
+          "label": "Exact token live announcement",
+          "publisher": "Spiko",
+          "publishedAt": "2026-03-19",
+          "url": "https://www.spiko.io/blog/spiko-amundi-safo",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 6,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "token-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "autousd-auto-finance",
+      "reviewedAt": "2026-10-03T22:44:33Z",
+      "expiresAt": "2027-10-03T22:44:33Z",
+      "reviewer": "Unknown resolver W1R39",
+      "notes": "Exact token live announcement establishes only a conservative full-calendar-month operating-history lower bound. No redemption throughput, stress recovery, independent reserve reconciliation or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "token-launch",
+          "label": "Exact token live announcement",
+          "publisher": "Auto Finance",
+          "publishedAt": "2025-04-09",
+          "url": "https://blog.auto.finance/post/the-stablecoin-autopool-autousd-is-now-live",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 17,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "token-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "bd-basedollar",
+      "reviewedAt": "2026-10-03T22:44:33Z",
+      "expiresAt": "2027-10-03T22:44:33Z",
+      "reviewer": "Unknown resolver W1R39",
+      "notes": "Exact token live announcement establishes only a conservative full-calendar-month operating-history lower bound. No redemption throughput, stress recovery, independent reserve reconciliation or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "token-launch",
+          "label": "Exact token live announcement",
+          "publisher": "Base Dollar contributors",
+          "publishedAt": "2026-08-20",
+          "url": "https://basedollar.org/blog/launch",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 1,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "token-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "gldy-streamex",
+      "reviewedAt": "2026-10-03T22:44:33Z",
+      "expiresAt": "2027-10-03T22:44:33Z",
+      "reviewer": "Unknown resolver W1R39",
+      "notes": "Exact token live announcement establishes only a conservative full-calendar-month operating-history lower bound. No redemption throughput, stress recovery, independent reserve reconciliation or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "token-launch",
+          "label": "Exact token live announcement",
+          "publisher": "Streamex Corp.",
+          "publishedAt": "2026-02-25",
+          "url": "https://ir.streamex.com/news-releases/news-release-details/streamex-corp-announces-gldy-now-live-and-available-purchase",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 7,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "token-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
