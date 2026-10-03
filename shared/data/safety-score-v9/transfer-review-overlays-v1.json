@@ -9361,21 +9361,21 @@
     {
       "assetId": "xgld-unitas",
       "reviewedAt": "2026-10-03",
-      "reviewer": "Refine06 exact-source transfer review",
+      "reviewer": "W1R69 exact verified source review",
       "deployments": [
         {
           "chainId": "bsc",
           "contractOrTokenId": "0xe60106a5cab7e7c64830919d36ab20caaf50ac91",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "Exact verified XGLDToken/OFT/ERC20 source has no holder-transfer allowlist, blacklist, freeze, pause or custom _update hook. Native mint whitelisting does not gate ERC20 transfer/transferFrom; burner can burn only its own balance. Upstream XAUt restriction risk remains inherited in the asset blacklistability review. This exact-source posture does not provide an economic deployment partition or issuer redemption access.",
+          "evidence": "Exact Sourcify runtime-verified XGLDToken inherits OFT and standard ERC20; complete source has no transfer override, whitelist, pause, freeze or seizure hook. ERC20 _update only applies balances and zero-address mint/burn semantics. XGLD native burn consumes msg.sender balance, not arbitrary holders. Mint/redemption whitelisting and upstream XAUt restrictions do not censor local holder transfers.",
           "sources": [
             {
-              "label": "Exact bsc XGLDToken and inherited OFT/ERC20 source",
-              "url": "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=sources,abi"
+              "label": "Exact runtime-verified XGLDToken plus OFT/ERC20 source",
+              "url": "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=sources,abi,proxyResolution"
             },
             {
-              "label": "XGLD secondary-holder versus native mint/redeem access",
+              "label": "Issuer exact deployment census and primary-access distinction",
               "url": "https://docs.unitas.so/overview/xgld.md"
             }
           ]
@@ -9385,14 +9385,14 @@
           "contractOrTokenId": "0xea953ea6634d55dac6697c436b1e81a679db5882",
           "scope": "material-bridge",
           "posture": "permissionless",
-          "evidence": "Exact verified XGLDToken/OFT/ERC20 source has no holder-transfer allowlist, blacklist, freeze, pause or custom _update hook. Native mint whitelisting does not gate ERC20 transfer/transferFrom; burner can burn only its own balance. Upstream XAUt restriction risk remains inherited in the asset blacklistability review. This exact-source posture does not provide an economic deployment partition or issuer redemption access.",
+          "evidence": "Exact Sourcify runtime-verified XGLDToken inherits OFT and standard ERC20; complete source has no transfer override, whitelist, pause, freeze or seizure hook. ERC20 _update only applies balances and zero-address mint/burn semantics. XGLD native burn consumes msg.sender balance, not arbitrary holders. Mint/redemption whitelisting and upstream XAUt restrictions do not censor local holder transfers.",
           "sources": [
             {
-              "label": "Exact base XGLDToken and inherited OFT/ERC20 source",
+              "label": "Exact runtime-verified XGLDToken plus OFT/ERC20 source",
               "url": "https://sourcify.dev/server/v2/contract/8453/0xea953ea6634d55dac6697c436b1e81a679db5882?fields=sources,abi"
             },
             {
-              "label": "XGLD secondary-holder versus native mint/redeem access",
+              "label": "Issuer exact deployment census and primary-access distinction",
               "url": "https://docs.unitas.so/overview/xgld.md"
             }
           ]

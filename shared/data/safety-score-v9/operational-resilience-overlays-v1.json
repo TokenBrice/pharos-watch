@@ -10286,6 +10286,105 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "xgld-unitas",
+      "reviewedAt": "2026-10-03T23:05:20Z",
+      "expiresAt": "2027-10-04T00:00:00Z",
+      "reviewer": "W1R69 primary-source unknown resolver",
+      "notes": "Exact creation receipt binds BNB XGLD; deployment is a lower bound, not independent performance assurance. No redemption throughput, stress recovery, financial reconciliation or incident absence is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "Dated exact token operation",
+          "publisher": "BNB Chain",
+          "publishedAt": "2026-05-19",
+          "url": "https://bscscan.com/tx/0x566485655aa376b658b3a4e0dc680522fcbc579896ee583058c43cb3066446c0",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 4,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdu-unitas",
+      "reviewedAt": "2026-10-03T23:05:20Z",
+      "expiresAt": "2027-10-04T00:00:00Z",
+      "reviewer": "W1R69 primary-source unknown resolver",
+      "notes": "Dated operating terms establish USDu already issued on BNB and Solana; no precise original launch date asserted. No redemption throughput, stress recovery, financial reconciliation or incident absence is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "Dated exact token operation",
+          "publisher": "Unipay Labs Limited",
+          "publishedAt": "2026-08-27",
+          "url": "https://docs.unitas.so/resources/terms-of-service.md",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 1,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "money-defi-money",
+      "reviewedAt": "2026-10-03T23:05:20Z",
+      "expiresAt": "2027-10-04T00:00:00Z",
+      "reviewer": "W1R69 primary-source unknown resolver",
+      "notes": "Issuer documented MONEY live on Optimism. Issuer sunset notice of 2025-05-07 preserves functional contracts but ceases UI/support; no uninterrupted staffed operations or incident-free history asserted. No redemption throughput, stress recovery, financial reconciliation or incident absence is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "Dated exact token operation",
+          "publisher": "defi.money",
+          "publishedAt": "2024-09-10",
+          "url": "https://blog.defi.money/optimism-mainnet",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 24,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

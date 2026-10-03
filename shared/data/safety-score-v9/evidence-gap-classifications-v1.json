@@ -22679,6 +22679,465 @@
         "https://base.blockscout.com/api/v2/smart-contracts/0xba515304d8153c4b162dc79f867e152df9c127eb"
       ],
       "rationale": "Issuer publishes a seven-day bonding minimum and buffer-dependent claim, but no guaranteed funding or end-to-end final delivery deadline for the queue route. The full contract architecture and integration corpus contain no maximum funded settlement SLA. Do not turn an unlock minimum into a completion maximum."
+    },
+    {
+      "id": "uw-xgld-unitas-2a23121b3ee490f8",
+      "assetId": "xgld-unitas",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R69)",
+      "sources": [
+        {
+          "url": "https://docs.unitas.so/overview/xgld.md",
+          "observedAt": "2026-10-03T23:03:06Z",
+          "datumAsOf": null,
+          "location": "Overview",
+          "excerpt": "XGLD uses XAUt as collateral, borrows USDT against it and deploys the borrowed USDT into Unitas strategies.",
+          "assertion": "Discloses XAUt collateral and borrowing, not a debt-netted current allocation or comprehensive leverage constraint."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://unitas.so/",
+        "https://docs.unitas.so/resources/terms-of-service.md",
+        "https://docs.unitas.so/resources/audits.md",
+        "https://docs.unitas.so/backing-custody-and-security/overview.md",
+        "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas.md",
+        "https://docs.unitas.so/mainnet-program-and-address-index.md",
+        "https://docs.unitas.so/solution-design/minting-usdu.md",
+        "https://docs.unitas.so/resources/faq.md",
+        "https://docs.unitas.so/overview/xgld.md",
+        "https://api-accountable.unitas.so/v1/dashboard?type=xgld",
+        "https://api-accountable.unitas.so/v1/dashboard",
+        "https://docs.unitas.so/off-exchange-settlement.md",
+        "https://evm.unitas.so/transparency",
+        "https://api.unitas.so/api/usdu/custodian_attestations?source=solana",
+        "https://paragraph.com/@unitaslabs/unitas-introduces-xgld.md",
+        "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=sources,abi,proxyResolution",
+        "https://sourcify.dev/server/v2/contract/56/0x2a9e3ea72575e05337a7703c8fad65a82a5b5865?fields=sources,abi"
+      ],
+      "rationale": "The complete current XGLD debt-netted reserve composition is not disclosed: docs describe XAUt plus borrowed USDT strategy capital, while Accountable exposes gross venue totals/supply. No full position census, borrowed liabilities or net weights supports an admitted full composition."
+    },
+    {
+      "id": "uw-xgld-unitas-1ea37d8ff37663ad",
+      "assetId": "xgld-unitas",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R69)",
+      "sources": [
+        {
+          "url": "https://docs.unitas.so/overview/xgld.md",
+          "observedAt": "2026-10-03T23:03:06Z",
+          "datumAsOf": null,
+          "location": "Overview",
+          "excerpt": "XGLD uses XAUt as collateral, borrows USDT against it and deploys the borrowed USDT into Unitas strategies.",
+          "assertion": "Discloses XAUt collateral and borrowing, not a debt-netted current allocation or comprehensive leverage constraint."
+        },
+        {
+          "url": "https://docs.unitas.so/overview/xgld.md",
+          "observedAt": "2026-10-03T23:03:06Z",
+          "datumAsOf": null,
+          "location": "Yield Distribution",
+          "excerpt": "XAUt is held by the XGLD Fund Vault",
+          "assertion": "Names a functional vault, not immediate legal custodians, insolvency segregation, contractual remoteness or full-book capital-reuse terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://unitas.so/",
+        "https://docs.unitas.so/resources/terms-of-service.md",
+        "https://docs.unitas.so/resources/audits.md",
+        "https://docs.unitas.so/backing-custody-and-security/overview.md",
+        "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas.md",
+        "https://docs.unitas.so/mainnet-program-and-address-index.md",
+        "https://docs.unitas.so/solution-design/minting-usdu.md",
+        "https://docs.unitas.so/resources/faq.md",
+        "https://docs.unitas.so/overview/xgld.md",
+        "https://api-accountable.unitas.so/v1/dashboard?type=xgld",
+        "https://api-accountable.unitas.so/v1/dashboard",
+        "https://docs.unitas.so/off-exchange-settlement.md",
+        "https://evm.unitas.so/transparency",
+        "https://api.unitas.so/api/usdu/custodian_attestations?source=solana",
+        "https://paragraph.com/@unitaslabs/unitas-introduces-xgld.md",
+        "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=sources,abi,proxyResolution",
+        "https://sourcify.dev/server/v2/contract/56/0x2a9e3ea72575e05337a7703c8fad65a82a5b5865?fields=sources,abi"
+      ],
+      "rationale": "XGLD-specific complete custody/escrow protections and capital-reuse correlation remain undisclosed. USDu OES documentation cannot establish XGLD legal custodian identity, segregation, bankruptcy remoteness, or the full borrowed-USDT reuse book."
+    },
+    {
+      "id": "uw-xgld-unitas-98ed98cdc8bfcd83",
+      "assetId": "xgld-unitas",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "rehypothecationCorrelation",
+        "pillar": "backing",
+        "requiredDatum": "rehypothecationCorrelation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R69)",
+      "sources": [
+        {
+          "url": "https://docs.unitas.so/overview/xgld.md",
+          "observedAt": "2026-10-03T23:03:06Z",
+          "datumAsOf": null,
+          "location": "Overview",
+          "excerpt": "XGLD uses XAUt as collateral, borrows USDT against it and deploys the borrowed USDT into Unitas strategies.",
+          "assertion": "Discloses XAUt collateral and borrowing, not a debt-netted current allocation or comprehensive leverage constraint."
+        },
+        {
+          "url": "https://docs.unitas.so/overview/xgld.md",
+          "observedAt": "2026-10-03T23:03:06Z",
+          "datumAsOf": null,
+          "location": "Yield Distribution",
+          "excerpt": "XAUt is held by the XGLD Fund Vault",
+          "assertion": "Names a functional vault, not immediate legal custodians, insolvency segregation, contractual remoteness or full-book capital-reuse terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://unitas.so/",
+        "https://docs.unitas.so/resources/terms-of-service.md",
+        "https://docs.unitas.so/resources/audits.md",
+        "https://docs.unitas.so/backing-custody-and-security/overview.md",
+        "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas.md",
+        "https://docs.unitas.so/mainnet-program-and-address-index.md",
+        "https://docs.unitas.so/solution-design/minting-usdu.md",
+        "https://docs.unitas.so/resources/faq.md",
+        "https://docs.unitas.so/overview/xgld.md",
+        "https://api-accountable.unitas.so/v1/dashboard?type=xgld",
+        "https://api-accountable.unitas.so/v1/dashboard",
+        "https://docs.unitas.so/off-exchange-settlement.md",
+        "https://evm.unitas.so/transparency",
+        "https://api.unitas.so/api/usdu/custodian_attestations?source=solana",
+        "https://paragraph.com/@unitaslabs/unitas-introduces-xgld.md",
+        "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=sources,abi,proxyResolution",
+        "https://sourcify.dev/server/v2/contract/56/0x2a9e3ea72575e05337a7703c8fad65a82a5b5865?fields=sources,abi"
+      ],
+      "rationale": "XGLD-specific complete custody/escrow protections and capital-reuse correlation remain undisclosed. USDu OES documentation cannot establish XGLD legal custodian identity, segregation, bankruptcy remoteness, or the full borrowed-USDT reuse book."
+    },
+    {
+      "id": "uw-xgld-unitas-fa582c5df3ee3f53",
+      "assetId": "xgld-unitas",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "leverage",
+        "pillar": "backing",
+        "requiredDatum": "leverage",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R69)",
+      "sources": [
+        {
+          "url": "https://docs.unitas.so/overview/xgld.md",
+          "observedAt": "2026-10-03T23:03:06Z",
+          "datumAsOf": null,
+          "location": "Overview",
+          "excerpt": "XGLD uses XAUt as collateral, borrows USDT against it and deploys the borrowed USDT into Unitas strategies.",
+          "assertion": "Discloses XAUt collateral and borrowing, not a debt-netted current allocation or comprehensive leverage constraint."
+        },
+        {
+          "url": "https://paragraph.com/@unitaslabs/unitas-introduces-xgld.md",
+          "observedAt": "2026-10-03T23:09:22Z",
+          "datumAsOf": "2026-04-24",
+          "location": "Asset Flow",
+          "excerpt": "The XAUt collateral is then used to borrow stablecoins at 70% LTV",
+          "assertion": "A dated design LTV is disclosed, but not a current exhaustive strategy-book leverage cap accounting for all borrowings and downstream reuse."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://unitas.so/",
+        "https://docs.unitas.so/resources/terms-of-service.md",
+        "https://docs.unitas.so/resources/audits.md",
+        "https://docs.unitas.so/backing-custody-and-security/overview.md",
+        "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas.md",
+        "https://docs.unitas.so/mainnet-program-and-address-index.md",
+        "https://docs.unitas.so/solution-design/minting-usdu.md",
+        "https://docs.unitas.so/resources/faq.md",
+        "https://docs.unitas.so/overview/xgld.md",
+        "https://api-accountable.unitas.so/v1/dashboard?type=xgld",
+        "https://api-accountable.unitas.so/v1/dashboard",
+        "https://docs.unitas.so/off-exchange-settlement.md",
+        "https://evm.unitas.so/transparency",
+        "https://api.unitas.so/api/usdu/custodian_attestations?source=solana",
+        "https://paragraph.com/@unitaslabs/unitas-introduces-xgld.md",
+        "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=sources,abi,proxyResolution",
+        "https://sourcify.dev/server/v2/contract/56/0x2a9e3ea72575e05337a7703c8fad65a82a5b5865?fields=sources,abi"
+      ],
+      "rationale": "The current whole-allocation XGLD leverage bound is undisclosed. April design states 70% collateral LTV; current docs say conservative LTV. Neither binds maximum current gross leverage or downstream strategy leverage across the entire book."
+    },
+    {
+      "id": "uw-xgld-unitas-bcfc059b9b50829d",
+      "assetId": "xgld-unitas",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R69)",
+      "sources": [
+        {
+          "url": "https://docs.unitas.so/overview/xgld.md",
+          "observedAt": "2026-10-03T23:03:06Z",
+          "datumAsOf": null,
+          "location": "Overview",
+          "excerpt": "XGLD uses XAUt as collateral, borrows USDT against it and deploys the borrowed USDT into Unitas strategies.",
+          "assertion": "Discloses XAUt collateral and borrowing, not a debt-netted current allocation or comprehensive leverage constraint."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://unitas.so/",
+        "https://docs.unitas.so/resources/terms-of-service.md",
+        "https://docs.unitas.so/resources/audits.md",
+        "https://docs.unitas.so/backing-custody-and-security/overview.md",
+        "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas.md",
+        "https://docs.unitas.so/mainnet-program-and-address-index.md",
+        "https://docs.unitas.so/solution-design/minting-usdu.md",
+        "https://docs.unitas.so/resources/faq.md",
+        "https://docs.unitas.so/overview/xgld.md",
+        "https://api-accountable.unitas.so/v1/dashboard?type=xgld",
+        "https://api-accountable.unitas.so/v1/dashboard",
+        "https://docs.unitas.so/off-exchange-settlement.md",
+        "https://evm.unitas.so/transparency",
+        "https://api.unitas.so/api/usdu/custodian_attestations?source=solana",
+        "https://paragraph.com/@unitaslabs/unitas-introduces-xgld.md",
+        "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=sources,abi,proxyResolution",
+        "https://sourcify.dev/server/v2/contract/56/0x2a9e3ea72575e05337a7703c8fad65a82a5b5865?fields=sources,abi",
+        "https://unipayfi.github.io/POR/20260925_090008_HTD_PoR_for_Unitas.pdf"
+      ],
+      "rationale": "No XGLD whole-supply-to-net-backing reconciliation procedure/cadence is published. Gross Accountable reserves versus token supply omit borrowed-USDT liabilities; published HT Digital reports are scoped to sibling USDu Solana, not XGLD."
+    },
+    {
+      "id": "uw-xgld-unitas-6dc7f904df075e7d",
+      "assetId": "xgld-unitas",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "supervision",
+        "pillar": "control",
+        "requiredDatum": "supervision",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R69)",
+      "sources": [
+        {
+          "url": "https://docs.unitas.so/resources/terms-of-service.md",
+          "observedAt": "2026-10-03T23:03:03Z",
+          "datumAsOf": "2026-08-27",
+          "location": "Opening scope",
+          "excerpt": "the associated smart-contract systems that issue and manage the USDu and sUSDu digital tokens",
+          "assertion": "Dated platform terms explicitly scope USDu/sUSDu, not an identified XGLD issuing entity or prudential authorization."
+        },
+        {
+          "url": "https://docs.unitas.so/overview/xgld.md",
+          "observedAt": "2026-10-03T23:03:06Z",
+          "datumAsOf": null,
+          "location": "Overview",
+          "excerpt": "XGLD uses XAUt as collateral, borrows USDT against it and deploys the borrowed USDT into Unitas strategies.",
+          "assertion": "Discloses XAUt collateral and borrowing, not a debt-netted current allocation or comprehensive leverage constraint."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://unitas.so/",
+        "https://docs.unitas.so/resources/terms-of-service.md",
+        "https://docs.unitas.so/resources/audits.md",
+        "https://docs.unitas.so/backing-custody-and-security/overview.md",
+        "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas.md",
+        "https://docs.unitas.so/mainnet-program-and-address-index.md",
+        "https://docs.unitas.so/solution-design/minting-usdu.md",
+        "https://docs.unitas.so/resources/faq.md",
+        "https://docs.unitas.so/overview/xgld.md",
+        "https://api-accountable.unitas.so/v1/dashboard?type=xgld",
+        "https://api-accountable.unitas.so/v1/dashboard",
+        "https://docs.unitas.so/off-exchange-settlement.md",
+        "https://evm.unitas.so/transparency",
+        "https://api.unitas.so/api/usdu/custodian_attestations?source=solana",
+        "https://paragraph.com/@unitaslabs/unitas-introduces-xgld.md",
+        "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=sources,abi,proxyResolution",
+        "https://sourcify.dev/server/v2/contract/56/0x2a9e3ea72575e05337a7703c8fad65a82a5b5865?fields=sources,abi"
+      ],
+      "rationale": "Applicable XGLD issuer supervision is undisclosed: no XGLD legal issuing entity, regulator, licence or claim-specific assurance regime is identified. Singapore-law platform terms cover USDu/sUSDu; sibling custodians or USDu reports do not establish XGLD supervision."
+    },
+    {
+      "id": "uw-usdu-unitas-aa99b50169f6a6a2",
+      "assetId": "usdu-unitas",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:4f1543eeff3b4e8d587008d8",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R69)",
+      "sources": [
+        {
+          "url": "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas.md",
+          "observedAt": "2026-10-03T23:03:05Z",
+          "datumAsOf": null,
+          "location": "Settlement & Liquidity",
+          "excerpt": "Custodians batch-settle PnL and margin flows, while Unitas bots rebalance hedge sizes (\u2248 hourly)",
+          "assertion": "Describes hedge rebalancing frequency, not a maximum withdrawal or full liquidation horizon for each live venue slice."
+        },
+        {
+          "url": "https://docs.unitas.so/solution-design/minting-usdu.md",
+          "observedAt": "2026-10-03T23:03:05Z",
+          "datumAsOf": null,
+          "location": "Resulting Position",
+          "excerpt": "Collateral positions across multiple strategies",
+          "assertion": "Discloses strategy deployment and institutional hedge margin but no per-slice maximum realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://unitas.so/",
+        "https://docs.unitas.so/resources/terms-of-service.md",
+        "https://docs.unitas.so/resources/audits.md",
+        "https://docs.unitas.so/backing-custody-and-security/overview.md",
+        "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas.md",
+        "https://docs.unitas.so/mainnet-program-and-address-index.md",
+        "https://docs.unitas.so/solution-design/minting-usdu.md",
+        "https://docs.unitas.so/resources/faq.md",
+        "https://api-accountable.unitas.so/v1/dashboard",
+        "https://docs.unitas.so/off-exchange-settlement.md",
+        "https://evm.unitas.so/transparency",
+        "https://api.unitas.so/api/usdu/custodian_attestations?source=solana",
+        "https://unipayfi.github.io/POR/20260925_090008_HTD_PoR_for_Unitas.pdf"
+      ],
+      "rationale": "Maximum full-position liquidation/withdrawal horizons for the live Bnb_smartchain, Binance and Solana hedge slices are not disclosed. Hourly hedge rebalancing, onchain balances and whitelisted redemption descriptions do not establish realization deadlines for these scoped positions."
+    },
+    {
+      "id": "uw-usdu-unitas-1a7c34d00289e8e5",
+      "assetId": "usdu-unitas",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:56d5347d63149e058d3d052d",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R69)",
+      "sources": [
+        {
+          "url": "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas.md",
+          "observedAt": "2026-10-03T23:03:05Z",
+          "datumAsOf": null,
+          "location": "Settlement & Liquidity",
+          "excerpt": "Custodians batch-settle PnL and margin flows, while Unitas bots rebalance hedge sizes (\u2248 hourly)",
+          "assertion": "Describes hedge rebalancing frequency, not a maximum withdrawal or full liquidation horizon for each live venue slice."
+        },
+        {
+          "url": "https://docs.unitas.so/solution-design/minting-usdu.md",
+          "observedAt": "2026-10-03T23:03:05Z",
+          "datumAsOf": null,
+          "location": "Resulting Position",
+          "excerpt": "Collateral positions across multiple strategies",
+          "assertion": "Discloses strategy deployment and institutional hedge margin but no per-slice maximum realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://unitas.so/",
+        "https://docs.unitas.so/resources/terms-of-service.md",
+        "https://docs.unitas.so/resources/audits.md",
+        "https://docs.unitas.so/backing-custody-and-security/overview.md",
+        "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas.md",
+        "https://docs.unitas.so/mainnet-program-and-address-index.md",
+        "https://docs.unitas.so/solution-design/minting-usdu.md",
+        "https://docs.unitas.so/resources/faq.md",
+        "https://api-accountable.unitas.so/v1/dashboard",
+        "https://docs.unitas.so/off-exchange-settlement.md",
+        "https://evm.unitas.so/transparency",
+        "https://api.unitas.so/api/usdu/custodian_attestations?source=solana",
+        "https://unipayfi.github.io/POR/20260925_090008_HTD_PoR_for_Unitas.pdf"
+      ],
+      "rationale": "Maximum full-position liquidation/withdrawal horizons for the live Bnb_smartchain, Binance and Solana hedge slices are not disclosed. Hourly hedge rebalancing, onchain balances and whitelisted redemption descriptions do not establish realization deadlines for these scoped positions."
+    },
+    {
+      "id": "uw-usdu-unitas-8814d4e5697da7da",
+      "assetId": "usdu-unitas",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:f456b0509f488415bce58033",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R69)",
+      "sources": [
+        {
+          "url": "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas.md",
+          "observedAt": "2026-10-03T23:03:05Z",
+          "datumAsOf": null,
+          "location": "Settlement & Liquidity",
+          "excerpt": "Custodians batch-settle PnL and margin flows, while Unitas bots rebalance hedge sizes (\u2248 hourly)",
+          "assertion": "Describes hedge rebalancing frequency, not a maximum withdrawal or full liquidation horizon for each live venue slice."
+        },
+        {
+          "url": "https://docs.unitas.so/solution-design/minting-usdu.md",
+          "observedAt": "2026-10-03T23:03:05Z",
+          "datumAsOf": null,
+          "location": "Resulting Position",
+          "excerpt": "Collateral positions across multiple strategies",
+          "assertion": "Discloses strategy deployment and institutional hedge margin but no per-slice maximum realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://unitas.so/",
+        "https://docs.unitas.so/resources/terms-of-service.md",
+        "https://docs.unitas.so/resources/audits.md",
+        "https://docs.unitas.so/backing-custody-and-security/overview.md",
+        "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas.md",
+        "https://docs.unitas.so/mainnet-program-and-address-index.md",
+        "https://docs.unitas.so/solution-design/minting-usdu.md",
+        "https://docs.unitas.so/resources/faq.md",
+        "https://api-accountable.unitas.so/v1/dashboard",
+        "https://docs.unitas.so/off-exchange-settlement.md",
+        "https://evm.unitas.so/transparency",
+        "https://api.unitas.so/api/usdu/custodian_attestations?source=solana",
+        "https://unipayfi.github.io/POR/20260925_090008_HTD_PoR_for_Unitas.pdf"
+      ],
+      "rationale": "Maximum full-position liquidation/withdrawal horizons for the live Bnb_smartchain, Binance and Solana hedge slices are not disclosed. Hourly hedge rebalancing, onchain balances and whitelisted redemption descriptions do not establish realization deadlines for these scoped positions."
     }
   ]
 }
