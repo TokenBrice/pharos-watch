@@ -7875,6 +7875,500 @@
         "https://forum.makerdao.com/t/huntingdon-valley-bank-transaction-documents-on-permaweb/16264"
       ],
       "rationale": "Exact maximum maturity and whole-position liquidityHorizon of the Legacy RWA bucket are not disclosed as hard all-in bounds. Current dashboard identifies HVB, New Silver, Fortunafi and Harbor claims. New Silver permits further extensions beyond ordinary terms; Tinlake redemptions depend on liquidity. Original facility/loan maturities and minimum epochs cannot serve as current exhaustive bucket maxima. No WAM, 30-month extrapolation, or instantaneous liquidation claim is used."
+    },
+    {
+      "id": "uw-earnusd-lido-0fd3e026464ba8e9",
+      "assetId": "earnusd-lido",
+      "scope": {
+        "componentKey": "control:mint-meta:earnusd-lido:01b7e766009f5bd6b71c",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:earnusd-lido:01b7e766009f5bd6b71c",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R07)",
+      "sources": [
+        {
+          "url": "https://docs.lido.fi/earn/deployment-contracts/",
+          "observedAt": "2026-10-03T22:53:22Z",
+          "datumAsOf": null,
+          "location": "Actors; Proxy Admin, Lazy/Active Vault Admin and earnUSD Curator rows",
+          "excerpt": "Roles governing the vaults. Addresses are shared across all chains.",
+          "assertion": "The exact four Safe addresses and numeric quorums are disclosed, but not independent human owners, key-custody arrangements or their off-chain signing-policy approval boundaries."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.lido.fi/earn/deployment-contracts/",
+        "https://docs.lido.fi/earn/audits/",
+        "https://docs.lido.fi/earn/architecture/oracle/",
+        "https://research.lido.fi/t/lido-earn-competing-on-trust-5m-treasury-allocation/11228",
+        "https://mellow.finance/Runtime-Labs-Vault-Legal-Notice.pdf",
+        "https://docs.mellow.finance/lido-earn/earnusd",
+        "https://stake.lido.fi/earn/usd"
+      ],
+      "rationale": "Missing datum for each exact Safe is the human-independence/key-custody/signing-policy boundary, not its on-chain threshold. Deployment roles, audits, legal terms, vault disclosures and treasury governance identify actors and permissions without mapping these four rosters to independent humans or binding approval policies. Existing pinned on-chain owner/quorum observations are preserved; a roster is not proof of human independence."
+    },
+    {
+      "id": "uw-earnusd-lido-6adfee15ecf34c66",
+      "assetId": "earnusd-lido",
+      "scope": {
+        "componentKey": "control:mint-meta:earnusd-lido:7199def3b50d7094744a",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:earnusd-lido:7199def3b50d7094744a",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R07)",
+      "sources": [
+        {
+          "url": "https://docs.lido.fi/earn/deployment-contracts/",
+          "observedAt": "2026-10-03T22:53:22Z",
+          "datumAsOf": null,
+          "location": "Actors; Proxy Admin, Lazy/Active Vault Admin and earnUSD Curator rows",
+          "excerpt": "Roles governing the vaults. Addresses are shared across all chains.",
+          "assertion": "The exact four Safe addresses and numeric quorums are disclosed, but not independent human owners, key-custody arrangements or their off-chain signing-policy approval boundaries."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.lido.fi/earn/deployment-contracts/",
+        "https://docs.lido.fi/earn/audits/",
+        "https://docs.lido.fi/earn/architecture/oracle/",
+        "https://research.lido.fi/t/lido-earn-competing-on-trust-5m-treasury-allocation/11228",
+        "https://mellow.finance/Runtime-Labs-Vault-Legal-Notice.pdf",
+        "https://docs.mellow.finance/lido-earn/earnusd",
+        "https://stake.lido.fi/earn/usd"
+      ],
+      "rationale": "Missing datum for each exact Safe is the human-independence/key-custody/signing-policy boundary, not its on-chain threshold. Deployment roles, audits, legal terms, vault disclosures and treasury governance identify actors and permissions without mapping these four rosters to independent humans or binding approval policies. Existing pinned on-chain owner/quorum observations are preserved; a roster is not proof of human independence."
+    },
+    {
+      "id": "uw-earnusd-lido-cc4090d8bfbebb51",
+      "assetId": "earnusd-lido",
+      "scope": {
+        "componentKey": "control:mint-meta:earnusd-lido:87f8f76514e83baeaea3",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:earnusd-lido:87f8f76514e83baeaea3",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R07)",
+      "sources": [
+        {
+          "url": "https://docs.lido.fi/earn/deployment-contracts/",
+          "observedAt": "2026-10-03T22:53:22Z",
+          "datumAsOf": null,
+          "location": "Actors; Proxy Admin, Lazy/Active Vault Admin and earnUSD Curator rows",
+          "excerpt": "Roles governing the vaults. Addresses are shared across all chains.",
+          "assertion": "The exact four Safe addresses and numeric quorums are disclosed, but not independent human owners, key-custody arrangements or their off-chain signing-policy approval boundaries."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.lido.fi/earn/deployment-contracts/",
+        "https://docs.lido.fi/earn/audits/",
+        "https://docs.lido.fi/earn/architecture/oracle/",
+        "https://research.lido.fi/t/lido-earn-competing-on-trust-5m-treasury-allocation/11228",
+        "https://mellow.finance/Runtime-Labs-Vault-Legal-Notice.pdf",
+        "https://docs.mellow.finance/lido-earn/earnusd",
+        "https://stake.lido.fi/earn/usd"
+      ],
+      "rationale": "Missing datum for each exact Safe is the human-independence/key-custody/signing-policy boundary, not its on-chain threshold. Deployment roles, audits, legal terms, vault disclosures and treasury governance identify actors and permissions without mapping these four rosters to independent humans or binding approval policies. Existing pinned on-chain owner/quorum observations are preserved; a roster is not proof of human independence."
+    },
+    {
+      "id": "uw-earnusd-lido-ca8d46f1a92edf61",
+      "assetId": "earnusd-lido",
+      "scope": {
+        "componentKey": "control:mint-meta:earnusd-lido:d4820d60b8218389c4e6",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:earnusd-lido:d4820d60b8218389c4e6",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R07)",
+      "sources": [
+        {
+          "url": "https://docs.lido.fi/earn/deployment-contracts/",
+          "observedAt": "2026-10-03T22:53:22Z",
+          "datumAsOf": null,
+          "location": "Actors; Proxy Admin, Lazy/Active Vault Admin and earnUSD Curator rows",
+          "excerpt": "Roles governing the vaults. Addresses are shared across all chains.",
+          "assertion": "The exact four Safe addresses and numeric quorums are disclosed, but not independent human owners, key-custody arrangements or their off-chain signing-policy approval boundaries."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.lido.fi/earn/deployment-contracts/",
+        "https://docs.lido.fi/earn/audits/",
+        "https://docs.lido.fi/earn/architecture/oracle/",
+        "https://research.lido.fi/t/lido-earn-competing-on-trust-5m-treasury-allocation/11228",
+        "https://mellow.finance/Runtime-Labs-Vault-Legal-Notice.pdf",
+        "https://docs.mellow.finance/lido-earn/earnusd",
+        "https://stake.lido.fi/earn/usd"
+      ],
+      "rationale": "Missing datum for each exact Safe is the human-independence/key-custody/signing-policy boundary, not its on-chain threshold. Deployment roles, audits, legal terms, vault disclosures and treasury governance identify actors and permissions without mapping these four rosters to independent humans or binding approval policies. Existing pinned on-chain owner/quorum observations are preserved; a roster is not proof of human independence."
+    },
+    {
+      "id": "uw-earnusd-lido-7135b34de998d35c",
+      "assetId": "earnusd-lido",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R07)",
+      "sources": [
+        {
+          "url": "https://docs.lido.fi/earn/architecture/oracle/",
+          "observedAt": "2026-10-03T22:53:22Z",
+          "datumAsOf": null,
+          "location": "Security Considerations",
+          "excerpt": "Price validation is local and does not rely on external feeds.",
+          "assertion": "Public oracle controls validate trusted prices, not an independent whole-EarnUSD asset/liability financial reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.lido.fi/earn/",
+        "https://docs.lido.fi/earn/architecture/oracle/",
+        "https://docs.lido.fi/earn/deployment-contracts/",
+        "https://docs.lido.fi/earn/audits/",
+        "https://research.lido.fi/t/lido-earn-competing-on-trust-5m-treasury-allocation/11228",
+        "https://mellow.finance/Runtime-Labs-Vault-Legal-Notice.pdf",
+        "https://stake.lido.fi/earn/usd",
+        "https://docs.mellow.finance/lido-earn/earnusd"
+      ],
+      "rationale": "The exact missing datum is the independent or issuer whole-liability reconciliation process/assurance for earnUSD shares versus all strategy assets. Architecture reports prices; security audits review code; treasury monitoring covers DAO holdings. Searches of issuer docs, audits, legal terms, dashboard and governance disclosures found no complete asset-liability assurance statement. No independent-attestation or continuous-reconciliation claim is inferred from NAV."
+    },
+    {
+      "id": "uw-earnusd-lido-42b1d922e98d2b70",
+      "assetId": "earnusd-lido",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R07)",
+      "sources": [
+        {
+          "url": "https://mellow.finance/Runtime-Labs-Vault-Legal-Notice.pdf",
+          "observedAt": "2026-10-03T22:53:22Z",
+          "datumAsOf": "2025-11-10",
+          "location": "Clause 18, page 5",
+          "excerpt": "we shall owe no fiduciary duties to you",
+          "assertion": "The governing strategist terms disclose a non-fiduciary agreement and broad third-party strategy risks, not whole-wrapper holder-beneficial segregation/remoteness or a complete reuse/correlation boundary."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://stake.lido.fi/earn/usd",
+        "https://mellow.finance/Runtime-Labs-Vault-Legal-Notice.pdf",
+        "https://lido.fi/terms-of-use",
+        "https://lido.fi/earn/risk-disclosures",
+        "https://docs.mellow.finance/lido-earn/earnusd",
+        "https://help.lido.fi/en/articles/14038922-vault-overview-earnusd",
+        "https://docs.lido.fi/earn/deployment-contracts/",
+        "https://research.lido.fi/t/lido-earn-competing-on-trust-5m-treasury-allocation/11228"
+      ],
+      "rationale": "Exact missing data are holder-beneficial custody segregation and insolvency remoteness across the wrapper's full downstream book, and whole-book reuse/claim-correlation restrictions. Published contracts locate immediate vaults; terms allow changing strategies and routing through third parties, but do not document legal rights across every downstream position or a complete reuse boundary. No-fiduciary wording is not converted into a definite adverse custody status."
+    },
+    {
+      "id": "uw-earnusd-lido-927bfe25c6ac9f61",
+      "assetId": "earnusd-lido",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "rehypothecationCorrelation",
+        "pillar": "backing",
+        "requiredDatum": "rehypothecationCorrelation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R07)",
+      "sources": [
+        {
+          "url": "https://mellow.finance/Runtime-Labs-Vault-Legal-Notice.pdf",
+          "observedAt": "2026-10-03T22:53:22Z",
+          "datumAsOf": "2025-11-10",
+          "location": "Clause 18, page 5",
+          "excerpt": "we shall owe no fiduciary duties to you",
+          "assertion": "The governing strategist terms disclose a non-fiduciary agreement and broad third-party strategy risks, not whole-wrapper holder-beneficial segregation/remoteness or a complete reuse/correlation boundary."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://stake.lido.fi/earn/usd",
+        "https://mellow.finance/Runtime-Labs-Vault-Legal-Notice.pdf",
+        "https://lido.fi/terms-of-use",
+        "https://lido.fi/earn/risk-disclosures",
+        "https://docs.mellow.finance/lido-earn/earnusd",
+        "https://help.lido.fi/en/articles/14038922-vault-overview-earnusd",
+        "https://docs.lido.fi/earn/deployment-contracts/",
+        "https://research.lido.fi/t/lido-earn-competing-on-trust-5m-treasury-allocation/11228"
+      ],
+      "rationale": "Exact missing data are holder-beneficial custody segregation and insolvency remoteness across the wrapper's full downstream book, and whole-book reuse/claim-correlation restrictions. Published contracts locate immediate vaults; terms allow changing strategies and routing through third parties, but do not document legal rights across every downstream position or a complete reuse boundary. No-fiduciary wording is not converted into a definite adverse custody status."
+    },
+    {
+      "id": "uw-usd3-3jane-ce0d98eb902697e9",
+      "assetId": "usd3-3jane",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:244028e7490f2316ab383a79",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R07)",
+      "sources": [
+        {
+          "url": "https://docs.3jane.xyz/backing/ccl.md",
+          "observedAt": "2026-10-03T22:53:22Z",
+          "datumAsOf": null,
+          "location": "Crypto Credit Lines, second paragraph",
+          "excerpt": "0%-collateral, open-term, variable-rate USDC credit facility.",
+          "assertion": "The combined credit sleeve includes open-term credit, alongside distinct FCC maturities; no single current whole-slice maximum maturity or asset-realization horizon is given."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.3jane.xyz/backing/backing.md",
+        "https://docs.3jane.xyz/backing/ccl.md",
+        "https://docs.3jane.xyz/backing/fcc.md",
+        "https://docs.3jane.xyz/backing/fcc/facilities.md",
+        "https://docs.3jane.xyz/backing/fcc/legal-structuring.md",
+        "https://docs.3jane.xyz/usd3-susd3/suppliers.md",
+        "https://app.3jane.xyz/info/backing",
+        "https://accountable.3jane.xyz/",
+        "https://www.3jane.xyz/pdf/terms-of-service.pdf",
+        "https://www.3jane.xyz/pdf/advance-v0.pdf"
+      ],
+      "rationale": "Exact missing data are a maximum residual maturity and asset-realization horizon for the admitted combined private-credit row. Issuer facility dates, target sub-12-month assets and WAL apply to specific FCC facilities, not the mixed CCL/FCC book. The rendered backing dashboard supplies amounts, not these bounds. Open-term CCL and bespoke advance contracts do not disclose one conservative whole-slice maximum; supplier redemption mechanics are not asset liquidity."
+    },
+    {
+      "id": "uw-usd3-3jane-7fa74f2b71a64b12",
+      "assetId": "usd3-3jane",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:244028e7490f2316ab383a79",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R07)",
+      "sources": [
+        {
+          "url": "https://docs.3jane.xyz/backing/ccl.md",
+          "observedAt": "2026-10-03T22:53:22Z",
+          "datumAsOf": null,
+          "location": "Crypto Credit Lines, second paragraph",
+          "excerpt": "0%-collateral, open-term, variable-rate USDC credit facility.",
+          "assertion": "The combined credit sleeve includes open-term credit, alongside distinct FCC maturities; no single current whole-slice maximum maturity or asset-realization horizon is given."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.3jane.xyz/backing/backing.md",
+        "https://docs.3jane.xyz/backing/ccl.md",
+        "https://docs.3jane.xyz/backing/fcc.md",
+        "https://docs.3jane.xyz/backing/fcc/facilities.md",
+        "https://docs.3jane.xyz/backing/fcc/legal-structuring.md",
+        "https://docs.3jane.xyz/usd3-susd3/suppliers.md",
+        "https://app.3jane.xyz/info/backing",
+        "https://accountable.3jane.xyz/",
+        "https://www.3jane.xyz/pdf/terms-of-service.pdf",
+        "https://www.3jane.xyz/pdf/advance-v0.pdf"
+      ],
+      "rationale": "Exact missing data are a maximum residual maturity and asset-realization horizon for the admitted combined private-credit row. Issuer facility dates, target sub-12-month assets and WAL apply to specific FCC facilities, not the mixed CCL/FCC book. The rendered backing dashboard supplies amounts, not these bounds. Open-term CCL and bespoke advance contracts do not disclose one conservative whole-slice maximum; supplier redemption mechanics are not asset liquidity."
+    },
+    {
+      "id": "uw-usd3-3jane-d135f7ef1ad16a8f",
+      "assetId": "usd3-3jane",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R07)",
+      "sources": [
+        {
+          "url": "https://docs.3jane.xyz/backing/fcc/legal-structuring.md",
+          "observedAt": "2026-10-03T22:53:22Z",
+          "datumAsOf": null,
+          "location": "Facility lifecycle, Deploying / revolving",
+          "excerpt": "During the revolving period, eligible principal collections are recycled into new advances or purchases.",
+          "assertion": "Facility SPV protections and recycling are disclosed, but do not establish full USD3-holder custody/remoteness or a whole-pool claim reuse/correlation restriction across CCL, FCC, Aave and bank cash."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.3jane.xyz/backing/backing.md",
+        "https://docs.3jane.xyz/backing/fcc/legal-structuring.md",
+        "https://docs.3jane.xyz/backing/fcc/banking-rail-erebor.md",
+        "https://docs.3jane.xyz/backing/ccl.md",
+        "https://docs.3jane.xyz/usd3-susd3/suppliers.md",
+        "https://www.3jane.xyz/pdf/terms-of-service.pdf",
+        "https://www.3jane.xyz/pdf/advance-v0.pdf",
+        "https://www.3jane.xyz/pdf/disclaimer.pdf",
+        "https://app.3jane.xyz/info/backing",
+        "https://accountable.3jane.xyz/"
+      ],
+      "rationale": "Exact missing data are full-pool USD3-holder beneficial segregation/insolvency remoteness and complete reuse/claim-correlation permissions. FCC SPVs, first-priority security and DACA protect particular receivables, not necessarily every USD3-held claim or Erebor staging balance. Supplier/advance terms and backing disclosures do not publish equivalent whole-book legal rights or a complete reuse limit. Borrower-specific restrictions are not reclassified as pool protections."
+    },
+    {
+      "id": "uw-usd3-3jane-805b72ffcaeabc85",
+      "assetId": "usd3-3jane",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "rehypothecationCorrelation",
+        "pillar": "backing",
+        "requiredDatum": "rehypothecationCorrelation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R07)",
+      "sources": [
+        {
+          "url": "https://docs.3jane.xyz/backing/fcc/legal-structuring.md",
+          "observedAt": "2026-10-03T22:53:22Z",
+          "datumAsOf": null,
+          "location": "Facility lifecycle, Deploying / revolving",
+          "excerpt": "During the revolving period, eligible principal collections are recycled into new advances or purchases.",
+          "assertion": "Facility SPV protections and recycling are disclosed, but do not establish full USD3-holder custody/remoteness or a whole-pool claim reuse/correlation restriction across CCL, FCC, Aave and bank cash."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.3jane.xyz/backing/backing.md",
+        "https://docs.3jane.xyz/backing/fcc/legal-structuring.md",
+        "https://docs.3jane.xyz/backing/fcc/banking-rail-erebor.md",
+        "https://docs.3jane.xyz/backing/ccl.md",
+        "https://docs.3jane.xyz/usd3-susd3/suppliers.md",
+        "https://www.3jane.xyz/pdf/terms-of-service.pdf",
+        "https://www.3jane.xyz/pdf/advance-v0.pdf",
+        "https://www.3jane.xyz/pdf/disclaimer.pdf",
+        "https://app.3jane.xyz/info/backing",
+        "https://accountable.3jane.xyz/"
+      ],
+      "rationale": "Exact missing data are full-pool USD3-holder beneficial segregation/insolvency remoteness and complete reuse/claim-correlation permissions. FCC SPVs, first-priority security and DACA protect particular receivables, not necessarily every USD3-held claim or Erebor staging balance. Supplier/advance terms and backing disclosures do not publish equivalent whole-book legal rights or a complete reuse limit. Borrower-specific restrictions are not reclassified as pool protections."
+    },
+    {
+      "id": "uw-usyc-hashnote-c61d61b73e76bed2",
+      "assetId": "usyc-hashnote",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:73bb3f9ea2b0aa057a0ae5d7",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R07)",
+      "sources": [
+        {
+          "url": "https://usyc.docs.hashnote.com/overview/product-structuring.md",
+          "observedAt": "2026-10-03T22:53:22Z",
+          "datumAsOf": null,
+          "location": "Product Structuring, second paragraph",
+          "excerpt": "Tokens represent shares in the fund",
+          "assertion": "The admitted exact Chainlink claim is an SDYF fund-share interest; neither its contractual maximum residual maturity nor a final maturity date is disclosed here."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.circle.com/usyc",
+        "https://developers.circle.com/tokenized/usyc/overview",
+        "https://usyc.docs.hashnote.com/overview/introduction.md",
+        "https://usyc.docs.hashnote.com/overview/product-structuring.md",
+        "https://usyc.docs.hashnote.com/overview/subscription-and-redemption.md",
+        "https://forum.arbitrum.foundation/t/hashnote-usyc-step-application/23587",
+        "https://s206.q4cdn.com/265218871/files/doc_financials/2025/ar/CRCL_AR_2026_WO13_WKV_PR-1.pdf"
+      ],
+      "rationale": "Exact missing datum is maximum maturity of the fund-share claim admitted under this sourceKey, not maturity of underlying T-bills/repo. Product terms, subscription/redemption docs, issuer STEP application and Circle financial filing disclose a redeemable fund interest and short-duration investments without a fund-share final maturity or maximum residual maturity. Immediate/T0 redemption and underlying investment tenors cannot be inserted as fund-share maturity."
+    },
+    {
+      "id": "uw-earnusd-lido-79f6becbba1954c3",
+      "assetId": "earnusd-lido",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "supervision",
+        "pillar": "control",
+        "requiredDatum": "supervision",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:58:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R07)",
+      "sources": [
+        {
+          "url": "https://mellow.finance/Runtime-Labs-Vault-Legal-Notice.pdf",
+          "observedAt": "2026-10-03T22:53:22Z",
+          "datumAsOf": "2025-11-10",
+          "location": "Clause 31(g), page 9",
+          "excerpt": "means Runtime Global S.A., a company established under the laws of the Republic of Panama.",
+          "assertion": "EarnUSD's linked governing terms identify the exact strategist legal entity and domicile, without a regulator or authorization identifier."
+        },
+        {
+          "url": "https://supervalores.gob.pa/files/iper/pj_er/admin_inversiones/Listado_Administradores_inversion.pdf",
+          "observedAt": "2026-10-03T22:58:29Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Authorized investment administrators, full 22-entry table",
+          "excerpt": "Actualizado al 31 de agosto 2026",
+          "assertion": "Exact Runtime Global S.A. is absent from this complete dated authorized-manager list; this is a scoped negative search, not proof of no supervision anywhere."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://mellow.finance/Runtime-Labs-Vault-Legal-Notice.pdf",
+        "https://lido.fi/terms-of-use",
+        "https://lido.fi/earn/risk-disclosures",
+        "https://docs.mellow.finance/lido-earn/earnusd",
+        "https://docs.lido.fi/earn/",
+        "https://supervalores.gob.pa/informacion-de-personas-juridicas-o-entes-regulados/",
+        "https://supervalores.gob.pa/files/iper/pj_er/admin_inversiones/Listado_Administradores_inversion.pdf",
+        "https://supervalores.gob.pa/files/iper/pj_er/asesores_inversion/Listado_Asesores_Inversion.pdf",
+        "https://supervalores.gob.pa/files/iper/pj_er/soc_inv/Sociedades_Inversion_Privada.pdf",
+        "https://supervalores.gob.pa/files/iper/pj_er/soc_inv/Sociedades_Inversion_Registradas_extranjero.pdf"
+      ],
+      "rationale": "Exact missing datum is a publicly documented supervisor and authorization boundary governing earnUSD mint/strategist operations. Linked terms identify Runtime Global S.A. but no regulator/license. Exact-entity search plus Panama SMV's current juridical register and August 31 manager, advisor, private-fund and foreign-offered-fund lists yield no match. Lido's no-supervision statement governs its interface only and is not transferred to the token. Supervision remains unknown, not none."
     }
   ]
 }

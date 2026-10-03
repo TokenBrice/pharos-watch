@@ -3680,6 +3680,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "earnusd-lido",
+      "reviewedAt": "2026-10-03T22:46:27Z",
+      "expiresAt": "2027-10-03T22:46:27Z",
+      "reviewer": "Unknown resolver W1R07",
+      "notes": "Exact-token documented live-history lower bound from 2026-03-12; eligibility only. No independently verified performance, redemption throughput, stress recovery, report continuity or incident-free claim is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-history",
+          "label": "Lido exact EarnUSD launch",
+          "publisher": "Lido",
+          "publishedAt": "2026-03-12",
+          "url": "https://blog.lido.fi/lido-earn-expands-with-earneth-and-earnusd/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 6,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usd3-3jane",
+      "reviewedAt": "2026-10-03T22:46:27Z",
+      "expiresAt": "2027-10-03T22:46:27Z",
+      "reviewer": "Unknown resolver W1R07",
+      "notes": "Exact-token documented live-history lower bound from 2025-08-25; eligibility only. No independently verified performance, redemption throughput, stress recovery, report continuity or incident-free claim is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-history",
+          "label": "USD3 canonical contract creation, Ethereum block 23214680",
+          "publisher": "Ethereum",
+          "publishedAt": "2025-08-25",
+          "url": "https://eth.blockscout.com/tx/0xa50b1bacaceebe52c33a9815fa9e0eb8549f2c38218f41745647b881a7008243",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 13,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usyc-hashnote",
+      "reviewedAt": "2026-10-03T22:49:16Z",
+      "expiresAt": "2027-10-03T22:46:27Z",
+      "reviewer": "Unknown resolver W1R07",
+      "notes": "Exact-token reported performance tracking began July 10, 2023; full-calendar-month live-history lower bound only. No independently verified performance, redemption throughput, stress recovery, report continuity or incident-free claim is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-history",
+          "label": "Hashnote issuer STEP application: USYC tracking began July 10, 2023",
+          "publisher": "Hashnote",
+          "publishedAt": "2024-05-02",
+          "url": "https://forum.arbitrum.foundation/t/hashnote-usyc-step-application/23587",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 38,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "buck-bucket-protocol",
+      "reviewedAt": "2026-10-03T22:46:27Z",
+      "expiresAt": "2027-10-03T22:46:27Z",
+      "reviewer": "Unknown resolver W1R07",
+      "notes": "Exact-token documented live-history lower bound from 2023-06-28; eligibility only. No independently verified performance, redemption throughput, stress recovery, report continuity or incident-free claim is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-history",
+          "label": "Bucket issuer mainnet recap, December 29 2023",
+          "publisher": "Bucket Protocol",
+          "publishedAt": "2023-12-29",
+          "url": "https://medium.com/@bucketprotocol/bucket-protocol-mainnet-recap-achievements-and-whats-next-pt-1-806fd973e208",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 39,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
