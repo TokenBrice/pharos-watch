@@ -31,7 +31,7 @@
         "liquidity",
         "smart-contract"
       ],
-      "liquidityHorizon": "unknown",
+      "liquidityHorizon": "immediate",
       "sourceKey": "reserve-protocol-dtf:0x0adc69041a2b086f8772acce2a754f410f211bed"
     },
     {
@@ -67,13 +67,13 @@
         "market",
         "concentration"
       ],
-      "liquidityHorizon": "unknown",
+      "liquidityHorizon": "immediate",
       "sourceKey": "reserve-protocol-dtf:0xbeef01735c132ada46aa9aa4c54623caa92a64cb"
     }
   ],
   "reserveReview": {
     "reviewedAt": "2026-10-03",
-    "reviewer": "Codex USD3 exact-contract identity review; W1R68 sUSDS native withdrawal review",
+    "reviewer": "Codex USD3 exact-contract identity review; W1R68 sUSDS native withdrawal review; W2R44 full-held Aave and MetaMorpho withdrawal simulation",
     "confidence": "verified",
     "sources": [
       {
@@ -111,9 +111,17 @@
       {
         "label": "Steakhouse USDC V1 contract and read interface",
         "url": "https://etherscan.io/address/0xbeef01735c132ada46aa9aa4c54623caa92a64cb#readContract"
+      },
+      {
+        "label": "Exact StaticATokenV3LM verified native USDC withdrawal implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0adc69041a2b086f8772acce2a754f410f211bed"
+      },
+      {
+        "label": "Full BackingManager Aave and Steakhouse share redemption eth_call simulations at Ethereum block 26115203",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "The previously reviewed four-contract composition and rounded 25% weights are retained. Exact identity reads at Ethereum block 26088539 (2026-09-30T06:35:47Z) confirm that USD3's BasketHandler quote includes 0xbeef01735c132ada46aa9aa4c54623caa92a64cb and its AssetRegistry maps that token to collateral plugin 0xb1327ead6ab9a1e363c4fc61648bd3131a587e39. USD3's BackingManager 0x4b0b3d40b0623f3a9eac09d2e01f592710ee59f0 holds 372031454478024121936647 raw vault shares. The vault returns name Steakhouse USDC, symbol steakUSDC, asset 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 and curator 0x827e86072b06674a077f592a531dce4590adecdb. Steakhouse's legacy registry identifies this exact address as its Morpho V1 USDC vault. It differs from the tracked steakusdc-steakhouse V2 contract 0xbeef088055857739c12cd3765f20b7679def0f51, so the V1 share position is unlinked rather than attributed to V2 shares or direct USDC. On 2026-10-03, W1R68 reviewed Sky's exact Ethereum sUSDS documentation and linked official SUsds.sol source: maxRedeem(owner) returns the full owner balance; redeem invokes drip and burns shares with synchronous usds.transfer(receiver, assets), with no queue or fixed lock. Immediate liquidity describes the entire sUSDS claim's native USDS conversion, not fiat settlement, USDS price assurance or the Reserve token's own redemption throughput. Other lending-position liquidity remains unknown; no portfolio weights or composition date are refreshed.",
+    "rationale": "The previously reviewed four-contract composition and rounded 25% weights are retained. Exact identity reads at Ethereum block 26088539 (2026-09-30T06:35:47Z) confirm that USD3's BasketHandler quote includes 0xbeef01735c132ada46aa9aa4c54623caa92a64cb and its AssetRegistry maps that token to collateral plugin 0xb1327ead6ab9a1e363c4fc61648bd3131a587e39. The exact Steakhouse USDC V1 vault differs from the tracked V2 share token and remains unlinked. W1R68's sourced sUSDS synchronous native USDS conversion remains unchanged. On 2026-10-03 W2R44 pinned Ethereum block 26115203, hash 0x1b8e8fe59dc6658999fa93a3f1e1a854885dfb8d7eaacf9a8b1c4a10a1d9bee6, timestamp 2026-10-03T23:48:35Z. USD3 main().backingManager() is 0x4b0b3d40b0623f3a9eac09d2e01f592710ee59f0. Sender-bound eth_call redeem(uint256,address,address) for this holder's full balance succeeded on both verified exact contracts: StaticATokenV3LM 0x0adc69041a2b086f8772acce2a754f410f211bed and MetaMorpho 0xbeef01735c132ada46aa9aa4c54623caa92a64cb. Each verified redemption burns the entire submitted position and transfers native USDC synchronously; MetaMorpho's exact market-liquidity checks and StaticAToken's pause/available-liquidity checks were exercised, not assumed. Immediate describes full backing-manager claim realization at this observed state, not a future liquidity guarantee, stressed USD sale, fiat settlement or USD3 holder-redemption throughput. Compound's wrapper-to-Comet-to-USDC path remains unknown. No portfolio weights or composition date are refreshed.",
     "compositionBasis": "Previously reviewed 2026-09-21 Reserve DTF basket weights retained; exact basket, registry, holder, vault asset and curator identity rechecked by block-pinned Ethereum RPC at block 26088539",
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
