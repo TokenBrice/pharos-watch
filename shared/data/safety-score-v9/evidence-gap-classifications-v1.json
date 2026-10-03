@@ -27090,6 +27090,318 @@
         "https://www.prnewswire.com/news-releases/zoths-zeusd-off-to-a-strong-start-reaching-over-27m-in-tvl-within-6-weeks-in-its-beta-launch--public-access-set-for-march-1st-302385678.html"
       ],
       "rationale": "No current dated measured complete reserve composition or continuing whole-liability supply-to-backing reconciliation is disclosed for tracked ZeUSD V1 0x7dc9748da8e762e569f9269f48f69a1a9f8ea761. Successfully fetched issuer-linked dashboard and original issuer announcement give generic RWA categories. Current zToken NAV/biweekly USDZe attestation descriptions belong to a different product and cannot establish either legacy ZeUSD datum. Failed old-document fetches are not the basis for C."
+    },
+    {
+      "id": "uw-gbpe-monerium-c05bcd51528a3dd0",
+      "assetId": "gbpe-monerium",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:19:09Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
+      "sources": [
+        {
+          "url": "https://monerium.com/financial-information/",
+          "observedAt": "2026-10-03T23:19:09Z",
+          "datumAsOf": null,
+          "location": "Financial statements; Attestations; How we safeguard",
+          "excerpt": "Our policy is to hold only as much in bank deposits as we need to meet anticipated redemptions.",
+          "assertion": "Named providers and a qualitative EURe fund policy are disclosed, but no current currency-specific whole-book portfolio allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://monerium.com/",
+        "https://docs.monerium.com/",
+        "https://monerium.com/financial-information/",
+        "https://monerium.com/whitepapers/eure-whitepaper.xhtml",
+        "https://monerium.com/policies/business-terms-of-service/",
+        "https://www.skatturinn.is/fyrirtaekjaskra/leit/kennitala/5505121060"
+      ],
+      "rationale": "Current EURe/GBPe whole-asset reserve composition, denominator and provider allocation are not published on the issuer financial/attestation surface, whitepaper or terms. Disclosures identify permitted categories, qualitative EURe bulk-in-fund policy and annual issuer-wide totals only. The registry lists 2025 annual accounts, not a fresh currency-specific holdings schedule; no historic mixed basket refreshed."
+    },
+    {
+      "id": "uw-eure-monerium-0586410ed083995d",
+      "assetId": "eure-monerium",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:19:09Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
+      "sources": [
+        {
+          "url": "https://monerium.com/financial-information/",
+          "observedAt": "2026-10-03T23:19:09Z",
+          "datumAsOf": null,
+          "location": "Financial statements; Attestations; How we safeguard",
+          "excerpt": "Our policy is to hold only as much in bank deposits as we need to meet anticipated redemptions.",
+          "assertion": "Named providers and a qualitative EURe fund policy are disclosed, but no current currency-specific whole-book portfolio allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://monerium.com/",
+        "https://docs.monerium.com/",
+        "https://monerium.com/financial-information/",
+        "https://monerium.com/whitepapers/eure-whitepaper.xhtml",
+        "https://monerium.com/policies/business-terms-of-service/",
+        "https://www.skatturinn.is/fyrirtaekjaskra/leit/kennitala/5505121060"
+      ],
+      "rationale": "Current EURe/GBPe whole-asset reserve composition, denominator and provider allocation are not published on the issuer financial/attestation surface, whitepaper or terms. Disclosures identify permitted categories, qualitative EURe bulk-in-fund policy and annual issuer-wide totals only. The registry lists 2025 annual accounts, not a fresh currency-specific holdings schedule; no historic mixed basket refreshed."
+    },
+    {
+      "id": "uw-gbpe-monerium-0b8bf0ccfd917f26",
+      "assetId": "gbpe-monerium",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:gbpe-monerium:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:19:09Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
+      "sources": [
+        {
+          "url": "https://monerium.com/policies/business-terms-of-service/",
+          "observedAt": "2026-10-03T23:19:09Z",
+          "datumAsOf": null,
+          "location": "Section 4",
+          "excerpt": "The issuances and redemption of e-money denominated in other currencies than EUR are subject to an additional contractual agreement between us and you.",
+          "assertion": "Non-EUR redemption requires a separate agreement; public general terms do not specify the applicable GBPe tariff."
+        },
+        {
+          "url": "https://monerium.com/policies/business-terms-of-service/",
+          "observedAt": "2026-10-03T23:19:09Z",
+          "datumAsOf": null,
+          "location": "Section 4",
+          "excerpt": "we can not guarantee execution time of transactions through 3rd party service providers.",
+          "assertion": "Public terms expressly decline an end-to-end banking execution guarantee."
+        },
+        {
+          "url": "https://help.monerium.com/article/12-gbpe-ibans",
+          "observedAt": "2026-10-03T23:19:09Z",
+          "datumAsOf": "2025-10-01",
+          "location": "GBPe IBANs",
+          "excerpt": "At the moment, we do not offer GBP IBANs to our customers.",
+          "assertion": "No public GBP IBAN rail or confirmed timeline; onchain CoW swap is not this issuer redemption route."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://monerium.com/policies/business-terms-of-service/",
+        "https://monerium.com/policies/personal-terms-of-service/",
+        "https://monerium.com/fee-schedule/",
+        "https://help.monerium.com/article/12-gbpe-ibans",
+        "https://docs.monerium.com/api/",
+        "https://monerium.com/whitepapers/eure-whitepaper.xhtml"
+      ],
+      "rationale": "No applicable public GBPe offchain issuer all-in fee or final GBP banking settlement maximum found. Terms require a separate non-EUR agreement, reserve fees and disclaim third-party execution guarantees. GBP help says IBANs unavailable. The former fee-schedule URL returning 404 is not the basis for C. EURe free-service/SEPA statements cannot establish this bespoke GBP route's terms."
+    },
+    {
+      "id": "uw-gbpe-monerium-cc424002568307e4",
+      "assetId": "gbpe-monerium",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:gbpe-monerium:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:19:09Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
+      "sources": [
+        {
+          "url": "https://monerium.com/policies/business-terms-of-service/",
+          "observedAt": "2026-10-03T23:19:09Z",
+          "datumAsOf": null,
+          "location": "Section 4",
+          "excerpt": "The issuances and redemption of e-money denominated in other currencies than EUR are subject to an additional contractual agreement between us and you.",
+          "assertion": "Non-EUR redemption requires a separate agreement; public general terms do not specify the applicable GBPe tariff."
+        },
+        {
+          "url": "https://monerium.com/policies/business-terms-of-service/",
+          "observedAt": "2026-10-03T23:19:09Z",
+          "datumAsOf": null,
+          "location": "Section 4",
+          "excerpt": "we can not guarantee execution time of transactions through 3rd party service providers.",
+          "assertion": "Public terms expressly decline an end-to-end banking execution guarantee."
+        },
+        {
+          "url": "https://help.monerium.com/article/12-gbpe-ibans",
+          "observedAt": "2026-10-03T23:19:09Z",
+          "datumAsOf": "2025-10-01",
+          "location": "GBPe IBANs",
+          "excerpt": "At the moment, we do not offer GBP IBANs to our customers.",
+          "assertion": "No public GBP IBAN rail or confirmed timeline; onchain CoW swap is not this issuer redemption route."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://monerium.com/policies/business-terms-of-service/",
+        "https://monerium.com/policies/personal-terms-of-service/",
+        "https://monerium.com/fee-schedule/",
+        "https://help.monerium.com/article/12-gbpe-ibans",
+        "https://docs.monerium.com/api/",
+        "https://monerium.com/whitepapers/eure-whitepaper.xhtml"
+      ],
+      "rationale": "No applicable public GBPe offchain issuer all-in fee or final GBP banking settlement maximum found. Terms require a separate non-EUR agreement, reserve fees and disclaim third-party execution guarantees. GBP help says IBANs unavailable. The former fee-schedule URL returning 404 is not the basis for C. EURe free-service/SEPA statements cannot establish this bespoke GBP route's terms."
+    },
+    {
+      "id": "uw-tryb-bilira-8102453e4ce9c8d6",
+      "assetId": "tryb-bilira",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:f3e432036a0ef2478d7e04cf",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:19:09Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a8569b8840c2c64559e3c4a_TRYB_Guvence_Raporu_082026_ENG.pdf",
+          "observedAt": "2026-10-03T23:10:13Z",
+          "datumAsOf": "2026-08-17",
+          "location": "Scanned PDF page 5, reserve-account criterion 2",
+          "excerpt": "Turkish Lira held in custody accounts are the total balances in accounts held by the Company at federally insured TL depository institutions on behalf of the TRYb holders at the Report Date and Time.",
+          "assertion": "The complete scanned report discloses bank balances, but no bank-deposit maturity maximum or whole-position withdrawal horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.bilira.co/en/audit-reports",
+        "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a8569b8840c2c64559e3c4a_TRYB_Guvence_Raporu_082026_ENG.pdf",
+        "https://www.bilira.co/en/legal-information/tryb-terms-of-use",
+        "https://www.bilira.co/en/legal-information/framework-agreement",
+        "https://cs.bilira.co/hc/bilira-kripto-yardim-merkezi/articles/1746700110-what-is-tryb-where-can-tryb-be-used",
+        "https://www.bilira.co/en/product/tryb-stablecoin"
+      ],
+      "rationale": "TRYB reserve deposit maximum term and whole-position liquidity horizon are not disclosed. Visually reviewed all six scanned August report pages, reserve/archive disclosures, token terms, help and framework agreement. Bank cash totals are disclosed, not demand/term classification, maturity schedule or withdrawal conditions. Customer platform-balance payment promises do not establish reserve-bank realizability."
+    },
+    {
+      "id": "uw-tryb-bilira-408d3fc46eb99fb7",
+      "assetId": "tryb-bilira",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:f3e432036a0ef2478d7e04cf",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:19:09Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a8569b8840c2c64559e3c4a_TRYB_Guvence_Raporu_082026_ENG.pdf",
+          "observedAt": "2026-10-03T23:10:13Z",
+          "datumAsOf": "2026-08-17",
+          "location": "Scanned PDF page 5, reserve-account criterion 2",
+          "excerpt": "Turkish Lira held in custody accounts are the total balances in accounts held by the Company at federally insured TL depository institutions on behalf of the TRYb holders at the Report Date and Time.",
+          "assertion": "The complete scanned report discloses bank balances, but no bank-deposit maturity maximum or whole-position withdrawal horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.bilira.co/en/audit-reports",
+        "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a8569b8840c2c64559e3c4a_TRYB_Guvence_Raporu_082026_ENG.pdf",
+        "https://www.bilira.co/en/legal-information/tryb-terms-of-use",
+        "https://www.bilira.co/en/legal-information/framework-agreement",
+        "https://cs.bilira.co/hc/bilira-kripto-yardim-merkezi/articles/1746700110-what-is-tryb-where-can-tryb-be-used",
+        "https://www.bilira.co/en/product/tryb-stablecoin"
+      ],
+      "rationale": "TRYB reserve deposit maximum term and whole-position liquidity horizon are not disclosed. Visually reviewed all six scanned August report pages, reserve/archive disclosures, token terms, help and framework agreement. Bank cash totals are disclosed, not demand/term classification, maturity schedule or withdrawal conditions. Customer platform-balance payment promises do not establish reserve-bank realizability."
+    },
+    {
+      "id": "uw-audf-forte-03f5ae6b7660778f",
+      "assetId": "audf-forte",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:5bfd0a7830e7ce008eee2128",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:19:09Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
+      "sources": [
+        {
+          "url": "https://www.forteaud.com/api/documents/view/audf-reserves-report-august-2026",
+          "observedAt": "2026-10-03T23:10:13Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Auditor opinion, page 2",
+          "excerpt": "We have audited the Australian Dollar (AUD) Reserve bank account held by Forte Securities Australia Pty Ltd",
+          "assertion": "Audit establishes reserve bank cash balance, not the account's demand/term status, maturity maximum or whole-position realization time."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.forteaud.com/",
+        "https://www.forteaud.com/transparency",
+        "https://www.forteaud.com/how-audf-works",
+        "https://www.forteaud.com/api/documents/view/audf-reserves-report-august-2026",
+        "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/65f294b4fb7847349b4aa198/1710396597284/Forte%2BAUDF%2B-%2BWhitepaper%2B14.03.24.pdf",
+        "https://www.cointree.com/company/pds/audf-pds/"
+      ],
+      "rationale": "AUDF reserve bank-deposit maximum contractual maturity and whole-position liquidity horizon are not disclosed. Issuer transparency/workflow, August bank reserve audit, complete whitepaper and distributor PDS describe cash backing and conditional redemption but not bank-account term/withdrawal conditions. Open-ended or on-demand holder liabilities do not establish the underlying deposit maturity."
+    },
+    {
+      "id": "uw-audf-forte-685e460848fb1c64",
+      "assetId": "audf-forte",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:5bfd0a7830e7ce008eee2128",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:19:09Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
+      "sources": [
+        {
+          "url": "https://www.forteaud.com/api/documents/view/audf-reserves-report-august-2026",
+          "observedAt": "2026-10-03T23:10:13Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Auditor opinion, page 2",
+          "excerpt": "We have audited the Australian Dollar (AUD) Reserve bank account held by Forte Securities Australia Pty Ltd",
+          "assertion": "Audit establishes reserve bank cash balance, not the account's demand/term status, maturity maximum or whole-position realization time."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.forteaud.com/",
+        "https://www.forteaud.com/transparency",
+        "https://www.forteaud.com/how-audf-works",
+        "https://www.forteaud.com/api/documents/view/audf-reserves-report-august-2026",
+        "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/65f294b4fb7847349b4aa198/1710396597284/Forte%2BAUDF%2B-%2BWhitepaper%2B14.03.24.pdf",
+        "https://www.cointree.com/company/pds/audf-pds/"
+      ],
+      "rationale": "AUDF reserve bank-deposit maximum contractual maturity and whole-position liquidity horizon are not disclosed. Issuer transparency/workflow, August bank reserve audit, complete whitepaper and distributor PDS describe cash backing and conditional redemption but not bank-account term/withdrawal conditions. Open-ended or on-demand holder liabilities do not establish the underlying deposit maturity."
     }
   ]
 }

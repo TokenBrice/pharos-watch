@@ -12101,6 +12101,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "gbpe-monerium",
+      "reviewedAt": "2026-10-03T23:10:13Z",
+      "expiresAt": "2027-10-03T23:10:13Z",
+      "reviewer": "W1R81 primary-source review",
+      "notes": "Conservative live-history lower bound from year-end 2024 issuance in whitepaper A.22. The 2019 retrospective records a pilot issuance, while A.22 says GBPe issuance started in 2024; no uninterrupted 2019-to-present history is asserted. No throughput, reconciliation continuity, stress performance or incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "monerium-gbpe-2024-history",
+          "label": "EURe whitepaper A.22: GBPe issuance in 2024",
+          "publisher": "Monerium",
+          "publishedAt": "2026-02-09",
+          "url": "https://monerium.com/whitepapers/eure-whitepaper.xhtml",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 21,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "monerium-gbpe-2024-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "eure-monerium",
+      "reviewedAt": "2026-10-03T23:10:13Z",
+      "expiresAt": "2027-10-03T23:10:13Z",
+      "reviewer": "W1R81 primary-source review",
+      "notes": "82 full elapsed months from documented EURe blockchain issuance on 2019-11-28. Issuer-reported lower bound only; no independently verified performance, throughput, reconciliation continuity or incident absence is asserted.",
+      "sources": [
+        {
+          "sourceId": "monerium-2019-issuance",
+          "label": "2019 year in review: EURe issued 28 November",
+          "publisher": "Monerium",
+          "publishedAt": "2019-12-31",
+          "url": "https://monerium.com/blog/2019/year-in-review/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 82,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "monerium-2019-issuance"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "ussd-sonic-labs",
+      "reviewedAt": "2026-10-03T23:10:13Z",
+      "expiresAt": "2027-10-03T23:10:13Z",
+      "reviewer": "W1R81 primary-source review",
+      "notes": "Six full elapsed months from the exact-token 2026-03-09 announcement stating USSD is now available on Sonic and giving its catalog contract address. No Frax parent history, stress performance, independently verified throughput, reconciliation continuity or incident absence is asserted.",
+      "sources": [
+        {
+          "sourceId": "sonic-ussd-launch",
+          "label": "USSD live launch announcement",
+          "publisher": "Sonic Labs",
+          "publishedAt": "2026-03-09",
+          "url": "https://www.soniclabs.com/blog/ussd-sonics-native-permissionless-usd-stablecoin-built-with-frax/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 6,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "sonic-ussd-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "tryb-bilira",
+      "reviewedAt": "2026-10-03T23:10:13Z",
+      "expiresAt": "2027-10-03T23:10:13Z",
+      "reviewer": "W1R81 primary-source review",
+      "notes": "45 full elapsed months from the dated 2022-12-31 issuer survey documenting actual TRYB DeFi use. This is a conservative operating-history lower bound, not a claimed launch date. No stress performance, throughput, reconciliation continuity or incident absence is asserted.",
+      "sources": [
+        {
+          "sourceId": "bilira-2022-tryb-use",
+          "label": "Turkey DeFi and stablecoin trends: actual TRYB use",
+          "publisher": "BiLira",
+          "publishedAt": "2022-12-31",
+          "url": "https://www.bilira.co/en/blog-article/turkey-defi-stablecoin-trends-2022",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 45,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "bilira-2022-tryb-use"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "audf-forte",
+      "reviewedAt": "2026-10-03T23:10:13Z",
+      "expiresAt": "2027-10-03T23:10:13Z",
+      "reviewer": "W1R81 primary-source review",
+      "notes": "30 full elapsed months from the dated 2024-03-14 issuer whitepaper stating AUDF currently operates on Ethereum, Avalanche and Polygon. Not a precise inception-date assertion; no performance, throughput, reconciliation continuity or incident absence is asserted.",
+      "sources": [
+        {
+          "sourceId": "forte-2024-live-whitepaper",
+          "label": "AUDF whitepaper dated 14 March 2024, Technology Stack",
+          "publisher": "Forte Securities Australia",
+          "publishedAt": "2024-03-14",
+          "url": "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/65f294b4fb7847349b4aa198/1710396597284/Forte%2BAUDF%2B-%2BWhitepaper%2B14.03.24.pdf",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 30,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "forte-2024-live-whitepaper"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

@@ -15,13 +15,13 @@
         "liquidity",
         "custody"
       ],
-      "liquidityHorizon": "unknown",
+      "liquidityHorizon": "immediate",
       "sourceKey": "escrow-balance:0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB06GBPSAFO)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W1R81 primary-source and pinned Sonic liquidity review",
     "confidence": "verified",
     "sources": [
       {
@@ -39,9 +39,13 @@
       {
         "label": "Sonic Labs USSD documentation",
         "url": "https://docs.soniclabs.com/sonic/ussd"
+      },
+      {
+        "label": "Current BrandedCustodian implementation: atomic frxUSD withdrawal",
+        "url": "https://sonicscan.org/address/0xD2478F5db285e7d4f1a260C9f142168124d02370#code"
       }
     ],
-    "rationale": "Pinned Sonic block 80179059 on 2026-10-01: BrandedCustodian 0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03 totalAssets() and USSD totalSupply() are exactly equal at 970622.051101100913413464 tokens. custodianTkn() returns 0x80eede496655fb9047dd39d9f418d5483ed600df, and brandedStablecoin() returns the tracked USSD contract. Frax's BrandedCustodian documentation describes 1:1 frxUSD backing. The direct reserve remains 100% Sonic frxUSD with a wrapper dependency on frxusd-frax; underlying Treasury and approved-stablecoin reserves remain inherited look-through exposure, not direct USSD slices.",
+    "rationale": "The original 2026-10-01 composition is preserved. Liquidity metadata reviewed at Sonic block 80306692 on 2026-10-03: actual frxUSD balanceOf(custodian), totalAssets() and native USSD totalSupply() all equal 970845213627100913413464 base units. The beacon returns implementation 0xd2478f5db285e7d4f1a260c9f142168124d02370. Its verified full source burns caller-owned USSD and transfers idle frxUSD atomically; isolatedBackingEnabled=false, router=0, individualCustodian=0, redeemFee=0. Immediate describes availability of the entire direct frxUSD position under the local withdrawal mechanism, not sale at a guaranteed USD price or final bank settlement. Owner recovery, isolation activation, token freeze and upgrade powers remain separate adverse controls; parent reserves and fiat redemption remain inherited.",
     "compositionBasis": "Fixed-block Sonic frxUSD balanceOf the USSD BrandedCustodian reconciled to USSD totalSupply",
     "compositionAsOf": "2026-10-01",
     "scope": "full-composition",

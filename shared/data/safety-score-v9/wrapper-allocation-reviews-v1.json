@@ -4702,6 +4702,65 @@
           "url": "https://sourcify.dev/server/v2/contract/8453/0x812b71c33ae5eafebae967c5670e37eca3cab0ac?fields=sources,compilation,runtimeBytecode"
         }
       ]
+    },
+    {
+      "assetId": "ussd-sonic-labs",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R81 pinned Sonic direct-reserve allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "The direct reserve envelope is solely Sonic frxUSD in the native BrandedCustodian. At block 80306692 its totalAssets equals actual idle frxUSD balance and native USSD totalSupply at 970845213627100913413464 base units. Full verified implementation review shows fixed-rate accounting and deposit/burn/transfer paths, with no local borrowing or lending surface. Owner recovery and isolation activation remain adverse claim controls. Parent custody/reuse and remote bridge/issuance risks remain inherited or separately scored.",
+      "observations": [
+        {
+          "chain": "sonic",
+          "address": "0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03",
+          "function": "totalAssets()/custodianTkn()/brandedStablecoin()/isolatedBackingEnabled()/router()/individualCustodian()/mintFee()/redeemFee()/pricePerShare()",
+          "value": "assets=970845213627100913413464; asset=0x80eede496655fb9047dd39d9f418d5483ed600df; token=0x000000000eccff26b795f73fb0a70d48da657fef; isolated=false; router=0; individualCustodian=0; fees=0; pricePerShare=1000000000000000000",
+          "block": 80306692
+        },
+        {
+          "chain": "sonic",
+          "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+          "function": "balanceOf(0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03)",
+          "value": "970845213627100913413464",
+          "block": 80306692
+        },
+        {
+          "chain": "sonic",
+          "address": "0x000000000eccff26b795f73fb0a70d48da657fef",
+          "function": "totalSupply()",
+          "value": "970845213627100913413464",
+          "block": 80306692
+        },
+        {
+          "chain": "sonic",
+          "address": "0x251d07287c12707418a414b2c95436b4216b7bf4",
+          "function": "implementation()",
+          "value": "0xd2478f5db285e7d4f1a260c9f142168124d02370",
+          "block": 80306692
+        }
+      ],
+      "sources": [
+        {
+          "label": "Full verified BrandedCustodian implementation",
+          "url": "https://sonicscan.org/address/0xD2478F5db285e7d4f1a260C9f142168124d02370#code"
+        },
+        {
+          "label": "Native proxy and beacon",
+          "url": "https://sonicscan.org/address/0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03#code"
+        },
+        {
+          "label": "Frax branded custody specification",
+          "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian"
+        },
+        {
+          "label": "Pinned Sonic RPC",
+          "url": "https://rpc.soniclabs.com"
+        }
+      ]
     }
   ]
 }

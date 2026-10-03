@@ -8,6 +8,8 @@
     "governance": "centralized",
     "rwa": true
   },
+  "variantOf": "frxusd-frax",
+  "variantKind": "pure-wrapper",
   "collateral": "Sonic frxUSD held 1:1 by the USSD BrandedCustodian contract on Sonic. USSD inherits frxUSD's upstream reserve exposure rather than directly holding Frax's tokenized Treasury and approved-stablecoin portfolio.",
   "pegMechanism": "USSD is minted and redeemed 1:1 against Sonic frxUSD through Frax-derived permissionless contracts. Broader approved-asset and tokenized-Treasury routes belong to the upstream frxUSD reserve layer; cross-chain USSD additionally relies on its omnichain infrastructure.",
   "mechanismArchetype": "tbill",
