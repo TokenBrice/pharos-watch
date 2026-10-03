@@ -12497,6 +12497,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "vnxau-vnx",
+      "reviewedAt": "2026-10-03T23:08:54Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "W1R75 primary-source unknown-wave research",
+      "notes": "Lower bound of live token history from exact-token dated evidence as of 2025-12-31; not an inception estimate. No throughput, stress recovery, independently verified reconciliation continuity, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-token-evidence",
+          "label": "Dated VNXAU token supply and gold AUP",
+          "publisher": "VNX Commodities AG / AREVA",
+          "publishedAt": "2026-03-23",
+          "url": "https://vnx.li/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 9,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-token-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "idrt-rupiah-token",
+      "reviewedAt": "2026-10-03T23:08:54Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "W1R75 primary-source unknown-wave research",
+      "notes": "Lower bound of live token history from exact-token dated evidence as of 2026-08-31; not an inception estimate. No throughput, stress recovery, independently verified reconciliation continuity, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-token-evidence",
+          "label": "Dated IDRT liability report",
+          "publisher": "PT Rupiah Token Indonesia / Johannes Juara & Rekan",
+          "publishedAt": "2026-09-29",
+          "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/AUP_PT_Rupiah_Token_Indonesia_FPE_Aug_31_2026_70d8e0d4cf.pdf?updated_at=2026-09-29T09:04:00.517Z",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 1,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-token-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdu-universal",
+      "reviewedAt": "2026-10-03T23:08:54Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "W1R75 primary-source unknown-wave research",
+      "notes": "Lower bound of live token history from exact-token dated evidence as of 2026-08-31; not an inception estimate. No throughput, stress recovery, independently verified reconciliation continuity, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-token-evidence",
+          "label": "Dated USDU liability examination",
+          "publisher": "Universal Digital INTL Limited / Crowe Mak LLP",
+          "publishedAt": "2026-09-18",
+          "url": "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 1,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-token-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "vchf-vnx",
+      "reviewedAt": "2026-10-03T23:18:49Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "W1R75 primary-source unknown-wave research",
+      "notes": "Lower bound of live token history from exact-token dated evidence as of 2026-08-31; not an inception estimate. No throughput, stress recovery, independently verified reconciliation continuity, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-token-evidence",
+          "label": "Exact VCHF covered-token report; not issuer inception",
+          "publisher": "VNX Global Ltd / Apex Fund Services Ltd",
+          "publishedAt": "2026-09-08",
+          "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 1,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-token-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdv-solomon-v2",
+      "reviewedAt": "2026-10-03T23:18:49Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "W1R75 primary-source unknown-wave research",
+      "notes": "Lower bound of live token history from exact-token dated evidence as of 2026-09-04; not an inception estimate. No throughput, stress recovery, independently verified reconciliation continuity, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-token-evidence",
+          "label": "Dated current Chancery deployment identifies exact new USDv mint",
+          "publisher": "Solomon Labs",
+          "publishedAt": "2026-09-04",
+          "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 0,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-token-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

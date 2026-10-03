@@ -28454,6 +28454,522 @@
         "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
       ],
       "rationale": "The exact scoped questions ask for independent human signers/operators and actual key custody. KPK discloses manual team signers, named deployer addresses, shared curator signer sets, quorum and signing practices. Its issuer site, reports index, legal terms, complete docs index, signer/automation architecture and governance archive do not map all exact manual/Security Council signer addresses to independently controlled people or provide per-key custody evidence. Automation EOAs are excluded because their signer-vault custody is positively disclosed."
+    },
+    {
+      "id": "uw-idrt-rupiah-token-cd6ec83654e6bda2",
+      "assetId": "idrt-rupiah-token",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:idrt-rupiah-token:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://rupiahtoken.com/faq/berapa-biaya-pencairan-idrt-ke-idr",
+          "observedAt": "2026-10-03T23:18:49Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "Biaya penarikan (withdrawal fee) IDRT ke IDR adalah 0,5% + biaya transfer bank Rp 6500,- (jika ada)",
+          "assertion": "Published 50 bps plus conditional IDR 6,500 formula requires same-notional FX and applicability evaluation; current undisclosedReviewedFee model does not evaluate it."
+        }
+      ]
+    },
+    {
+      "id": "uw-idrt-rupiah-token-8652780fedbd2ef8",
+      "assetId": "idrt-rupiah-token",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:a04ce16f6cdeba9c7105a50e",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/AUP_PT_Rupiah_Token_Indonesia_FPE_Aug_31_2026_70d8e0d4cf.pdf?updated_at=2026-09-29T09:04:00.517Z",
+          "observedAt": "2026-10-03T23:18:49Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Appendix 1, procedure 3",
+          "excerpt": "Obtain a copy of the bank statements and deposit certificates for each bank account and time deposits used as collateral for Rupiah Token at the end of each month.",
+          "assertion": "AUP discloses bank accounts and time deposits, but no certificate maturity dates, contractual maximum or whole-slice realizability bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://rupiahtoken.com/",
+        "https://rupiahtoken.com/faq",
+        "https://rupiahtoken.com/legal/terms",
+        "https://rupiahtoken.com/whitepaper.pdf",
+        "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/AUP_PT_Rupiah_Token_Indonesia_FPE_Aug_31_2026_70d8e0d4cf.pdf?updated_at=2026-09-29T09:04:00.517Z",
+        "https://rupiahtoken.com/faq/dimana-cadangan-uang-backing-rupiah-token-disimpan-apa-buktinya"
+      ],
+      "rationale": "Maximum contractual deposit maturity and entire-slice liquidation horizon for IDR bank accounts/time deposits are not disclosed. The August AUP names the types and aggregate collateral; FAQ, whitepaper and redemption disclosures do not publish the deposit certificates, lock/early-break terms or maturity ladder. Holder redemption mechanics are not reserve liquidation proof."
+    },
+    {
+      "id": "uw-idrt-rupiah-token-15c57e783254758a",
+      "assetId": "idrt-rupiah-token",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:a04ce16f6cdeba9c7105a50e",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/AUP_PT_Rupiah_Token_Indonesia_FPE_Aug_31_2026_70d8e0d4cf.pdf?updated_at=2026-09-29T09:04:00.517Z",
+          "observedAt": "2026-10-03T23:18:49Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Appendix 1, procedure 3",
+          "excerpt": "Obtain a copy of the bank statements and deposit certificates for each bank account and time deposits used as collateral for Rupiah Token at the end of each month.",
+          "assertion": "AUP discloses bank accounts and time deposits, but no certificate maturity dates, contractual maximum or whole-slice realizability bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://rupiahtoken.com/",
+        "https://rupiahtoken.com/faq",
+        "https://rupiahtoken.com/legal/terms",
+        "https://rupiahtoken.com/whitepaper.pdf",
+        "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/AUP_PT_Rupiah_Token_Indonesia_FPE_Aug_31_2026_70d8e0d4cf.pdf?updated_at=2026-09-29T09:04:00.517Z",
+        "https://rupiahtoken.com/faq/dimana-cadangan-uang-backing-rupiah-token-disimpan-apa-buktinya"
+      ],
+      "rationale": "Maximum contractual deposit maturity and entire-slice liquidation horizon for IDR bank accounts/time deposits are not disclosed. The August AUP names the types and aggregate collateral; FAQ, whitepaper and redemption disclosures do not publish the deposit certificates, lock/early-break terms or maturity ladder. Holder redemption mechanics are not reserve liquidation proof."
+    },
+    {
+      "id": "uw-usdu-universal-70710eb41ecaaa20",
+      "assetId": "usdu-universal",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:9aa6907919efd87e0fbde46b",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf",
+          "observedAt": "2026-10-03T23:18:49Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Reserve report notes",
+          "excerpt": "USDU reserves will only be invested in fiat deposits in UAE Central Bank regulated Banks",
+          "assertion": "Deposit category is disclosed without contractual maturity or reserve-account withdrawal/realization maximum."
+        },
+        {
+          "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf",
+          "observedAt": "2026-10-03T23:18:49Z",
+          "datumAsOf": "2026-01-30",
+          "location": "Page 10",
+          "excerpt": "Typically burning and redemption will take 2 business days, following the completion of any required customer due diligence.",
+          "assertion": "Typical customer redemption is not a bank-deposit maturity or entire reserve realization covenant."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.universal.ae/",
+        "https://www.universal.ae/transparency",
+        "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf",
+        "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf",
+        "https://www.adgm.com/public-registers/fsra/firms/financial-firms/universal-digital-intl-limited-250089"
+      ],
+      "rationale": "The USD bank-deposit slice has no disclosed contractual maturity maximum or full-book realization horizon. Crowe confirms aggregate bank balances without account terms. Whitepaper reserve mandate, transparency archive, issuer banking disclosures and FSRA register do not supply deposit certificates or withdrawal/lock terms; typical client redemption is not reserve liquidity."
+    },
+    {
+      "id": "uw-usdu-universal-6bc842b99a7e8e6e",
+      "assetId": "usdu-universal",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:9aa6907919efd87e0fbde46b",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf",
+          "observedAt": "2026-10-03T23:18:49Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Reserve report notes",
+          "excerpt": "USDU reserves will only be invested in fiat deposits in UAE Central Bank regulated Banks",
+          "assertion": "Deposit category is disclosed without contractual maturity or reserve-account withdrawal/realization maximum."
+        },
+        {
+          "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf",
+          "observedAt": "2026-10-03T23:18:49Z",
+          "datumAsOf": "2026-01-30",
+          "location": "Page 10",
+          "excerpt": "Typically burning and redemption will take 2 business days, following the completion of any required customer due diligence.",
+          "assertion": "Typical customer redemption is not a bank-deposit maturity or entire reserve realization covenant."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.universal.ae/",
+        "https://www.universal.ae/transparency",
+        "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf",
+        "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf",
+        "https://www.adgm.com/public-registers/fsra/firms/financial-firms/universal-digital-intl-limited-250089"
+      ],
+      "rationale": "The USD bank-deposit slice has no disclosed contractual maturity maximum or full-book realization horizon. Crowe confirms aggregate bank balances without account terms. Whitepaper reserve mandate, transparency archive, issuer banking disclosures and FSRA register do not supply deposit certificates or withdrawal/lock terms; typical client redemption is not reserve liquidity."
+    },
+    {
+      "id": "uw-vchf-vnx-f9f0e4372b4f1498",
+      "assetId": "vchf-vnx",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:vchf-vnx:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": null,
+          "location": "Annex III C, fiat withdrawal fees",
+          "excerpt": "Every time you withdraw fiat funds from your Platform User Account you will be charged the fee in the amount of GBP 30 and CHF 30 for SWIFT transfers.",
+          "assertion": "Public CHF 30 SWIFT fee plus conditional unused-funds percentage requires FX and account-history scenario evaluation, absent from current route cost model."
+        }
+      ]
+    },
+    {
+      "id": "uw-vchf-vnx-6d00ae72f2dbfd80",
+      "assetId": "vchf-vnx",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Sections 2.1-2.3",
+          "excerpt": "For purposes of this report, the Covered Stablecoins are limited to the VCHF and VGBP tokens listed below on the identified blockchains.",
+          "assertion": "Scoped report covers six VCHF chains, not a reconciled all-deployment token liability perimeter."
+        },
+        {
+          "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": null,
+          "location": "Overview and VCHF contract registry",
+          "excerpt": "Every deployment listed below represents the same underlying claim against VNX's segregated reserves.",
+          "assertion": "Current registry additionally lists Tezos while the examined VCHF schedule omits Tezos; older catalog deployments also lack an explicit current liability bridge."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vnx.li/",
+        "https://vnx.io/swiss-franc",
+        "https://faq.vnx.io/en/",
+        "https://vnx.gitbook.io/vnx-global/transparency/audits.md",
+        "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+        "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
+        "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
+        "https://vnx.gitbook.io/vnx-global/institutional/reserve/reserve-management.md"
+      ],
+      "rationale": "The current whole-VCHF reserve composition, whole-supply reconciliation cadence and assurance join remain undisclosed across all retained liabilities. Apex publishes a genuine CHF cash examination for six chains, but omits registry-listed Tezos and gives no reconciliation of legacy catalog deployments, excluded supply and migration into this covered book. Daily valuation and monthly scoped examinations do not establish that missing whole-liability perimeter."
+    },
+    {
+      "id": "uw-vchf-vnx-87b280d41e0226d5",
+      "assetId": "vchf-vnx",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Sections 2.1-2.3",
+          "excerpt": "For purposes of this report, the Covered Stablecoins are limited to the VCHF and VGBP tokens listed below on the identified blockchains.",
+          "assertion": "Scoped report covers six VCHF chains, not a reconciled all-deployment token liability perimeter."
+        },
+        {
+          "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": null,
+          "location": "Overview and VCHF contract registry",
+          "excerpt": "Every deployment listed below represents the same underlying claim against VNX's segregated reserves.",
+          "assertion": "Current registry additionally lists Tezos while the examined VCHF schedule omits Tezos; older catalog deployments also lack an explicit current liability bridge."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vnx.li/",
+        "https://vnx.io/swiss-franc",
+        "https://faq.vnx.io/en/",
+        "https://vnx.gitbook.io/vnx-global/transparency/audits.md",
+        "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+        "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
+        "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
+        "https://vnx.gitbook.io/vnx-global/institutional/reserve/reserve-management.md"
+      ],
+      "rationale": "The current whole-VCHF reserve composition, whole-supply reconciliation cadence and assurance join remain undisclosed across all retained liabilities. Apex publishes a genuine CHF cash examination for six chains, but omits registry-listed Tezos and gives no reconciliation of legacy catalog deployments, excluded supply and migration into this covered book. Daily valuation and monthly scoped examinations do not establish that missing whole-liability perimeter."
+    },
+    {
+      "id": "uw-vchf-vnx-559f1e6d00625760",
+      "assetId": "vchf-vnx",
+      "scope": {
+        "componentKey": "mechanism-review:assuranceAndReconciliation",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "mechanism-review:assuranceAndReconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Sections 2.1-2.3",
+          "excerpt": "For purposes of this report, the Covered Stablecoins are limited to the VCHF and VGBP tokens listed below on the identified blockchains.",
+          "assertion": "Scoped report covers six VCHF chains, not a reconciled all-deployment token liability perimeter."
+        },
+        {
+          "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": null,
+          "location": "Overview and VCHF contract registry",
+          "excerpt": "Every deployment listed below represents the same underlying claim against VNX's segregated reserves.",
+          "assertion": "Current registry additionally lists Tezos while the examined VCHF schedule omits Tezos; older catalog deployments also lack an explicit current liability bridge."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vnx.li/",
+        "https://vnx.io/swiss-franc",
+        "https://faq.vnx.io/en/",
+        "https://vnx.gitbook.io/vnx-global/transparency/audits.md",
+        "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+        "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
+        "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
+        "https://vnx.gitbook.io/vnx-global/institutional/reserve/reserve-management.md"
+      ],
+      "rationale": "The current whole-VCHF reserve composition, whole-supply reconciliation cadence and assurance join remain undisclosed across all retained liabilities. Apex publishes a genuine CHF cash examination for six chains, but omits registry-listed Tezos and gives no reconciliation of legacy catalog deployments, excluded supply and migration into this covered book. Daily valuation and monthly scoped examinations do not establish that missing whole-liability perimeter."
+    },
+    {
+      "id": "uw-vnxau-vnx-3e0cd4acdd66e9ad",
+      "assetId": "vnxau-vnx",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://vnx.li/vnxau-transparency",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": null,
+          "location": "Audit reports, 31.12.2025",
+          "excerpt": "Gold reserve report on VNXAU gold tokens \u2014 examination of management assertions",
+          "assertion": "Current archive exposes December 31, 2025 report only; current exact full-book composition/reconciliation is not provided."
+        },
+        {
+          "url": "https://vnx.li/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": "2025-12-31",
+          "location": "Restrictions on procedures, page 7",
+          "excerpt": "Any activity prior to or after that date or time was not considered when testing the assertions described above.",
+          "assertion": "Historical AUP cannot establish current expanded VNXAU deployment supply-to-gold reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vnx.li/",
+        "https://vnx.li/vnxau",
+        "https://vnx.li/vnxau-transparency",
+        "https://vnx.li/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
+        "https://vnx.io/gold",
+        "https://vnx.gitbook.io/vnx-global/vnx-ecosystem/vnxau.md"
+      ],
+      "rationale": "Current whole-VNXAU reserve composition and assurance/reconciliation for the expanded mint perimeter are not published. The issuer discloses one gram allocated gold and a December 2025 AUP covering five historical deployments; the current case study/transparency names a different four-chain set and no newer full-book report. Historical gold grams cannot be re-dated or treated as a current whole-liability reserve schedule."
+    },
+    {
+      "id": "uw-vnxau-vnx-4c466d398750a000",
+      "assetId": "vnxau-vnx",
+      "scope": {
+        "componentKey": "mechanism-review:assuranceAndReconciliation",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "mechanism-review:assuranceAndReconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://vnx.li/vnxau-transparency",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": null,
+          "location": "Audit reports, 31.12.2025",
+          "excerpt": "Gold reserve report on VNXAU gold tokens \u2014 examination of management assertions",
+          "assertion": "Current archive exposes December 31, 2025 report only; current exact full-book composition/reconciliation is not provided."
+        },
+        {
+          "url": "https://vnx.li/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": "2025-12-31",
+          "location": "Restrictions on procedures, page 7",
+          "excerpt": "Any activity prior to or after that date or time was not considered when testing the assertions described above.",
+          "assertion": "Historical AUP cannot establish current expanded VNXAU deployment supply-to-gold reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vnx.li/",
+        "https://vnx.li/vnxau",
+        "https://vnx.li/vnxau-transparency",
+        "https://vnx.li/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
+        "https://vnx.io/gold",
+        "https://vnx.gitbook.io/vnx-global/vnx-ecosystem/vnxau.md"
+      ],
+      "rationale": "Current whole-VNXAU reserve composition and assurance/reconciliation for the expanded mint perimeter are not published. The issuer discloses one gram allocated gold and a December 2025 AUP covering five historical deployments; the current case study/transparency names a different four-chain set and no newer full-book report. Historical gold grams cannot be re-dated or treated as a current whole-liability reserve schedule."
+    },
+    {
+      "id": "uw-usdv-solomon-v2-3628b08607274051",
+      "assetId": "usdv-solomon-v2",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://docs.solomonlabs.org/usdv/transparency-and-risk",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "The USDv dashboard is intended to show:",
+          "assertion": "Dashboard publishes supply and reserves, not a dated full on/offchain asset/liability reconciliation procedure and recurring cadence."
+        },
+        {
+          "url": "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "Reserve composition can change based on supply, redemption needs, market liquidity, counterparty access, risk management, and program requirements.",
+          "assertion": "Reserve management description is not whole-supply reconciliation evidence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://solomonlabs.org/",
+        "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves",
+        "https://docs.solomonlabs.org/usdv/transparency-and-risk",
+        "https://docs.solomonlabs.org/usdv/audits-and-security",
+        "https://app.solomonlabs.org/stats",
+        "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md",
+        "https://solomonlabs.org/terms-of-use",
+        "https://blog.solomonlabs.org/p/winding-down-the-original-usdv"
+      ],
+      "rationale": "No documented recurring whole-new-USDv supply-to-backing reconciliation is disclosed. Current dashboard balances, Chancery PDA accounting, authority documentation and security audits do not reconcile every on/offchain reserve, mint/burn flow and outstanding liability on a common clock/cadence. The legacy beta article describes an older distinct token and cannot establish new-token reconciliation."
+    },
+    {
+      "id": "uw-usdv-solomon-v2-3237766bbbfd32ee",
+      "assetId": "usdv-solomon-v2",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "supervision",
+        "pillar": "control",
+        "requiredDatum": "supervision",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://solomonlabs.org/terms-of-use",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": "2026-07-15",
+          "location": "Sections 1-4",
+          "excerpt": "\u201cSolomon Labs\u201d is a brand term only and is not a legal entity.",
+          "assertion": "Brand/IP owner/interface operator identification does not establish exact new-USDv issuing entity or applicable issuer prudential regime."
+        },
+        {
+          "url": "https://solomonlabs.org/terms-of-use",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": "2026-07-15",
+          "location": "Section 2",
+          "excerpt": "These are main-website Terms only.",
+          "assertion": "Terms exclude separate issuer/redemption arrangements; interface regulatory disclaimer cannot be encoded as reviewed absence of issuer supervision."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://solomonlabs.org/",
+        "https://solomonlabs.org/terms-of-use",
+        "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves",
+        "https://docs.solomonlabs.org/usdv/transparency-and-risk",
+        "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming",
+        "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md",
+        "https://solomondao.org/"
+      ],
+      "rationale": "The exact new-USDv legal issuer and licence/activity covering its token issuance are undisclosed. Main-site terms name Panama interface operator Genesee and Marshall Islands IP owner SOLOMON DAO LLC but expressly separate issuer arrangements. Token docs, legal terms, current authority/deployment disclosure and scoped issuer/regulatory search establish no issuer register identity; no supervision:none inference is made."
     }
   ]
 }
