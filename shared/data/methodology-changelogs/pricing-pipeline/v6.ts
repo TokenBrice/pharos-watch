@@ -5,7 +5,7 @@ export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
     version: "6.41",
     title: "Reviewed pricing routes and fiat references for expanded asset coverage",
     date: "2026-10-03",
-    effectiveAt: 1790985600,
+    effectiveAt: 1791048600,
     summary:
       "Universal USD gains a guarded Uniswap v3 missing-price route, and JLTXX uses exact-class JPMorgan NAV telemetry. CZK, PLN and AED become first-class FX pegs. Reviewed ERC-4626 vaults share live and pre-intake NAV valuation, while ONED and PYUSDx gain issuer-conversion references that preserve fresh own market prices.",
     impact: [
