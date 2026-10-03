@@ -8171,17 +8171,17 @@
     },
     {
       "assetId": "hbusdt-hyperbeat",
-      "reviewedAt": "2026-10-03T22:57:32Z",
-      "expiresAt": "2027-10-03T22:57:32Z",
-      "reviewer": "W1R60 unknown-resolver",
-      "notes": "Exact hbUSDT vault token deployment provides a 17-full-month lower bound; no Tether parent history is inherited. No redemption stress performance, assurance continuity or incident-free history is asserted.",
+      "reviewedAt": "2026-10-03T23:48:27Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "Unknown wave W2R09",
+      "notes": "Corrected deployment tx hash (ff7, not 6f7) resolves to exact hbUSDT 0x5e105266db42f78FA814322Bce7f388B4C2e61eb created May 2 2025 at block 3270801. Seventeen full months by October 3 2026 is eligibility-only implementation history, not performance/incident evidence.",
       "sources": [
         {
           "sourceId": "vault-token-creation",
-          "label": "Hyperbeat USDT vault token contract creation transaction",
+          "label": "Exact hbUSDT successful contract creation, block 3270801",
           "publisher": "HyperEVMScan",
           "publishedAt": "2025-05-02",
-          "url": "https://hyperevmscan.io/tx/0x99ea9968412a0da66f7ec8d18a77da4a914981f8125382f61a0829cdac84c1ca",
+          "url": "https://hyperevmscan.io/tx/0x99ea9968412a0da6ff7ec8d18a77da4a914981f8125382f61a0829cdac84c1ca",
           "confidence": "issuer-reported"
         }
       ],
