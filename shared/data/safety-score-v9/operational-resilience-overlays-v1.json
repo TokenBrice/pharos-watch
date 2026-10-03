@@ -1163,6 +1163,105 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "xaut-tether",
+      "reviewedAt": "2026-10-03T22:46:23Z",
+      "expiresAt": "2027-10-03T22:46:23Z",
+      "reviewer": "W1R01 primary-source unknown-wave review",
+      "notes": "Issuer dated exact-token live operation establishes only a calendar-month lower bound. No independently verified uninterrupted history, redemption throughput, stress recovery, reconciliation continuity or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Tether Gold operating exchange listing",
+          "publisher": "Tether Operations",
+          "publishedAt": "2020-05-19",
+          "url": "https://tether.io/news/btse-lists-tether-gold-xaut/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 76,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usat-tether",
+      "reviewedAt": "2026-10-03T22:46:23Z",
+      "expiresAt": "2027-10-03T22:46:23Z",
+      "reviewer": "W1R01 primary-source unknown-wave review",
+      "notes": "Issuer dated exact-token live operation establishes only a calendar-month lower bound. No independently verified uninterrupted history, redemption throughput, stress recovery, reconciliation continuity or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Official USA₮ launch",
+          "publisher": "Tether Operations",
+          "publishedAt": "2026-01-27",
+          "url": "https://tether.io/news/tether-announces-the-launch-of-usat-the-federally-regulated-dollar-backed-stablecoin-made-in-america/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 8,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "mxnt-tether",
+      "reviewedAt": "2026-10-03T22:46:23Z",
+      "expiresAt": "2027-10-03T22:46:23Z",
+      "reviewer": "W1R01 primary-source unknown-wave review",
+      "notes": "Issuer dated exact-token live operation establishes only a calendar-month lower bound. No independently verified uninterrupted history, redemption throughput, stress recovery, reconciliation continuity or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Official MXN₮ launch",
+          "publisher": "Tether Operations",
+          "publishedAt": "2022-05-26",
+          "url": "https://tether.io/news/tether-launches-mxntugrik-tether-tokens-pegged-to-the-mexican-peso/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 52,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

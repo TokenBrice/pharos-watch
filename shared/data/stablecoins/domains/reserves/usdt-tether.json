@@ -93,7 +93,7 @@
       "name": "Precious metals",
       "pct": 10.033669,
       "risk": "medium",
-      "assetClass": "other",
+      "assetClass": "commodity-allocated",
       "issuerOrObligor": "Physical gold inventory",
       "riskFactors": [
         "market",
@@ -163,10 +163,14 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Safety Score v10.01 BDO primary-source classification and horizon review",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Safety Score v10.01 BDO primary-source classification and horizon review; W1R01 physical-gold class verification",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "W1R01 2026-10-03 class-only verification: PDF page 9 footnote 9 identifies LBMA standard physical gold bars owned by the Company; commodity-allocated, no contractual maturity asserted",
+        "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"
+      },
       {
         "label": "BDO ISAE 3000R report at 2026-06-30, signed 2026-07-31; report page 4 / PDF page 9, footnotes 3-13 reverified 2026-10-02 UTC",
         "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"

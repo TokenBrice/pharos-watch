@@ -2372,6 +2372,338 @@
         "https://app.morpho.org/ethereum/vault/0xbeef088055857739c12cd3765f20b7679def0f51/steakhouse-prime-instant"
       ],
       "rationale": "The exact deployed lending-position slice has no published whole-slice maximum realization horizon. Reviewed issuer product/risk documents, legal terms and document archive, protocol withdrawal docs and exact verified source disclose liquidity dependence, not a bounded repayment SLA. Instant branding, atomic execution when liquid, and current idle balances do not prove immediate realizability of the complete position. This is a noncustodial protocol vault, not an attested fund with a regulator-mandated redemption term."
+    },
+    {
+      "id": "uw-mxnt-tether-92b4f5b791b4b92c",
+      "assetId": "mxnt-tether",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:63270a616c9f076f331322d9",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
+      "sources": [
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T22:55:50Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Section 4.1",
+          "excerpt": "The Reserves are comprised of cash, cash equivalents and other assets and may include loan receivables and other assets from Affiliates.",
+          "assertion": "The shared reserve basket does not disclose an MXNT-specific allocation, maximum maturity or whole-basket liquidation bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/how-it-works/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+      ],
+      "rationale": "MXNT-specific maturityDaysMax and liquidityHorizon are not disclosed in current legal terms, issuer FAQ, transparency/report index, full Q2 reserve report or CNAD-filed RID. They disclose a shared changing basket, not MXNT-specific holdings or a complete realization deadline. USDT category maturities cannot be imported as an MXNT maximum."
+    },
+    {
+      "id": "uw-mxnt-tether-dc82f3c48ca42263",
+      "assetId": "mxnt-tether",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:63270a616c9f076f331322d9",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
+      "sources": [
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T22:55:50Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Section 4.1",
+          "excerpt": "The Reserves are comprised of cash, cash equivalents and other assets and may include loan receivables and other assets from Affiliates.",
+          "assertion": "The shared reserve basket does not disclose an MXNT-specific allocation, maximum maturity or whole-basket liquidation bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/how-it-works/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+      ],
+      "rationale": "MXNT-specific maturityDaysMax and liquidityHorizon are not disclosed in current legal terms, issuer FAQ, transparency/report index, full Q2 reserve report or CNAD-filed RID. They disclose a shared changing basket, not MXNT-specific holdings or a complete realization deadline. USDT category maturities cannot be imported as an MXNT maximum."
+    },
+    {
+      "id": "uw-usdt-tether-ff8af77bfdec2f9a",
+      "assetId": "usdt-tether",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:bbe3851d64bce9dedc4fb999",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
+      "sources": [
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T22:55:49Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 footnote 7",
+          "excerpt": "The \u201cCash & Bank Deposits\u201d category comprises cash deposits at financial institutions.",
+          "assertion": "No demand/term split or maximum term of the whole deposit slice is stated."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T22:55:49Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 footnote 11",
+          "excerpt": "The \u201cPublic Equities\u201d category comprises indirect gold, bitcoin, and other asset exposure",
+          "assertion": "The report does not identify instruments or state contractual maturity applicability/maximum term of the indirect exposures."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/how-it-works/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+      ],
+      "rationale": "Exact slice maximum maturities for cash/bank deposits and indirect public-equity exposures are not published in the full report, current transparency disclosures, FAQ, legal terms or CNAD-filed RID. Cash-deposit wording does not prove all are demand deposits; active-market indirect exposures do not establish instrument-level maturity or applicability."
+    },
+    {
+      "id": "uw-usdt-tether-ae7153e3f83418f4",
+      "assetId": "usdt-tether",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c271d604eb64f6f89594867f",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
+      "sources": [
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T22:55:49Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 footnote 7",
+          "excerpt": "The \u201cCash & Bank Deposits\u201d category comprises cash deposits at financial institutions.",
+          "assertion": "No demand/term split or maximum term of the whole deposit slice is stated."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T22:55:49Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 footnote 11",
+          "excerpt": "The \u201cPublic Equities\u201d category comprises indirect gold, bitcoin, and other asset exposure",
+          "assertion": "The report does not identify instruments or state contractual maturity applicability/maximum term of the indirect exposures."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/how-it-works/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+      ],
+      "rationale": "Exact slice maximum maturities for cash/bank deposits and indirect public-equity exposures are not published in the full report, current transparency disclosures, FAQ, legal terms or CNAD-filed RID. Cash-deposit wording does not prove all are demand deposits; active-market indirect exposures do not establish instrument-level maturity or applicability."
+    },
+    {
+      "id": "uw-usdt-tether-a5ac49ecd1562e98",
+      "assetId": "usdt-tether",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdt-tether:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
+      "sources": [
+        {
+          "url": "https://tether.to/en/redeem-tethers-to-fiat-currency/",
+          "observedAt": "2026-10-03T22:55:50Z",
+          "datumAsOf": null,
+          "location": "Step 3",
+          "excerpt": "You will also be notified when the request has been processed.",
+          "assertion": "The step-by-step bank redemption guide has no maximum request-to-final-bank-credit interval."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/how-it-works/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf",
+        "https://tether.to/en/knowledge-base/",
+        "https://tether.to/en/redeem-tethers-to-fiat-currency/"
+      ],
+      "rationale": "USDT direct fiat redemption terms and exact bank redemption guide disclose verified bank payment, KYC and discretionary suspensions, not an end-to-end final-bank-credit maximum SLA. RID, legal terms and FAQs also provide no such bound; token transfer speed is not fiat completion."
+    },
+    {
+      "id": "uw-xaut-tether-dca1228a7aacb8b6",
+      "assetId": "xaut-tether",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:xaut-tether:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
+      "sources": [
+        {
+          "url": "https://gold.tether.to/legal/termsofservice",
+          "observedAt": "2026-10-03T22:56:07Z",
+          "datumAsOf": "2025-09-09",
+          "location": "Section 5.3",
+          "excerpt": "However, it may take several business days for any redemption to be completed.",
+          "assertion": "Several business days is not a maximum for physical delivery, sale/wire or whole-reserve realization."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://gold.tether.to/faq",
+        "https://gold.tether.to/legal/termsofservice",
+        "https://gold.tether.to/legal/feeschedule",
+        "https://gold.tether.to/Relevant%20Information%20Document%20-%20TG%20Commodities,%20S.A.%20de%20C.V.%20(ENG).pdf",
+        "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf"
+      ],
+      "rationale": "Exact physical-redemption settlement maximum and whole-slice liquidityHorizon are undisclosed. Terms promise commercially reasonable processing with possible delays; full-bar delivery and Swiss gold sale/wire have no maximum. FAQ, fee schedule, reserve report and CNAD-filed RID do not supply a full-position realization bound. Gold market availability is not instant whole-slice USD liquidity."
+    },
+    {
+      "id": "uw-xaut-tether-adcec5b7eb565f8e",
+      "assetId": "xaut-tether",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:3cf818dc42a5e2c91af7720d",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
+      "sources": [
+        {
+          "url": "https://gold.tether.to/legal/termsofservice",
+          "observedAt": "2026-10-03T22:56:07Z",
+          "datumAsOf": "2025-09-09",
+          "location": "Section 5.3",
+          "excerpt": "However, it may take several business days for any redemption to be completed.",
+          "assertion": "Several business days is not a maximum for physical delivery, sale/wire or whole-reserve realization."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://gold.tether.to/faq",
+        "https://gold.tether.to/legal/termsofservice",
+        "https://gold.tether.to/legal/feeschedule",
+        "https://gold.tether.to/Relevant%20Information%20Document%20-%20TG%20Commodities,%20S.A.%20de%20C.V.%20(ENG).pdf",
+        "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf"
+      ],
+      "rationale": "Exact physical-redemption settlement maximum and whole-slice liquidityHorizon are undisclosed. Terms promise commercially reasonable processing with possible delays; full-bar delivery and Swiss gold sale/wire have no maximum. FAQ, fee schedule, reserve report and CNAD-filed RID do not supply a full-position realization bound. Gold market availability is not instant whole-slice USD liquidity."
+    },
+    {
+      "id": "uw-xaut-tether-a54258f4e7371188",
+      "assetId": "xaut-tether",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:xaut-tether:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
+      "sources": [
+        {
+          "url": "https://gold.tether.to/legal/feeschedule",
+          "observedAt": "2026-10-03T22:56:07Z",
+          "datumAsOf": "2025-01-27",
+          "location": "Footnote 4",
+          "excerpt": "Physical delivery of the bullion bar(s) requires payment of fees to defray the associated delivery cost.",
+          "assertion": "The 25-bps base fee is disclosed but delivery surcharge lacks a numerical schedule or maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://gold.tether.to/faq",
+        "https://gold.tether.to/legal/termsofservice",
+        "https://gold.tether.to/legal/feeschedule",
+        "https://gold.tether.to/Relevant%20Information%20Document%20-%20TG%20Commodities,%20S.A.%20de%20C.V.%20(ENG).pdf",
+        "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf"
+      ],
+      "rationale": "Exact total physical-redemption cost remains undisclosed: schedule gives 25 bps plus applicable fees, with delivery cost and potential broker mark-up but no numeric surcharge formula or maximum. Base fee is already modeled; this partial formula is not the missing complete same-notional cost, and is not a B justification."
+    },
+    {
+      "id": "uw-usat-tether-6ba19618ecac9828",
+      "assetId": "usat-tether",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usat-tether:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
+      "sources": [
+        {
+          "url": "https://www.anchorage.com/usat-policies-disclosures",
+          "observedAt": "2026-10-03T22:55:50Z",
+          "datumAsOf": "2026-08-21",
+          "location": "Issuance and Redemption Policy",
+          "excerpt": "net of any fees disclosed in the USAT Fee Schedule.",
+          "assertion": "The USAT policy references fees but does not supply the USAT table."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://usat.io/",
+        "https://usat.io/terms/",
+        "https://www.anchorage.com/terms-and-disclosures",
+        "https://www.anchorage.com/usat-policies-disclosures",
+        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-service-fee-schedule",
+        "https://docs.anchorage.com/knowledge-base/platform/users/stablecoins",
+        "https://www.anchorage.com/platform/usat-reserve-attestations"
+      ],
+      "rationale": "Exact USAT issuer redemption fee schedule is not publicly supplied on issuer legal center, USAT policies, supported-stablecoin docs, website terms or reserve archive. The public covered-stablecoin fee table only specifies USDtb/USDPT/USDGO; USAT requires separate onboarding. Neither par redemption nor other assets zero fees establishes USAT cost."
     }
   ]
 }

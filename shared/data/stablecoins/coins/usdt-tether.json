@@ -441,7 +441,7 @@
           "name": "Precious metals",
           "pct": 10.033669,
           "risk": "medium",
-          "assetClass": "other",
+          "assetClass": "commodity-allocated",
           "issuerOrObligor": "Physical gold inventory",
           "riskFactors": [
             "market",
