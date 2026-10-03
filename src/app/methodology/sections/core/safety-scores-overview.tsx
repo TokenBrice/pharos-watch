@@ -9,17 +9,18 @@ export function SafetyScoresOverview() {
   return (
     <>
       <p>
-        Safety Score V10 is the active model for identity-aware consumers. It evaluates three material risk pillars:
-        Backing (40%), Exit (35%), and Economic Control (25%). The aggregation allows bounded headroom above the
-        weakest material path, then applies peg behavior, structural ceilings, evidence sufficiency, track record,
-        dependencies, and wrapper-local risk. A strong unrelated pillar therefore cannot erase a weak material
-        failure path.
+        Safety Score V10 evaluates Backing, Exit and Economic Control, normally weighted 40%, 35% and 25%.
+        It allows only bounded headroom above the weakest included pillar: a strong unrelated pillar cannot erase
+        a known weak path. v10.01 stops treating our missing measurements as asset risk. Known peg problems,
+        structural constraints, dependency limits and track record still matter; missing-data ceilings do not.
       </p>
       <p>
-        Exit selects the strongest exact same-notional route and may add a bounded independent-backup credit:
-        {" "}<span className="font-mono">min(10, 100 - primary) × backup / 100</span>. The score card shows the
-        selected route, backup credit, and actual stress-request completion separately. The standalone DEX market
-        score and redemption route score describe their own modules; neither is the V10 Exit score.
+        Exit compares every admissible route alone and every independently usable pair, then takes the best feasible
+        portfolio. The stronger member is primary; its backup adds{" "}
+        <span className="font-mono">min(10, 100 − primary score) × backup score / 100</span>. An improving correlated
+        alternative cannot displace a better independent pair. Capacity, output, fees, access, settlement and
+        shared-resource checks still apply. Cards show selected routes, backup credit and stress-request completion
+        separately; standalone route scores are not the Safety Score Exit pillar.
       </p>
       <p>
         Since methodology v9.96, issuer redemption routes honor reviewed explicit stablecoin payouts before the legacy
@@ -55,13 +56,12 @@ export function SafetyScoresOverview() {
         substitute for an executable route.
       </p>
       <p>
-        Since methodology v9.4, a favorable faster-settlement term receives credit only when the exact delay has a
-        review date and source; a conservative correction can still lower credit without asserting a favorable
-        promise. Curated settlement and cost terms can therefore move Exit in either direction. A route whose
-        same-notional capacity, settlement, or cost is not established publishes a bounded terms gap: supported
-        partial evidence remains visible, but generated fallback values receive no primary or backup credit, and
-        ordinary uncertainty does not become measured danger. Since methodology v9.45, an open route with an
-        unproven settlement bound takes the bounded floor and exit-unverified ceiling instead of Exit 0.
+        Faster settlement needs a reviewed delay and source. A route with unproven same-notional capacity, cost or
+        settlement stays visible but receives no invented executable or backup credit. Genuine unresearched or
+        undisclosed whole-exit uncertainty remains bounded at 35 where the policy permits it, not measured zero
+        and not an Exit-wide ceiling. Proven pipeline or curation gaps are excluded rather than charged. The bounded
+        floor is applied after portfolio selection; evidence explanations do not switch on or off when the floor
+        binds. Measured exhaustion still needs complete admitted evidence.
       </p>
       <p>
         Equal-score route ties and every other canonical V10 array use locale-independent JavaScript code-unit order.
@@ -70,10 +70,38 @@ export function SafetyScoresOverview() {
         collated a non-ASCII or case-sensitive key differently, but it does not change numeric score or grade math.
       </p>
       <p>
-        V10 distinguishes measured adverse evidence from issuer non-disclosure, unsupported methodology, missing
-        integration, and transient producer failure. Bounded gaps can remain rateable under explicit ceilings; an
-        unbounded required fact remains NR. F is reserved for causally attributed measured danger, while a D requires
-        measured weakness or traceable policy-bounded uncertainty.
+        We classify why evidence is missing: A, our pipeline was unavailable; B, the required current data is public
+        but we have not curated it; C, research found the issuer does not disclose it; U, not yet researched;
+        D, a measured adverse fact. A/B exclusion needs proof for that asset and question, not just a missing value.
+        U is never labelled issuer silence. Unknown values do not prove safety, failure or zero loss.
+      </p>
+      <p>
+        Proven A/B components do not score and carry a visible “Partial evidence: pipeline gap” flag.
+        If one whole pillar is excluded, the other two weights are renormalized. If two or three are excluded,
+        we show Pipeline gap with no score or grade—not NR and not a one-pillar rating. Known restrictions and
+        measured problems remain charged even beside a gap. Measuring a formerly excluded weak pillar can lower
+        a partial rating because coverage has changed.
+      </p>
+      <p>
+        For C/U, quality credit is no lower than before v10.01 and no lower than the weakest comparable ordinary
+        disclosed rung; existing uncertainty charges and discounts remain. This does not guarantee every disclosure
+        raises a score: cost, holder, topology, some route defaults and wrapper charges retain explicit exceptions
+        where a genuinely weaker measurement scores lower. There are no missing-data whole-score ceilings.
+        Evidence-based NR counts U as C. A pillar must still be limited by its pre-v10.01 evidence predicate after
+        A/B relief and have a real compiled witness; a newly tagged bounded component alone does not qualify.
+        A computed F without measured adversity is still withheld, explained as “Score below the F threshold
+        without a measured adverse fact”.
+      </p>
+      <p>
+        Exit shows observation, model and capacity-method confidence separately. Positive method identity maps to
+        its tier: live-direct is 1 and same-run verified live queue/proxy is 0.75. Known queue delays and liquidity
+        limits still count. A proven-empty, reconciled route surface is measured adverse D, not an unknown gap.
+        A confidence gap caused by our pipeline or curation does not discount the asset, but this never makes stale
+        capacity current or admits an invalid execution certificate. Issuer/unresearched uncertainty and genuinely
+        weaker models still apply. Unknown holder terms are not verified eligibility; an unevaluated public fee
+        formula is not a zero fee. Wrapper A/B gaps do not trigger form fallback charges; C/U eligibility follows
+        cause, not a legacy disposition label. Allocation reviews resolve U custody/reuse, while other eligible
+        local gaps keep existing charges and no missing proof grants risk-transfer credit.
       </p>
       <p>
         Live reserve percentages are scoring weights, not identities. A namespace-qualified stable source key joins
@@ -82,10 +110,11 @@ export function SafetyScoresOverview() {
         a unique normalized-name compatibility join.
       </p>
       <p>
-        Since methodology v9.4, reserve classification remains current for 365 days while composition uses a 31-day
-        window plus a fixed 7-day reporting grace. Both gates apply before reviewed facts reach live adapter rows, so
-        current percentages cannot preserve an expired classification and a durable classification cannot extend stale
-        percentages.
+        Classification research lasts 365 days; composition has its own clock. Named-firm attestations, audits and
+        examinations can be admitted for 120 days inclusive from the report&apos;s as-of date, at their actual assurance
+        strength. A named attestation is not promoted to an audit. Scope, chronology, source and fingerprint checks
+        remain strict; unnamed generic curated composition keeps the 31-day window plus 7-day grace.
+        Neither a later review nor publication refreshes old holdings.
       </p>
       <p>
         Since methodology v9.31, curated collateral links share the reserve-envelope admission gate. When no live
@@ -130,55 +159,52 @@ export function SafetyScoresOverview() {
         are not production freshness evidence or score forecasts.
       </p>
       <p>
-        Since methodology v10.0, a current known circulating USD amount can size the Exit stress request even when
-        its chain or bridge distribution is bounded-unknown. This changes only the request notional: bridge
-        materiality, transfer scope, Economic Control, and their evidence gaps and ceilings remain unresolved.
-        Unknown, stale, or unavailable circulating amounts still receive no request, and sizing does not establish
-        executable capacity or waive route valuation, cost, access, or settlement evidence.
+        A current established circulating amount can size the Exit stress request even when its chain or bridge
+        partition is unresolved. This sizes the request only: it does not invent bridge shares, transfer scope,
+        control safety or executable capacity. Unknown, stale or unavailable amounts still cannot size it.
+        Route valuation, cost, access and settlement admission remain; missing bridge evidence now follows the
+        cause-aware rules rather than a generic missing-data ceiling.
       </p>
       <p>
-        Reviewed curated compositions require verified, complete, sourced, dated evidence under the existing chronology
-        and freshness gates. Methodology v10.0 admits an explicitly reconciled unclassified residual of at most 0.1%,
-        the policy-owned limit, only when that residual can still be charged as bounded-unknown. The unknown share
-        remains in the composition and is not normalized away. Unrecorded, above-threshold, or unchargeably small
-        positive tails, other unresolved reserve dispositions, and incomplete or unverified evidence still withhold
-        the whole curated reserve envelope, not just the disputed link.
+        We keep independently identified reserve holdings instead of rejecting an entire reviewed composition
+        because an unclassified tail exceeds 0.1%. Each remaining share carries its own cause. Researched or
+        unresearched uncertainty is bounded; measured adverse holdings keep their measured treatment; proven pipeline
+        or curation gaps receive no scoring weight. Original whole-asset shares and unknown tails remain visible—only
+        scoring weights can be renormalized. Exposure and dependency shares are never rescaled to pretend the book
+        is complete, and a defensible whole-book denominator is still required.
+        Inherited parent Backing replaces only unknown local defaults: known local class, liquidity and source
+        strength still bound it, with missing factors at their best ordinary rungs. An empty issuer/obligor census
+        scores concentration at bounded-unknown 35, not diversified 98. A missing obligor affects only concentration,
+        never a reserve row&apos;s class quality.
       </p>
       <p>
-        Responsibility follows causal provenance instead of the nearest processing stage. An explicit reason-level
-        owner is authoritative; inherited reserve gaps, unavailable upstream pillars, and missing parent scores carry
-        every originating owner downstream. Every attributed root receives a causal-root-qualified score path even
-        when it is the only root, so adding another root cannot rename an existing public fact; only unattributed
-        fallbacks retain aggregate base paths, and ownership never becomes part of fact identity.
-        Applicable but unpublished mechanism metrics remain issuer-undisclosed rather than measured-adverse. Since
-        methodology v9.451, one a reviewer has covered and found unpublished says so: the published gap carries the
-        review date, the reason, and the source that was checked, instead of the sentence used for a component nobody
-        has reviewed yet. The input stays bounded-unknown and the owner stays issuer-undisclosed, so no score, grade,
-        or open-data-point count moves. Since methodology v9.46, a bridge control whose controlling party is an
-        external message-validation quorum — a LayerZero DVN set, a Chainlink CCIP DON/RMN, a Bantu AMTP validator
+        Responsibility follows validated evidence about the exact missing question, not the nearest processing stage
+        or a compiler&apos;s default label. A pipeline verdict binds the captured source and generation.
+        Public-but-uncurated and researched-undisclosed classifications retain dated primary sources; otherwise the
+        question is “Not yet researched”. Inherited gaps preserve their originating causes and evidence identities.
+        Every attributed root receives a causal-root-qualified score path, so adding another root cannot rename an
+        existing public fact; ownership never becomes part of fact identity. Since methodology v9.46, a bridge control
+        whose controlling party is an external message-validation quorum — a LayerZero DVN set, a Chainlink CCIP DON/RMN,
+        a Bantu AMTP validator
         group — is graded as the known, weak authority it is instead of compiling as unknown and publishing an
         issuer-owned unresolved-control gap for a fact the issuer had published. The rung grades at or below a named
         issuer backend and never above a named multisig: naming a validation domain cannot lift a control, and a
-        route co-controlled by an unattested single key still reports that key as its weakest link. A
-        reviewed external exit output whose identity is known but cannot be valued is attributed to producer failure,
-        while an issuer-undisclosed settlement asset stays issuer-undisclosed; neither becomes scoreable. Date-only
-        dispositions enter replay only after their reviewed UTC day. Partial control reviews retain the controls that
+        route co-controlled by an unattested single key still reports that key as its weakest link.
+        A reviewed unpriced output is not automatically a pipeline failure: the missing valuation needs its own
+        cause proof, and never becomes assumed par proceeds. Date-only dispositions enter replay only after their
+        reviewed UTC day. Partial control reviews retain the controls that
         were actually reviewed while unresolved surfaces remain bounded and fail closed. Strategy-vault wrapper
         loss-control facts can use those reviewed local controls as wrapper evidence. Methodology v10.0 grants no
         parent first-loss or risk-transfer credit, even for documented backstops. Activating that credit requires a new
         evidence lane, reviewed intake, a review window, and a methodology change. Subthreshold unrecognized chain-label
         supply pools are tolerated by the bridge-materiality proof and no longer surface as public
-        evidence-responsibility facts; material unmatched bridge supply still fails closed. Coverage that no
-        supported adapter can observe is unsupported methodology rather than producer failure: deployment census
-        coverage is reported per chain instead of all or nothing, an exit surface whose census remainder is
-        unsupported reports unsupported route evidence, and an unreviewed dependency set on an asset with no
-        live-reserve adapter is unsupported rather than failed. Since methodology 9.2, a populated DEX exit
-        surface is complete for gap accounting once its budgeted score-eligible routes are observed; leftover
-        target-construction and reviewed model-limit gates on other recognised venues are not a data-feed
-        failure. Exact-route scoring completeness stays strict. An asset with no usable price whose tracked peg
-        record is already adverse is measured adverse, while a clean record with no usable price stays a quiet
-        observation and its deviation is never coerced to zero. These are provenance and
-        evidence-retention changes: pillar weights, score math, and grade thresholds are unchanged.
+        evidence-responsibility facts; material unmatched bridge supply still fails closed. Unsupported coverage
+        needs a captured reader-boundary proof for A exclusion; otherwise the unresolved question remains U.
+        Since methodology 9.2, a populated DEX exit surface is complete for gap accounting once its budgeted
+        score-eligible routes are observed; leftover target-construction and reviewed model-limit gates on other
+        recognised venues are not a data-feed failure. Exact-route scoring completeness stays strict.
+        Measured adverse peg history retains its own treatment; missing current price remains a separately
+        cause-bearing observation and its deviation is never coerced to zero.
       </p>
       <p>
         Since methodology v9.94, the XAUT lock/mint group attribution reconciles Tether&apos;s daily disclosure to
@@ -287,10 +313,10 @@ export function SafetyScoresOverview() {
         repairs in these waves cannot manifest until a real producer cycle runs.
       </p>
       <p>
-        Since methodology v9.4, stale issuer- or parent-published evidence is attributed as
-        {" "}<code className="text-xs">published-evidence-expired</code> when its publisher provenance is explicit,
-        rather than being described as issuer non-disclosure. Unknown provenance still fails closed under the existing
-        responsibility. The new value changes attribution and public explanation, not score arithmetic.
+        Expired evidence stays dated history. Expiry is not proof the issuer is silent, nor that newer required data
+        is public. Current cause proof decides whether the gap is pipeline, uncurated public data, researched
+        non-disclosure or not yet researched. Known active adverse facts are not cleared by an expired positive
+        review, and favorable parent inheritance still needs current whole-allocation proof.
       </p>
       <p>
         Governance access posture treats a reviewed global mint-domain contract as immutable when it has no privileged
@@ -313,17 +339,11 @@ export function SafetyScoresOverview() {
         price-insensitive mechanism remains neutral.
       </p>
       <p>
-        Methodology v9.4 also makes control scope follow the liability a control can reach. A proved deployment-local
-        control contributes a proportional exposure adjustment only with a complete reconciled liability partition.
-        Methodology v10.0 prices the full admitted unresolved deployment cohort, including unattributed remainder:
-        below 5% of supply, the bounded-unknown charge is proportional; from 5% to 15%, the control-unverified ceiling
-        blends smoothly; at 15% or more, or with an unknown share, the full ceiling applies. These thresholds are
-        policy-owned. An admitted known-share cohort below 15% carries no second Control evidence cliff. Out-of-cohort
-        uncertainty and proved adverse or root-reaching controls keep their charges; contradictory scope still fails
-        closed. A control that still binds Economic Control retains its causal attribution, and a scope correction
-        alone cannot turn an unchanged measured D or F into NR. Common-control thresholds count independent root
-        liabilities, so wrappers and derivatives do not manufacture another affected asset and same-issuer controllers
-        remain diagnostic. Chain
+        Control scope follows the liabilities an admitted control can reach. Known deployment-local controls need
+        a complete reconciled supply partition for proportional pricing; no gap creates deployment shares or proves
+        native issuance. Proven A/B uncertainty is excluded and C/U stays component-bounded, without the former
+        control-unverified whole-score ceiling. Known adverse/root-reaching controls keep their actual constraints.
+        Common-control census still counts independent root liabilities, not extra wrapper copies. Chain
         maturity is a dated five-gate review requiring 36 months of continuous production history,
         a 365-day liveness record, permissionless participation or at least 21 independently operated block producers
         or finality members, no unilateral instant change path (with L2s at Stage 1 or later and at least a 7-day holder
@@ -337,10 +357,9 @@ export function SafetyScoresOverview() {
         the affected liability.
       </p>
       <p>
-        Publication is fail-closed. Global, stale, or identity failures retain the last accepted V10 ratings and expose
-        the publication as held. Attributable asset-local producer failures instead quarantine affected assets to NR
-        and can publish while at least 90% of active assets remain unaffected. Active consumers do not recompute or
-        fall back to V8.
+        Publication remains fail-closed: global or invalid-identity state holds the last accepted publication.
+        Attributable asset-local producer failures are technical pipeline gaps, never fabricated issuer NR or
+        measured danger. Current consumers use the accepted publication and status, not a fallback scorer.
       </p>
       <p className="text-xs text-muted-foreground">
         See also:{" "}
@@ -355,17 +374,17 @@ export function SafetyScoresOverview() {
       <MethodologyFacts
         facts={[
           { label: "Model shape", value: "3 pillars + bounded aggregation" },
-          { label: "Grade output", value: "A+ to F, with NR" },
+          { label: "Grade output", value: "A+ to F; NR and Pipeline gap are distinct" },
           { label: "Publication state", value: "Current or held; never V8 fallback" },
         ]}
       />
       <MethodologyPreconditions
         facts={[
-          { label: "Minimum data", value: "Mechanism-appropriate required facts for all material pillars" },
+          { label: "Minimum data", value: "At least two included pillars for a score; scoped cause proof for exclusions" },
           { label: "Required sources", value: "Backing, exit, control, peg, dependency, and evidence-provenance inputs" },
           {
             label: "Failure behavior",
-            value: "Unbounded evidence gaps return NR; transient producer failures hold the last accepted publication",
+            value: "Technical gaps have no score/grade; NR needs causal evidence gates; global failures hold accepted state",
           },
         ]}
       />

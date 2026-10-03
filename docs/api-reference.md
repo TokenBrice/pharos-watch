@@ -310,6 +310,36 @@ HTTP method allowance is defined centrally in `shared/lib/api-endpoints/` and en
 
 The same shared endpoint descriptors now also carry static worker dependency-hydration hints consumed by `worker/src/routes/registry.ts`, where the worker binds shared endpoint keys directly to handlers through a single static route-definition list. That keeps endpoint metadata, router behavior, method guards, admin status-page actions, and worker-side static route wiring aligned from one source of truth plus one worker binding table.
 
+## Safety Score Availability
+
+### Full cards
+
+[Safety Score contract](./report-cards.md#api). The route remains `/api/report-cards/v9`; current body `schemaVersion` is 7 (methodology 10.01), with internal public response 6 and score trace 4. Model-family/route naming is not the methodology decimal or body schema version.
+
+Each `cards[]` row publishes `ratingStatus: "rated" | "not-rated" | "pipeline-gap"`. Rated means numeric score and letter grade; not-rated means null score and `grade: "NR"` with causal withholding reasons. Pipeline-gap means null score and null grade, never NR, zero or F. At least two included pillars are needed for a Safety Score. Exactly one A/B-only excluded pillar permits a two-pillar rating; two or three give technical pipeline-gap. Pipeline-gap keeps diagnostic breakdowns and null aggregate/stages/weakest pillar, with no binding cap.
+
+`partialEvidence` is null or `{ reasonCode: "partial-evidence-pipeline-gap", excludedPillars, excludedComponentKeys, causeGapIds, causes }`. Pillar IDs are `backing | exit | control`; causes are A and/or B only. Sorted unique IDs identify exact excluded scopes. The object also appears for subcomponent exclusions with no whole pillar excluded. A partial flag does not itself make a card NR. Mixed components retain their known/C/U/D contributions.
+
+Pillar rows carry `aggregationDisposition: "included" | "excluded-a-b"`, `causeGapIds`, `limitedEvidenceCauses` and `supportedComponentKeys`. Excluded pillar scores are null; eligible aggregation carries included/excluded pillars and renormalized `effectiveScoringWeights`, with zero weight for excluded pillars. Contribution rows retain `cause`, `causeGapIds`, `scoringDisposition` and `effectiveScoringWeight`: A/B is diagnostic null/zero weight, C/U is bounded uncertainty, admitted D is measured adverse. Cause A requires a captured pipeline proof; B requires current scoped public-data research; C is researched non-disclosure; U is not yet researched. A responsibility label alone is not proof.
+
+Exit route breakdowns add `confidenceDimensions: { observation, model, capacityMethod }`; each dimension has `{ factor, cause, causeGapIds }`. A/B-missing dimensions are neutral (factor 1); known weaker models and C/U uncertainty retain their factors. `confidenceFactor` reconciles to the minimum applicable dimension. `capacityEvidenceTier` distinguishes `live-direct`, `live-queue-proxy`, `documented`, `heuristic` and `unknown`; same-run verified live queue/proxy uses method factor 0.75. A diagnostic route may have null confidence dimensions. Neutral confidence never admits stale capacity or an invalid certificate, and does not imply holder eligibility, zero fee or executable output.
+
+`completeness` adds `pipelineGapCount` and sorted unique `pipelineGapIds`. `expectedCount = ratedCount + notRatedCount + pipelineGapCount`; not-rated and pipeline-gap membership is disjoint and matches the cards. Do not derive NR count from every null score. Reserve breakdowns preserve `wholeAssetWeight` independently of `effectiveScoringWeight`; A/B tail exclusion never rescales dependency or materiality exposure.
+
+Retained old schema publications require explicit historical dispatch or refusal, never invented A/B defaults. Current consumers preserve status and partial metadata rather than treating a null score as a downgrade. Existing publication health/held headers remain a separate availability contract.
+
+### Free grades
+
+`/api/safety-grades` returns compact Safety Score availability rows from the same accepted publication, without an API key. The changed response adds `schemaVersion: 1`; each `grades[]` row carries `id`, nullable `score`, nullable `grade`, `ratingStatus` and nullable compact `partialEvidence`. Compact partial metadata contains only `reasonCode`, `excludedPillars` and A/B `causes`, not full component/gap lists. Rated rows have a numeric score and letter grade; not-rated rows have null score and `"NR"`; pipeline-gap rows have null score and null grade. A partial rated result can omit one pillar. Technical availability is not an NR grade, a zero score or a historical downgrade. `methodologyVersion`, `asOfSec`, `updatedAt` and `publicationStatus` describe the same snapshot as the full cards.
+
+### Dependency graph
+
+[Graph contract](./dependency-map.md). Current response body `schemaVersion` is 2; path and operation ID remain `/api/dependency-graph/v1` and `dependencyGraphV1`. Nodes preserve published `ratingStatus`, nullable grade/score and compact partial metadata. Pipeline-gap is technical unavailability, not NR; null parent scores do not become zero or perfect support. Graph exposure still uses original admitted whole-asset weights. No alternate scoring authority or on-demand evaluator is introduced.
+
+### Dependency scenarios
+
+[Modeled results](./dependency-map.md). Current response/artifact body `schemaVersion` is 2 and scenario cache generation is v2; the route remains `/api/dependency-scenarios/v1` with operation ID `dependencyScenariosV1`. Published and modeled technical pipeline-gap scores/grades stay null and distinct from NR; deltas involving unavailable numeric values remain null, never zero or a fabricated downgrade. Status and partial metadata survive parent propagation. These generation-bound offline artifacts remain noncanonical modeled scenarios, not forecasts or changes to accepted Safety Scores. Old artifacts require explicit historical version dispatch or refusal, never relabelling a v1 artifact under a v2 cache key.
+
 ## Public Endpoints
 
 Unless an endpoint section explicitly says `Authentication: exempt`, routes in this section require `X-API-Key` when called on `https://api.pharos.watch`. OpenAPI schemas are published at [`/openapi.json`](https://pharos.watch/openapi.json); endpoint auth and cache flags come from `shared/lib/api-endpoints/definitions.ts`.
@@ -495,7 +525,7 @@ Returns aggregate blacklist counts and exposure totals.
 
 ### `GET /api/depeg-events`
 
-Incidents filtered by asset, state and review. `total`/optional `totalExact` replace `counts`; sum `constituentEventCount` across all pages for threshold-crossing totals. Since 2026-09-28, `auditVerdict` accepts confirmed, repaired, false_positive, disputed, no_data, or null; unknown archived values are rejected. v6.31 adds optional `priceCoverage`: `intervals` ([startSec,endSec][]), `lastTrustedObservationAt` and `gapStartedAt` (nullable seconds). Intervals bound trusted off-peg time; gaps are unknown. Open legacy null/absent coverage is unknown; closed legacy/replay durations are retained.
+Asset/state/review-filtered incidents. `total`/optional `totalExact` replace `counts`; sum `constituentEventCount` across pages for threshold-crossing totals. Audit verdicts (2026-09-28): confirmed/repaired/false_positive/disputed/no_data/null; unknowns rejected. v6.31 optional `priceCoverage`: off-peg `intervals` and `atParIntervals` ([startSec,endSec][]), nullable-second `lastTrustedObservationAt`/`gapStartedAt`, three-state `lastObservationKind`. Unrecorded spans are unknown. Open legacy null/absent coverage is unknown; closed legacy/replay durations are retained.
 
 - **Operation ID:** `depegEvents`
 - **Path:** `/api/depeg-events`
@@ -768,7 +798,7 @@ Dynamic social-card image routes are served by the Worker and intentionally omit
 
 ### `GET /api/report-cards/v9`
 
-[V9 contract](./report-cards.md#api).
+[Status](#safety-score-availability).
 
 - **Operation ID:** `reportCardsV9`
 - **Path:** `/api/report-cards/v9`
@@ -778,7 +808,7 @@ Dynamic social-card image routes are served by the Worker and intentionally omit
 
 ### `GET /api/safety-grades`
 
-Returns one Safety Score and grade per tracked stablecoin from the same V9 publication, without an API key.
+[Status](#safety-score-availability).
 
 - **Operation ID:** `safetyGrades`
 - **Path:** `/api/safety-grades`
@@ -788,7 +818,7 @@ Returns one Safety Score and grade per tracked stablecoin from the same V9 publi
 
 ### `GET /api/dependency-graph/v1`
 
-[Graph contract](./dependency-map.md).
+[Status](#safety-score-availability).
 
 - **Operation ID:** `dependencyGraphV1`
 - **Path:** `/api/dependency-graph/v1`
@@ -798,7 +828,7 @@ Returns one Safety Score and grade per tracked stablecoin from the same V9 publi
 
 ### `GET /api/dependency-scenarios/v1`
 
-[Modeled results](./dependency-map.md).
+[Status](#safety-score-availability).
 
 - **Operation ID:** `dependencyScenariosV1`
 - **Path:** `/api/dependency-scenarios/v1`
@@ -884,7 +914,7 @@ Returns current Yield Intelligence rankings and risk-adjusted fields.
 ```json
 {
   "currentVersion": "8.46",
-  "methodologyVersion": "10.0"
+  "methodologyVersion": "10.01"
 }
 ```
 
