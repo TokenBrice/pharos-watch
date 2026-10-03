@@ -10088,6 +10088,72 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "frnt-wyoming",
+      "reviewedAt": "2026-10-03T23:05:10Z",
+      "expiresAt": "2027-10-03T23:05:10Z",
+      "reviewer": "W1R92 primary-source unknown-wave review",
+      "notes": "Dated exact-token mainnet launch establishes a lower bound of full calendar operating months only. No continuous uptime, independent assurance, incident-free operation, redemption throughput or stress recovery is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-mainnet-launch",
+          "label": "Exact token mainnet launch announcement",
+          "publisher": "Wyoming Governor",
+          "publishedAt": "2025-08-19",
+          "url": "https://content.govdelivery.com/accounts/WYGOV/bulletins/3ee734a",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 13,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-mainnet-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "ousd-origin-protocol",
+      "reviewedAt": "2026-10-03T23:05:10Z",
+      "expiresAt": "2027-10-03T23:05:10Z",
+      "reviewer": "W1R92 primary-source unknown-wave review",
+      "notes": "Dated exact-token mainnet launch establishes a lower bound of full calendar operating months only. No continuous uptime, independent assurance, incident-free operation, redemption throughput or stress recovery is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-mainnet-launch",
+          "label": "Exact token mainnet launch announcement",
+          "publisher": "Origin Protocol",
+          "publishedAt": "2020-09-22",
+          "url": "https://www.originprotocol.com/blog/meet-ousd-the-first-stablecoin-that-earns-a-yield-in-your-wallet?lang=en",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 72,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-mainnet-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
