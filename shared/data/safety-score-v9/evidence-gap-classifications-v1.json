@@ -4115,6 +4115,223 @@
           "assertion": "Published receipt-age fee formula cannot be evaluated by the current route-level fee model. Pinned curve minFee=0,maxFee=34000000000000000,minDuration=259200,maxDuration=1728000,curvature=1e18; exact receipt curve snapshot and age are necessary."
         }
       ]
+    },
+    {
+      "id": "uw-ggbr-goldfish-gold-3dec8d5b817f15db",
+      "assetId": "ggbr-goldfish-gold",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:15Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R20)",
+      "sources": [
+        {
+          "url": "https://goldfishgold.com/collateral",
+          "observedAt": "2026-10-03T22:45:43Z",
+          "datumAsOf": null,
+          "location": "The coverage",
+          "excerpt": "Values refresh from public gold spot feeds \u00b7 falls back to a static indicative price when offline \u00b7 ratio moves with token supply",
+          "assertion": "Live reserve/supply comparison is disclosed, not whole-supply mint/burn and physical/legal backing reconciliation procedures or cadence."
+        },
+        {
+          "url": "https://goldfishgold.com/Goldfish-Cyfrin.pdf",
+          "observedAt": "2026-10-03T22:47:15Z",
+          "datumAsOf": "2025-10-10",
+          "location": "Disclaimer, page 3",
+          "excerpt": "The audit was time-boxed and the review of the code was solely on the security aspects of the solidity implementation of the contracts.",
+          "assertion": "Published audit explicitly covers code security, not financial reserve-to-liability reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://goldfishgold.com/",
+        "https://goldfishgold.com/collateral",
+        "https://goldfishgold.com/support",
+        "https://goldfishgold.com/terms-of-service",
+        "https://goldfishgold.com/risk-disclosures",
+        "https://goldfishgold.com/security",
+        "https://goldfishgold.com/Goldfish-Cyfrin.pdf",
+        "https://eth.blockscout.com/api/v2/addresses/0x7e2ac793f3e692f388e66c7dc28f739d13b0b71a",
+        "https://app.goldfishgold.com/redemption"
+      ],
+      "rationale": "No dated whole-GGBR-supply reconciliation procedure/cadence covering mint/burn movements, all token liabilities and independently verified physical/title backing on a common clock was located. Issuer discloses trust gold quantities, live wallet/supply comparisons and geological verification claims; the audit is explicitly code-security only. Those nearby disclosures do not establish periodic or continuous whole-supply reconciliation. Existing unknown remains unchanged."
+    },
+    {
+      "id": "uw-ggbr-goldfish-gold-8aeaf0dfb1e4f820",
+      "assetId": "ggbr-goldfish-gold",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:ggbr-goldfish-gold"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:47:15Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R20)",
+      "sources": [
+        {
+          "url": "https://app.goldfishgold.com/redemption",
+          "observedAt": "2026-10-03T22:47:15Z",
+          "datumAsOf": null,
+          "location": "Redemption Information",
+          "excerpt": "Processing Time 5-7 Business Days",
+          "assertion": "Processing estimate does not bound delivery, vault release or onward spendable USD completion."
+        },
+        {
+          "url": "https://app.goldfishgold.com/redemption",
+          "observedAt": "2026-10-03T22:47:15Z",
+          "datumAsOf": null,
+          "location": "Redemption Information note",
+          "excerpt": "Note: Physical gold redemption requires KYC verification and may incur additional shipping and insurance fees.",
+          "assertion": "Physical shipping and KYC are additional legs; no final delivery or composed cash-settlement maximum is supplied."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://goldfishgold.com/",
+        "https://goldfishgold.com/support",
+        "https://goldfishgold.com/collateral",
+        "https://goldfishgold.com/terms-of-service",
+        "https://goldfishgold.com/risk-disclosures",
+        "https://goldfishgold.com/security",
+        "https://goldfishgold.com/Goldfish-Cyfrin.pdf",
+        "https://app.goldfishgold.com/redemption"
+      ],
+      "rationale": "The app publishes 5-7 business days processing and vault storage/physical delivery options, not an end-to-end maximum for final physical receipt or sale into spendable USD. Governing terms permit service restrictions and suspension and give no delivery/cash SLA. No guaranteed final endpoint completion bound was found for either issuer delivery or the composed physical-to-USD route. Do not encode processing business days as a calendar-second delivery SLA."
+    },
+    {
+      "id": "uw-ggbr-goldfish-gold-25c5a4382656fed9",
+      "assetId": "ggbr-goldfish-gold",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:ggbr-goldfish-gold:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:47:15Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R20)",
+      "sources": [
+        {
+          "url": "https://app.goldfishgold.com/redemption",
+          "observedAt": "2026-10-03T22:47:15Z",
+          "datumAsOf": null,
+          "location": "Redemption Information",
+          "excerpt": "Processing Time 5-7 Business Days",
+          "assertion": "Processing estimate does not bound delivery, vault release or onward spendable USD completion."
+        },
+        {
+          "url": "https://app.goldfishgold.com/redemption",
+          "observedAt": "2026-10-03T22:47:15Z",
+          "datumAsOf": null,
+          "location": "Redemption Information note",
+          "excerpt": "Note: Physical gold redemption requires KYC verification and may incur additional shipping and insurance fees.",
+          "assertion": "Physical shipping and KYC are additional legs; no final delivery or composed cash-settlement maximum is supplied."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://goldfishgold.com/",
+        "https://goldfishgold.com/support",
+        "https://goldfishgold.com/collateral",
+        "https://goldfishgold.com/terms-of-service",
+        "https://goldfishgold.com/risk-disclosures",
+        "https://goldfishgold.com/security",
+        "https://goldfishgold.com/Goldfish-Cyfrin.pdf",
+        "https://app.goldfishgold.com/redemption"
+      ],
+      "rationale": "The app publishes 5-7 business days processing and vault storage/physical delivery options, not an end-to-end maximum for final physical receipt or sale into spendable USD. Governing terms permit service restrictions and suspension and give no delivery/cash SLA. No guaranteed final endpoint completion bound was found for either issuer delivery or the composed physical-to-USD route. Do not encode processing business days as a calendar-second delivery SLA."
+    },
+    {
+      "id": "uw-hchf-hedera-swiss-franc-29c7af444e886484",
+      "assetId": "hchf-hedera-swiss-franc",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:hchf-hedera-swiss-franc:collateral-redeem"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:51:15Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R20)",
+      "sources": [
+        {
+          "url": "https://docs.hliquity.org/deep-dive/redemptions-and-hchf-price-stability",
+          "observedAt": "2026-10-03T22:45:43Z",
+          "datumAsOf": null,
+          "location": "Redemption Fee",
+          "excerpt": "The fee is dynamic and depends on the amount of HCHF being redeemed relative to the total HCHF supply.",
+          "assertion": "W15: applicable dynamic fee is public but Pharos lacks same-notional evaluation; not an undisclosed fee or fixed 50 bps."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/SwisscoastAG/HLiquity/30f7253f635f6015267b0fcdb5554d259b76e5db/packages/contracts/contracts/TroveManager.sol",
+          "observedAt": "2026-10-03T22:51:15Z",
+          "datumAsOf": null,
+          "location": "_updateBaseRateFromRedemption",
+          "excerpt": "uint newBaseRate = decayedBaseRate.add(redeemedHCHFFraction.div(BETA));",
+          "assertion": "Official docs bind this contract version to HCHF 0.0.6070123. Size-dependent post-redemption base rate needs pinned state and requested-notional producer calculation."
+        }
+      ]
+    },
+    {
+      "id": "uw-hchf-hedera-swiss-franc-cf7aeff43cb4e8b6",
+      "assetId": "hchf-hedera-swiss-franc",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d924497fa8187805cd75c814",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:15Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R20)",
+      "sources": [
+        {
+          "url": "https://docs.hliquity.org/deep-dive/borrowing",
+          "observedAt": "2026-10-03T22:47:15Z",
+          "datumAsOf": null,
+          "location": "Loan Repayment",
+          "excerpt": "Loans issued by the protocol do not have a repayment schedule.",
+          "assertion": "Trove collateral is debt-encumbered and not an idle freely withdrawable whole-reserve cash position."
+        },
+        {
+          "url": "https://docs.hliquity.org/deep-dive/stability-pool-and-liquidations",
+          "observedAt": "2026-10-03T22:47:15Z",
+          "datumAsOf": null,
+          "location": "What Happens When the Stability Pool is Empty?",
+          "excerpt": "In this process, the debt and collateral from liquidated Troves are redistributed among all other existing Troves in proportion to their collateral amounts.",
+          "assertion": "Pool and trove claims have distinct realization constraints; liquidation speed does not disclose a whole-aggregate USD liquidity horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://hliquity.finance/",
+        "https://docs.hliquity.org/",
+        "https://docs.hliquity.org/llms.txt",
+        "https://docs.hliquity.org/deep-dive/borrowing",
+        "https://docs.hliquity.org/deep-dive/redemptions-and-hchf-price-stability",
+        "https://docs.hliquity.org/deep-dive/stability-pool-and-liquidations",
+        "https://docs.hliquity.org/deep-dive/recovery-mode",
+        "https://docs.hliquity.org/fundamentals/token-ids-pools-contracts",
+        "https://mainnet-public.mirrornode.hedera.com/api/v1/tokens/0.0.6070123",
+        "https://raw.githubusercontent.com/SwisscoastAG/HLiquity/30f7253f635f6015267b0fcdb5554d259b76e5db/packages/contracts/contracts/TroveManager.sol"
+      ],
+      "rationale": "No published whole-position realization horizon for the aggregate HBAR collateral across Troves and Stability Pool was located. Borrowing, repayment, liquidation/redistribution and redemption mechanics disclose encumbrance and distinct claims but no maximum for realizing the entire scoped collateral into USD. Atomic HBAR redemption alone does not establish immediate liquidity of the whole reserve slice. Preserve unknown rather than infer zero-day liquidity from native HBAR transferability."
     }
   ]
 }

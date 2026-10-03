@@ -17,12 +17,12 @@
         "smart-contract",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "over-seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W1R20 unknown-wave liquidity review",
     "confidence": "verified",
     "sources": [
       {
@@ -36,9 +36,13 @@
       {
         "label": "Spiko smart-contract disclosure",
         "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+      },
+      {
+        "label": "SPKCC prospectus dated February 1, 2026, redemption gates and exceptional settlement",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_SPKCC_EN.pdf"
       }
     ],
-    "rationale": "Spiko's current producer reports the SPKCC fund as one cash-and-carry strategy envelope, not a defensible fixed 80/20 allocation. The direct exposure is classified as hedged crypto with basis, venue, custody, liquidity, counterparty, smart-contract, and concentration risks retained.",
+    "rationale": "The live SPKCC fund envelope retains its hedged-crypto classification and unsplit strategy risks. Liquidity is conservatively over seven days: the February 1, 2026 prospectus permits redemption gates over twenty NAVs within a month and exceptional asset-realization settlement up to thirty days; ordinary T+2 dealing is not a whole-position immediate liquidity guarantee. This metadata review does not refresh the July composition or measure underlying weights.",
     "compositionBasis": "Exact live SPKCC aggregate and official cash-and-carry fund disclosure",
     "compositionAsOf": "2026-07-15",
     "scope": "full-composition",

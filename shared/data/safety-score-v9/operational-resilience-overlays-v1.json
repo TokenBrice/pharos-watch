@@ -1790,6 +1790,204 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "eutbl-spiko",
+      "reviewedAt": "2026-10-03T22:47:15Z",
+      "expiresAt": "2027-10-03T22:45:43Z",
+      "reviewer": "W1R20 unknown-wave research",
+      "notes": "Exact-asset dated live-operation lower bound only, not parent/issuer age. No cumulative redemptions, stress recovery, financial reconciliation continuity or incident-free history is asserted. UKTBL and GGBR use conservative dated live observations rather than an inferred inception. SPKCC uses the later explicit USD-class live announcement rather than fund formation or ambiguous earlier aggregate marketing. HCHF uses exact token creation as permitted deployment-history evidence, not first paid issuance.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Exact EUTBL tokenized fund launch",
+          "publisher": "Spiko",
+          "publishedAt": "2024-06-12",
+          "url": "https://www.spiko.io/blog/spiko-launches-the-worlds-first-tokenized-money-market-funds",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 27,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "ustbl-spiko",
+      "reviewedAt": "2026-10-03T22:47:15Z",
+      "expiresAt": "2027-10-03T22:45:43Z",
+      "reviewer": "W1R20 unknown-wave research",
+      "notes": "Exact-asset dated live-operation lower bound only, not parent/issuer age. No cumulative redemptions, stress recovery, financial reconciliation continuity or incident-free history is asserted. UKTBL and GGBR use conservative dated live observations rather than an inferred inception. SPKCC uses the later explicit USD-class live announcement rather than fund formation or ambiguous earlier aggregate marketing. HCHF uses exact token creation as permitted deployment-history evidence, not first paid issuance.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Exact USTBL tokenized fund launch",
+          "publisher": "Spiko",
+          "publishedAt": "2024-06-12",
+          "url": "https://www.spiko.io/blog/spiko-launches-the-worlds-first-tokenized-money-market-funds",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 27,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "uktbl-spiko",
+      "reviewedAt": "2026-10-03T22:47:15Z",
+      "expiresAt": "2027-10-03T22:45:43Z",
+      "reviewer": "W1R20 unknown-wave research",
+      "notes": "Exact-asset dated live-operation lower bound only, not parent/issuer age. No cumulative redemptions, stress recovery, financial reconciliation continuity or incident-free history is asserted. UKTBL and GGBR use conservative dated live observations rather than an inferred inception. SPKCC uses the later explicit USD-class live announcement rather than fund formation or ambiguous earlier aggregate marketing. HCHF uses exact token creation as permitted deployment-history evidence, not first paid issuance.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "UK Treasury fund live AUM and users",
+          "publisher": "Spiko",
+          "publishedAt": "2026-02-19",
+          "url": "https://www.spiko.io/blog/1-billion-aum-numbers",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 7,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "spkcc-spiko",
+      "reviewedAt": "2026-10-03T22:47:15Z",
+      "expiresAt": "2027-10-03T22:45:43Z",
+      "reviewer": "W1R20 unknown-wave research",
+      "notes": "Exact-asset dated live-operation lower bound only, not parent/issuer age. No cumulative redemptions, stress recovery, financial reconciliation continuity or incident-free history is asserted. UKTBL and GGBR use conservative dated live observations rather than an inferred inception. SPKCC uses the later explicit USD-class live announcement rather than fund formation or ambiguous earlier aggregate marketing. HCHF uses exact token creation as permitted deployment-history evidence, not first paid issuance.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "SPKCC USD share class live product announcement",
+          "publisher": "Spiko",
+          "publishedAt": "2026-08-11",
+          "url": "https://www.spiko.io/blog/spiko-cash-carry-everything-you-need-to-know-about-our-new-product",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 1,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "ggbr-goldfish-gold",
+      "reviewedAt": "2026-10-03T22:51:15Z",
+      "expiresAt": "2027-10-03T22:45:43Z",
+      "reviewer": "W1R20 unknown-wave research",
+      "notes": "Exact GGBR proxy creation at Ethereum block 23520330 on October 6, 2025 establishes a conservative eleven completed months of deployment history. Official FAQ and homepage bind the GGBR symbol to this exact address. Creation is not proof of first paid issuance. No cumulative redemption, stress recovery, reserve reconciliation continuity or incident-free claim is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Exact GGBR Ethereum proxy creation transaction at block 23520330",
+          "publisher": "Ethereum via Blockscout",
+          "publishedAt": "2025-10-06",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x22828ccf13900345758ab9af32579b453573bc9321a4e14c1534c85156563b8f",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 11,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "hchf-hedera-swiss-franc",
+      "reviewedAt": "2026-10-03T22:47:15Z",
+      "expiresAt": "2027-10-03T22:45:43Z",
+      "reviewer": "W1R20 unknown-wave research",
+      "notes": "Exact-asset dated live-operation lower bound only, not parent/issuer age. No cumulative redemptions, stress recovery, financial reconciliation continuity or incident-free history is asserted. UKTBL and GGBR use conservative dated live observations rather than an inferred inception. SPKCC uses the later explicit USD-class live announcement rather than fund formation or ambiguous earlier aggregate marketing. HCHF uses exact token creation as permitted deployment-history evidence, not first paid issuance.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "HCHF exact token creation timestamp",
+          "publisher": "Hedera mirror node",
+          "publishedAt": "2024-06-03",
+          "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/tokens/0.0.6070123",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 28,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
