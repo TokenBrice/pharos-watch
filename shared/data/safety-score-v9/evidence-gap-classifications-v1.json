@@ -10207,6 +10207,147 @@
           "assertion": "Deployment registry binds the legacy USBD collateral redemption mechanism; do not import the new USDC collar-loan fee schedule as USBD terms."
         }
       ]
+    },
+    {
+      "id": "uw-senpyusdmwin-sentora-1b4b759ba82fe191",
+      "assetId": "senpyusdmwin-sentora",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:b52575f909bf946b51ece17f",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R33)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T22:57:29Z",
+          "datumAsOf": null,
+          "location": "June 2026 terms, Appendix B-1 section 6",
+          "excerpt": "The sole mechanism available to you to reduce exposure to a Sentora Vault is to initiate a withdrawal transaction, subject to applicable smart contract logic, protocol constraints, and potential time-lock requirements.",
+          "assertion": "Terms disclose conditional withdrawal, not a time bound for realizing the entire idle-plus-lent PYUSD/RLUSD position."
+        },
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T22:57:29Z",
+          "datumAsOf": null,
+          "location": "Advanced Liquidity Curation; Core Non-Custodial Mechanisms",
+          "excerpt": "It does not withdraw assets out of the Morpho protocol; instead, it shifts the user\u2019s exposure from the vault to the underlying positions, even when those positions are illiquid.",
+          "assertion": "In-kind exit transfers protocol exposure; it does not establish a whole-position cash realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
+        "https://sentora.com/asset-risk-reviews/huma",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x8381a156958711e230f325428b5eb4b6555c75d9",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+      ],
+      "rationale": "The exact liquidityHorizon of each entire idle-plus-lent protocol-position slice is not published. Source exit() pays available underlying or uses the configured liquidity adapter; pinned block 26114898 shows no liquidity adapter in all three wrappers. Docs/legal terms describe liquidity-conditional ordinary exit and in-kind position transfer, but no whole-slice cash realization bound. Collateral-token redemption SLAs are not lender-vault PYUSD/RLUSD realization SLAs; no immediate/one-day/seven-day scalar is justified."
+    },
+    {
+      "id": "uw-senpyusdpst-sentora-becb1cf34a222a85",
+      "assetId": "senpyusdpst-sentora",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:b52575f909bf946b51ece17f",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R33)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T22:57:29Z",
+          "datumAsOf": null,
+          "location": "June 2026 terms, Appendix B-1 section 6",
+          "excerpt": "The sole mechanism available to you to reduce exposure to a Sentora Vault is to initiate a withdrawal transaction, subject to applicable smart contract logic, protocol constraints, and potential time-lock requirements.",
+          "assertion": "Terms disclose conditional withdrawal, not a time bound for realizing the entire idle-plus-lent PYUSD/RLUSD position."
+        },
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T22:57:29Z",
+          "datumAsOf": null,
+          "location": "Advanced Liquidity Curation; Core Non-Custodial Mechanisms",
+          "excerpt": "It does not withdraw assets out of the Morpho protocol; instead, it shifts the user\u2019s exposure from the vault to the underlying positions, even when those positions are illiquid.",
+          "assertion": "In-kind exit transfers protocol exposure; it does not establish a whole-position cash realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
+        "https://sentora.com/asset-risk-reviews/huma",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x8381a156958711e230f325428b5eb4b6555c75d9",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+      ],
+      "rationale": "The exact liquidityHorizon of each entire idle-plus-lent protocol-position slice is not published. Source exit() pays available underlying or uses the configured liquidity adapter; pinned block 26114898 shows no liquidity adapter in all three wrappers. Docs/legal terms describe liquidity-conditional ordinary exit and in-kind position transfer, but no whole-slice cash realization bound. Collateral-token redemption SLAs are not lender-vault PYUSD/RLUSD realization SLAs; no immediate/one-day/seven-day scalar is justified."
+    },
+    {
+      "id": "uw-sxsrlusd-sentora-bc99b6508c2435b8",
+      "assetId": "sxsrlusd-sentora",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e3b1fb8a74fb6d9b8b059d21",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R33)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T22:57:29Z",
+          "datumAsOf": null,
+          "location": "June 2026 terms, Appendix B-1 section 6",
+          "excerpt": "The sole mechanism available to you to reduce exposure to a Sentora Vault is to initiate a withdrawal transaction, subject to applicable smart contract logic, protocol constraints, and potential time-lock requirements.",
+          "assertion": "Terms disclose conditional withdrawal, not a time bound for realizing the entire idle-plus-lent PYUSD/RLUSD position."
+        },
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T22:57:29Z",
+          "datumAsOf": null,
+          "location": "Advanced Liquidity Curation; Core Non-Custodial Mechanisms",
+          "excerpt": "It does not withdraw assets out of the Morpho protocol; instead, it shifts the user\u2019s exposure from the vault to the underlying positions, even when those positions are illiquid.",
+          "assertion": "In-kind exit transfers protocol exposure; it does not establish a whole-position cash realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
+        "https://sentora.com/asset-risk-reviews/huma",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x8381a156958711e230f325428b5eb4b6555c75d9",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+      ],
+      "rationale": "The exact liquidityHorizon of each entire idle-plus-lent protocol-position slice is not published. Source exit() pays available underlying or uses the configured liquidity adapter; pinned block 26114898 shows no liquidity adapter in all three wrappers. Docs/legal terms describe liquidity-conditional ordinary exit and in-kind position transfer, but no whole-slice cash realization bound. Collateral-token redemption SLAs are not lender-vault PYUSD/RLUSD realization SLAs; no immediate/one-day/seven-day scalar is justified."
     }
   ]
 }

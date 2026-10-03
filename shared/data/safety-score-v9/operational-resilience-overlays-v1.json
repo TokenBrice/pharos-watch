@@ -4703,6 +4703,105 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "senpyusdmwin-sentora",
+      "reviewedAt": "2026-10-03T22:50:19Z",
+      "expiresAt": "2027-10-04T00:00:00Z",
+      "reviewer": "Unknown resolver W1R33",
+      "notes": "Exact wrapper creation transaction is a conservative implementation-history lower bound only. No parent history, settled redemption throughput, reconciliation continuity or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-wrapper-creation",
+          "label": "Exact VaultV2 creation transaction",
+          "publisher": "Ethereum / Blockscout",
+          "publishedAt": "2026-07-31",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x5d13db5f4ab2788747baff3b025e7fa831ebfc467d7e7eef25ab2215a4c9e54b",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 2,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-wrapper-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "senpyusdpst-sentora",
+      "reviewedAt": "2026-10-03T22:50:19Z",
+      "expiresAt": "2027-10-04T00:00:00Z",
+      "reviewer": "Unknown resolver W1R33",
+      "notes": "Exact wrapper creation transaction is a conservative implementation-history lower bound only. No parent history, settled redemption throughput, reconciliation continuity or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-wrapper-creation",
+          "label": "Exact VaultV2 creation transaction",
+          "publisher": "Ethereum / Blockscout",
+          "publishedAt": "2026-08-14",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x94356f40a7175de6465231d0a27ade92a79be3bde9a11b4933456bbdfe98a4c1",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 1,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-wrapper-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "sxsrlusd-sentora",
+      "reviewedAt": "2026-10-03T22:50:19Z",
+      "expiresAt": "2027-10-04T00:00:00Z",
+      "reviewer": "Unknown resolver W1R33",
+      "notes": "Exact wrapper creation transaction is a conservative implementation-history lower bound only. No parent history, settled redemption throughput, reconciliation continuity or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-wrapper-creation",
+          "label": "Exact VaultV2 creation transaction",
+          "publisher": "Ethereum / Blockscout",
+          "publishedAt": "2026-09-01",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x3b058e09d1c1c04d15955d0fa488863a93c808e8d7789a44f1ecaa3655d4a128",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 1,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-wrapper-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
