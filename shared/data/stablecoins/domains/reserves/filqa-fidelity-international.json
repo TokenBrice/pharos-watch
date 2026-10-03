@@ -1,0 +1,84 @@
+{
+  "id": "filqa-fidelity-international",
+  "reserves": [
+    {
+      "name": "Fidelity USD Digital Liquidity Fund SP accumulating shares",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Fidelity International Strategies Funds SPC",
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody",
+        "credit",
+        "market"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Fidelity September 14, 2026 fund prospectus",
+        "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+      },
+      {
+        "label": "Retrieved Fidelity prospectus text",
+        "url": "https://r.jina.ai/https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+      },
+      {
+        "label": "Verified deployed token implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7030fe438be6ed196b8886616bbf5a245c267339"
+      },
+      {
+        "label": "Ethereum token deployment",
+        "url": "https://etherscan.io/address/0x54a4fc78431f9201824643e99bec891bb7462a1d#code"
+      }
+    ],
+    "rationale": "The 100% slice describes the authenticated whole fund-share claim, following BUIDL single-fund-share presentation. It does not invent underlying Treasury, repo, deposit or credit weights. Participating shares in the USD Digital Liquidity Fund SP of Fidelity International Strategies Funds SPC. Permitted investments include government and non-government money-market instruments, securitisations and asset-backed commercial paper, money-market funds and USD deposits; derivatives are permitted. J.P. Morgan SE Dublin Branch is depositary/custodian. Current position weights are unavailable.",
+    "compositionBasis": "Standing authenticated fund-share identity, not a current position-weighted portfolio or token-to-assets reconciliation",
+    "scope": "classification-only",
+    "knownUnknownExposure": "All current underlying position weights and complete token-to-fund asset/liability reconciliation remain unavailable. Named custodians and auditors do not prove current whole-book custody allocation or financial assurance.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Fidelity USD Digital Liquidity Fund SP accumulating shares",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The direct fund-share identity is authenticated, but current look-through security weights are unavailable. The entire fund-share basket remains unresolved for constituent-weight mapping; no tracked stablecoin constituent is asserted."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "J.P. Morgan SE, Dublin Branch",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Fidelity September 14, 2026 fund prospectus",
+        "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+      },
+      {
+        "label": "Retrieved Fidelity prospectus text",
+        "url": "https://r.jina.ai/https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+      }
+    ],
+    "uncertainty": "The prospectus establishes statutory segregation between Cayman SPC portfolios and names JPMorgan depositary/custodian, but current subcustody and derivative-counterparty allocations and full insolvency recovery are unavailable.",
+    "knownUnknownExposurePct": 100
+  }
+}

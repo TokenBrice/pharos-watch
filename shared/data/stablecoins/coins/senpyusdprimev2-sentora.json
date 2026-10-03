@@ -1,0 +1,115 @@
+{
+  "id": "senpyusdprimev2-sentora",
+  "name": "Sentora PRIME Main",
+  "symbol": "senPYUSDPRIMEv2",
+  "oneLiner": "senPYUSDPRIMEv2 is Sentora's PYUSD Morpho Vault V2 share; yield and losses change NAV, and cash redemption depends on idle PYUSD.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "pyusd-paypal",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "pyusd-paypal",
+  "collateral": "PYUSD loans against Hastra PRIME collateral (0x19ebb35279a16207ec4ba82799cc64715065f7f6), described by Sentora as Figure home-equity credit exposure. The exact PRIME tracked identity and enforceable recovery priority are unresolved.",
+  "pegMechanism": "ERC-4626 deposit/mint and withdraw/redeem exchange shares for PYUSD at the current asset conversion rate. Lending interest, fees and realized losses change NAV. liquidityAdapter() is zero at the pinned review; ordinary cash redemptions use idle assets unless assets are first deallocated. Shared market liquidity and an in-kind position exit do not promise full-size cash redemption.",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "Exact Ethereum deployment 0xc21b08c16458202593d4d9b26b9984ee67b38bbd is immutable VaultV2, issuing transferable ERC-4626 operational shares over PYUSD, not a direct fiat or parent-reserve ownership claim. asset(), decimals(), totalSupply(), convertToAssets() and ordinary one-share redeem simulation were reverified at Ethereum block 26107702. The protocol-position archetype intentionally differs from the fiat-cash parent.",
+    "sources": [
+      {
+        "label": "Sentora PRIME Main exact vault",
+        "url": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+      },
+      {
+        "label": "Exact verified VaultV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+      },
+      {
+        "label": "Exact current MorphoMarketV1AdapterV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89"
+      },
+      {
+        "label": "Morpho Vault V2 accounting and redemption mechanics",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Ethereum RPC, pinned block 26107702",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Morpho exact-vault portfolio API",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Sentora PRIME residential-credit case study",
+        "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+    },
+    {
+      "label": "Issuer",
+      "url": "https://sentora.com"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "governanceQuality": "wrapper",
+  "yieldConfig": {
+    "yieldSource": "Sentora PRIME Main Morpho lending vault",
+    "yieldType": "lending-vault"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "senpyusdprimev2-sentora",
+    "display": {
+      "url": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
+      "label": "Sentora PRIME Main"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "PYUSD deposited into Sentora-curated Morpho lending markets",
+        "risk": "medium",
+        "coinId": "pyusd-paypal",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x6c3ea9036406852006290770bedfcaba0e23a0e8"
+      },
+      "redemptionLiquidity": {
+        "source": "morpho-vault-v2",
+        "chainId": 1
+      }
+    }
+  },
+  "launchDate": "2026-05-08"
+}

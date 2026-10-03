@@ -1,0 +1,107 @@
+{
+  "id": "steakusdg-steakhouse",
+  "name": "Steakhouse USDG",
+  "symbol": "steakUSDG",
+  "oneLiner": "steakUSDG is Steakhouse’s Morpho V2 USDG lending vault; shares accrue yield, absorb strategy losses, and redeem against available liquidity.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "usdg-paxos",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "usdg-paxos",
+  "collateral": "USDG held idle in the exact Morpho VaultV2 and supplied through its sole MorphoMarketV1 adapter; borrower collateral and market liquidity determine strategy risk.",
+  "pegMechanism": "ERC-4626 shares represent a proportional USDG-denominated lending position. Interest and fee-share accrual change assets per share; bad debt reduces NAV. Holder withdrawals burn shares and pay USDG atomically when idle assets plus the selected liquidity adapter suffice.",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "The current holder claim is the operational ERC-4626 claim at robinhood:0xbeeff033f34c046626b8d0a041844c5d1a5409dd, not direct ownership of the parent’s fiat reserves. Exact verified immutable VaultV2 code pulls underlying before user mint, can mint fee shares during interest accrual, and burns receipts against available underlying on exit. Reverified at block 78597801; parent fiat-cash protections remain upstream.",
+    "sources": [
+      {
+        "label": "Morpho exact Steakhouse USDG deployment",
+        "url": "https://app.morpho.org/robinhood-chain/vault/0xBeEff033F34C046626B8D0A041844C5d1A5409dd/steakhouse-usdg"
+      },
+      {
+        "label": "Exact verified VaultV2 source (robinhood, 0xbeeff033f34c046626b8d0a041844c5d1a5409dd)",
+        "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all"
+      },
+      {
+        "label": "Morpho current vault identity and asset API",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Steakhouse DeFi vault governing terms",
+        "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Morpho exact Steakhouse USDG deployment",
+      "url": "https://app.morpho.org/robinhood-chain/vault/0xBeEff033F34C046626B8D0A041844C5d1A5409dd/steakhouse-usdg"
+    },
+    {
+      "label": "Steakhouse documentation",
+      "url": "https://www.steakhouse.financial/docs"
+    },
+    {
+      "label": "Morpho Vault V2 mechanics",
+      "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "robinhood",
+      "address": "0xbeeff033f34c046626b8d0a041844c5d1a5409dd",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "unknown",
+  "yieldConfig": {
+    "yieldSource": "Steakhouse Morpho USDG lending vault",
+    "yieldType": "lending-vault"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "steakusdg-steakhouse",
+    "display": {
+      "url": "https://app.morpho.org/robinhood-chain/vault/0xBeEff033F34C046626B8D0A041844C5d1A5409dd/steakhouse-usdg",
+      "label": "Steakhouse USDG"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "robinhood",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://rpc.mainnet.chain.robinhood.com",
+      "slice": {
+        "name": "USDG-denominated Steakhouse Morpho lending claim",
+        "risk": "high",
+        "coinId": "usdg-paxos",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
+      },
+      "deployedExposure": {
+        "basis": "Exact asset() returned 0x5fc5360d0400a0fd4f2af552add042d716f1d168; sole adapter 0x44abc1d6ccff2696d98890b92e2157af242179c2 is identified by Morpho as MorphoMarketV1 over the same loan asset. This 100% slice is the underlying lending claim, not an estimate of borrower collateral or idle cash.",
+        "reviewedAt": "2026-10-02",
+        "sourceUrl": "https://app.morpho.org/robinhood-chain/vault/0xBeEff033F34C046626B8D0A041844C5d1A5409dd/steakhouse-usdg"
+      },
+      "redemptionLiquidity": {
+        "source": "morpho-vault-v2",
+        "chainId": 4663
+      }
+    }
+  },
+  "launchDate": "2026-05-29"
+}

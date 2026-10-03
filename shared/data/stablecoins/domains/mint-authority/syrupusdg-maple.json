@@ -1,0 +1,155 @@
+{
+  "id": "syrupusdg-maple",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "inheritedFrom": "usdg-paxos",
+    "summary": "syrupUSDG is the canonical Ethereum Maple lending-pool share. Base USDG issuance is inherited from Paxos; local share eligibility and accounting depend on an upgradeable PoolManager and privileged protocol controls. CCIP representation mint/burn powers belong to Bridge Risk, not native issuance.",
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "upgradeability": {
+      "model": "custom",
+      "deploymentRefs": [
+        "ethereum:0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
+      ],
+      "proxyAddresses": [
+        "0x6c48cd22086f3db3f23e7ceedd5c429d93ff3327"
+      ],
+      "implementationAddresses": [
+        "0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Maple syrupUSDG PoolManager",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107703,
+      "sources": [
+        {
+          "label": "Verified deployed contract 0x6c48cd22086f3db3f23e7ceedd5c429d93ff3327",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6c48cd22086f3db3f23e7ceedd5c429d93ff3327"
+        },
+        {
+          "label": "Verified deployed contract 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+        },
+        {
+          "label": "Maple syrupUSDG legal claim and risk disclosures",
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"
+        },
+        {
+          "label": "Ethereum RPC observation at block 26107703",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a",
+        "label": "Maple syrupUSDG canonical share contract",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "Verified deployed contract 0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
+          },
+          {
+            "label": "Ethereum RPC observation at block 26107703",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "evidence": "At block 26107703, asset() was USDG 0xe343167631d89b6ffc58b88d6b7fb0228795491d, decimals 6, totalSupply 188334976.708895 and totalAssets 190837163.740225. The token's EIP-1967 implementation/admin slots were zero. Verified mint/deposit/transfer paths check the manager; token non-proxy identity is not whole-protocol immutability.",
+        "deploymentRefs": [
+          "ethereum:0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
+        ],
+        "canRaiseCap": false
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x6c48cd22086f3db3f23e7ceedd5c429d93ff3327",
+        "label": "Maple syrupUSDG PoolManager",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "Verified deployed contract 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+          },
+          {
+            "label": "Verified deployed contract 0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
+          },
+          {
+            "label": "Ethereum RPC observation at block 26107703",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "evidence": "At block 26107703, manager implementation() was 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8, poolDelegate() was 0x54e28bb2d530ee10386dbca6e7e84efac809292c, globals() was 0x804a6f5f667170f545bf14e5ddb48c70b788390c, withdrawalManager() was 0xaf63c06970086d535f338565d77c5fa3bdc5fd79 and poolPermissionManager() was 0xbe10adce8b6e3e02db384e7fada5395dd113d8b3. Verified manager source exposes upgrade, setLiquidityCap and canCall. These control share issuance and valuation, not creation of base USDG.",
+        "deploymentRefs": [
+          "ethereum:0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
+        ],
+        "canRaiseCap": true
+      }
+    ],
+    "review": {
+      "evidence": "Exact native share and mutable manager bindings are verified at Ethereum block 26107703. Local shares represent an economically pooled credit claim; USDG denomination does not prove financial reconciliation. The sibling The Network Firm dashboard covers syrupUSDC and syrupUSDT, not syrupUSDG. Native protocol controls are admitted conservatively; no complete signer, guard, protective-delay or privileged-path census is claimed.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "sources": [
+        {
+          "label": "Maple syrupUSDG legal claim and risk disclosures",
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"
+        },
+        {
+          "label": "Maple syrupUSDG defaults and impairments",
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-defaults-and-impairments.md"
+        },
+        {
+          "label": "Maple pool accounting and impairment authority",
+          "url": "https://docs.maple.finance/technical-resources/pools/accounting/pool-accounting.md"
+        },
+        {
+          "label": "Verified deployed contract 0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
+        },
+        {
+          "label": "Verified deployed contract 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+        },
+        {
+          "label": "Ethereum RPC observation at block 26107703",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        }
+      ],
+      "disposition": "scoreable",
+      "scopedQuestions": [
+        {
+          "controlRef": "Maple syrupUSDG PoolManager",
+          "question": "What complete governor, security-admin, delegate, factory upgrade-path and schedule-delay census applies to this pool, including bypass and signer/module/guard facts?",
+          "reviewedAt": "2026-10-02",
+          "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+          "sources": [
+            {
+              "label": "Maple syrupUSDG legal claim and risk disclosures",
+              "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"
+            },
+            {
+              "label": "Verified deployed contract 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

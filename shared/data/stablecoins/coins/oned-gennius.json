@@ -1,0 +1,77 @@
+{
+  "id": "oned-gennius",
+  "name": "ONED USD",
+  "symbol": "ONED",
+  "oneLiner": "ONED is a Gennius-branded dollar token backed by USDC held by Coinbase, with 1:1 conversion for eligible Coinbase accounts.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized"
+  },
+  "detailProvider": "coingecko",
+  "geckoId": "oned",
+  "collateral": "USDC held in Coinbase custody, with itemized Base reserve wallets published by Coinbase; token-specific legal segregation and insolvency priority are unverified.",
+  "pegMechanism": "Eligible Coinbase accounts can deposit native ONED from external wallets and convert ONED 1:1 with USDC. New York, Canada and the European Economic Area are excluded on Coinbase. Copies, wrapped and bridged ONED are not redeemable under native holder terms.",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "The exact Base token is a distinct Coinbase Custom Stablecoin for Gennius, backed 1:1 by Coinbase-custodied USDC and convertible by eligible accounts. This is a core custody-layer instrument with USDC collateral rather than a direct on-chain wrapper.",
+    "sources": [
+      {
+        "label": "Coinbase ONED custody and conversion",
+        "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins"
+      },
+      {
+        "label": "Coinbase ONED itemized reserve dashboard",
+        "url": "https://www.coinbase.com/en-in/oned/proof-of-reserves"
+      },
+      {
+        "label": "ONED native holder terms",
+        "url": "https://oned.global/#/end-user-terms-and-conditions"
+      }
+    ]
+  },
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.coinbase.com/en-in/oned/proof-of-reserves",
+    "provider": "Coinbase itemized ONED reserve and supply dashboard; no token-specific independent financial attestor identified",
+    "attestorTier": "self",
+    "cadence": "real-time"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://oned.global/"
+    },
+    {
+      "label": "Coinbase ONED custody and conversion",
+      "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins"
+    },
+    {
+      "label": "Coinbase ONED itemized reserve dashboard",
+      "url": "https://www.coinbase.com/en-in/oned/proof-of-reserves"
+    },
+    {
+      "label": "ONED native holder terms",
+      "url": "https://oned.global/#/end-user-terms-and-conditions"
+    },
+    {
+      "label": "Gennius ONED platform terms",
+      "url": "https://tc.oned.global/#/oned"
+    },
+    {
+      "label": "Verified current ONED implementation",
+      "url": "https://basescan.org/address/0x57ab1e54fca80105a93a735b59f850f8420b5e2c#code"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "base",
+      "address": "0x10ed0050b7a5d5e1e9cc164f77a71d0bf69f64bd",
+      "decimals": 6
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "cex"
+}

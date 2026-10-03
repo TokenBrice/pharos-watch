@@ -1,0 +1,93 @@
+{
+  "id": "steakusdg-steakhouse",
+  "reserves": [
+    {
+      "sourceKey": "erc4626-single-asset:robinhood:0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "name": "USDG-denominated Steakhouse Morpho lending claim",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usdg-paxos",
+      "depType": "wrapper",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "USDG parent issuer and borrowers in Steakhouse-curated Morpho markets",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "liquidity",
+        "smart-contract",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Morpho exact Steakhouse USDG deployment",
+        "url": "https://app.morpho.org/robinhood-chain/vault/0xBeEff033F34C046626B8D0A041844C5d1A5409dd/steakhouse-usdg"
+      },
+      {
+        "label": "Exact verified VaultV2 source (robinhood, 0xbeeff033f34c046626b8d0a041844c5d1a5409dd)",
+        "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all"
+      },
+      {
+        "label": "Morpho current vault identity and asset API",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Steakhouse DeFi vault governing terms",
+        "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+      }
+    ],
+    "rationale": "Exact asset, 18 share decimals, 6 underlying decimals, positive totalAssets and totalSupply were independently read at robinhood block 78597801. Sole adapter 0x44abc1d6ccff2696d98890b92e2157af242179c2 matches the current Morpho API. The complete direct reserve relationship is the USDG-denominated protocol position, not idle fiat or an independently attested loan book.",
+    "compositionBasis": "Standing underlying-asset relationship corroborated by fixed-block RPC and exact Morpho current deployment inventory",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Borrower collateral allocations and realizable stress exit vary. The 100% underlying-token claim does not assert any collateral-market weighting, signed reconciliation, legal segregation or funded recovery.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Steakhouse USDG VaultV2 and Morpho adapter 0x44abc1d6ccff2696d98890b92e2157af242179c2",
+        "role": "other",
+        "jurisdiction": "robinhood"
+      },
+      {
+        "name": "Carniceria Tropical SA (Steakhouse vault service operator and curator)",
+        "role": "other",
+        "jurisdiction": "Panama"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Morpho exact Steakhouse USDG deployment",
+        "url": "https://app.morpho.org/robinhood-chain/vault/0xBeEff033F34C046626B8D0A041844C5d1A5409dd/steakhouse-usdg"
+      },
+      {
+        "label": "Exact verified VaultV2 source (robinhood, 0xbeeff033f34c046626b8d0a041844c5d1a5409dd)",
+        "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all"
+      },
+      {
+        "label": "Morpho current vault identity and asset API",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Steakhouse DeFi vault governing terms",
+        "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+      }
+    ],
+    "uncertainty": "Immediate assets sit in vault and adapter/market contracts; the curator terms deny custody and fiduciary obligations. Ultimate parent reserve custody, borrower-collateral custody, legal priority, continuity resources and legal reuse rights are not fully established for this exact share. Whole-book custody therefore remains unknown."
+  }
+}

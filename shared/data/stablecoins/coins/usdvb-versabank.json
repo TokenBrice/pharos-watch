@@ -1,0 +1,45 @@
+{
+  "id": "usdvb-versabank",
+  "name": "VersaBank Real Bank Deposit Token USD",
+  "symbol": "USDVB",
+  "oneLiner": "USDVB is VersaBank USA’s pilot dollar deposit token, issued one-for-one against bank deposits ahead of conditional commercialization.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized"
+  },
+  "collateral": "Pre-launch bank deposit token: one USDVB represents US$1 on deposit with VersaBank USA National Association. This is exposure to a bank deposit and its balance sheet, not a separately segregated 100%-cash reserve trust. Federal deposit-insurance eligibility remains subject to regulatory confirmation.",
+  "pegMechanism": "The pilot issues one USDVB per US$1 deposited with VersaBank USA, with issuance and redemption through VersaVault and access/control through VersaView on planned Algorand, Ethereum and Stellar deployments. Ordinary external-holder transfer and redemption rights, minimums, fees, timing and capacity are unpublished.",
+  "mechanismArchetype": "fiat-cash",
+  "links": [
+    {
+      "label": "Pilot announcement",
+      "url": "https://www.versabank.com/versabank-announces-versabank-usa-launch-of-tokenized-deposit-pilot-program-in-united-states/"
+    },
+    {
+      "label": "Q3 2026 management discussion",
+      "url": "https://www.versabank.com/wp-content/uploads/2026/09/VB-Q326-MDA-vF.pdf"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States"
+  },
+  "status": "pre-launch",
+  "announcedDate": "2025-08-26",
+  "launchPhaseDetail": "Internal USDVB pilot announced August 26, 2025, with limited designated external deposit-partner/client deployment planned. Pilot is not a supported catalog launch-phase enum, so no launchPhase is assigned. Commercial launch requires the bank’s stated OCC non-objection process; the September 1, 2026 filing still seeks regulatory confirmation of deposit-insurance eligibility and the ability to pay interest. No current launch window or official chain-qualified asset addresses are established.",
+  "milestones": [
+    {
+      "date": "2025-08-26",
+      "type": "announcement",
+      "title": "VersaBank USA launches internal USDVB pilot",
+      "sourceUrl": "https://www.versabank.com/versabank-announces-versabank-usa-launch-of-tokenized-deposit-pilot-program-in-united-states/",
+      "description": "The bank describes phased testing and limited external partner/client expansion before commercialization, with one USDVB per US$1 on deposit."
+    },
+    {
+      "date": "2026-09-01",
+      "type": "regulatory",
+      "title": "Quarterly filing retains conditional tokenized-deposit strategy",
+      "sourceUrl": "https://www.versabank.com/wp-content/uploads/2026/09/VB-Q326-MDA-vF.pdf",
+      "description": "The bank seeks regulatory confirmation of insurance eligibility and the ability to pay interest; the filing does not establish a public USDVB commercial launch."
+    }
+  ]
+}

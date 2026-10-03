@@ -1,0 +1,83 @@
+{
+  "id": "usdr-rise",
+  "name": "RISE Dollar",
+  "symbol": "USDR",
+  "oneLiner": "RISE's USDR wraps M0's M on RISE; public conversion is to wM, while direct M output requires an approved swapper.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "rwa": true
+  },
+  "variantOf": "m-m0",
+  "variantKind": "pure-wrapper",
+  "pegReferenceId": "m-m0",
+  "collateral": "M0 M tokens held by the chain-local extension; the M parent provides the Treasury-backed issuance and custody layer.",
+  "pegMechanism": "M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right.",
+  "mechanismArchetype": "tbill",
+  "llamaId": "435",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Docs",
+      "url": "https://docs.risechain.com/docs/rise-evm/usdr"
+    },
+    {
+      "label": "Token explorer",
+      "url": "https://explorer.risechain.com/address/0x62b7f5a5be488ea58f660c5aff465647213bc6e9"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "rise",
+      "address": "0x62b7f5a5be488ea58f660c5aff465647213bc6e9",
+      "decimals": 6
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://explorer.risechain.com/address/0x62b7f5a5be488ea58f660c5aff465647213bc6e9",
+    "provider": "On-chain parent-token custody; not independent financial assurance",
+    "cadence": "real-time"
+  },
+  "dependencyReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "RISE Dollar product documentation (accessed 2026-10-02)",
+        "url": "https://docs.risechain.com/docs/rise-evm/usdr"
+      },
+      {
+        "label": "Verified token implementation",
+        "url": "https://explorer.risechain.com/api/v2/smart-contracts/0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b"
+      },
+      {
+        "label": "Pinned rise RPC at block 23375290",
+        "url": "https://rpc.risechain.com"
+      },
+      {
+        "label": "M0 published platform deployments",
+        "url": "https://docs.m0.org/resources/addresses/m0-platform"
+      },
+      {
+        "label": "M0 liquidity routes and issuer onboarding",
+        "url": "https://docs.m0.org/build/accessing-liquidity"
+      }
+    ],
+    "rationale": "At rise block 23375290, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 4,186,507.178834 M against 4,166,902.771484 USDR supply. M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right.",
+    "relationships": [
+      {
+        "id": "m-m0",
+        "weight": 1,
+        "type": "wrapper",
+        "reason": "The immediate serial claim is the verified parent stablecoin, not a direct child allocation of off-chain Treasury reserves."
+      }
+    ]
+  },
+  "infrastructures": [
+    "m0"
+  ]
+}

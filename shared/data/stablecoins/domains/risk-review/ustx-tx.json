@@ -1,0 +1,19 @@
+{
+  "id": "ustx-tx",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Reviewed primary evidence",
+        "url": "https://brale.xyz/security"
+      },
+      {
+        "label": "Reviewed primary evidence",
+        "url": "https://www.linkedin.com/feed/update/urn:li:ugcPost:7508604753505964033/"
+      }
+    ],
+    "evidence": "Brale explicitly supports denylist/freeze/clawback for token programs. USTX-specific enabled implementation is not yet disclosed; capability expectation only.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

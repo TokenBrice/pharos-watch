@@ -1,0 +1,188 @@
+{
+  "id": "xgld-unitas",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "XGLD primary mechanism",
+        "url": "https://docs.unitas.so/overview/xgld.md"
+      },
+      {
+        "label": "Verified XGLDToken source (equal BNB and Base runtime)",
+        "url": "https://basescan.org/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
+      },
+      {
+        "label": "BNB XGLD deployment",
+        "url": "https://bscscan.com/address/0xe60106a5cab7e7c64830919d36ab20caaf50ac91"
+      },
+      {
+        "label": "XAUt direct parent claim",
+        "url": "https://gold.tether.to/faq"
+      }
+    ],
+    "evidence": "XGLD carries upstream XAUt holder-freeze exposure. The verified equal BNB/Base token runtime has local mint/burn roles and OFT administration, but those are not direct holder freezing. The tracked parent remains blacklistable; no separate XGLD freeze verdict is inferred from mint administration.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "BNB is the native XGLD mint/redemption deployment; Base is a LayerZero OFT representation. Reciprocal peers and endpoint are pinned, while DVN/delegate bypass controls, signer policy and conservation remain incomplete.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "XGLD primary mechanism",
+        "url": "https://docs.unitas.so/overview/xgld.md"
+      },
+      {
+        "label": "Verified XGLDToken source (equal BNB and Base runtime)",
+        "url": "https://basescan.org/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
+      },
+      {
+        "label": "BNB XGLD deployment",
+        "url": "https://bscscan.com/address/0xe60106a5cab7e7c64830919d36ab20caaf50ac91"
+      }
+    ],
+    "routes": [
+      {
+        "id": "bsc:0xe60106a5cab7e7c64830919d36ab20caaf50ac91",
+        "destinationChain": "bsc",
+        "canonicalChain": "bsc",
+        "contractAddress": "0xe60106a5cab7e7c64830919d36ab20caaf50ac91",
+        "protocol": "Issuer-native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer names BNB native mint/redemption; current token identity and 6 decimals are pinned. Token also has OFT bridge capability, separated into route controls.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 125374459,
+        "sources": [
+          {
+            "label": "XGLD primary mechanism",
+            "url": "https://docs.unitas.so/overview/xgld.md"
+          },
+          {
+            "label": "Verified XGLDToken source (equal BNB and Base runtime)",
+            "url": "https://basescan.org/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
+          },
+          {
+            "label": "BNB XGLD deployment",
+            "url": "https://bscscan.com/address/0xe60106a5cab7e7c64830919d36ab20caaf50ac91"
+          }
+        ]
+      },
+      {
+        "id": "base:0xea953ea6634d55dac6697c436b1e81a679db5882",
+        "destinationChain": "base",
+        "canonicalChain": "bsc",
+        "contractAddress": "0xea953ea6634d55dac6697c436b1e81a679db5882",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer names Base as an OFT representation; current 6-decimal token and reciprocal BNB/Base peers are pinned. Direct redemption requires returning to BNB.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 52095841,
+        "sources": [
+          {
+            "label": "XGLD primary mechanism",
+            "url": "https://docs.unitas.so/overview/xgld.md"
+          },
+          {
+            "label": "Verified XGLDToken source (equal BNB and Base runtime)",
+            "url": "https://basescan.org/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
+          },
+          {
+            "label": "BNB XGLD deployment",
+            "url": "https://bscscan.com/address/0xe60106a5cab7e7c64830919d36ab20caaf50ac91"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "xgld-bsc-oft",
+        "label": "XGLD bsc OFT bridge runtime",
+        "routeRefs": [
+          "bsc:0xe60106a5cab7e7c64830919d36ab20caaf50ac91"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "peer-config"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xe60106a5cab7e7c64830919d36ab20caaf50ac91",
+        "authorityType": "contract",
+        "observedAt": "2026-10-02",
+        "observedBlock": 125374459,
+        "sources": [
+          {
+            "label": "XGLD primary mechanism",
+            "url": "https://docs.unitas.so/overview/xgld.md"
+          },
+          {
+            "label": "Verified XGLDToken source (equal BNB and Base runtime)",
+            "url": "https://basescan.org/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
+          },
+          {
+            "label": "BNB XGLD deployment",
+            "url": "https://bscscan.com/address/0xe60106a5cab7e7c64830919d36ab20caaf50ac91"
+          }
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "Pinned peers(30184) matches the remote XGLD token; endpoint() is 0x1a44076050125825900e736c501f859c50fe728c. DVN and delegate bypass configuration remains unverified.",
+          "rateLimits": "No current token-specific rate-limit configuration is independently established.",
+          "pausersAdminsUpgraders": "owner() is 0x99997b18733ff4a9d8e0b9c7d9dec59625f87228. Owner signing threshold, delegate powers and complete local authorization roster remain unavailable."
+        },
+        "evidence": "Issuer documents LayerZero OFT. Current BNB and Base runtimes are byte-for-byte equal, with reciprocal exact remote peer bindings; endpoint and owner are directly read. No locked collateral conservation, immutable cap or favorable signer policy is inferred."
+      },
+      {
+        "id": "xgld-base-oft",
+        "label": "XGLD base OFT bridge runtime",
+        "routeRefs": [
+          "base:0xea953ea6634d55dac6697c436b1e81a679db5882"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "peer-config"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xea953ea6634d55dac6697c436b1e81a679db5882",
+        "authorityType": "contract",
+        "observedAt": "2026-10-02",
+        "observedBlock": 52095841,
+        "sources": [
+          {
+            "label": "XGLD primary mechanism",
+            "url": "https://docs.unitas.so/overview/xgld.md"
+          },
+          {
+            "label": "Verified XGLDToken source (equal BNB and Base runtime)",
+            "url": "https://basescan.org/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
+          },
+          {
+            "label": "BNB XGLD deployment",
+            "url": "https://bscscan.com/address/0xe60106a5cab7e7c64830919d36ab20caaf50ac91"
+          }
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "Pinned peers(30102) matches the remote XGLD token; endpoint() is 0x1a44076050125825900e736c501f859c50fe728c. DVN and delegate bypass configuration remains unverified.",
+          "rateLimits": "No current token-specific rate-limit configuration is independently established.",
+          "pausersAdminsUpgraders": "owner() is 0xbb984ce670100aa855f6152f88b26ee57f4ea82a. Owner signing threshold, delegate powers and complete local authorization roster remain unavailable."
+        },
+        "evidence": "Issuer documents LayerZero OFT. Current BNB and Base runtimes are byte-for-byte equal, with reciprocal exact remote peer bindings; endpoint and owner are directly read. No locked collateral conservation, immutable cap or favorable signer policy is inferred."
+      }
+    ]
+  }
+}

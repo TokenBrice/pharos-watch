@@ -51,6 +51,9 @@ const PEG_ORDER = [
   "GHS",
   "KES",
   "PEN",
+  "CZK",
+  "PLN",
+  "AED",
   "IDR",
   "INR",
   "HKD",
@@ -93,6 +96,9 @@ const PEG_COUNT_ORDER = [
   "GHS",
   "KES",
   "PEN",
+  "CZK",
+  "PLN",
+  "AED",
 ] as const;
 
 export interface StablecoinClientProjectionCoin {

@@ -1,0 +1,152 @@
+{
+  "id": "usdfr-forest-road",
+  "reserves": [
+    {
+      "name": "Forest Road deployed specialty-finance credit book",
+      "pct": 97.344125,
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Forest Road originated facilities; borrower legal identities undisclosed",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "legal",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "USDC idle redemption reserve",
+      "pct": 2.655875,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle",
+      "riskFactors": [
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Forest Road USDfr and credit-book mechanism",
+        "url": "https://forestroadvault.com/docs/overview"
+      },
+      {
+        "label": "Canonical Ethereum deployment addresses",
+        "url": "https://forestroadvault.com/docs/addresses"
+      },
+      {
+        "label": "USDfr primary redemption and holder controls",
+        "url": "https://forestroadvault.com/docs/how-to"
+      },
+      {
+        "label": "Timelocked but Forest-Road-controlled governance",
+        "url": "https://forestroadvault.com/docs/roles-and-governance"
+      },
+      {
+        "label": "Definitive legal characterization and related-party facility",
+        "url": "https://forestroadvault.com/legal"
+      },
+      {
+        "label": "Disclosed open economic findings and security-review scope",
+        "url": "https://forestroadvault.com/docs/security"
+      },
+      {
+        "label": "Default and recovery pricing mechanics",
+        "url": "https://forestroadvault.com/docs/recovery"
+      },
+      {
+        "label": "Public onchain backing and loan-book disclosure",
+        "url": "https://forestroadvault.com/transparency"
+      },
+      {
+        "label": "Ethereum USDfr totalSupply and role reads at block 26107707",
+        "url": "https://etherscan.io/address/0xcc07e7c4e5e35affd47b351e420a22c667d7f83d"
+      },
+      {
+        "label": "ReserveManager accounting reads at block 26107707",
+        "url": "https://etherscan.io/address/0x8317736611b542ddb4a820fe344b621a904bdd48"
+      }
+    ],
+    "rationale": "At Ethereum block 26107707, totalBackingValue was $5150523.219270193949, deployedPrincipal $5013731.736653193831, actual ReserveManager USDC custody $136,791.482617 and USDfr supply 5,142,565.55847783. The two accounting categories reconcile; percentages use backing value, not token supply or contractual face. Deployed principal includes accrual and issuer/attester marks, not independently verified credit market value. The earlier same-day pinned 11-facility face census is not relabeled as outstanding-balance WAM.",
+    "compositionBasis": "Pinned Ethereum ReserveManager totalBackingValue/deployedPrincipal and canonical USDC balance at block 26107707",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Deployed credit book has onchain accounting and facility identifiers, but borrower identities, executed liens/segregation instruments, independently confirmed collateral and financial assurance remain unavailable. Idle USDC alone creates the tracked collateral dependency.",
+    "knownUnknownExposurePct": 97.344125,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Forest Road deployed specialty-finance credit book",
+        "pct": 97.344125,
+        "disposition": "insufficient-evidence",
+        "rationale": "Credit-facility accounting does not establish borrower identities, independently verified asset values or enforceable holder priority; no stablecoin dependency is invented for the loan book."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "ReserveManager 0x8317736611b542ddb4a820fe344b621a904bdd48",
+        "role": "custodian"
+      },
+      {
+        "name": "Forest Road originator and servicer",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Forest Road USDfr and credit-book mechanism",
+        "url": "https://forestroadvault.com/docs/overview"
+      },
+      {
+        "label": "Canonical Ethereum deployment addresses",
+        "url": "https://forestroadvault.com/docs/addresses"
+      },
+      {
+        "label": "USDfr primary redemption and holder controls",
+        "url": "https://forestroadvault.com/docs/how-to"
+      },
+      {
+        "label": "Timelocked but Forest-Road-controlled governance",
+        "url": "https://forestroadvault.com/docs/roles-and-governance"
+      },
+      {
+        "label": "Definitive legal characterization and related-party facility",
+        "url": "https://forestroadvault.com/legal"
+      },
+      {
+        "label": "Disclosed open economic findings and security-review scope",
+        "url": "https://forestroadvault.com/docs/security"
+      },
+      {
+        "label": "Default and recovery pricing mechanics",
+        "url": "https://forestroadvault.com/docs/recovery"
+      },
+      {
+        "label": "Public onchain backing and loan-book disclosure",
+        "url": "https://forestroadvault.com/transparency"
+      }
+    ],
+    "uncertainty": "Exact Ethereum contract custodies idle USDC. Credit collateral is described as assigned, lien-perfected and escrowed via attester facts, but executed deeds, escrow account holders, borrower identities and asset-wide legal safeguards are not public. Named onchain custody cannot establish a whole-book regulated institutional tier.",
+    "knownUnknownExposurePct": 97.344125
+  }
+}

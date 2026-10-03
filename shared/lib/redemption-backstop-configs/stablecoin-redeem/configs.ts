@@ -28,6 +28,7 @@ import {
   gauntletMorphoConfig,
   steakhousePrimeInstantConfig,
 } from "./shared";
+import { DISCOVERY_STABLECOIN_REDEEM_CONFIGS } from "./discovery-wave";
 
 const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/stablecoin-redeem/configs.ts";
 const REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT = "2026-07-19";
@@ -119,6 +120,7 @@ const RESERVOIR_REDEEM_CONFIGS = defineConfigFamily(
 );
 
 const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
+  ...DISCOVERY_STABLECOIN_REDEEM_CONFIGS,
   "onyc-onre": defineStablecoinRedeemConfig({
     outputAssets: ["usdg-paxos"],
     capacityModel: { kind: "fixed-usd", amountUsd: 0, confidence: "dynamic" },

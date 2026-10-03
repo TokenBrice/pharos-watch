@@ -1,0 +1,219 @@
+{
+  "id": "usdr-rise",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "inheritedFrom": "m-m0",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "RISE Dollar inherits base M issuance and uses chain-local M-extension wrapping. Local proxy upgrades and operational role administration remain additional controls; public wM conversion is distinct from approved direct M output.",
+    "controls": [
+      {
+        "chain": "rise",
+        "address": "0xc588c10a90c942ee3476877c4bac3d798e724856",
+        "deploymentRefs": [
+          "rise:0x62b7f5a5be488ea58f660c5aff465647213bc6e9"
+        ],
+        "label": "USDR token ProxyAdmin owner",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 23375290,
+        "sources": [
+          {
+            "label": "RISE Dollar product documentation (accessed 2026-10-02)",
+            "url": "https://docs.risechain.com/docs/rise-evm/usdr"
+          },
+          {
+            "label": "Verified token implementation",
+            "url": "https://explorer.risechain.com/api/v2/smart-contracts/0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b"
+          },
+          {
+            "label": "Pinned rise RPC at block 23375290",
+            "url": "https://rpc.risechain.com"
+          },
+          {
+            "label": "M0 published platform deployments",
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
+          },
+          {
+            "label": "M0 liquidity routes and issuer onboarding",
+            "url": "https://docs.m0.org/build/accessing-liquidity"
+          }
+        ],
+        "evidence": "At block 23375290, token EIP-1967 admin is 0x286944bbf99ee9a2f631d821e8dc2212ddbd7e69, whose owner() returns 0xc588c10a90c942ee3476877c4bac3d798e724856. Safe threshold and owner count were read at the same block; complete modules, guards, signer independence and key custody remain unresolved.",
+        "canRaiseCap": true,
+        "safe": {
+          "threshold": 4,
+          "observedBlock": 23375290,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "threshold": 4,
+        "signerCount": 8
+      },
+      {
+        "chain": "rise",
+        "address": "0xb6807116b3b1b321a390594e31ecd6e0076f6278",
+        "deploymentRefs": [
+          "rise:0x62b7f5a5be488ea58f660c5aff465647213bc6e9"
+        ],
+        "label": "USDR local SwapFacility wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 23375290,
+        "sources": [
+          {
+            "label": "RISE Dollar product documentation (accessed 2026-10-02)",
+            "url": "https://docs.risechain.com/docs/rise-evm/usdr"
+          },
+          {
+            "label": "Verified token implementation",
+            "url": "https://explorer.risechain.com/api/v2/smart-contracts/0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b"
+          },
+          {
+            "label": "Pinned rise RPC at block 23375290",
+            "url": "https://rpc.risechain.com"
+          },
+          {
+            "label": "M0 published platform deployments",
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
+          },
+          {
+            "label": "M0 liquidity routes and issuer onboarding",
+            "url": "https://docs.m0.org/build/accessing-liquidity"
+          }
+        ],
+        "evidence": "Verified wrap transfers the parent M claim before minting child balances. The facility is the constructor-bound caller of wrap/unwrap; direct M input/output is approved-swapper-gated. The route does not create base M liabilities.",
+        "canRaiseCap": "unknown",
+        "capDescription": "Parent-token inventory gates the reviewed M wrapping path; upgradeable local logic and route permissioning are not immutable limits."
+      },
+      {
+        "chain": "rise",
+        "address": "0xb0ea3203b80d67c58f6709779c5fbac641aab769",
+        "deploymentRefs": [
+          "rise:0x62b7f5a5be488ea58f660c5aff465647213bc6e9"
+        ],
+        "label": "USDR operational DEFAULT_ADMIN Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 23375290,
+        "sources": [
+          {
+            "label": "RISE Dollar product documentation (accessed 2026-10-02)",
+            "url": "https://docs.risechain.com/docs/rise-evm/usdr"
+          },
+          {
+            "label": "Verified token implementation",
+            "url": "https://explorer.risechain.com/api/v2/smart-contracts/0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b"
+          },
+          {
+            "label": "Pinned rise RPC at block 23375290",
+            "url": "https://rpc.risechain.com"
+          },
+          {
+            "label": "M0 published platform deployments",
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
+          },
+          {
+            "label": "M0 liquidity routes and issuer onboarding",
+            "url": "https://docs.m0.org/build/accessing-liquidity"
+          }
+        ],
+        "evidence": "Fresh hasRole(DEFAULT_ADMIN_ROLE,Safe)=true. The Safe can grant/change the roles defined by the reviewed extension; JMI allowed-asset/cap administration can change eligible non-M inventory, but totalAssets() for current non-M inventory is zero.",
+        "safe": {
+          "threshold": 2,
+          "observedBlock": 23375290,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "threshold": 2,
+        "signerCount": 3,
+        "canRaiseCap": true
+      }
+    ],
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "rise:0x62b7f5a5be488ea58f660c5aff465647213bc6e9"
+      ],
+      "proxyAddresses": [
+        "0x62b7f5a5be488ea58f660c5aff465647213bc6e9"
+      ],
+      "implementationAddresses": [
+        "0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b"
+      ],
+      "adminAddresses": [
+        "0x286944bbf99ee9a2f631d821e8dc2212ddbd7e69"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "USDR token ProxyAdmin owner",
+      "observedAt": "2026-10-02",
+      "observedBlock": 23375290,
+      "sources": [
+        {
+          "label": "RISE Dollar product documentation (accessed 2026-10-02)",
+          "url": "https://docs.risechain.com/docs/rise-evm/usdr"
+        },
+        {
+          "label": "Verified token implementation",
+          "url": "https://explorer.risechain.com/api/v2/smart-contracts/0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b"
+        },
+        {
+          "label": "Pinned rise RPC at block 23375290",
+          "url": "https://rpc.risechain.com"
+        },
+        {
+          "label": "M0 published platform deployments",
+          "url": "https://docs.m0.org/resources/addresses/m0-platform"
+        },
+        {
+          "label": "M0 liquidity routes and issuer onboarding",
+          "url": "https://docs.m0.org/build/accessing-liquidity"
+        }
+      ]
+    },
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "continuous",
+    "supervision": "unknown",
+    "review": {
+      "sources": [
+        {
+          "label": "RISE Dollar product documentation (accessed 2026-10-02)",
+          "url": "https://docs.risechain.com/docs/rise-evm/usdr"
+        },
+        {
+          "label": "Verified token implementation",
+          "url": "https://explorer.risechain.com/api/v2/smart-contracts/0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b"
+        },
+        {
+          "label": "Pinned rise RPC at block 23375290",
+          "url": "https://rpc.risechain.com"
+        },
+        {
+          "label": "M0 published platform deployments",
+          "url": "https://docs.m0.org/resources/addresses/m0-platform"
+        },
+        {
+          "label": "M0 liquidity routes and issuer onboarding",
+          "url": "https://docs.m0.org/build/accessing-liquidity"
+        }
+      ],
+      "evidence": "At rise block 23375290, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 4,186,507.178834 M against 4,166,902.771484 USDR supply. M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right. Local role/proxy reach is authored separately from inherited M authority and the parent bridge layer.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "Close current SwapFacility upgrade/role-control reach and all extension operational role holders.",
+        "Enumerate operational and upgrade Safe modules/guards, signer independence and key custody; no threshold-only strength claim is made."
+      ]
+    }
+  }
+}

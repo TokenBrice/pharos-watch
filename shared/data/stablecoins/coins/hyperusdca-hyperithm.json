@@ -1,0 +1,120 @@
+{
+  "id": "hyperusdca-hyperithm",
+  "name": "Hyperithm USDC Apex",
+  "symbol": "hyperUSDCa",
+  "oneLiner": "hyperUSDCa is Hyperithm's USDC lending vault on Monad; shares earn borrower interest and redeem for liquid USDC, with credit losses reducing NAV.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "usdc-circle",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "usdc-circle",
+  "collateral": "USDC in the Hyperithm-curated Morpho Vault V2 on monad, held idle or lent through its MorphoMarketV1AdapterV2; borrower collateral and credit losses remain local strategy exposure",
+  "pegMechanism": "ERC-4626 shares accrue net USDC lending interest and realize losses at NAV. Ordinary withdraw/redeem uses idle USDC and the configured liquidity adapter, subject to liquidity; force-deallocation and in-kind exits are separate, not guaranteed dollar settlement",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "Hyperithm USDC Apex (hyperUSDCa) at monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371 is the current public ERC-4626 VaultV2 share over USDC 0x754704bc059f8c67012fed69bc8a327a5aafb603. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x068f22739a5f8a5c84619d7f355b678d00707908 holds 7 enumerated Morpho market IDs. This intentionally differs from the fiat-cash parent and older Morpho precedent classifications.",
+    "sources": [
+      {
+        "label": "Exact Morpho Vault V2 deployment",
+        "url": "https://app.morpho.org/monad/vault/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
+      },
+      {
+        "label": "Verified deployment code identity",
+        "url": "https://monadscan.com/address/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371#code"
+      },
+      {
+        "label": "Pinned monad block 110016412",
+        "url": "https://monadscan.com/block/110016412"
+      },
+      {
+        "label": "Morpho complete current vault inventory",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho Vault V2 gates",
+        "url": "https://docs.morpho.org/curate/concepts/gates.md"
+      },
+      {
+        "label": "Morpho share accounting and loss realization",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "Exact Morpho lending adapter",
+        "url": "https://monadscan.com/address/0x068f22739a5f8a5c84619d7f355b678d00707908#code"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Morpho vault",
+      "url": "https://app.morpho.org/monad/vault/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
+    },
+    {
+      "label": "Vault mechanics",
+      "url": "https://docs.morpho.org/developers/earn/tutorials/assets-flow.md"
+    },
+    {
+      "label": "Gate documentation",
+      "url": "https://docs.morpho.org/curate/concepts/gates.md"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "monad",
+      "address": "0x78999cc96d2ba0341588c60ccb0e91c6c33cf371",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "exotic",
+  "custodyModel": "unknown",
+  "governanceQuality": "wrapper",
+  "yieldConfig": {
+    "yieldSource": "Hyperithm USDC Apex Morpho Vault V2",
+    "yieldType": "lending-vault"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "hyperusdca-hyperithm",
+    "display": {
+      "url": "https://app.morpho.org/monad/vault/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371",
+      "label": "Hyperithm USDC Apex"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "monad",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "Hyperithm USDC Apex deployed strategy positions",
+        "risk": "high",
+        "coinId": "usdc-circle",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x754704bc059f8c67012fed69bc8a327a5aafb603"
+      },
+      "deployedExposure": {
+        "basis": "Pinned sole MorphoMarketV1AdapterV2 and complete market inventory; supplied USDC is a lending position, not idle cash",
+        "reviewedAt": "2026-10-02",
+        "sourceUrl": "https://app.morpho.org/monad/vault/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
+      },
+      "redemptionLiquidity": {
+        "source": "morpho-vault-v2",
+        "chainId": 143
+      },
+      "rpcUrl": "https://rpc.monad.xyz"
+    }
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "id": "pyusdx-moonpay",
+  "reserves": [
+    {
+      "name": "PYUSD backing held for MoonPay PYUSDx issuance",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "pyusd-paypal",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Paxos Trust Company, N.A. (PYUSD issuer); MoonPay Digital Assets Limited (PYUSDx issuer)",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "MoonPay PYUSDx holder and counterparty terms",
+        "url": "https://www.moonpay.com/legal/pyusdx_terms"
+      },
+      {
+        "label": "M0 exact PYUSDx mainnet deployments",
+        "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+      }
+    ],
+    "rationale": "MoonPay terms define PYUSDx as backed by PYUSD and prescribe one PYUSD per token for minting and redemption. The 100% slice records the disclosed backing asset, not a measured reserve-coverage ratio. No public issuer wallet census or token-specific reserve-to-liability examination was retrieved. Upstream PYUSD assurance does not verify MoonPay holdings or PYUSDx liabilities.",
+    "compositionBasis": "Issuer-defined single-asset 1:1 PYUSD backing; no independent quantity reconciliation",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The disclosed reserve asset is PYUSD; the reserve amount, custody structure, encumbrance and allocation against all local liabilities are not independently established.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "MoonPay Digital Assets Limited (issuer-designated PYUSD receiving addresses; custodian undisclosed)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "MoonPay PYUSDx holder and counterparty terms",
+        "url": "https://www.moonpay.com/legal/pyusdx_terms"
+      }
+    ],
+    "uncertainty": "Terms expressly deny any ownership, beneficial, trust, custodial or proprietary reserve interest and restrict redemption to eligible counterparties. Receiving PYUSD at issuer-designated addresses does not establish complete custody coverage, segregation, encumbrance limits or insolvency priority."
+  }
+}

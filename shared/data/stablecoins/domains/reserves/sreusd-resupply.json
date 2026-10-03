@@ -1,0 +1,86 @@
+{
+  "id": "sreusd-resupply",
+  "reserves": [
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0x57ab1e0003f623289cd798b1824be09a793e4bec",
+      "name": "REUSD savings vault position",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "reusd-resupply",
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Resupply sreUSD vault and REUSD",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "market",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Resupply savings documentation",
+        "url": "https://docs.resupply.finance/resupply-protocol/savings-reusd.md"
+      },
+      {
+        "label": "Resupply official deployment roster",
+        "url": "https://raw.githubusercontent.com/resupplyfi/resupply/main/deployment/contracts.json"
+      },
+      {
+        "label": "Verified current sreUSD implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x557ab1e003951a73c12d16f0fea8490e39c33c35"
+      },
+      {
+        "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
+        "url": "https://etherscan.io/block/26107704"
+      }
+    ],
+    "rationale": "At Ethereum block 26107704 (2026-10-02T22:44:11Z), asset() is 0x57ab1e0003f623289cd798b1824be09a793e4bec; decimals() is 18, totalSupply() is 27269498.885603778064 shares, totalAssets() is 28218576.035466793925 REUSD, and balanceOf(vault) is 28224015.272168319672 REUSD. convertToAssets(1e18) and previewRedeem(1e18) return 1.034803615345 REUSD. The complete local reserve envelope is the named parent token; unvested rewards are excluded from redeemable totalAssets until released. No upstream reserve percentages or financial-assurance claims are assigned to the child.",
+    "compositionBasis": "Official single-asset vault documentation, verified accounting source and fixed-block Ethereum reads at 26107704",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Local underlying identity is fully identified. Upstream parent custody, collateral realization and stressed liquidity remain parent-layer risks; the local percentage is not an end-to-end solvency claim.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Resupply sreUSD vault (Ethereum 0x557ab1e003951a73c12d16f0fea8490e39c33c35)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Resupply savings documentation",
+        "url": "https://docs.resupply.finance/resupply-protocol/savings-reusd.md"
+      },
+      {
+        "label": "Resupply official deployment roster",
+        "url": "https://raw.githubusercontent.com/resupplyfi/resupply/main/deployment/contracts.json"
+      },
+      {
+        "label": "Verified current sreUSD implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x557ab1e003951a73c12d16f0fea8490e39c33c35"
+      },
+      {
+        "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
+        "url": "https://etherscan.io/block/26107704"
+      }
+    ],
+    "uncertainty": "Onchain custody describes only the immediate wrapper token holdings. It does not assert legal segregation, bankruptcy priority, upstream custodial safeguards or administrator independence."
+  }
+}

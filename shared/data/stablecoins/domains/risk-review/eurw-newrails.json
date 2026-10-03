@@ -1,0 +1,72 @@
+{
+  "id": "eurw-newrails",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "sources": [
+      {
+        "label": "Hacken Newrails Monad code security audit dated March 12, 2026",
+        "url": "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf"
+      },
+      {
+        "label": "Newrails EMT redemption policy effective February 9, 2026",
+        "url": "https://www.newrails.xyz/en/legal/emt-redemption-policy"
+      }
+    ],
+    "evidence": "The Hacken audit of the Monad Stablecoin and Blacklistable modules identifies BLACKLISTER_ROLE add/remove blacklist authority and restrictions on transfers and approvals. The current exact Monad EURW UUPS deployment is bound by six-decimal symbol/supply and implementation reads. The issuer redemption policy expressly permits wallet blocking and legal-order freezing. Hedera administrative-key observations are not used because its exact token ID lacks primary binding."
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Only the exact CoinGecko-bound Monad issuer-native EURW deployment is authored. The whitepaper also describes Hedera, but token lead 0.0.10250174 lacks an issuer exact-ID binding and is excluded. No cross-chain bridge mechanism or controller is established by a network-support statement.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Newrails EURW MiCA whitepaper notified May 26, 2026",
+        "url": "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml"
+      },
+      {
+        "label": "CoinGecko exact EURW deployment identity",
+        "url": "https://www.coingecko.com/en/coins/newrails-euro"
+      },
+      {
+        "label": "Monad mainnet JSON-RPC",
+        "url": "https://rpc.monad.xyz"
+      }
+    ],
+    "routes": [
+      {
+        "id": "monad:0x1111b3ded9f1fe1801ad4ebef8e2788183a24111",
+        "destinationChain": "monad",
+        "contractAddress": "0x1111b3ded9f1fe1801ad4ebef8e2788183a24111",
+        "protocol": "Newrails native EURW",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The issuer identifies Monad EURW, CoinGecko binds the exact contract and six decimals, and current RPC reads confirm EURW symbol, positive supply and UUPS implementation. An issuer-native route is not evidence of a bridge.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 110016408,
+        "sources": [
+          {
+            "label": "Newrails EURW MiCA whitepaper notified May 26, 2026",
+            "url": "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml"
+          },
+          {
+            "label": "CoinGecko exact EURW deployment identity",
+            "url": "https://www.coingecko.com/en/coins/newrails-euro"
+          },
+          {
+            "label": "Monad mainnet JSON-RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ]
+      }
+    ]
+  }
+}

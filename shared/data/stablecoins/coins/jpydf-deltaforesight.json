@@ -1,0 +1,56 @@
+{
+  "id": "jpydf-deltaforesight",
+  "name": "JPYdf",
+  "symbol": "JPYdf",
+  "oneLiner": "JPYdf is a pre-launch yen-targeted token developed by DeltaForesight, designed for overcollateralized crypto borrowing without a yen redemption claim.",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "JPY",
+    "governance": "centralized-dependent"
+  },
+  "collateral": "Pre-launch: user-deposited cryptoassets and stablecoins are planned to back overcollateralized issuance. The eligible assets, collateral ratios and composition are not disclosed. DeltaForesight's corporate financing is not token collateral or a redemption guarantee.",
+  "pegMechanism": "Pre-launch: JPY DeFi is designed to issue and burn JPYdf under smart-contract rules against overcollateralized user deposits, with liquidation when collateral falls below a required ratio. The Japanese yen is a value-linkage target only. JPYdf represents neither a yen monetary claim nor a right to yen redemption, and no entity promises a face-value buyback. Oracle sources, liquidation parameters and executable protocol redemption terms remain unpublished.",
+  "mechanismArchetype": "cdp",
+  "links": [
+    { "label": "Developer website", "url": "https://deltaforesight.com/" },
+    { "label": "Development announcement", "url": "https://prtimes.jp/main/html/rd/p/000000001.000190693.html" },
+    { "label": "Fusion vault roadmap", "url": "https://deltaforesight.com/en/news/fusion-vaults-20260929/" }
+  ],
+  "jurisdiction": { "country": "Japan" },
+  "status": "pre-launch",
+  "announcedDate": "2026-09-25",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "DeltaForesight announced JPY DeFi development before mainnet on September 25, 2026. Features, eligibility and launch timing remain subject to development and legal review. Its September 29 announcement plans related Fusion by IPOR vaults after mainnet; those vaults are concept-stage plans, with strategies, target chains and offering terms still to be determined. The vault-share ERC-4626 standard does not establish JPYdf itself as a yield-bearing vault token.",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://prtimes.jp/main/html/rd/p/000000001.000190693.html",
+      "title": "DeltaForesight announces development of JPYdf before mainnet",
+      "description": "The developer describes cryptoasset and stablecoin collateral, rule-based overcollateralized issuance and liquidation, while disclaiming yen redemption rights.",
+      "source": "DeltaForesight via PR TIMES"
+    },
+    {
+      "type": "blog",
+      "url": "https://deltaforesight.com/en/news/fusion-vaults-20260929/",
+      "title": "DeltaForesight plans Fusion vaults after JPY DeFi mainnet",
+      "description": "IPOR Labs is to provide vault infrastructure and technical support; chains, strategies and offering terms remain undecided.",
+      "source": "DeltaForesight"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2026-09-25",
+      "type": "announcement",
+      "title": "DeltaForesight announces JPYdf development before mainnet",
+      "description": "The developer publishes the overcollateralized borrowing design and announces corporate J-KISS financing. Launch timing and user terms remain unannounced; the financing is not protocol backing.",
+      "sourceUrl": "https://prtimes.jp/main/html/rd/p/000000001.000190693.html"
+    },
+    {
+      "date": "2026-09-29",
+      "type": "partnership",
+      "title": "DeltaForesight plans related vaults using Fusion by IPOR",
+      "description": "Related ERC-4626 vaults are planned after JPY DeFi mainnet, subject to development, security audits and legal review. IPOR Labs provides infrastructure and technical support; token deployments and offering terms are not announced.",
+      "sourceUrl": "https://deltaforesight.com/en/news/fusion-vaults-20260929/"
+    }
+  ]
+}

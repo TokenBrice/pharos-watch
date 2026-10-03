@@ -1,0 +1,151 @@
+{
+  "id": "krusdc-keyrock",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "unknown",
+    "confidence": "unknown",
+    "summary": "Keyrock Prime USDC mints USDC-backed deposit shares and may mint fee shares during accrual. Circle USDC issuance is inherited; owner and curator retain strategy parameter powers.",
+    "inheritedFrom": "usdc-circle",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "controls": [
+      {
+        "chain": "arc",
+        "address": "0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123",
+        "deploymentRefs": [
+          "arc:0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123"
+        ],
+        "label": "Keyrock Prime USDC asset-backed share contract",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "observedAt": "2026-10-02",
+        "observedBlock": 23952285,
+        "sources": [
+          {
+            "label": "Keyrock Prime USDC exact vault identity and accounting",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 mechanism documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Pinned VaultV2 primary source, gate and loss semantics",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "arc fixed-block RPC observation 23952285",
+            "url": "https://rpc.mainnet.arc.io"
+          }
+        ],
+        "evidence": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=75004490745099738925640035 atomic shares; accrueInterestView returned assets=75012317730434, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 75012317730434 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1000104 USDC atomic units. Reference VaultV2 code mints shares against transferred USDC and accrual can mint fee shares. No discretionary Circle USDC minting power is conveyed."
+      },
+      {
+        "chain": "arc",
+        "address": "0x3ab74ecc34760c0a81f55e0001be6068dcf1cc04",
+        "deploymentRefs": [
+          "arc:0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123"
+        ],
+        "label": "Keyrock Prime USDC owner parameter authority",
+        "role": "governor",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 23952285,
+        "sources": [
+          {
+            "label": "Keyrock Prime USDC exact vault identity and accounting",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 mechanism documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Pinned VaultV2 primary source, gate and loss semantics",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "arc fixed-block RPC observation 23952285",
+            "url": "https://rpc.mainnet.arc.io"
+          }
+        ],
+        "evidence": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, owner=0x3ab74ecc34760c0a81f55e0001be6068dcf1cc04; curator=0x26a17b96e9ca28d84c4e78f22b83a1ccea28ad21. Both owner and curator eth_getCode returned 0x; no multisignature or key-custody attestation is established. addAdapter delay=604800 sec; increaseAbsoluteCap delay=604800 sec; fee-setting delays=0. Fee rates performance=0.0, management=0.0.",
+        "failureDomainKeys": [
+          "eoa:arc:0x3ab74ecc34760c0a81f55e0001be6068dcf1cc04"
+        ]
+      }
+    ],
+    "upgradeability": {
+      "model": "unknown",
+      "canChangeMintLogic": "unknown",
+      "observedAt": "2026-10-02",
+      "observedBlock": 23952285,
+      "sources": [
+        {
+          "label": "Keyrock Prime USDC exact vault identity and accounting",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Morpho Vault V2 mechanism documentation",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Pinned VaultV2 primary source, gate and loss semantics",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+        },
+        {
+          "label": "arc fixed-block RPC observation 23952285",
+          "url": "https://rpc.mainnet.arc.io"
+        }
+      ]
+    },
+    "review": {
+      "disposition": "unresolved",
+      "sources": [
+        {
+          "label": "Keyrock Prime USDC exact vault identity and accounting",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Morpho Vault V2 mechanism documentation",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Pinned VaultV2 primary source, gate and loss semantics",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+        },
+        {
+          "label": "arc fixed-block RPC observation 23952285",
+          "url": "https://rpc.mainnet.arc.io"
+        }
+      ],
+      "evidence": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, owner=0x3ab74ecc34760c0a81f55e0001be6068dcf1cc04; curator=0x26a17b96e9ca28d84c4e78f22b83a1ccea28ad21. Both owner and curator eth_getCode returned 0x; no multisignature or key-custody attestation is established. addAdapter delay=604800 sec; increaseAbsoluteCap delay=604800 sec; fee-setting delays=0. Fee rates performance=0.0, management=0.0. Local financial attestation or prudential supervision is not inherited from Circle. Arc factory/API and reference source identify VaultV2, but exact deployment source-to-bytecode completeness and mint-logic replacement protection remain unverified.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "unresolvedQuestions": [
+        "Signer independence and actual key custody are undisclosed.",
+        "Obtain exact Arc deployed-code/source linkage before resolving local mint-logic immutability."
+      ]
+    }
+  }
+}

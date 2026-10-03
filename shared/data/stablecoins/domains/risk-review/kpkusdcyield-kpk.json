@@ -1,0 +1,68 @@
+{
+  "id": "kpkusdcyield-kpk",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+        "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+      },
+      {
+        "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+      },
+      {
+        "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+        "url": "https://eth-mainnet.g.alchemy.com"
+      },
+      {
+        "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho gate semantics and irreversible abdication",
+        "url": "https://docs.morpho.org/curate/concepts/gates.md"
+      },
+      {
+        "label": "Exact current MorphoMarketV1AdapterV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
+      }
+    ],
+    "evidence": "At Ethereum block 26107704, sendSharesGate, receiveSharesGate and receiveAssetsGate are zero and their setter selectors are permanently abdicated. Source transfer requires share gates; exit requires canSendShares and canReceiveAssets. sendAssetsGate instead controls deposits, not direct withdrawal. Its setter abdicated=0. Underlying USDC issuer freeze exposure remains inherited. Partial source verification and matching deployed bytes do not prove a complete compiler match.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "One exact native Ethereum vault-share deployment; no token-specific bridge representation is authored. Parent and borrower collateral bridge risks remain separate.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+        "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+      },
+      {
+        "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+      },
+      {
+        "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+        "url": "https://eth-mainnet.g.alchemy.com"
+      },
+      {
+        "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho gate semantics and irreversible abdication",
+        "url": "https://docs.morpho.org/curate/concepts/gates.md"
+      },
+      {
+        "label": "Exact current MorphoMarketV1AdapterV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
+      }
+    ]
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "id": "stbt-matrixdock",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "STBT issuance and custom-proxy upgrades share an issuer control contract with zero current delay and unverified proposer thresholds.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x22276a1bd16bc3052b362c2e0f65aace04ed6f99",
+        "deploymentRefs": [
+          "ethereum:0x530824da86689c9c17cdc2871ff29b058345b44a"
+        ],
+        "label": "STBT issuer and owner controller",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "Verified deployed mint implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"
+          }
+        ],
+        "evidence": "Pinned block 26107703: issuer, owner, moderator and controller all return this contract; getMinDelay returns zero. STBTv2 issue checks the reserve-feed budget, but owner can replace issuer and mint logic via the custom proxy. Effective proposer/admin membership and backend custody thresholds remain unknown."
+      }
+    ],
+    "upgradeability": {
+      "model": "custom",
+      "deploymentRefs": [
+        "ethereum:0x530824da86689c9c17cdc2871ff29b058345b44a"
+      ],
+      "proxyAddresses": [
+        "0x530824da86689c9c17cdc2871ff29b058345b44a"
+      ],
+      "implementationAddresses": [
+        "0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"
+      ],
+      "adminAddresses": [
+        "0x22276a1bd16bc3052b362c2e0f65aace04ed6f99"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "STBT issuer and owner controller",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107703,
+      "sources": [
+        {
+          "label": "Deployed upgrade authorization",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x530824da86689c9c17cdc2871ff29b058345b44a"
+        }
+      ]
+    },
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "review": {
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "sources": [
+        {
+          "label": "Deployed mint implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"
+        },
+        {
+          "label": "STBT January 2025 terms",
+          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32"
+        }
+      ],
+      "evidence": "Pinned block 26107703: issuer, owner, moderator and controller all return this contract; getMinDelay returns zero. STBTv2 issue checks the reserve-feed budget, but owner can replace issuer and mint logic via the custom proxy. Effective proposer/admin membership and backend custody thresholds remain unknown. A mutable issuer reserve feed is not an immutable collateral gate or independent financial assurance.",
+      "unresolvedQuestions": [
+        "Full role-holder/controller census and organizational signing/key-custody policies remain undisclosed."
+      ]
+    }
+  }
+}

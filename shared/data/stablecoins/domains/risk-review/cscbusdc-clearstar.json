@@ -1,0 +1,124 @@
+{
+  "id": "cscbusdc-clearstar",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Exact Morpho Vault V2 deployment",
+        "url": "https://app.morpho.org/base/vault/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
+      },
+      {
+        "label": "Verified deployment code identity",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
+      },
+      {
+        "label": "Pinned base block 52095852",
+        "url": "https://basescan.org/block/52095852"
+      },
+      {
+        "label": "Morpho complete current vault inventory",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho Vault V2 gates",
+        "url": "https://docs.morpho.org/curate/concepts/gates.md"
+      },
+      {
+        "label": "Morpho share accounting and loss realization",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "Exact Morpho lending adapter",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x812b71c33ae5eafebae967c5670e37eca3cab0ac"
+      }
+    ],
+    "evidence": "At base block 52095852 (0x31aeb6c), observed 2026-10-02T22:44:15.795793+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was zero with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "One reviewed native base VaultV2 share deployment; no bridge or separate confidential receipt supply is included. This does not prove absence of uncatalogued integrations.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Exact Morpho Vault V2 deployment",
+        "url": "https://app.morpho.org/base/vault/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
+      },
+      {
+        "label": "Verified deployment code identity",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
+      },
+      {
+        "label": "Pinned base block 52095852",
+        "url": "https://basescan.org/block/52095852"
+      },
+      {
+        "label": "Morpho complete current vault inventory",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho Vault V2 gates",
+        "url": "https://docs.morpho.org/curate/concepts/gates.md"
+      },
+      {
+        "label": "Morpho share accounting and loss realization",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "Exact Morpho lending adapter",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x812b71c33ae5eafebae967c5670e37eca3cab0ac"
+      }
+    ],
+    "routes": [
+      {
+        "id": "base:0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c",
+        "destinationChain": "base",
+        "canonicalChain": "base",
+        "contractAddress": "0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c",
+        "protocol": "Morpho Vault V2",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native asset-backed ERC-4626 share issuance on the sole authored deployment.",
+        "observedAt": "2026-10-02",
+        "observedBlock": 52095852,
+        "sources": [
+          {
+            "label": "Exact Morpho Vault V2 deployment",
+            "url": "https://app.morpho.org/base/vault/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
+          },
+          {
+            "label": "Verified deployment code identity",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
+          },
+          {
+            "label": "Pinned base block 52095852",
+            "url": "https://basescan.org/block/52095852"
+          },
+          {
+            "label": "Morpho complete current vault inventory",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 gates",
+            "url": "https://docs.morpho.org/curate/concepts/gates.md"
+          },
+          {
+            "label": "Morpho share accounting and loss realization",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Exact Morpho lending adapter",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x812b71c33ae5eafebae967c5670e37eca3cab0ac"
+          }
+        ]
+      }
+    ]
+  }
+}

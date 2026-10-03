@@ -1,0 +1,85 @@
+{
+  "id": "umint-ubs",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "Native fund issuance is privileged and administrator-controlled; current role-member independence and complete control closure are not publicly established.",
+    "controls": [
+      {
+        "label": "Native uMINT role-gated issuance surface",
+        "chain": "ethereum",
+        "address": "0xc06036793272219179f846ef6bfc3b16e820df0b",
+        "deploymentRefs": [
+          "ethereum:0xc06036793272219179f846ef6bfc3b16e820df0b"
+        ],
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "DigiFT native uMINT disclosure within STEP2 application (March 20, 2025)",
+            "url": "https://forum.arbitrum.foundation/t/digift-dr-umint-step2-application/28764"
+          },
+          {
+            "label": "UBS production subscription and redemption (November 4, 2025)",
+            "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20251104-chainlink.html"
+          },
+          {
+            "label": "UBS Ethereum uMINT launch",
+            "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20241101-first-tokenized-investment-fund.html"
+          },
+          {
+            "label": "Verified deployed token implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc06036793272219179f846ef6bfc3b16e820df0b"
+          },
+          {
+            "label": "Ethereum token deployment",
+            "url": "https://etherscan.io/address/0xc06036793272219179f846ef6bfc3b16e820df0b#code"
+          }
+        ],
+        "evidence": "At Ethereum block 26107703 the native CMTAT_EVCC has decimals18, 115147.298 shares and zero EIP1967 implementation slot. Verified mint requires MINTER_ROLE; role-administration and rule-engine replacement remain privileged. Actual current minter/admin members, independence and signing threshold are unresolved; no standard proxy is not an immutability proof."
+      }
+    ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "review": {
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "DigiFT native uMINT disclosure within STEP2 application (March 20, 2025)",
+          "url": "https://forum.arbitrum.foundation/t/digift-dr-umint-step2-application/28764"
+        },
+        {
+          "label": "UBS production subscription and redemption (November 4, 2025)",
+          "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20251104-chainlink.html"
+        },
+        {
+          "label": "UBS Ethereum uMINT launch",
+          "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20241101-first-tokenized-investment-fund.html"
+        },
+        {
+          "label": "Verified deployed token implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc06036793272219179f846ef6bfc3b16e820df0b"
+        },
+        {
+          "label": "Ethereum token deployment",
+          "url": "https://etherscan.io/address/0xc06036793272219179f846ef6bfc3b16e820df0b#code"
+        }
+      ],
+      "evidence": "Identity and current stock reverified at Ethereum block 26107703 (2026-10-02T22:44:06.965406+00:00). Verified deployed code establishes privileged native mint/control capabilities, but no complete cap, reserve reconciliation, quorum or noninterference proof is asserted. Accumulating native Ethereum money-market fund share, subscribed and redeemed through authorized distributors such as DigiFT at NAV. UBS confirms an in-production subscription and redemption workflow. The 2025 distributor dossier describes daily T+0 dealing, but current contractual cutoffs, fees, minimums and unconditional capacity are not publicly established. DigiFT DR-uMINT is a separate receipt and is excluded from native identity and supply.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "unresolvedQuestions": [
+        "Actual current MINTER/default-admin and enforcement role members",
+        "Native PPM, current financial reconciliation and role independence",
+        "Mutable rule-engine authority and full implementation closure"
+      ]
+    }
+  }
+}

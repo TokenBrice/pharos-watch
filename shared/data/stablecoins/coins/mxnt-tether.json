@@ -1,0 +1,66 @@
+{
+  "id": "mxnt-tether",
+  "name": "Mexican Peso Tether",
+  "symbol": "MXNT",
+  "oneLiner": "MXNT is Tether's peso token backed by its shared fiat-token reserve pool, redeemable by verified clients above a large minimum.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "MXN",
+    "governance": "centralized"
+  },
+  "collateral": "Tether's shared reserves for fiat-denominated tokens include Treasuries, reverse repos, bank cash, gold, bitcoin, secured loans, equities and other investments; no dedicated MXNT allocation is disclosed.",
+  "pegMechanism": "Verified Tether clients may mint and redeem at one Mexican peso per MXNT less fees. The USD 100,000-equivalent minimum and fee floor restrict access; timing and capacity are not guaranteed.",
+  "mechanismArchetype": "fiat-cash",
+  "detailProvider": "defillama",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xed03ed872159e199065401b6d0d487d78d9464aa",
+      "decimals": 6
+    }
+  ],
+  "jurisdiction": {
+    "country": "El Salvador"
+  },
+  "custodyModel": "unknown",
+  "collateralQuality": "exotic",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://tether.to/en/"
+    },
+    {
+      "label": "Holder terms and issuance",
+      "url": "https://tether.to/en/legal/"
+    },
+    {
+      "label": "Reserve report",
+      "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"
+    }
+  ],
+  "llamaId": "281",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+    "provider": "BDO Advisory Services S.r.l.; ISAE 3000 (Revised) reasonable assurance of aggregate fiat-token assets and liabilities, not dedicated MXNT reserves",
+    "attestorTier": "regional",
+    "cadence": "quarterly",
+    "attestorJurisdiction": "Italy",
+    "latestReport": {
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-31",
+      "publishedAtBasis": "signed-date-standin",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Retrieved independent reserve report",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"
+        }
+      ]
+    }
+  }
+}

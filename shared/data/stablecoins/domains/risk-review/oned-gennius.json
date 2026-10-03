@@ -1,0 +1,40 @@
+{
+  "id": "oned-gennius",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "sources": [
+      {
+        "label": "ONED native holder terms",
+        "url": "https://oned.global/#/end-user-terms-and-conditions"
+      },
+      {
+        "label": "Verified current ONED implementation",
+        "url": "https://basescan.org/address/0x57ab1e54fca80105a93a735b59f850f8420b5e2c#code"
+      }
+    ],
+    "evidence": "Native holder terms authorize operator blocklisting, freezing, seizure, forfeiture and destruction. Verified current Stablecoin implementation exposes BLOCKLIST_ROLE, blocklist, isBlocklisted and pause. At Base block 52095848, hasRole(BLOCKLIST_ROLE,0x2c34489fd3b7cc2a5dc4a47b34b117d3f62b6e9e)=true and paused()=false; holder-level control is directly evidenced, not merely inherited from USDC."
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "The reviewed native ONED liability exists only on Base. Coinbase identifies the exact Base token; native holder terms explicitly exclude redemption of copies, wrapped tokens and bridged versions. No additional representation is authored.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Coinbase ONED custody and conversion",
+        "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins"
+      },
+      {
+        "label": "Coinbase ONED itemized reserve dashboard",
+        "url": "https://www.coinbase.com/en-in/oned/proof-of-reserves"
+      },
+      {
+        "label": "ONED native holder terms",
+        "url": "https://oned.global/#/end-user-terms-and-conditions"
+      }
+    ]
+  }
+}

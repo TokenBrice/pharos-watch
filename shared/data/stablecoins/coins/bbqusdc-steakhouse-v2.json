@@ -1,0 +1,119 @@
+{
+  "id": "bbqusdc-steakhouse-v2",
+  "name": "Steakhouse High Yield USDC",
+  "symbol": "bbqUSDC",
+  "oneLiner": "bbqUSDC is Steakhouse's high-yield Morpho Vault V2 over USDC; withdrawals depend on lending liquidity and losses reduce share value.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "usdc-circle",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "usdc-circle",
+  "collateral": "USDC in the Steakhouse-curated Morpho Vault V2 on ethereum, held idle or lent through its MorphoMarketV1AdapterV2; borrower collateral and credit losses remain local strategy exposure",
+  "pegMechanism": "ERC-4626 shares accrue net USDC lending interest and realize losses at NAV. Ordinary withdraw/redeem uses idle USDC and the configured liquidity adapter, subject to liquidity; force-deallocation and in-kind exits are separate, not guaranteed dollar settlement",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "Steakhouse High Yield USDC (bbqUSDC) at ethereum:0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757 is the current public ERC-4626 VaultV2 share over USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0xbfe734baab130048e20a64e800c4c2ec25756284 holds 10 enumerated Morpho market IDs. This intentionally differs from the fiat-cash parent and older Morpho precedent classifications.",
+    "sources": [
+      {
+        "label": "Exact Morpho Vault V2 deployment",
+        "url": "https://app.morpho.org/ethereum/vault/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+      },
+      {
+        "label": "Verified deployment code identity",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+      },
+      {
+        "label": "Pinned ethereum block 26107704",
+        "url": "https://etherscan.io/block/26107704"
+      },
+      {
+        "label": "Morpho complete current vault inventory",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho Vault V2 gates",
+        "url": "https://docs.morpho.org/curate/concepts/gates.md"
+      },
+      {
+        "label": "Morpho share accounting and loss realization",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "Exact Morpho lending adapter",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbfe734baab130048e20a64e800c4c2ec25756284"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Morpho vault",
+      "url": "https://app.morpho.org/ethereum/vault/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+    },
+    {
+      "label": "Vault mechanics",
+      "url": "https://docs.morpho.org/developers/earn/tutorials/assets-flow.md"
+    },
+    {
+      "label": "Gate documentation",
+      "url": "https://docs.morpho.org/curate/concepts/gates.md"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "exotic",
+  "custodyModel": "unknown",
+  "governanceQuality": "wrapper",
+  "yieldConfig": {
+    "yieldSource": "Steakhouse High Yield USDC Morpho Vault V2",
+    "yieldType": "lending-vault"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "bbqusdc-steakhouse-v2",
+    "display": {
+      "url": "https://app.morpho.org/ethereum/vault/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757",
+      "label": "Steakhouse High Yield USDC"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "Steakhouse High Yield USDC deployed strategy positions",
+        "risk": "high",
+        "coinId": "usdc-circle",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+      },
+      "deployedExposure": {
+        "basis": "Pinned sole MorphoMarketV1AdapterV2 and complete market inventory; supplied USDC is a lending position, not idle cash",
+        "reviewedAt": "2026-10-02",
+        "sourceUrl": "https://app.morpho.org/ethereum/vault/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+      },
+      "redemptionLiquidity": {
+        "source": "morpho-vault-v2",
+        "chainId": 1
+      }
+    }
+  }
+}

@@ -1,0 +1,197 @@
+{
+  "id": "zaru-blocktower",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciliation-unknown",
+    "confidence": "manual-review",
+    "summary": "Native issuance remains under issuer authority. ZARU has a System Program Solana signer and the same EOA with mint/admin/upgrader powers on three EVM chains.",
+    "controls": [
+      {
+        "chain": "solana",
+        "address": "8USLqNrJ6WfUcTk2XUBYGRiMA2Mp2qh9AhsJZBEg5W62",
+        "deploymentRefs": [
+          "solana:2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+        ],
+        "label": "Solana Token-2022 mint authority",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 452748072,
+        "sources": [
+          {
+            "label": "Solana mint and authority observation",
+            "url": "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+          }
+        ],
+        "evidence": "Finalized mint account at slot 452748072 has decimals 6, supply 60552996.19414, and mintAuthority 8USLqNrJ6WfUcTk2XUBYGRiMA2Mp2qh9AhsJZBEg5W62. Authority read at slot 452748181 is a nonexecutable zero-data System Program account; no on-chain quorum is demonstrated."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x29fc8c0e185f7d6cb85e232412db8e2a28f72cf1",
+        "deploymentRefs": [
+          "ethereum:0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"
+        ],
+        "label": "ethereum MINTER_ROLE and role administrator",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107705,
+        "sources": [
+          {
+            "label": "Verified ERC20F implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+          },
+          {
+            "label": "ethereum issuer token",
+            "url": "https://etherscan.io/address/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"
+          }
+        ],
+        "evidence": "At ethereum block 26107705, hasRole returns true for DEFAULT_ADMIN_ROLE, MINTER_ROLE, UPGRADER_ROLE, RECOVERY_ROLE and PAUSER_ROLE on this address; eth_getCode returns 0x. Verified source gates mint by MINTER_ROLE and UUPS upgrades by UPGRADER_ROLE. No enforced cap or independently proved key quorum is established."
+      },
+      {
+        "chain": "base",
+        "address": "0x29fc8c0e185f7d6cb85e232412db8e2a28f72cf1",
+        "deploymentRefs": [
+          "base:0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"
+        ],
+        "label": "base MINTER_ROLE and role administrator",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 52095862,
+        "sources": [
+          {
+            "label": "Verified ERC20F implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+          },
+          {
+            "label": "base issuer token",
+            "url": "https://basescan.org/address/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"
+          }
+        ],
+        "evidence": "At base block 52095862, hasRole returns true for DEFAULT_ADMIN_ROLE, MINTER_ROLE, UPGRADER_ROLE, RECOVERY_ROLE and PAUSER_ROLE on this address; eth_getCode returns 0x. Verified source gates mint by MINTER_ROLE and UUPS upgrades by UPGRADER_ROLE. No enforced cap or independently proved key quorum is established."
+      },
+      {
+        "chain": "arc",
+        "address": "0x29fc8c0e185f7d6cb85e232412db8e2a28f72cf1",
+        "deploymentRefs": [
+          "arc:0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"
+        ],
+        "label": "arc MINTER_ROLE and role administrator",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 23952333,
+        "sources": [
+          {
+            "label": "Verified ERC20F implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+          },
+          {
+            "label": "arc issuer token",
+            "url": "https://explorer.arc.io/address/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"
+          }
+        ],
+        "evidence": "At arc block 23952333, hasRole returns true for DEFAULT_ADMIN_ROLE, MINTER_ROLE, UPGRADER_ROLE, RECOVERY_ROLE and PAUSER_ROLE on this address; eth_getCode returns 0x. Verified source gates mint by MINTER_ROLE and UUPS upgrades by UPGRADER_ROLE. No enforced cap or independently proved key quorum is established."
+      }
+    ],
+    "upgradeability": {
+      "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5",
+        "base:0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5",
+        "arc:0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"
+      ],
+      "proxyAddresses": [
+        "0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"
+      ],
+      "implementationAddresses": [
+        "0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+      ],
+      "adminAddresses": [
+        "0x29fc8c0e185f7d6cb85e232412db8e2a28f72cf1"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "ethereum MINTER_ROLE and role administrator",
+      "observedAt": "2026-10-02",
+      "sources": [
+        {
+          "label": "Verified ERC20F implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+        },
+        {
+          "label": "ethereum issuer token",
+          "url": "https://etherscan.io/address/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"
+        }
+      ]
+    },
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "review": {
+      "sources": [
+        {
+          "label": "Issuer issuance and holder terms",
+          "url": "https://zaru.network/blog/zar-universal-white-paper"
+        },
+        {
+          "label": "Retrieved independent reserve report",
+          "url": "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf"
+        },
+        {
+          "label": "Solana mint and authority observation",
+          "url": "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+        },
+        {
+          "label": "Verified ERC20F implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+        },
+        {
+          "label": "ethereum issuer token",
+          "url": "https://etherscan.io/address/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"
+        },
+        {
+          "label": "Verified ERC20F implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+        },
+        {
+          "label": "base issuer token",
+          "url": "https://basescan.org/address/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"
+        },
+        {
+          "label": "Verified ERC20F implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+        },
+        {
+          "label": "arc issuer token",
+          "url": "https://explorer.arc.io/address/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"
+        }
+      ],
+      "evidence": "The named controls create native issuer liabilities without an independently enforced collateral cap. The July snapshot reconciles reserve assets against historical ZARU circulation, but a recurring current reserve reconciliation is not established; mint reconciliation stays unknown.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "Report snapshot is July 31, signed August 28; no current financial reconciliation/current weights should be asserted.",
+        "ISRS 4400 AUP has no assurance opinion; legal insolvency priority and MMF look-through/duration remain qualified/unproved.",
+        "Public independent signer threshold/timelock not demonstrated; EVM powers are a current EOA and Solana authority a system account.",
+        "Partner minimum/fees/capacity unquantified; CEX volume is not DEX depth.",
+        "Only about seven days of requested 90-day price history; no FX-normalized depeg assertion.",
+        "CG circulation matches Solana exactly but excludes observed Arc 100 units (~USD 6); preserve CG provenance, no max-splice/aggregate shortcut.",
+        "FSP55172 remains issuer-claimed, not independently pinned regulator authorization."
+      ]
+    }
+  }
+}

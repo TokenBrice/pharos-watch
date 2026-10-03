@@ -1,0 +1,164 @@
+{
+  "id": "skymoneyusdsflagship-sky",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "verified",
+    "summary": "Local share issuance is asset-backed and accounting-mediated; the parameter administrator does not have arbitrary share mint authority. Base USDS issuance remains inherited from usds-sky.",
+    "inheritedFrom": "usds-sky",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "sky.money USDS Flagship immutable asset-backed share contract",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107702,
+      "sources": [
+        {
+          "label": "Sky.money curated vault disclosure",
+          "url": "https://sky.money/vaults"
+        },
+        {
+          "label": "Verified exact deployed VaultV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0"
+        },
+        {
+          "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
+          "url": "https://etherscan.io/block/26107702"
+        },
+        {
+          "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Morpho exact-vault accounting and controls GraphQL API",
+          "url": "https://api.morpho.org/graphql"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xe15fcc81118895b67b6647bbd393182df44e11e0",
+        "label": "sky.money USDS Flagship immutable asset-backed share contract",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "Sky.money curated vault disclosure",
+            "url": "https://sky.money/vaults"
+          },
+          {
+            "label": "Verified exact deployed VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0"
+          },
+          {
+            "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
+            "url": "https://etherscan.io/block/26107702"
+          },
+          {
+            "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Morpho exact-vault accounting and controls GraphQL API",
+            "url": "https://api.morpho.org/graphql"
+          }
+        ],
+        "evidence": "Deposits and mint calls transfer the underlying parent asset before minting shares. Interest accrual may mint management/performance fee shares against accounted assets; both rates are zero in the current exact-vault API. Verified fixed deployment code has no privileged arbitrary native share mint or upgrade entrypoint; the implementation slot is zero."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3f32bc09d41ee699844f8296e806417d6bf61bba",
+        "label": "sky.money USDS Flagship parameter-control Safe",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 2,
+        "signerCount": 3,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x477fba4f877feb7b21467a5a1e6e5290ba7cb742",
+            "0x4503d863ee8c57689e564904520c161986d1ab1a",
+            "0xd731e32f50ebb32df54cb95326b93ef7475f1d92"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 26107702,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "Sky.money curated vault disclosure",
+            "url": "https://sky.money/vaults"
+          },
+          {
+            "label": "Verified exact deployed VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0"
+          },
+          {
+            "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
+            "url": "https://etherscan.io/block/26107702"
+          },
+          {
+            "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Morpho exact-vault accounting and controls GraphQL API",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Parameter-control Safe",
+            "url": "https://etherscan.io/address/0x3f32bc09d41ee699844f8296e806417d6bf61bba"
+          }
+        ],
+        "evidence": "At block 26107702, current Safe threshold/owner enumeration, empty getModulesPaginated result and zero guard were re-read. This Safe is both owner and curator. Current API reports 259200-second delays for adding adapters and increasing allocation caps, but zero for allocator and fee settings. Share-transfer and asset-exit gate setters are abdicated. Signer independence and offchain key custody are not established."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Sky.money curated vault disclosure",
+          "url": "https://sky.money/vaults"
+        },
+        {
+          "label": "Verified exact deployed VaultV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0"
+        },
+        {
+          "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
+          "url": "https://etherscan.io/block/26107702"
+        },
+        {
+          "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Morpho exact-vault accounting and controls GraphQL API",
+          "url": "https://api.morpho.org/graphql"
+        }
+      ],
+      "evidence": "At Ethereum block 26107702 (2026-10-02T22:43:47+00:00), totalAssets=37213041.517174 USDS; totalSupply=37094821.851264 shares; convertToAssets(1e18)=1.003186958718484956 USDS; idle balance=29771240.288112 USDS. Complete current adapter census contains 1 adapter, 3 markets: 0x9a8dab6de1059e6dc66c34b358764b70effb289e514e237f3161ffb09eaaf24f (PT-sUSDS-26NOV2026, LLTV 0.915): 2535545.351573 USDS lender claim; 0xb374528d44b6ab6e0cecc87e0481f45d892f38baec90c1d318851969ec14ea5f (wstETH, LLTV 0.86): 1323435.223921 USDS lender claim; 0x2f4ea313fb7df23a82c19d95e8b90acc8179bd053e0d9ef745cdf28d6a49499c (cbBTC, LLTV 0.86): 3582820.653569 USDS lender claim. The API snapshot is separately observed and is not the pinned-block denominator. Exact-deployment source and current Safe state establish the local share and parameter paths; parent native mint authority is inherited separately.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "Offchain key custody and independence of Safe signers remain unestablished."
+      ]
+    }
+  }
+}

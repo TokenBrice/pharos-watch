@@ -184,6 +184,30 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "trusd-tori::Unverified USDC Morpho dust on Base::USDC",
     "The Base Morpho vault and token representation are unverified, so the dust remains unlinked with its measured share preserved.",
   ],
+  [
+    "sparkusdtbc-spark::Morpho USDT receivable in sUSDS-collateralized market::USDT",
+    "Reviewed exact-vault lender receivable, not a held USDT token or owned borrower collateral; reserveReview records the not-applicable link disposition.",
+  ],
+  [
+    "sparkusdtbc-spark::Morpho USDT receivable in cbBTC-collateralized market::USDT",
+    "Reviewed exact-vault lender receivable, not a held USDT token or owned borrower collateral; reserveReview records the not-applicable link disposition.",
+  ],
+  [
+    "sparkusdtbc-spark::Morpho USDT receivable in WBTC-collateralized market::USDT",
+    "Reviewed exact-vault lender receivable, not a held USDT token or owned borrower collateral; reserveReview records the not-applicable link disposition.",
+  ],
+  [
+    "sparkusdtbc-spark::Morpho USDT receivable in wstETH-collateralized market::USDT",
+    "Reviewed exact-vault lender receivable, not a held USDT token or owned borrower collateral; reserveReview records the not-applicable link disposition.",
+  ],
+  [
+    "sparkusdc-spark::Morpho USDC receivable in cbBTC-collateralized market::USDC",
+    "Reviewed exact-vault lender receivable, not a held USDC token or owned borrower collateral; only the separate measured idle USDC slice has a wrapper dependency link.",
+  ],
+  [
+    "xgld-unitas::XAUt collateral and borrowed-USDT strategy book (net allocation undisclosed)::USDT",
+    "Issuer-disclosed leveraged strategy basket lacks net constituent weights after borrowed USDT liabilities; a USDT coinId would misrepresent the undisclosed net allocation.",
+  ],
 ]);
 
 // Reviewed wrapper spellings, not arbitrary substrings (USDT is not USDtb).

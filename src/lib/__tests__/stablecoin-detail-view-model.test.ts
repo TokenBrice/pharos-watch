@@ -557,7 +557,9 @@ describe("stablecoin detail view-model builder", () => {
     expect(parentViewModel.status).toBe("ready");
     if (parentViewModel.status !== "ready") return;
     expect(parentViewModel.hasVariants).toBe(true);
-    expect(parentViewModel.childVariants.map((coin) => coin.id)).toEqual(["susds-sky", "stusds-sky"]);
+    expect(parentViewModel.childVariants.map((coin) => coin.id)).toEqual([
+      "susds-sky", "stusds-sky", "skymoneyusdsflagship-sky",
+    ]);
   });
 
   it("enables the yield section for commodity assets when a live ranking exists", () => {

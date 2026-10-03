@@ -1,0 +1,353 @@
+{
+  "id": "chfsafo-spiko",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "sources": [
+      {
+        "label": "Spiko allowlisted holder controls",
+        "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+      },
+      {
+        "label": "Exact CHF KID, ISIN FR0014015LG6",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf"
+      },
+      {
+        "label": "Exact CHF Token-2022 register",
+        "url": "https://solscan.io/token/6Gst8o3L5uNtkUvhEg23HpDLpYRdNQTgdn1Bc7jnCM5c"
+      }
+    ],
+    "evidence": "Spiko permission architecture restricts token holding to allowlisted KYC addresses. The exact CHF Solana mint at finalized slot 452748326 has default frozen accounts, an explicit freeze authority, permanent delegate and pausable authority. These are holder-control surfaces, separate from mint permission."
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "CACEIS Fund Administration calculates daily fund NAV and Spiko publishes the exact CHF class NAV. Current chfSAFO totals show 2 October 2026 NAV CHF 1.000074. Exact CHF external feed, redundancy, failover and publisher authorizer closure were not verified; the EUR Chainlink address is not inherited.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "rationale": "CHFSAFO subscriptions/redemptions use a fund NAV authority. This is a UCITS fund share, not borrower-specific liquidation collateral branches.",
+      "sources": [
+        {
+          "label": "Spiko SICAV prospectus, 1 September 2026",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        },
+        {
+          "label": "Exact CHF KID, ISIN FR0014015LG6",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf"
+        },
+        {
+          "label": "CHF shares, assets and NAV at 2 October 2026",
+          "url": "https://public-api.spiko.io/share-classes/chfSAFO/totals"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Spiko SICAV prospectus, 1 September 2026",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "CHF shares, assets and NAV at 2 October 2026",
+        "url": "https://public-api.spiko.io/share-classes/chfSAFO/totals"
+      },
+      {
+        "label": "Spiko daily NAV publication architecture",
+        "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Eight exact CHF deployments are native registers for the same UCITS share class, maintained by Spiko Finance. No CHF-specific third-party bridge or CCIP transport was verified. Native liability creation belongs in Mint Authority; cross-register migration/control closure remains unresolved.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Spiko SICAV prospectus, 1 September 2026",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "Exact CHF KID, ISIN FR0014015LG6",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf"
+      },
+      {
+        "label": "Exact CHF native registers and five share decimals",
+        "url": "https://public-api.spiko.io/share-classes/chfSAFO"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x18b5c15e5196a38a162b1787875295b76e4313fb",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x18b5c15e5196a38a162b1787875295b76e4313fb",
+        "protocol": "Spiko native UCITS share register",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Exact CHF issuer API and prospectus identify this native share register. Five share decimals are issuer-specified and corroborated by the research RPC census; native issuance is not a bridged representation. Detailed cross-register transfer controls and conservation remain unresolved.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "failureDomainKeys": [
+          "issuer-backend:spiko:fund-register"
+        ],
+        "sources": [
+          {
+            "label": "Spiko SICAV prospectus, 1 September 2026",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+          },
+          {
+            "label": "Exact CHF KID, ISIN FR0014015LG6",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf"
+          },
+          {
+            "label": "Exact CHF native registers and five share decimals",
+            "url": "https://public-api.spiko.io/share-classes/chfSAFO"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0x9de2b2dcdcf43540e47143f28484b6d15118f089",
+        "destinationChain": "polygon",
+        "canonicalChain": "polygon",
+        "contractAddress": "0x9de2b2dcdcf43540e47143f28484b6d15118f089",
+        "protocol": "Spiko native UCITS share register",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Exact CHF issuer API and prospectus identify this native share register. Five share decimals are issuer-specified and corroborated by the research RPC census; native issuance is not a bridged representation. Detailed cross-register transfer controls and conservation remain unresolved.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "failureDomainKeys": [
+          "issuer-backend:spiko:fund-register"
+        ],
+        "sources": [
+          {
+            "label": "Spiko SICAV prospectus, 1 September 2026",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+          },
+          {
+            "label": "Exact CHF KID, ISIN FR0014015LG6",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf"
+          },
+          {
+            "label": "Exact CHF native registers and five share decimals",
+            "url": "https://public-api.spiko.io/share-classes/chfSAFO"
+          }
+        ]
+      },
+      {
+        "id": "starknet:0x06723dcb428eddb160c5adfc2d0a5e5adc184bf6a7298780c3cbf3fa764f709b",
+        "destinationChain": "starknet",
+        "canonicalChain": "starknet",
+        "contractAddress": "0x06723dcb428eddb160c5adfc2d0a5e5adc184bf6a7298780c3cbf3fa764f709b",
+        "protocol": "Spiko native UCITS share register",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Exact CHF issuer API and prospectus identify this native share register. Five share decimals are issuer-specified and corroborated by the research RPC census; native issuance is not a bridged representation. Detailed cross-register transfer controls and conservation remain unresolved.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "failureDomainKeys": [
+          "issuer-backend:spiko:fund-register"
+        ],
+        "sources": [
+          {
+            "label": "Spiko SICAV prospectus, 1 September 2026",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+          },
+          {
+            "label": "Exact CHF KID, ISIN FR0014015LG6",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf"
+          },
+          {
+            "label": "Exact CHF native registers and five share decimals",
+            "url": "https://public-api.spiko.io/share-classes/chfSAFO"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x97e7962bcd091e7ecfb583fc96289b1e1553ac6e",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0x97e7962bcd091e7ecfb583fc96289b1e1553ac6e",
+        "protocol": "Spiko native UCITS share register",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Exact CHF issuer API and prospectus identify this native share register. Five share decimals are issuer-specified and corroborated by the research RPC census; native issuance is not a bridged representation. Detailed cross-register transfer controls and conservation remain unresolved.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "failureDomainKeys": [
+          "issuer-backend:spiko:fund-register"
+        ],
+        "sources": [
+          {
+            "label": "Spiko SICAV prospectus, 1 September 2026",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+          },
+          {
+            "label": "Exact CHF KID, ISIN FR0014015LG6",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf"
+          },
+          {
+            "label": "Exact CHF native registers and five share decimals",
+            "url": "https://public-api.spiko.io/share-classes/chfSAFO"
+          }
+        ]
+      },
+      {
+        "id": "etherlink:0xef53e7d17822b641c6481837238a64a688709301",
+        "destinationChain": "etherlink",
+        "canonicalChain": "etherlink",
+        "contractAddress": "0xef53e7d17822b641c6481837238a64a688709301",
+        "protocol": "Spiko native UCITS share register",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Exact CHF issuer API and prospectus identify this native share register. Five share decimals are issuer-specified and corroborated by the research RPC census; native issuance is not a bridged representation. Detailed cross-register transfer controls and conservation remain unresolved.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "failureDomainKeys": [
+          "issuer-backend:spiko:fund-register"
+        ],
+        "sources": [
+          {
+            "label": "Spiko SICAV prospectus, 1 September 2026",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+          },
+          {
+            "label": "Exact CHF KID, ISIN FR0014015LG6",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf"
+          },
+          {
+            "label": "Exact CHF native registers and five share decimals",
+            "url": "https://public-api.spiko.io/share-classes/chfSAFO"
+          }
+        ]
+      },
+      {
+        "id": "base:0xd9aa2300e126869182dfb6ecf54984e4c687f36b",
+        "destinationChain": "base",
+        "canonicalChain": "base",
+        "contractAddress": "0xd9aa2300e126869182dfb6ecf54984e4c687f36b",
+        "protocol": "Spiko native UCITS share register",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Exact CHF issuer API and prospectus identify this native share register. Five share decimals are issuer-specified and corroborated by the research RPC census; native issuance is not a bridged representation. Detailed cross-register transfer controls and conservation remain unresolved.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "failureDomainKeys": [
+          "issuer-backend:spiko:fund-register"
+        ],
+        "sources": [
+          {
+            "label": "Spiko SICAV prospectus, 1 September 2026",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+          },
+          {
+            "label": "Exact CHF KID, ISIN FR0014015LG6",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf"
+          },
+          {
+            "label": "Exact CHF native registers and five share decimals",
+            "url": "https://public-api.spiko.io/share-classes/chfSAFO"
+          }
+        ]
+      },
+      {
+        "id": "stellar:CAJD2IBSP7VO2VYJQUYJSOGPJINTUYV7MQITINXVPTIH3CCLCUENNMW4",
+        "destinationChain": "stellar",
+        "canonicalChain": "stellar",
+        "contractAddress": "CAJD2IBSP7VO2VYJQUYJSOGPJINTUYV7MQITINXVPTIH3CCLCUENNMW4",
+        "protocol": "Spiko native UCITS share register",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Exact CHF issuer API and prospectus identify this native share register. Five share decimals are issuer-specified and corroborated by the research RPC census; native issuance is not a bridged representation. Detailed cross-register transfer controls and conservation remain unresolved.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "failureDomainKeys": [
+          "issuer-backend:spiko:fund-register"
+        ],
+        "sources": [
+          {
+            "label": "Spiko SICAV prospectus, 1 September 2026",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+          },
+          {
+            "label": "Exact CHF KID, ISIN FR0014015LG6",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf"
+          },
+          {
+            "label": "Exact CHF native registers and five share decimals",
+            "url": "https://public-api.spiko.io/share-classes/chfSAFO"
+          }
+        ]
+      },
+      {
+        "id": "solana:6Gst8o3L5uNtkUvhEg23HpDLpYRdNQTgdn1Bc7jnCM5c",
+        "destinationChain": "solana",
+        "canonicalChain": "solana",
+        "contractAddress": "6Gst8o3L5uNtkUvhEg23HpDLpYRdNQTgdn1Bc7jnCM5c",
+        "protocol": "Spiko native UCITS share register",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Exact CHF issuer API and prospectus identify this native share register. Five share decimals are issuer-specified and corroborated by the research RPC census; native issuance is not a bridged representation. Detailed cross-register transfer controls and conservation remain unresolved.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "failureDomainKeys": [
+          "issuer-backend:spiko:fund-register"
+        ],
+        "sources": [
+          {
+            "label": "Spiko SICAV prospectus, 1 September 2026",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+          },
+          {
+            "label": "Exact CHF KID, ISIN FR0014015LG6",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf"
+          },
+          {
+            "label": "Exact CHF native registers and five share decimals",
+            "url": "https://public-api.spiko.io/share-classes/chfSAFO"
+          }
+        ]
+      }
+    ]
+  }
+}

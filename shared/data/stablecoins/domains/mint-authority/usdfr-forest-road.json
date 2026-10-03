@@ -1,0 +1,145 @@
+{
+  "id": "usdfr-forest-road",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "Only the controller holds the reviewed USDfr mint role; KYC user deposits and authorized yield issuance are checked against ReserveManager backing. Forest-Road-controlled governance can replace UUPS mint logic after a 172800-second timelock; collateral marks and loan facts rely on approved attesters.",
+    "upgradeability": {
+      "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0xcc07e7c4e5e35affd47b351e420a22c667d7f83d"
+      ],
+      "proxyAddresses": [
+        "0xcc07e7c4e5e35affd47b351e420a22c667d7f83d"
+      ],
+      "adminAddresses": [
+        "0x28b36b6a48ed3f7409464c811a9ed538a824120e"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "Forest Road governance timelock",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107707,
+      "sources": [
+        {
+          "label": "Canonical Ethereum deployment addresses",
+          "url": "https://forestroadvault.com/docs/addresses"
+        },
+        {
+          "label": "Timelocked but Forest-Road-controlled governance",
+          "url": "https://forestroadvault.com/docs/roles-and-governance"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "USDfr MintRedeemController",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "chain": "ethereum",
+        "address": "0x50ac018eb6400f247ffe0fa7f1d4e0e900cdb47c",
+        "deploymentRefs": [
+          "ethereum:0xcc07e7c4e5e35affd47b351e420a22c667d7f83d"
+        ],
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107707,
+        "capDescription": "Every user mint is gated by KYC and the reserve-to-liability invariant; authenticated credit interest may create yield liabilities through authorized modules. Upgrade authority can replace this logic.",
+        "evidence": "At block 26107707 hasRole(keccak256(MINTER_ROLE),controller) returned true. Primary topology docs assign native mint only to this controller and explain canonical USDC deposits and backed yield issuance.",
+        "sources": [
+          {
+            "label": "Forest Road USDfr and credit-book mechanism",
+            "url": "https://forestroadvault.com/docs/overview"
+          },
+          {
+            "label": "Canonical Ethereum deployment addresses",
+            "url": "https://forestroadvault.com/docs/addresses"
+          },
+          {
+            "label": "Timelocked but Forest-Road-controlled governance",
+            "url": "https://forestroadvault.com/docs/roles-and-governance"
+          }
+        ]
+      },
+      {
+        "label": "Forest Road governance timelock",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "chain": "ethereum",
+        "address": "0x28b36b6a48ed3f7409464c811a9ed538a824120e",
+        "deploymentRefs": [
+          "ethereum:0xcc07e7c4e5e35affd47b351e420a22c667d7f83d"
+        ],
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "timelockDelaySec": 172800,
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107707,
+        "failureDomainKeys": [
+          "issuer-governance:forest-road:grove-treasury"
+        ],
+        "evidence": "At block 26107707 token hasRole(DEFAULT_ADMIN_ROLE,timelock) returned true and timelock getMinDelay returned 172800. Primary docs identify timelock UPGRADER and DEFAULT_ADMIN and state Forest Road treasury controls GROVE voting at launch. No independent electorate or Safe signer separation is inferred.",
+        "sources": [
+          {
+            "label": "Canonical Ethereum deployment addresses",
+            "url": "https://forestroadvault.com/docs/addresses"
+          },
+          {
+            "label": "Timelocked but Forest-Road-controlled governance",
+            "url": "https://forestroadvault.com/docs/roles-and-governance"
+          }
+        ]
+      }
+    ],
+    "economicCapSemantics": "bounded",
+    "reconciliation": "continuous",
+    "supervision": "unknown",
+    "review": {
+      "disposition": "scoreable",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "sources": [
+        {
+          "label": "Forest Road USDfr and credit-book mechanism",
+          "url": "https://forestroadvault.com/docs/overview"
+        },
+        {
+          "label": "Canonical Ethereum deployment addresses",
+          "url": "https://forestroadvault.com/docs/addresses"
+        },
+        {
+          "label": "USDfr primary redemption and holder controls",
+          "url": "https://forestroadvault.com/docs/how-to"
+        },
+        {
+          "label": "Timelocked but Forest-Road-controlled governance",
+          "url": "https://forestroadvault.com/docs/roles-and-governance"
+        },
+        {
+          "label": "Definitive legal characterization and related-party facility",
+          "url": "https://forestroadvault.com/legal"
+        },
+        {
+          "label": "Disclosed open economic findings and security-review scope",
+          "url": "https://forestroadvault.com/docs/security"
+        },
+        {
+          "label": "Default and recovery pricing mechanics",
+          "url": "https://forestroadvault.com/docs/recovery"
+        },
+        {
+          "label": "Public onchain backing and loan-book disclosure",
+          "url": "https://forestroadvault.com/transparency"
+        }
+      ],
+      "evidence": "Ethereum-only native issuance is controller-gated and backing-checked, with mutable logic behind a two-day timelock controlled by the Forest Road treasury. Continuous onchain ledger reconciliation is accounting, not financial assurance of receivables. Open issuer-disclosed LMV-09 and LMV-11 economic findings, and newer disclosed LMV-12 through LMV-16 findings, remain adverse reviewed operating context; no claim of completed remediation is made.",
+      "unresolvedQuestions": [
+        "Complete current operational Safe/attester quorum, key custody and role closure.",
+        "Executed offchain collateral and token holder-priority instruments.",
+        "Independent remediation/retest evidence for open economic findings."
+      ]
+    }
+  }
+}

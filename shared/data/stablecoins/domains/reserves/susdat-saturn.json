@@ -1,0 +1,75 @@
+{
+  "id": "susdat-saturn",
+  "reserves": [
+    {
+      "name": "STRCon note tracking Strategy Stretch Preferred (STRC)",
+      "pct": 93.7977725084671,
+      "risk": "high",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "Ondo Global Markets (BVI) Limited structured note; underlying preferred-equity obligor Strategy Inc.",
+      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "smart-contract", "market", "legal", "concentration"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "USDat cash buffer held by the Saturn sUSDat vault",
+      "pct": 6.202227491532897,
+      "risk": "low",
+      "coinId": "usdat-saturn",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Saturn USDat; current backing is MoonPay PYUSDx/PayPal USD",
+      "riskFactors": ["credit", "liquidity", "custody", "counterparty", "smart-contract", "legal"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      { "label": "Saturn V2 current asset and migration structure", "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md" },
+      { "label": "Verified deployed vault implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b7074cf6681382b70e239063931ebe83c0f4e0a" },
+      { "label": "Ethereum observation block 26108096", "url": "https://etherscan.io/block/26108096" },
+      { "label": "STRCon underlying preferred-security identity", "url": "https://app.ondo.finance/assets/strcon" },
+      { "label": "Ondo structured-note issuer and holder rights", "url": "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md" },
+      { "label": "Saturn disclosures still describe older custody and proposed assurance", "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits.md" },
+      { "label": "Exact STRCon legal-document access surface", "url": "https://app.ondo.finance/legal-documentation?asset=strcon&autoOpen=true&download=doc-0" }
+    ],
+    "rationale": "At Ethereum block 26108096, observed 2026-10-03T00:03:10.345094Z, the vault asset() was USDat 0x23238f20b894f29041f48d88ee91131c395aaa71. totalAssets() returned 66,668,382.380280 accounting units, exactly the sum of the actual USDat balance 4,134,924.740150 and STRConModule recognizedValue() 62,533,457.640130. The old STRCMirrorModule recognizedValue() was zero and getUnvestedSurplus() was zero. STRConModule ASSET() returned 0xecabe1ff8a9e1dc55899cf58dac8497ece5ae84c and the vault held 594,182.9100530432 STRCon. Shares outstanding were 64,115,192.98239439 at 18 decimals. Percentages are current operational NAV weights, not an independent off-chain securities/liabilities reconciliation or a claim that note holders directly own Strategy shares. BNB and Monad supplies are bridge representations and are not added to canonical supply.",
+    "compositionBasis": "Pinned Ethereum totalAssets, USDat balance, STRConModule recognizedValue/ASSET, STRCMirrorModule recognizedValue and exact STRCon balance at block 26108096",
+    "compositionAsOf": "2026-10-03",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All operational NAV positions are identified, so unresolved composition identity exposure is zero. For the dominant STRCon slice, exact current note terms, Strategy preferred seniority, dated off-chain reconciliation, Saturn deed-of-gift execution, legal priority, default recovery and realizable liquidity are not established. Those credit/legal uncertainties remain explicit in the local mechanism overlay; zero unidentified composition is not zero financial risk. Family-level Ondo safeguards are not upgraded to Saturn holder safeguards.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "STRCon note tracking Strategy Stretch Preferred (STRC)",
+        "pct": 93.7977725084671,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "STRCon is the exact untracked Ondo security note held on-chain. The structured asset class names both the note issuer and Strategy obligor; no USDat cash-backed passthrough, invented STRCon catalog dependency or missing-parent numeric score is substituted. Exact note and Saturn recovery terms remain unavailable in the local credit overlay."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      { "name": "Saturn sUSDat Ethereum vault (holds STRCon and USDat)", "role": "other" },
+      { "name": "Ondo Global Markets (BVI) Limited (STRCon note issuer)", "role": "other", "jurisdiction": "British Virgin Islands" },
+      { "name": "Alpaca (broker named in Saturn's STRCon migration runbook)", "role": "other" }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      { "label": "Saturn current migration entities and proposed deed of gift", "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md" },
+      { "label": "Ondo structured-note custody and family legal safeguards", "url": "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md" },
+      { "label": "Saturn custody page retains older Clear Street fund narrative", "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/custody-of-digital-credit.md" },
+      { "label": "Ethereum block 26108096", "url": "https://etherscan.io/block/26108096" }
+    ],
+    "uncertainty": "The vault's current on-chain note location is verified, while issuer documentation still describes legacy off-chain STRC at Clear Street. The V2 runbook moves STRC to Alpaca, identifies Saturn Fund Ltd., Saturn Global Capital Investments Ltd. and Saturn Vault Corporation, and instructs dating a deed of gift, but its planning text does not establish executed legal rights. Whole-book custody safeguards and provider shares are unknown. Ondo family bankruptcy-remoteness and security-agent claims do not prove sUSDat holder priority against any Saturn entity.",
+    "knownUnknownExposurePct": 100
+  }
+}

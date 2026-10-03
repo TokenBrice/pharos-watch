@@ -1,0 +1,89 @@
+{
+  "id": "usdfc-secured-finance",
+  "reserves": [
+    {
+      "name": "Native FIL",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Filecoin network",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Secured Finance FIL-only CDP overview",
+        "url": "https://docs.secured.finance/usdfc-stablecoin/overview"
+      },
+      {
+        "label": "Filecoin mainnet contract graph",
+        "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts"
+      },
+      {
+        "label": "Filecoin GLIF RPC pinned block 6422489",
+        "url": "https://api.node.glif.io/rpc/v1"
+      }
+    ],
+    "rationale": "Only native FIL collateral is permitted. Composition is 100% FIL, distinct from the reserve-to-debt collateralization ratio.",
+    "compositionBasis": "FIL-only protocol rules, corroborated by pinned ActivePool and DefaultPool reads at Filecoin block 6422489.",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No undisclosed collateral asset in the permitted single-asset book; FIL volatility and pool balances remain variable. FIL has no dedicated reserve-risk mapping; medium is the conservative native-altcoin classification.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Native FIL",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Filecoin native collateral is not a tracked stablecoin."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "USDFC ActivePool",
+        "role": "other",
+        "jurisdiction": "Filecoin"
+      },
+      {
+        "name": "USDFC DefaultPool",
+        "role": "other",
+        "jurisdiction": "Filecoin"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Secured Finance FIL-only CDP overview",
+        "url": "https://docs.secured.finance/usdfc-stablecoin/overview"
+      },
+      {
+        "label": "Filecoin mainnet contract graph",
+        "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts"
+      },
+      {
+        "label": "Filecoin GLIF RPC pinned block 6422489",
+        "url": "https://api.node.glif.io/rpc/v1"
+      }
+    ],
+    "uncertainty": "On-chain pool separation establishes technical custody only; legal segregation, insolvency priority and rehypothecation protections are not established.",
+    "knownUnknownExposurePct": 100
+  }
+}

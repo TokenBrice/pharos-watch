@@ -6,6 +6,7 @@ import { mapWithConcurrency } from "../../../lib/concurrency";
 import type { PeggedAsset } from "../enrich-prices";
 import { buildZephyrProtocolPeggedAsset, fetchZephyrProtocolStats, isZephyrScannerAssetId } from "../zephyr-zsd";
 import { resolveVaultNavSupplyPrice } from "../../../lib/authoritative-price-sources";
+import { loadReserveNavSupplyPrice } from "../../../lib/reserve-nav-price";
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, prefersOnChainSupplyMcap, toPublicChainCirculating } from "./onchain-supply";
 import {
   fetchSupplementalPriceData,
@@ -75,8 +76,13 @@ export async function fetchFiatCoinGeckoTokens(
         // for supply valuation only; the published price stays with the live
         // override stage. Fail-closed: no trusted NAV -> the coin stays out.
         let navSupplyPrice: number | undefined;
-        if (navLikeAsset && !priceResolution && previousAssetsById) {
-          const navOverride = await resolveVaultNavSupplyPrice(meta.id, previousAssetsById, db, signal);
+        if (navLikeAsset && !priceResolution) {
+          const reserveNav = await loadReserveNavSupplyPrice(meta, db, nowSec);
+          const navUsdRate = meta.flags.pegCurrency === "USD" ? 1 : pegReferencePrice;
+          if (reserveNav && navUsdRate != null) navSupplyPrice = reserveNav.price * navUsdRate;
+        }
+        if (navLikeAsset && !priceResolution && navSupplyPrice == null && previousAssetsById) {
+          const navOverride = await resolveVaultNavSupplyPrice(meta.id, previousAssetsById, db, signal, chainRpcs);
           if (navOverride) {
             navSupplyPrice = navOverride.price;
             logWorkerEventArgs(

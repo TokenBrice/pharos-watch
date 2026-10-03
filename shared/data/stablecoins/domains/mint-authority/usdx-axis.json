@@ -1,0 +1,132 @@
+{
+  "id": "usdx-axis",
+  "mintAuthority": {
+    "mintPath": "offchain-attested-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "Canonical Ethereum USDx is issued through USDxMarket signed-order settlement. A 3-of-5 Safe administers roles, routes and capacity directly; a separate two-day timelock owns the proxy upgrade path. The market operator cannot change the user's signed order, but collateral valuation and approval remain offchain.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x5ae365ac83638418c4c30555d32f9a91ccaef58c",
+        "deploymentRefs": ["ethereum:0xa1fa7777974312f7d801a8880714a218f76233f8"],
+        "label": "Axis USDxMarket canonical issuer",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "Signed orders must pass account eligibility, signer, enabled route/channel, nonce and configured CapConfig capacity checks. Exact current cap amounts and complete latent route closure are not asserted.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          { "label": "USDxMarket signed-order settlement and capacity checks", "url": "https://docs.axis.to/usdx-the-synthetic-dollar/mint-and-redeem.md" },
+          { "label": "Axis MARKET_ROLE issuance permissions", "url": "https://docs.axis.to/reference/access-control.md" },
+          { "label": "Pinned Ethereum control observation", "url": "https://etherscan.io/block/26107703" }
+        ],
+        "evidence": "At block 26107703, USDx.hasRole(MARKET_ROLE, USDxMarket) returned true. Official documentation identifies the market as the live launch issuance route and documents cap-limited atomic settlement of user-signed orders. The market does not independently value collateral through an external price oracle. Future BRIDGE_ROLE assignment is an admin expansion surface, not an authored active bridge deployment."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xdeca86926d2aec9c3b0eeeb54aacfde6d0249370",
+        "deploymentRefs": ["ethereum:0xa1fa7777974312f7d801a8880714a218f76233f8"],
+        "label": "Axis published mint operator",
+        "role": "backend-signer",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "capDescription": "Executes approved signed mint orders under USDxMarket capacity and routing constraints; exact cap values remain unreviewed.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          { "label": "Published Axis operator wallet", "url": "https://docs.axis.to/reference/contract-addresses.md" },
+          { "label": "Mint operator permissions", "url": "https://docs.axis.to/reference/access-control.md" },
+          { "label": "Pinned role observation block", "url": "https://etherscan.io/block/26107703" }
+        ],
+        "evidence": "USDxMarket.hasRole(MINT_OPERATOR_ROLE, this published wallet) returned true at block 26107703. Docs call it KMS-secured; no independent HSM/MPC key-custody attestation or complete operator-role membership census was retrieved. The wallet executes settlement, while risk-increasing configuration remains with the governance Safe."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xdeb538917b1c1ae6b81550a6c42a66d818cc6d6d",
+        "deploymentRefs": ["ethereum:0xa1fa7777974312f7d801a8880714a218f76233f8"],
+        "label": "Axis governance Safe native issuance administration",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "safe": {
+          "owners": ["0xae89fd944a412a3e1f6a8dec586f9a040e8d69a3", "0x79170f93ca5d2d3cb56c3cdff84015960259c41a", "0xc39fdd5c692f8778f7357e7f6cb72f359b96151b", "0x1623016a129e3acd16cb4a56d215e60f7f7a7027", "0x73a50922f75a2e4a7cdb949489738f23251b7fb7"],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "observedBlock": 26107703,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "sources": [
+          { "label": "Axis risk-up governance and role administration", "url": "https://docs.axis.to/reference/access-control.md" },
+          { "label": "Governance Safe", "url": "https://etherscan.io/address/0xdeb538917b1c1ae6b81550a6c42a66d818cc6d6d" },
+          { "label": "Pinned Safe and role observation", "url": "https://etherscan.io/block/26107703" }
+        ],
+        "evidence": "At block 26107703, getThreshold returned 3 and getOwners returned five addresses. Complete getModulesPaginated(0x1,20) returned an empty array with terminal sentinel 0x1, and the standard Safe guard slot was zero. USDx and MarketConfig.hasRole(DEFAULT_ADMIN_ROLE, Safe) returned true. Docs permit role grants and cap/route expansion without an enforced timelock; the separate upgrade delay does not constrain these admin actions. Signer independence and nonstandard bypass closure are not established."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xd6bb04711e41aa41b9130ad41ee6884755914c0b",
+        "deploymentRefs": ["ethereum:0xa1fa7777974312f7d801a8880714a218f76233f8"],
+        "label": "Axis native USDx proxy-upgrade timelock",
+        "role": "timelock",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          { "label": "Axis transparent-proxy upgrade authority", "url": "https://docs.axis.to/reference/access-control.md" },
+          { "label": "USDx ProxyAdmin", "url": "https://etherscan.io/address/0xde4552a601e0424bdf5407b2b465d63a3df6a271#code" },
+          { "label": "Pinned proxy owner and minimum-delay observation", "url": "https://etherscan.io/block/26107703" }
+        ],
+        "evidence": "The canonical token's EIP-1967 admin slot returned ProxyAdmin 0xde4552a601e0424bdf5407b2b465d63a3df6a271; its owner() returned this TimelockController. getMinDelay() returned 172800 seconds at block 26107703. The implementation slot returned 0x7c4ba7477f180b0370338f722c3717b3fbfda1c6. A future implementation can change issuance semantics; complete proposer/executor membership and all bypass paths remain unresolved."
+      }
+    ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "deploymentRefs": ["ethereum:0xa1fa7777974312f7d801a8880714a218f76233f8"],
+      "proxyAddresses": ["0xa1fa7777974312f7d801a8880714a218f76233f8"],
+      "implementationAddresses": ["0x7c4ba7477f180b0370338f722c3717b3fbfda1c6"],
+      "adminAddresses": ["0xde4552a601e0424bdf5407b2b465d63a3df6a271"],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "Axis native USDx proxy-upgrade timelock",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107703,
+      "sources": [
+        { "label": "Axis canonical V2 proxy and upgrade model", "url": "https://docs.axis.to/reference/access-control.md" },
+        { "label": "Pinned Ethereum proxy observation", "url": "https://etherscan.io/block/26107703" }
+      ]
+    },
+    "review": {
+      "sources": [
+        { "label": "Axis access control", "url": "https://docs.axis.to/reference/access-control.md" },
+        { "label": "Axis contract roster", "url": "https://docs.axis.to/reference/contract-addresses.md" },
+        { "label": "Axis primary market", "url": "https://docs.axis.to/usdx-the-synthetic-dollar/mint-and-redeem.md" },
+        { "label": "Ethereum block 26107703", "url": "https://etherscan.io/block/26107703" }
+      ],
+      "evidence": "Reopened issuer documentation and pinned read-only Ethereum calls at block 26107703, hash 0x1af27eeae8f8788fa7897fa456addc58ffc0e2e5f01befe9a58256167e5aeb9d (22:43:59 UTC, October 2, 2026), confirm canonical supply 60,779,732.78107246 USDx, market mint authority, published operator membership, the 3-of-5 Safe and two-day ProxyAdmin owner timelock. Native risk-up configuration is not delayed. Accountable reserve reporting does not establish full issuance-ledger reconciliation or prudential supervision, so both economic facts remain unknown. Legacy Plasma V1 is a distinct instrument and is not included as another canonical deployment.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable",
+      "unresolvedQuestions": ["Complete current mint-operator and latent role/route inventory", "Exact current capacities and all cap-expansion constraints", "Timelock proposer/executor closure and nonstandard Safe bypass reach", "Independent signer and key-custody evidence", "Economic issuance-ledger reconciliation and supervisory regime"]
+    }
+  }
+}

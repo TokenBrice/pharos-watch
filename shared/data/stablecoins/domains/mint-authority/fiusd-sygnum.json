@@ -1,0 +1,115 @@
+{
+  "id": "fiusd-sygnum",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unknown",
+    "confidence": "unknown",
+    "summary": "Sygnum issues one token after each fund-unit subscription and burns on sale. Both deployments use permissioned operators and mutable implementations; complete root authority and independent token-to-unit accounting are unresolved.",
+    "controls": [
+      {
+        "chain": "zksync",
+        "address": "0x159d8a100d5a869edda532626fde7737056c06c5",
+        "deploymentRefs": [
+          "zksync:0x2ab105a3ead22731082b790ca9a00d9a3a7627f9"
+        ],
+        "label": "FIUSD zksync operators registry",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 72312845,
+        "sources": [
+          {
+            "label": "Sygnum issuer-authored FIUSD application dated March 20, 2025",
+            "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
+          },
+          {
+            "label": "Verified deployed Arbitrum implementation",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7616b08676117e1aab542e53fe3f7b12f7596d37"
+          }
+        ],
+        "evidence": "getOperatorsContract() returned 0x159d8a100d5a869edda532626fde7737056c06c5 at block 72312845. The verified Arbitrum implementation gates internal native minting by operator/system membership, including a SygnumTokenV3 operator override. Neither the complete registry membership nor the proxy/root-upgrade signing census is closed; zkSync deployed implementation source equivalence has not been independently proven."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xbf9060880363a61e7462039aa8a4aa98fe486067",
+        "deploymentRefs": [
+          "arbitrum:0xcded6b899edba762d793f44ed295248049440e1e"
+        ],
+        "label": "FIUSD arbitrum operators registry",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 511123948,
+        "sources": [
+          {
+            "label": "Sygnum issuer-authored FIUSD application dated March 20, 2025",
+            "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
+          },
+          {
+            "label": "Verified deployed Arbitrum implementation",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7616b08676117e1aab542e53fe3f7b12f7596d37"
+          }
+        ],
+        "evidence": "getOperatorsContract() returned 0xbf9060880363a61e7462039aa8a4aa98fe486067 at block 511123948. The verified Arbitrum implementation gates internal native minting by operator/system membership, including a SygnumTokenV3 operator override. Neither the complete registry membership nor the proxy/root-upgrade signing census is closed; zkSync deployed implementation source equivalence has not been independently proven."
+      }
+    ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "internal-ledger",
+    "supervision": "unknown",
+    "upgradeability": {
+      "model": "unknown",
+      "deploymentRefs": [
+        "zksync:0x2ab105a3ead22731082b790ca9a00d9a3a7627f9",
+        "arbitrum:0xcded6b899edba762d793f44ed295248049440e1e"
+      ],
+      "proxyAddresses": [
+        "0x2ab105a3ead22731082b790ca9a00d9a3a7627f9",
+        "0xcded6b899edba762d793f44ed295248049440e1e"
+      ],
+      "implementationAddresses": [
+        "0x8dd51341147a2d50566b9910f515689d3decaee8",
+        "0x7616b08676117e1aab542e53fe3f7b12f7596d37"
+      ],
+      "canChangeMintLogic": "unknown",
+      "observedAt": "2026-10-02",
+      "sources": [
+        {
+          "label": "Sygnum issuer-authored FIUSD application dated March 20, 2025",
+          "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
+        },
+        {
+          "label": "Verified deployed Arbitrum implementation",
+          "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7616b08676117e1aab542e53fe3f7b12f7596d37"
+        }
+      ]
+    },
+    "review": {
+      "disposition": "unresolved",
+      "sources": [
+        {
+          "label": "Sygnum issuer-authored FIUSD application dated March 20, 2025",
+          "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
+        },
+        {
+          "label": "Verified deployed Arbitrum implementation",
+          "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7616b08676117e1aab542e53fe3f7b12f7596d37"
+        }
+      ],
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "evidence": "Sygnum describes one FIUSD per subscribed Fidelity ILF unit, token burn when the unit is sold, and a daily internal report comparing Core Banking System, database and blockchain records. This supports internal-ledger process semantics only, not financial assurance. The two current native supplies are 1517.66 zkSync and zero Arbitrum units, while CoinGecko claims 3997.66. Current operator registries and EIP-1967 implementations were read; no Safe, timelock, full minter/system roster or independently reconciled reserve cap is credited.",
+      "unresolvedQuestions": [
+        "Close operator/system members and ultimate root/proxy administration on both deployments.",
+        "Independently verify zkSync deployed implementation source and all latent mint paths.",
+        "Explain the 2480-unit provider/native discrepancy with a current token-to-fund-unit reconciliation.",
+        "Publish the native cross-chain reallocation and burn conservation policy."
+      ]
+    }
+  }
+}

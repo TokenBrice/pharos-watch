@@ -164,6 +164,15 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   // deployments read "no registered token-pool provider supports this chain"
   // rather than claiming a query that cannot run.
   arc:            { name: "Arc",             explorerUrl: "https://arc.etherscan.io",                       evmChainId: 5042,     type: "evm",   logoPath: "/chains/arc.png"              },
+  // Mainnet IDs read from each official RPC via eth_chainId (2026-10-03).
+  // RISE has no verified token-pool provider registration, so its deployments
+  // read "no registered token-pool provider supports this chain" rather than
+  // claiming a query that cannot run. Somnia and Filecoin are registered in
+  // CoinGecko asset_platforms/onchain networks and GeckoTerminal networks.
+  // No DexScreener registration was verified for any of these three chains.
+  rise:           { name: "RISE",            explorerUrl: "https://explorer.risechain.com",                 evmChainId: 4153,     type: "evm",   logoPath: "/chains/rise.png"             },
+  somnia:         { name: "Somnia",          explorerUrl: "https://explorer.somnia.network",               evmChainId: 5031,     type: "evm",   logoPath: "/chains/somnia.png",          providers: { coingecko: "somnia", geckoTerminal: "somnia" } },
+  filecoin:       { name: "Filecoin",        explorerUrl: "https://filecoin.blockscout.com",               evmChainId: 314,      type: "evm",   logoPath: "/chains/filecoin.svg",        providers: { coingecko: "filecoin", geckoTerminal: "filecoin" } },
   // Scilla ZRC-2 scope, not Zilliqa's separate EVM interface. No pool provider.
   zilliqa:        { name: "Zilliqa",         explorerUrl: "https://viewblock.io/zilliqa",                   evmChainId: null,     type: "other", logoPath: "/chains/zilliqa.png"          },
 };

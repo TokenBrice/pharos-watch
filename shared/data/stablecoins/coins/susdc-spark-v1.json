@@ -1,0 +1,112 @@
+{
+  "id": "susdc-spark-v1",
+  "name": "Spark USDC V1 (Legacy)",
+  "symbol": "sUSDC",
+  "oneLiner": "sUSDC is Spark's legacy USDC savings share, backed by sUSDS and redeemable through Sky PSM liquidity or an sUSDS escape hatch.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "usdc-circle",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "usdc-circle",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "Exact ethereum holder instrument 0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe is an operational ERC-4626 protocol-position claim. sUSDS shares in the Sky Savings Rate, obtained by converting deposited USDC through the Sky PSM. USDC is the deposit and ordinary redemption asset, not the held reserve asset. Verified deployment code and native accounting distinguish this receipt from direct parent fiat ownership and from Spark Savings V2.",
+    "sources": [
+      {
+        "label": "Spark Savings documentation distinguishes Legacy V1 from V2",
+        "url": "https://docs.spark.finance/products/spark-savings"
+      },
+      {
+        "label": "Official Spark Ethereum deployment registry",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Ethereum.sol"
+      },
+      {
+        "label": "Verified exact vault deployment and source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+      },
+      {
+        "label": "Verified Legacy UsdcVault implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba"
+      },
+      {
+        "label": "Credential-free RPC endpoint; pinned read in review notes",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      }
+    ]
+  },
+  "collateral": "sUSDS shares in the Sky Savings Rate, obtained by converting deposited USDC through the Sky PSM. USDC is the deposit and ordinary redemption asset, not the held reserve asset.",
+  "pegMechanism": "Deposit USDC through the PSM to obtain sUSDS and mint matching sUSDC shares; burn shares for USDC through PSM pocket liquidity. The exit function can instead return the corresponding sUSDS shares. Share NAV follows the Sky Savings Rate.",
+  "detailProvider": "coingecko",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe",
+      "decimals": 18
+    }
+  ],
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://spark.fi"
+    },
+    {
+      "label": "Spark Savings documentation distinguishes Legacy V1 from V2",
+      "url": "https://docs.spark.finance/products/spark-savings"
+    },
+    {
+      "label": "Verified exact vault deployment and source",
+      "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+    }
+  ],
+  "custodyModel": "unknown",
+  "governanceQuality": "wrapper",
+  "yieldConfig": {
+    "yieldSource": "Sky Savings Rate via sUSDS",
+    "yieldType": "nav-appreciation"
+  },
+  "geckoId": "spark-usdc",
+  "dependencyReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spark Savings documentation distinguishes Legacy V1 from V2",
+        "url": "https://docs.spark.finance/products/spark-savings"
+      },
+      {
+        "label": "Official Spark Ethereum deployment registry",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Ethereum.sol"
+      },
+      {
+        "label": "Verified exact vault deployment and source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+      },
+      {
+        "label": "Verified Legacy UsdcVault implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba"
+      },
+      {
+        "label": "Credential-free RPC endpoint; pinned read in review notes",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      }
+    ],
+    "rationale": "USDC is the exact native deposit/redemption denomination and tracked variant parent. Reserve composition records separate held positions; borrower collateral is not custody of the lender receipt.",
+    "relationships": [
+      {
+        "id": "usdc-circle",
+        "weight": 1,
+        "type": "wrapper",
+        "reason": "Exact asset() is native USDC; this is the serial denomination and inherited parent issuer constraint."
+      }
+    ]
+  }
+}

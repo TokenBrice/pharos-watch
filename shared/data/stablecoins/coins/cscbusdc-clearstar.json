@@ -1,0 +1,119 @@
+{
+  "id": "cscbusdc-clearstar",
+  "name": "Clearstar cbAssets Vault",
+  "symbol": "CSCBUSDC",
+  "oneLiner": "CSCBUSDC is Clearstar's USDC vault lending against Coinbase-wrapped assets on Base; withdrawals depend on liquidity and credit losses reduce NAV.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "usdc-circle",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "usdc-circle",
+  "collateral": "USDC in the Clearstar-curated Morpho Vault V2 on base, held idle or lent through its MorphoMarketV1AdapterV2; borrower collateral and credit losses remain local strategy exposure",
+  "pegMechanism": "ERC-4626 shares accrue net USDC lending interest and realize losses at NAV. Ordinary withdraw/redeem uses idle USDC and the configured liquidity adapter, subject to liquidity; force-deallocation and in-kind exits are separate, not guaranteed dollar settlement",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "Clearstar cbAssets Vault (CSCBUSDC) at base:0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c is the current public ERC-4626 VaultV2 share over USDC 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x812b71c33ae5eafebae967c5670e37eca3cab0ac holds 8 enumerated Morpho market IDs. This intentionally differs from the fiat-cash parent and older Morpho precedent classifications.",
+    "sources": [
+      {
+        "label": "Exact Morpho Vault V2 deployment",
+        "url": "https://app.morpho.org/base/vault/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
+      },
+      {
+        "label": "Verified deployment code identity",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
+      },
+      {
+        "label": "Pinned base block 52095852",
+        "url": "https://basescan.org/block/52095852"
+      },
+      {
+        "label": "Morpho complete current vault inventory",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho Vault V2 gates",
+        "url": "https://docs.morpho.org/curate/concepts/gates.md"
+      },
+      {
+        "label": "Morpho share accounting and loss realization",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "Exact Morpho lending adapter",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x812b71c33ae5eafebae967c5670e37eca3cab0ac"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Morpho vault",
+      "url": "https://app.morpho.org/base/vault/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
+    },
+    {
+      "label": "Vault mechanics",
+      "url": "https://docs.morpho.org/developers/earn/tutorials/assets-flow.md"
+    },
+    {
+      "label": "Gate documentation",
+      "url": "https://docs.morpho.org/curate/concepts/gates.md"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "base",
+      "address": "0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "unknown",
+  "governanceQuality": "wrapper",
+  "yieldConfig": {
+    "yieldSource": "Clearstar cbAssets Vault Morpho Vault V2",
+    "yieldType": "lending-vault"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "cscbusdc-clearstar",
+    "display": {
+      "url": "https://app.morpho.org/base/vault/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c",
+      "label": "Clearstar cbAssets Vault"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "base",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "Clearstar cbAssets Vault deployed strategy positions",
+        "risk": "high",
+        "coinId": "usdc-circle",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+      },
+      "deployedExposure": {
+        "basis": "Pinned sole MorphoMarketV1AdapterV2 and complete market inventory; supplied USDC is a lending position, not idle cash",
+        "reviewedAt": "2026-10-02",
+        "sourceUrl": "https://app.morpho.org/base/vault/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
+      },
+      "redemptionLiquidity": {
+        "source": "morpho-vault-v2",
+        "chainId": 8453
+      }
+    }
+  }
+}

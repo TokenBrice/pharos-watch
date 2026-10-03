@@ -1,0 +1,39 @@
+{
+  "id": "usdso-somnia",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "USD Somnia product documentation (accessed 2026-10-02)",
+        "url": "https://somnia.network/usdso-stablecoin"
+      },
+      {
+        "label": "Verified token implementation",
+        "url": "https://explorer.somnia.network/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+      },
+      {
+        "label": "Pinned somnia RPC at block 428274392",
+        "url": "https://api.infra.mainnet.somnia.network"
+      },
+      {
+        "label": "USDso terms: Frax issuer and no Somnia redemption/yield obligation",
+        "url": "https://somnia.network/usdso-terms-of-service"
+      },
+      {
+        "label": "Verified BrandedCustodian implementation",
+        "url": "https://explorer.somnia.network/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+      },
+      {
+        "label": "Verified current BrandedFactory implementation",
+        "url": "https://explorer.somnia.network/api/v2/smart-contracts/0x690575465af47835b72c5b74c334234624cfd942"
+      },
+      {
+        "label": "Frax parent reserve balance sheet (issuer telemetry)",
+        "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+      }
+    ],
+    "evidence": "At somnia block 428274392, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 3,268,350.769507 frxUSD against 3,268,350.769507 USDso supply. Verified GeniusDollar freeze()/freezeMany() accepts FREEZER_ROLE or DEFAULT_ADMIN_ROLE, and the ordinary transfer hook rejects frozen accounts; DEFAULT_ADMIN can bypass the hook and pause/unpause. The observed 3-of-6 Safe 0x9527e19f55d1afce9f1e9edcea79552bf41983f9 holds token DEFAULT_ADMIN_ROLE.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

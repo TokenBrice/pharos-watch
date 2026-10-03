@@ -1,0 +1,104 @@
+{
+  "id": "sreusd-resupply",
+  "name": "Resupply Savings reUSD",
+  "symbol": "sreUSD",
+  "oneLiner": "sreUSD is Resupply's REUSD savings share, accruing protocol revenue and redeemable for REUSD without a local cooldown or penalty fee.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "reusd-resupply",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "reusd-resupply",
+  "collateral": "REUSD held in the Ethereum sreUSD ERC-4626 savings vault; upstream backing and issuer risk remain with reusd-resupply",
+  "pegMechanism": "Deposit REUSD to mint sreUSD shares; weekly protocol revenue is streamed through seven-day reward cycles and increases the REUSD exchange rate. Native withdraw/redeem burns shares for REUSD without a local cooldown or penalty fee. Conversion into other stablecoins remains a separate parent REUSD route, including its communal redemption fee and stress risks.",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "The exact Ethereum deployment 0x557ab1e003951a73c12d16f0fea8490e39c33c35 is a current ERC-4626 operational share claim on REUSD. At Ethereum block 26107704 (2026-10-02T22:44:11Z), asset() is 0x57ab1e0003f623289cd798b1824be09a793e4bec; decimals() is 18, totalSupply() is 27269498.885603778064 shares, totalAssets() is 28218576.035466793925 REUSD, and balanceOf(vault) is 28224015.272168319672 REUSD. convertToAssets(1e18) and previewRedeem(1e18) return 1.034803615345 REUSD. Local vault conservation, custody and recovery differ from the parent's CDP lending collateral, so protocol-position is an intentional local archetype override; upstream economic risks remain inherited through the 100% wrapper dependency.",
+    "sources": [
+      {
+        "label": "Resupply savings documentation",
+        "url": "https://docs.resupply.finance/resupply-protocol/savings-reusd.md"
+      },
+      {
+        "label": "Resupply official deployment roster",
+        "url": "https://raw.githubusercontent.com/resupplyfi/resupply/main/deployment/contracts.json"
+      },
+      {
+        "label": "Verified current sreUSD implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x557ab1e003951a73c12d16f0fea8490e39c33c35"
+      },
+      {
+        "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
+        "url": "https://etherscan.io/block/26107704"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://etherscan.io/address/0x557ab1e003951a73c12d16f0fea8490e39c33c35#readContract",
+    "provider": "Ethereum onchain vault accounting and direct REUSD token balances. This proves the local wrapper position, not independent financial assurance of the parent's reserves.",
+    "cadence": "real-time"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://resupply.finance/"
+    },
+    {
+      "label": "Savings documentation",
+      "url": "https://docs.resupply.finance/resupply-protocol/savings-reusd.md"
+    },
+    {
+      "label": "Deployment roster",
+      "url": "https://raw.githubusercontent.com/resupplyfi/resupply/main/deployment/contracts.json"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x557ab1e003951a73c12d16f0fea8490e39c33c35",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "yieldConfig": {
+    "yieldSource": "Resupply savings (sreUSD)",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "sreusd-resupply",
+    "display": {
+      "url": "https://docs.resupply.finance/resupply-protocol/savings-reusd.md",
+      "label": "Resupply Savings reUSD"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "REUSD savings vault position",
+        "risk": "high",
+        "coinId": "reusd-resupply",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x57ab1e0003f623289cd798b1824be09a793e4bec"
+      }
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "jltxx-jpmorgan",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      { "label": "Verified StopCodesFacet, ACCOUNT_ADMIN-controlled holder restrictions", "url": "https://eth.blockscout.com/address/0x996440281f77b4d664878b0b14a10e909fc3310b?tab=contract" },
+      { "label": "Exact JLTXX FactTokenDiamond", "url": "https://eth.blockscout.com/address/0x09864f52b035ae22ee739dfa5c748fa080d07bd8?tab=contract" }
+    ],
+    "evidence": "At Ethereum block26107698, blockHash0x1873f19af6d4b1423d634e2067220be47f24b4aed3efab69b062aac2a5b0a9fd, facetAddress(updateStopCodes(address,(bool,bool,bool,bool))) on the exact JLTXX token0x09864f52b035ae22ee739dfa5c748fa080d07bd8 returned0x996440281f77b4d664878b0b14a10e909fc3310b. Its verified StopCodesFacet requires ACCOUNT_ADMIN to update per-account stopSubscriptionTo, stopTransferFrom, stopTransferTo and stopRedemptionFrom flags; live token therefore exposes explicit holder transfer/redemption restrictions. This finding covers only the authored Ethereum deployment, not an unbound Solana mint.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "summary": "JLTXX transaction NAV is calculated and published by the fund for exact CUSIP46655R119, share class4397. Pharos reads that class publisher, not an independent market oracle or guaranteed $1 peg; the issuer can correct NAV and the publisher is a single off-chain availability dependency.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      { "label": "JPMorgan Token Class NAV publisher", "url": "https://am.jpmorgan.com/FundsMarketingHandler/slim/product.md?cusip=46655r119&country=us&role=adv&language=en" },
+      { "label": "SEC-filed fund NAV valuation and transaction terms", "url": "https://www.sec.gov/Archives/edgar/data/1659326/000119312526217424/d44657d485bpos.htm" }
+    ]
+  }
+}

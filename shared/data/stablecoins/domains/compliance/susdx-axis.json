@@ -1,0 +1,28 @@
+{
+  "id": "susdx-axis",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "sUSDx is an ERC-4626/ERC-7540 USDx savings receipt with a variable exchange rate as realized trading rewards vest. Redemption returns proportional USDx through an async queue rather than a fixed monetary-value payment. This is Pharos's editorial assessment of the exact savings-share structure, not a token-specific regulator determination or a finding that the parent USDx is outside GENIUS.",
+      "references": [
+        { "label": "Axis savings-vault share and redemption accounting", "url": "https://docs.axis.to/reference/staking-contracts.md", "sourceKind": "issuer-disclosure", "accessedAt": "2026-10-02" },
+        { "label": "Axis staking and unstaking", "url": "https://docs.axis.to/susdx-the-rewards-vault/stake-and-unstake.md", "sourceKind": "issuer-disclosure", "accessedAt": "2026-10-02" },
+        { "label": "GENIUS Act payment-stablecoin definition", "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm", "sourceKind": "statute", "sourceDate": "2025-07-18", "accessedAt": "2026-10-02" }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Coordinate Origin Limited",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "The savings receipt is separately identified from canonical USDx and inherits its economic risk. Axis terms name Coordinate Origin Limited for issuance/redemption and Coordinate Labs Pte. Ltd. for the platform; no token-specific regulatory approval is asserted. The issuer's U.S.-person exclusion is an access policy, not proof of statutory authorization or exclusion. MiCA is intentionally unassessed because no exact sUSDx regulatory classification was established; an interest-accruing share cannot be assigned an EU out-of-scope status merely by analogy to sUSDe.",
+    "references": [
+      { "label": "Axis legal issuer and platform operator", "url": "https://www.axis.to/terms-of-service", "sourceKind": "issuer-disclosure", "accessedAt": "2026-10-02" },
+      { "label": "Axis variable reward and U.S.-person restrictions", "url": "https://docs.axis.to/resources-and-legal/compliance.md", "sourceKind": "issuer-disclosure", "accessedAt": "2026-10-02" },
+      { "label": "Axis async savings-vault accounting", "url": "https://docs.axis.to/reference/staking-contracts.md", "sourceKind": "issuer-disclosure", "accessedAt": "2026-10-02" }
+    ],
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

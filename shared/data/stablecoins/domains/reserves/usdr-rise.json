@@ -1,0 +1,92 @@
+{
+  "id": "usdr-rise",
+  "reserves": [
+    {
+      "name": "M token held by RISE Dollar",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "m-m0",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "M0 permissioned issuers and local M-extension",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "RISE Dollar product documentation (accessed 2026-10-02)",
+        "url": "https://docs.risechain.com/docs/rise-evm/usdr"
+      },
+      {
+        "label": "Verified token implementation",
+        "url": "https://explorer.risechain.com/api/v2/smart-contracts/0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b"
+      },
+      {
+        "label": "Pinned rise RPC at block 23375290",
+        "url": "https://rpc.risechain.com"
+      },
+      {
+        "label": "M0 published platform deployments",
+        "url": "https://docs.m0.org/resources/addresses/m0-platform"
+      },
+      {
+        "label": "M0 liquidity routes and issuer onboarding",
+        "url": "https://docs.m0.org/build/accessing-liquidity"
+      }
+    ],
+    "rationale": "At rise block 23375290, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 4,186,507.178834 M against 4,166,902.771484 USDR supply. M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right. USDR JMI totalAssets() returned zero, so no non-M asset slice is assigned.",
+    "compositionBasis": "Verified immediate parent-token custody and liability conservation at pinned block 23375290",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The immediate parent-token custody is identified; whole-book upstream legal segregation, custodian allocation, independent financial reconciliation and holder seniority are not established by this local balance observation.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "RISE Dollar local extension contract",
+        "role": "custodian",
+        "sharePct": 100
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "RISE Dollar product documentation (accessed 2026-10-02)",
+        "url": "https://docs.risechain.com/docs/rise-evm/usdr"
+      },
+      {
+        "label": "Verified token implementation",
+        "url": "https://explorer.risechain.com/api/v2/smart-contracts/0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b"
+      },
+      {
+        "label": "Pinned rise RPC at block 23375290",
+        "url": "https://rpc.risechain.com"
+      },
+      {
+        "label": "M0 published platform deployments",
+        "url": "https://docs.m0.org/resources/addresses/m0-platform"
+      },
+      {
+        "label": "M0 liquidity routes and issuer onboarding",
+        "url": "https://docs.m0.org/build/accessing-liquidity"
+      }
+    ],
+    "uncertainty": "The immediate parent-token custody is identified; whole-book upstream legal segregation, custodian allocation, independent financial reconciliation and holder seniority are not established by this local balance observation."
+  }
+}

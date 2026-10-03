@@ -1,0 +1,158 @@
+{
+  "id": "oned-gennius",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "ONED native issuance is role-gated and subject to mutable per-minter rate limits. Separate no-code default-admin and beacon-owner addresses can authorize issuance or replace mint logic; the observed 24-hour default-admin transfer delay is not a global mint or upgrade delay.",
+    "controls": [
+      {
+        "chain": "base",
+        "address": "0x026bbff480a3dfde0f60ec525029c746fbb0f485",
+        "deploymentRefs": [
+          "base:0x10ed0050b7a5d5e1e9cc164f77a71d0bf69f64bd"
+        ],
+        "label": "ONED authorized minter",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 52095848,
+        "failureDomainKeys": [
+          "entity:coinbase-oned-issuance"
+        ],
+        "sources": [
+          {
+            "label": "Verified current ONED implementation",
+            "url": "https://basescan.org/address/0x57ab1e54fca80105a93a735b59f850f8420b5e2c#code"
+          },
+          {
+            "label": "ONED Base deployment",
+            "url": "https://basescan.org/address/0x10ed0050b7a5d5e1e9cc164f77a71d0bf69f64bd"
+          }
+        ],
+        "evidence": "At Base block 52095848, hasRole(MINT_ROLE,minter)=true and currentMintLimit(minter)=5000000 ONED. Mint allowance is configurable; this is not an immutable supply ceiling. eth_getCode(controller)=0x. A no-code address does not establish single-person or MPC key custody."
+      },
+      {
+        "chain": "base",
+        "address": "0x9446ce5c9e8b47d7e6cb229a42eaae32d4e8aaf9",
+        "deploymentRefs": [
+          "base:0x10ed0050b7a5d5e1e9cc164f77a71d0bf69f64bd"
+        ],
+        "label": "ONED default admin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 52095848,
+        "failureDomainKeys": [
+          "entity:coinbase-oned-issuance"
+        ],
+        "sources": [
+          {
+            "label": "Verified current ONED implementation",
+            "url": "https://basescan.org/address/0x57ab1e54fca80105a93a735b59f850f8420b5e2c#code"
+          },
+          {
+            "label": "ONED Base deployment",
+            "url": "https://basescan.org/address/0x10ed0050b7a5d5e1e9cc164f77a71d0bf69f64bd"
+          }
+        ],
+        "evidence": "At Base block 52095848, defaultAdmin() returns this address and defaultAdminDelay()=86400 seconds. That delay governs admin transfer, not ordinary minting or a globally timelocked upgrade. Token source exposes role and minter configuration powers. eth_getCode(controller)=0x. A no-code address does not establish single-person or MPC key custody."
+      },
+      {
+        "chain": "base",
+        "address": "0x8b6fed2d19076f96004df41c78c771b45f4dc71b",
+        "deploymentRefs": [
+          "base:0x10ed0050b7a5d5e1e9cc164f77a71d0bf69f64bd"
+        ],
+        "label": "ONED beacon owner",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 52095848,
+        "failureDomainKeys": [
+          "entity:coinbase-oned-issuance"
+        ],
+        "sources": [
+          {
+            "label": "Verified current ONED implementation",
+            "url": "https://basescan.org/address/0x57ab1e54fca80105a93a735b59f850f8420b5e2c#code"
+          },
+          {
+            "label": "ONED Base deployment",
+            "url": "https://basescan.org/address/0x10ed0050b7a5d5e1e9cc164f77a71d0bf69f64bd"
+          }
+        ],
+        "evidence": "At Base block 52095848, Beacon owner() returns this address; implementation()=0x57ab1e54fca80105a93a735b59f850f8420b5e2c. Beacon ownership can replace token logic; token default-admin upgradeBeaconToAndCall is an additional replacement surface. eth_getCode(controller)=0x. A no-code address does not establish single-person or MPC key custody."
+      }
+    ],
+    "upgradeability": {
+      "model": "beacon",
+      "deploymentRefs": [
+        "base:0x10ed0050b7a5d5e1e9cc164f77a71d0bf69f64bd"
+      ],
+      "proxyAddresses": [
+        "0x10ed0050b7a5d5e1e9cc164f77a71d0bf69f64bd"
+      ],
+      "implementationAddresses": [
+        "0x57ab1e54fca80105a93a735b59f850f8420b5e2c"
+      ],
+      "adminAddresses": [
+        "0x57ab1ec39f403e6946c944812888bf77fd64f0af"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "ONED beacon owner",
+      "observedAt": "2026-10-02",
+      "observedBlock": 52095848,
+      "sources": [
+        {
+          "label": "Verified current ONED implementation",
+          "url": "https://basescan.org/address/0x57ab1e54fca80105a93a735b59f850f8420b5e2c#code"
+        }
+      ]
+    },
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "review": {
+      "sources": [
+        {
+          "label": "Coinbase ONED custody and conversion",
+          "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins"
+        },
+        {
+          "label": "Coinbase ONED itemized reserve dashboard",
+          "url": "https://www.coinbase.com/en-in/oned/proof-of-reserves"
+        },
+        {
+          "label": "ONED native holder terms",
+          "url": "https://oned.global/#/end-user-terms-and-conditions"
+        },
+        {
+          "label": "Gennius ONED platform terms",
+          "url": "https://tc.oned.global/#/oned"
+        },
+        {
+          "label": "Verified current ONED implementation",
+          "url": "https://basescan.org/address/0x57ab1e54fca80105a93a735b59f850f8420b5e2c#code"
+        }
+      ],
+      "evidence": "At Base block 52095848, the authorized minter held MINT_ROLE with 5000000 ONED remaining mint allowance. Default admin was 0x9446ce5c9e8b47d7e6cb229a42eaae32d4e8aaf9, admin-transfer delay 86400 seconds, and the beacon owner was 0x8b6fed2d19076f96004df41c78c771b45f4dc71b; all three controller addresses had no EVM bytecode. The Coinbase dashboard reserve-to-supply snapshot is reproducible but does not establish a financially assured issuer reconciliation process or token-specific prudential supervision.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "Controller MPC/HSM safeguards and complete mint-rate-limit authority membership are undisclosed.",
+        "Independent whole-token financial reconciliation and legal issuer entity are unresolved."
+      ]
+    }
+  }
+}

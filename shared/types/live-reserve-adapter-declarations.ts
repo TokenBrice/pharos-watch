@@ -2224,6 +2224,21 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "none" },
     validation: TIMESTAMPED_FEED_VALIDATION,
   },
+  "jpmorgan-nav": {
+    primaryInputKinds: ["http-html"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "single-bucket",
+    evidenceClass: "static-validated",
+    sourceOriginClass: "issuer-attested",
+    preferredFreshnessMode: "verified",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
+      maxSourceAgeSec: BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
+    },
+  },
   "ondo-ousg": {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: chainlinkNavParamsSchema,

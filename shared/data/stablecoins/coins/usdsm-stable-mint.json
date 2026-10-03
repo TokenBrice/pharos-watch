@@ -1,0 +1,29 @@
+{
+  "id": "usdsm-stable-mint",
+  "name": "Stable Mint USD",
+  "symbol": "USDSM",
+  "oneLiner": "USDSM is Stable mint Ltd's dollar token, backed by cash and liquid financial assets and redeemable at par after holder onboarding.",
+  "flags": { "backing": "rwa-backed", "governance": "centralized" },
+  "collateral": "Issuer-disclosed U.S. dollar cash deposits and high-quality liquid financial assets; current banks, asset weights and independently reconciled backing are undisclosed",
+  "pegMechanism": "Legal-person participants mint against received USD deposits; legal and natural holders can request par USD redemption after AML/KYC onboarding. Etherlink is the primary deployment, with LayerZero V2 burn-and-mint interoperability across Ethereum, Base and Arbitrum.",
+  "mechanismArchetype": "fiat-cash",
+  "llamaId": "411",
+  "detailProvider": "defillama",
+  "geckoId": "stable-mint-usd",
+  "proofOfReserves": { "type": "self-reported", "url": "https://stablemint.io/stablecoins/", "provider": "Stable mint Ltd; 102% reserve claim without retrieved dated reserve-to-liability reconciliation", "attestorTier": "self", "cadence": "undisclosed" },
+  "links": [
+    { "label": "Website", "url": "https://stablemint.io/stablecoins/" },
+    { "label": "USDSM whitepaper", "url": "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html" },
+    { "label": "Issuance and redemption terms", "url": "https://stablemint.io/legal/terms-conditions/" }
+  ],
+  "jurisdiction": { "country": "Malta", "regulator": "MFSA", "license": "Electronic Money Institution" },
+  "contracts": [
+    { "chain": "etherlink", "address": "0x6bde51212203ae5d592cc5180da2abbd41c922de", "decimals": 18 },
+    { "chain": "ethereum", "address": "0x399b29975cbe313c56269cd5097f5ae097fa2741", "decimals": 18 },
+    { "chain": "base", "address": "0x26c358f7c5fedb20a6ddef108cd91efb6b8da0cb", "decimals": 18 },
+    { "chain": "arbitrum", "address": "0x26c358f7c5fedb20a6ddef108cd91efb6b8da0cb", "decimals": 18 }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "governanceQuality": "regulated-entity"
+}

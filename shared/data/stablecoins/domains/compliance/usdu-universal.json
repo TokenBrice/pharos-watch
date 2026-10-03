@@ -1,0 +1,42 @@
+{
+  "id": "usdu-universal",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDU is a transferable U.S.-dollar-denominated fiat-referenced token with professional-client par USD redemption; domestic UAE payment use is restricted."
+    },
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Universal Digital INTL Limited",
+    "issuerDomicile": "United Arab Emirates",
+    "licensingRegulator": "ADGM FSRA",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.universal.ae/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "ADGM FSP250089 confirms local fiat-referenced-token issuance only. It does not establish GENIUS authorization or a U.S. foreign-issuer exception. The issuer whitepaper describes UAE foreign-payment-token registration, which remains issuer-attributed. U.S. posture is unresolved; MiCA has not been assessed.",
+    "references": [
+      {
+        "label": "Crowe August 2026 reserve examination",
+        "url": "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-02"
+      },
+      {
+        "label": "USDU January 2026 whitepaper",
+        "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      },
+      {
+        "label": "ADGM FSRA issuer register FSP250089",
+        "url": "https://www.adgm.com/public-registers/fsra/firms/financial-firms/universal-digital-intl-limited-250089",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-10-02"
+      }
+    ],
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

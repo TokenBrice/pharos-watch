@@ -1,0 +1,229 @@
+{
+  "id": "earnusd-lido",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "inheritedFrom": "usdc-circle",
+    "summary": "earnUSD is an upgradeable tokenized ShareManager for Lido/Mellow protocol strategies. Base USDC minting remains inherited from Circle; local queues/vault create shares and the observed 5-of-8 Proxy Admin Safe can replace share logic. The curator is currently 3-of-6, not the published 3-of-5.",
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+      ],
+      "proxyAddresses": [
+        "0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+      ],
+      "implementationAddresses": [
+        "0x000000000c79d2b5cd58ae545afc83030233d7b6"
+      ],
+      "adminAddresses": [
+        "0x98a876b68eecb730e692d0ec699b3378bdc71d6f"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Lido EarnUSD Proxy Admin Safe",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107703,
+      "sources": [
+        {
+          "label": "Verified deployed contract 0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+        },
+        {
+          "label": "Verified deployed contract 0x000000000c79d2b5cd58ae545afc83030233d7b6",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x000000000c79d2b5cd58ae545afc83030233d7b6"
+        },
+        {
+          "label": "Lido earnUSD deployment and actor registry",
+          "url": "https://docs.lido.fi/earn/deployment-contracts"
+        },
+        {
+          "label": "Ethereum RPC observation at block 26107703",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981",
+        "label": "Lido EarnUSD ShareManager",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "Verified deployed contract 0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+          },
+          {
+            "label": "Verified deployed contract 0x000000000c79d2b5cd58ae545afc83030233d7b6",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x000000000c79d2b5cd58ae545afc83030233d7b6"
+          },
+          {
+            "label": "Ethereum RPC observation at block 26107703",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "evidence": "At block 26107703, the exact share proxy had decimals 18, totalSupply 50902385.14796045, vault() 0x014e6da8f283c4af65b2aa0f201438680a004452 and zero current flags. Verified implementation mint is onlyVaultOrQueue. Its asset()/totalAssets() calls revert; no ordinary ERC-4626 collateral gate or financial reconciliation is asserted.",
+        "deploymentRefs": [
+          "ethereum:0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+        ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x81698f87c6482bf1ce9bfcfc0f103c4a0adf0af0",
+        "label": "Lido EarnUSD Proxy Admin Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "Lido earnUSD deployment and actor registry",
+            "url": "https://docs.lido.fi/earn/deployment-contracts"
+          },
+          {
+            "label": "Verified deployed contract 0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+          },
+          {
+            "label": "Ethereum RPC observation at block 26107703",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "evidence": "At block 26107703, the share's EIP-1967 admin slot pointed to ProxyAdmin 0x98a876b68eecb730e692d0ec699b3378bdc71d6f, whose owner() was this Safe. getThreshold() returned 5 and getOwners() returned 8 addresses. Modules, guards and exact alternate execution routes are not yet established.",
+        "deploymentRefs": [
+          "ethereum:0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+        ],
+        "threshold": 5,
+        "signerCount": 8,
+        "safe": {
+          "threshold": 5,
+          "observedBlock": 26107703,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "safe:ethereum:0x81698f87c6482bf1ce9bfcfc0f103c4a0adf0af0"
+        ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xe5abcc40196174ae0d12153de286f0d8e401769d",
+        "label": "Lido EarnUSD curator Safe",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "Lido earnUSD deployment and actor registry",
+            "url": "https://docs.lido.fi/earn/deployment-contracts"
+          },
+          {
+            "label": "Ethereum RPC observation at block 26107703",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "evidence": "At block 26107703, getThreshold() was 3 and getOwners() had 6 addresses, correcting the docs' 3-of-5. The published earnUSD TimelockController 0xda6da82dff8cd29d828e4775cc003f504a968845 returned getMinDelay() 0. This is a current timelock observation, not proof of a protective delay over every proxy or curator action. Modules/guards and complete role/bypass census remain unknown.",
+        "deploymentRefs": [
+          "ethereum:0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+        ],
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 26107703,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "safe:ethereum:0xe5abcc40196174ae0d12153de286f0d8e401769d"
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "At Ethereum block 26107703, the exact earnUSD proxy implementation/admin, ProxyAdmin owner chain, totalSupply, vault, two-subvault count and current curator/proxy-admin quorum sizes were verified. Deployed state corrects the introduction one-subvault claim and published curator 3-of-5. The documented TimelockController has minDelay 0. Unknown modules/guards and full grant/bypass coverage prevent a stronger control-confidence claim; no independent financial reconciliation or complete collateral gate is inferred.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "sources": [
+        {
+          "label": "Lido earnUSD holder deposits and withdrawals",
+          "url": "https://docs.lido.fi/earn/"
+        },
+        {
+          "label": "Lido earnUSD deployment and actor registry",
+          "url": "https://docs.lido.fi/earn/deployment-contracts"
+        },
+        {
+          "label": "Lido ShareManager holder controls",
+          "url": "https://docs.lido.fi/earn/architecture/managers/sharemanager/"
+        },
+        {
+          "label": "Verified deployed contract 0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+        },
+        {
+          "label": "Verified deployed contract 0x000000000c79d2b5cd58ae545afc83030233d7b6",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x000000000c79d2b5cd58ae545afc83030233d7b6"
+        },
+        {
+          "label": "Verified deployed contract 0x0000000615b2771511daa693ac07be5622869e01",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000615b2771511daa693ac07be5622869e01"
+        },
+        {
+          "label": "Ethereum RPC observation at block 26107703",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        }
+      ],
+      "disposition": "scoreable",
+      "scopedQuestions": [
+        {
+          "controlRef": "Lido EarnUSD Proxy Admin Safe",
+          "question": "Which enabled modules, guard and alternate execution routes can exercise upgrades, and what full role and bypass census governs every share/queue/vault deployment?",
+          "reviewedAt": "2026-10-02",
+          "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+          "sources": [
+            {
+              "label": "Lido earnUSD deployment and actor registry",
+              "url": "https://docs.lido.fi/earn/deployment-contracts"
+            },
+            {
+              "label": "Verified deployed contract 0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+            }
+          ]
+        },
+        {
+          "controlRef": "Lido EarnUSD curator Safe",
+          "question": "Which current curator grant paths, verifier constraints, modules and guards bind allocation changes, and can any route bypass the zero-delay timelock?",
+          "reviewedAt": "2026-10-02",
+          "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+          "sources": [
+            {
+              "label": "Lido earnUSD deployment and actor registry",
+              "url": "https://docs.lido.fi/earn/deployment-contracts"
+            },
+            {
+              "label": "Ethereum RPC observation at block 26107703",
+              "url": "https://eth-mainnet.g.alchemy.com/v2/"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

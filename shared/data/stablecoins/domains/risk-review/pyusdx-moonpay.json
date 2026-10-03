@@ -1,0 +1,522 @@
+{
+  "id": "pyusdx-moonpay",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "sources": [
+      {
+        "label": "MoonPay PYUSDx holder and counterparty terms",
+        "url": "https://www.moonpay.com/legal/pyusdx_terms"
+      },
+      {
+        "label": "M0 exact PYUSDx mainnet deployments",
+        "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+      },
+      {
+        "label": "M0 PYUSDx compliance controls",
+        "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+      },
+      {
+        "label": "M0 PYUSDx token and reward issuance",
+        "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
+      }
+    ],
+    "evidence": "Token source and security docs expose per-account freezing, forced transfers and global pause. At the pinned Ethereum, Arbitrum and Monad blocks, the issuer address held FREEZE_MANAGER_ROLE and FORCED_TRANSFER_MANAGER_ROLE on every deployment. Terms section 11 applies freezing, seizure, forfeiture and potential destruction to all holders, not only eligible counterparties."
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "All three deployments can issue native MoonPay liabilities and transfer them using M0 Portal burn/mint with the LayerZero V2 adapter. Exact route identities and Portal administrator membership are verified; validator sets, route limits and complete Portal upgrade/signature safeguards remain unresolved.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "M0 mainnet deployment roster",
+        "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+      },
+      {
+        "label": "M0 Portal burn/mint transfer specification",
+        "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+      },
+      {
+        "label": "M0 compliance and upgrade specification",
+        "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+        "protocol": "M0 PYUSDx native issuance with LayerZero Portal transfer rail",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "entity:m0-pyusdx-portal"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "M0 native token and Portal deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 cross-chain burn/mint and adapter semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          },
+          {
+            "label": "M0 upgrade and pause permissions",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "Pinned Portal controller membership",
+            "url": "https://etherscan.io/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
+          }
+        ],
+        "reviewNote": "Native token issuance exists on this deployment; cross-chain transfers burn on the source and mint on the destination. Pinned totalSupply at block 26107703 was 91882981.224535 PYUSDx. Portal DEFAULT_ADMIN_ROLE is held by 0x48670b46380fe1645f0e3e821a25162db2589d19, a deployed contract. LayerZero validator configuration and complete controller safeguards remain unresolved."
+      },
+      {
+        "id": "arbitrum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+        "protocol": "M0 PYUSDx native issuance with LayerZero Portal transfer rail",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "entity:m0-pyusdx-portal"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 511123860,
+        "sources": [
+          {
+            "label": "M0 native token and Portal deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 cross-chain burn/mint and adapter semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          },
+          {
+            "label": "M0 upgrade and pause permissions",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "Pinned Portal controller membership",
+            "url": "https://arbiscan.io/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
+          }
+        ],
+        "reviewNote": "Native token issuance exists on this deployment; cross-chain transfers burn on the source and mint on the destination. Pinned totalSupply at block 511123860 was 443583.150573 PYUSDx. Portal DEFAULT_ADMIN_ROLE is held by 0x48670b46380fe1645f0e3e821a25162db2589d19, a deployed contract. LayerZero validator configuration and complete controller safeguards remain unresolved."
+      },
+      {
+        "id": "monad:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+        "destinationChain": "monad",
+        "contractAddress": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+        "protocol": "M0 PYUSDx native issuance with LayerZero Portal transfer rail",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "monad",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "entity:m0-pyusdx-portal"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 110016384,
+        "sources": [
+          {
+            "label": "M0 native token and Portal deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 cross-chain burn/mint and adapter semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          },
+          {
+            "label": "M0 upgrade and pause permissions",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "Pinned Portal controller membership",
+            "url": "https://monadscan.com/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
+          }
+        ],
+        "reviewNote": "Native token issuance exists on this deployment; cross-chain transfers burn on the source and mint on the destination. Pinned totalSupply at block 110016384 was 1.0 PYUSDx. Portal DEFAULT_ADMIN_ROLE is held by 0x48670b46380fe1645f0e3e821a25162db2589d19, a deployed contract. LayerZero validator configuration and complete controller safeguards remain unresolved."
+      }
+    ],
+    "controls": [
+      {
+        "id": "pyusdx-ethereum-portal",
+        "routeRefs": [
+          "ethereum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xaad1466fe33d373189fb9dcc47270e608feee8a7",
+        "label": "PYUSDx ethereum Portal transfer rail",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "entity:m0-pyusdx-portal"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "M0 native token and Portal deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 cross-chain burn/mint and adapter semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          },
+          {
+            "label": "M0 upgrade and pause permissions",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "Pinned Portal controller membership",
+            "url": "https://etherscan.io/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
+          }
+        ],
+        "evidence": "The exact official Portal deployment burns source PYUSDx and mints destination PYUSDx after an adapter-authenticated message. Messages bind destination chain and peer and have replay protection. These cross-chain capabilities belong in Bridge Risk, separately from IssuerGateway and reward issuance.",
+        "capDescription": "Current per-route limits and LayerZero verifier configuration are unresolved."
+      },
+      {
+        "id": "pyusdx-ethereum-portal-admin",
+        "routeRefs": [
+          "ethereum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "label": "PYUSDx ethereum Portal administrator",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "unknown",
+        "failureDomainKeys": [
+          "entity:m0-pyusdx-portal"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "M0 native token and Portal deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 cross-chain burn/mint and adapter semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          },
+          {
+            "label": "M0 upgrade and pause permissions",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "Pinned Portal controller membership",
+            "url": "https://etherscan.io/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
+          }
+        ],
+        "evidence": "Pinned hasRole(DEFAULT_ADMIN_ROLE,0x48670b46380fe1645f0e3e821a25162db2589d19) on the exact Portal returned true at block 26107703; controller bytecode is nonempty. Portal documentation gives administrators adapter/peer configuration and fallback-recipient control. No signer, threshold, guard or timelock claim is inferred from the contract identity."
+      },
+      {
+        "id": "pyusdx-arbitrum-portal",
+        "routeRefs": [
+          "arbitrum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xaad1466fe33d373189fb9dcc47270e608feee8a7",
+        "label": "PYUSDx arbitrum Portal transfer rail",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "entity:m0-pyusdx-portal"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 511123860,
+        "sources": [
+          {
+            "label": "M0 native token and Portal deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 cross-chain burn/mint and adapter semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          },
+          {
+            "label": "M0 upgrade and pause permissions",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "Pinned Portal controller membership",
+            "url": "https://arbiscan.io/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
+          }
+        ],
+        "evidence": "The exact official Portal deployment burns source PYUSDx and mints destination PYUSDx after an adapter-authenticated message. Messages bind destination chain and peer and have replay protection. These cross-chain capabilities belong in Bridge Risk, separately from IssuerGateway and reward issuance.",
+        "capDescription": "Current per-route limits and LayerZero verifier configuration are unresolved."
+      },
+      {
+        "id": "pyusdx-arbitrum-portal-admin",
+        "routeRefs": [
+          "arbitrum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "label": "PYUSDx arbitrum Portal administrator",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "unknown",
+        "failureDomainKeys": [
+          "entity:m0-pyusdx-portal"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 511123860,
+        "sources": [
+          {
+            "label": "M0 native token and Portal deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 cross-chain burn/mint and adapter semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          },
+          {
+            "label": "M0 upgrade and pause permissions",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "Pinned Portal controller membership",
+            "url": "https://arbiscan.io/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
+          }
+        ],
+        "evidence": "Pinned hasRole(DEFAULT_ADMIN_ROLE,0x48670b46380fe1645f0e3e821a25162db2589d19) on the exact Portal returned true at block 511123860; controller bytecode is nonempty. Portal documentation gives administrators adapter/peer configuration and fallback-recipient control. No signer, threshold, guard or timelock claim is inferred from the contract identity."
+      },
+      {
+        "id": "pyusdx-monad-portal",
+        "routeRefs": [
+          "monad:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0xaad1466fe33d373189fb9dcc47270e608feee8a7",
+        "label": "PYUSDx monad Portal transfer rail",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "entity:m0-pyusdx-portal"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 110016384,
+        "sources": [
+          {
+            "label": "M0 native token and Portal deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 cross-chain burn/mint and adapter semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          },
+          {
+            "label": "M0 upgrade and pause permissions",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "Pinned Portal controller membership",
+            "url": "https://monadscan.com/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
+          }
+        ],
+        "evidence": "The exact official Portal deployment burns source PYUSDx and mints destination PYUSDx after an adapter-authenticated message. Messages bind destination chain and peer and have replay protection. These cross-chain capabilities belong in Bridge Risk, separately from IssuerGateway and reward issuance.",
+        "capDescription": "Current per-route limits and LayerZero verifier configuration are unresolved."
+      },
+      {
+        "id": "pyusdx-monad-portal-admin",
+        "routeRefs": [
+          "monad:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "label": "PYUSDx monad Portal administrator",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "unknown",
+        "failureDomainKeys": [
+          "entity:m0-pyusdx-portal"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 110016384,
+        "sources": [
+          {
+            "label": "M0 native token and Portal deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 cross-chain burn/mint and adapter semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          },
+          {
+            "label": "M0 upgrade and pause permissions",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "Pinned Portal controller membership",
+            "url": "https://monadscan.com/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
+          }
+        ],
+        "evidence": "Pinned hasRole(DEFAULT_ADMIN_ROLE,0x48670b46380fe1645f0e3e821a25162db2589d19) on the exact Portal returned true at block 110016384; controller bytecode is nonempty. Portal documentation gives administrators adapter/peer configuration and fallback-recipient control. No signer, threshold, guard or timelock claim is inferred from the contract identity."
+      },
+      {
+        "id": "pyusdx-ethereum-bridge-upgrade-and-pause",
+        "routeRefs": [
+          "ethereum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "capabilities": [
+          "upgrade",
+          "pause"
+        ],
+        "label": "PYUSDx ethereum bridge upgrade and pause authority (controller unresolved)",
+        "authorityType": "unknown",
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "M0 bridge and Portal upgrade/pause specification",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "M0 Portal independent send/receive pause model",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          }
+        ],
+        "evidence": "Core Portal and LayerZeroBridgeAdapter are documented transparent upgradeable proxies with dedicated ProxyAdmins. Portal has separate send/receive pause controls. Exact current proxy-owner and pauser safeguards were not fully resolved; these live permissions are retained as unknown controls, not assumed absent."
+      },
+      {
+        "id": "pyusdx-arbitrum-bridge-upgrade-and-pause",
+        "routeRefs": [
+          "arbitrum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "capabilities": [
+          "upgrade",
+          "pause"
+        ],
+        "label": "PYUSDx arbitrum bridge upgrade and pause authority (controller unresolved)",
+        "authorityType": "unknown",
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "M0 bridge and Portal upgrade/pause specification",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "M0 Portal independent send/receive pause model",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          }
+        ],
+        "evidence": "Core Portal and LayerZeroBridgeAdapter are documented transparent upgradeable proxies with dedicated ProxyAdmins. Portal has separate send/receive pause controls. Exact current proxy-owner and pauser safeguards were not fully resolved; these live permissions are retained as unknown controls, not assumed absent."
+      },
+      {
+        "id": "pyusdx-monad-bridge-upgrade-and-pause",
+        "routeRefs": [
+          "monad:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "capabilities": [
+          "upgrade",
+          "pause"
+        ],
+        "label": "PYUSDx monad bridge upgrade and pause authority (controller unresolved)",
+        "authorityType": "unknown",
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "M0 bridge and Portal upgrade/pause specification",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "M0 Portal independent send/receive pause model",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          }
+        ],
+        "evidence": "Core Portal and LayerZeroBridgeAdapter are documented transparent upgradeable proxies with dedicated ProxyAdmins. Portal has separate send/receive pause controls. Exact current proxy-owner and pauser safeguards were not fully resolved; these live permissions are retained as unknown controls, not assumed absent."
+      }
+    ],
+    "scopedQuestions": [
+      {
+        "controlRef": "pyusdx-ethereum-portal-admin",
+        "question": "What current signer quorum, modules/guards, upgrade controller, delay and LayerZero verifier/peer settings constrain this Portal administration path?",
+        "reviewedAt": "2026-10-02",
+        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "sources": [
+          {
+            "label": "M0 Portal controls",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          }
+        ]
+      },
+      {
+        "controlRef": "pyusdx-arbitrum-portal-admin",
+        "question": "What current signer quorum, modules/guards, upgrade controller, delay and LayerZero verifier/peer settings constrain this Portal administration path?",
+        "reviewedAt": "2026-10-02",
+        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "sources": [
+          {
+            "label": "M0 Portal controls",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          }
+        ]
+      },
+      {
+        "controlRef": "pyusdx-monad-portal-admin",
+        "question": "What current signer quorum, modules/guards, upgrade controller, delay and LayerZero verifier/peer settings constrain this Portal administration path?",
+        "reviewedAt": "2026-10-02",
+        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "sources": [
+          {
+            "label": "M0 Portal controls",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          }
+        ]
+      }
+    ]
+  }
+}

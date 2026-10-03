@@ -1,0 +1,86 @@
+{
+  "id": "eurw-newrails",
+  "name": "Newrails Euro",
+  "symbol": "EURW",
+  "oneLiner": "EURW is Newrails' MiCA euro token, redeemable at par by verified holders through SEPA and backed by safeguarded euro reserves.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized"
+  },
+  "collateral": "Euro-denominated cash and permitted liquid government money-market funds or similar investments in segregated safeguarding arrangements; the whitepaper sets a minimum 30% cash policy, not an observed portfolio allocation.",
+  "pegMechanism": "All holders, including secondary-market holders, may redeem EURW for EUR 1 after identity, wallet and own-name SEPA-bank-account verification. The issuer charges no redemption fee and burns tokens before SEPA payment. Numerical minimum, capacity and settlement SLA are not disclosed; third-party bank and network charges may apply.",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "The MiCA whitepaper binds EURW to Newrails UAB, a fixed euro holder claim and safeguarded cash/cash-equivalent reserves, rather than a fund-share NAV; exact CoinGecko metadata and Monad symbol/decimals reads bind the authored deployment.",
+    "sources": [
+      {
+        "label": "Newrails EURW MiCA whitepaper notified May 26, 2026",
+        "url": "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml"
+      },
+      {
+        "label": "Bank of Lithuania Newrails EMI and EMT issuer register",
+        "url": "https://www.lb.lt/en/sfi-financial-market-participants/newrails-uab"
+      },
+      {
+        "label": "CoinGecko exact EURW deployment identity",
+        "url": "https://www.coingecko.com/en/coins/newrails-euro"
+      },
+      {
+        "label": "Monad mainnet JSON-RPC",
+        "url": "https://rpc.monad.xyz"
+      }
+    ]
+  },
+  "llamaId": "392",
+  "detailProvider": "defillama",
+  "geckoId": "newrails-euro",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.newrails.xyz/en/platform/eurw",
+    "provider": "Newrails claims monthly independent attestations, but no exact-token financial reserve report was retrieved from its product page or public download inventory.",
+    "attestorTier": "undisclosed",
+    "cadence": "monthly"
+  },
+  "links": [
+    {
+      "label": "Newrails EURW product and reserve disclosure",
+      "url": "https://www.newrails.xyz/en/platform/eurw"
+    },
+    {
+      "label": "Newrails EURW MiCA whitepaper notified May 26, 2026",
+      "url": "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml"
+    },
+    {
+      "label": "Newrails EMT redemption policy effective February 9, 2026",
+      "url": "https://www.newrails.xyz/en/legal/emt-redemption-policy"
+    },
+    {
+      "label": "Hacken Newrails Monad code security audit dated March 12, 2026",
+      "url": "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf"
+    },
+    {
+      "label": "Bank of Lithuania Newrails EMI and EMT issuer register",
+      "url": "https://www.lb.lt/en/sfi-financial-market-participants/newrails-uab"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Lithuania",
+    "regulator": "Bank of Lithuania",
+    "license": "Electronic money institution LB001967; regulator register identifies an electronic money token issuer"
+  },
+  "contracts": [
+    {
+      "chain": "monad",
+      "address": "0x1111b3ded9f1fe1801ad4ebef8e2788183a24111",
+      "decimals": 6
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "governanceQuality": "regulated-entity",
+  "launchDate": "2026-02-10"
+}

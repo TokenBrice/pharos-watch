@@ -44,6 +44,10 @@ const PREFER_ONCHAIN_SUPPLY_MCAP_IDS = new Set([
   // Prefer the complete native Ethereum + Sui receipt aggregate over a
   // CoinGecko row that historically covered only Sui.
   "eearn-ember",
+  // Reviewed 2026-10-02: fresh CG cap values 3,997.66 FIUSD units, but the
+  // complete native zkSync + Arbitrum roster reads only 1,517.66 + 0 units.
+  // Never admit that contradictory cap, even when a native leg is unreadable.
+  "fiusd-sygnum",
 ]);
 const EXCLUDED_BALANCE_READ_CONCURRENCY = 1;
 const MOVEMENT_USDCX_ID = "usdcx-movement";

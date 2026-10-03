@@ -1,0 +1,204 @@
+{
+  "id": "chfsafo-spiko",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "unknown",
+    "summary": "Spiko operates native CHF fund-share issuance across eight registers under the UCITS fund framework. Ethereum PermissionManager authorizes ADMIN and MINTER groups; the 3-of-6 super-admin Safe can alter permissions and upgrade mint-critical logic. Exact per-chain controller closure outside Ethereum and the Solana mint remains unresolved.",
+    "upgradeability": {
+      "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x18b5c15e5196a38a162b1787875295b76e4313fb"
+      ],
+      "proxyAddresses": [
+        "0x18b5c15e5196a38a162b1787875295b76e4313fb"
+      ],
+      "adminAddresses": [
+        "0x4eaa52b6280593a8820c45ce38f974290ae52cea"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Spiko Ethereum super-admin Safe",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107707,
+      "sources": [
+        {
+          "label": "Spiko UUPS permission architecture",
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        },
+        {
+          "label": "Exact CHF Ethereum proxy",
+          "url": "https://etherscan.io/address/0x18b5c15e5196a38a162b1787875295b76e4313fb"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Spiko native issuance and register operator",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "deploymentRefs": [
+          "ethereum:0x18b5c15e5196a38a162b1787875295b76e4313fb",
+          "polygon:0x9de2b2dcdcf43540e47143f28484b6d15118f089",
+          "starknet:0x06723dcb428eddb160c5adfc2d0a5e5adc184bf6a7298780c3cbf3fa764f709b",
+          "arbitrum:0x97e7962bcd091e7ecfb583fc96289b1e1553ac6e",
+          "etherlink:0xef53e7d17822b641c6481837238a64a688709301",
+          "base:0xd9aa2300e126869182dfb6ecf54984e4c687f36b",
+          "stellar:CAJD2IBSP7VO2VYJQUYJSOGPJINTUYV7MQITINXVPTIH3CCLCUENNMW4",
+          "solana:6Gst8o3L5uNtkUvhEg23HpDLpYRdNQTgdn1Bc7jnCM5c"
+        ],
+        "failureDomainKeys": [
+          "issuer-backend:spiko:fund-register"
+        ],
+        "observedAt": "2026-10-02",
+        "evidence": "The exact CHF API/prospectus identifies eight native fund-share registers and Spiko Finance as register and settlement operator. Operator-address rosters and signing controls on every native chain are not inferred from Ethereum.",
+        "sources": [
+          {
+            "label": "Spiko SICAV prospectus, 1 September 2026",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+          },
+          {
+            "label": "Exact CHF KID, ISIN FR0014015LG6",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf"
+          },
+          {
+            "label": "Exact CHF native registers and five share decimals",
+            "url": "https://public-api.spiko.io/share-classes/chfSAFO"
+          }
+        ]
+      },
+      {
+        "label": "Spiko Ethereum super-admin Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "chain": "ethereum",
+        "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "deploymentRefs": [
+          "ethereum:0x18b5c15e5196a38a162b1787875295b76e4313fb"
+        ],
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107707,
+        "safe": {
+          "owners": [
+            "0x75e0092e7d2c8d854fcf5334f95554852d62746a",
+            "0xd01046472371168721e45dc357296683f026d6b8",
+            "0x4d1d9c5b5d9ca448194313d799de374f362bd460",
+            "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2",
+            "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949",
+            "0xa6e06dfe42064b7cd6dc902a62e74ca5bb574011"
+          ],
+          "threshold": 3,
+          "observedBlock": 26107707,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 26107707, CHF authority() returned PermissionManager 0x344278aff344d6fb960705dc18a4912221608472; getRequirements(token,mint(address,uint256)) returned mask 0x5, ADMIN group 0 and MINTER group 2. getGroups(Safe) included ADMIN; getThreshold returned 3 and getOwners returned six addresses. Technical docs grant super-admin upgrade and permission administration. No CHF-specific enforced delay or other-chain Safe reuse is asserted.",
+        "sources": [
+          {
+            "label": "Spiko permission architecture",
+            "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+          },
+          {
+            "label": "CHF Ethereum proxy",
+            "url": "https://etherscan.io/address/0x18b5c15e5196a38a162b1787875295b76e4313fb"
+          }
+        ]
+      },
+      {
+        "label": "Spiko Ethereum Minter proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "chain": "ethereum",
+        "address": "0x5ed5a75eeed1934ea060186e35187eaa73331366",
+        "deploymentRefs": [
+          "ethereum:0x18b5c15e5196a38a162b1787875295b76e4313fb"
+        ],
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107707,
+        "evidence": "At block 26107707, getGroups(0x5ed5a75eeed1934ea060186e35187eaa73331366) included group 2, matching the exact CHF token mint requirements mask 0x5. Limit values and current pending-mint capacity were not retrieved.",
+        "sources": [
+          {
+            "label": "CHF Ethereum proxy",
+            "url": "https://etherscan.io/address/0x18b5c15e5196a38a162b1787875295b76e4313fb"
+          },
+          {
+            "label": "Spiko PermissionManager",
+            "url": "https://etherscan.io/address/0x344278aff344d6fb960705dc18a4912221608472"
+          }
+        ]
+      },
+      {
+        "label": "CHF Solana mint authority",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "chain": "solana",
+        "address": "BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ",
+        "deploymentRefs": [
+          "solana:6Gst8o3L5uNtkUvhEg23HpDLpYRdNQTgdn1Bc7jnCM5c"
+        ],
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-02",
+        "evidence": "Finalized Solana getAccountInfo at slot 452748326 returned this Token-2022 mint authority, five decimals and zero supply. Its upstream signer policy and administrator hierarchy are unverified.",
+        "sources": [
+          {
+            "label": "Exact CHF Solana mint",
+            "url": "https://solscan.io/token/6Gst8o3L5uNtkUvhEg23HpDLpYRdNQTgdn1Bc7jnCM5c"
+          }
+        ]
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
+    "review": {
+      "disposition": "unresolved",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "evidence": "The AMF-authorized UCITS framework and issuer daily share/NAV reporting provide periodic accounting, not an independently signed current cross-register reconciliation. Exact Ethereum authority and Solana mint controls are observed; per-chain upstream signer closure, limits and delays remain explicitly unresolved.",
+      "sources": [
+        {
+          "label": "Spiko SICAV prospectus, 1 September 2026",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        },
+        {
+          "label": "Exact CHF KID, ISIN FR0014015LG6",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf"
+        },
+        {
+          "label": "Exact CHF native registers and five share decimals",
+          "url": "https://public-api.spiko.io/share-classes/chfSAFO"
+        },
+        {
+          "label": "CHF shares, assets and NAV at 2 October 2026",
+          "url": "https://public-api.spiko.io/share-classes/chfSAFO/totals"
+        },
+        {
+          "label": "SAFO physical and signed derivative inventory at 2 October 2026",
+          "url": "https://public-api.spiko.io/fund-assets/?fundId=59c2c924-ebf8-492d-a4b0-72d72ebf61e6"
+        },
+        {
+          "label": "AMF-hosted June 2026 SAFO semiannual report, not an audit opinion",
+          "url": "https://geco.amf-france.org/back-office/document/download/429960"
+        },
+        {
+          "label": "Spiko control architecture",
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        }
+      ],
+      "unresolvedQuestions": [
+        "Complete current mint, permission and upgrade authorizer hierarchy for all eight native registers.",
+        "Enforced delay and independent signing/key-custody policy outside the exact observed Ethereum Safe.",
+        "Current independently reconciled native supplies and all circulation exclusions."
+      ]
+    }
+  }
+}

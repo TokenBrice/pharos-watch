@@ -1,0 +1,259 @@
+{
+  "id": "gbpa-agant",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "manual-review",
+    "summary": "GBPA has five issuer-native deployments. Ethereum, Base and Arc retain a direct EOA fiat minter and an EOA owner of the upgrade administration. Solana minting uses a 1-of-2 Token-2022 multisig, allowing either signer to authorize issuance. Tempo native issuance roles remain undisclosed. LayerZero source-burn/destination-credit machinery is authored separately under Bridge Risk.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+        "base:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+        "arc:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+      ],
+      "proxyAddresses": [
+        "0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+      ],
+      "implementationAddresses": [
+        "0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0",
+        "0x302a8a24e79c4f987cb7dd4993a8c998079784b1"
+      ],
+      "adminAddresses": [
+        "0x2ebc550927191e2ef13cedbcf2886dcd810dabc9"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "GBPA EVM ProxyAdmin owner",
+      "observedAt": "2026-10-02",
+      "sources": [
+        {
+          "label": "Verified GBPA Ethereum implementation and imported OFT source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0"
+        },
+        {
+          "label": "Ethereum GBPA token and state",
+          "url": "https://etherscan.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+        },
+        {
+          "label": "Base GBPA token and state",
+          "url": "https://basescan.org/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+        },
+        {
+          "label": "Arc GBPA token and state",
+          "url": "https://explorer.arc.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "GBPA EVM fiat minter",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0x5c32ec946062109c61260c738e2fd794b18499d8",
+        "deploymentRefs": [
+          "ethereum:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+          "base:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+          "arc:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+        ],
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "Verified GBPA Ethereum implementation and imported OFT source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0"
+          },
+          {
+            "label": "Ethereum GBPA token and state",
+            "url": "https://etherscan.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+          },
+          {
+            "label": "Base GBPA token and state",
+            "url": "https://basescan.org/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+          },
+          {
+            "label": "Arc GBPA token and state",
+            "url": "https://explorer.arc.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+          }
+        ],
+        "evidence": "Fresh pinned reads at Ethereum block 26107703, Base 52095851, Arc 23952287 return hasMintRole=true for this address and eth_getCode=0x on all three chains. The verified Ethereum/Base implementation permits role-controlled minting without a reserve oracle or fixed numeric issuance cap. Arc uses a different implementation, retained explicitly; complete role and cap inventories are not claimed."
+      },
+      {
+        "label": "GBPA EVM ProxyAdmin owner",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "chain": "ethereum",
+        "address": "0xbecf04e2348d00885c62d97d9629c99e581fe00f",
+        "deploymentRefs": [
+          "ethereum:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+          "base:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+          "arc:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+        ],
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "Ethereum GBPA token and state",
+            "url": "https://etherscan.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+          },
+          {
+            "label": "Base GBPA token and state",
+            "url": "https://basescan.org/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+          },
+          {
+            "label": "Arc GBPA token and state",
+            "url": "https://explorer.arc.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+          }
+        ],
+        "evidence": "At Ethereum block 26107703, Base 52095851, Arc 23952287, token owner and ProxyAdmin.owner return this codeless address. Current implementations resolve to 0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0 on Ethereum/Base and 0x302a8a24e79c4f987cb7dd4993a8c998079784b1 on Arc. The native mint-logic replacement path is controlled here; bridge peer/configuration powers are recorded separately."
+      },
+      {
+        "label": "GBPA Solana native mint multisig",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "chain": "solana",
+        "address": "B97UNTZsqZfmK8shTRvhCZ43t8JizkTYSBokiQr6Xz2c",
+        "deploymentRefs": [
+          "solana:DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ"
+        ],
+        "threshold": 1,
+        "signerCount": 2,
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 452748382,
+        "sources": [
+          {
+            "label": "Solana GBPA Token-2022 mint",
+            "url": "https://explorer.solana.com/address/DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ"
+          },
+          {
+            "label": "GBPA Solana 1-of-2 mint multisig",
+            "url": "https://explorer.solana.com/address/B97UNTZsqZfmK8shTRvhCZ43t8JizkTYSBokiQr6Xz2c"
+          }
+        ],
+        "evidence": "At finalized slot 452748382, the native Token-2022 mint and initialized mint-authority multisig decode as 1 required signature from 2 valid signers: 2Z1jwnD78v1q4Nt6suH5YkgskqRgNySdbPbdYWcYxug4 and AkRcEoab3ECQ4GoDgVb9jE9wVMVeSksR3TwGCmdNEtB8. The second signer is also the mint permanent delegate. A 1-of-2 threshold is not two-person approval and issuer Fireblocks policy does not upgrade this on-chain quorum."
+      },
+      {
+        "label": "GBPA Tempo native issuance role inventory",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "unknown",
+        "deploymentRefs": [
+          "tempo:0x20c0000000000000000000000a6da882d075a4c3"
+        ],
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 42323712,
+        "sources": [
+          {
+            "label": "Agant official mainnet deployment registry",
+            "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"
+          },
+          {
+            "label": "Tempo GBPA deployment",
+            "url": "https://explorer.tempo.xyz/address/0x20c0000000000000000000000a6da882d075a4c3"
+          }
+        ],
+        "evidence": "The official issuer registry and current TIP-20 symbol/decimals/supply reads bind this native deployment. Standard owner and proxy-admin selectors do not resolve its role administration; the complete current minter, cap-admin and TIP-403 policy-controller sets remain unpinned."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "review": {
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Nephos GBPA reserve attestation as of September 30, 2026",
+          "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true"
+        },
+        {
+          "label": "Agant GBPA product page",
+          "url": "https://www.agant.io/gbpa"
+        },
+        {
+          "label": "Agant official mainnet deployment registry",
+          "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"
+        },
+        {
+          "label": "Verified GBPA Ethereum implementation and imported OFT source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0"
+        },
+        {
+          "label": "Ethereum GBPA token and state",
+          "url": "https://etherscan.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+        },
+        {
+          "label": "Base GBPA token and state",
+          "url": "https://basescan.org/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+        },
+        {
+          "label": "Arc GBPA token and state",
+          "url": "https://explorer.arc.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+        },
+        {
+          "label": "Solana GBPA Token-2022 mint",
+          "url": "https://explorer.solana.com/address/DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ"
+        },
+        {
+          "label": "GBPA Solana 1-of-2 mint multisig",
+          "url": "https://explorer.solana.com/address/B97UNTZsqZfmK8shTRvhCZ43t8JizkTYSBokiQr6Xz2c"
+        }
+      ],
+      "evidence": "Fresh EVM control reads at Ethereum block 26107703, Base 52095851, Arc 23952287 and finalized Solana slot 452748382 corroborate concentrated native issuance authority. The September 30 Nephos report periodically reconciles GBP 1,904,014.09 reserve balances against 1,900,346.94 GBPA across all five networks; the issuer describes regular reserve attestations. Its contradictory assurance-method language is capped at attestation and does not establish prudential issuer supervision. Token supply can be originated outside the supply-conserving LayerZero path. The authority inventory is deliberately partial, with Tempo roles and exhaustive EVM minter/admin membership not established.",
+      "unresolvedQuestions": [
+        "What are the current Tempo issuer/admin/minter/cap roles and TIP-403 policy 552 controllers?",
+        "What is the exhaustive EVM issuer role roster and each controller’s key-custody and replacement process?",
+        "Do public Holder Terms or a trust deed establish enforceable holder priority and insolvency treatment?"
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "GBPA Tempo native issuance role inventory",
+          "question": "Which current issuer/minter/cap-admin/TIP-403 policy controllers can originate native Tempo GBPA or alter its issuance limits?",
+          "reviewedAt": "2026-10-02",
+          "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+          "sources": [
+            {
+              "label": "Agant official mainnet deployment registry",
+              "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"
+            }
+          ]
+        },
+        {
+          "controlRef": "GBPA EVM fiat minter",
+          "question": "What is the complete current native minter/admin roster, with role-replacement paths and key-custody arrangements across Ethereum, Base and Arc?",
+          "reviewedAt": "2026-10-02",
+          "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+          "sources": [
+            {
+              "label": "Verified GBPA Ethereum implementation and imported OFT source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0"
+            },
+            {
+              "label": "Ethereum GBPA token and state",
+              "url": "https://etherscan.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+            },
+            {
+              "label": "Base GBPA token and state",
+              "url": "https://basescan.org/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+            },
+            {
+              "label": "Arc GBPA token and state",
+              "url": "https://explorer.arc.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

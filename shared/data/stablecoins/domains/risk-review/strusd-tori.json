@@ -1,0 +1,552 @@
+{
+  "id": "strusd-tori",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Tori strUSD staking and unstaking terms",
+        "url": "https://docs.tori.finance/products/strusd.md"
+      },
+      {
+        "label": "Tori canonical vault and CCIP deployments",
+        "url": "https://docs.tori.finance/resources/contracts.md"
+      },
+      {
+        "label": "Tori roles and timelock disclosure",
+        "url": "https://docs.tori.finance/security/roles.md"
+      },
+      {
+        "label": "Verified StakedTrUSD implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6561272e3ebc9f2e07cdb12b7c474db9132b977a"
+      },
+      {
+        "label": "Tori reserve ownership and holder-rights terms",
+        "url": "https://docs.tori.finance/legal/trusd-terms.md"
+      },
+      {
+        "label": "Pinned Ethereum block 26107706",
+        "url": "https://etherscan.io/block/26107706"
+      }
+    ],
+    "evidence": "Verified current StakedTrUSD implements FULL_RESTRICTED_STAKER_ROLE checks on sender/recipient transfers, staking and unstaking. The owner has BLACKLIST_MANAGER_ROLE and DEFAULT_ADMIN_ROLE. Admin redistributeLockedAmount burns a restricted holder and remints to another address or redistributes value; seizeCooldown transfers restricted-holder silo funds. The owner cannot be blacklisted. Spoke pool mint/burn control is separate bridge risk.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "Share conversion uses trUSD balance minus unvested rewards; authorized rewards and loss reports alter NAV. This is an upgradeable internal pricing authority, not an independent dollar oracle.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "rationale": "The ERC-4626 asset-per-share rate controls deposit and withdrawal amounts, without borrower debt or local liquidation branches.",
+      "sources": [
+        {
+          "label": "Tori strUSD staking and unstaking terms",
+          "url": "https://docs.tori.finance/products/strusd.md"
+        },
+        {
+          "label": "Tori canonical vault and CCIP deployments",
+          "url": "https://docs.tori.finance/resources/contracts.md"
+        },
+        {
+          "label": "Tori roles and timelock disclosure",
+          "url": "https://docs.tori.finance/security/roles.md"
+        },
+        {
+          "label": "Verified StakedTrUSD implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6561272e3ebc9f2e07cdb12b7c474db9132b977a"
+        },
+        {
+          "label": "Tori reserve ownership and holder-rights terms",
+          "url": "https://docs.tori.finance/legal/trusd-terms.md"
+        },
+        {
+          "label": "Pinned Ethereum block 26107706",
+          "url": "https://etherscan.io/block/26107706"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Tori strUSD staking and unstaking terms",
+        "url": "https://docs.tori.finance/products/strusd.md"
+      },
+      {
+        "label": "Tori canonical vault and CCIP deployments",
+        "url": "https://docs.tori.finance/resources/contracts.md"
+      },
+      {
+        "label": "Tori roles and timelock disclosure",
+        "url": "https://docs.tori.finance/security/roles.md"
+      },
+      {
+        "label": "Verified StakedTrUSD implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6561272e3ebc9f2e07cdb12b7c474db9132b977a"
+      },
+      {
+        "label": "Tori reserve ownership and holder-rights terms",
+        "url": "https://docs.tori.finance/legal/trusd-terms.md"
+      },
+      {
+        "label": "Pinned Ethereum block 26107706",
+        "url": "https://etherscan.io/block/26107706"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "Ethereum creates native staking shares; Monad and Pharos use CCIP burn/mint representations backed by one Ethereum lockbox. Bridge administration is separate from native UUPS authority.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Tori strUSD staking and unstaking terms",
+        "url": "https://docs.tori.finance/products/strusd.md"
+      },
+      {
+        "label": "Tori canonical vault and CCIP deployments",
+        "url": "https://docs.tori.finance/resources/contracts.md"
+      },
+      {
+        "label": "Tori roles and timelock disclosure",
+        "url": "https://docs.tori.finance/security/roles.md"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x280839980a7ed0d7717f64125fe241012e5f5815",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x280839980a7ed0d7717f64125fe241012e5f5815",
+        "protocol": "Tori ERC-4626",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Ethereum vault creates share liabilities; its CCIP pool locks existing shares. Do not add spoke totalSupply to native supply.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107706,
+        "sources": [
+          {
+            "label": "Tori strUSD staking and unstaking terms",
+            "url": "https://docs.tori.finance/products/strusd.md"
+          },
+          {
+            "label": "Tori canonical vault and CCIP deployments",
+            "url": "https://docs.tori.finance/resources/contracts.md"
+          },
+          {
+            "label": "Tori roles and timelock disclosure",
+            "url": "https://docs.tori.finance/security/roles.md"
+          },
+          {
+            "label": "ethereum strUSD token and pinned control reads",
+            "url": "https://etherscan.io/address/0x280839980a7ed0d7717f64125fe241012e5f5815"
+          },
+          {
+            "label": "ethereum CCIP pool",
+            "url": "https://etherscan.io/address/0xb12e0794fb2191672ba7a1811edc9713c8c2c38b"
+          }
+        ]
+      },
+      {
+        "id": "monad:0x683fb58ee77172626d5b49087ddac71ef7825d20",
+        "destinationChain": "monad",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x683fb58ee77172626d5b49087ddac71ef7825d20",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Official token/pool mapping and fresh symbol, decimals, getMinters/getBurners, getToken, owner, typeAndVersion and remote token/pool reads agree. Every spoke share represents a share locked on Ethereum, not a separate native vault.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 110016528,
+        "sources": [
+          {
+            "label": "Tori strUSD staking and unstaking terms",
+            "url": "https://docs.tori.finance/products/strusd.md"
+          },
+          {
+            "label": "Tori canonical vault and CCIP deployments",
+            "url": "https://docs.tori.finance/resources/contracts.md"
+          },
+          {
+            "label": "Tori roles and timelock disclosure",
+            "url": "https://docs.tori.finance/security/roles.md"
+          },
+          {
+            "label": "monad strUSD token and pinned control reads",
+            "url": "https://monadvision.com/address/0x683fb58ee77172626d5b49087ddac71ef7825d20"
+          },
+          {
+            "label": "monad CCIP pool",
+            "url": "https://monadvision.com/address/0x936a28338985b905f7e932af379533666df6d1ec"
+          }
+        ],
+        "sourceChain": "ethereum",
+        "representationId": "strusd-ccip-ethereum-lockbox",
+        "controllerChain": "monad",
+        "controllerAddress": "0x936a28338985b905f7e932af379533666df6d1ec",
+        "failureDomainKeys": [
+          "bridge:chainlink-ccip-strusd"
+        ]
+      },
+      {
+        "id": "pharos:0x25419e949b485d481bed4ea0c5a0496f6c7f7c63",
+        "destinationChain": "pharos",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x25419e949b485d481bed4ea0c5a0496f6c7f7c63",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Official token/pool mapping and fresh symbol, decimals, getMinters/getBurners, getToken, owner, typeAndVersion and remote token/pool reads agree. Every spoke share represents a share locked on Ethereum, not a separate native vault.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 19213616,
+        "sources": [
+          {
+            "label": "Tori strUSD staking and unstaking terms",
+            "url": "https://docs.tori.finance/products/strusd.md"
+          },
+          {
+            "label": "Tori canonical vault and CCIP deployments",
+            "url": "https://docs.tori.finance/resources/contracts.md"
+          },
+          {
+            "label": "Tori roles and timelock disclosure",
+            "url": "https://docs.tori.finance/security/roles.md"
+          },
+          {
+            "label": "pharos strUSD token and pinned control reads",
+            "url": "https://pharosscan.xyz/address/0x25419e949b485d481bed4ea0c5a0496f6c7f7c63"
+          },
+          {
+            "label": "pharos CCIP pool",
+            "url": "https://pharosscan.xyz/address/0x7305a63323d3171c6311d8f3218c3a7d164f3f0f"
+          }
+        ],
+        "sourceChain": "ethereum",
+        "representationId": "strusd-ccip-ethereum-lockbox",
+        "controllerChain": "pharos",
+        "controllerAddress": "0x7305a63323d3171c6311d8f3218c3a7d164f3f0f",
+        "failureDomainKeys": [
+          "bridge:chainlink-ccip-strusd"
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "strusd-ethereum-ccip-pool",
+        "label": "strUSD ethereum CCIP pool",
+        "routeRefs": [
+          "ethereum:0x280839980a7ed0d7717f64125fe241012e5f5815"
+        ],
+        "capabilities": [
+          "escrow",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xb12e0794fb2191672ba7a1811edc9713c8c2c38b",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "bridge:chainlink-ccip-strusd"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107706,
+        "sources": [
+          {
+            "label": "Tori strUSD staking and unstaking terms",
+            "url": "https://docs.tori.finance/products/strusd.md"
+          },
+          {
+            "label": "Tori canonical vault and CCIP deployments",
+            "url": "https://docs.tori.finance/resources/contracts.md"
+          },
+          {
+            "label": "Tori roles and timelock disclosure",
+            "url": "https://docs.tori.finance/security/roles.md"
+          },
+          {
+            "label": "ethereum strUSD token and pinned control reads",
+            "url": "https://etherscan.io/address/0x280839980a7ed0d7717f64125fe241012e5f5815"
+          },
+          {
+            "label": "ethereum CCIP pool",
+            "url": "https://etherscan.io/address/0xb12e0794fb2191672ba7a1811edc9713c8c2c38b"
+          }
+        ],
+        "routeChecks": {
+          "lockboxOrEscrow": "Ethereum LockRelease pool 0xb12e0794fb2191672ba7a1811edc9713c8c2c38b holds canonical shares; Monad and Pharos use BurnMint pools.",
+          "trustedPeerOrRemote": "Fresh getSupportedChains, getRemoteToken and getRemotePools agree with the other two authored deployments and pools."
+        },
+        "evidence": "At ethereum block 26107706, getToken and typeAndVersion matched the official mapping. Canonical shares are locked/released, not minted by the Ethereum pool."
+      },
+      {
+        "id": "strusd-ethereum-ccip-owner",
+        "label": "strUSD ethereum CCIP owner",
+        "routeRefs": [
+          "ethereum:0x280839980a7ed0d7717f64125fe241012e5f5815"
+        ],
+        "capabilities": [
+          "admin",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x0c6bbfd2d5666d44bf28580edeec0263692c8316",
+        "authorityType": "multisig",
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "controller:0x0c6bbfd2d5666d44bf28580edeec0263692c8316"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107706,
+        "sources": [
+          {
+            "label": "Tori strUSD staking and unstaking terms",
+            "url": "https://docs.tori.finance/products/strusd.md"
+          },
+          {
+            "label": "Tori canonical vault and CCIP deployments",
+            "url": "https://docs.tori.finance/resources/contracts.md"
+          },
+          {
+            "label": "Tori roles and timelock disclosure",
+            "url": "https://docs.tori.finance/security/roles.md"
+          },
+          {
+            "label": "ethereum strUSD token and pinned control reads",
+            "url": "https://etherscan.io/address/0x280839980a7ed0d7717f64125fe241012e5f5815"
+          },
+          {
+            "label": "ethereum CCIP pool",
+            "url": "https://etherscan.io/address/0xb12e0794fb2191672ba7a1811edc9713c8c2c38b"
+          }
+        ],
+        "capDescription": "Ethereum and Monad inbound/outbound buckets are enabled with 1500000-token capacities and 69.444444444444444444-token/second refills. Pharos v2.0 numeric limiter API was not established; issuer states the same six-hour lane policy. Current bounds are mutable configuration, not an immutable issuance ceiling.",
+        "evidence": "At ethereum block 26107706, pool owner() returned 0x0c6bbfd2d5666d44bf28580edeec0263692c8316. Ethereum owner Safe is freshly verified 3-of-5, no enabled modules, zero guard/module-guard slots. No bridge timelock is established.",
+        "threshold": 3,
+        "signerCount": 5
+      },
+      {
+        "id": "strusd-monad-ccip-pool",
+        "label": "strUSD monad CCIP pool",
+        "routeRefs": [
+          "monad:0x683fb58ee77172626d5b49087ddac71ef7825d20"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "peer-config"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x936a28338985b905f7e932af379533666df6d1ec",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "bridge:chainlink-ccip-strusd"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 110016528,
+        "sources": [
+          {
+            "label": "Tori strUSD staking and unstaking terms",
+            "url": "https://docs.tori.finance/products/strusd.md"
+          },
+          {
+            "label": "Tori canonical vault and CCIP deployments",
+            "url": "https://docs.tori.finance/resources/contracts.md"
+          },
+          {
+            "label": "Tori roles and timelock disclosure",
+            "url": "https://docs.tori.finance/security/roles.md"
+          },
+          {
+            "label": "monad strUSD token and pinned control reads",
+            "url": "https://monadvision.com/address/0x683fb58ee77172626d5b49087ddac71ef7825d20"
+          },
+          {
+            "label": "monad CCIP pool",
+            "url": "https://monadvision.com/address/0x936a28338985b905f7e932af379533666df6d1ec"
+          }
+        ],
+        "routeChecks": {
+          "lockboxOrEscrow": "Ethereum LockRelease pool 0xb12e0794fb2191672ba7a1811edc9713c8c2c38b holds canonical shares; Monad and Pharos use BurnMint pools.",
+          "trustedPeerOrRemote": "Fresh getSupportedChains, getRemoteToken and getRemotePools agree with the other two authored deployments and pools."
+        },
+        "evidence": "At monad block 110016528, getToken and typeAndVersion matched the official mapping. Token getMinters and getBurners both returned this pool as sole member. Representation mint/burn does not issue new native vault liabilities."
+      },
+      {
+        "id": "strusd-monad-ccip-owner",
+        "label": "strUSD monad CCIP owner",
+        "routeRefs": [
+          "monad:0x683fb58ee77172626d5b49087ddac71ef7825d20"
+        ],
+        "capabilities": [
+          "admin",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x0c6bbfd2d5666d44bf28580edeec0263692c8316",
+        "authorityType": "multisig",
+        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "controller:0x0c6bbfd2d5666d44bf28580edeec0263692c8316"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 110016528,
+        "sources": [
+          {
+            "label": "Tori strUSD staking and unstaking terms",
+            "url": "https://docs.tori.finance/products/strusd.md"
+          },
+          {
+            "label": "Tori canonical vault and CCIP deployments",
+            "url": "https://docs.tori.finance/resources/contracts.md"
+          },
+          {
+            "label": "Tori roles and timelock disclosure",
+            "url": "https://docs.tori.finance/security/roles.md"
+          },
+          {
+            "label": "monad strUSD token and pinned control reads",
+            "url": "https://monadvision.com/address/0x683fb58ee77172626d5b49087ddac71ef7825d20"
+          },
+          {
+            "label": "monad CCIP pool",
+            "url": "https://monadvision.com/address/0x936a28338985b905f7e932af379533666df6d1ec"
+          }
+        ],
+        "capDescription": "Ethereum and Monad inbound/outbound buckets are enabled with 1500000-token capacities and 69.444444444444444444-token/second refills. Pharos v2.0 numeric limiter API was not established; issuer states the same six-hour lane policy. Current bounds are mutable configuration, not an immutable issuance ceiling.",
+        "evidence": "At monad block 110016528, pool owner() returned 0x0c6bbfd2d5666d44bf28580edeec0263692c8316. Same-address Safe owner is identified; chain-local Safe threshold and guards were not re-read, so no quorum protection is credited here."
+      },
+      {
+        "id": "strusd-pharos-ccip-pool",
+        "label": "strUSD pharos CCIP pool",
+        "routeRefs": [
+          "pharos:0x25419e949b485d481bed4ea0c5a0496f6c7f7c63"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "peer-config"
+        ],
+        "controllerChain": "pharos",
+        "controllerAddress": "0x7305a63323d3171c6311d8f3218c3a7d164f3f0f",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "bridge:chainlink-ccip-strusd"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 19213616,
+        "sources": [
+          {
+            "label": "Tori strUSD staking and unstaking terms",
+            "url": "https://docs.tori.finance/products/strusd.md"
+          },
+          {
+            "label": "Tori canonical vault and CCIP deployments",
+            "url": "https://docs.tori.finance/resources/contracts.md"
+          },
+          {
+            "label": "Tori roles and timelock disclosure",
+            "url": "https://docs.tori.finance/security/roles.md"
+          },
+          {
+            "label": "pharos strUSD token and pinned control reads",
+            "url": "https://pharosscan.xyz/address/0x25419e949b485d481bed4ea0c5a0496f6c7f7c63"
+          },
+          {
+            "label": "pharos CCIP pool",
+            "url": "https://pharosscan.xyz/address/0x7305a63323d3171c6311d8f3218c3a7d164f3f0f"
+          }
+        ],
+        "routeChecks": {
+          "lockboxOrEscrow": "Ethereum LockRelease pool 0xb12e0794fb2191672ba7a1811edc9713c8c2c38b holds canonical shares; Monad and Pharos use BurnMint pools.",
+          "trustedPeerOrRemote": "Fresh getSupportedChains, getRemoteToken and getRemotePools agree with the other two authored deployments and pools."
+        },
+        "evidence": "At pharos block 19213616, getToken and typeAndVersion matched the official mapping. Token getMinters and getBurners both returned this pool as sole member. Representation mint/burn does not issue new native vault liabilities."
+      },
+      {
+        "id": "strusd-pharos-ccip-owner",
+        "label": "strUSD pharos CCIP owner",
+        "routeRefs": [
+          "pharos:0x25419e949b485d481bed4ea0c5a0496f6c7f7c63"
+        ],
+        "capabilities": [
+          "admin",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "pharos",
+        "controllerAddress": "0x07adfa5e8c7e8e80d1449dac46c3d6e739850e64",
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "controller:0x07adfa5e8c7e8e80d1449dac46c3d6e739850e64"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 19213616,
+        "sources": [
+          {
+            "label": "Tori strUSD staking and unstaking terms",
+            "url": "https://docs.tori.finance/products/strusd.md"
+          },
+          {
+            "label": "Tori canonical vault and CCIP deployments",
+            "url": "https://docs.tori.finance/resources/contracts.md"
+          },
+          {
+            "label": "Tori roles and timelock disclosure",
+            "url": "https://docs.tori.finance/security/roles.md"
+          },
+          {
+            "label": "pharos strUSD token and pinned control reads",
+            "url": "https://pharosscan.xyz/address/0x25419e949b485d481bed4ea0c5a0496f6c7f7c63"
+          },
+          {
+            "label": "pharos CCIP pool",
+            "url": "https://pharosscan.xyz/address/0x7305a63323d3171c6311d8f3218c3a7d164f3f0f"
+          }
+        ],
+        "capDescription": "Ethereum and Monad inbound/outbound buckets are enabled with 1500000-token capacities and 69.444444444444444444-token/second refills. Pharos v2.0 numeric limiter API was not established; issuer states the same six-hour lane policy. Current bounds are mutable configuration, not an immutable issuance ceiling.",
+        "evidence": "At pharos block 19213616, pool owner() returned 0x07adfa5e8c7e8e80d1449dac46c3d6e739850e64. Owner code is empty. No independent MPC/HSM custody attestation or timelock established."
+      }
+    ],
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "Chainlink CCIP",
+        "url": "https://docs.tori.finance/resources/contracts.md",
+        "bridgeTypes": [
+          "lockAndMint",
+          "burnAndMint"
+        ]
+      }
+    ]
+  }
+}

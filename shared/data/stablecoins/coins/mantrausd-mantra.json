@@ -1,0 +1,84 @@
+{
+  "id": "mantrausd-mantra",
+  "name": "Mantra USD",
+  "symbol": "mantraUSD",
+  "oneLiner": "MANTRA's dollar wraps M0's M; public conversion is to wM, and a single externally owned address controls token upgrades.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "rwa": true
+  },
+  "variantOf": "m-m0",
+  "variantKind": "pure-wrapper",
+  "pegReferenceId": "m-m0",
+  "collateral": "M0 M tokens held by the chain-local extension; the M parent provides the Treasury-backed issuance and custody layer.",
+  "pegMechanism": "M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right.",
+  "mechanismArchetype": "tbill",
+  "llamaId": "333",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://mantrausd.com/"
+    },
+    {
+      "label": "Token explorer",
+      "url": "https://blockscout.mantrascan.io/address/0xd2b95283011e47257917770d28bb3ee44c849f6f"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "mantra",
+      "address": "0xd2b95283011e47257917770d28bb3ee44c849f6f",
+      "decimals": 6
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://blockscout.mantrascan.io/address/0xd2b95283011e47257917770d28bb3ee44c849f6f",
+    "provider": "On-chain parent-token custody; not independent financial assurance",
+    "cadence": "real-time"
+  },
+  "dependencyReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mantra USD product documentation (accessed 2026-10-02)",
+        "url": "https://mantrausd.com/"
+      },
+      {
+        "label": "Verified token implementation",
+        "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8"
+      },
+      {
+        "label": "Pinned mantra RPC at block 18531313",
+        "url": "https://evm.mantrachain.io"
+      },
+      {
+        "label": "M0 published platform deployments",
+        "url": "https://docs.m0.org/resources/addresses/m0-platform"
+      },
+      {
+        "label": "M0 liquidity routes and issuer onboarding",
+        "url": "https://docs.m0.org/build/accessing-liquidity"
+      }
+    ],
+    "rationale": "At mantra block 18531313, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 439,646.447844 M against 434,703.845695 mantraUSD supply. M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right.",
+    "relationships": [
+      {
+        "id": "m-m0",
+        "weight": 1,
+        "type": "wrapper",
+        "reason": "The immediate serial claim is the verified parent stablecoin, not a direct child allocation of off-chain Treasury reserves."
+      }
+    ]
+  },
+  "geckoId": "mantra-usd",
+  "infrastructures": [
+    "m0"
+  ]
+}

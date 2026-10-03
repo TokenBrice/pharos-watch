@@ -1,0 +1,68 @@
+{
+  "id": "senpathusd-sentora",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Exact Sentora vault",
+        "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+      },
+      {
+        "label": "Pinned RPC identity, accounting and controls",
+        "url": "https://rpc.tempo.xyz"
+      },
+      {
+        "label": "Morpho Vault V2 documentation",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "MorphoMarketV1AdapterV2 source",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+      },
+      {
+        "label": "Tempo TIP-20 restriction specification",
+        "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+      }
+    ],
+    "evidence": "At tempo block 42323768, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and their setters permanently abdicated. Exact immutable VaultV2 code forbids executing abdicated setters. Local share transfer and withdrawal gates are disabled; upstream pathUSD blacklist/pause or reserve-access powers remain inherited from pathusd-bridge. Allocator liquidity configuration and lending losses are distinct risks.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Only the exact native tempo vault-share deployment is authored. No share bridge representation is evidenced; upstream parent routes are separate inherited exposure.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Exact Sentora vault",
+        "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+      },
+      {
+        "label": "Pinned RPC identity, accounting and controls",
+        "url": "https://rpc.tempo.xyz"
+      },
+      {
+        "label": "Morpho Vault V2 documentation",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "MorphoMarketV1AdapterV2 source",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+      },
+      {
+        "label": "Tempo TIP-20 restriction specification",
+        "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+      }
+    ]
+  }
+}

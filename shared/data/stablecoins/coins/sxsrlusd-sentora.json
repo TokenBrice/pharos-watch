@@ -1,0 +1,116 @@
+{
+  "id": "sxsrlusd-sentora",
+  "name": "Sentora x Spark RLUSD",
+  "symbol": "sxsRLUSD",
+  "oneLiner": "sxsRLUSD is Sentora and Spark's RLUSD vault on Morpho; shares hold idle RLUSD and WBTC-backed loans, with withdrawals subject to liquidity.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "rlusd-ripple",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "rlusd-ripple",
+  "collateral": "RLUSD held idle in an immutable Morpho Vault V2 and supplied by a MorphoMarketV1AdapterV2 to a WBTC-collateralized lending market. Allocations can change under curator controls.",
+  "pegMechanism": "ERC-4626 shares convert to RLUSD at the live assets-per-share rate. Interest increases and recognized losses reduce share value; withdrawals use idle assets and configured adapter liquidity rather than a fixed dollar promise.",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "The current exact holder instrument ethereum:0xfc8c624b6080a0a780583799f2a862de936f6e22 is an immutable ERC-4626 operational claim on idle RLUSD plus Morpho lender positions, not a direct fiat reserve claim. Deposit/mint requires underlying assets and accrual can issue fee shares. At ethereum block 26107706, asset() was 0x8292bb45bf1ee4d140127049757c2e0ff06317ed, share decimals 18 and underlying decimals 18; totalAssets raw 250001199783394711178689552, totalSupply raw 249994918735505772044961482, idle raw 225673066061791758611500399, sole adapter market assets raw 24328133721602952567189153, with an exact zero accounting difference. The only funded market lent RLUSD against WBTC at 86% LLTV. The adapter position had zero borrowing and zero posted collateral.",
+    "sources": [
+      {
+        "label": "Exact Sentora vault",
+        "url": "https://app.morpho.org/ethereum/vault/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+      },
+      {
+        "label": "Pinned RPC identity, accounting and controls",
+        "url": "https://eth-mainnet.g.alchemy.com/v2"
+      },
+      {
+        "label": "Morpho Vault V2 documentation",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Exact VaultV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+      },
+      {
+        "label": "MorphoMarketV1AdapterV2 source",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+      },
+      {
+        "label": "Ripple RLUSD terms, section 11.5",
+        "url": "https://ripple.com/legal/stablecoin/"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://app.morpho.org/ethereum/vault/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+    },
+    {
+      "label": "Sentora",
+      "url": "https://sentora.com/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xfc8c624b6080a0a780583799f2a862de936f6e22",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "yieldConfig": {
+    "yieldSource": "Sentora x Spark RLUSD Morpho lending interest net of vault fees",
+    "yieldType": "lending-vault"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "sxsrlusd-sentora",
+    "display": {
+      "url": "https://app.morpho.org/ethereum/vault/0xfc8c624b6080a0a780583799f2a862de936f6e22",
+      "label": "Sentora x Spark RLUSD"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "RLUSD held idle and supplied to Sentora x Spark RLUSD Morpho lending positions",
+        "risk": "high",
+        "coinId": "rlusd-ripple",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+      },
+      "deployedExposure": {
+        "basis": "At ethereum block 26107706, asset() was 0x8292bb45bf1ee4d140127049757c2e0ff06317ed, share decimals 18 and underlying decimals 18; totalAssets raw 250001199783394711178689552, totalSupply raw 249994918735505772044961482, idle raw 225673066061791758611500399, sole adapter market assets raw 24328133721602952567189153, with an exact zero accounting difference. The only funded market lent RLUSD against WBTC at 86% LLTV. The adapter position had zero borrowing and zero posted collateral. The reviewed descriptor is the entire parent-denominated strategy claim; 100% denotes denomination, not 100% idle cash.",
+        "reviewedAt": "2026-10-02",
+        "sourceUrl": "https://app.morpho.org/ethereum/vault/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+      },
+      "redemptionLiquidity": {
+        "source": "morpho-vault-v2",
+        "chainId": 1
+      }
+    }
+  },
+  "launchDate": "2026-09-01"
+}

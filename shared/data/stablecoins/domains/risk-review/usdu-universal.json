@@ -1,0 +1,23 @@
+{
+  "id": "usdu-universal",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Exact-match USDU implementation source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x7df0b1f63e0a467b6aa95b4ed6d299dab9f73750?fields=all"
+      },
+      {
+        "label": "Ethereum pinned block 26107709",
+        "url": "https://etherscan.io/block/26107709"
+      },
+      {
+        "label": "USDU mint and redemption whitepaper",
+        "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"
+      }
+    ],
+    "evidence": "Sourcify reports exact runtime and creation match for the live implementation. Blacklistable and TokenV1 implement blacklist/unBlacklist and wipeBlacklistedAddress. Pinned getBlacklister() returns0x91462fc34e6b1fda7675e3729eeb1e762f5ac80d, also the permission admin and pauser. Whitepaper explicitly describes transaction revocation.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

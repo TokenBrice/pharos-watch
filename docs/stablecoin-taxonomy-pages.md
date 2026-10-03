@@ -72,6 +72,8 @@ Both paths add indexed routes, so treat them as SEO changes rather than data edi
 4. Confirm `shared/lib/filter-tags.ts` emits the cohort's filter tag for member coins.
 5. Run the taxonomy hub and sitemap suites (`src/app/stablecoins/__tests__/taxonomy-hub-pages.test.tsx`, `src/app/__tests__/sitemap-frozen.test.ts`) and regenerate sitemap dates so the new route carries a last-modified value.
 
+CZK, PLN, and AED have authored slug/copy entries (`czk`, `pln`, `aed`) and presentation metadata labelled Czech Koruna, Polish Zloty, and UAE Dirham. Their filter tags are `czk-peg`, `pln-peg`, and `aed-peg`. The client projection's peg route/count order includes all three. A currency becomes a generated cohort route only when the active registry contains an asset in that bucket; pre-launch PLNQ, CZKC, and AED-RAKBANK alone do not create empty active routes. The curated high-volume peg dropdown remains unchanged; individual currency tags and cohort pages retain the existing discovery contract.
+
 ---
 
 ## Update Rules

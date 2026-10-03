@@ -1,0 +1,92 @@
+{
+  "id": "susdc-spark-v1",
+  "reserves": [
+    {
+      "name": "sUSDS shares held by Legacy UsdcVault",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "susds-sky",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sky sUSDS savings contract",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spark Savings documentation distinguishes Legacy V1 from V2",
+        "url": "https://docs.spark.finance/products/spark-savings"
+      },
+      {
+        "label": "Official Spark Ethereum deployment registry",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Ethereum.sol"
+      },
+      {
+        "label": "Verified exact vault deployment and source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+      },
+      {
+        "label": "Verified Legacy UsdcVault implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba"
+      },
+      {
+        "label": "Credential-free RPC endpoint; pinned read in review notes",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      }
+    ],
+    "rationale": "Observed 2026-10-02T22:43:52.688407+00:00 at ethereum block 26107702 (hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6). Native totalSupply 161342339855641335323322489 (18 decimals), asset 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (6 decimals), totalAssets 179331003650749, convertToAssets(10^18) 1111493. One-share redeem from actual holder 0xa09fe38187abecc2768b98b80ea30afbc2fbd774 returned 1111493 asset base units via eth_call at that same block; no transaction broadcast. sUSDS balance 161342339855641335323322489 equals native totalSupply exactly. The implementation values this held receipt by sUSDS.convertToAssets; it ignores 1004961 idle USDC base units and any USDS dust. The 100% row is the modeled ERC-4626 claim-accounting denominator, not a Sky system-wide collateral allocation.",
+    "compositionBasis": "Exact-vault operational position accounting; no independent financial assurance or legal segregation is inferred",
+    "compositionAsOf": "2026-10-02",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "No unresolved composition-link dispositions remain within the immediate sUSDS claim-accounting denominator. This does not establish stressed realization, enforceable priority or independently reconciled ultimate backing; those protections remain unproven. Underlying issuer and protocol risk remains serial, and whole-book custody uncertainty is recorded separately in custodyProfile.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": []
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Legacy UsdcVault and Sky sUSDS contract",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Spark Savings documentation distinguishes Legacy V1 from V2",
+        "url": "https://docs.spark.finance/products/spark-savings"
+      },
+      {
+        "label": "Official Spark Ethereum deployment registry",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Ethereum.sol"
+      },
+      {
+        "label": "Verified exact vault deployment and source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+      },
+      {
+        "label": "Verified Legacy UsdcVault implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba"
+      },
+      {
+        "label": "Credential-free RPC endpoint; pinned read in review notes",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      }
+    ],
+    "uncertainty": "On-chain position location is verified. Complete ultimate custody, enforceable segregation, successor custody and legal insolvency protection are not established by the receipt code or parent reserve disclosures.",
+    "knownUnknownExposurePct": 100
+  }
+}

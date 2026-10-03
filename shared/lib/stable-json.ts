@@ -46,21 +46,25 @@ const CANONICAL_CHUNK_TARGET = 64 * 1024;
 function* stringifyCanonicalChunks(value: unknown): Generator<string> {
   const stackValues: unknown[] = [value];
   const stackRaw: boolean[] = [false];
-  let chunk = "";
+  // Join each bounded chunk before retaining it: concatenation ropes otherwise
+  // keep a node per JSON token alive until the entire canonical stream flattens.
+  let chunk: string[] = [];
+  let chunkLength = 0;
 
   while (stackValues.length > 0) {
     const current = stackValues.pop();
     const raw = stackRaw.pop()!;
+    let fragment = "";
     if (raw) {
-      chunk += current as string;
+      fragment = current as string;
     } else if (current === null) {
-      chunk += "null";
+      fragment = "null";
     } else if (current !== undefined && (
       typeof current === "string" ||
       typeof current === "number" ||
       typeof current === "boolean"
     )) {
-      chunk += JSON.stringify(current);
+      fragment = JSON.stringify(current);
     } else if (Array.isArray(current)) {
       stackValues.push("]");
       stackRaw.push(true);
@@ -72,7 +76,7 @@ function* stringifyCanonicalChunks(value: unknown): Generator<string> {
           stackRaw.push(true);
         }
       }
-      chunk += "[";
+      fragment = "[";
     } else if (current !== undefined) {
       const objectValue = current as Record<string, unknown>;
       const keys = Object.keys(objectValue)
@@ -93,15 +97,18 @@ function* stringifyCanonicalChunks(value: unknown): Generator<string> {
           stackRaw.push(true);
         }
       }
-      chunk += "{";
+      fragment = "{";
     }
 
-    if (chunk.length >= CANONICAL_CHUNK_TARGET) {
-      yield chunk;
-      chunk = "";
+    chunk.push(fragment);
+    chunkLength += fragment.length;
+    if (chunkLength >= CANONICAL_CHUNK_TARGET) {
+      yield chunk.join("");
+      chunk = [];
+      chunkLength = 0;
     }
   }
-  if (chunk.length > 0) yield chunk;
+  if (chunkLength > 0) yield chunk.join("");
 }
 
 /** Deterministic JSON for runtime-neutral identity and digest projections. */

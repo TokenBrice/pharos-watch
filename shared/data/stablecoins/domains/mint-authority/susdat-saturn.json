@@ -1,0 +1,99 @@
+{
+  "id": "susdat-saturn",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "inheritedFrom": "usdat-saturn",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "unknown",
+    "summary": "Canonical Ethereum shares mint through the USDat ERC-4626 vault, with base issuance inherited from USDat. Local UUPS logic is role-controlled and the observed default admin is a five-day timelock. One-hour parameter administration and operator-recognized STRCon accounting remain separate controls. The complete role/bypass census and financial reconciliation are unresolved. BNB and Monad privileged representation minting is recorded under Bridge Risk, not native issuance.",
+    "controls": [
+      {
+        "label": "Saturn sUSDat native ERC-4626 wrapper",
+        "chain": "ethereum",
+        "address": "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+        "deploymentRefs": ["ethereum:0xd166337499e176bbc38a1fbd113ab144e5bd2df7"],
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26108096,
+        "sources": [
+          { "label": "Verified deployed StakedUSDat implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b7074cf6681382b70e239063931ebe83c0f4e0a" },
+          { "label": "Saturn vault mechanics", "url": "https://saturncredit.gitbook.io/saturn-docs/solution/susdat-overview.md" }
+        ],
+        "evidence": "At Ethereum block 26108096, asset() returned the tracked USDat contract, decimals() returned 18, totalSupply() was 64,115,192.98239439 and paused() was false. The verified deployed source exposes deposit/mint share issuance against USDat rather than native creation of USDat. This is not a proof that upgrades, reserve accounting or all roles are harmless."
+      },
+      {
+        "label": "Saturn sUSDat default-admin upgrade timelock",
+        "chain": "ethereum",
+        "address": "0xfd5782e3bff366601da3973ae30c583de4f08a67",
+        "deploymentRefs": ["ethereum:0xd166337499e176bbc38a1fbd113ab144e5bd2df7"],
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 432000,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26108096,
+        "sources": [
+          { "label": "Verified deployed role-gated UUPS implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b7074cf6681382b70e239063931ebe83c0f4e0a" },
+          { "label": "Saturn V2 deployment and timelock runbook", "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md" },
+          { "label": "Ethereum block 26108096", "url": "https://etherscan.io/block/26108096" }
+        ],
+        "evidence": "At block 26108096, the proxy EIP-1967 implementation slot was 0x2b7074cf6681382b70e239063931ebe83c0f4e0a; hasRole(DEFAULT_ADMIN_ROLE, this timelock) returned true and getMinDelay() returned 432000 seconds. The verified _authorizeUpgrade function requires DEFAULT_ADMIN_ROLE. This confirms one active upgrade controller and its delay, not exclusive membership, signer independence or absence of bypasses."
+      },
+      {
+        "label": "Saturn sUSDat parameter-manager timelock",
+        "chain": "ethereum",
+        "address": "0x6f72de4f529a03bfa883825152656a8c62cbb626",
+        "deploymentRefs": ["ethereum:0xd166337499e176bbc38a1fbd113ab144e5bd2df7"],
+        "role": "other",
+        "authorityType": "timelock",
+        "directMintAbility": "parameter-only",
+        "timelockDelaySec": 3600,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26108096,
+        "sources": [
+          { "label": "Saturn V2 parameter-manager and migration runbook", "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md" },
+          { "label": "Ethereum block 26108096", "url": "https://etherscan.io/block/26108096" }
+        ],
+        "evidence": "The issuer V2 runbook identifies this PARAMETER_MANAGER_ROLE timelock for migration configuration; getMinDelay() at block 26108096 returned 3600 seconds. Exact currently authorized proposers, executors, complete parameter powers and role membership are not independently enumerated in this addition."
+      }
+    ],
+    "upgradeability": {
+      "model": "uups",
+      "deploymentRefs": ["ethereum:0xd166337499e176bbc38a1fbd113ab144e5bd2df7"],
+      "proxyAddresses": ["0xd166337499e176bbc38a1fbd113ab144e5bd2df7"],
+      "implementationAddresses": ["0x2b7074cf6681382b70e239063931ebe83c0f4e0a"],
+      "adminAddresses": ["0xfd5782e3bff366601da3973ae30c583de4f08a67"],
+      "canChangeMintLogic": true,
+      "delaySec": 432000,
+      "controlRef": "Saturn sUSDat default-admin upgrade timelock",
+      "observedAt": "2026-10-03",
+      "observedBlock": 26108096,
+      "sources": [
+        { "label": "Deployed StakedUSDat UUPS implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b7074cf6681382b70e239063931ebe83c0f4e0a" },
+        { "label": "Ethereum block 26108096", "url": "https://etherscan.io/block/26108096" }
+      ]
+    },
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "review": {
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-03",
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "What is the complete current native admin, parameter-manager, operator, surplus-manager and market-mode role census, including proposer/executor and emergency bypass powers?",
+        "What executed legal and independent financial reconciliation constrains recognized STRCon NAV against sUSDat liabilities after the migration?"
+      ],
+      "sources": [
+        { "label": "Current V2 role and migration runbook", "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md" },
+        { "label": "Verified deployed StakedUSDat implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b7074cf6681382b70e239063931ebe83c0f4e0a" },
+        { "label": "Saturn incomplete assurance disclosure", "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits.md" }
+      ],
+      "evidence": "Native issuance is a USDat share wrapper with an observed five-day upgrade controller and one-hour parameter timelock. The current implementation, USDat asset, share supply, totalAssets and default-admin membership were re-observed at Ethereum block 26108096. Public custody/assurance prose remains on the legacy STRC structure, while the deployed vault holds STRCon. The unresolved review preserves observed adverse/local powers without asserting a complete safe control inventory or scoreable whole financial claim."
+    }
+  }
+}

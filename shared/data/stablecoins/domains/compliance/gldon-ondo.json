@@ -1,0 +1,53 @@
+{
+  "id": "gldon-ondo",
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "GLDON is a security debt instrument tracking GLD ETF exposure, not a fixed monetary-value payment stablecoin.",
+      "references": [
+        {
+          "label": "GENIUS Act section 2(22) payment stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-02"
+        },
+        {
+          "label": "Exact token product claim",
+          "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-02"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Explicit scope clarification for a gold-family catalog addition; no GENIUS authorization asserted.",
+    "references": [
+      {
+        "label": "Exact token product claim",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      }
+    ],
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02",
+    "issuerEntity": "Ondo Global Markets (BVI) Limited",
+    "issuerDomicile": "British Virgin Islands"
+  },
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "GLDon Final Terms: security debt instrument",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf"
+      },
+      {
+        "label": "Ondo prospectus: ledger-based securities",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/ae1f1ca8ce2c2197a45b563e3e9add041924a249.pdf"
+      }
+    ]
+  }
+}

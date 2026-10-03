@@ -1,0 +1,76 @@
+{
+  "id": "sdai-gnosis",
+  "reserves": [
+    {
+      "sourceKey": "erc4626-single-asset:gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d",
+      "name": "WXDAI held by SavingsXDai",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "xdai-gnosis",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Gnosis xDAI bridge / Sky",
+      "riskFactors": [
+        "smart-contract",
+        "counterparty",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Gnosis verified SavingsXDai and imported ERC-4626 source",
+        "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701"
+      },
+      {
+        "label": "Gnosis xDAI bridge and savings infrastructure",
+        "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+      },
+      {
+        "label": "Pinned Gnosis block 48557408",
+        "url": "https://gnosis.blockscout.com/block/48557408"
+      }
+    ],
+    "rationale": "At Gnosis block 48557408, asset() returned WXDAI, totalSupply was 33869798.864272802852763810 shares and totalAssets exactly matched the separately read 42672422.460002511422928167 WXDAI balance. Fixed single-asset code establishes the complete immediate parent exposure; medium legacy risk reflects xDAI bridge dependence.",
+    "compositionBasis": "Exact ERC-4626 underlying-asset relationship and pinned balance/share reads",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Immediate parent identity is known. This review does not independently close parent reserves, offchain legal segregation, or stressed recovery.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Gnosis SavingsXDai 0xaf204776c7245bf4147c2612bf6e5972ee483701",
+        "role": "other",
+        "jurisdiction": "gnosis"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Gnosis verified SavingsXDai and imported ERC-4626 source",
+        "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701"
+      },
+      {
+        "label": "Gnosis xDAI bridge and savings infrastructure",
+        "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+      },
+      {
+        "label": "Pinned Gnosis block 48557408",
+        "url": "https://gnosis.blockscout.com/block/48557408"
+      }
+    ],
+    "uncertainty": "Immediate WXDAI is held onchain in the fixed-asset vault. Whole-book custody includes the upstream xDAI bridge and Sky reserve stack; no whole-book institutional or all-onchain label is established."
+  }
+}

@@ -90,6 +90,17 @@ describe("resolveChainId", () => {
     expect(resolveChainId("edgeX L1")).toBe("edgechain");
     expect(resolveChainId("Echelon Initia")).toBe("initia");
   });
+
+  it.each([
+    ["RISE", "rise", 4153],
+    ["Somnia", "somnia", 5031],
+    ["Filecoin", "filecoin", 314],
+  ])("joins %s supply labels and EVM IDs to the same canonical chain", (label, chainId, evmChainId) => {
+    expect(resolveChainId(` ${label} `)).toBe(chainId);
+    expect(resolveChainId(label.toUpperCase())).toBe(chainId);
+    expect(resolveChainId(chainId)).toBe(chainId);
+    expect(resolveChainId(evmChainId)).toBe(chainId);
+  });
 });
 
 describe("normalizeChainId", () => {
@@ -122,6 +133,12 @@ describe("getChainResilienceTier", () => {
 
   it("treats the newly launched Pharos Network as tier 3", () => {
     expect(getChainResilienceTier("pharos")).toBe(3);
+  });
+
+  it("keeps newer RISE and Somnia below the established Filecoin tier", () => {
+    expect(getChainResilienceTier("rise")).toBe(3);
+    expect(getChainResilienceTier("somnia")).toBe(3);
+    expect(getChainResilienceTier("filecoin")).toBe(2);
   });
 });
 

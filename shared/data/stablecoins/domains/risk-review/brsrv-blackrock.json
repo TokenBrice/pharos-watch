@@ -1,0 +1,178 @@
+{
+  "id": "brsrv-blackrock",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "BlackRock July 31, 2026 OnChain share prospectus",
+        "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf"
+      },
+      {
+        "label": "BlackRock BRSRV fund reporting",
+        "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle"
+      },
+      {
+        "label": "Verified deployed token implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc4ecf0307ff0c45c0546e0debedbbd0e47ac3354"
+      },
+      {
+        "label": "Ethereum token deployment",
+        "url": "https://etherscan.io/address/0x3078bcf707e457d3af2f938a2a478bbeea50a942#code"
+      }
+    ],
+    "evidence": "The prospectus authorizes wallet whitelisting, restriction/rejection/freezing, erroneous-transfer burn/reissue and lost-key remedies. Finalized Solana slot 452748384 corroborates a freeze authority and permanent delegate. A zero blacklist-manager service does not remove transfer-agent controls.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "Primary subscription and redemption use issuer-administered fund NAV. Public quote or oracle publication does not remove the fund valuation authority; no collateral-liquidation mechanism is modeled.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "rationale": "The token is a direct NAV fund-share claim, with no evidenced borrower-vault or liquidation-price branches. Primary NAV authority applies to the share price and redemption.",
+      "sources": [
+        {
+          "label": "BlackRock July 31, 2026 OnChain share prospectus",
+          "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf"
+        },
+        {
+          "label": "BlackRock BRSRV fund reporting",
+          "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "BlackRock July 31, 2026 OnChain share prospectus",
+        "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf"
+      },
+      {
+        "label": "BlackRock BRSRV fund reporting",
+        "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Ethereum, Tempo and Solana are native OnChain share rails under one Securitize shareholder register. Ethereum currently carries the issued stock; Tempo and Solana stock were zero at the observed pins. No bridge-representation route or bridge-specific capability is established; native mint and upgrade powers remain in Mint Authority.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "BlackRock July 31, 2026 OnChain share prospectus",
+        "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf"
+      },
+      {
+        "label": "BlackRock BRSRV fund reporting",
+        "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x3078bcf707e457d3af2f938a2a478bbeea50a942",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x3078bcf707e457d3af2f938a2a478bbeea50a942",
+        "protocol": "Securitize native fund-share register",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The July 2026 prospectus identifies this supported public blockchain as a native fund-share issuance rail backed by one official shareholder register. Current exact deployment and stock are reverified. No generic bridge or separately collateralized wrapper is inferred; native administrative controls are in mintAuthority.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "BlackRock July 31, 2026 OnChain share prospectus",
+            "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf"
+          },
+          {
+            "label": "BlackRock BRSRV fund reporting",
+            "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle"
+          },
+          {
+            "label": "Verified deployed token implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc4ecf0307ff0c45c0546e0debedbbd0e47ac3354"
+          },
+          {
+            "label": "Ethereum token deployment",
+            "url": "https://etherscan.io/address/0x3078bcf707e457d3af2f938a2a478bbeea50a942#code"
+          }
+        ]
+      },
+      {
+        "id": "tempo:0xe36e2e79beb1b7f618201eead6106a7d737695e3",
+        "destinationChain": "tempo",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe36e2e79beb1b7f618201eead6106a7d737695e3",
+        "protocol": "Securitize native fund-share register",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The July 2026 prospectus identifies this supported public blockchain as a native fund-share issuance rail backed by one official shareholder register. Current exact deployment and stock are reverified. No generic bridge or separately collateralized wrapper is inferred; native administrative controls are in mintAuthority.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 42323853,
+        "sources": [
+          {
+            "label": "BlackRock July 31, 2026 OnChain share prospectus",
+            "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf"
+          },
+          {
+            "label": "BlackRock BRSRV fund reporting",
+            "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle"
+          },
+          {
+            "label": "Verified native deployment",
+            "url": "https://explore.tempo.xyz/address/0xe36e2e79beb1b7f618201eead6106a7d737695e3#code"
+          }
+        ]
+      },
+      {
+        "id": "solana:9rX4yuAirQkm5JC26v3oSfGencsxwjB8kkmgf2dwWe9N",
+        "destinationChain": "solana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "9rX4yuAirQkm5JC26v3oSfGencsxwjB8kkmgf2dwWe9N",
+        "protocol": "Securitize native fund-share register",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The July 2026 prospectus identifies this supported public blockchain as a native fund-share issuance rail backed by one official shareholder register. Current exact deployment and stock are reverified. No generic bridge or separately collateralized wrapper is inferred; native administrative controls are in mintAuthority.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 452748384,
+        "sources": [
+          {
+            "label": "BlackRock July 31, 2026 OnChain share prospectus",
+            "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf"
+          },
+          {
+            "label": "BlackRock BRSRV fund reporting",
+            "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle"
+          },
+          {
+            "label": "Verified native deployment",
+            "url": "https://solscan.io/token/9rX4yuAirQkm5JC26v3oSfGencsxwjB8kkmgf2dwWe9N"
+          }
+        ]
+      }
+    ]
+  }
+}

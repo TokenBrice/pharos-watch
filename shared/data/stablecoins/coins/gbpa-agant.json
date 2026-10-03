@@ -1,0 +1,114 @@
+{
+  "id": "gbpa-agant",
+  "name": "Agant GBP",
+  "symbol": "GBPA",
+  "oneLiner": "GBPA is Agant's pound stablecoin backed by Griffin Bank cash and State Street money-market holdings, with direct redemption for approved businesses.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GBP",
+    "governance": "centralized"
+  },
+  "collateral": "GBP cash at Griffin Bank and GBP money-market fund holdings at State Street in designated trust accounts; the September 2026 report identifies both balances.",
+  "pegMechanism": "Approved UK business distribution customers mint and redeem at GBP 1 per GBPA through Agant Rails. Off-ramp tokens are burned and GBP is sent to a whitelisted bank account; retail holders access the issuer through distribution customers. Public numerical fees, minimums, capacity and bank-settlement guarantees are undisclosed.",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "The issuer identifies a fixed GBP redemption claim and cash/MMF reserve backing; the retrieved five-chain reserve-to-supply attestation corroborates an issuer-native fiat-cash instrument rather than a NAV share or crypto-collateralized loan.",
+    "sources": [
+      {
+        "label": "Agant GBPA token design",
+        "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/gbp-stablecoin-gbpa.md"
+      },
+      {
+        "label": "Nephos GBPA reserve attestation as of September 30, 2026",
+        "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true"
+      },
+      {
+        "label": "Agant business platform terms",
+        "url": "https://app.agant.io/terms-of-service"
+      }
+    ]
+  },
+  "llamaId": "399",
+  "detailProvider": "defillama",
+  "geckoId": "agant-gbp",
+  "proofOfReserves": {
+    "type": "attestation",
+    "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
+    "provider": "Nephos Accountants Limited; the report disclaims a formal assurance engagement despite its ISAE 3000 examination opening.",
+    "attestorTier": "niche",
+    "cadence": "undisclosed",
+    "attestorJurisdiction": "United Kingdom",
+    "latestReport": {
+      "periodEnd": "2026-09-30",
+      "assuranceMethod": "attestation",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "confidence": "manual-review",
+      "sources": [
+        {
+          "label": "Nephos GBPA reserve attestation as of September 30, 2026",
+          "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true"
+        }
+      ]
+    }
+  },
+  "links": [
+    {
+      "label": "Agant GBPA product page",
+      "url": "https://www.agant.io/gbpa"
+    },
+    {
+      "label": "Agant official mainnet deployment registry",
+      "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"
+    },
+    {
+      "label": "Agant business platform terms",
+      "url": "https://app.agant.io/terms-of-service"
+    },
+    {
+      "label": "Agant off-ramp Rails procedure",
+      "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/platform/off-ramp.md"
+    },
+    {
+      "label": "Nephos GBPA reserve attestation as of September 30, 2026",
+      "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United Kingdom"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+      "decimals": 6
+    },
+    {
+      "chain": "arc",
+      "address": "0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+      "decimals": 6
+    },
+    {
+      "chain": "tempo",
+      "address": "0x20c0000000000000000000000a6da882d075a4c3",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ",
+      "decimals": 6
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity"
+}

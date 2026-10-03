@@ -1,0 +1,315 @@
+{
+  "id": "gbpa-agant",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "sources": [
+      {
+        "label": "Verified GBPA Ethereum implementation and imported OFT source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0"
+      },
+      {
+        "label": "Ethereum GBPA token and state",
+        "url": "https://etherscan.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+      },
+      {
+        "label": "Base GBPA token and state",
+        "url": "https://basescan.org/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+      },
+      {
+        "label": "Arc GBPA token and state",
+        "url": "https://explorer.arc.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+      },
+      {
+        "label": "Solana GBPA Token-2022 mint",
+        "url": "https://explorer.solana.com/address/DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ"
+      }
+    ],
+    "evidence": "Verified AgantTokenUpgradeable source provides owner/assetProtection freeze and unfreeze controls and blocks transfers and approvals involving frozen accounts. Fresh Ethereum, Base and Arc reads at Ethereum block 26107703, Base 52095851, Arc 23952287 return 0xbecf04e2348d00885c62d97d9629c99e581fe00f as owner, pauser and assetProtection. Solana finalized slot 452748382 retains freeze and pause authority BRi183SZJLrCVAqFQ69Zi95UdrumSpazdeuM4nLKQz2X and permanent delegate AkRcEoab3ECQ4GoDgVb9jE9wVMVeSksR3TwGCmdNEtB8. Tempo policy-controller identity remains a separate coverage gap, not a mint-to-freeze inference."
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "All five authored deployments are issuer-native liabilities. Agant documents LayerZero OFT source-burn/destination-mint interoperability, distinct from fiat-originating native issuance. The EVM owner controls OFT peers, delegates, bridge pausing and proxy upgrades. Full active DVN/peer/limit configuration, Solana bridge program control and Tempo bridge administration are unpinned and receive no favorable quorum or limit assumptions.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Agant official mainnet deployment registry",
+        "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"
+      },
+      {
+        "label": "Agant GBPA token design",
+        "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/gbp-stablecoin-gbpa.md"
+      },
+      {
+        "label": "Verified GBPA Ethereum implementation and imported OFT source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0"
+      },
+      {
+        "label": "Ethereum GBPA token and state",
+        "url": "https://etherscan.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+      },
+      {
+        "label": "Base GBPA token and state",
+        "url": "https://basescan.org/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+      },
+      {
+        "label": "Arc GBPA token and state",
+        "url": "https://explorer.arc.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+      },
+      {
+        "label": "Solana GBPA Token-2022 mint",
+        "url": "https://explorer.solana.com/address/DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+        "protocol": "Agant native GBPA with LayerZero OFT interoperability",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer networks registry and September reserve/supply report bind this native deployment. Current symbol GBPA, decimals 6 and positive supply were independently read. Native liability identity does not establish exhaustive cross-chain peer/DVN/controller closure.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "Agant official mainnet deployment registry",
+            "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"
+          },
+          {
+            "label": "Nephos GBPA reserve attestation as of September 30, 2026",
+            "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true"
+          }
+        ]
+      },
+      {
+        "id": "base:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+        "destinationChain": "base",
+        "contractAddress": "0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+        "protocol": "Agant native GBPA with LayerZero OFT interoperability",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer networks registry and September reserve/supply report bind this native deployment. Current symbol GBPA, decimals 6 and positive supply were independently read. Native liability identity does not establish exhaustive cross-chain peer/DVN/controller closure.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 52095851,
+        "sources": [
+          {
+            "label": "Agant official mainnet deployment registry",
+            "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"
+          },
+          {
+            "label": "Nephos GBPA reserve attestation as of September 30, 2026",
+            "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true"
+          }
+        ]
+      },
+      {
+        "id": "arc:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+        "destinationChain": "arc",
+        "contractAddress": "0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+        "protocol": "Agant native GBPA with LayerZero OFT interoperability",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer networks registry and September reserve/supply report bind this native deployment. Current symbol GBPA, decimals 6 and positive supply were independently read. Native liability identity does not establish exhaustive cross-chain peer/DVN/controller closure.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 23952287,
+        "sources": [
+          {
+            "label": "Agant official mainnet deployment registry",
+            "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"
+          },
+          {
+            "label": "Nephos GBPA reserve attestation as of September 30, 2026",
+            "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true"
+          }
+        ]
+      },
+      {
+        "id": "tempo:0x20c0000000000000000000000a6da882d075a4c3",
+        "destinationChain": "tempo",
+        "contractAddress": "0x20c0000000000000000000000a6da882d075a4c3",
+        "protocol": "Agant native GBPA with LayerZero OFT interoperability",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer networks registry and September reserve/supply report bind this native deployment. Current symbol GBPA, decimals 6 and positive supply were independently read. Native liability identity does not establish exhaustive cross-chain peer/DVN/controller closure.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 42323712,
+        "sources": [
+          {
+            "label": "Agant official mainnet deployment registry",
+            "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"
+          },
+          {
+            "label": "Nephos GBPA reserve attestation as of September 30, 2026",
+            "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true"
+          }
+        ]
+      },
+      {
+        "id": "solana:DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ",
+        "destinationChain": "solana",
+        "contractAddress": "DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ",
+        "protocol": "Agant native GBPA with LayerZero OFT interoperability",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer networks registry and September reserve/supply report bind this native deployment. Current symbol GBPA, decimals 6 and positive supply were independently read. Native liability identity does not establish exhaustive cross-chain peer/DVN/controller closure.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 452748382,
+        "sources": [
+          {
+            "label": "Agant official mainnet deployment registry",
+            "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"
+          },
+          {
+            "label": "Nephos GBPA reserve attestation as of September 30, 2026",
+            "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "gbpa-evm-oft-owner",
+        "label": "GBPA EVM owner OFT bridge controls",
+        "routeRefs": [
+          "ethereum:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+          "base:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+          "arc:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config",
+          "pause",
+          "upgrade"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xbecf04e2348d00885c62d97d9629c99e581fe00f",
+        "authorityType": "eoa",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "eoa:0xbecf04e2348d00885c62d97d9629c99e581fe00f"
+        ],
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "Verified GBPA Ethereum implementation and imported OFT source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0"
+          },
+          {
+            "label": "Ethereum GBPA token and state",
+            "url": "https://etherscan.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+          },
+          {
+            "label": "Base GBPA token and state",
+            "url": "https://basescan.org/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+          },
+          {
+            "label": "Arc GBPA token and state",
+            "url": "https://explorer.arc.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+          }
+        ],
+        "routeChecks": {
+          "lockboxOrEscrow": "Verified OFT source burns on debit and mints on credit rather than locking in a separately identified escrow.",
+          "trustedPeerOrRemote": "OAppCore setPeer and setDelegate are owner-only; complete live peer mappings were not enumerated.",
+          "attestorQuorum": "Current token-specific required/optional DVNs and message-validation thresholds were not pinned.",
+          "rateLimits": "No complete current route cap/remaining-quota inventory was retrieved.",
+          "pausersAdminsUpgraders": "Current codeless token owner also owns ProxyAdmin; verified source exposes separate bridgePause/bridgeUnpause. Native mint-logic replacement is also authored in Mint Authority because that distinct capability reaches fiat-originated issuance."
+        },
+        "evidence": "At Ethereum block 26107703, Base 52095851, Arc 23952287, owner(), pauser() and ProxyAdmin.owner() identify the same EOA. Verified Ethereum/Base OFT/OApp code establishes owner configuration and source-debit/destination-credit semantics. Arc uses a different implementation and endpoint; no assumption of identical full bridge configuration is made."
+      },
+      {
+        "id": "gbpa-layerzero-message-validation",
+        "label": "GBPA LayerZero message validation and bridge credits",
+        "routeRefs": [
+          "ethereum:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+          "base:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+          "arc:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+          "tempo:0x20c0000000000000000000000a6da882d075a4c3",
+          "solana:DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "validator"
+        ],
+        "authorityType": "unknown",
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "protocol:layerzero"
+        ],
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "Agant GBPA token design",
+            "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/gbp-stablecoin-gbpa.md"
+          },
+          {
+            "label": "Agant official mainnet deployment registry",
+            "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"
+          },
+          {
+            "label": "Verified GBPA Ethereum implementation and imported OFT source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0"
+          }
+        ],
+        "routeChecks": {
+          "onchainAmountBounds": "OFT debit/credit implements supply-conserving transfers, not a bound on native fiat issuance.",
+          "attestorQuorum": "LayerZero is the documented validation domain; exact active token-specific DVN quorum and libraries remain unpinned.",
+          "trustedPeerOrRemote": "Complete five-deployment peer/adapter/program inventory is not closed.",
+          "rateLimits": "Current token-specific limits, controller identities and upgrade paths on Solana and Tempo remain unresolved."
+        },
+        "evidence": "Agant documents direct native LayerZero OFT interoperability without wrapped tokens. Verified EVM OFT source establishes bridge burn/mint; the exact active validation/controllers for all five lanes have not been independently closed. This unknown structured control preserves the capability and disclosure gap without inventing DVN threshold, Solana program identity or Tempo administrator."
+      }
+    ],
+    "scopedQuestions": [
+      {
+        "controlRef": "gbpa-layerzero-message-validation",
+        "question": "What are the full current DVN quorum, peer set, Solana OFT program/Store upgrade authorities, Tempo adapter administrators and route limits for each deployed lane?",
+        "reviewedAt": "2026-10-02",
+        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "sources": [
+          {
+            "label": "Agant official mainnet deployment registry",
+            "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"
+          },
+          {
+            "label": "Agant GBPA token design",
+            "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/gbp-stablecoin-gbpa.md"
+          }
+        ]
+      }
+    ]
+  }
+}

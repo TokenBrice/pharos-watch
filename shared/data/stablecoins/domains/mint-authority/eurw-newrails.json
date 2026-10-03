@@ -1,0 +1,170 @@
+{
+  "id": "eurw-newrails",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "The Monad EURW UUPS token separates minters from mint-allowance approvers. A current ADMIN_ROLE EOA can manage issuance roles; an UPGRADER_ROLE can replace logic immediately without a code-enforced multisig or waiting window. Current minter, approver and upgrader membership and outstanding quotas remain incompletely enumerated.",
+    "upgradeability": {
+      "model": "uups",
+      "deploymentRefs": [
+        "monad:0x1111b3ded9f1fe1801ad4ebef8e2788183a24111"
+      ],
+      "proxyAddresses": [
+        "0x1111b3ded9f1fe1801ad4ebef8e2788183a24111"
+      ],
+      "implementationAddresses": [
+        "0x52778511bec5ff87f9b52c7a2434631edcc157f4"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Newrails EURW UPGRADER_ROLE (current roster undisclosed)",
+      "observedAt": "2026-10-02",
+      "observedBlock": 110016408,
+      "sources": [
+        {
+          "label": "Hacken Newrails Monad code security audit dated March 12, 2026",
+          "url": "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf"
+        },
+        {
+          "label": "Monad mainnet JSON-RPC",
+          "url": "https://rpc.monad.xyz"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Newrails EURW ADMIN_ROLE EOA",
+        "chain": "monad",
+        "address": "0x1c4f1a908ae8c15c3fef774775b8e897c1fc9ca6",
+        "deploymentRefs": [
+          "monad:0x1111b3ded9f1fe1801ad4ebef8e2788183a24111"
+        ],
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 110016408,
+        "sources": [
+          {
+            "label": "Monad mainnet JSON-RPC",
+            "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "Hacken Newrails Monad code security audit dated March 12, 2026",
+            "url": "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf"
+          }
+        ],
+        "evidence": "At Monad block 110016408, hasRole(ADMIN_ROLE,address)=true and eth_getCode=0x. Tested MINTER_ROLE, MINTER_APPROVER_ROLE, UPGRADER_ROLE and BLACKLISTER_ROLE for this address are false. The audited ADMIN_ROLE grants and revokes roles, enabling new minters and quota approvers without being a direct minter itself."
+      },
+      {
+        "label": "Newrails EURW minter and quota-approver inventory",
+        "deploymentRefs": [
+          "monad:0x1111b3ded9f1fe1801ad4ebef8e2788183a24111"
+        ],
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "Hacken Newrails Monad code security audit dated March 12, 2026",
+            "url": "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf"
+          }
+        ],
+        "evidence": "Hacken identifies MINTER_ROLE minting that consumes an allowance and MINTER_APPROVER_ROLE that overwrites the allowance. Current controller identities, outstanding quotas and complete role membership were not enumerated. The accepted allowance-update frontrunning finding means a quota update must not be treated as a proved immutable economic issuance ceiling."
+      },
+      {
+        "label": "Newrails EURW UPGRADER_ROLE (current roster undisclosed)",
+        "deploymentRefs": [
+          "monad:0x1111b3ded9f1fe1801ad4ebef8e2788183a24111"
+        ],
+        "role": "proxy-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "observedAt": "2026-10-02",
+        "observedBlock": 110016408,
+        "sources": [
+          {
+            "label": "Hacken Newrails Monad code security audit dated March 12, 2026",
+            "url": "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf"
+          },
+          {
+            "label": "Monad mainnet JSON-RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "The current EIP-1967 implementation is 0x52778511bec5ff87f9b52c7a2434631edcc157f4. Hacken identifies immediate UUPS upgrade authority without mandatory multisig or waiting period. Current UPGRADER_ROLE membership remains undisclosed; the separately verified ADMIN_ROLE address tested false for this role."
+      }
+    ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "unknown",
+    "supervision": "prudential",
+    "review": {
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Hacken Newrails Monad code security audit dated March 12, 2026",
+          "url": "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf"
+        },
+        {
+          "label": "Newrails EURW MiCA whitepaper notified May 26, 2026",
+          "url": "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml"
+        },
+        {
+          "label": "Bank of Lithuania Newrails EMI and EMT issuer register",
+          "url": "https://www.lb.lt/en/sfi-financial-market-participants/newrails-uab"
+        },
+        {
+          "label": "Monad mainnet JSON-RPC",
+          "url": "https://rpc.monad.xyz"
+        }
+      ],
+      "evidence": "Fresh Monad block 110016408 binds EURW, six decimals, 692,189.0936 issued units, current implementation and the ADMIN_ROLE EOA. The Bank of Lithuania register identifies Newrails UAB as a licensed electronic money institution and electronic money token issuer, and the exact-token MiCA whitepaper subjects EURW reserve safeguarding/redemption to that regime. This supports prudential issuer supervision, not independent token reserve assurance. Code audit findings establish centralized, role-controlled minting and immediate upgrades; full current controller/quota closure remains a bounded gap.",
+      "unresolvedQuestions": [
+        "What are the full current MINTER_ROLE, MINTER_APPROVER_ROLE and UPGRADER_ROLE rosters, quotas and key-custody arrangements?",
+        "Where is the current exact-token financial reserve-to-liability reconciliation?"
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "Newrails EURW minter and quota-approver inventory",
+          "question": "Which current Monad addresses hold MINTER_ROLE and MINTER_APPROVER_ROLE, and what outstanding mint allowances and replacement controls apply?",
+          "reviewedAt": "2026-10-02",
+          "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+          "sources": [
+            {
+              "label": "Hacken Newrails Monad code security audit dated March 12, 2026",
+              "url": "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf"
+            },
+            {
+              "label": "Monad mainnet JSON-RPC",
+              "url": "https://rpc.monad.xyz"
+            }
+          ]
+        },
+        {
+          "controlRef": "Newrails EURW UPGRADER_ROLE (current roster undisclosed)",
+          "question": "Which current Monad addresses hold UPGRADER_ROLE and what key-custody or operational replacement process controls immediate native mint-logic changes?",
+          "reviewedAt": "2026-10-02",
+          "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+          "sources": [
+            {
+              "label": "Hacken Newrails Monad code security audit dated March 12, 2026",
+              "url": "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf"
+            },
+            {
+              "label": "Monad mainnet JSON-RPC",
+              "url": "https://rpc.monad.xyz"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -86,9 +86,11 @@ interface OnChainRateConfig {
 ```
 
 The generic-vault inventory, exact contracts, chain assignments, selectors, and lifecycle state are owned by
-`ON_CHAIN_RATE_CONFIGS` and its typed rate-source registry. Do not copy that changing roster here. Generic entries use
-the configured `convertToAssets(uint256)` reader; protocol-specific or quarantined assets use the dedicated paths and
-lifecycle records described below.
+`ON_CHAIN_RATE_CONFIGS` and its typed rate-source registry. Do not copy that changing roster here. ERC-4626 entries
+use `convertToAssets(uint256)` with one whole share in the vault's share decimals, then decode the result in underlying-asset
+decimals. Axis sUSDx instead reads `exchangeRate()`; its deployment accepts the generic reader's trailing zero word.
+Protocol-specific or quarantined assets use the dedicated paths and lifecycle records described below. Optional
+`totalAssets` reads are USD venue TVL only for USD-denominated underlyings; EURCV assets are not reported as USD TVL.
 
 `scrvusd-curve` is intentionally quarantined from this generic Tier 1 reader because its trailing 7-day `convertToAssets(1e18)` delta understated Curve's current scrvUSD savings APY. It uses the scrvUSD special-case estimator below instead. `ustb-superstate` is quarantined because the tracked USTB token is not an ERC-4626 vault; restoring deterministic USTB coverage requires a dedicated Superstate NAV-oracle adapter, not another generic `convertToAssets` attempt.
 
@@ -215,15 +217,17 @@ Ethereum Frankencoin Savings is an exact external `lending-opportunity` for ZCHF
 | Neutrl USD (346)   | sNUSD   | Neutrl staked USD              |
 | Avalon USDa (220)  | sUSDa   | Avalon staked USDa             |
 | infiniFi USD (298) | siUSD   | infiniFi savings               |
-| Falcon USD (246)   | sUSDf   | Falcon Finance savings         |
 | Unitas (283)       | sUSDu   | Unitas savings                 |
 | Yuzu USD (344)     | syzUSD  | Yuzu savings                   |
 | fxUSD (168)        | fxSAVE  | Concentrator savings           |
 | Flying Tulip ftUSD | sftUSD  | Flying Tulip staking           |
 | Hermetica USDh     | sUSDh   | Hermetica staking wrapper      |
-| Saturn USDat       | sUSDat  | Saturn staking vault           |
 
 `YIELD_VARIANT_MAP` is only used when the yield-bearing wrapper is not already modeled as its own tracked asset. As of May 13, 2026, `sUSDe`, `sUSDS`, `sDAI`, `sfrxUSD`, `scrvUSD`, `sUSDai`, `stcUSD`, `sAID`, `msY`, K3 `sBOLD`, and `savUSD` are tracked directly, so their base assets no longer resolve through those wrapper paths. Added 2026-05-13: gtUSDC (Gauntlet/Morpho), spUSDC and spUSDT (Spark Savings), sGHO (Aave SM), yBOLD, and yvUSDC (Yearn) now own their own native pool sources. Added 2026-05-22: base `gho-aave` no longer inherits the tracked sGHO source, and base `dola-inverse-finance` no longer publishes the untracked sDOLA wrapper source. Removed 2026-08-31: base `bold-liquity` no longer carries a yBOLD variant entry or a curated DeFiLlama pool pin, because both resolved to the tracked wrapper's own Yearn pool and republished it as BOLD's headline yield. AA_FalconXUSDC remains NAV/price-derived until a usable single-exposure nonzero APY source is available.
+
+Added 2026-10-03: tracked `susdf-falcon` owns the Falcon savings rate and native DeFiLlama pool; base USDf no longer resolves through an sUSDf variant. Gnosis `sdai-gnosis` owns the Gnosis savings pool, while Ethereum `sdai-sky` retains its separate on-chain rate reader.
+
+Saturn `susdat-saturn` also owns its exact ERC-4626 holder-rate source as a tracked strategy-vault child. Its USDat-denominated NAV includes preferred-credit dividends and market-value changes; it does not guarantee a cash savings return. The obsolete `usdat-saturn` wrapper mapping is removed.
 
 APY, base/reward split, pool TVL, and pool UUID are all taken directly from the DL response.
 

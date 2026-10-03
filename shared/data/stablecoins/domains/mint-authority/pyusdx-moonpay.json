@@ -1,0 +1,325 @@
+{
+  "id": "pyusdx-moonpay",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciliation-unknown",
+    "confidence": "manual-review",
+    "summary": "MoonPay issuance uses a mutable IssuerGateway, while the earner manager can mint rewards directly to any account. The same no-code issuer address controls token roles, rewards and ProxyAdmin on all three chains. A 300-second gateway delay does not constrain the reward or upgrade paths.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x693cc3305342b02ac1549b509a704ff944cd9499",
+        "deploymentRefs": [
+          "ethereum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "label": "PYUSDx ethereum IssuerGateway",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "MoonPay PYUSDx holder and counterparty terms",
+            "url": "https://www.moonpay.com/legal/pyusdx_terms"
+          },
+          {
+            "label": "M0 exact PYUSDx mainnet deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 PYUSDx compliance controls",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "M0 PYUSDx token and reward issuance",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
+          }
+        ],
+        "evidence": "Official deployment roster and token security specification identify IssuerGateway as ISSUER_ROLE holder. The gateway mint delay was 300 seconds at block 26107703. This delays the gateway queue only; direct earner-manager reward minting and admin-granted issuer roles are not bounded by it.",
+        "capDescription": "Queue delay is mutable and is not a reserve-enforcing economic cap.",
+        "canRaiseCap": "unknown"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x314160525f5ea6677d3908112ff9bd885f3bb78e",
+        "deploymentRefs": [
+          "ethereum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "label": "PYUSDx ethereum issuer admin and earner manager",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "entity:moonpay-pyusdx-issuer",
+          "address:0x314160525f5ea6677d3908112ff9bd885f3bb78e"
+        ],
+        "bypassSurfaces": [
+          "distributeReward() mints directly to any account outside the IssuerGateway queue.",
+          "DEFAULT_ADMIN_ROLE can replace the earner manager and grant issuer roles.",
+          "The same no-code address owns token ProxyAdmin and can replace native mint logic."
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "MoonPay PYUSDx holder and counterparty terms",
+            "url": "https://www.moonpay.com/legal/pyusdx_terms"
+          },
+          {
+            "label": "M0 exact PYUSDx mainnet deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 PYUSDx compliance controls",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "M0 PYUSDx token and reward issuance",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
+          },
+          {
+            "label": "Pinned token and ProxyAdmin explorer",
+            "url": "https://etherscan.io/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+          }
+        ],
+        "evidence": "At block 26107703, DEFAULT_ADMIN_ROLE(owner)=true, earnerManager()=0x314160525f5ea6677d3908112ff9bd885f3bb78e, ProxyAdmin.owner()=0x314160525f5ea6677d3908112ff9bd885f3bb78e, eth_getCode(owner)=0x. Security and token/yield specifications document role granting and direct distributeReward() issuance. No MPC, HSM or multisignature safeguards are established by a no-code address."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x693cc3305342b02ac1549b509a704ff944cd9499",
+        "deploymentRefs": [
+          "arbitrum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "label": "PYUSDx arbitrum IssuerGateway",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 511123860,
+        "sources": [
+          {
+            "label": "MoonPay PYUSDx holder and counterparty terms",
+            "url": "https://www.moonpay.com/legal/pyusdx_terms"
+          },
+          {
+            "label": "M0 exact PYUSDx mainnet deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 PYUSDx compliance controls",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "M0 PYUSDx token and reward issuance",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
+          }
+        ],
+        "evidence": "Official deployment roster and token security specification identify IssuerGateway as ISSUER_ROLE holder. The gateway mint delay was 300 seconds at block 511123860. This delays the gateway queue only; direct earner-manager reward minting and admin-granted issuer roles are not bounded by it.",
+        "capDescription": "Queue delay is mutable and is not a reserve-enforcing economic cap.",
+        "canRaiseCap": "unknown"
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x314160525f5ea6677d3908112ff9bd885f3bb78e",
+        "deploymentRefs": [
+          "arbitrum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "label": "PYUSDx arbitrum issuer admin and earner manager",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "entity:moonpay-pyusdx-issuer",
+          "address:0x314160525f5ea6677d3908112ff9bd885f3bb78e"
+        ],
+        "bypassSurfaces": [
+          "distributeReward() mints directly to any account outside the IssuerGateway queue.",
+          "DEFAULT_ADMIN_ROLE can replace the earner manager and grant issuer roles.",
+          "The same no-code address owns token ProxyAdmin and can replace native mint logic."
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 511123860,
+        "sources": [
+          {
+            "label": "MoonPay PYUSDx holder and counterparty terms",
+            "url": "https://www.moonpay.com/legal/pyusdx_terms"
+          },
+          {
+            "label": "M0 exact PYUSDx mainnet deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 PYUSDx compliance controls",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "M0 PYUSDx token and reward issuance",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
+          },
+          {
+            "label": "Pinned token and ProxyAdmin explorer",
+            "url": "https://arbiscan.io/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+          }
+        ],
+        "evidence": "At block 511123860, DEFAULT_ADMIN_ROLE(owner)=true, earnerManager()=0x314160525f5ea6677d3908112ff9bd885f3bb78e, ProxyAdmin.owner()=0x314160525f5ea6677d3908112ff9bd885f3bb78e, eth_getCode(owner)=0x. Security and token/yield specifications document role granting and direct distributeReward() issuance. No MPC, HSM or multisignature safeguards are established by a no-code address."
+      },
+      {
+        "chain": "monad",
+        "address": "0x693cc3305342b02ac1549b509a704ff944cd9499",
+        "deploymentRefs": [
+          "monad:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "label": "PYUSDx monad IssuerGateway",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 110016384,
+        "sources": [
+          {
+            "label": "MoonPay PYUSDx holder and counterparty terms",
+            "url": "https://www.moonpay.com/legal/pyusdx_terms"
+          },
+          {
+            "label": "M0 exact PYUSDx mainnet deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 PYUSDx compliance controls",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "M0 PYUSDx token and reward issuance",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
+          }
+        ],
+        "evidence": "Official deployment roster and token security specification identify IssuerGateway as ISSUER_ROLE holder. The gateway mint delay was 300 seconds at block 110016384. This delays the gateway queue only; direct earner-manager reward minting and admin-granted issuer roles are not bounded by it.",
+        "capDescription": "Queue delay is mutable and is not a reserve-enforcing economic cap.",
+        "canRaiseCap": "unknown"
+      },
+      {
+        "chain": "monad",
+        "address": "0x314160525f5ea6677d3908112ff9bd885f3bb78e",
+        "deploymentRefs": [
+          "monad:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "label": "PYUSDx monad issuer admin and earner manager",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "entity:moonpay-pyusdx-issuer",
+          "address:0x314160525f5ea6677d3908112ff9bd885f3bb78e"
+        ],
+        "bypassSurfaces": [
+          "distributeReward() mints directly to any account outside the IssuerGateway queue.",
+          "DEFAULT_ADMIN_ROLE can replace the earner manager and grant issuer roles.",
+          "The same no-code address owns token ProxyAdmin and can replace native mint logic."
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 110016384,
+        "sources": [
+          {
+            "label": "MoonPay PYUSDx holder and counterparty terms",
+            "url": "https://www.moonpay.com/legal/pyusdx_terms"
+          },
+          {
+            "label": "M0 exact PYUSDx mainnet deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 PYUSDx compliance controls",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "M0 PYUSDx token and reward issuance",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
+          },
+          {
+            "label": "Pinned token and ProxyAdmin explorer",
+            "url": "https://monadscan.com/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+          }
+        ],
+        "evidence": "At block 110016384, DEFAULT_ADMIN_ROLE(owner)=true, earnerManager()=0x314160525f5ea6677d3908112ff9bd885f3bb78e, ProxyAdmin.owner()=0x314160525f5ea6677d3908112ff9bd885f3bb78e, eth_getCode(owner)=0x. Security and token/yield specifications document role granting and direct distributeReward() issuance. No MPC, HSM or multisignature safeguards are established by a no-code address."
+      }
+    ],
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+      ],
+      "proxyAddresses": [
+        "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+      ],
+      "implementationAddresses": [
+        "0x0568d0a74145fd557b3541897bc6878f5c6e9c8c"
+      ],
+      "adminAddresses": [
+        "0xb8a874137df3d4b0f19490eb06cfbe6b6d35e581"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "PYUSDx ethereum issuer admin and earner manager",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107703,
+      "sources": [
+        {
+          "label": "MoonPay PYUSDx holder and counterparty terms",
+          "url": "https://www.moonpay.com/legal/pyusdx_terms"
+        },
+        {
+          "label": "M0 exact PYUSDx mainnet deployments",
+          "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+        },
+        {
+          "label": "M0 PYUSDx compliance controls",
+          "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+        },
+        {
+          "label": "M0 PYUSDx token and reward issuance",
+          "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
+        }
+      ]
+    },
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "review": {
+      "sources": [
+        {
+          "label": "MoonPay PYUSDx holder and counterparty terms",
+          "url": "https://www.moonpay.com/legal/pyusdx_terms"
+        },
+        {
+          "label": "M0 exact PYUSDx mainnet deployments",
+          "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+        },
+        {
+          "label": "M0 PYUSDx compliance controls",
+          "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+        },
+        {
+          "label": "M0 PYUSDx token and reward issuance",
+          "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
+        }
+      ],
+      "evidence": "Pinned Ethereum, Arbitrum and Monad reads reproduced the issuer DEFAULT_ADMIN_ROLE, earner manager and ProxyAdmin owner at the same no-code address. Token implementations resolve respectively to 0x0568d0a74145fd557b3541897bc6878f5c6e9c8c, 0x8dfb7c8ce5e67ace965520b134b4aca8fd71c5e0 and 0x411d482be645a807823bcc5f4e762d9c24c6966a. Gateway delay is 300 seconds on each chain, but distributeReward() is an additional direct native supply path. The structured upgradeability snapshot is Ethereum-scoped; per-chain issuer controls record all three local upgrade powers. No token-specific independent reserve reconciliation or issuer supervision was established.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "Issuer key custody and signer safeguards are undisclosed.",
+        "Token-specific financial reserve reconciliation and supervision are unresolved."
+      ]
+    }
+  }
+}

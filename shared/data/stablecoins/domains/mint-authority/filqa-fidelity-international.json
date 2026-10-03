@@ -1,0 +1,114 @@
+{
+  "id": "filqa-fidelity-international",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "Native fund issuance is privileged and administrator-controlled; current role-member independence and complete control closure are not publicly established.",
+    "controls": [
+      {
+        "label": "FILQ-A permission-manager authority",
+        "chain": "ethereum",
+        "address": "0x7427f3e0e32eb1ee19516aa5c6abc99267a3ec89",
+        "deploymentRefs": [
+          "ethereum:0x54a4fc78431f9201824643e99bec891bb7462a1d"
+        ],
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "Fidelity September 14, 2026 fund prospectus",
+            "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+          },
+          {
+            "label": "Retrieved Fidelity prospectus text",
+            "url": "https://r.jina.ai/https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+          },
+          {
+            "label": "Verified deployed token implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7030fe438be6ed196b8886616bbf5a245c267339"
+          },
+          {
+            "label": "Ethereum token deployment",
+            "url": "https://etherscan.io/address/0x54a4fc78431f9201824643e99bec891bb7462a1d#code"
+          }
+        ],
+        "evidence": "At Ethereum block 26107703 getPermissionManagerAddress returned this address and the implementation remained 0x7030fe438be6ed196b8886616bbf5a245c267339. Verified mint/burn require requiresAuth, and upgrade authorization requires this permission manager. Complete authorization roots, cap and deployed upgrade delay are unknown."
+      }
+    ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "review": {
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Fidelity September 14, 2026 fund prospectus",
+          "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+        },
+        {
+          "label": "Retrieved Fidelity prospectus text",
+          "url": "https://r.jina.ai/https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+        },
+        {
+          "label": "Verified deployed token implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7030fe438be6ed196b8886616bbf5a245c267339"
+        },
+        {
+          "label": "Ethereum token deployment",
+          "url": "https://etherscan.io/address/0x54a4fc78431f9201824643e99bec891bb7462a1d#code"
+        }
+      ],
+      "evidence": "Identity and current stock reverified at Ethereum block 26107703 (2026-10-02T22:44:06.965406+00:00). Verified deployed code establishes privileged native mint/control capabilities, but no complete cap, reserve reconciliation, quorum or noninterference proof is asserted. Accumulating USD money-market share priced at daily NAV; normal valuation is at 21:00 UK time, with two valuation points only during a declared stressed market environment. On-chain investors exit by redemption through the transfer agent or Token Distributor: transfers of tokens are not accepted or recognized in the register. Usual market hours are 01:00 to 21:00 London on eligible weekdays; off-hours facilities depend on liquidity, and gates or suspension may apply.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "unresolvedQuestions": [
+        "Permission-manager minter, admin and upgrader member census",
+        "Actual deployed UUPS upgrade delay and bypass paths",
+        "Current independent token-to-fund liability reconciliation"
+      ]
+    },
+    "upgradeability": {
+      "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x54a4fc78431f9201824643e99bec891bb7462a1d"
+      ],
+      "proxyAddresses": [
+        "0x54a4fc78431f9201824643e99bec891bb7462a1d"
+      ],
+      "implementationAddresses": [
+        "0x7030fe438be6ed196b8886616bbf5a245c267339"
+      ],
+      "adminAddresses": [
+        "0x7427f3e0e32eb1ee19516aa5c6abc99267a3ec89"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "FILQ-A permission-manager authority",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107703,
+      "sources": [
+        {
+          "label": "Fidelity September 14, 2026 fund prospectus",
+          "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+        },
+        {
+          "label": "Retrieved Fidelity prospectus text",
+          "url": "https://r.jina.ai/https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+        },
+        {
+          "label": "Verified deployed token implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7030fe438be6ed196b8886616bbf5a245c267339"
+        },
+        {
+          "label": "Ethereum token deployment",
+          "url": "https://etherscan.io/address/0x54a4fc78431f9201824643e99bec891bb7462a1d#code"
+        }
+      ]
+    }
+  }
+}

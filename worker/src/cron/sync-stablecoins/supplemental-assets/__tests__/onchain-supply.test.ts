@@ -607,3 +607,58 @@ describe("eEARN complete native aggregate", () => {
     } else expect(result).toBeNull();
   });
 });
+
+describe("discovery native supply aggregates", () => {
+  const cases = [
+    {
+      id: "uscc-superstate",
+      contracts: [
+        { chain: "ethereum", address: "0x14d60e7fdc0d71d8611742720e4c50e7a974020c", decimals: 6 },
+        { chain: "plume", address: "0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf", decimals: 6 },
+        { chain: "solana", address: "BTRR3sj1Bn2ZjuemgbeQ6SCtf84iXS81CS7UDTSxUCaK", decimals: 6 },
+      ],
+      supplies: [9_102_522_978_447n, 1_441_528_020_930n, 708_371_216_894n],
+      units: 11_252_422.216271,
+    },
+    {
+      id: "pyusdx-moonpay",
+      contracts: ["ethereum", "arbitrum", "monad"].map((chain) => ({
+        chain, address: "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d", decimals: 6,
+      })),
+      supplies: [91_882_981_224_535n, 443_583_150_573n, 1_000_000n],
+      units: 92_326_565.375108,
+    },
+  ];
+
+  beforeEach(() => {
+    probeTrackedTokenSupplyMock.mockReset();
+    fetchErc20TotalSupplyMock.mockReset();
+    fetchSolanaTokenSupplyMock.mockReset();
+  });
+
+  function installReads(contracts: NonNullable<StablecoinMeta["contracts"]>, supplies: (bigint | null)[]): void {
+    const read = (chain: string) => supplies[contracts.findIndex((contract) => contract.chain === chain)] ?? null;
+    probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) => read(input.chain));
+    fetchErc20TotalSupplyMock.mockImplementation(async (input) => read(input.chain));
+    fetchSolanaTokenSupplyMock.mockImplementation(async () => read("solana"));
+  }
+
+  it.each(cases)("values the complete $id native stock without canonical reallocation", async ({ id, contracts, supplies, units }) => {
+    installReads(contracts, supplies);
+    const result = await fetchCuratedAggregateOnChainMcap(makeMeta({ id, name: id, symbol: id, contracts }), 1.25);
+    expect(result?.mcap).toBeCloseTo(units * 1.25, 6);
+    for (const [index, contract] of contracts.entries()) {
+      const chain = Object.values(result?.chainCirculating ?? {}).find((row) => row.chainId === contract.chain);
+      expect(chain?.current).toBeCloseTo(Number(supplies[index]) / 10 ** contract.decimals! * 1.25, 6);
+    }
+  });
+
+  it.each(cases)("rejects $id if any native leg is unreadable", async ({ id, contracts, supplies }) => {
+    for (const missingIndex of supplies.keys()) {
+      installReads(contracts, supplies.map((supply, index) => index === missingIndex ? null : supply));
+      await expect(fetchCuratedAggregateOnChainMcap(
+        makeMeta({ id, name: id, symbol: id, contracts }), 1.25,
+      )).resolves.toBeNull();
+    }
+  });
+});

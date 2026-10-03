@@ -1,0 +1,29 @@
+{
+  "id": "usdsm-stable-mint",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "MFSA",
+    "authorizedEntity": "Stable mint Ltd",
+    "references": [
+      { "label": "ESMA EMT issuer register, exact Stable mint Ltd LEI and USD whitepaper row", "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv" },
+      { "label": "USDSM MiCA whitepaper", "url": "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html" }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": { "summary": "USDSM is a transferable USD-referenced electronic money token with issuer par redemption; it is not a bank deposit or fund share." },
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Stable mint Ltd",
+    "issuerDomicile": "Malta",
+    "licensingRegulator": "MFSA",
+    "foreignExceptionStatus": "unknown",
+    "redemptionPolicyPresent": true,
+    "notes": "Retrieved ESMA EMT register on 2026-10-02 names Stable mint Ltd, LEI 984500A64C0EA64BC554, Electronic money institution, MFSA/MT, authorization-notification date 05/08/2024 with no end date and the exact USD whitepaper. That verifies the EU issuer mapping but establishes no U.S. GENIUS approval or foreign registration. U.S. authorization posture remains unresolved; no no-public-authorization finding or U.S. lawful-distribution conclusion is asserted. Itemized reserves and current signed financial assurance were not retrieved.",
+    "references": [{ "label": "Stable Mint issuance and redemption terms", "url": "https://stablemint.io/legal/terms-conditions/", "sourceKind": "issuer-disclosure", "sourceDate": "2026-08-14", "accessedAt": "2026-10-02" }],
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

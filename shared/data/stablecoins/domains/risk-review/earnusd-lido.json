@@ -1,0 +1,83 @@
+{
+  "id": "earnusd-lido",
+  "blacklistabilityReview": {
+    "evidence": "The exact earnUSD implementation has account-level isBlacklisted checks and role-gated setAccountInfo, plus configurable mint/burn/transfer pause and whitelist flags. At block 26107703, current flags were zero; absence of an active pause does not remove configurable holder restrictions. The implementation is upgradeable. Because the full current role-grant/execution census is not closed, direct holder blacklisting is recorded as possible, not an observed historical freeze or an inference from the USDC parent.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02",
+    "sources": [
+      {
+        "label": "Lido ShareManager holder controls",
+        "url": "https://docs.lido.fi/earn/architecture/managers/sharemanager/"
+      },
+      {
+        "label": "Verified deployed contract 0x000000000c79d2b5cd58ae545afc83030233d7b6",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x000000000c79d2b5cd58ae545afc83030233d7b6"
+      },
+      {
+        "label": "Lido earnUSD deployment and actor registry",
+        "url": "https://docs.lido.fi/earn/deployment-contracts"
+      },
+      {
+        "label": "Ethereum RPC observation at block 26107703",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      }
+    ],
+    "reviewedStatus": "possible"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "earnUSD queue and share valuation uses the deployed Lido internal Oracle reporting model: trusted roles submit prices, accept suspicious reports and alter validation intervals. The actor registry names an Oracle Updater Safe, observed 3-of-8, but no independent external-feed or global protective-delay claim is made.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "rationale": "Review covers the exact earnUSD Oracle 0x827044735c9708a2cf850e7ea37eba43bc786028 and holder-share conversion. A complete position/collateral oracle branch census is not established.",
+      "sources": [
+        {
+          "label": "Lido internal Oracle reporting and privileged roles",
+          "url": "https://docs.lido.fi/earn/architecture/oracle"
+        },
+        {
+          "label": "Lido earnUSD deployment and actor registry",
+          "url": "https://docs.lido.fi/earn/deployment-contracts"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Lido internal Oracle reporting and privileged roles",
+        "url": "https://docs.lido.fi/earn/architecture/oracle"
+      },
+      {
+        "label": "Lido earnUSD deployment and actor registry",
+        "url": "https://docs.lido.fi/earn/deployment-contracts"
+      },
+      {
+        "label": "Ethereum RPC observation at block 26107703",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "The exact earnUSD ShareManager deployment is tracked only on Ethereum. The current Lido Earn deployment registry identifies its vault, queues and two subvaults but no holder-token bridge representation is authored.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Lido earnUSD deployment and actor registry",
+        "url": "https://docs.lido.fi/earn/deployment-contracts"
+      },
+      {
+        "label": "Lido earnUSD holder deposits and withdrawals",
+        "url": "https://docs.lido.fi/earn/"
+      }
+    ]
+  }
+}

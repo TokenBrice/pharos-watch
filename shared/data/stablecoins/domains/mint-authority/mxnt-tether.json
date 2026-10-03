@@ -1,0 +1,104 @@
+{
+  "id": "mxnt-tether",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "manual-review",
+    "summary": "Native issuance remains under issuer authority. MXNT Ethereum is controlled by a legacy 3-of-6 wallet that also owns ProxyAdmin; signer independence is unverified.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828",
+        "deploymentRefs": [
+          "ethereum:0xed03ed872159e199065401b6d0d487d78d9464aa"
+        ],
+        "label": "MXNT Ethereum token owner and ProxyAdmin owner",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107705,
+        "sources": [
+          {
+            "label": "Verified token implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"
+          },
+          {
+            "label": "Verified owner MultiSigWallet",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828"
+          }
+        ],
+        "evidence": "At Ethereum block 26107705, token owner() is this legacy MultiSigWallet, required()=3, getOwners() returns six addresses, and ProxyAdmin owner() is the same wallet. Verified token source makes mint onlyOwner. Three signatures are a cryptographic threshold, not proof of operational independence or key custody."
+      }
+    ],
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xed03ed872159e199065401b6d0d487d78d9464aa"
+      ],
+      "proxyAddresses": [
+        "0xed03ed872159e199065401b6d0d487d78d9464aa"
+      ],
+      "implementationAddresses": [
+        "0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"
+      ],
+      "adminAddresses": [
+        "0x856fcc085290ac1e40392442211e6a333afb873e"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "MXNT Ethereum token owner and ProxyAdmin owner",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107705,
+      "sources": [
+        {
+          "label": "Verified token implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"
+        },
+        {
+          "label": "Verified owner MultiSigWallet",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828"
+        }
+      ]
+    },
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "review": {
+      "sources": [
+        {
+          "label": "Issuer issuance and holder terms",
+          "url": "https://tether.to/en/legal/"
+        },
+        {
+          "label": "Retrieved independent reserve report",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"
+        },
+        {
+          "label": "Verified token implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"
+        },
+        {
+          "label": "Verified owner MultiSigWallet",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828"
+        }
+      ],
+      "evidence": "The named controls create native issuer liabilities without an independently enforced collateral cap. Quarterly BDO reports reconcile shared fiat-token reserve assets against aggregate issuer fiat-token liabilities; legal terms place MXNT in this common reserve book. This is periodic aggregate reconciliation, not dedicated MXNT allocation or local signing-independence proof.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "BDO report is aggregate fiat-token scope, not a dedicated MXNT asset-liability/custody/segregation packet.",
+        "Current named MXNT custodian allocation, enforceable bankruptcy priority and independent reserve mix remain unavailable.",
+        "Issuer redemption has USD 100k-equivalent minimum and fee floor; SLA/capacity not guaranteed, no proved small-holder DEX backstop.",
+        "3-of-6 is cryptographic threshold, not independence/HSM or timelock proof.",
+        "Official zero-supply Tron decimals=0; full local issuance/upgrader/freeze review unresolved and remains inactive.",
+        "Do not author nonresolving geckoId mexican-peso-tether (detail 404, stale price/cap zero); its historical chart is not a current trustworthy peg record.",
+        "Confirm exact CNAD issuer authorization and prudential coverage before claiming supervision credit."
+      ]
+    }
+  }
+}

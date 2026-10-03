@@ -1,0 +1,247 @@
+{
+  "id": "gtusdtp-gauntlet",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "probable",
+    "summary": "Gauntlet USDT Prime V2 uses deposit-backed VaultV2 share issuance with configured fee-share accrual; parent USDT issuance remains inherited, while local admins control strategy parameters.",
+    "inheritedFrom": "usdt-tether",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xf3557ad5e984211ac8a0874a670344f2c3376471",
+        "deploymentRefs": [
+          "ethereum:0xf3557ad5e984211ac8a0874a670344f2c3376471"
+        ],
+        "label": "Gauntlet USDT Prime V2 deposit-backed share accounting",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "Exact Gauntlet USDT Prime V2 Morpho Vault V2 deployment",
+            "url": "https://app.morpho.org/ethereum/vault/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+          },
+          {
+            "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+          },
+          {
+            "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+            "url": "https://eth-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho gate semantics and irreversible abdication",
+            "url": "https://docs.morpho.org/curate/concepts/gates.md"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0fc9b889756e1241a4d89472db701c0417c26d89"
+          }
+        ],
+        "capDescription": "Deposits require transferred underlying; performance and management fee accrual may mint configured fee shares. No arbitrary owner share-mint entrypoint in reviewed source.",
+        "evidence": "At Ethereum block 26107704, asset()=0xdac17f958d2ee523a2206206994597c13d831ec7, totalSupply()=4983174896491884983364107 raw 18-decimal shares and totalAssets()=5109830264097 raw 6-decimal USDT. One adapter 0x0fc9b889756e1241a4d89472db701c0417c26d89 enumerates 8 current market IDs; summed expectedSupplyAssets=5109830264096, idle underlying=1; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. Source and zero EIP-1967 implementation/admin/beacon slots support non-proxy VaultV2; full compiler verification remains unproven."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xc684c6587712e5e7bdf9fd64415f23bd2b05faec",
+        "deploymentRefs": [
+          "ethereum:0xf3557ad5e984211ac8a0874a670344f2c3376471"
+        ],
+        "label": "Gauntlet USDT Prime V2 owner parameter authority",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "Exact Gauntlet USDT Prime V2 Morpho Vault V2 deployment",
+            "url": "https://app.morpho.org/ethereum/vault/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+          },
+          {
+            "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+          },
+          {
+            "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+            "url": "https://eth-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho gate semantics and irreversible abdication",
+            "url": "https://docs.morpho.org/curate/concepts/gates.md"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0fc9b889756e1241a4d89472db701c0417c26d89"
+          }
+        ],
+        "evidence": "Pinned owner()=0xc684c6587712e5e7bdf9fd64415f23bd2b05faec. Safe threshold and complete owners/modules are pinned below; signer independence and enabled-module permissions are not established. Owner appointment and curator adapter/cap/fee powers can change future allocations; these are not arbitrary parent-token issuance.",
+        "capDescription": "addAdapter timelock=604800 seconds; performance/management fee setters each 259200 seconds. Both current fee rates are zero. Module reach and role replacement do not inherit a blanket delay guarantee.",
+        "threshold": 4,
+        "signerCount": 7,
+        "safe": {
+          "owners": [
+            "0x6c8038257c618fd7d25269fc97c04de8a5b2b843",
+            "0x59520256bfd073d131da8c8f58c4eef979bc64c7",
+            "0xa3a845fcde05ea884ea033b150300f0f8bdfa01d",
+            "0xa0895ef86b766afd455fdb129a830a1c6ce054a1",
+            "0x1f6da8198fe51236e279009b325f107ddce4d2b6",
+            "0x1d8e0b8f4ced9262c9ac0c0870bf8b45d74ad9d9",
+            "0xd0644e17c6ad2b34932cb6d8dc6026000da5ff2e"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "observedBlock": 26107704,
+          "observedAt": "2026-10-02",
+          "source": "onchain",
+          "guard": "0x0000000000000000000000000000000000000000"
+        }
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x9e33faae38ff641094fa68c65c2ce600b3410585",
+        "deploymentRefs": [
+          "ethereum:0xf3557ad5e984211ac8a0874a670344f2c3376471"
+        ],
+        "label": "Gauntlet USDT Prime V2 curator parameter authority",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "Exact Gauntlet USDT Prime V2 Morpho Vault V2 deployment",
+            "url": "https://app.morpho.org/ethereum/vault/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+          },
+          {
+            "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+          },
+          {
+            "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+            "url": "https://eth-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho gate semantics and irreversible abdication",
+            "url": "https://docs.morpho.org/curate/concepts/gates.md"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0fc9b889756e1241a4d89472db701c0417c26d89"
+          }
+        ],
+        "evidence": "Pinned curator()=0x9e33faae38ff641094fa68c65c2ce600b3410585. Safe threshold and complete owners/modules are pinned below; signer independence and enabled-module permissions are not established. Owner appointment and curator adapter/cap/fee powers can change future allocations; these are not arbitrary parent-token issuance.",
+        "capDescription": "addAdapter timelock=604800 seconds; performance/management fee setters each 259200 seconds. Both current fee rates are zero. Module reach and role replacement do not inherit a blanket delay guarantee.",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0x6c8038257c618fd7d25269fc97c04de8a5b2b843",
+            "0x59520256bfd073d131da8c8f58c4eef979bc64c7",
+            "0xa3a845fcde05ea884ea033b150300f0f8bdfa01d",
+            "0xd0644e17c6ad2b34932cb6d8dc6026000da5ff2e",
+            "0x1f6da8198fe51236e279009b325f107ddce4d2b6",
+            "0x1d8e0b8f4ced9262c9ac0c0870bf8b45d74ad9d9"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "observedBlock": 26107704,
+          "observedAt": "2026-10-02",
+          "source": "onchain",
+          "guard": "0x0000000000000000000000000000000000000000"
+        }
+      }
+    ],
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "Gauntlet USDT Prime V2 deposit-backed share accounting",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107704,
+      "sources": [
+        {
+          "label": "Exact Gauntlet USDT Prime V2 Morpho Vault V2 deployment",
+          "url": "https://app.morpho.org/ethereum/vault/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+        },
+        {
+          "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+        },
+        {
+          "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+          "url": "https://eth-mainnet.g.alchemy.com"
+        },
+        {
+          "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Morpho gate semantics and irreversible abdication",
+          "url": "https://docs.morpho.org/curate/concepts/gates.md"
+        },
+        {
+          "label": "Exact current MorphoMarketV1AdapterV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0fc9b889756e1241a4d89472db701c0417c26d89"
+        }
+      ]
+    },
+    "review": {
+      "sources": [
+        {
+          "label": "Exact Gauntlet USDT Prime V2 Morpho Vault V2 deployment",
+          "url": "https://app.morpho.org/ethereum/vault/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+        },
+        {
+          "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+        },
+        {
+          "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+          "url": "https://eth-mainnet.g.alchemy.com"
+        },
+        {
+          "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Morpho gate semantics and irreversible abdication",
+          "url": "https://docs.morpho.org/curate/concepts/gates.md"
+        },
+        {
+          "label": "Exact current MorphoMarketV1AdapterV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0fc9b889756e1241a4d89472db701c0417c26d89"
+        }
+      ],
+      "evidence": "At Ethereum block 26107704, asset()=0xdac17f958d2ee523a2206206994597c13d831ec7, totalSupply()=4983174896491884983364107 raw 18-decimal shares and totalAssets()=5109830264097 raw 6-decimal USDT. One adapter 0x0fc9b889756e1241a4d89472db701c0417c26d89 enumerates 8 current market IDs; summed expectedSupplyAssets=5109830264096, idle underlying=1; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification. Current performance and management fees are zero; governed fee settings can create accrual fee shares. Parent issuer authority is inherited rather than copied as favorable wrapper supervision.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "Independent signer/key custody and enabled-module authorization closure.",
+        "Exact-vault signed financial assurance and legal insolvency priority."
+      ]
+    }
+  }
+}

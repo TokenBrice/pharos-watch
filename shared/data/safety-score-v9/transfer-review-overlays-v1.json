@@ -5856,6 +5856,1583 @@
           ]
         }
       ]
+    },
+    {
+      "assetId": "arcusdc-galaxy",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "arc",
+          "contractOrTokenId": "0x8e357432cc12ff425c36432f312968aeb16112af",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, all four gate addresses were zero; setReceiveSharesGate, setSendSharesGate and setReceiveAssetsGate were abdicated. setSendAssetsGate remains mutable and gates deposits/mints, not direct withdrawal/redeem. Deposit-funded in-kind exit may be obstructed by deposit gating. Underlying USDC freeze powers remain inherited. Reference source is pinned; exact-deployment compiler/source completeness is unestablished on Arc.",
+          "sources": [
+            {
+              "label": "Galaxy USDC exact vault identity and accounting",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho Vault V2 mechanism documentation",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Pinned VaultV2 primary source, gate and loss semantics",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+            },
+            {
+              "label": "arc fixed-block RPC observation 23952285",
+              "url": "https://rpc.mainnet.arc.io"
+            }
+          ]
+        }
+      ],
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-10-02",
+        "expiresAt": "2027-10-02",
+        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "deploymentKey": "arc:0x8e357432cc12ff425c36432f312968aeb16112af",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Galaxy USDC exact vault identity and accounting",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 mechanism documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Pinned VaultV2 primary source, gate and loss semantics",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "arc fixed-block RPC observation 23952285",
+            "url": "https://rpc.mainnet.arc.io"
+          }
+        ]
+      }
+    },
+    {
+      "assetId": "bbqusdc-steakhouse-v2",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "At ethereum block 26107704 (0x18e5f38), observed 2026-10-02T22:44:15.742108+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was zero with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim.",
+          "sources": [
+            {
+              "label": "Exact Morpho Vault V2 deployment",
+              "url": "https://app.morpho.org/ethereum/vault/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+            },
+            {
+              "label": "Verified deployment code identity",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+            },
+            {
+              "label": "Pinned ethereum block 26107704",
+              "url": "https://etherscan.io/block/26107704"
+            },
+            {
+              "label": "Morpho complete current vault inventory",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho Vault V2 gates",
+              "url": "https://docs.morpho.org/curate/concepts/gates.md"
+            },
+            {
+              "label": "Morpho share accounting and loss realization",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Exact Morpho lending adapter",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbfe734baab130048e20a64e800c4c2ec25756284"
+            }
+          ]
+        }
+      ],
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-10-02",
+        "expiresAt": "2027-10-02",
+        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "deploymentKey": "ethereum:0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Exact Morpho Vault V2 deployment",
+            "url": "https://app.morpho.org/ethereum/vault/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+          },
+          {
+            "label": "Verified deployment code identity",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+          },
+          {
+            "label": "Pinned ethereum block 26107704",
+            "url": "https://etherscan.io/block/26107704"
+          },
+          {
+            "label": "Morpho complete current vault inventory",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 gates",
+            "url": "https://docs.morpho.org/curate/concepts/gates.md"
+          },
+          {
+            "label": "Morpho share accounting and loss realization",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Exact Morpho lending adapter",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbfe734baab130048e20a64e800c4c2ec25756284"
+          }
+        ]
+      }
+    },
+    {
+      "assetId": "cscbusdc-clearstar",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "base",
+          "contractOrTokenId": "0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "At base block 52095852 (0x31aeb6c), observed 2026-10-02T22:44:15.795793+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was zero with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim.",
+          "sources": [
+            {
+              "label": "Exact Morpho Vault V2 deployment",
+              "url": "https://app.morpho.org/base/vault/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
+            },
+            {
+              "label": "Verified deployment code identity",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
+            },
+            {
+              "label": "Pinned base block 52095852",
+              "url": "https://basescan.org/block/52095852"
+            },
+            {
+              "label": "Morpho complete current vault inventory",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho Vault V2 gates",
+              "url": "https://docs.morpho.org/curate/concepts/gates.md"
+            },
+            {
+              "label": "Morpho share accounting and loss realization",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Exact Morpho lending adapter",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x812b71c33ae5eafebae967c5670e37eca3cab0ac"
+            }
+          ]
+        }
+      ],
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-10-02",
+        "expiresAt": "2027-10-02",
+        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "deploymentKey": "base:0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Exact Morpho Vault V2 deployment",
+            "url": "https://app.morpho.org/base/vault/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
+          },
+          {
+            "label": "Verified deployment code identity",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
+          },
+          {
+            "label": "Pinned base block 52095852",
+            "url": "https://basescan.org/block/52095852"
+          },
+          {
+            "label": "Morpho complete current vault inventory",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 gates",
+            "url": "https://docs.morpho.org/curate/concepts/gates.md"
+          },
+          {
+            "label": "Morpho share accounting and loss realization",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Exact Morpho lending adapter",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x812b71c33ae5eafebae967c5670e37eca3cab0ac"
+          }
+        ]
+      }
+    },
+    {
+      "assetId": "ethenausdc-steakhouse",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "base",
+          "contractOrTokenId": "0xbeeff0be997cca5b1c13a7433c2004637975739e",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "At base block 52095852 (0x31aeb6c), observed 2026-10-02T22:44:15.793112+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was zero with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim.",
+          "sources": [
+            {
+              "label": "Exact Morpho Vault V2 deployment",
+              "url": "https://app.morpho.org/base/vault/0xbeeff0be997cca5b1c13a7433c2004637975739e"
+            },
+            {
+              "label": "Verified deployment code identity",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e"
+            },
+            {
+              "label": "Pinned base block 52095852",
+              "url": "https://basescan.org/block/52095852"
+            },
+            {
+              "label": "Morpho complete current vault inventory",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho Vault V2 gates",
+              "url": "https://docs.morpho.org/curate/concepts/gates.md"
+            },
+            {
+              "label": "Morpho share accounting and loss realization",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Exact Morpho lending adapter",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
+            }
+          ]
+        }
+      ],
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-10-02",
+        "expiresAt": "2027-10-02",
+        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "deploymentKey": "base:0xbeeff0be997cca5b1c13a7433c2004637975739e",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Exact Morpho Vault V2 deployment",
+            "url": "https://app.morpho.org/base/vault/0xbeeff0be997cca5b1c13a7433c2004637975739e"
+          },
+          {
+            "label": "Verified deployment code identity",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e"
+          },
+          {
+            "label": "Pinned base block 52095852",
+            "url": "https://basescan.org/block/52095852"
+          },
+          {
+            "label": "Morpho complete current vault inventory",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 gates",
+            "url": "https://docs.morpho.org/curate/concepts/gates.md"
+          },
+          {
+            "label": "Morpho share accounting and loss realization",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Exact Morpho lending adapter",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
+          }
+        ]
+      }
+    },
+    {
+      "assetId": "gtusdtp-gauntlet",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0xf3557ad5e984211ac8a0874a670344f2c3376471",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "At Ethereum block 26107704, sendSharesGate, receiveSharesGate and receiveAssetsGate are zero and their setter selectors are permanently abdicated. Source transfer requires share gates; exit requires canSendShares and canReceiveAssets. sendAssetsGate instead controls deposits, not direct withdrawal. Its setter abdicated=0. Underlying USDT issuer freeze exposure remains inherited. Partial source verification and matching deployed bytes do not prove a complete compiler match.",
+          "sources": [
+            {
+              "label": "Exact Gauntlet USDT Prime V2 Morpho Vault V2 deployment",
+              "url": "https://app.morpho.org/ethereum/vault/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+            },
+            {
+              "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+            },
+            {
+              "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+              "url": "https://eth-mainnet.g.alchemy.com"
+            },
+            {
+              "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho gate semantics and irreversible abdication",
+              "url": "https://docs.morpho.org/curate/concepts/gates.md"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0fc9b889756e1241a4d89472db701c0417c26d89"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "gusdcq-galaxy",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x91600e31fbedc72433d4a57f16639cfe661be7d8",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "At Ethereum block 26107704, sendSharesGate, receiveSharesGate and receiveAssetsGate are zero and their setter selectors are permanently abdicated. Source transfer requires share gates; exit requires canSendShares and canReceiveAssets. sendAssetsGate instead controls deposits, not direct withdrawal. Its setter abdicated=1. Underlying USDC issuer freeze exposure remains inherited. Partial source verification and matching deployed bytes do not prove a complete compiler match.",
+          "sources": [
+            {
+              "label": "Exact Galaxy USDC Quality Morpho Vault V2 deployment",
+              "url": "https://app.morpho.org/ethereum/vault/0x91600e31fbedc72433d4a57f16639cfe661be7d8"
+            },
+            {
+              "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x91600e31fbedc72433d4a57f16639cfe661be7d8"
+            },
+            {
+              "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+              "url": "https://eth-mainnet.g.alchemy.com"
+            },
+            {
+              "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho gate semantics and irreversible abdication",
+              "url": "https://docs.morpho.org/curate/concepts/gates.md"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7df529c92b5744b13be10f06e0c0846186a24f79"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "gusdtq-galaxy",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x71ffb6a81786ec285d429d531cf655107b9d878d",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "At Ethereum block 26107704, sendSharesGate, receiveSharesGate and receiveAssetsGate are zero and their setter selectors are permanently abdicated. Source transfer requires share gates; exit requires canSendShares and canReceiveAssets. sendAssetsGate instead controls deposits, not direct withdrawal. Its setter abdicated=1. Underlying USDT issuer freeze exposure remains inherited. Partial source verification and matching deployed bytes do not prove a complete compiler match.",
+          "sources": [
+            {
+              "label": "Exact Galaxy USDT Quality Morpho Vault V2 deployment",
+              "url": "https://app.morpho.org/ethereum/vault/0x71ffb6a81786ec285d429d531cf655107b9d878d"
+            },
+            {
+              "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x71ffb6a81786ec285d429d531cf655107b9d878d"
+            },
+            {
+              "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+              "url": "https://eth-mainnet.g.alchemy.com"
+            },
+            {
+              "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho gate semantics and irreversible abdication",
+              "url": "https://docs.morpho.org/curate/concepts/gates.md"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0b4bcdd43778df87befb011a27debf5e48a78b71"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "hyperusdca-hyperithm",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "monad",
+          "contractOrTokenId": "0x78999cc96d2ba0341588c60ccb0e91c6c33cf371",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "At monad block 110016412 (0x68eb79c), observed 2026-10-02T22:44:15.638184+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was zero with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim.",
+          "sources": [
+            {
+              "label": "Exact Morpho Vault V2 deployment",
+              "url": "https://app.morpho.org/monad/vault/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
+            },
+            {
+              "label": "Verified deployment code identity",
+              "url": "https://monadscan.com/address/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371#code"
+            },
+            {
+              "label": "Pinned monad block 110016412",
+              "url": "https://monadscan.com/block/110016412"
+            },
+            {
+              "label": "Morpho complete current vault inventory",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho Vault V2 gates",
+              "url": "https://docs.morpho.org/curate/concepts/gates.md"
+            },
+            {
+              "label": "Morpho share accounting and loss realization",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Exact Morpho lending adapter",
+              "url": "https://monadscan.com/address/0x068f22739a5f8a5c84619d7f355b678d00707908#code"
+            }
+          ]
+        }
+      ],
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-10-02",
+        "expiresAt": "2027-10-02",
+        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "deploymentKey": "monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Exact Morpho Vault V2 deployment",
+            "url": "https://app.morpho.org/monad/vault/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
+          },
+          {
+            "label": "Verified deployment code identity",
+            "url": "https://monadscan.com/address/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371#code"
+          },
+          {
+            "label": "Pinned monad block 110016412",
+            "url": "https://monadscan.com/block/110016412"
+          },
+          {
+            "label": "Morpho complete current vault inventory",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 gates",
+            "url": "https://docs.morpho.org/curate/concepts/gates.md"
+          },
+          {
+            "label": "Morpho share accounting and loss realization",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Exact Morpho lending adapter",
+            "url": "https://monadscan.com/address/0x068f22739a5f8a5c84619d7f355b678d00707908#code"
+          }
+        ]
+      }
+    },
+    {
+      "assetId": "kpkusdcprime-kpk",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "At Ethereum block 26107704, sendSharesGate, receiveSharesGate and receiveAssetsGate are zero and their setter selectors are permanently abdicated. Source transfer requires share gates; exit requires canSendShares and canReceiveAssets. sendAssetsGate instead controls deposits, not direct withdrawal. Its setter abdicated=0. Underlying USDC issuer freeze exposure remains inherited. Partial source verification and matching deployed bytes do not prove a complete compiler match.",
+          "sources": [
+            {
+              "label": "Exact KPK USDC Prime Morpho Vault V2 deployment",
+              "url": "https://app.morpho.org/ethereum/vault/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6"
+            },
+            {
+              "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6"
+            },
+            {
+              "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+              "url": "https://eth-mainnet.g.alchemy.com"
+            },
+            {
+              "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho gate semantics and irreversible abdication",
+              "url": "https://docs.morpho.org/curate/concepts/gates.md"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1d511811aca9d8817a3e50f29cadff6243a02902"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "kpkusdcyield-kpk",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "At Ethereum block 26107704, sendSharesGate, receiveSharesGate and receiveAssetsGate are zero and their setter selectors are permanently abdicated. Source transfer requires share gates; exit requires canSendShares and canReceiveAssets. sendAssetsGate instead controls deposits, not direct withdrawal. Its setter abdicated=0. Underlying USDC issuer freeze exposure remains inherited. Partial source verification and matching deployed bytes do not prove a complete compiler match.",
+          "sources": [
+            {
+              "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+              "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+            },
+            {
+              "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+            },
+            {
+              "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+              "url": "https://eth-mainnet.g.alchemy.com"
+            },
+            {
+              "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho gate semantics and irreversible abdication",
+              "url": "https://docs.morpho.org/curate/concepts/gates.md"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "krusdc-keyrock",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "arc",
+          "contractOrTokenId": "0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, all four gate addresses were zero; setReceiveSharesGate, setSendSharesGate and setReceiveAssetsGate were abdicated. setSendAssetsGate remains mutable and gates deposits/mints, not direct withdrawal/redeem. Deposit-funded in-kind exit may be obstructed by deposit gating. Underlying USDC freeze powers remain inherited. Reference source is pinned; exact-deployment compiler/source completeness is unestablished on Arc.",
+          "sources": [
+            {
+              "label": "Keyrock Prime USDC exact vault identity and accounting",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho Vault V2 mechanism documentation",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Pinned VaultV2 primary source, gate and loss semantics",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+            },
+            {
+              "label": "arc fixed-block RPC observation 23952285",
+              "url": "https://rpc.mainnet.arc.io"
+            }
+          ]
+        }
+      ],
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-10-02",
+        "expiresAt": "2027-10-02",
+        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "deploymentKey": "arc:0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Keyrock Prime USDC exact vault identity and accounting",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 mechanism documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Pinned VaultV2 primary source, gate and loss semantics",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "arc fixed-block RPC observation 23952285",
+            "url": "https://rpc.mainnet.arc.io"
+          }
+        ]
+      }
+    },
+    {
+      "assetId": "oned-gennius",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "base",
+          "contractOrTokenId": "0x10ed0050b7a5d5e1e9cc164f77a71d0bf69f64bd",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "sources": [
+            {
+              "label": "Coinbase ONED custody and conversion",
+              "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins"
+            },
+            {
+              "label": "Coinbase ONED itemized reserve dashboard",
+              "url": "https://www.coinbase.com/en-in/oned/proof-of-reserves"
+            },
+            {
+              "label": "ONED native holder terms",
+              "url": "https://oned.global/#/end-user-terms-and-conditions"
+            },
+            {
+              "label": "Gennius ONED platform terms",
+              "url": "https://tc.oned.global/#/oned"
+            },
+            {
+              "label": "Verified current ONED implementation",
+              "url": "https://basescan.org/address/0x57ab1e54fca80105a93a735b59f850f8420b5e2c#code"
+            }
+          ],
+          "evidence": "The exact Base Stablecoin implementation includes role-gated blocklisting and global pause; native holder terms explicitly permit address freezes, seizure and destruction. BLOCKLIST_ROLE membership was true and paused() was false at the pinned current Base block. Ordinary transfers remain restrictable by these local controls."
+        }
+      ]
+    },
+    {
+      "assetId": "pyusdx-moonpay",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "sources": [
+            {
+              "label": "MoonPay PYUSDx holder and counterparty terms",
+              "url": "https://www.moonpay.com/legal/pyusdx_terms"
+            },
+            {
+              "label": "M0 exact PYUSDx mainnet deployments",
+              "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+            },
+            {
+              "label": "M0 PYUSDx compliance controls",
+              "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+            },
+            {
+              "label": "M0 PYUSDx token and reward issuance",
+              "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
+            }
+          ],
+          "evidence": "Native token transfers are open in the ordinary ERC-20 path but per-account freezing blocks sending, receiving, approvals and yield claims. Forced-transfer managers can seize frozen balances; global pause blocks transfers. Exact role memberships and implementation identity were reverified at the current pinned blocks."
+        },
+        {
+          "chainId": "arbitrum",
+          "contractOrTokenId": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "sources": [
+            {
+              "label": "MoonPay PYUSDx holder and counterparty terms",
+              "url": "https://www.moonpay.com/legal/pyusdx_terms"
+            },
+            {
+              "label": "M0 exact PYUSDx mainnet deployments",
+              "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+            },
+            {
+              "label": "M0 PYUSDx compliance controls",
+              "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+            },
+            {
+              "label": "M0 PYUSDx token and reward issuance",
+              "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
+            }
+          ],
+          "evidence": "Native token transfers are open in the ordinary ERC-20 path but per-account freezing blocks sending, receiving, approvals and yield claims. Forced-transfer managers can seize frozen balances; global pause blocks transfers. Exact role memberships and implementation identity were reverified at the current pinned blocks."
+        },
+        {
+          "chainId": "monad",
+          "contractOrTokenId": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "sources": [
+            {
+              "label": "MoonPay PYUSDx holder and counterparty terms",
+              "url": "https://www.moonpay.com/legal/pyusdx_terms"
+            },
+            {
+              "label": "M0 exact PYUSDx mainnet deployments",
+              "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+            },
+            {
+              "label": "M0 PYUSDx compliance controls",
+              "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+            },
+            {
+              "label": "M0 PYUSDx token and reward issuance",
+              "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
+            }
+          ],
+          "evidence": "Native token transfers are open in the ordinary ERC-20 path but per-account freezing blocks sending, receiving, approvals and yield claims. Forced-transfer managers can seize frozen balances; global pause blocks transfers. Exact role memberships and implementation identity were reverified at the current pinned blocks."
+        }
+      ]
+    },
+    {
+      "assetId": "sdai-gnosis",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "gnosis",
+          "contractOrTokenId": "0xaf204776c7245bf4147c2612bf6e5972ee483701",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "Complete immutable SavingsXDai and imported ERC-4626 source has no holder blacklist, pause, seizure or privileged arbitrary-holder burn. Inherited xDAI bridge and Sky dependencies remain exposed. Pinned Gnosis block 48557408 has zero implementation slot and owner() reverts.",
+          "sources": [
+            {
+              "label": "Gnosis verified SavingsXDai and imported ERC-4626 source",
+              "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701"
+            },
+            {
+              "label": "Gnosis xDAI bridge and savings infrastructure",
+              "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+            },
+            {
+              "label": "Pinned Gnosis block 48557408",
+              "url": "https://gnosis.blockscout.com/block/48557408"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "senpathusd-sentora",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "tempo",
+          "contractOrTokenId": "0x9a044ae05e5e6290dcf56afd69548565e957a626",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "Pinned tempo block 42323768: zero share gates and permanently abdicated setReceiveSharesGate/setSendSharesGate; immutable VaultV2 bytecode. The local ERC-20 share transfer is permissionless; upstream freeze exposure is not removed.",
+          "sources": [
+            {
+              "label": "Exact Sentora vault",
+              "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+            },
+            {
+              "label": "Pinned RPC identity, accounting and controls",
+              "url": "https://rpc.tempo.xyz"
+            },
+            {
+              "label": "Morpho Vault V2 documentation",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "MorphoMarketV1AdapterV2 source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+            },
+            {
+              "label": "Tempo TIP-20 restriction specification",
+              "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "senpyusdmain-sentora",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0xb576765fb15505433af24fee2c0325895c559fb2",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "Block 26107702: zero send/receive share gates with abdicated setters in the exact immutable VaultV2 source; no direct local share blacklist. Underlying issuer freeze and mutable asset-redemption gates remain distinct.",
+          "sources": [
+            {
+              "label": "Paypal USD Main exact vault",
+              "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+            },
+            {
+              "label": "Exact verified VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+            },
+            {
+              "label": "Morpho Vault V2 accounting and redemption mechanics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Ethereum RPC, pinned block 26107702",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho exact-vault portfolio API",
+              "url": "https://api.morpho.org/graphql"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "senpyusdmwin-sentora",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "Pinned ethereum block 26107706: zero share gates and permanently abdicated setReceiveSharesGate/setSendSharesGate; immutable VaultV2 bytecode. The local ERC-20 share transfer is permissionless; upstream freeze exposure is not removed.",
+          "sources": [
+            {
+              "label": "Exact Sentora vault",
+              "url": "https://app.morpho.org/ethereum/vault/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57"
+            },
+            {
+              "label": "Pinned RPC identity, accounting and controls",
+              "url": "https://eth-mainnet.g.alchemy.com/v2"
+            },
+            {
+              "label": "Morpho Vault V2 documentation",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Exact VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57"
+            },
+            {
+              "label": "MorphoMarketV1AdapterV2 source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+            },
+            {
+              "label": "Paxos USD stablecoin terms, section 3.5",
+              "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "senpyusdprimev2-sentora",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "Block 26107702: zero send/receive share gates with abdicated setters in the exact immutable VaultV2 source; no direct local share blacklist. Underlying issuer freeze and mutable asset-redemption gates remain distinct.",
+          "sources": [
+            {
+              "label": "Sentora PRIME Main exact vault",
+              "url": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+            },
+            {
+              "label": "Exact verified VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89"
+            },
+            {
+              "label": "Morpho Vault V2 accounting and redemption mechanics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Ethereum RPC, pinned block 26107702",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho exact-vault portfolio API",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Sentora PRIME residential-credit case study",
+              "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "senpyusdpst-sentora",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x8381a156958711e230f325428b5eb4b6555c75d9",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "Pinned ethereum block 26107706: zero share gates and permanently abdicated setReceiveSharesGate/setSendSharesGate; immutable VaultV2 bytecode. The local ERC-20 share transfer is permissionless; upstream freeze exposure is not removed.",
+          "sources": [
+            {
+              "label": "Exact Sentora vault",
+              "url": "https://app.morpho.org/ethereum/vault/0x8381a156958711e230f325428b5eb4b6555c75d9"
+            },
+            {
+              "label": "Pinned RPC identity, accounting and controls",
+              "url": "https://eth-mainnet.g.alchemy.com/v2"
+            },
+            {
+              "label": "Morpho Vault V2 documentation",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Exact VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8381a156958711e230f325428b5eb4b6555c75d9"
+            },
+            {
+              "label": "MorphoMarketV1AdapterV2 source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+            },
+            {
+              "label": "Paxos USD stablecoin terms, section 3.5",
+              "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "senrlusdv2-sentora",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "Block 26107702: zero send/receive share gates with abdicated setters in the exact immutable VaultV2 source; no direct local share blacklist. Underlying issuer freeze and mutable asset-redemption gates remain distinct.",
+          "sources": [
+            {
+              "label": "Sentora RLUSD Main exact vault",
+              "url": "https://app.morpho.org/ethereum/vault/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
+            },
+            {
+              "label": "Exact verified VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff"
+            },
+            {
+              "label": "Morpho Vault V2 accounting and redemption mechanics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Ethereum RPC, pinned block 26107702",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho exact-vault portfolio API",
+              "url": "https://api.morpho.org/graphql"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "sfrax-frax",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "At block 26107702, the exact deployed source exposes ordinary ERC-20 share transfers and no administrator-only holder blacklist, seizure or forced burn. The fixed StakedFrax implementation has no upgrade entrypoint or share whitelist. The tracked child inherits frax-frax token/reserve/control exposure; absence of a local blacklist is not an exemption from inherited wrapper semantics. This transfer posture describes the native share itself; underlying freeze exposure remains inherited.",
+          "sources": [
+            {
+              "label": "Frax sFRAX staking and redemption documentation",
+              "url": "https://docs.frax.finance/frax-v3-100-cr-and-more/sfrax"
+            },
+            {
+              "label": "Verified exact deployed StakedFrax source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32"
+            },
+            {
+              "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
+              "url": "https://etherscan.io/block/26107702"
+            },
+            {
+              "label": "Pinned Frax reward accounting implementation",
+              "url": "https://raw.githubusercontent.com/FraxFinance/staked-frax-erc4626/9e42ee6b39fb1c08c6dc3607707b8b190f2de58c/src/contracts/LinearRewardsErc4626.sol"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "skymoneyusdsflagship-sky",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0xe15fcc81118895b67b6647bbd393182df44e11e0",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "At block 26107702, the exact deployed source exposes ordinary ERC-20 share transfers and no administrator-only holder blacklist, seizure or forced burn. sendSharesGate, receiveSharesGate and receiveAssetsGate are zero; current Morpho API records their setter abdications. The deposit gate is distinct. The tracked child inherits usds-sky token/reserve/control exposure; absence of a local blacklist is not an exemption from inherited wrapper semantics. This transfer posture describes the native share itself; underlying freeze exposure remains inherited.",
+          "sources": [
+            {
+              "label": "Sky.money curated vault disclosure",
+              "url": "https://sky.money/vaults"
+            },
+            {
+              "label": "Verified exact deployed VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0"
+            },
+            {
+              "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
+              "url": "https://etherscan.io/block/26107702"
+            },
+            {
+              "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Morpho exact-vault accounting and controls GraphQL API",
+              "url": "https://api.morpho.org/graphql"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "skymoneyusdtsavings-sky",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "At block 26107702, the exact deployed source exposes ordinary ERC-20 share transfers and no administrator-only holder blacklist, seizure or forced burn. sendSharesGate, receiveSharesGate and receiveAssetsGate are zero; current Morpho API records their setter abdications. The deposit gate is distinct. The tracked child inherits usdt-tether token/reserve/control exposure; absence of a local blacklist is not an exemption from inherited wrapper semantics. This transfer posture describes the native share itself; underlying freeze exposure remains inherited.",
+          "sources": [
+            {
+              "label": "Sky.money curated vault disclosure",
+              "url": "https://sky.money/vaults"
+            },
+            {
+              "label": "Verified exact deployed VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11"
+            },
+            {
+              "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
+              "url": "https://etherscan.io/block/26107702"
+            },
+            {
+              "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Morpho exact-vault accounting and controls GraphQL API",
+              "url": "https://api.morpho.org/graphql"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "sreusd-resupply",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x557ab1e003951a73c12d16f0fea8490e39c33c35",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "Verified nonproxy SavingsReUSD and inherited ERC20 implementation have no blacklist, holder seizure, global transfer pause or mutable implementation path. ERC-4626 withdraw/redeem requires the holder or allowance. Core reward and OFT configuration powers do not override native ordinary ERC20 transfer; parent exposure is separate. Genesis-through-block-26107704 PeerSet logs are empty.",
+          "sources": [
+            {
+              "label": "Resupply savings documentation",
+              "url": "https://docs.resupply.finance/resupply-protocol/savings-reusd.md"
+            },
+            {
+              "label": "Resupply official deployment roster",
+              "url": "https://raw.githubusercontent.com/resupplyfi/resupply/main/deployment/contracts.json"
+            },
+            {
+              "label": "Verified current sreUSD implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x557ab1e003951a73c12d16f0fea8490e39c33c35"
+            },
+            {
+              "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
+              "url": "https://etherscan.io/block/26107704"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "steakcusdc-steakhouse",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0xbeef00a59b577423653a1526c7009bde103f542b",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "At ethereum block 26107704 (0x18e5f38), observed 2026-10-02T22:44:15.796565+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was the whitelist 0x47c591a3bc346913d0b6bdd96fb50e34efa268aa with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim.",
+          "sources": [
+            {
+              "label": "Exact Morpho Vault V2 deployment",
+              "url": "https://app.morpho.org/ethereum/vault/0xbeef00a59b577423653a1526c7009bde103f542b"
+            },
+            {
+              "label": "Verified deployment code identity",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef00a59b577423653a1526c7009bde103f542b"
+            },
+            {
+              "label": "Pinned ethereum block 26107704",
+              "url": "https://etherscan.io/block/26107704"
+            },
+            {
+              "label": "Morpho complete current vault inventory",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho Vault V2 gates",
+              "url": "https://docs.morpho.org/curate/concepts/gates.md"
+            },
+            {
+              "label": "Morpho share accounting and loss realization",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Exact Morpho lending adapter",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x17bc9aa135cef1a5c3a91925e0f865d526318718"
+            }
+          ]
+        }
+      ],
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-10-02",
+        "expiresAt": "2027-10-02",
+        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "deploymentKey": "ethereum:0xbeef00a59b577423653a1526c7009bde103f542b",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Exact Morpho Vault V2 deployment",
+            "url": "https://app.morpho.org/ethereum/vault/0xbeef00a59b577423653a1526c7009bde103f542b"
+          },
+          {
+            "label": "Verified deployment code identity",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef00a59b577423653a1526c7009bde103f542b"
+          },
+          {
+            "label": "Pinned ethereum block 26107704",
+            "url": "https://etherscan.io/block/26107704"
+          },
+          {
+            "label": "Morpho complete current vault inventory",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 gates",
+            "url": "https://docs.morpho.org/curate/concepts/gates.md"
+          },
+          {
+            "label": "Morpho share accounting and loss realization",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Exact Morpho lending adapter",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x17bc9aa135cef1a5c3a91925e0f865d526318718"
+          }
+        ]
+      }
+    },
+    {
+      "assetId": "strusd-tori",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x280839980a7ed0d7717f64125fe241012e5f5815",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "Verified current StakedTrUSD implements FULL_RESTRICTED_STAKER_ROLE checks on sender/recipient transfers, staking and unstaking. The owner has BLACKLIST_MANAGER_ROLE and DEFAULT_ADMIN_ROLE. Admin redistributeLockedAmount burns a restricted holder and remints to another address or redistributes value; seizeCooldown transfers restricted-holder silo funds. The owner cannot be blacklisted. Spoke pool mint/burn control is separate bridge risk. Pinned Ethereum block 26107706 resolves to the retrieved StakedTrUSD implementation and the owner has the blacklist role.",
+          "sources": [
+            {
+              "label": "Tori strUSD staking and unstaking terms",
+              "url": "https://docs.tori.finance/products/strusd.md"
+            },
+            {
+              "label": "Tori canonical vault and CCIP deployments",
+              "url": "https://docs.tori.finance/resources/contracts.md"
+            },
+            {
+              "label": "Tori roles and timelock disclosure",
+              "url": "https://docs.tori.finance/security/roles.md"
+            },
+            {
+              "label": "Verified StakedTrUSD implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6561272e3ebc9f2e07cdb12b7c474db9132b977a"
+            },
+            {
+              "label": "Tori reserve ownership and holder-rights terms",
+              "url": "https://docs.tori.finance/legal/trusd-terms.md"
+            },
+            {
+              "label": "Pinned Ethereum block 26107706",
+              "url": "https://etherscan.io/block/26107706"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "sxsrlusd-sentora",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0xfc8c624b6080a0a780583799f2a862de936f6e22",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "Pinned ethereum block 26107706: zero share gates and permanently abdicated setReceiveSharesGate/setSendSharesGate; immutable VaultV2 bytecode. The local ERC-20 share transfer is permissionless; upstream freeze exposure is not removed.",
+          "sources": [
+            {
+              "label": "Exact Sentora vault",
+              "url": "https://app.morpho.org/ethereum/vault/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+            },
+            {
+              "label": "Pinned RPC identity, accounting and controls",
+              "url": "https://eth-mainnet.g.alchemy.com/v2"
+            },
+            {
+              "label": "Morpho Vault V2 documentation",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Exact VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+            },
+            {
+              "label": "MorphoMarketV1AdapterV2 source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+            },
+            {
+              "label": "Ripple RLUSD terms, section 11.5",
+              "url": "https://ripple.com/legal/stablecoin/"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "usdfc-secured-finance",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "filecoin",
+          "contractOrTokenId": "0x80b98d3aa09ffff255c3ba4a241111ff1262f045",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "Pinned proxy/admin slots and2-of-3 Safe ownership establish a mutable holder-transfer implementation. Current official source shows fixed protocol-recipient guards only, but upgrade control prevents an immutable permissionless claim; source/runtime equivalence remains unverified.",
+          "sources": [
+            {
+              "label": "Secured Finance FIL-only CDP overview",
+              "url": "https://docs.secured.finance/usdfc-stablecoin/overview"
+            },
+            {
+              "label": "Filecoin mainnet contract graph",
+              "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts"
+            },
+            {
+              "label": "Filecoin GLIF RPC pinned block 6422489",
+              "url": "https://api.node.glif.io/rpc/v1"
+            },
+            {
+              "label": "USDFC DebtToken source",
+              "url": "https://raw.githubusercontent.com/Secured-Finance/stablecoin-contracts/develop/contracts/DebtToken.sol"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "usdx-axis",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0xa1fa7777974312f7d801a8880714a218f76233f8",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "Official canonical V2 source reference documents RESTRICTION_ROLE blacklist/unBlacklist and PAUSER_ROLE enforcement through _update on token flows. Approved-account issuance does not mean ordinary holders are whitelisted, but privileged holder-transfer restriction exists.",
+          "sources": [
+            {
+              "label": "Axis exact token role and transfer semantics",
+              "url": "https://docs.axis.to/reference/access-control.md"
+            },
+            {
+              "label": "Axis canonical V2 identity",
+              "url": "https://docs.axis.to/reference/contract-addresses.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "armusdcs-wintermute",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, all four gate addresses were zero; setReceiveSharesGate, setSendSharesGate and setReceiveAssetsGate were abdicated. setSendAssetsGate remains mutable and gates deposits/mints, not direct withdrawal/redeem. Deposit-funded in-kind exit may be obstructed by deposit gating. Underlying USDC freeze powers remain inherited. Reference source is pinned; Blockscout supplied partial VaultV2 source with deployed bytecode matching RPC, not a full compiler/source verification.",
+          "sources": [
+            {
+              "label": "Wintermute USDC Select exact vault identity and accounting",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho Vault V2 mechanism documentation",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Pinned VaultV2 primary source, gate and loss semantics",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+            },
+            {
+              "label": "Ethereum block 26107703 replay locator; observed via Alchemy Ethereum RPC (credential omitted)",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Exact VaultV2 partial source with matching deployed bytecode",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"
+            },
+            {
+              "label": "Exact adapter partial source with matching deployed bytecode",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3b9e060a2b05588126fda01b95e9485687fc91d7"
+            }
+          ]
+        }
+      ],
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-10-02",
+        "expiresAt": "2027-10-02",
+        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "deploymentKey": "ethereum:0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Wintermute USDC Select exact vault identity and accounting",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 mechanism documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Pinned VaultV2 primary source, gate and loss semantics",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "Ethereum block 26107703 replay locator; observed via Alchemy Ethereum RPC (credential omitted)",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact VaultV2 partial source with matching deployed bytecode",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"
+          },
+          {
+            "label": "Exact adapter partial source with matching deployed bytecode",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3b9e060a2b05588126fda01b95e9485687fc91d7"
+          }
+        ]
+      }
+    },
+    {
+      "assetId": "pendleusdc-pendle",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x55c1b6e461a6334b567baf0feb5d728715446f05",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, all four gate addresses were zero; setReceiveSharesGate, setSendSharesGate and setReceiveAssetsGate were abdicated. setSendAssetsGate remains mutable and gates deposits/mints, not direct withdrawal/redeem. Deposit-funded in-kind exit may be obstructed by deposit gating. Underlying USDC freeze powers remain inherited. Reference source is pinned; Blockscout supplied partial VaultV2 source with deployed bytecode matching RPC, not a full compiler/source verification.",
+          "sources": [
+            {
+              "label": "Pendle Ecosystem USDC exact vault identity and accounting",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho Vault V2 mechanism documentation",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Pinned VaultV2 primary source, gate and loss semantics",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+            },
+            {
+              "label": "Ethereum block 26107703 replay locator; observed via Alchemy Ethereum RPC (credential omitted)",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Exact VaultV2 partial source with matching deployed bytecode",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x55c1b6e461a6334b567baf0feb5d728715446f05"
+            },
+            {
+              "label": "Exact adapter partial source with matching deployed bytecode",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2f362079dbc570a6df5bd04ad91002d17c0db9a"
+            }
+          ]
+        }
+      ],
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-10-02",
+        "expiresAt": "2027-10-02",
+        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "deploymentKey": "ethereum:0x55c1b6e461a6334b567baf0feb5d728715446f05",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Pendle Ecosystem USDC exact vault identity and accounting",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 mechanism documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Pinned VaultV2 primary source, gate and loss semantics",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "Ethereum block 26107703 replay locator; observed via Alchemy Ethereum RPC (credential omitted)",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact VaultV2 partial source with matching deployed bytecode",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x55c1b6e461a6334b567baf0feb5d728715446f05"
+          },
+          {
+            "label": "Exact adapter partial source with matching deployed bytecode",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2f362079dbc570a6df5bd04ad91002d17c0db9a"
+          }
+        ]
+      }
     }
   ]
 }

@@ -440,7 +440,13 @@ export interface DexCoverageWaiver {
  * and `uusd-youves`/tezos when the TzKT census was; keeping them would publish
  * "no provider supports this chain" beside a census row naming one.
  */
-const EXCLUSIVE_UNSUPPORTED_STABLECOINS = [["silk-shade-protocol", "secret"]] as const;
+// Reviewed 2026-10-03; Arc and Rise remain outside the discovery-provider registry.
+const EXCLUSIVE_UNSUPPORTED_STABLECOINS = [
+  ["silk-shade-protocol", "secret"],
+  ["krusdc-keyrock", "arc"],
+  ["arcusdc-galaxy", "arc"],
+  ["usdr-rise", "rise"],
+] as const;
 
 const COVERAGE_WAIVER_EXPIRY_SEC = Date.UTC(2026, 9, 31) / 1000;
 

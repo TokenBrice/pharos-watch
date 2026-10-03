@@ -1,0 +1,15 @@
+{
+  "id": "btd-alpen",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Reviewed primary evidence",
+        "url": "https://www.alpen.org/blog/bitcoin-dollar"
+      }
+    ],
+    "evidence": "Primary design says censorship-resistant/immutable/no governance, but deployed direct freeze absence is unverified. Conservative possible pending token/bridge code; do not convert no-governance into confirmedfalse.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "plnq-quantoz",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "PLNQ whitepaper",
+        "url": "https://www.quantoz.com/documents/plnq-wp-v1.1-30-4-2026.pdf"
+      },
+      {
+        "label": "Ethereum PLNQ contract",
+        "url": "https://etherscan.io/token/0x00b81d7b21955837890d9346e4978b6b43762b3a"
+      }
+    ],
+    "evidence": "PLNQ whitepaper D.1 reserves the right to blacklist addresses and freeze PLNQ for illegal activity or terms violations; F.3/F.4 also disclose recovery and freezing controls. The issuer token roster and Ethereum block 26107706 establish the exact deployed PLNQ identity with six decimals and zero supply. Nested owner/proxy-admin authorization, thresholds and upgrade delays remain unresolved; planned-chain controls are not authored as verified deployments.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

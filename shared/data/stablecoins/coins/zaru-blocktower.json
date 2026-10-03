@@ -1,0 +1,81 @@
+{
+  "id": "zaru-blocktower",
+  "name": "ZAR Universal",
+  "symbol": "ZARU",
+  "oneLiner": "ZARU is BlockTower's rand token, backed by cash and money-market funds with institutional redemption and retail partner access.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "ZAR",
+    "governance": "centralized"
+  },
+  "collateral": "Rand bank deposits at Standard Bank and unit-trust money-market funds at Sanlam; the retrieved Moore report measures the July 31, 2026 book, not current allocations.",
+  "pegMechanism": "One ZAR per token through BlockTower's verified institutional mint/redemption service; retail access through network partners. Fiat settlement may take up to five business days, and partner fees and minimums vary.",
+  "mechanismArchetype": "fiat-cash",
+  "detailProvider": "coingecko",
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN",
+      "decimals": 6
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5",
+      "decimals": 18
+    },
+    {
+      "chain": "arc",
+      "address": "0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5",
+      "decimals": 18
+    }
+  ],
+  "jurisdiction": {
+    "country": "South Africa"
+  },
+  "custodyModel": "unknown",
+  "collateralQuality": "rwa",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://zaru.network/"
+    },
+    {
+      "label": "Holder terms and issuance",
+      "url": "https://zaru.network/blog/zar-universal-white-paper"
+    },
+    {
+      "label": "Reserve report",
+      "url": "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf"
+    }
+  ],
+  "geckoId": "zar-universal",
+  "proofOfReserves": {
+    "type": "agreed-upon-procedures",
+    "url": "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+    "provider": "Moore Blockchain and Digital Assets JHB (Pty) Ltd; ISRS 4400 (Revised) procedures expressly provide no assurance opinion",
+    "attestorTier": "regional",
+    "cadence": "ad-hoc",
+    "attestorJurisdiction": "South Africa",
+    "latestReport": {
+      "periodEnd": "2026-07-31",
+      "publishedAt": "2026-08-28",
+      "publishedAtBasis": "signed-date-standin",
+      "assuranceMethod": "agreed-upon-procedures",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Retrieved independent reserve report",
+          "url": "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf"
+        }
+      ]
+    }
+  }
+}

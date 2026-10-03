@@ -2,6 +2,7 @@ import { defineRecordEntries, finalizeBackstopRegistry } from "../factory";
 import { BASE_OFFCHAIN_ISSUER_ENTRIES } from "./base-batches";
 import { COMMODITY_OFFCHAIN_CONFIGS } from "./commodity";
 import { COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS } from "./coverage-and-stablecoin-audit";
+import { DISCOVERY_OFFCHAIN_ISSUER_CONFIGS } from "./discovery";
 import { MAJOR_ISSUER_OFFCHAIN_CONFIGS } from "./major-issuers";
 import { NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS } from "./non-usd-and-tokenized";
 import { REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS } from "./remediation-and-late-audit";
@@ -28,6 +29,9 @@ const OFFCHAIN_ISSUER_REGISTRY_ENTRIES = [
   ...defineRecordEntries(REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS, {
     overrideReason: "Reviewed remediation or late-audit config replaces the shared offchain issuer default.",
     sourceFilePath: "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts",
+  }),
+  ...defineRecordEntries(DISCOVERY_OFFCHAIN_ISSUER_CONFIGS, {
+    sourceFilePath: "shared/lib/redemption-backstop-configs/offchain-issuer/discovery.ts",
   }),
 ];
 

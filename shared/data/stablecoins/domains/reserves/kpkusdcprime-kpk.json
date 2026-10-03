@@ -1,0 +1,111 @@
+{
+  "id": "kpkusdcprime-kpk",
+  "reserves": [
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "name": "USDC deposited into KPK-curated Morpho lending markets",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "KPK-curated Morpho lending markets and their borrowers",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "market",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Exact KPK USDC Prime Morpho Vault V2 deployment",
+        "url": "https://app.morpho.org/ethereum/vault/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6"
+      },
+      {
+        "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6"
+      },
+      {
+        "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+        "url": "https://eth-mainnet.g.alchemy.com"
+      },
+      {
+        "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho gate semantics and irreversible abdication",
+        "url": "https://docs.morpho.org/curate/concepts/gates.md"
+      },
+      {
+        "label": "Exact current MorphoMarketV1AdapterV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1d511811aca9d8817a3e50f29cadff6243a02902"
+      }
+    ],
+    "rationale": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=28097145082426439535141891 raw 18-decimal shares and totalAssets()=29100078912490 raw 6-decimal USDC. One adapter 0x1d511811aca9d8817a3e50f29cadff6243a02902 enumerates 8 current market IDs; summed expectedSupplyAssets=29100078910236, idle underlying=2254; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. The 100% slice identifies the denomination and standing parent dependency across idle and deployed lending positions; it does not assert that every asset is idle cash or invent borrower-collateral reserve weights.",
+    "compositionBasis": "Pinned full adapter census and underlying-asset denomination",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Parent denomination and current positions are identified. Borrower collateral custody and recovery protections, independent vault financial assurance and legal segregation remain unproven.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "KPK USDC Prime VaultV2 0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
+        "role": "other"
+      },
+      {
+        "name": "MorphoMarketV1AdapterV2 0x1d511811aca9d8817a3e50f29cadff6243a02902",
+        "role": "other"
+      },
+      {
+        "name": "Morpho Blue Ethereum lending markets",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Exact KPK USDC Prime Morpho Vault V2 deployment",
+        "url": "https://app.morpho.org/ethereum/vault/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6"
+      },
+      {
+        "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6"
+      },
+      {
+        "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+        "url": "https://eth-mainnet.g.alchemy.com"
+      },
+      {
+        "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho gate semantics and irreversible abdication",
+        "url": "https://docs.morpho.org/curate/concepts/gates.md"
+      },
+      {
+        "label": "Exact current MorphoMarketV1AdapterV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1d511811aca9d8817a3e50f29cadff6243a02902"
+      }
+    ],
+    "uncertainty": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=28097145082426439535141891 raw 18-decimal shares and totalAssets()=29100078912490 raw 6-decimal USDC. One adapter 0x1d511811aca9d8817a3e50f29cadff6243a02902 enumerates 8 current market IDs; summed expectedSupplyAssets=29100078910236, idle underlying=2254; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. Immediate holders are on-chain contracts; downstream collateral issuer/custodian and legal rights remain separate. Lending deployment does not establish custodian reuse rights. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification."
+  }
+}

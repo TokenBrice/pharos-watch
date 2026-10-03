@@ -1,0 +1,19 @@
+{
+  "id": "net-cloudflare",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Reviewed primary evidence",
+        "url": "https://www.cloudflare.com/press/press-releases/2025/cloudflare-introduces-net-dollar-to-support-a-new-business-model-for-the-ai-driven-internet/"
+      },
+      {
+        "label": "Reviewed primary evidence",
+        "url": "https://netdollar.cloudflare.com/"
+      }
+    ],
+    "evidence": "Unresolved future capability: primary announcement/FAQ disclose no NET-specific freeze/control terms or deployment. A source-linked uncertain review can be authored; no direct capability or no-freeze conclusion is established.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

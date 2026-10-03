@@ -1,0 +1,79 @@
+{
+  "id": "usdfr-forest-road",
+  "name": "Forest Road USDfr",
+  "symbol": "USDfr",
+  "oneLiner": "USDfr is Forest Road's credit-backed dollar, minted with USDC and redeemable by KYC-approved holders against available idle reserves.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "rwa": true
+  },
+  "collateral": "Specialty-finance credit receivables and idle canonical USDC in an Ethereum reserve. Forest Road originates and services the book; loan facts enter through threshold-signed attestations. Renewable-energy, media/entertainment and a related-party digital-assets facility are disclosed sectors.",
+  "pegMechanism": "KYC-approved participants mint USDfr 1:1 with USDC. Direct USDfr-to-USDC redemption pays 1:1 while fully backed and is limited to idle USDC, with transfer blocklisting and pause controls. A separate Uniswap v4 market supports secondary exit. USDfr itself earns no yield; sUSDfr is a separate instrument.",
+  "mechanismArchetype": "rwa-credit-fund",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "Exact Ethereum token 0xcc07e7c4e5e35affd47b351e420a22c667d7f83d is a transferable credit-backed dollar claim. ReserveManager records loan principal/accrual and idle USDC; controller redemption and a verified exact-token secondary market establish ordinary exit. This is credit investment exposure, not core cash backing or the separate yield-bearing sUSDfr wrapper.",
+    "sources": [
+      {
+        "label": "Forest Road USDfr and credit-book mechanism",
+        "url": "https://forestroadvault.com/docs/overview"
+      },
+      {
+        "label": "Canonical Ethereum deployment addresses",
+        "url": "https://forestroadvault.com/docs/addresses"
+      },
+      {
+        "label": "USDfr primary redemption and holder controls",
+        "url": "https://forestroadvault.com/docs/how-to"
+      },
+      {
+        "label": "Timelocked but Forest-Road-controlled governance",
+        "url": "https://forestroadvault.com/docs/roles-and-governance"
+      },
+      {
+        "label": "Definitive legal characterization and related-party facility",
+        "url": "https://forestroadvault.com/legal"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "geckoId": "forest-road-usdfr",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://forestroadvault.com/transparency",
+    "provider": "Forest Road onchain reserve accounting and loan attestations; security reviews are not independent financial assurance.",
+    "attestorTier": "self",
+    "cadence": "real-time"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://forestroadvault.com"
+    },
+    {
+      "label": "Docs",
+      "url": "https://forestroadvault.com/docs/overview"
+    },
+    {
+      "label": "Legal disclosures",
+      "url": "https://forestroadvault.com/legal"
+    },
+    {
+      "label": "CoinGecko",
+      "url": "https://www.coingecko.com/en/coins/forest-road-usdfr"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xcc07e7c4e5e35affd47b351e420a22c667d7f83d",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "governanceQuality": "single-entity"
+}

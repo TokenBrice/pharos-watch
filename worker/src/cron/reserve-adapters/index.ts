@@ -1,5 +1,6 @@
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import type { LiveReserveAdapterKey } from "@shared/types/live-reserves";
+import { fetchJpmorganNavReserves } from "./jpmorgan-nav";
 import { fetchLeverupLvusdReserves } from "./leverup-lvusd";
 import { fetchThreeJaneUsd3Reserves } from "./3jane-usd3";
 import { fetchHyloSolanaReserves } from "./hylo-solana";
@@ -140,6 +141,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "cadd-independent-assurance": fetchCaddIndependentAssuranceReserves,
   "cap-vault": fetchCapVaultReserves,
   "chainlink-nav": fetchChainlinkNavCore,
+  "jpmorgan-nav": fetchJpmorganNavReserves,
   "circle-transparency": fetchCircleReserves,
   "chainlink-por": fetchChainlinkPorReserves,
   "chronicle-nav": fetchChronicleNavReserves,

@@ -1,0 +1,127 @@
+{
+  "id": "fiusd-sygnum",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Sygnum issuer-authored FIUSD application dated March 20, 2025",
+        "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
+      },
+      {
+        "label": "Verified deployed Arbitrum implementation",
+        "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7616b08676117e1aab542e53fe3f7b12f7596d37"
+      }
+    ],
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02",
+    "evidence": "Sygnum requires whitelisted professional-investor custodial wallets. Verified current Arbitrum implementation source additionally exposes operator-only toggleFreeze and privileged confiscate, establishing a direct holder-control surface without claiming independently verified zkSync ABI equivalence."
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "JPMorgan calculates Fidelity ILF NAV and communicates it through Chainlink. Each native token references an on-chain price-feed oracle, but that transport does not independently reconcile Sygnum token units.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "rationale": "The applicable price authority prices subscriptions, redemptions and fund NAV; no borrower liquidation branches are disclosed for the holder instrument.",
+      "sources": [
+        {
+          "label": "Sygnum issuer-authored FIUSD application dated March 20, 2025",
+          "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
+        },
+        {
+          "label": "Verified deployed Arbitrum implementation",
+          "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7616b08676117e1aab542e53fe3f7b12f7596d37"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Sygnum issuer-authored FIUSD application dated March 20, 2025",
+        "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
+      },
+      {
+        "label": "Verified deployed Arbitrum implementation",
+        "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7616b08676117e1aab542e53fe3f7b12f7596d37"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Sygnum identifies both zkSync and Arbitrum as native one-token/one-fund-unit deployments. No separately verified wrapper, escrow or external messaging bridge is credited. Native reallocation and underlying-unit reconciliation remain unresolved despite the legitimate zero Arbitrum leg.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Sygnum issuer-authored FIUSD application dated March 20, 2025",
+        "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
+      },
+      {
+        "label": "Verified deployed Arbitrum implementation",
+        "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7616b08676117e1aab542e53fe3f7b12f7596d37"
+      }
+    ],
+    "routes": [
+      {
+        "id": "zksync:0x2ab105a3ead22731082b790ca9a00d9a3a7627f9",
+        "destinationChain": "zksync",
+        "canonicalChain": "zksync",
+        "contractAddress": "0x2ab105a3ead22731082b790ca9a00d9a3a7627f9",
+        "protocol": "Sygnum native FIUSD ledger security",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer application binds this deployment to one subscribed Fidelity ILF unit per token, with burn on sale; no external wrapped supply is inferred.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 72312845,
+        "sources": [
+          {
+            "label": "Sygnum issuer-authored FIUSD application dated March 20, 2025",
+            "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
+          },
+          {
+            "label": "Verified deployed Arbitrum implementation",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7616b08676117e1aab542e53fe3f7b12f7596d37"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0xcded6b899edba762d793f44ed295248049440e1e",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0xcded6b899edba762d793f44ed295248049440e1e",
+        "protocol": "Sygnum native FIUSD ledger security",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer application binds this deployment to one subscribed Fidelity ILF unit per token, with burn on sale; no external wrapped supply is inferred.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 511123948,
+        "sources": [
+          {
+            "label": "Sygnum issuer-authored FIUSD application dated March 20, 2025",
+            "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
+          },
+          {
+            "label": "Verified deployed Arbitrum implementation",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7616b08676117e1aab542e53fe3f7b12f7596d37"
+          }
+        ]
+      }
+    ]
+  }
+}

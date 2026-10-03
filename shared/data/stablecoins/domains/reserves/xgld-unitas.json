@@ -1,0 +1,70 @@
+{
+  "id": "xgld-unitas",
+  "reserves": [
+    {
+      "name": "XAUt collateral and borrowed-USDT strategy book (net allocation undisclosed)",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Unitas XGLD strategy operator; exact issuing legal entity undisclosed",
+      "riskFactors": [
+        "leverage",
+        "basis",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "market",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "XGLD borrowing, vaults and OES strategy",
+        "url": "https://docs.unitas.so/overview/xgld.md"
+      }
+    ],
+    "rationale": "100% denotes the complete disclosed strategy envelope, not measured XAUt or USDT weights. XAUt collateral, BYBIT Stake & Borrow and delta-neutral strategies are disclosed; gross asset values cannot establish net backing after debt.",
+    "compositionBasis": "Issuer product and backing disclosures reopened 2026-10-02",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Complete current positions, borrowed liabilities, custodians, legal segregation and net weights are not disclosed; no 100% XAUt collateral attribution is authored.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "XAUt collateral and borrowed-USDT strategy book (net allocation undisclosed)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Complete current positions, borrowed liabilities, custodians, legal segregation and net weights are not disclosed; no 100% XAUt collateral attribution is authored."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Unitas Fund Vault / OES custody providers (identities and allocation undisclosed)",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "XGLD borrowing, vaults and OES strategy",
+        "url": "https://docs.unitas.so/overview/xgld.md"
+      }
+    ],
+    "uncertainty": "Complete current positions, borrowed liabilities, custodians, legal segregation and net weights are not disclosed; no 100% XAUt collateral attribution is authored.",
+    "knownUnknownExposurePct": 100
+  }
+}

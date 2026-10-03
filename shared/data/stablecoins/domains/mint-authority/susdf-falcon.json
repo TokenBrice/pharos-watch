@@ -1,0 +1,165 @@
+{
+  "id": "susdf-falcon",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "sUSDf shares mint against deposited USDf; parent issuance remains inherited from usdf-falcon. The Falcon 4-of-6 Safe can replace the local implementation through ProxyAdmin.",
+    "inheritedFrom": "usdf-falcon",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xc8cf6d7991f15525488b2a83df53468d682ba4b0",
+        "deploymentRefs": [
+          "ethereum:0xc8cf6d7991f15525488b2a83df53468d682ba4b0"
+        ],
+        "label": "sUSDf native savings wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "Falcon Finance savings documentation",
+            "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md"
+          },
+          {
+            "label": "Falcon Finance official deployment roster",
+            "url": "https://docs.falcon.finance/resources/smart-contracts.md"
+          },
+          {
+            "label": "Verified current sUSDf implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d132bee412e6619a4863aeedad97541bfda3f34"
+          },
+          {
+            "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
+            "url": "https://etherscan.io/block/26107704"
+          }
+        ],
+        "evidence": "At Ethereum block 26107704 (2026-10-02T22:44:11Z), asset() is 0xfa2b947eec368f42195f24f36d2af29f7c24cec2; decimals() is 18, totalSupply() is 56876949.092047125101 shares, totalAssets() is 64669136.889719046652 USDf, and balanceOf(vault) is 64670233.223213575780 USDf. convertToAssets(1e18) and previewRedeem(1e18) return 1.137000804756 USDf. Verified ERC-4626 native shares mint only against underlying deposits. Upgrade replacement risk is assessed separately in this profile."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7",
+        "deploymentRefs": [
+          "ethereum:0xc8cf6d7991f15525488b2a83df53468d682ba4b0"
+        ],
+        "controllerAssetId": "usdf-falcon",
+        "label": "Falcon Safe local sUSDf ProxyAdmin owner",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "threshold": 4,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 26107704,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "Falcon Finance savings documentation",
+            "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md"
+          },
+          {
+            "label": "Falcon Finance official deployment roster",
+            "url": "https://docs.falcon.finance/resources/smart-contracts.md"
+          },
+          {
+            "label": "Verified current sUSDf implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d132bee412e6619a4863aeedad97541bfda3f34"
+          },
+          {
+            "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
+            "url": "https://etherscan.io/block/26107704"
+          },
+          {
+            "label": "Falcon Safe",
+            "url": "https://etherscan.io/address/0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7"
+          },
+          {
+            "label": "Falcon ProxyAdmin",
+            "url": "https://etherscan.io/address/0x16a2605c026bfe4f4b7f4471933714d9b2149ace"
+          }
+        ],
+        "evidence": "Pinned ProxyAdmin.owner() returns this Safe; getThreshold() = 4, getOwners() contains six owners, getModulesPaginated() is empty and both Safe guard storage slots are zero. It can replace the native sUSDf implementation; no enforced universal timelock is established."
+      }
+    ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "sources": [
+        {
+          "label": "Falcon Finance savings documentation",
+          "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md"
+        },
+        {
+          "label": "Falcon Finance official deployment roster",
+          "url": "https://docs.falcon.finance/resources/smart-contracts.md"
+        },
+        {
+          "label": "Verified current sUSDf implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d132bee412e6619a4863aeedad97541bfda3f34"
+        },
+        {
+          "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
+          "url": "https://etherscan.io/block/26107704"
+        }
+      ],
+      "evidence": "At Ethereum block 26107704 (2026-10-02T22:44:11Z), asset() is 0xfa2b947eec368f42195f24f36d2af29f7c24cec2; decimals() is 18, totalSupply() is 56876949.092047125101 shares, totalAssets() is 64669136.889719046652 USDf, and balanceOf(vault) is 64670233.223213575780 USDf. convertToAssets(1e18) and previewRedeem(1e18) return 1.137000804756 USDf. EIP-1967 implementation is 0x0d132bee412e6619a4863aeedad97541bfda3f34; admin is ProxyAdmin 0x16a2605c026bfe4f4b7f4471933714d9b2149ace, owned by 4-of-6 Safe 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7. hasRole(DEFAULT_ADMIN_ROLE, Safe) is true. No enabled modules or guards were detected at the pin. Local upgrades can replace share issuance constraints; parent USDf issuance stays inherited.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "Signer independence, key custody and any offchain upgrade-delay policy are undisclosed."
+      ]
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xc8cf6d7991f15525488b2a83df53468d682ba4b0"
+      ],
+      "proxyAddresses": [
+        "0xc8cf6d7991f15525488b2a83df53468d682ba4b0"
+      ],
+      "implementationAddresses": [
+        "0x0d132bee412e6619a4863aeedad97541bfda3f34"
+      ],
+      "adminAddresses": [
+        "0x16a2605c026bfe4f4b7f4471933714d9b2149ace",
+        "0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Falcon Safe local sUSDf ProxyAdmin owner",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107704,
+      "sources": [
+        {
+          "label": "Falcon Finance savings documentation",
+          "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md"
+        },
+        {
+          "label": "Falcon Finance official deployment roster",
+          "url": "https://docs.falcon.finance/resources/smart-contracts.md"
+        },
+        {
+          "label": "Verified current sUSDf implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d132bee412e6619a4863aeedad97541bfda3f34"
+        },
+        {
+          "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
+          "url": "https://etherscan.io/block/26107704"
+        }
+      ]
+    }
+  }
+}

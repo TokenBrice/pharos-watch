@@ -1,0 +1,249 @@
+{
+  "id": "kpkusdcyield-kpk",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "probable",
+    "summary": "KPK USDC Yield V2 uses deposit-backed VaultV2 share issuance with configured fee-share accrual; parent USDC issuance remains inherited, while local admins control strategy parameters.",
+    "inheritedFrom": "usdc-circle",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13",
+        "deploymentRefs": [
+          "ethereum:0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        ],
+        "label": "KPK USDC Yield V2 deposit-backed share accounting",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+            "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+          },
+          {
+            "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+          },
+          {
+            "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+            "url": "https://eth-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho gate semantics and irreversible abdication",
+            "url": "https://docs.morpho.org/curate/concepts/gates.md"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
+          }
+        ],
+        "capDescription": "Deposits require transferred underlying; performance and management fee accrual may mint configured fee shares. No arbitrary owner share-mint entrypoint in reviewed source.",
+        "evidence": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=9792630120840452584390720 raw 18-decimal shares and totalAssets()=10295065635649 raw 6-decimal USDC. One adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 enumerates 5 current market IDs; summed expectedSupplyAssets=9983200606668, idle underlying=311865028981; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. Source and zero EIP-1967 implementation/admin/beacon slots support non-proxy VaultV2; full compiler verification remains unproven."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537",
+        "deploymentRefs": [
+          "ethereum:0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        ],
+        "label": "KPK USDC Yield V2 owner parameter authority",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+            "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+          },
+          {
+            "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+          },
+          {
+            "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+            "url": "https://eth-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho gate semantics and irreversible abdication",
+            "url": "https://docs.morpho.org/curate/concepts/gates.md"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
+          }
+        ],
+        "evidence": "Pinned owner()=0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537. Safe threshold and complete owners/modules are pinned below; signer independence and enabled-module permissions are not established. Owner appointment and curator adapter/cap/fee powers can change future allocations; these are not arbitrary parent-token issuance.",
+        "capDescription": "addAdapter timelock=259201 seconds; performance/management fee setters each 1209601 seconds. Both current fee rates are zero. Module reach and role replacement do not inherit a blanket delay guarantee.",
+        "threshold": 5,
+        "signerCount": 8,
+        "safe": {
+          "owners": [
+            "0xb45e9b1cd8cdfa602d494af2b3d92d46aaa15dd6",
+            "0x76d6705cd03c5c12b87f7a40be1e916f5e8beba8",
+            "0x4cf1072ff925e0f7aeeb495c6db92c4c97394209",
+            "0xdaf763adba152ee5e42f05488ea1cdc4e58af987",
+            "0xd3c14771993de5984225f2cc6b91b21266526625",
+            "0x97c0567cda7d4e34e49bad8fd5469d9e91a89c61",
+            "0x3eb10e2d37a3c95fec4d4d0f19025409b46e8e2f",
+            "0xc4105307f2f09cf5d08e0a565783ffdf365b7343"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "observedBlock": 26107704,
+          "observedAt": "2026-10-02",
+          "source": "onchain",
+          "guard": "0x0000000000000000000000000000000000000000"
+        }
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x7e43df1c1c5a2245858b60d4655fda83704e4171",
+        "deploymentRefs": [
+          "ethereum:0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        ],
+        "label": "KPK USDC Yield V2 curator parameter authority",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "present",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+            "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+          },
+          {
+            "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+          },
+          {
+            "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+            "url": "https://eth-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho gate semantics and irreversible abdication",
+            "url": "https://docs.morpho.org/curate/concepts/gates.md"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
+          }
+        ],
+        "evidence": "Pinned curator()=0x7e43df1c1c5a2245858b60d4655fda83704e4171. Safe threshold and complete owners/modules are pinned below; signer independence and enabled-module permissions are not established. Owner appointment and curator adapter/cap/fee powers can change future allocations; these are not arbitrary parent-token issuance.",
+        "capDescription": "addAdapter timelock=259201 seconds; performance/management fee setters each 1209601 seconds. Both current fee rates are zero. Module reach and role replacement do not inherit a blanket delay guarantee.",
+        "threshold": 2,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0xaf150c6d108d0c2c96bbfc3cef9b4848b5d99440",
+            "0xf0cf1e3ec6264b03241826f5b2abda17b4352a75",
+            "0x331d9c769185ae25233314859d53c2b9203a1204",
+            "0x7f99cf4919ccdf311c12ee22540e2c05b6ab5fa1",
+            "0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537"
+          ],
+          "threshold": 2,
+          "enabledModules": [
+            "0xc3a8702bc57e0b787bd62d429a993265f596be1e"
+          ],
+          "observedBlock": 26107704,
+          "observedAt": "2026-10-02",
+          "source": "onchain",
+          "guard": "0x0000000000000000000000000000000000000000"
+        }
+      }
+    ],
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "KPK USDC Yield V2 deposit-backed share accounting",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107704,
+      "sources": [
+        {
+          "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+          "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        },
+        {
+          "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        },
+        {
+          "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+          "url": "https://eth-mainnet.g.alchemy.com"
+        },
+        {
+          "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Morpho gate semantics and irreversible abdication",
+          "url": "https://docs.morpho.org/curate/concepts/gates.md"
+        },
+        {
+          "label": "Exact current MorphoMarketV1AdapterV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
+        }
+      ]
+    },
+    "review": {
+      "sources": [
+        {
+          "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+          "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        },
+        {
+          "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        },
+        {
+          "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+          "url": "https://eth-mainnet.g.alchemy.com"
+        },
+        {
+          "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Morpho gate semantics and irreversible abdication",
+          "url": "https://docs.morpho.org/curate/concepts/gates.md"
+        },
+        {
+          "label": "Exact current MorphoMarketV1AdapterV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
+        }
+      ],
+      "evidence": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=9792630120840452584390720 raw 18-decimal shares and totalAssets()=10295065635649 raw 6-decimal USDC. One adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 enumerates 5 current market IDs; summed expectedSupplyAssets=9983200606668, idle underlying=311865028981; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification. Current performance and management fees are zero; governed fee settings can create accrual fee shares. Parent issuer authority is inherited rather than copied as favorable wrapper supervision.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "Independent signer/key custody and enabled-module authorization closure.",
+        "Exact-vault signed financial assurance and legal insolvency priority."
+      ]
+    }
+  }
+}

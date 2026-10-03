@@ -1,0 +1,74 @@
+{
+  "id": "zarsc-supercoin",
+  "reserves": [
+    {
+      "name": "ZAR cash in Absa current account",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Absa Bank Limited",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Issuer holder and reserve terms",
+        "url": "https://www.supercoin.co.za/terms-of-service"
+      },
+      {
+        "label": "Retrieved independent reserve report",
+        "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf"
+      }
+    ],
+    "rationale": "August 31 book only: Moore obtained directly from Absa a current-account statement showing ZAR 8,412,465.96 in Super Money SA's name. Issued supply is 8,177,042, with 467,883.071866 designated non-circulating by management. Management allocates ZAR 467,883.07 of reserves to that treasury balance, leaving ZAR 7,944,582.89 against 7,709,158.928134 circulation. Bank-level segregation of that allocation was not independently established. The engagement expresses no assurance opinion.",
+    "compositionBasis": "Retrieved independent report; historical snapshot and scope retained",
+    "compositionAsOf": "2026-08-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No verified trust, bankruptcy priority, or bank-level segregation of issuer-designated non-circulating reserve amounts. Composition is historical, not a live reserve claim.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "ZAR cash in Absa current account",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Off-chain fiat deposit or fund share, not a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Absa Bank Limited",
+        "role": "bank",
+        "jurisdiction": "South Africa"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Issuer holder and reserve terms",
+        "url": "https://www.supercoin.co.za/terms-of-service"
+      },
+      {
+        "label": "Retrieved independent reserve report",
+        "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf"
+      }
+    ],
+    "uncertainty": "No verified trust, bankruptcy priority, or bank-level segregation of issuer-designated non-circulating reserve amounts. Composition is historical, not a live reserve claim. Segregation labels for the rand tokens reflect issuer terms and management representations, not independently proven bankruptcy remoteness."
+  }
+}

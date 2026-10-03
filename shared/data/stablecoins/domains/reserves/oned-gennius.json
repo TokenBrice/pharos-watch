@@ -1,0 +1,81 @@
+{
+  "id": "oned-gennius",
+  "reserves": [
+    {
+      "name": "USDC held by Coinbase for ONED",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle (USDC issuer); Coinbase (ONED USDC custody)",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Coinbase ONED custody and conversion",
+        "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins"
+      },
+      {
+        "label": "Coinbase ONED itemized reserve dashboard",
+        "url": "https://www.coinbase.com/en-in/oned/proof-of-reserves"
+      },
+      {
+        "label": "Base reserve-wallet and token RPC corroboration",
+        "url": "https://base-mainnet.g.alchemy.com"
+      }
+    ],
+    "rationale": "Coinbase explicitly identifies ONED as backed 1:1 by USDC in Coinbase custody. At Base block 52095848, the five dashboard-listed USDC wallets held 11857520.082376 USDC in total, against ONED totalSupply of 11857520.01. The dashboard displayed 11857520.08 USDC and 11857520.01 ONED, refreshed at 10/2/2026 10:43 PM with timezone unspecified. This is an independently reproduced on-chain snapshot, not an independent financial attestation or proof of absence of off-chain liabilities.",
+    "compositionBasis": "Exact-token Coinbase USDC backing disclosure corroborated by five Base USDC balances and ONED totalSupply",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The disclosed asset composition is entirely USDC. Complete off-chain obligations, reserve encumbrance and legal allocation are not established by wallet balances.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Coinbase (USDC custody for ONED Custom Stablecoin)",
+        "role": "custodian",
+        "sharePct": 100
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Coinbase ONED custody and conversion",
+        "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins"
+      },
+      {
+        "label": "Coinbase ONED itemized reserve dashboard",
+        "url": "https://www.coinbase.com/en-in/oned/proof-of-reserves"
+      },
+      {
+        "label": "ONED native holder terms",
+        "url": "https://oned.global/#/end-user-terms-and-conditions"
+      },
+      {
+        "label": "Gennius ONED platform terms",
+        "url": "https://tc.oned.global/#/oned"
+      }
+    ],
+    "uncertainty": "Coinbase names itself as custodian for the entire disclosed USDC reserve. The reviewed ONED holder/platform terms and dashboard do not establish a token-specific trust, legal segregation, insolvency priority or prohibition of reserve reuse; underlying Circle reserve protections do not establish these local safeguards."
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "id": "gldon-ondo",
+  "reserves": [
+    {
+      "name": "SPDR Gold Shares (GLD) exposure and cash in transit held for Ondo Global Markets",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "SPDR Gold Trust exposure via Ondo Global Markets (BVI) Limited",
+      "riskFactors": [
+        "market",
+        "custody",
+        "counterparty",
+        "liquidity",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "GLDon Final Terms and named custodians",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf"
+      },
+      {
+        "label": "Ondo full backing and security structure",
+        "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md"
+      },
+      {
+        "label": "GLDon issuer metadata; underlying holdings are not wrapper reserves",
+        "url": "https://app.ondo.finance/api/v2/assets/gldon/info"
+      }
+    ],
+    "rationale": "The 100% share-and-cash envelope mirrors IAUon and SLVon; issuer API Physical Gold weight describes the underlying ETF and is not a measured GLDON reserve mix. Final Terms permit Other Collateral and Additional Collateral, whose current usage is not established.",
+    "compositionBasis": "Issuer product and backing disclosures reopened 2026-10-02",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current GLDON-specific GLD/cash/Other Collateral weights and liabilities are undisclosed. Named providers establish roles, not asset-specific provider shares or unconditional no-reuse protections.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "SPDR Gold Shares (GLD) exposure and cash in transit held for Ondo Global Markets",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Current GLDON-specific GLD/cash/Other Collateral weights and liabilities are undisclosed. Named providers establish roles, not asset-specific provider shares or unconditional no-reuse protections."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Alpaca Securities LLC",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "BitGo Trust Company, Inc.",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Ankura Trust Company, LLC",
+        "role": "other",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "GLDon Final Terms and named custodians",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf"
+      },
+      {
+        "label": "Ondo full backing and security structure",
+        "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md"
+      },
+      {
+        "label": "GLDon issuer metadata; underlying holdings are not wrapper reserves",
+        "url": "https://app.ondo.finance/api/v2/assets/gldon/info"
+      }
+    ],
+    "uncertainty": "Current GLDON-specific GLD/cash/Other Collateral weights and liabilities are undisclosed. Named providers establish roles, not asset-specific provider shares or unconditional no-reuse protections.",
+    "knownUnknownExposurePct": 100
+  }
+}

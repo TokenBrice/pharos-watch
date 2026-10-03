@@ -1,0 +1,103 @@
+{
+  "id": "stbt-matrixdock",
+  "reserves": [
+    {
+      "name": "Short-term U.S. Treasury bills",
+      "pct": 95,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "duration",
+        "custody",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Superstate USTB fund interests",
+      "pct": 2.93,
+      "risk": "low",
+      "coinId": "ustb-superstate",
+      "depType": "collateral",
+      "assetClass": "fund-share",
+      "riskFactors": [
+        "custody",
+        "liquidity",
+        "legal",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "BlackRock BUIDL fund interests",
+      "pct": 2.07,
+      "risk": "low",
+      "coinId": "buidl-blackrock",
+      "depType": "collateral",
+      "assetClass": "fund-share",
+      "riskFactors": [
+        "custody",
+        "liquidity",
+        "legal",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "STBT January 2025 terms",
+        "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32"
+      },
+      {
+        "label": "Matrixdock reserve and rebasing disclosures",
+        "url": "https://www.matrixdock.com/stbt"
+      },
+      {
+        "label": "April 2026 settlement and fee update",
+        "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/announcements/stbt-custodian-and-conversion-fee-reduction-and-settlement-optimization.md"
+      }
+    ],
+    "rationale": "Issuer dashboard observed on 2026-10-02 attributes 95.00% of STBT to Treasury bills, 2.93% to USTB and 2.07% to BUIDL. These published liability-allocation weights total 100 and are not normalized from the separately shown USD 23,791,487.76 reserve NAV. Cash shown as surplus is not assigned a fabricated holder weight.",
+    "compositionBasis": "Undated rounded issuer dashboard composition-of-STBT column, observed 2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Dashboard lacks an as-of timestamp and independently signed reserve-to-liability reconciliation. Native supply at block 26107703 is 23,595,622.754750904 units. Custodian/broker identities, encumbrances and current third-party token deployment identities are undisclosed. Legal terms permit affiliate borrowing/lending and give token holders no direct or indirect asset title.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Short-term U.S. Treasury bills",
+        "pct": 95,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "U.S. Treasury bills are exogenous sovereign securities, not tracked stablecoins."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Epimetheus Technologies SPC or another Prometheus affiliate",
+        "role": "other"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "STBT January 2025 terms",
+        "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32"
+      }
+    ],
+    "uncertainty": "Terms §8 place reserves in affiliate bank/broker accounts separate from operating accounts; an intercompany note gives Prometheus a security interest. Holders remain unsecured Prometheus creditors without bank/broker relationships or asset ownership. Underlying brokers/banks and their safeguards are unnamed; affiliate asset reuse is expressly permitted.",
+    "knownUnknownExposurePct": 100
+  }
+}

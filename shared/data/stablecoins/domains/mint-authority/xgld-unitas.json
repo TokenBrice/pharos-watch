@@ -1,0 +1,67 @@
+{
+  "id": "xgld-unitas",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "inheritedFrom": "xaut-tether",
+    "authorityPosture": "unbounded-reconciliation-unknown",
+    "confidence": "manual-review",
+    "summary": "XGLD inherits XAUt issuer risk and adds local BNB operator minters; complete native minter and signing policy remain unverified.",
+    "controls": [
+      {
+        "label": "Unitas BNB native XGLD minter administration",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "bsc",
+        "address": "0x99997b18733ff4a9d8e0b9c7d9dec59625f87228",
+        "deploymentRefs": [
+          "bsc:0xe60106a5cab7e7c64830919d36ab20caaf50ac91"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 125374459,
+        "sources": [
+          {
+            "label": "XGLD primary mechanism",
+            "url": "https://docs.unitas.so/overview/xgld.md"
+          },
+          {
+            "label": "Verified XGLDToken source (equal BNB and Base runtime)",
+            "url": "https://basescan.org/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
+          },
+          {
+            "label": "BNB XGLD deployment",
+            "url": "https://bscscan.com/address/0xe60106a5cab7e7c64830919d36ab20caaf50ac91"
+          }
+        ],
+        "evidence": "owner() returned this address at the pinned BNB block. The BNB runtime equals the verified Base XGLDToken runtime (13,191 bytes), whose owner can add/remove native minters and burners. Complete role holders and owner signing policy are unavailable; this is not a verified Safe threshold."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "review": {
+      "sources": [
+        {
+          "label": "XGLD primary mechanism",
+          "url": "https://docs.unitas.so/overview/xgld.md"
+        },
+        {
+          "label": "Verified XGLDToken source (equal BNB and Base runtime)",
+          "url": "https://basescan.org/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
+        },
+        {
+          "label": "BNB XGLD deployment",
+          "url": "https://bscscan.com/address/0xe60106a5cab7e7c64830919d36ab20caaf50ac91"
+        }
+      ],
+      "evidence": "Issuer docs describe whitelisted native BNB minting against XAUt and strategy borrowing. Current owner and bytecode equality establish privileged mint authorization; no fully netted reserve/debt reconciliation, immutable supply cap or complete signing policy is established. Base OFT controls are recorded under Bridge Risk, not native mint authority.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "Complete native minter/burner roster and owner signing policy",
+        "Net position and borrowed-liability reconciliation"
+      ]
+    }
+  }
+}

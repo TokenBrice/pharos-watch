@@ -28,7 +28,7 @@
         }
       ]
     },
-    "summary": "YLDS has native issuer-controlled issuance on Provenance and Stellar. Provenance marker uylds.fcc has five direct ACCESS_MINT accounts plus a zero-delay 4-of-6 group policy, and enabled chain governance can change marker supply controls or native marker logic after the documented fastest 86,400-second expedited vote. The Stellar issuer account has no on-chain issuance cap. Solana and Ethereum are Hastra wYLDS bridge/wrapper representations and are excluded from Mint Authority.",
+    "summary": "YLDS has native issuer-controlled issuance on Provenance and Stellar. Provenance marker uylds.fcc has five direct ACCESS_MINT accounts plus a zero-delay 4-of-6 group policy, and enabled chain governance can change marker supply controls or native marker logic after the documented fastest 86,400-second expedited vote. The Stellar issuer account has no on-chain issuance cap. The previously cataloged Solana and Ethereum identities are the distinct Hastra wYLDS instrument and were removed from Figure YLDS contracts and deployment reviews on 2026-10-03.",
     "controls": [
       {
         "label": "YLDS Provenance 4-of-6 marker admin and mint policy",

@@ -1,0 +1,48 @@
+{
+  "id": "steakusdg-steakhouse",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Morpho exact Steakhouse USDG deployment",
+        "url": "https://app.morpho.org/robinhood-chain/vault/0xBeEff033F34C046626B8D0A041844C5d1A5409dd/steakhouse-usdg"
+      },
+      {
+        "label": "Exact verified VaultV2 source (robinhood, 0xbeeff033f34c046626b8d0a041844c5d1a5409dd)",
+        "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all"
+      },
+      {
+        "label": "Morpho current vault identity and asset API",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Steakhouse DeFi vault governing terms",
+        "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+      }
+    ],
+    "evidence": "At robinhood block 78597801, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and their setters permanently abdicated. Matched immutable core has no direct holder seizure or discretionary forced burn. The USDG-denominated lending claim inherits upstream parent freeze exposure; deposit gate/curator authority is distinct from a holder blacklist.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Only the exact native robinhood vault share is authored. No source-verified share bridge representation is included; underlying parent chain routes remain upstream.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Morpho exact Steakhouse USDG deployment",
+        "url": "https://app.morpho.org/robinhood-chain/vault/0xBeEff033F34C046626B8D0A041844C5d1A5409dd/steakhouse-usdg"
+      },
+      {
+        "label": "Exact verified VaultV2 source (robinhood, 0xbeeff033f34c046626b8d0a041844c5d1a5409dd)",
+        "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all"
+      },
+      {
+        "label": "Morpho current vault identity and asset API",
+        "url": "https://api.morpho.org/graphql"
+      }
+    ]
+  }
+}

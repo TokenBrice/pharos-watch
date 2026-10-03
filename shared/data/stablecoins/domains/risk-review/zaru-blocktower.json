@@ -1,0 +1,166 @@
+{
+  "id": "zaru-blocktower",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Finalized Solana mint configuration",
+        "url": "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+      },
+      {
+        "label": "Issuer holder terms",
+        "url": "https://zaru.network/blog/zar-universal-white-paper"
+      }
+    ],
+    "evidence": "At finalized Solana slot 452748072, the exact tracked Token-2022 mint has freezeAuthority 8USLqNrJ6WfUcTk2XUBYGRiMA2Mp2qh9AhsJZBEg5W62, a permanent delegate 8USLqNrJ6WfUcTk2XUBYGRiMA2Mp2qh9AhsJZBEg5W62, and a retained pausable authority. These are direct holder freeze/seizure controls; transfer hook is presently unset. Issuer terms expressly reserve freeze and recovery/burn powers.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "All four declared deployments expose native issuer minting. No third-party bridge representation or bridge controller is established; native mint and upgrade controls remain in Mint Authority.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Issuer native expansion model",
+        "url": "https://zaru.network/blog/zar-universal-white-paper"
+      },
+      {
+        "label": "Issuer homepage identifies live Arc deployment",
+        "url": "https://zaru.network/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "solana:2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN",
+        "destinationChain": "solana",
+        "canonicalChain": "solana",
+        "contractAddress": "2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN",
+        "protocol": "BlockTower native ZARU issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native mint authority is independently observed. No third-party bridge, lockbox, messaging controller or bridge representation is identified.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "solana",
+        "controllerAddress": "8USLqNrJ6WfUcTk2XUBYGRiMA2Mp2qh9AhsJZBEg5W62",
+        "observedAt": "2026-10-02",
+        "observedBlock": 452748072,
+        "sources": [
+          {
+            "label": "Solana mint and authority observation",
+            "url": "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+          },
+          {
+            "label": "Issuer native expansion model",
+            "url": "https://zaru.network/blog/zar-universal-white-paper"
+          }
+        ]
+      },
+      {
+        "id": "ethereum:0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5",
+        "protocol": "BlockTower native ZARU issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native mint authority is independently observed. No third-party bridge, lockbox, messaging controller or bridge representation is identified.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x29fc8c0e185f7d6cb85e232412db8e2a28f72cf1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107705,
+        "sources": [
+          {
+            "label": "Verified ERC20F implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+          },
+          {
+            "label": "ethereum issuer token",
+            "url": "https://etherscan.io/address/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"
+          },
+          {
+            "label": "Issuer native expansion model",
+            "url": "https://zaru.network/blog/zar-universal-white-paper"
+          }
+        ]
+      },
+      {
+        "id": "base:0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5",
+        "destinationChain": "base",
+        "canonicalChain": "base",
+        "contractAddress": "0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5",
+        "protocol": "BlockTower native ZARU issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native mint authority is independently observed. No third-party bridge, lockbox, messaging controller or bridge representation is identified.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "base",
+        "controllerAddress": "0x29fc8c0e185f7d6cb85e232412db8e2a28f72cf1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 52095862,
+        "sources": [
+          {
+            "label": "Verified ERC20F implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+          },
+          {
+            "label": "base issuer token",
+            "url": "https://basescan.org/address/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"
+          },
+          {
+            "label": "Issuer native expansion model",
+            "url": "https://zaru.network/blog/zar-universal-white-paper"
+          }
+        ]
+      },
+      {
+        "id": "arc:0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5",
+        "destinationChain": "arc",
+        "canonicalChain": "arc",
+        "contractAddress": "0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5",
+        "protocol": "BlockTower native ZARU issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native mint authority is independently observed. No third-party bridge, lockbox, messaging controller or bridge representation is identified.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "arc",
+        "controllerAddress": "0x29fc8c0e185f7d6cb85e232412db8e2a28f72cf1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 23952333,
+        "sources": [
+          {
+            "label": "Verified ERC20F implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+          },
+          {
+            "label": "arc issuer token",
+            "url": "https://explorer.arc.io/address/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"
+          },
+          {
+            "label": "Issuer native expansion model",
+            "url": "https://zaru.network/blog/zar-universal-white-paper"
+          }
+        ]
+      }
+    ]
+  }
+}

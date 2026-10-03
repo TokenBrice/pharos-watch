@@ -1,0 +1,224 @@
+{
+  "id": "sxsrlusd-sentora",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "manual-review",
+    "summary": "sxsRLUSD shares issue against deposited RLUSD and protocol fee accrual; no arbitrary privileged local share issuance is resolved. Curator allocation and fee authority remains material, while RLUSD issuance is inherited.",
+    "inheritedFrom": "rlusd-ripple",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "Sentora x Spark RLUSD immutable share accounting",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107706,
+      "sources": [
+        {
+          "label": "Exact Sentora vault",
+          "url": "https://app.morpho.org/ethereum/vault/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+        },
+        {
+          "label": "Pinned RPC identity, accounting and controls",
+          "url": "https://eth-mainnet.g.alchemy.com/v2"
+        },
+        {
+          "label": "Morpho Vault V2 documentation",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Exact VaultV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+        },
+        {
+          "label": "MorphoMarketV1AdapterV2 source",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+        },
+        {
+          "label": "Ripple RLUSD terms, section 11.5",
+          "url": "https://ripple.com/legal/stablecoin/"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xfc8c624b6080a0a780583799f2a862de936f6e22",
+        "deploymentRefs": [
+          "ethereum:0xfc8c624b6080a0a780583799f2a862de936f6e22"
+        ],
+        "label": "Sentora x Spark RLUSD immutable share accounting",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107706,
+        "sources": [
+          {
+            "label": "Exact Sentora vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+          },
+          {
+            "label": "Pinned RPC identity, accounting and controls",
+            "url": "https://eth-mainnet.g.alchemy.com/v2"
+          },
+          {
+            "label": "Morpho Vault V2 documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Exact VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+          },
+          {
+            "label": "MorphoMarketV1AdapterV2 source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "Ripple RLUSD terms, section 11.5",
+            "url": "https://ripple.com/legal/stablecoin/"
+          }
+        ],
+        "evidence": "Exact immutable VaultV2 source and pinned asset reads establish underlying-backed deposit/mint, plus accrued fee-share issuance, without an arbitrary privileged share-mint entrypoint. At ethereum block 26107706, asset() was 0x8292bb45bf1ee4d140127049757c2e0ff06317ed, share decimals 18 and underlying decimals 18; totalAssets raw 250001199783394711178689552, totalSupply raw 249994918735505772044961482, idle raw 225673066061791758611500399, sole adapter market assets raw 24328133721602952567189153, with an exact zero accounting difference. The only funded market lent RLUSD against WBTC at 86% LLTV. The adapter position had zero borrowing and zero posted collateral."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3300f198988e4c9c63f75df86de36421f06af8c4",
+        "deploymentRefs": [
+          "ethereum:0xfc8c624b6080a0a780583799f2a862de936f6e22"
+        ],
+        "label": "Sentora x Spark RLUSD owner",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107706,
+        "sources": [
+          {
+            "label": "Exact Sentora vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+          },
+          {
+            "label": "Pinned RPC identity, accounting and controls",
+            "url": "https://eth-mainnet.g.alchemy.com/v2"
+          },
+          {
+            "label": "Morpho Vault V2 documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Exact VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+          },
+          {
+            "label": "MorphoMarketV1AdapterV2 source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "Verified SubProxy owner source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x3300f198988e4c9c63f75df86de36421f06af8c4?fields=all"
+          }
+        ],
+        "evidence": "The exact verified owner is SubProxy with wards-authorized delegatecall. Ultimate authorization census and latent execution reach remain unresolved; this owner is not asserted to be a Safe."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xff070333654aae76a0a77465e4f0fd101c57c03f",
+        "deploymentRefs": [
+          "ethereum:0xfc8c624b6080a0a780583799f2a862de936f6e22"
+        ],
+        "label": "Sentora x Spark RLUSD curator",
+        "role": "cap-admin",
+        "authorityType": "safe",
+        "safe": {
+          "owners": [
+            "0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+            "0xab5710211458fc8d7e0be628202f47ddbd3f38eb"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": null,
+          "observedBlock": 26107706,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107706,
+        "sources": [
+          {
+            "label": "Exact Sentora vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+          },
+          {
+            "label": "Pinned RPC identity, accounting and controls",
+            "url": "https://eth-mainnet.g.alchemy.com/v2"
+          },
+          {
+            "label": "Morpho Vault V2 documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Exact VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+          },
+          {
+            "label": "MorphoMarketV1AdapterV2 source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "Ripple RLUSD terms, section 11.5",
+            "url": "https://ripple.com/legal/stablecoin/"
+          }
+        ],
+        "evidence": "Pinned getThreshold/getOwners, empty module list and zero guard establish this controller; signer independence and off-chain key custody remain unknown. The 2-of-2 curator signs through nested Safe branches: Sentora 1-of-1 and the second branch 1-of-2. These are not two independent EOA signers.",
+        "threshold": 2,
+        "signerCount": 2,
+        "canRaiseCap": true,
+        "timelockDelaySec": 604800,
+        "capDescription": "Adapter and cap increases wait 604800 seconds; existing allocations remain dynamic. Fees can mint protocol fee shares, not arbitrary asset-unbacked issuance."
+      }
+    ],
+    "review": {
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Exact Sentora vault",
+          "url": "https://app.morpho.org/ethereum/vault/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+        },
+        {
+          "label": "Pinned RPC identity, accounting and controls",
+          "url": "https://eth-mainnet.g.alchemy.com/v2"
+        },
+        {
+          "label": "Morpho Vault V2 documentation",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Exact VaultV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+        },
+        {
+          "label": "MorphoMarketV1AdapterV2 source",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+        },
+        {
+          "label": "Verified SubProxy owner source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x3300f198988e4c9c63f75df86de36421f06af8c4?fields=all"
+        }
+      ],
+      "evidence": "Pinned identity, zero implementation slot, exact immutable source and gate/role reads bound the local share mint path. User issuance requires underlying assets; interest accrual may mint fee shares. Parent issuance is inherited and parent financial attestations do not reconcile this vault. At ethereum block 26107706, asset() was 0x8292bb45bf1ee4d140127049757c2e0ff06317ed, share decimals 18 and underlying decimals 18; totalAssets raw 250001199783394711178689552, totalSupply raw 249994918735505772044961482, idle raw 225673066061791758611500399, sole adapter market assets raw 24328133721602952567189153, with an exact zero accounting difference. The only funded market lent RLUSD against WBTC at 86% LLTV. The adapter position had zero borrowing and zero posted collateral.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "unresolvedQuestions": [
+        "Independent exact-vault financial assurance and enforceable insolvency priority were not established.",
+        "Ultimate SubProxy ward census, authorized delegatecall targets and nested signer independence remain unresolved."
+      ]
+    }
+  }
+}

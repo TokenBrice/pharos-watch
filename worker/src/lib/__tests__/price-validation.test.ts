@@ -282,6 +282,26 @@ describe("validatePriceCandidate", () => {
     expect(validatePriceCandidate(0.001, vnd, "fallback_enrichment", noReference).reasonCode).toBe("hardcoded_upper_bound_exceeded");
   });
 
+  it.each([
+    ["CZK", 1 / 21.8],
+    ["PLN", 1 / 3.8998],
+    ["AED", 1 / 3.6725],
+  ] as const)("validates %s as fiat FX rather than an unbounded or dollar peg", (currency, rate) => {
+    const pegType = `pegged${currency}`;
+    const context = buildPriceValidationContext({ pegType, pegCurrency: currency });
+    const references: PriceValidationReferences = {
+      rates: { [pegType]: rate },
+      type: "fresh",
+      updatedAt: freshRefs.updatedAt,
+    };
+    const noReference: PriceValidationReferences = { rates: {}, type: "none", updatedAt: null };
+
+    expect(validatePriceCandidate(rate, context, "fallback_enrichment", references).reasonCode).toBe("within_reference_band");
+    expect(validatePriceCandidate(rate * 1.2, context, "fallback_enrichment", references).reasonCode).toBe("reference_upper_bound_exceeded");
+    expect(validatePriceCandidate(rate, context, "fallback_enrichment", noReference).accepted).toBe(true);
+    expect(validatePriceCandidate(1, context, "fallback_enrichment", noReference).reasonCode).toBe("hardcoded_upper_bound_exceeded");
+  });
+
   it("caps USD reference upper bound at the hardcoded USD publish ceiling", () => {
     const context = buildPriceValidationContext({ pegType: "peggedUSD", pegCurrency: "USD" });
     const result = validatePriceCandidate(1.5, context, "fallback_enrichment", freshRefs);

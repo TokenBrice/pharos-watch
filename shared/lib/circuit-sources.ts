@@ -40,6 +40,7 @@ export const CIRCUIT_SOURCE_REGISTRY = {
   USDV_JUPITER: { key: "usdv-jupiter", scope: "asset-scoped" },
   SUSD_SOLAYER_NAV: { key: "susd-solayer-nav", scope: "asset-scoped" },
   USDAF_UNISWAP_V4: { key: "usdaf-uniswap-v4", scope: "asset-scoped" },
+  USDU_UNISWAP_V3: { key: "usdu-uniswap-v3", scope: "asset-scoped" },
   // Single-asset members share this breaker with multi-asset redemption providers.
   PROTOCOL_REDEEM: { key: "protocol-redeem", scope: "source-wide" },
   CURVE_ONCHAIN: { key: "curve-onchain", scope: "source-wide" },

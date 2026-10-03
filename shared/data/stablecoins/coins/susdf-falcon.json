@@ -1,0 +1,117 @@
+{
+  "id": "susdf-falcon",
+  "name": "Falcon Staked USDf",
+  "symbol": "sUSDf",
+  "oneLiner": "sUSDf is Falcon's USDf savings share, accruing strategy rewards and redeemable for USDf subject to admin restrictions and a configurable cooldown.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "usdf-falcon",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "usdf-falcon",
+  "collateral": "USDf held in the Ethereum sUSDf ERC-4626 savings vault; upstream backing and issuer risk remain with usdf-falcon",
+  "pegMechanism": "Deposit USDf to mint sUSDf shares; USDf rewards increase the share-to-USDf exchange rate as they vest. Direct share redemption has cooldownDuration() = 0 at Ethereum block 26107704 on 2026-10-02, but administrators can introduce a cooldown of up to 90 days and restrict deposit or redemption accounts. Platform redemption separately requires approved onboarding and remains subject to Falcon's terms.",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "The exact Ethereum deployment 0xc8cf6d7991f15525488b2a83df53468d682ba4b0 is a current ERC-4626 operational share claim on USDf. At Ethereum block 26107704 (2026-10-02T22:44:11Z), asset() is 0xfa2b947eec368f42195f24f36d2af29f7c24cec2; decimals() is 18, totalSupply() is 56876949.092047125101 shares, totalAssets() is 64669136.889719046652 USDf, and balanceOf(vault) is 64670233.223213575780 USDf. convertToAssets(1e18) and previewRedeem(1e18) return 1.137000804756 USDf. Local vault conservation, custody and recovery differ from the parent's synthetic-delta-neutral hedge book, so protocol-position is an intentional local archetype override; upstream economic risks remain inherited through the 100% wrapper dependency.",
+    "sources": [
+      {
+        "label": "Falcon Finance savings documentation",
+        "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md"
+      },
+      {
+        "label": "Falcon Finance official deployment roster",
+        "url": "https://docs.falcon.finance/resources/smart-contracts.md"
+      },
+      {
+        "label": "Verified current sUSDf implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d132bee412e6619a4863aeedad97541bfda3f34"
+      },
+      {
+        "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
+        "url": "https://etherscan.io/block/26107704"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://etherscan.io/address/0xc8cf6d7991f15525488b2a83df53468d682ba4b0#readContract",
+    "provider": "Ethereum onchain vault accounting and direct USDf token balances. This proves the local wrapper position, not independent financial assurance of the parent's reserves.",
+    "cadence": "real-time"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://falcon.finance/"
+    },
+    {
+      "label": "Savings documentation",
+      "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md"
+    },
+    {
+      "label": "Deployment roster",
+      "url": "https://docs.falcon.finance/resources/smart-contracts.md"
+    },
+    {
+      "label": "Falcon platform terms",
+      "url": "https://docs.falcon.finance/resources/terms-of-use.md"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xc8cf6d7991f15525488b2a83df53468d682ba4b0",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "yieldConfig": {
+    "yieldSource": "Falcon Finance savings (sUSDf)",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "susdf-falcon",
+    "display": {
+      "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md",
+      "label": "Falcon Staked USDf"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "USDf savings vault position",
+        "risk": "high",
+        "coinId": "usdf-falcon",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xfa2b947eec368f42195f24f36d2af29f7c24cec2"
+      },
+      "redemptionLock": [
+        {
+          "selector": "cooldownDuration()",
+          "kind": "cooldown-seconds"
+        }
+      ]
+    }
+  },
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  }
+}

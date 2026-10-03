@@ -1,0 +1,80 @@
+{
+  "id": "jltxx-jpmorgan",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "The live Ethereum FactTokenDiamond delegates mint(bytes32,address,uint256) to a verified Tokenization Agent-gated MintableFacet. The request identifier is an operational idempotence control, not an on-chain collateral cap. The diamond owner contract can replace mint logic immediately; beneficial controller quorum and complete live Tokenization Agent membership were not resolved.",
+    "upgradeability": {
+      "model": "diamond",
+      "deploymentRefs": ["ethereum:0x09864f52b035ae22ee739dfa5c748fa080d07bd8"],
+      "adminAddresses": ["0x5ae5d4ada523985dbab22cf046599979897c8418"],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "FactTokenDiamond owner controller",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107698,
+      "sources": [
+        { "label": "Token diamond owner read", "url": "https://eth.blockscout.com/address/0x09864f52b035ae22ee739dfa5c748fa080d07bd8?tab=read_contract" },
+        { "label": "Verified DiamondCutFacet", "url": "https://eth.blockscout.com/address/0x6e4d1a8b0a6b2ed26c50873c2c75feac77385295?tab=contract" }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x09864f52b035ae22ee739dfa5c748fa080d07bd8",
+        "deploymentRefs": ["ethereum:0x09864f52b035ae22ee739dfa5c748fa080d07bd8"],
+        "label": "FactTokenDiamond Tokenization Agent mint surface",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "present",
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": ["jpmorgan-morgan-money-fact-token-control"],
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107698,
+        "sources": [
+          { "label": "Verified live FactTokenDiamond", "url": "https://eth.blockscout.com/address/0x09864f52b035ae22ee739dfa5c748fa080d07bd8?tab=contract" },
+          { "label": "Verified MintableFacet", "url": "https://eth.blockscout.com/address/0xe70c597957e542209ed44f2fbae58370089e59be?tab=contract" }
+        ],
+        "evidence": "Pinned loupe call binds the mint selector to0xe70c597957e542209ed44f2fbae58370089e59be. Mint requires TOKENIZATION_AGENT, active token, active requester and not-paused state. Owner-only DiamondCutFacet can replace the delegatecalled mint facet; the verified code has no timelock on that call. Role members, controller signing quorum, key custody and an enforceable aggregate collateral ceiling remain unresolved."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5ae5d4ada523985dbab22cf046599979897c8418",
+        "deploymentRefs": ["ethereum:0x09864f52b035ae22ee739dfa5c748fa080d07bd8"],
+        "label": "FactTokenDiamond owner controller",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": ["jpmorgan-morgan-money-fact-token-control"],
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107698,
+        "sources": [
+          { "label": "Verified DiamondCutFacet", "url": "https://eth.blockscout.com/address/0x6e4d1a8b0a6b2ed26c50873c2c75feac77385295?tab=contract" },
+          { "label": "Token diamond owner read", "url": "https://eth.blockscout.com/address/0x09864f52b035ae22ee739dfa5c748fa080d07bd8?tab=read_contract" }
+        ],
+        "evidence": "Pinned owner() returned this contract at Ethereum block26107698 (0x18e5f32), blockHash0x1873f19af6d4b1423d634e2067220be47f24b4aed3efab69b062aac2a5b0a9fd. facetAddress(0x1f931c1c) binds DiamondCutFacet0x6e4d1a8b0a6b2ed26c50873c2c75feac77385295; verified diamondCut calls enforceIsContractOwner and allows add/replace/remove/delegatecall with no local delay. The owner is itself a contract, not an asserted EOA/multisig. No claim that the controller's own ownership/upgrade path is immutable or independently timelocked. Pinned eth_getCode proves the controller is a contract. No multisig threshold or signer count was established."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "internal-ledger",
+    "supervision": "unknown",
+    "review": {
+      "disposition": "scoreable",
+      "sources": [
+        { "label": "SEC-filed JLTXX prospectus, Investor Register and daily reconciliation", "url": "https://www.sec.gov/Archives/edgar/data/1659326/000119312526217424/d44657d485bpos.htm" },
+        { "label": "Verified MintableFacet", "url": "https://eth.blockscout.com/address/0xe70c597957e542209ed44f2fbae58370089e59be?tab=contract" },
+        { "label": "Verified DiamondCutFacet", "url": "https://eth.blockscout.com/address/0x6e4d1a8b0a6b2ed26c50873c2c75feac77385295?tab=contract" },
+        { "label": "Issuer JLTXX launch", "url": "https://am.jpmorgan.com/us/en/asset-management/institutional/about-us/media/press-releases/jp-morgan-asset-management-launches-second-tokenized-fund-on-ethereum/" },
+        { "label": "Exact Ethereum FactTokenDiamond", "url": "https://eth.blockscout.com/address/0x09864f52b035ae22ee739dfa5c748fa080d07bd8?tab=contract" }
+      ],
+      "evidence": "The legal Investor Register governs ownership and is reconciled daily to tokenized share balances. This is disclosed internal-ledger reconciliation, not independent reserve coverage or prudential mint supervision. Scoreable under the approved Ethereum single-deployment roster, which reconciles to published Token Class assets to about0.0116%; the October1 Solana authorization is an unresolved expansion signal, not an invented deployment/control.",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)"
+    }
+  }
+}

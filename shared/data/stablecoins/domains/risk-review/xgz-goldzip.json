@@ -1,0 +1,23 @@
+{
+  "id": "xgz-goldzip",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "GoldZip Ethereum proxy",
+        "url": "https://etherscan.io/address/0x69af64f409c08e9076bf7f3ed9db3a7409717161"
+      },
+      {
+        "label": "Verified HKGXToken implementation",
+        "url": "https://etherscan.io/address/0x29ed41cb1013a4df63d87b82346b384847db7511#code"
+      },
+      {
+        "label": "GoldZip issuance claim",
+        "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+      }
+    ],
+    "evidence": "The current proxy EIP-1967 implementation slot binds verified HKGXToken. Its ABI exposes freezeAccount, unfreezeAccount, isFrozen and forceBurn with privileged freeze/burn roles; direct holder controls are distinct from mint authority.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

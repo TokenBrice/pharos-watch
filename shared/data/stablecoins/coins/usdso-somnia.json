@@ -1,0 +1,89 @@
+{
+  "id": "usdso-somnia",
+  "name": "USD Somnia",
+  "symbol": "USDso",
+  "oneLiner": "Frax-issued USDso wraps frxUSD on Somnia, with on-chain parent-token redemption and administrator-controlled issuance and custody.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "rwa": true
+  },
+  "variantOf": "frxusd-frax",
+  "variantKind": "pure-wrapper",
+  "pegReferenceId": "frxusd-frax",
+  "collateral": "Somnia frxUSD held by the local BrandedCustodian; Treasury funds and other cash-equivalent reserves sit upstream in frxUSD.",
+  "pegMechanism": "The BrandedCustodian burns caller-owned USDso and returns frxUSD. At the pin, custodianTkn() was Somnia frxUSD 0x00000000d61733e7a393a10a5b48c311abe8f1e5; totalAssets(), brandedCoinMinted(), actual frxUSD custody and child supply matched. previewRedeem(1e18)=1e18, redeemFee()=0 and isolatedBackingEnabled()=false. The terms identify Frax Inc. and/or affiliates as issuer, disclaim Somnia fiat-redemption responsibility and exclude a holder yield entitlement.",
+  "mechanismArchetype": "tbill",
+  "llamaId": "378",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://somnia.network/usdso-stablecoin"
+    },
+    {
+      "label": "Token explorer",
+      "url": "https://explorer.somnia.network/address/0x00000022da000002656c64d9ea6011ea952d008a"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "somnia",
+      "address": "0x00000022da000002656c64d9ea6011ea952d008a",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://explorer.somnia.network/address/0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9",
+    "provider": "On-chain parent-token custody; not independent financial assurance",
+    "cadence": "real-time"
+  },
+  "dependencyReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USD Somnia product documentation (accessed 2026-10-02)",
+        "url": "https://somnia.network/usdso-stablecoin"
+      },
+      {
+        "label": "Verified token implementation",
+        "url": "https://explorer.somnia.network/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+      },
+      {
+        "label": "Pinned somnia RPC at block 428274392",
+        "url": "https://api.infra.mainnet.somnia.network"
+      },
+      {
+        "label": "USDso terms: Frax issuer and no Somnia redemption/yield obligation",
+        "url": "https://somnia.network/usdso-terms-of-service"
+      },
+      {
+        "label": "Verified BrandedCustodian implementation",
+        "url": "https://explorer.somnia.network/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+      },
+      {
+        "label": "Verified current BrandedFactory implementation",
+        "url": "https://explorer.somnia.network/api/v2/smart-contracts/0x690575465af47835b72c5b74c334234624cfd942"
+      },
+      {
+        "label": "Frax parent reserve balance sheet (issuer telemetry)",
+        "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+      }
+    ],
+    "rationale": "At somnia block 428274392, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 3,268,350.769507 frxUSD against 3,268,350.769507 USDso supply. The BrandedCustodian burns caller-owned USDso and returns frxUSD. At the pin, custodianTkn() was Somnia frxUSD 0x00000000d61733e7a393a10a5b48c311abe8f1e5; totalAssets(), brandedCoinMinted(), actual frxUSD custody and child supply matched. previewRedeem(1e18)=1e18, redeemFee()=0 and isolatedBackingEnabled()=false. The terms identify Frax Inc. and/or affiliates as issuer, disclaim Somnia fiat-redemption responsibility and exclude a holder yield entitlement.",
+    "relationships": [
+      {
+        "id": "frxusd-frax",
+        "weight": 1,
+        "type": "wrapper",
+        "reason": "The immediate serial claim is the verified parent stablecoin, not a direct child allocation of off-chain Treasury reserves."
+      }
+    ]
+  },
+  "geckoId": "usd-somnia"
+}

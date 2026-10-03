@@ -1,0 +1,19 @@
+{
+  "id": "zarsc-supercoin",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Finalized Solana mint configuration",
+        "url": "https://solscan.io/token/5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ"
+      },
+      {
+        "label": "Issuer holder terms",
+        "url": "https://www.supercoin.co.za/terms-of-service"
+      }
+    ],
+    "evidence": "At finalized Solana slot 452748073, the exact tracked Token-2022 mint has freezeAuthority 78gLf8nzh9KpfgHJ3dXN61frauTzdAw5yeBXQbFsVnZi, a permanent delegate 3DkHJVMsC7zLLdBa7SamKpr4r6jC9C8AWQdzzvcYjVdc, and a retained pausable authority. These are direct holder freeze/seizure controls; transfer hook is presently unset. Issuer terms expressly reserve freeze and recovery/burn powers.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

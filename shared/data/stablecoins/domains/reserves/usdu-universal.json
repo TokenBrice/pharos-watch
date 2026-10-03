@@ -1,0 +1,85 @@
+{
+  "id": "usdu-universal",
+  "reserves": [
+    {
+      "name": "USD bank deposits",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "UAE Central Bank-regulated reserve banks",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Crowe August 2026 reserve examination",
+        "url": "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf"
+      },
+      {
+        "label": "USDU January 2026 whitepaper",
+        "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"
+      },
+      {
+        "label": "ADGM FSRA issuer register FSP250089",
+        "url": "https://www.adgm.com/public-registers/fsra/firms/financial-firms/universal-digital-intl-limited-250089"
+      }
+    ],
+    "rationale": "Crowe obtained direct bank confirmations and independently traced exact Ethereum liabilities; all reported reserves are U.S. dollar deposits.",
+    "compositionBasis": "Crowe ISAE3000 reasonable-assurance examination: August31 2026 USD deposits30,651,543.81 / total reserves30,651,543.81 =100%; same token liabilities. September18 signed date is a publication stand-in.",
+    "compositionAsOf": "2026-08-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Asset type is fully classified. Bank-specific shares, contractual deposit maturities and independently established holder insolvency priority are undisclosed.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Emirates NBD (issuer-named reserve bank)",
+        "role": "bank",
+        "jurisdiction": "United Arab Emirates"
+      },
+      {
+        "name": "Mashreq (issuer-named reserve bank)",
+        "role": "bank",
+        "jurisdiction": "United Arab Emirates"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Crowe August 2026 reserve examination",
+        "url": "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf"
+      },
+      {
+        "label": "USDU January 2026 whitepaper",
+        "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"
+      },
+      {
+        "label": "ADGM FSRA issuer register FSP250089",
+        "url": "https://www.adgm.com/public-registers/fsra/firms/financial-firms/universal-digital-intl-limited-250089"
+      },
+      {
+        "label": "Universal named reserve banking partners",
+        "url": "https://www.universal.ae/"
+      }
+    ],
+    "uncertainty": "The issuer names Emirates NBD and Mashreq as reserve banks without publishing allocation shares; Crowe confirms balances but does not identify banks in its examined schedule. The whitepaper separates Universal reserve accounts from Aquanow client money accounts. Crowe excludes accompanying notes and legal compliance; no independently verified holder trust, insolvency priority or whole-book rehypothecation prohibition is established.",
+    "knownUnknownExposurePct": 100
+  }
+}

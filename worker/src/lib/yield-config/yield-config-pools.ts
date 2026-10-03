@@ -6,6 +6,9 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "steakusdt-steakhouse": "ef5d3acb-b974-4db1-8076-e8db9f142493",
   // Both Prime receipts have same-symbol siblings; the UUID owns the vault identity.
   "steakusdc-steakhouse": "931ea9be-5f4d-428e-beaf-205fc5b4e2b5",
+  // Robinhood has no generic Worker rate-RPC route. Live DL native row binds the
+  // unique STEAKUSDG symbol and exact USDG underlying to this tracked deployment.
+  "steakusdg-steakhouse": "32f586b4-5358-5aa2-88ee-c842139e7023",
   "sdola-inverse-finance": "bf0f95c9-bc46-467d-9762-1d80ff50cd74",
   // sUSDe - ethena-usde native staking, Ethereum, $3.5B TVL, ~3.6% APY
   "susde-ethena": "66985a81-9c51-46ca-9977-42b4fe7bc6df",
@@ -42,8 +45,8 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   // ── Wave 1: Native yield coins (C+ or above) ─────────────────────
   // sUSDS - sky-lending, Ethereum, $5.3B TVL, ~4.0% APY
   "susds-sky": "d8c4eff5-c8a9-46fc-a888-057c4c668e72",
-  // sDAI - sdai native, Gnosis, $86M TVL, ~5.5% APY
-  "sdai-sky": "13392973-be6e-4b2f-bce9-4f7dd53d1c3a",
+  // Gnosis Savings xDAI receipt; the Ethereum Sky sDAI has its own rate reader.
+  "sdai-gnosis": "13392973-be6e-4b2f-bce9-4f7dd53d1c3a",
   // scrvUSD - curve native savings, Ethereum, $40M TVL, ~6.7% APY
   "scrvusd-curve": "5fd328af-4203-471b-bd16-1705c726d926",
   // sfrxUSD - frax native staking, Ethereum, $26M TVL, ~4.3% APY
@@ -57,8 +60,8 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   // ── Stablewatch Wave 1: New wrapper pools ─────────────────────────
   // infiniFi USD -> siUSD - infinifi native savings, Ethereum, $121M TVL, ~4.8% APY
   "iusd-infinifi": "8fa2e60e-365a-41fc-8d50-fadde5041f94",
-  // Falcon USD -> sUSDf - falcon-finance native savings, Ethereum, $87M TVL, ~5.9% APY
-  "usdf-falcon": "0f67a08c-3f24-4a4b-963e-541f5a5c0364",
+  // Tracked Falcon sUSDf owns native savings yield, not its USDf parent.
+  "susdf-falcon": "0f67a08c-3f24-4a4b-963e-541f5a5c0364",
   // Unitas -> sUSDu - unitas native savings, Solana, $49M TVL, ~12.9% APY
   "usdu-unitas": "7f980c43-5b87-4690-a11a-b0e8a5e37a63",
   // GAIB sAID - gaib native savings, Ethereum, $15M TVL, ~10.5% APY

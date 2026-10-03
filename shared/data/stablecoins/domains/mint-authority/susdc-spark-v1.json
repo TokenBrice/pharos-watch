@@ -1,0 +1,161 @@
+{
+  "id": "susdc-spark-v1",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "sUSDC inherits USDC issuer authority. Native shares are deposit-backed; the authorized UUPS ward can replace share accounting.",
+    "inheritedFrom": "usdc-circle",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe",
+        "deploymentRefs": [
+          "ethereum:0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+        ],
+        "label": "Exact deposit-backed ERC-4626 share issuer",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "Spark Savings documentation distinguishes Legacy V1 from V2",
+            "url": "https://docs.spark.finance/products/spark-savings"
+          },
+          {
+            "label": "Official Spark Ethereum deployment registry",
+            "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Ethereum.sol"
+          },
+          {
+            "label": "Verified exact vault deployment and source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+          },
+          {
+            "label": "Verified Legacy UsdcVault implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba"
+          },
+          {
+            "label": "Credential-free RPC endpoint; pinned read in review notes",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "evidence": "Observed 2026-10-02T22:43:52.688407+00:00 at ethereum block 26107702 (hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6). Native totalSupply 161342339855641335323322489 (18 decimals), asset 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (6 decimals), totalAssets 179331003650749, convertToAssets(10^18) 1111493. One-share redeem from actual holder 0xa09fe38187abecc2768b98b80ea30afbc2fbd774 returned 1111493 asset base units via eth_call at that same block; no transaction broadcast. Verified source mints receipts only through deposit-backed user operations and documented fee accounting; it does not create the underlying stablecoin."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3300f198988e4c9c63f75df86de36421f06af8c4",
+        "deploymentRefs": [
+          "ethereum:0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+        ],
+        "label": "Legacy UsdcVault authorized SubProxy ward",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "Spark Savings documentation distinguishes Legacy V1 from V2",
+            "url": "https://docs.spark.finance/products/spark-savings"
+          },
+          {
+            "label": "Official Spark Ethereum deployment registry",
+            "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Ethereum.sol"
+          },
+          {
+            "label": "Verified exact vault deployment and source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+          },
+          {
+            "label": "Verified Legacy UsdcVault implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba"
+          },
+          {
+            "label": "Credential-free RPC endpoint; pinned read in review notes",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "evidence": "wards(SubProxy) = 1 at the pinned block. Verified UsdcVault auth restricts rely/deny and UUPS upgrades to wards; this can replace native share accounting."
+      }
+    ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "sources": [
+        {
+          "label": "Spark Savings documentation distinguishes Legacy V1 from V2",
+          "url": "https://docs.spark.finance/products/spark-savings"
+        },
+        {
+          "label": "Official Spark Ethereum deployment registry",
+          "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Ethereum.sol"
+        },
+        {
+          "label": "Verified exact vault deployment and source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+        },
+        {
+          "label": "Verified Legacy UsdcVault implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba"
+        },
+        {
+          "label": "Credential-free RPC endpoint; pinned read in review notes",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        }
+      ],
+      "evidence": "Observed 2026-10-02T22:43:52.688407+00:00 at ethereum block 26107702 (hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6). Native totalSupply 161342339855641335323322489 (18 decimals), asset 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (6 decimals), totalAssets 179331003650749, convertToAssets(10^18) 1111493. One-share redeem from actual holder 0xa09fe38187abecc2768b98b80ea30afbc2fbd774 returned 1111493 asset base units via eth_call at that same block; no transaction broadcast. Parent mint authority remains inherited. Current exact-token operational controls are recorded without promoting local accounting into independent reserve assurance.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "Complete current ward inventory and every controlling authorization/bypass path were not enumerated; do not assign a global timelock or signer-independence claim."
+      ]
+    },
+    "upgradeability": {
+      "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+      ],
+      "canChangeMintLogic": true,
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107702,
+      "sources": [
+        {
+          "label": "Spark Savings documentation distinguishes Legacy V1 from V2",
+          "url": "https://docs.spark.finance/products/spark-savings"
+        },
+        {
+          "label": "Official Spark Ethereum deployment registry",
+          "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Ethereum.sol"
+        },
+        {
+          "label": "Verified exact vault deployment and source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+        },
+        {
+          "label": "Verified Legacy UsdcVault implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba"
+        },
+        {
+          "label": "Credential-free RPC endpoint; pinned read in review notes",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        }
+      ],
+      "proxyAddresses": [
+        "0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+      ],
+      "implementationAddresses": [
+        "0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba"
+      ],
+      "adminAddresses": [
+        "0x3300f198988e4c9c63f75df86de36421f06af8c4"
+      ],
+      "controlRef": "Legacy UsdcVault authorized SubProxy ward"
+    }
+  }
+}

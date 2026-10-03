@@ -21,6 +21,7 @@ import { resolveAdapterCoin, type AdapterNetworkSpec, type AdapterRpcValue } fro
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { BTCFI_HANDLER_ROWS, BTCFI_MARKET_ROWS } from "./reserve-adapter-payloads.test-support";
 import { MAKINA_ALLOCATIONS_FIXTURE, makinaNetworkSpec } from "./makina-strategy.test-support";
+import { JPMORGAN_JLTXX_PUBLISHER_URL } from "../jpmorgan-nav";
 
 export interface AdapterCorpusDrift {
   /** What the upstream changed, in the words of the failure it must produce. */
@@ -122,7 +123,27 @@ const TETHER_CAPTURE = {
   ],
 };
 
+// Verbatim official publisher capture; this http-html input is text/markdown.
+const JPMORGAN_NAV_CAPTURE = readFileSync(new URL("./fixtures/jpmorgan-nav.html", import.meta.url), "utf8");
+
 export const CORPUS_CASES: Record<string, AdapterCorpusCase> = {
+  "jpmorgan-nav": {
+    coinId: "jltxx-jpmorgan",
+    nowSec: Date.parse("2026-10-03T00:49:01Z") / 1000,
+    network: { html: { [JPMORGAN_JLTXX_PUBLISHER_URL]: JPMORGAN_NAV_CAPTURE } },
+    drift: {
+      label: "transaction NAV becomes a non-numeric dollar value",
+      network: {
+        html: {
+          [JPMORGAN_JLTXX_PUBLISHER_URL]: JPMORGAN_NAV_CAPTURE.replace(
+            "- **Transaction NAV As of 10/01/2026**: $1.00",
+            "- **Transaction NAV As of 10/01/2026**: $NaN",
+          ),
+        },
+      },
+      outcome: "error",
+    },
+  },
   "blox-attestation-index": {
     coinId: "myrc-blox",
     nowSec: Date.parse("2026-10-01T00:00:00Z") / 1000,

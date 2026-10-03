@@ -1,0 +1,103 @@
+{
+  "id": "sreusd-resupply",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "verified",
+    "summary": "sreUSD shares mint against deposited REUSD; parent issuance remains inherited from reusd-resupply. The nonproxy savings contract has no privileged native share mint; fixed Resupply Core ownership administers rewards and potential bridge configuration.",
+    "inheritedFrom": "reusd-resupply",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x557ab1e003951a73c12d16f0fea8490e39c33c35",
+        "deploymentRefs": [
+          "ethereum:0x557ab1e003951a73c12d16f0fea8490e39c33c35"
+        ],
+        "label": "sreUSD native savings wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "Resupply savings documentation",
+            "url": "https://docs.resupply.finance/resupply-protocol/savings-reusd.md"
+          },
+          {
+            "label": "Resupply official deployment roster",
+            "url": "https://raw.githubusercontent.com/resupplyfi/resupply/main/deployment/contracts.json"
+          },
+          {
+            "label": "Verified current sreUSD implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x557ab1e003951a73c12d16f0fea8490e39c33c35"
+          },
+          {
+            "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
+            "url": "https://etherscan.io/block/26107704"
+          }
+        ],
+        "evidence": "At Ethereum block 26107704 (2026-10-02T22:44:11Z), asset() is 0x57ab1e0003f623289cd798b1824be09a793e4bec; decimals() is 18, totalSupply() is 27269498.885603778064 shares, totalAssets() is 28218576.035466793925 REUSD, and balanceOf(vault) is 28224015.272168319672 REUSD. convertToAssets(1e18) and previewRedeem(1e18) return 1.034803615345 REUSD. Verified ERC-4626 native shares mint only against underlying deposits. OFT _debit/_credit locks and releases existing shares without changing native totalSupply; PeerSet logs from genesis through the pin are empty."
+      }
+    ],
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "sources": [
+        {
+          "label": "Resupply savings documentation",
+          "url": "https://docs.resupply.finance/resupply-protocol/savings-reusd.md"
+        },
+        {
+          "label": "Resupply official deployment roster",
+          "url": "https://raw.githubusercontent.com/resupplyfi/resupply/main/deployment/contracts.json"
+        },
+        {
+          "label": "Verified current sreUSD implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x557ab1e003951a73c12d16f0fea8490e39c33c35"
+        },
+        {
+          "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
+          "url": "https://etherscan.io/block/26107704"
+        }
+      ],
+      "evidence": "At Ethereum block 26107704 (2026-10-02T22:44:11Z), asset() is 0x57ab1e0003f623289cd798b1824be09a793e4bec; decimals() is 18, totalSupply() is 27269498.885603778064 shares, totalAssets() is 28218576.035466793925 REUSD, and balanceOf(vault) is 28224015.272168319672 REUSD. convertToAssets(1e18) and previewRedeem(1e18) return 1.034803615345 REUSD. EIP-1967 implementation slot is zero and the verified source is a direct nonproxy deployment. owner() is immutable Core 0xc07e000044f95655c11fda4cd37f70a94d7e0a7d, whose voter() currently returns 0x11111111063874ce8dc6232cb5c1c849359476e6, differing from the deployment-manifest VOTER. No native privileged share minter is present. Existing bridge support cannot mint additional native liabilities.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "The complete current Core target/selector operator authorizer census and savings-specific independent code-audit scope remain unresolved."
+      ]
+    },
+    "upgradeability": {
+      "model": "immutable",
+      "implementationAddresses": [
+        "0x557ab1e003951a73c12d16f0fea8490e39c33c35"
+      ],
+      "canChangeMintLogic": false,
+      "controlRef": "sreUSD native savings wrapper",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107704,
+      "sources": [
+        {
+          "label": "Resupply savings documentation",
+          "url": "https://docs.resupply.finance/resupply-protocol/savings-reusd.md"
+        },
+        {
+          "label": "Resupply official deployment roster",
+          "url": "https://raw.githubusercontent.com/resupplyfi/resupply/main/deployment/contracts.json"
+        },
+        {
+          "label": "Verified current sreUSD implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x557ab1e003951a73c12d16f0fea8490e39c33c35"
+        },
+        {
+          "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
+          "url": "https://etherscan.io/block/26107704"
+        }
+      ]
+    }
+  }
+}

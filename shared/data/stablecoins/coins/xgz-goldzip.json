@@ -1,0 +1,73 @@
+{
+  "id": "xgz-goldzip",
+  "name": "GoldZip Gold",
+  "symbol": "XGZ",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "pegCurrency": "GOLD",
+    "rwa": true
+  },
+  "detailProvider": "commodity",
+  "geckoId": "goldzip-gold",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x69af64f409c08e9076bf7f3ed9db3a7409717161",
+      "decimals": 8
+    }
+  ],
+  "mechanismArchetype": "commodity-claim",
+  "custodyModel": "unknown",
+  "oneLiner": "XGZ is GoldZip’s physical-gold token, representing one gram of 99.99% fine gold with AML-gated delivery from 1,000 tokens.",
+  "commodityOunces": 0.03215074656862798,
+  "collateral": "Issuer-reported physical 99.99% fine gold stored in HKGX-recognised third-party depositories; one gram per XGZ.",
+  "pegMechanism": "GoldZip accepts eligible minimum 1kg gold bars for Ethereum issuance after verification. Physical delivery requires at least 1,000 XGZ and AML compliance, with Singapore and Hong Kong delivery described. Delivery charges and settlement timing are undisclosed.",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "XGZ Ethereum 0x69af64f409c08e9076bf7f3ed9db3a7409717161 is an operational claim redeemable for physical gold, one gram per token, corroborated by the issuer transparency deployment and 8-decimal on-chain identity. Specific bar allocation and insolvency segregation remain unverified.",
+    "sources": [
+      {
+        "label": "GoldZip litepaper",
+        "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+      },
+      {
+        "label": "GoldZip transparency and exact deployment",
+        "url": "https://goldzip.info/transparency/"
+      }
+    ]
+  },
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://goldzip.info/transparency/",
+    "provider": "GoldZip issuer transparency. Independent reports are advertised but downloads remain coming soon; no named current attestor or scoped reconciliation is available.",
+    "attestorTier": "undisclosed",
+    "cadence": "undisclosed"
+  },
+  "jurisdiction": {
+    "country": "Singapore"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://goldzip.info/"
+    },
+    {
+      "label": "Litepaper",
+      "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://goldzip.info/transparency/"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Reserve reports not yet published",
+      "message": "The transparency page advertises reports as coming soon. Current named custodians, bar allocation and independent reserve-to-token reconciliation are unavailable."
+    }
+  ]
+}

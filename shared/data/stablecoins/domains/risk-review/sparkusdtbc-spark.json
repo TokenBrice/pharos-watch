@@ -1,0 +1,27 @@
+{
+  "id": "sparkusdtbc-spark",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Verified exact vault deployment and source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
+      },
+      {
+        "label": "Credential-free RPC endpoint; pinned read in review notes",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Morpho vault framework and holder exit mechanics",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      }
+    ],
+    "evidence": "Observed 2026-10-02T22:43:49.516688+00:00 at ethereum block 26107702 (hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6). Native totalSupply 88558225018782413763816976 (18 decimals), asset 0xdac17f958d2ee523a2206206994597c13d831ec7 (6 decimals), totalAssets 89911293130474, convertToAssets(10^18) 1015278. One-share redeem from actual holder 0x1601843c5e9bc251a3272907010afa41fa18347e returned 1015278 asset base units via eth_call at that same block; no transaction broadcast. Underlying USDT retains its issuer freeze authority; the pinned parent authority getter returned 0x000000000000000000000000c6cde7c39eb2f0f0095f41570af89efc2c1ea828. No direct receipt-transfer blacklist is asserted. Morpho V2 send/receive share gates are abdicated; send-assets withdrawal-gate configuration remains a timelocked control, so transfer freedom does not guarantee withdrawal access.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

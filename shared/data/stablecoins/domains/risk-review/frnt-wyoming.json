@@ -1,0 +1,377 @@
+{
+  "id": "frnt-wyoming",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Commission current technology and Fireblocks HSM disclosure",
+        "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+      },
+      {
+        "label": "Frontier role-gated mint, recovery and upgrade source",
+        "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+      },
+      {
+        "label": "Frontier implementation on Ethereum",
+        "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+      },
+      {
+        "label": "Frontier holder trust and reserve rules",
+        "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+      },
+      {
+        "label": "solana exact deployment",
+        "url": "https://solscan.io/token/FRNTPi9V3Sw9b9U8d5Q3WY7tNANT6Q394d7dYtv7Jdog"
+      }
+    ],
+    "evidence": "ERC20F _update checks the restrictive registry; RECOVERY_ROLE can recover tokens from restricted accounts, PAUSER_ROLE can halt transfers, and the UUPS upgrader can change these rules. Pinned EVM-compatible reads identify registry 0x857efbfe934bc04e390675dbd5fd4ef7df5aa720 on all seven deployments. Finalized Solana slot 452748113 retains freeze authority and permanent delegate CBxsYp2sByWC5AgrEjze7Z8QTdDX56JJRgSEX7BUWady, with a pausable extension. No claim of permissionless immutable transfer is made.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "FRNT has eight native issuer deployment liabilities against one trust book. Current Commission technology materials designate Chainlink CCIP for cross-chain transfers, replacing the historical LayerZero rail. Current transfer-pool roles, limits and governance are not closed; Hedera transfer-rail participation is unresolved, despite a verified native deployment.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "Chainlink CCIP",
+        "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js",
+        "bridgeTypes": [
+          "burnAndMint"
+        ],
+        "note": "Current named transfer rail; historical LayerZero partner identity and multisig statements are not live CCIP governance evidence."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Commission current technology and Fireblocks HSM disclosure",
+        "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+      },
+      {
+        "label": "Frontier role-gated mint, recovery and upgrade source",
+        "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+      },
+      {
+        "label": "Frontier implementation on Ethereum",
+        "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+      },
+      {
+        "label": "Frontier holder trust and reserve rules",
+        "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+        "protocol": "Commission-native FRNT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "This exact deployment can create native issuer liabilities against the shared trust book. Native MINTER_ROLE and UUPS upgrade roles are freshly confirmed; the live cross-chain transfer rail is separate from direct native issuer minting.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "ethereum exact deployment",
+            "url": "https://etherscan.io/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "FRNT exact eight-chain liability inventory",
+            "url": "https://dashboard.ledgerlens.io/c/wystc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+        "destinationChain": "avalanche",
+        "contractAddress": "0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+        "protocol": "Commission-native FRNT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "This exact deployment can create native issuer liabilities against the shared trust book. Native MINTER_ROLE and UUPS upgrade roles are freshly confirmed; the live cross-chain transfer rail is separate from direct native issuer minting.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 96633151,
+        "sources": [
+          {
+            "label": "avalanche exact deployment",
+            "url": "https://snowscan.xyz/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "FRNT exact eight-chain liability inventory",
+            "url": "https://dashboard.ledgerlens.io/c/wystc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          }
+        ]
+      },
+      {
+        "id": "base:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+        "destinationChain": "base",
+        "contractAddress": "0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+        "protocol": "Commission-native FRNT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "This exact deployment can create native issuer liabilities against the shared trust book. Native MINTER_ROLE and UUPS upgrade roles are freshly confirmed; the live cross-chain transfer rail is separate from direct native issuer minting.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 52095853,
+        "sources": [
+          {
+            "label": "base exact deployment",
+            "url": "https://basescan.org/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "FRNT exact eight-chain liability inventory",
+            "url": "https://dashboard.ledgerlens.io/c/wystc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+        "destinationChain": "polygon",
+        "contractAddress": "0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+        "protocol": "Commission-native FRNT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "This exact deployment can create native issuer liabilities against the shared trust book. Native MINTER_ROLE and UUPS upgrade roles are freshly confirmed; the live cross-chain transfer rail is separate from direct native issuer minting.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 94850610,
+        "sources": [
+          {
+            "label": "polygon exact deployment",
+            "url": "https://polygonscan.com/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "FRNT exact eight-chain liability inventory",
+            "url": "https://dashboard.ledgerlens.io/c/wystc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+        "protocol": "Commission-native FRNT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "This exact deployment can create native issuer liabilities against the shared trust book. Native MINTER_ROLE and UUPS upgrade roles are freshly confirmed; the live cross-chain transfer rail is separate from direct native issuer minting.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 511123897,
+        "sources": [
+          {
+            "label": "arbitrum exact deployment",
+            "url": "https://arbiscan.io/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "FRNT exact eight-chain liability inventory",
+            "url": "https://dashboard.ledgerlens.io/c/wystc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+        "destinationChain": "optimism",
+        "contractAddress": "0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+        "protocol": "Commission-native FRNT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "This exact deployment can create native issuer liabilities against the shared trust book. Native MINTER_ROLE and UUPS upgrade roles are freshly confirmed; the live cross-chain transfer rail is separate from direct native issuer minting.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 157691139,
+        "sources": [
+          {
+            "label": "optimism exact deployment",
+            "url": "https://optimistic.etherscan.io/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "FRNT exact eight-chain liability inventory",
+            "url": "https://dashboard.ledgerlens.io/c/wystc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          }
+        ]
+      },
+      {
+        "id": "hedera:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+        "destinationChain": "hedera",
+        "contractAddress": "0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+        "protocol": "Commission-native FRNT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "This exact deployment can create native issuer liabilities against the shared trust book. Native MINTER_ROLE and UUPS upgrade roles are freshly confirmed; the live cross-chain transfer rail is separate from direct native issuer minting. Hedera supply is 103.93 units and absent from DL441; no manual aggregate correction is applied.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 100653016,
+        "sources": [
+          {
+            "label": "hedera exact deployment",
+            "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/contracts/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "FRNT exact eight-chain liability inventory",
+            "url": "https://dashboard.ledgerlens.io/c/wystc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          }
+        ]
+      },
+      {
+        "id": "solana:FRNTPi9V3Sw9b9U8d5Q3WY7tNANT6Q394d7dYtv7Jdog",
+        "destinationChain": "solana",
+        "contractAddress": "FRNTPi9V3Sw9b9U8d5Q3WY7tNANT6Q394d7dYtv7Jdog",
+        "protocol": "Commission-native FRNT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "This exact deployment can create native issuer liabilities against the shared trust book. Finalized Token-2022 mint account and current issuer metadata identify the native mint authority.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "solana exact deployment",
+            "url": "https://solscan.io/token/FRNTPi9V3Sw9b9U8d5Q3WY7tNANT6Q394d7dYtv7Jdog"
+          },
+          {
+            "label": "FRNT exact eight-chain liability inventory",
+            "url": "https://dashboard.ledgerlens.io/c/wystc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "frnt-ethereum-ccip-burn-mint-pool",
+        "label": "FRNT Ethereum CCIP BurnMintTokenPool",
+        "routeRefs": ["ethereum:0x5e817f2abccb9095585d26c2a3ce234a440574fc"],
+        "capabilities": ["bridge-mint", "bridge-burn"],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xf077771c2a09ab77678e3945b07db8586d205340",
+        "authorityType": "contract",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [{"label": "Verified Ethereum BurnMintTokenPool", "url": "https://etherscan.io/address/0xf077771c2a09ab77678e3945b07db8586d205340#code"}, {"label": "FRNT Ethereum token roles", "url": "https://etherscan.io/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc#readProxyContract"}],
+        "evidence": "At Ethereum block 26107704, FRNT hasRole returns true for this contract's MINTER_ROLE and BURNER_ROLE. Etherscan identifies BurnMintTokenPool with lockOrBurn/releaseOrMint, router/ramp checks, RMN checks, remote pools and token-bucket limits. This is bridge transfer mint/burn, not independent native issuer minting. Current remote inventory and limit values are not closed."
+      },
+      {
+        "id": "frnt-ethereum-ccip-pool-owner",
+        "label": "FRNT Ethereum CCIP pool owner",
+        "routeRefs": ["ethereum:0x5e817f2abccb9095585d26c2a3ce234a440574fc"],
+        "capabilities": ["admin", "rate-limit"],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x5e3372f9a1c04e789ef86df9ec35f87e000bb15b",
+        "authorityType": "issuer-backend",
+        "canRaiseCap": true,
+        "failureDomainKeys": ["issuer-backend:frnt-wyoming:commission"],
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [{"label": "Verified Ethereum BurnMintTokenPool owner and configuration interface", "url": "https://etherscan.io/address/0xf077771c2a09ab77678e3945b07db8586d205340#code"}],
+        "evidence": "Pool owner() returns this Commission-native role administrator at Ethereum block 26107704. Verified TokenPool exposes owner-controlled applyChainUpdates, remote-pool updates, router changes and rate-limit administration. This shared controller's transfer-rail capabilities are authored only here; native role administration remains in Mint Authority. No timelock or signing-independence credit is established."
+      },
+      {
+        "id": "frnt-current-ccip-transfer-rail",
+        "label": "Commission-designated CCIP cross-chain transfer rail",
+        "routeRefs": [
+          "ethereum:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+          "avalanche:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+          "base:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+          "polygon:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+          "arbitrum:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+          "optimism:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+          "solana:FRNTPi9V3Sw9b9U8d5Q3WY7tNANT6Q394d7dYtv7Jdog"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "validator",
+          "admin",
+          "rate-limit"
+        ],
+        "authorityType": "validator-quorum",
+        "failureDomainKeys": [
+          "messaging:chainlink-ccip:frnt"
+        ],
+        "routeChecks": {
+          "onchainAmountBounds": "Native issuer mint remains available separately. Full current CCIP pool conservation and minter-role inventory are not verified.",
+          "trustedPeerOrRemote": "Ethereum BurnMintTokenPool 0xf077771c2a09ab77678e3945b07db8586d205340 and its owner are pinned separately; complete live remote-token/pool inventory and other-chain administrators remain unresolved.",
+          "rateLimits": "Current pool capacities, refill rates and authority to raise limits are not established.",
+          "signingModel": "Commission names CCIP; no exact live DON/RMN quorum or independence is asserted.",
+          "pausersAdminsUpgraders": "Pool/admin/upgrade closure is missing; historical LayerZero authority assumptions are not inherited."
+        },
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          }
+        ],
+        "evidence": "Current Commission technology disclosure names Chainlink CCIP. This records the actual designated transfer subsystem and known capabilities conservatively without asserting exact pool deployment or protections. The seven original native issuance lanes are the bounded reviewed route inventory; Hedera native issuance is verified, but its current messaging/transfer coverage is not."
+      }
+    ]
+  }
+}

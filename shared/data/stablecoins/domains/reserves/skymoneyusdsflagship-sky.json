@@ -1,0 +1,101 @@
+{
+  "id": "skymoneyusdsflagship-sky",
+  "reserves": [
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+      "name": "sky.money USDS Flagship idle underlying and Morpho lender claims",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usds-sky",
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sky.money-curated Morpho Vault V2 and Morpho Blue borrowers; underlying USDS",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "market",
+        "credit",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown",
+      "blacklistabilityExposure": "upstream"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Sky.money curated vault disclosure",
+        "url": "https://sky.money/vaults"
+      },
+      {
+        "label": "Verified exact deployed VaultV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0"
+      },
+      {
+        "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
+        "url": "https://etherscan.io/block/26107702"
+      },
+      {
+        "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Morpho exact-vault accounting and controls GraphQL API",
+        "url": "https://api.morpho.org/graphql"
+      }
+    ],
+    "rationale": "At Ethereum block 26107702 (2026-10-02T22:43:47+00:00), totalAssets=37213041.517174 USDS; totalSupply=37094821.851264 shares; convertToAssets(1e18)=1.003186958718484956 USDS; idle balance=29771240.288112 USDS. Complete current adapter census contains 1 adapter, 3 markets: 0x9a8dab6de1059e6dc66c34b358764b70effb289e514e237f3161ffb09eaaf24f (PT-sUSDS-26NOV2026, LLTV 0.915): 2535545.351573 USDS lender claim; 0xb374528d44b6ab6e0cecc87e0481f45d892f38baec90c1d318851969ec14ea5f (wstETH, LLTV 0.86): 1323435.223921 USDS lender claim; 0x2f4ea313fb7df23a82c19d95e8b90acc8179bd053e0d9ef745cdf28d6a49499c (cbBTC, LLTV 0.86): 3582820.653569 USDS lender claim. The API snapshot is separately observed and is not the pinned-block denominator. The 100% row is the current direct parent-denominated operational claim, not a claim that lending exposure is idle cash or that borrower collateral is owned directly by holders.",
+    "compositionBasis": "Fixed-block ERC-4626, underlying balance and complete adapter/market reads at Ethereum block 26107702; verified deployed source",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Immediate wrapper claim and current positions are identified; independent financial reconciliation, enforceable segregation and insolvency priority remain undisclosed. Parent reserve risks are evaluated on the parent, not replicated as local custody.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "sky.money USDS Flagship Ethereum vault",
+        "role": "other",
+        "jurisdiction": "Ethereum"
+      },
+      {
+        "name": "Morpho Blue and vault adapter 0xf94be39e8863183ff41194b5923627c90a34039d",
+        "role": "other",
+        "jurisdiction": "Ethereum"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Sky.money curated vault disclosure",
+        "url": "https://sky.money/vaults"
+      },
+      {
+        "label": "Verified exact deployed VaultV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0"
+      },
+      {
+        "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
+        "url": "https://etherscan.io/block/26107702"
+      },
+      {
+        "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Morpho exact-vault accounting and controls GraphQL API",
+        "url": "https://api.morpho.org/graphql"
+      }
+    ],
+    "uncertainty": "Immediate custody is onchain; this does not establish whole-parent reserve custody or enforceable legal priority. Lender assets are intentionally deployed into Morpho borrower markets; allocation and available liquidity change."
+  }
+}

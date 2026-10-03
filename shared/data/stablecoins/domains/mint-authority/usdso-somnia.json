@@ -1,0 +1,252 @@
+{
+  "id": "usdso-somnia",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "inheritedFrom": "frxusd-frax",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USDso inherits frxUSD issuance, with a local role-gated token and collateral-taking BrandedCustodian. A 3-of-6 Safe controls token upgrades, factory upgrades and the custodian beacon; owner-only collateral recovery exists in code without an established current factory forwarding route.",
+    "controls": [
+      {
+        "chain": "somnia",
+        "address": "0x9527e19f55d1afce9f1e9edcea79552bf41983f9",
+        "deploymentRefs": [
+          "somnia:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "label": "USDso token ProxyAdmin owner",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 428274392,
+        "sources": [
+          {
+            "label": "USD Somnia product documentation (accessed 2026-10-02)",
+            "url": "https://somnia.network/usdso-stablecoin"
+          },
+          {
+            "label": "Verified token implementation",
+            "url": "https://explorer.somnia.network/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          },
+          {
+            "label": "Pinned somnia RPC at block 428274392",
+            "url": "https://api.infra.mainnet.somnia.network"
+          },
+          {
+            "label": "USDso terms: Frax issuer and no Somnia redemption/yield obligation",
+            "url": "https://somnia.network/usdso-terms-of-service"
+          },
+          {
+            "label": "Verified BrandedCustodian implementation",
+            "url": "https://explorer.somnia.network/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified current BrandedFactory implementation",
+            "url": "https://explorer.somnia.network/api/v2/smart-contracts/0x690575465af47835b72c5b74c334234624cfd942"
+          },
+          {
+            "label": "Frax parent reserve balance sheet (issuer telemetry)",
+            "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+          }
+        ],
+        "evidence": "At block 428274392, token EIP-1967 admin is 0x3281f2a1e0a3b818353f859c868c44748154b196, whose owner() returns 0x9527e19f55d1afce9f1e9edcea79552bf41983f9. Safe threshold and owner count were read at the same block; complete modules, guards, signer independence and key custody remain unresolved. At Somnia block 428274392, custodian owner() returned BrandedFactory proxy 0x63e89638743a409e2389f06a3f778a4570314d7d. Its owner field returned the same 3-of-6 Safe. The current BrandedCustodian code permits onlyOwner recoverERC20 of any token, including reserve frxUSD, and owner changes to caps, fees and isolated backing. No generic forwarding call for these functions was found in the current factory implementation, so direct Safe execution of the recovery function is not established. The Safe nevertheless owns both the factory ProxyAdmin (0xc1282f16dfb0ae563a93c40a406a583bd9a958a0) and custodian UpgradeableBeacon (0x251d07287c12707418a414b2c95436b4216b7bf4), enabling replacement of custody and issuance logic.",
+        "canRaiseCap": true,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 428274392,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "threshold": 3,
+        "signerCount": 6
+      },
+      {
+        "chain": "somnia",
+        "address": "0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9",
+        "deploymentRefs": [
+          "somnia:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "label": "USDso BrandedCustodian authorized minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 428274392,
+        "sources": [
+          {
+            "label": "USD Somnia product documentation (accessed 2026-10-02)",
+            "url": "https://somnia.network/usdso-stablecoin"
+          },
+          {
+            "label": "Verified token implementation",
+            "url": "https://explorer.somnia.network/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          },
+          {
+            "label": "Pinned somnia RPC at block 428274392",
+            "url": "https://api.infra.mainnet.somnia.network"
+          },
+          {
+            "label": "USDso terms: Frax issuer and no Somnia redemption/yield obligation",
+            "url": "https://somnia.network/usdso-terms-of-service"
+          },
+          {
+            "label": "Verified BrandedCustodian implementation",
+            "url": "https://explorer.somnia.network/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified current BrandedFactory implementation",
+            "url": "https://explorer.somnia.network/api/v2/smart-contracts/0x690575465af47835b72c5b74c334234624cfd942"
+          },
+          {
+            "label": "Frax parent reserve balance sheet (issuer telemetry)",
+            "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+          }
+        ],
+        "evidence": "Fresh token hasRole(MINTER_ROLE,custodian)=true. Verified deposit/mint transfers frxUSD into custody before minting USDso, updates brandedCoinMinted, and checks mintCap. Current mintCap is uint256 maximum, so the configured amount ceiling is not restrictive. Asset custody and supply were equal at the pin.",
+        "capDescription": "frxUSD collateral transfer gates this minter path; the uint256 maximum amount cap is raiseable and token mint itself is role-gated.",
+        "canRaiseCap": true
+      },
+      {
+        "chain": "somnia",
+        "address": "0x63e89638743a409e2389f06a3f778a4570314d7d",
+        "deploymentRefs": [
+          "somnia:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "label": "USDso BrandedFactory minter-role administrator",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 428274392,
+        "sources": [
+          {
+            "label": "USD Somnia product documentation (accessed 2026-10-02)",
+            "url": "https://somnia.network/usdso-stablecoin"
+          },
+          {
+            "label": "Verified token implementation",
+            "url": "https://explorer.somnia.network/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          },
+          {
+            "label": "Pinned somnia RPC at block 428274392",
+            "url": "https://api.infra.mainnet.somnia.network"
+          },
+          {
+            "label": "USDso terms: Frax issuer and no Somnia redemption/yield obligation",
+            "url": "https://somnia.network/usdso-terms-of-service"
+          },
+          {
+            "label": "Verified BrandedCustodian implementation",
+            "url": "https://explorer.somnia.network/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified current BrandedFactory implementation",
+            "url": "https://explorer.somnia.network/api/v2/smart-contracts/0x690575465af47835b72c5b74c334234624cfd942"
+          },
+          {
+            "label": "Frax parent reserve balance sheet (issuer telemetry)",
+            "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+          }
+        ],
+        "evidence": "GeniusDollar initialize grants FACTORY_ROLE to the factory and sets MINTER_ROLE admin to FACTORY_ROLE. The verified factory creates local custodians and grants them MINTER_ROLE. Current factory implementation is 0x690575465af47835b72c5b74c334234624cfd942; it is separately upgradeable under the same Safe.",
+        "canRaiseCap": true
+      }
+    ],
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "somnia:0x00000022da000002656c64d9ea6011ea952d008a"
+      ],
+      "proxyAddresses": [
+        "0x00000022da000002656c64d9ea6011ea952d008a"
+      ],
+      "implementationAddresses": [
+        "0x155384be16fa171e6d97e4136643a9ac31678d04"
+      ],
+      "adminAddresses": [
+        "0x3281f2a1e0a3b818353f859c868c44748154b196"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "USDso token ProxyAdmin owner",
+      "observedAt": "2026-10-02",
+      "observedBlock": 428274392,
+      "sources": [
+        {
+          "label": "USD Somnia product documentation (accessed 2026-10-02)",
+          "url": "https://somnia.network/usdso-stablecoin"
+        },
+        {
+          "label": "Verified token implementation",
+          "url": "https://explorer.somnia.network/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+        },
+        {
+          "label": "Pinned somnia RPC at block 428274392",
+          "url": "https://api.infra.mainnet.somnia.network"
+        },
+        {
+          "label": "USDso terms: Frax issuer and no Somnia redemption/yield obligation",
+          "url": "https://somnia.network/usdso-terms-of-service"
+        },
+        {
+          "label": "Verified BrandedCustodian implementation",
+          "url": "https://explorer.somnia.network/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+        },
+        {
+          "label": "Verified current BrandedFactory implementation",
+          "url": "https://explorer.somnia.network/api/v2/smart-contracts/0x690575465af47835b72c5b74c334234624cfd942"
+        },
+        {
+          "label": "Frax parent reserve balance sheet (issuer telemetry)",
+          "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+        }
+      ]
+    },
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "continuous",
+    "supervision": "unknown",
+    "review": {
+      "sources": [
+        {
+          "label": "USD Somnia product documentation (accessed 2026-10-02)",
+          "url": "https://somnia.network/usdso-stablecoin"
+        },
+        {
+          "label": "Verified token implementation",
+          "url": "https://explorer.somnia.network/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+        },
+        {
+          "label": "Pinned somnia RPC at block 428274392",
+          "url": "https://api.infra.mainnet.somnia.network"
+        },
+        {
+          "label": "USDso terms: Frax issuer and no Somnia redemption/yield obligation",
+          "url": "https://somnia.network/usdso-terms-of-service"
+        },
+        {
+          "label": "Verified BrandedCustodian implementation",
+          "url": "https://explorer.somnia.network/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+        },
+        {
+          "label": "Verified current BrandedFactory implementation",
+          "url": "https://explorer.somnia.network/api/v2/smart-contracts/0x690575465af47835b72c5b74c334234624cfd942"
+        },
+        {
+          "label": "Frax parent reserve balance sheet (issuer telemetry)",
+          "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+        }
+      ],
+      "evidence": "At somnia block 428274392, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 3,268,350.769507 frxUSD against 3,268,350.769507 USDso supply. The BrandedCustodian burns caller-owned USDso and returns frxUSD. At the pin, custodianTkn() was Somnia frxUSD 0x00000000d61733e7a393a10a5b48c311abe8f1e5; totalAssets(), brandedCoinMinted(), actual frxUSD custody and child supply matched. previewRedeem(1e18)=1e18, redeemFee()=0 and isolatedBackingEnabled()=false. The terms identify Frax Inc. and/or affiliates as issuer, disclaim Somnia fiat-redemption responsibility and exclude a holder yield entitlement. At Somnia block 428274392, custodian owner() returned BrandedFactory proxy 0x63e89638743a409e2389f06a3f778a4570314d7d. Its owner field returned the same 3-of-6 Safe. The current BrandedCustodian code permits onlyOwner recoverERC20 of any token, including reserve frxUSD, and owner changes to caps, fees and isolated backing. No generic forwarding call for these functions was found in the current factory implementation, so direct Safe execution of the recovery function is not established. The Safe nevertheless owns both the factory ProxyAdmin (0xc1282f16dfb0ae563a93c40a406a583bd9a958a0) and custodian UpgradeableBeacon (0x251d07287c12707418a414b2c95436b4216b7bf4), enabling replacement of custody and issuance logic.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "Close all live factory/minter role holders and custody administrative execution paths.",
+        "Verify the pending custodian ownership transfer and whether direct owner-only recovery/configuration can currently be executed through the factory.",
+        "Enumerate Safe modules, guards, signer independence and key custody; no threshold-only strength claim is made."
+      ]
+    }
+  }
+}

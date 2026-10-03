@@ -1,0 +1,68 @@
+{
+  "id": "senpyusdmwin-sentora",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Exact Sentora vault",
+        "url": "https://app.morpho.org/ethereum/vault/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57"
+      },
+      {
+        "label": "Pinned RPC identity, accounting and controls",
+        "url": "https://eth-mainnet.g.alchemy.com/v2"
+      },
+      {
+        "label": "Morpho Vault V2 documentation",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Exact VaultV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57"
+      },
+      {
+        "label": "MorphoMarketV1AdapterV2 source",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+      },
+      {
+        "label": "Paxos USD stablecoin terms, section 3.5",
+        "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
+      }
+    ],
+    "evidence": "At ethereum block 26107706, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and their setters permanently abdicated. Exact immutable VaultV2 code forbids executing abdicated setters. Local share transfer and withdrawal gates are disabled; upstream PYUSD blacklist/pause or reserve-access powers remain inherited from pyusd-paypal. Allocator liquidity configuration and lending losses are distinct risks.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Only the exact native ethereum vault-share deployment is authored. No share bridge representation is evidenced; upstream parent routes are separate inherited exposure.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Exact Sentora vault",
+        "url": "https://app.morpho.org/ethereum/vault/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57"
+      },
+      {
+        "label": "Pinned RPC identity, accounting and controls",
+        "url": "https://eth-mainnet.g.alchemy.com/v2"
+      },
+      {
+        "label": "Morpho Vault V2 documentation",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Exact VaultV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57"
+      },
+      {
+        "label": "MorphoMarketV1AdapterV2 source",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+      },
+      {
+        "label": "Paxos USD stablecoin terms, section 3.5",
+        "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
+      }
+    ]
+  }
+}

@@ -1,0 +1,142 @@
+{
+  "id": "usdu-universal",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "manual-review",
+    "summary": "Universal issues USDU through configurable minter allowances; the masterMinter and the token/ProxyAdmin owner can authorize or replace issuance logic. Current key thresholds and minter caps are undisclosed.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xe4ca6596d2c28014c6f89964f57838e0be9f369b"
+      ],
+      "proxyAddresses": [
+        "0xe4ca6596d2c28014c6f89964f57838e0be9f369b"
+      ],
+      "implementationAddresses": [
+        "0x7df0b1f63e0a467b6aa95b4ed6d299dab9f73750"
+      ],
+      "adminAddresses": [
+        "0x5316d447decb4f2d3d3d44cc95528c7336a33062"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "USDU token and ProxyAdmin owner",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107709,
+      "sources": [
+        {
+          "label": "Exact-match USDU implementation source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x7df0b1f63e0a467b6aa95b4ed6d299dab9f73750?fields=all"
+        },
+        {
+          "label": "Ethereum pinned block 26107709",
+          "url": "https://etherscan.io/block/26107709"
+        },
+        {
+          "label": "USDU mint and redemption whitepaper",
+          "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x5ec8a285f6c1f08c812c591a3263eef52d22fe19",
+        "deploymentRefs": [
+          "ethereum:0xe4ca6596d2c28014c6f89964f57838e0be9f369b"
+        ],
+        "label": "USDU masterMinter",
+        "role": "minter-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107709,
+        "sources": [
+          {
+            "label": "Exact-match USDU implementation source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x7df0b1f63e0a467b6aa95b4ed6d299dab9f73750?fields=all"
+          },
+          {
+            "label": "Ethereum pinned block 26107709",
+            "url": "https://etherscan.io/block/26107709"
+          },
+          {
+            "label": "USDU mint and redemption whitepaper",
+            "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"
+          }
+        ],
+        "evidence": "Pinned masterMinter() returns this address. Exact-matched TokenV1 source exposes master-minter-only configureMinter and minting allowances; current minter enumeration, key custody and signer threshold are unresolved."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x794e5b5a0a3375ff9dfaabd4e533c3adadc272c7",
+        "deploymentRefs": [
+          "ethereum:0xe4ca6596d2c28014c6f89964f57838e0be9f369b"
+        ],
+        "label": "USDU token and ProxyAdmin owner",
+        "role": "proxy-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107709,
+        "sources": [
+          {
+            "label": "Exact-match USDU implementation source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x7df0b1f63e0a467b6aa95b4ed6d299dab9f73750?fields=all"
+          },
+          {
+            "label": "Ethereum pinned block 26107709",
+            "url": "https://etherscan.io/block/26107709"
+          },
+          {
+            "label": "USDU mint and redemption whitepaper",
+            "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"
+          }
+        ],
+        "evidence": "Pinned getOwner() and ProxyAdmin.owner() return the same address; the live proxy implementation is 0x7df0b1f63e0a467b6aa95b4ed6d299dab9f73750. Authority key thresholds and upgrade delay are not proved."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
+    "review": {
+      "sources": [
+        {
+          "label": "Crowe August 2026 reserve examination",
+          "url": "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf"
+        },
+        {
+          "label": "USDU January 2026 whitepaper",
+          "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"
+        },
+        {
+          "label": "ADGM FSRA issuer register FSP250089",
+          "url": "https://www.adgm.com/public-registers/fsra/firms/financial-firms/universal-digital-intl-limited-250089"
+        },
+        {
+          "label": "Exact-match USDU implementation source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x7df0b1f63e0a467b6aa95b4ed6d299dab9f73750?fields=all"
+        },
+        {
+          "label": "Ethereum pinned block 26107709",
+          "url": "https://etherscan.io/block/26107709"
+        },
+        {
+          "label": "USDU mint and redemption whitepaper",
+          "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"
+        }
+      ],
+      "evidence": "At Ethereum block 26107709 token and ProxyAdmin owner and masterMinter were re-read. Crowe monthly examinations reconcile independently bank-confirmed USD reserves to exact Ethereum token liabilities. ADGM FSRA register confirms active FSP250089 Issuing a Fiat-Referenced Token; Crowe identifies COBS19A.9 reserve-assurance requirements. These support periodic reconciliation and named prudential supervision, not a hard supply cap or proof of key custody.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "Current authorized minter roster, issuance allowances and cap-change custody are not publicly pinned.",
+        "Owner/masterMinter signer thresholds, execution policy and upgrade timelock remain unresolved."
+      ]
+    }
+  }
+}

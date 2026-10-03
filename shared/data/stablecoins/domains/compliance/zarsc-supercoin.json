@@ -1,0 +1,38 @@
+{
+  "id": "zarsc-supercoin",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "Transferable single-fiat-reference token with issuer or partner redemption terms and payment/settlement use.",
+      "references": [
+        {
+          "label": "Issuer token terms",
+          "url": "https://www.supercoin.co.za/terms-of-service",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-02"
+        }
+      ]
+    },
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Super Money SA (Pty) Ltd (2022/614959/07)",
+    "issuerDomicile": "South Africa",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "references": [
+      {
+        "label": "Issuer token terms",
+        "url": "https://www.supercoin.co.za/terms-of-service",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      }
+    ],
+    "notes": "GENIUS authorization and foreign-exception status are unresolved. Local financial-service or issuer claims do not prove U.S. permission. MiCA scope was not resolved and no MiCA row is authored. No negative authorization or enforcement finding is asserted. Reserve report engagement is AUP, not audit assurance.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "id": "mxnt-tether",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Verified token implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"
+      },
+      {
+        "label": "Verified owner MultiSigWallet",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828"
+      },
+      {
+        "label": "Tether holder terms",
+        "url": "https://tether.to/en/legal/"
+      }
+    ],
+    "evidence": "At Ethereum block 26107705, proxy implementation is 0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566. Retrieved verified TetherToken source exposes onlyOwner blocked-list and destroyBlockedFunds functions. These directly block holders and destroy blocked balances; owner is the observed 3-of-6 wallet.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

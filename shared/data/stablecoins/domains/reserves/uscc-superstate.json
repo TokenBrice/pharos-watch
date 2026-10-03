@@ -1,0 +1,83 @@
+{
+  "id": "uscc-superstate",
+  "reserves": [
+    {
+      "name": "Bitwise Crypto Carry Fund share exposure",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Bitwise Crypto Carry Fund",
+      "riskFactors": [
+        "basis",
+        "market",
+        "counterparty",
+        "custody",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "USCC fund, service providers and October 1 holdings",
+        "url": "https://superstate.com/assets/uscc"
+      },
+      {
+        "label": "USCC current investor terms",
+        "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
+      },
+      {
+        "label": "Superstate deployments and administrative powers",
+        "url": "https://docs.superstate.com/investors/smart-contracts"
+      }
+    ],
+    "rationale": "The October 1 portfolio includes negative derivative marks and a negative USDC balance. Its signed NAV weights cannot be converted into a long-only reserve mix. This 100% row identifies the holder fund-share instrument, not 100% safe backing or verified custody; USTB look-through weights, venue margin, hedge notionals and net liabilities remain unpartitioned.",
+    "compositionBasis": "Whole holder-instrument claim; no fabricated normalization of underlying positions",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The October 1 portfolio includes negative derivative marks and a negative USDC balance. Its signed NAV weights cannot be converted into a long-only reserve mix. This 100% row identifies the holder fund-share instrument, not 100% safe backing or verified custody; USTB look-through weights, venue margin, hedge notionals and net liabilities remain unpartitioned.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Bitwise Crypto Carry Fund share exposure",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The October 1 portfolio includes negative derivative marks and a negative USDC balance. Its signed NAV weights cannot be converted into a long-only reserve mix. This 100% row identifies the holder fund-share instrument, not 100% safe backing or verified custody; USTB look-through weights, venue margin, hedge notionals and net liabilities remain unpartitioned."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Anchorage Digital",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "USCC fund, service providers and October 1 holdings",
+        "url": "https://superstate.com/assets/uscc"
+      },
+      {
+        "label": "USCC current investor terms",
+        "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
+      },
+      {
+        "label": "Superstate deployments and administrative powers",
+        "url": "https://docs.superstate.com/investors/smart-contracts"
+      }
+    ],
+    "uncertainty": "Anchorage is a named provider but the public sources do not close exchange margin custody, USTB look-through custody, legal segregation or the full fund default waterfall.",
+    "knownUnknownExposurePct": 100
+  }
+}

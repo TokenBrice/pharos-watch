@@ -1,0 +1,149 @@
+{
+  "id": "steakeurcv-steakhouse",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "manual-review",
+    "summary": "steakEURCV user shares mint against deposited EURCV; interest accrual can mint fee shares. Immutable core and owner/curator parameter powers do not create native EURCV, whose issuance remains inherited.",
+    "inheritedFrom": "eurcv-societe-generale-forge",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "immutable",
+      "deploymentRefs": [
+        "ethereum:0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+      ],
+      "canChangeMintLogic": false,
+      "controlRef": "steakEURCV immutable VaultV2 share issuance",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107702,
+      "sources": [
+        {
+          "label": "Morpho exact Steakhouse Prime EURCV deployment",
+          "url": "https://app.morpho.org/ethereum/vault/0xbeef0C075Da5D01112AE5cF34d257074fB5DDB2f"
+        },
+        {
+          "label": "Exact verified VaultV2 source (ethereum, 0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f)",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f?fields=all"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f",
+        "deploymentRefs": [
+          "ethereum:0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+        ],
+        "label": "steakEURCV immutable VaultV2 share issuance",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "Morpho exact Steakhouse Prime EURCV deployment",
+            "url": "https://app.morpho.org/ethereum/vault/0xbeef0C075Da5D01112AE5cF34d257074fB5DDB2f"
+          },
+          {
+            "label": "Exact verified VaultV2 source (ethereum, 0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f)",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f?fields=all"
+          }
+        ],
+        "evidence": "Exact verified VaultV2 enter() transfers deposited EURCV before creating user shares; accrueInterest() may mint fee shares. Core has no upgrade entrypoint and EIP-1967 implementation slot was zero. Performance fee 0% of interest; management fee 0% at block 26107702."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x4d7bd498bb24098ca281c05519629c605407f71d",
+        "deploymentRefs": [
+          "ethereum:0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+        ],
+        "label": "steakEURCV vault owner",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "Morpho exact Steakhouse Prime EURCV deployment",
+            "url": "https://app.morpho.org/ethereum/vault/0xbeef0C075Da5D01112AE5cF34d257074fB5DDB2f"
+          },
+          {
+            "label": "Exact verified VaultV2 source (ethereum, 0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f)",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f?fields=all"
+          },
+          {
+            "label": "Morpho current vault identity and asset API",
+            "url": "https://api.morpho.org/graphql"
+          }
+        ],
+        "evidence": "owner() can replace curator and sentinels under the immutable core; owner internal authorization, key custody and signer independence remain unresolved."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x827e86072b06674a077f592a531dce4590adecdb",
+        "deploymentRefs": [
+          "ethereum:0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+        ],
+        "label": "steakEURCV curator",
+        "role": "cap-admin",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "Morpho exact Steakhouse Prime EURCV deployment",
+            "url": "https://app.morpho.org/ethereum/vault/0xbeef0C075Da5D01112AE5cF34d257074fB5DDB2f"
+          },
+          {
+            "label": "Exact verified VaultV2 source (ethereum, 0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f)",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f?fields=all"
+          },
+          {
+            "label": "Morpho current vault identity and asset API",
+            "url": "https://api.morpho.org/graphql"
+          }
+        ],
+        "evidence": "curator() schedules adapter, allocation-cap, fee and gate changes. Allocation-cap increases were delayed 604800 seconds; both fee selectors had zero delay. User issuance remains asset-backed; fee governance can dilute shares. Ultimate controller authorization is not granted favorable credit."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Morpho exact Steakhouse Prime EURCV deployment",
+          "url": "https://app.morpho.org/ethereum/vault/0xbeef0C075Da5D01112AE5cF34d257074fB5DDB2f"
+        },
+        {
+          "label": "Exact verified VaultV2 source (ethereum, 0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f)",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f?fields=all"
+        },
+        {
+          "label": "Morpho current vault identity and asset API",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Steakhouse DeFi vault governing terms",
+          "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+        }
+      ],
+      "evidence": "Fixed-block state and matched exact VaultV2 source bound asset-backed mint, fee-share mint and burn/redeem at ethereum block 26107702. Parent mint authority remains inherited. Owner/curator control addresses and selector delays are current; internal authorization closure receives no favorable assumption.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "Ultimate owner/curator authorization closure, signer independence and key-custody attestations are not established.",
+        "No independently signed exact-vault financial reconciliation or prudential supervision is established."
+      ]
+    }
+  }
+}

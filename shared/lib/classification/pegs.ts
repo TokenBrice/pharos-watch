@@ -398,6 +398,39 @@ export const PEG_METADATA = {
     },
     chart: { label: "PEN", textColor: "text-rose-700 dark:text-rose-400", bgColor: "bg-rose-600", hex: "#e11d48" },
   },
+  CZK: {
+    label: "the Czech Koruna",
+    shortLabel: "Czech Koruna",
+    filterTag: "czk-peg",
+    filterLabel: "CZK",
+    badge: {
+      label: "CZK Peg",
+      cls: "bg-blue-600/10 text-blue-700 dark:text-blue-400 border-blue-600/20",
+    },
+    chart: { label: "CZK", textColor: "text-blue-700 dark:text-blue-400", bgColor: "bg-blue-600", hex: "#2563eb" },
+  },
+  PLN: {
+    label: "the Polish Zloty",
+    shortLabel: "Polish Zloty",
+    filterTag: "pln-peg",
+    filterLabel: "PLN",
+    badge: {
+      label: "PLN Peg",
+      cls: "bg-rose-600/10 text-rose-700 dark:text-rose-400 border-rose-600/20",
+    },
+    chart: { label: "PLN", textColor: "text-rose-700 dark:text-rose-400", bgColor: "bg-rose-600", hex: "#e11d48" },
+  },
+  AED: {
+    label: "the UAE Dirham",
+    shortLabel: "UAE Dirham",
+    filterTag: "aed-peg",
+    filterLabel: "AED",
+    badge: {
+      label: "AED Peg",
+      cls: "bg-emerald-600/10 text-emerald-700 dark:text-emerald-400 border-emerald-600/20",
+    },
+    chart: { label: "AED", textColor: "text-emerald-700 dark:text-emerald-400", bgColor: "bg-emerald-600", hex: "#059669" },
+  },
   GOLD: {
     label: "Gold",
     shortLabel: "Gold",

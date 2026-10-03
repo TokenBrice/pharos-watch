@@ -1,0 +1,32 @@
+{
+  "id": "usdsm-stable-mint",
+  "reserves": [{ "name": "Undisclosed mix of USD cash deposits and high-quality liquid assets", "pct": 100, "risk": "medium", "assetClass": "other", "issuerOrObligor": "Undisclosed credit institutions and liquid-asset obligors", "riskFactors": ["counterparty", "custody", "liquidity", "concentration"], "liquidityHorizon": "unknown", "unclassifiedResidual": true, "residualReason": "insufficient-evidence" }],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      { "label": "Stable Mint reserve disclosure", "url": "https://stablemint.io/stablecoins/" },
+      { "label": "USDSM whitepaper", "url": "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html" },
+      { "label": "Stable Mint terms, sections 4 and 9", "url": "https://stablemint.io/legal/terms-conditions/" }
+    ],
+    "rationale": "Retrieved issuer terms and whitepaper describe same-currency cash and high-quality liquid financial assets in segregated accounts. No dated itemized portfolio, bank identities or signed reserve-to-liability reconciliation was retrieved. The 100% slice denotes the entire unclassified book, not a measured allocation or backing ratio; the advertised 102% is an issuer assertion and receives no measured collateralization credit. Medium legacy risk records uncertainty in the unsplit basket rather than assuming Treasury-only backing.",
+    "compositionBasis": "Issuer-disclosed asset-class mandate; no measured current weights",
+    "scope": "classification-only",
+    "knownUnknownExposure": "The whole reserve book lacks itemized assets, counterparty weights and a independently reconciled liability denominator.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [{ "reserveIndex": 0, "reserveName": "Undisclosed mix of USD cash deposits and high-quality liquid assets", "pct": 100, "disposition": "basket-needs-split", "rationale": "No public current cash/HQLA weights or tracked stablecoin exposure were established." }]
+  },
+  "custodyProfile": {
+    "providers": [{ "name": "Undisclosed regulated credit institutions", "role": "bank" }],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "prohibited",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [{ "label": "USDSM whitepaper, reserve patrimony", "url": "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html" }, { "label": "Stable Mint reserve segregation disclosure", "url": "https://stablemint.io/stablecoins/" }],
+    "uncertainty": "Whitepaper D.3 describes a distinct patrimony and the issuer says reserves are separate, not lent or commingled. Actual banks, account agreements, allocation, replacement mechanics and practical insolvency enforceability are not public in the retrieved material. The whole-book custody summary therefore remains unknown.",
+    "knownUnknownExposurePct": 100
+  }
+}

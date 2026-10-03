@@ -1,0 +1,96 @@
+{
+  "id": "xgz-goldzip",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciliation-unknown",
+    "confidence": "manual-review",
+    "summary": "GoldZip controls Ethereum issuance through HKGXToken mint roles and a UUPS upgradeable deployment; complete current role and signing policy are undisclosed.",
+    "controls": [
+      {
+        "label": "GoldZip HKGXToken role-based issuer mint",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0x69af64f409c08e9076bf7f3ed9db3a7409717161",
+        "deploymentRefs": [
+          "ethereum:0x69af64f409c08e9076bf7f3ed9db3a7409717161"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "GoldZip Ethereum proxy",
+            "url": "https://etherscan.io/address/0x69af64f409c08e9076bf7f3ed9db3a7409717161"
+          },
+          {
+            "label": "Verified HKGXToken implementation",
+            "url": "https://etherscan.io/address/0x29ed41cb1013a4df63d87b82346b384847db7511#code"
+          },
+          {
+            "label": "GoldZip issuance claim",
+            "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+          }
+        ],
+        "evidence": "Current Ethereum proxy returns XGZ, 8 decimals, 39,000 supply and owner 0xd173e69192b9ff22069aa913ef6e6e94b19f0778; the EIP-1967 slot binds verified HKGXToken implementation 0x29ed41cb1013a4df63d87b82346b384847db7511. Its ABI exposes role-gated mint and UUPS upgradeToAndCall. Complete role-holder and wallet threshold evidence is unavailable."
+      }
+    ],
+    "upgradeability": {
+      "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x69af64f409c08e9076bf7f3ed9db3a7409717161"
+      ],
+      "proxyAddresses": [
+        "0x69af64f409c08e9076bf7f3ed9db3a7409717161"
+      ],
+      "implementationAddresses": [
+        "0x29ed41cb1013a4df63d87b82346b384847db7511"
+      ],
+      "canChangeMintLogic": "unknown",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107702,
+      "sources": [
+        {
+          "label": "GoldZip Ethereum proxy",
+          "url": "https://etherscan.io/address/0x69af64f409c08e9076bf7f3ed9db3a7409717161"
+        },
+        {
+          "label": "Verified HKGXToken implementation",
+          "url": "https://etherscan.io/address/0x29ed41cb1013a4df63d87b82346b384847db7511#code"
+        },
+        {
+          "label": "GoldZip issuance claim",
+          "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+        }
+      ]
+    },
+    "economicCapSemantics": "unknown",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "review": {
+      "sources": [
+        {
+          "label": "GoldZip Ethereum proxy",
+          "url": "https://etherscan.io/address/0x69af64f409c08e9076bf7f3ed9db3a7409717161"
+        },
+        {
+          "label": "Verified HKGXToken implementation",
+          "url": "https://etherscan.io/address/0x29ed41cb1013a4df63d87b82346b384847db7511#code"
+        },
+        {
+          "label": "GoldZip issuance claim",
+          "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+        }
+      ],
+      "evidence": "GoldZip documents verified-gold-deposit issuer issuance, but physical reserve and liability reconciliation is not published. The deployed proxy binds the verified role-based HKGXToken source; no immutable cap or verified KWallet signing threshold is inferred from that label.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "Complete current mint and upgrade role holders",
+        "KWallet threshold, signing policy and enforced upgrade delay",
+        "Reserve-to-token reconciliation"
+      ]
+    }
+  }
+}

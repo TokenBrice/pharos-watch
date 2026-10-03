@@ -1,0 +1,107 @@
+{
+  "id": "senpyusdpst-sentora",
+  "reserves": [
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0x6c3ea9036406852006290770bedfcaba0e23a0e8",
+      "name": "PYUSD held idle and supplied to Sentora Huma PST Main Morpho lending positions",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "pyusd-paypal",
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sentora Huma PST Main, Morpho lending borrowers and the PYUSD issuer",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Exact Sentora vault",
+        "url": "https://app.morpho.org/ethereum/vault/0x8381a156958711e230f325428b5eb4b6555c75d9"
+      },
+      {
+        "label": "Pinned RPC identity, accounting and controls",
+        "url": "https://eth-mainnet.g.alchemy.com/v2"
+      },
+      {
+        "label": "Morpho Vault V2 documentation",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Exact VaultV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8381a156958711e230f325428b5eb4b6555c75d9"
+      },
+      {
+        "label": "MorphoMarketV1AdapterV2 source",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+      },
+      {
+        "label": "Paxos USD stablecoin terms, section 3.5",
+        "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
+      }
+    ],
+    "rationale": "At ethereum block 26107706, asset() was 0x6c3ea9036406852006290770bedfcaba0e23a0e8, share decimals 18 and underlying decimals 6; totalAssets raw 67088184134955, totalSupply raw 66674549755026886856443154, idle raw 2115765190647, sole adapter market assets raw 64972418944308, with an exact zero accounting difference. The only funded market lent PYUSD against Huma PST at 86% LLTV. The adapter position had zero borrowing and zero posted collateral. The single 100% slice records the verified denomination and position claim, not an invented allocation or underlying borrower-credit rating.",
+    "compositionBasis": "Complete pinned idle-plus-sole-adapter accounting; single parent-denominated strategy dependency",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current immediate asset and adapter inventory are identified. Borrower legal recovery, default liquidation proceeds and future allocations remain uncertain.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Sentora Huma PST Main VaultV2",
+        "role": "other",
+        "jurisdiction": "ethereum"
+      },
+      {
+        "name": "MorphoMarketV1AdapterV2 0x39ad1c6152c09de4598a4f39c7b0a85f7b03326b",
+        "role": "other",
+        "jurisdiction": "ethereum"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Exact Sentora vault",
+        "url": "https://app.morpho.org/ethereum/vault/0x8381a156958711e230f325428b5eb4b6555c75d9"
+      },
+      {
+        "label": "Pinned RPC identity, accounting and controls",
+        "url": "https://eth-mainnet.g.alchemy.com/v2"
+      },
+      {
+        "label": "Morpho Vault V2 documentation",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Exact VaultV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8381a156958711e230f325428b5eb4b6555c75d9"
+      },
+      {
+        "label": "MorphoMarketV1AdapterV2 source",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+      },
+      {
+        "label": "Paxos USD stablecoin terms, section 3.5",
+        "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
+      }
+    ],
+    "uncertainty": "Immediate assets are held in on-chain vault and lender-position contracts; borrower collateral and upstream stablecoin reserve custody are separate exposures. No exact-share legal insolvency priority or whole-book off-chain collateral-custody safeguards were established. Lending reuse is explicit."
+  }
+}

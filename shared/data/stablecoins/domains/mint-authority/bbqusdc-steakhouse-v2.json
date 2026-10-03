@@ -1,0 +1,289 @@
+{
+  "id": "bbqusdc-steakhouse-v2",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "manual-review",
+    "summary": "bbqUSDC mints shares against USDC deposits and may mint fee shares through interest accounting. Vault parameter controls remain local; durable USDC issuance is inherited from Circle.",
+    "inheritedFrom": "usdc-circle",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "bbqUSDC VaultV2 share issuer",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107704,
+      "sources": [
+        {
+          "label": "Exact Morpho Vault V2 deployment",
+          "url": "https://app.morpho.org/ethereum/vault/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+        },
+        {
+          "label": "Verified deployment code identity",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+        },
+        {
+          "label": "Pinned ethereum block 26107704",
+          "url": "https://etherscan.io/block/26107704"
+        },
+        {
+          "label": "Morpho complete current vault inventory",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Morpho Vault V2 gates",
+          "url": "https://docs.morpho.org/curate/concepts/gates.md"
+        },
+        {
+          "label": "Morpho share accounting and loss realization",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Exact Morpho lending adapter",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbfe734baab130048e20a64e800c4c2ec25756284"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757",
+        "label": "bbqUSDC VaultV2 share issuer",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "Exact Morpho Vault V2 deployment",
+            "url": "https://app.morpho.org/ethereum/vault/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+          },
+          {
+            "label": "Verified deployment code identity",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+          },
+          {
+            "label": "Pinned ethereum block 26107704",
+            "url": "https://etherscan.io/block/26107704"
+          },
+          {
+            "label": "Morpho complete current vault inventory",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 gates",
+            "url": "https://docs.morpho.org/curate/concepts/gates.md"
+          },
+          {
+            "label": "Morpho share accounting and loss realization",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Exact Morpho lending adapter",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbfe734baab130048e20a64e800c4c2ec25756284"
+          }
+        ],
+        "evidence": "Steakhouse High Yield USDC (bbqUSDC) at ethereum:0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757 is the current public ERC-4626 VaultV2 share over USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0xbfe734baab130048e20a64e800c4c2ec25756284 holds 10 enumerated Morpho market IDs. Performance fee 5% of gains, management fee 0%; fee-share accrual is not discretionary minting of underlying USDC. EIP-1967 implementation, admin and beacon slots were zero."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x4d7bd498bb24098ca281c05519629c605407f71d",
+        "label": "bbqUSDC owner",
+        "role": "governor",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "Exact Morpho Vault V2 deployment",
+            "url": "https://app.morpho.org/ethereum/vault/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+          },
+          {
+            "label": "Verified deployment code identity",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+          },
+          {
+            "label": "Pinned ethereum block 26107704",
+            "url": "https://etherscan.io/block/26107704"
+          },
+          {
+            "label": "Morpho complete current vault inventory",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 gates",
+            "url": "https://docs.morpho.org/curate/concepts/gates.md"
+          },
+          {
+            "label": "Morpho share accounting and loss realization",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Exact Morpho lending adapter",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbfe734baab130048e20a64e800c4c2ec25756284"
+          },
+          {
+            "label": "Steakhouse supervisor action-specific controls",
+            "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
+          }
+        ],
+        "evidence": "Pinned owner() at ethereum block 26107704 (0x18e5f38), observed 2026-10-02T22:44:15.742108+00:00. Parameter and allocation control does not confer discretionary underlying USDC minting. Adapter addition and cap-increase delays: {\"addAdapter(address)\": 259200, \"increaseAbsoluteCap(bytes,uint256)\": 259200, \"setPerformanceFee(uint256)\": 0, \"setManagementFee(uint256)\": 0}. Fee selectors have their own zero delays; no blanket all-action timelock or signer independence is claimed. Supervisor owner 0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd; TIMELOCK 1209600 seconds applies to ownership/guardian removal, but curator replacement is immediate."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x827e86072b06674a077f592a531dce4590adecdb",
+        "label": "bbqUSDC curator",
+        "role": "governor",
+        "authorityType": "safe",
+        "safe": {
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 26107704,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "Exact Morpho Vault V2 deployment",
+            "url": "https://app.morpho.org/ethereum/vault/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+          },
+          {
+            "label": "Verified deployment code identity",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+          },
+          {
+            "label": "Pinned ethereum block 26107704",
+            "url": "https://etherscan.io/block/26107704"
+          },
+          {
+            "label": "Morpho complete current vault inventory",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 gates",
+            "url": "https://docs.morpho.org/curate/concepts/gates.md"
+          },
+          {
+            "label": "Morpho share accounting and loss realization",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Exact Morpho lending adapter",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbfe734baab130048e20a64e800c4c2ec25756284"
+          }
+        ],
+        "evidence": "Pinned curator() at ethereum block 26107704 (0x18e5f38), observed 2026-10-02T22:44:15.742108+00:00. Parameter and allocation control does not confer discretionary underlying USDC minting. Adapter addition and cap-increase delays: {\"addAdapter(address)\": 259200, \"increaseAbsoluteCap(bytes,uint256)\": 259200, \"setPerformanceFee(uint256)\": 0, \"setManagementFee(uint256)\": 0}. Fee selectors have their own zero delays; no blanket all-action timelock or signer independence is claimed. Safe threshold 2/7, enabled-module count 0, guard zero.",
+        "threshold": 2,
+        "signerCount": 7
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd",
+        "label": "bbqUSDC supervisor owner Safe",
+        "role": "governor",
+        "authorityType": "safe",
+        "safe": {
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 26107704,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "directMintAbility": "parameter-only",
+        "threshold": 5,
+        "signerCount": 10,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "Exact Morpho Vault V2 deployment",
+            "url": "https://app.morpho.org/ethereum/vault/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+          },
+          {
+            "label": "Verified deployment code identity",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+          },
+          {
+            "label": "Pinned ethereum block 26107704",
+            "url": "https://etherscan.io/block/26107704"
+          },
+          {
+            "label": "Morpho complete current vault inventory",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 gates",
+            "url": "https://docs.morpho.org/curate/concepts/gates.md"
+          },
+          {
+            "label": "Morpho share accounting and loss realization",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Exact Morpho lending adapter",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbfe734baab130048e20a64e800c4c2ec25756284"
+          },
+          {
+            "label": "Supervisor controls",
+            "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
+          }
+        ],
+        "evidence": "At ethereum block 26107704 (0x18e5f38), observed 2026-10-02T22:44:15.742108+00:00, supervisor.owner() returned this Safe, threshold 5/10, zero modules and guard. Immediate curator replacement remains available; signer independence was not established."
+      }
+    ],
+    "review": {
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Exact Morpho Vault V2 deployment",
+          "url": "https://app.morpho.org/ethereum/vault/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+        },
+        {
+          "label": "Verified deployment code identity",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+        },
+        {
+          "label": "Pinned ethereum block 26107704",
+          "url": "https://etherscan.io/block/26107704"
+        },
+        {
+          "label": "Morpho complete current vault inventory",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Morpho Vault V2 gates",
+          "url": "https://docs.morpho.org/curate/concepts/gates.md"
+        },
+        {
+          "label": "Morpho share accounting and loss realization",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Exact Morpho lending adapter",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbfe734baab130048e20a64e800c4c2ec25756284"
+        }
+      ],
+      "evidence": "Steakhouse High Yield USDC (bbqUSDC) at ethereum:0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757 is the current public ERC-4626 VaultV2 share over USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0xbfe734baab130048e20a64e800c4c2ec25756284 holds 10 enumerated Morpho market IDs. At ethereum block 26107704 (0x18e5f38), observed 2026-10-02T22:44:15.742108+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was zero with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim. Local fee/curator authority is not USDC issuer supervision or reserve-liability reconciliation.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "unresolvedQuestions": [
+        "Independent human signers and key-custody procedures are not established.",
+        "No exact-vault financial assurance or statutory holder priority was established."
+      ]
+    }
+  }
+}

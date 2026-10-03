@@ -1,0 +1,30 @@
+{
+  "id": "usdx-axis",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "USDx targets a dollar value but direct redemption is an approved-account signed-order exchange for supported digital-asset collateral. Axis terms disclaim a guaranteed value and guaranteed redemption availability. GENIUS section 2(22) separately requires a fixed monetary-value repayment obligation, excluding a digital asset merely denominated in fixed monetary value. These public terms do not settle USDx's U.S. legal category; synthetic backing and U.S.-person restrictions alone do not establish a statutory exclusion.",
+      "references": [
+        { "label": "Axis terms, issuer identity and redemption conditions", "url": "https://www.axis.to/terms-of-service", "sourceKind": "issuer-disclosure", "accessedAt": "2026-10-02" },
+        { "label": "Axis primary-market signed orders", "url": "https://docs.axis.to/usdx-the-synthetic-dollar/mint-and-redeem.md", "sourceKind": "issuer-disclosure", "accessedAt": "2026-10-02" },
+        { "label": "GENIUS Act section 2(22)", "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm", "sourceKind": "statute", "sourceDate": "2025-07-18", "accessedAt": "2026-10-02" }
+      ]
+    },
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Coordinate Origin Limited",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://app.axis.to/transparency",
+    "notes": "Terms identify Coordinate Origin Limited as the BVI entity for issuance/redemption, distinct from Singapore platform operator Coordinate Labs Pte. Ltd. Axis states USDx and sUSDx are not offered to U.S. persons. No token-specific regulatory authorization, foreign registration or legal opinion was retrieved; unknown records that unresolved posture without claiming a completed negative regulator-register search. The Accountable feed and Solidity security audits are not GENIUS authorization evidence. EU/EEA applications receive enhanced due diligence, which does not establish MiCA authorization; MiCA is intentionally unassessed rather than copied from the Ethena precedent.",
+    "references": [
+      { "label": "Axis legal issuer and platform operator", "url": "https://www.axis.to/terms-of-service", "sourceKind": "issuer-disclosure", "accessedAt": "2026-10-02" },
+      { "label": "Axis U.S.-person restrictions and disclosures", "url": "https://docs.axis.to/resources-and-legal/compliance.md", "sourceKind": "issuer-disclosure", "accessedAt": "2026-10-02" },
+      { "label": "Axis primary-market eligibility and EU/EEA due diligence", "url": "https://docs.axis.to/resources-and-legal/eligibility-and-onboarding.md", "sourceKind": "issuer-disclosure", "accessedAt": "2026-10-02" },
+      { "label": "GENIUS Act statutory definition", "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm", "sourceKind": "statute", "sourceDate": "2025-07-18", "accessedAt": "2026-10-02" }
+    ],
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

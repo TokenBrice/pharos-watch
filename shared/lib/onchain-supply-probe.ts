@@ -91,6 +91,28 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "base", allowZeroSupply: true },
     { chain: "tempo", allowZeroSupply: true },
   ],
+  // Reviewed native deployments (AD3a/AD5a, RPC reverified 2026-10-02).
+  // USCC public shares sum across Ethereum, Plume and Solana; book-entry shares
+  // are outside this token-stock scope. Solana's scaled-UI multiplier is 1.
+  // EVM burn/reissue and Solana redeem/rebuy do not create additive bridge stock.
+  "uscc-superstate": [
+    { chain: "ethereum", allowZeroSupply: true },
+    supplyProbeChain("plume", { allowZeroSupply: true }),
+    { chain: "solana", allowZeroSupply: true },
+  ],
+  // PYUSDx native Portal burn/mint supplies sum. Extension-held balances are
+  // already in these totalSupply reads, so never add CUSD/ConcUSD separately.
+  "pyusdx-moonpay": [
+    { chain: "ethereum" },
+    { chain: "arbitrum" },
+    supplyProbeChain("monad"),
+  ],
+  // Sygnum's native fund-unit tokens sum; Arbitrum is a live zero-supply leg.
+  // Use the reviewed zkSync supply profile, not an inferred chain RPC.
+  "fiusd-sygnum": [
+    supplyProbeChain("zksync"),
+    { chain: "arbitrum", allowZeroSupply: true },
+  ],
   // CoinGecko only exposes an Ethereum market-cap row for ftUSD and currently
   // leaves it stale; aggregate the verified native Ethereum + Sonic supplies.
   "ftusd-flying-tulip": [{ chain: "ethereum" }, { chain: "sonic" }],

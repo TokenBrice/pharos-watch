@@ -1,0 +1,76 @@
+{
+  "id": "mxnt-tether",
+  "reserves": [
+    {
+      "name": "Shared Tether fiat-token reserve pool; MXNT allocation undisclosed",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Tether International, S.A. de C.V.; underlying MXNT allocation undisclosed",
+      "riskFactors": [
+        "market",
+        "credit",
+        "custody",
+        "legal",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Issuer holder and reserve terms",
+        "url": "https://tether.to/en/legal/"
+      },
+      {
+        "label": "Retrieved independent reserve report",
+        "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"
+      }
+    ],
+    "rationale": "BDO reconciles the aggregate June 30 fiat-token reserve pool of USD 187,751,426,411 against USD 183,641,897,215 total liabilities, including USD 183,622,105,630 token liabilities. Legal terms place MXNT in that shared reserve model. This single basket records the whole shared claim but does not import USDT percentages or infer a dedicated peso-denominated allocation.",
+    "compositionBasis": "Retrieved independent report; historical snapshot and scope retained",
+    "compositionAsOf": "2026-06-30",
+    "scope": "classification-only",
+    "knownUnknownExposure": "The report does not disclose a dedicated MXNT reserve allocation, named MXNT custodian roster, insolvency priority, or reserve-specific peso asset mix.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Shared Tether fiat-token reserve pool; MXNT allocation undisclosed",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "No token-specific constituent weights are disclosed; basket cannot create tracked dependency edges."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Tether International, S.A. de C.V. (reserve owner; MXNT custodian roster undisclosed)",
+        "role": "other",
+        "jurisdiction": "El Salvador"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Issuer holder and reserve terms",
+        "url": "https://tether.to/en/legal/"
+      },
+      {
+        "label": "Retrieved independent reserve report",
+        "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"
+      }
+    ],
+    "uncertainty": "The report does not disclose a dedicated MXNT reserve allocation, named MXNT custodian roster, insolvency priority, or reserve-specific peso asset mix."
+  }
+}

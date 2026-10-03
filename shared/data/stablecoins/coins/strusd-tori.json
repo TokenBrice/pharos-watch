@@ -1,0 +1,124 @@
+{
+  "id": "strusd-tori",
+  "name": "Tori Staked trUSD",
+  "symbol": "strUSD",
+  "oneLiner": "strUSD is Tori's trUSD savings vault, accruing trading rewards and returning trUSD after a seven-day cooldown.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "trusd-tori",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "trusd-tori",
+  "detailProvider": "coingecko",
+  "geckoId": "tori-staked-trusd",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x280839980a7ed0d7717f64125fe241012e5f5815",
+      "decimals": 18
+    },
+    {
+      "chain": "monad",
+      "address": "0x683fb58ee77172626d5b49087ddac71ef7825d20",
+      "decimals": 18
+    },
+    {
+      "chain": "pharos",
+      "address": "0x25419e949b485d481bed4ea0c5a0496f6c7f7c63",
+      "decimals": 18
+    }
+  ],
+  "mechanismArchetype": "protocol-position",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "Exact Ethereum StakedTrUSD is a transferable ERC-4626 operational share claim against trUSD held in 0x280839980a7ed0d7717f64125fe241012e5f5815. Monad and Pharos are CCIP representations backed by the Ethereum escrow, not independent vaults or additional native liabilities. Local share accounting and cooldown differ from the parent synthetic-dollar mechanism.",
+    "sources": [
+      {
+        "label": "Tori strUSD staking and unstaking terms",
+        "url": "https://docs.tori.finance/products/strusd.md"
+      },
+      {
+        "label": "Tori canonical vault and CCIP deployments",
+        "url": "https://docs.tori.finance/resources/contracts.md"
+      },
+      {
+        "label": "Tori roles and timelock disclosure",
+        "url": "https://docs.tori.finance/security/roles.md"
+      },
+      {
+        "label": "Verified StakedTrUSD implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6561272e3ebc9f2e07cdb12b7c474db9132b977a"
+      },
+      {
+        "label": "Tori reserve ownership and holder-rights terms",
+        "url": "https://docs.tori.finance/legal/trusd-terms.md"
+      },
+      {
+        "label": "Pinned Ethereum block 26107706",
+        "url": "https://etherscan.io/block/26107706"
+      }
+    ]
+  },
+  "collateral": "trUSD held by the Ethereum staking vault; unvested rewards are excluded from totalAssets. Burned cooldown claims hold trUSD in the separate silo. Offchain reserve and strategy risks remain with tracked trUSD.",
+  "pegMechanism": "Holders stake trUSD for ERC-4626 shares. Current cooldownDuration is 604800 seconds: cooldownShares or cooldownAssets burns shares and moves trUSD to the silo, then unstake releases it. Staking and unstaking carry no protocol fee; gas applies. Restricted addresses can be blocked and their shares or cooldown funds seized. Parent trUSD repurchase is a separate KYC-approved, discretionary issuer route.",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://etherscan.io/address/0x280839980a7ed0d7717f64125fe241012e5f5815#readProxyContract",
+    "provider": "StakedTrUSD onchain trUSD balance, unvested rewards and share accounting; not a financial audit",
+    "cadence": "real-time"
+  },
+  "links": [
+    {
+      "label": "Tori strUSD staking and unstaking terms",
+      "url": "https://docs.tori.finance/products/strusd.md"
+    },
+    {
+      "label": "Tori canonical vault and CCIP deployments",
+      "url": "https://docs.tori.finance/resources/contracts.md"
+    }
+  ],
+  "collateralQuality": "exotic",
+  "custodyModel": "unknown",
+  "yieldConfig": {
+    "yieldSource": "Tori net trading rewards through the strUSD exchange rate",
+    "yieldType": "nav-appreciation"
+  },
+  "archetypeOverride": true,
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "strusd-tori",
+    "display": {
+      "url": "https://docs.tori.finance/products/strusd.md",
+      "label": "Tori StakedTrUSD"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "trUSD held by StakedTrUSD",
+        "risk": "high",
+        "coinId": "trusd-tori",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xd0580192e98ea6ceb9c7b6191ed2e27560911697"
+      },
+      "redemptionLock": [
+        {
+          "selector": "cooldownDuration()",
+          "kind": "cooldown-seconds"
+        }
+      ]
+    }
+  }
+}

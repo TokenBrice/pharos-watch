@@ -36,7 +36,7 @@ Active Pharos taxonomy no longer exposes `algorithmic` as a standalone backing b
 
 ### Peg Currency
 
-`PEG_CURRENCY_VALUES` in `shared/types/core.ts` is the runtime authority. It covers the tracked fiat pegs (including COP, CLP, GHS, KES, and PEN), `GOLD`, `SILVER`, `VAR` (variable/CPI-linked), and `OTHER`; do not maintain a second literal enum here.
+`PEG_CURRENCY_VALUES` in `shared/types/core.ts` is the runtime authority. It covers the tracked fiat pegs (including COP, CLP, GHS, KES, PEN, CZK, PLN, and AED), `GOLD`, `SILVER`, `VAR` (variable/CPI-linked), and `OTHER`; do not maintain a second literal enum here. Czech koruna, Polish zloty, and UAE dirham assets use `CZK`, `PLN`, and `AED` rather than `OTHER`.
 
 ### Boolean Flags
 
@@ -213,6 +213,8 @@ The `infrastructures` field is an array because a coin could in principle belong
 Peg deviation for non-USD stablecoins requires knowing the USD value of the peg currency. For every fiat peg, `shared/lib/peg-rates.ts` treats a usable cadence-valid `fxFallbackRates` quote from `sync-fx-rates.ts` as authoritative regardless of peer count. When fiat FX is unavailable, it falls back to the median price among same-`pegType` stablecoins with at least $1M supply. Gold and silver instead use the qualifying peer median when at least three contributors exist and use the metals/FX fallback only for a thinner group. The function always returns a `PegRatesResult` containing `rates` (the numeric lookup), `sources` (which source was used per currency), and `counts` (the number of qualifying live contributors per currency). The deviation is then `((price / pegRef) - 1) * 10000` basis points.
 
 Those `fxFallbackRates` are produced by the `sync-fx-rates` cron. Its cadence bucket and claim, provider fallback order, and Chainlink/Open Exchange Rates overlays are documented in [pricing-pipeline.md](./pricing-pipeline.md); `PRIMARY_FX_CURRENCIES` and `SECONDARY_FX_CURRENCY_TO_PEG` in `worker/src/lib/fx-config.ts` own which fiat pegs come from Frankfurter/ECB and which come from the secondary daily currency API.
+
+CZK and PLN use the primary ECB/Frankfurter business-daily source; AED uses the secondary calendar-daily currency API because ECB does not publish AED. The shared taxonomy owns the canonical DefiLlama peg types, display symbols, and FX/price-validation bounds for all three currencies. RAKBank's pre-launch dirham asset (`aed-rakbank`) uses `AED`. ILS and GEL assets remain unchanged; adding these three currencies does not establish ILS or GEL support.
 
 ## Commodity & Non-DefiLlama Stablecoins
 

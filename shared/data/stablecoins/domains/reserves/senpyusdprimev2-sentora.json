@@ -1,0 +1,130 @@
+{
+  "id": "senpyusdprimev2-sentora",
+  "reserves": [
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0x6c3ea9036406852006290770bedfcaba0e23a0e8",
+      "name": "Sentora PRIME Main idle underlying",
+      "pct": 1.9532,
+      "risk": "medium",
+      "coinId": "pyusd-paypal",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Paxos",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0xc21b08c16458202593d4d9b26b9984ee67b38bbd:deployed",
+      "name": "Sentora PRIME Main deployed strategy positions",
+      "pct": 98.0468,
+      "risk": "high",
+      "coinId": "pyusd-paypal",
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sentora-curated Morpho markets and their borrowers",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "concentration",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Sentora PRIME Main exact vault",
+        "url": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+      },
+      {
+        "label": "Exact verified VaultV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+      },
+      {
+        "label": "Exact current MorphoMarketV1AdapterV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89"
+      },
+      {
+        "label": "Morpho Vault V2 accounting and redemption mechanics",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Ethereum RPC, pinned block 26107702",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Morpho exact-vault portfolio API",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Sentora PRIME residential-credit case study",
+        "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
+      }
+    ],
+    "rationale": "At block 26107702, asset()=0x6c3ea9036406852006290770bedfcaba0e23a0e8; totalAssets=212994583350440, idle underlying=4160246119942, current adapter realAssets=208834337230498, in underlying smallest units. Idle plus adapter assets reconcile exactly to totalAssets. The 1 current pinned lender positions have zero borrow shares and zero posted collateral. PYUSD loans against Hastra PRIME collateral (0x19ebb35279a16207ec4ba82799cc64715065f7f6), described by Sentora as Figure home-equity credit exposure. The exact PRIME tracked identity and enforceable recovery priority are unresolved. The parent link denotes denomination and inherited token risk, not ownership of the parent issuer reserves.",
+    "compositionBasis": "Pinned exact vault underlying balance and sole adapter realAssets; percentages of totalAssets, rounded to four decimals",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current vault/adapter accounting is identified. Collateral custody, enforceable insolvency priority, borrower losses and stressed liquidation capacity are not established across every underlying layer.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Sentora PRIME Main immutable VaultV2 and 0x93d6393e66b56449b7926b9abfeb37606732de89 Morpho adapter",
+        "role": "other"
+      },
+      {
+        "name": "Morpho borrower markets",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Sentora PRIME Main exact vault",
+        "url": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+      },
+      {
+        "label": "Exact verified VaultV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+      },
+      {
+        "label": "Exact current MorphoMarketV1AdapterV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89"
+      },
+      {
+        "label": "Morpho Vault V2 accounting and redemption mechanics",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Ethereum RPC, pinned block 26107702",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Morpho exact-vault portfolio API",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Sentora PRIME residential-credit case study",
+        "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
+      }
+    ],
+    "uncertainty": "Immediate lender positions are held in contracts and intentionally reused as loans. No whole-book claim of exclusively on-chain ultimate collateral custody is made. Parent issuer custody remains inherited; underlying collateral legal/custody layers and recoveries are unresolved."
+  }
+}

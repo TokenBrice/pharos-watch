@@ -334,6 +334,29 @@ describe("authoritative-price-sources", () => {
     }
   });
 
+  it("normalizes legacy Spark's 18-decimal shares into 6-decimal USDC without changing V2", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    fetchEvmCallHexAtBlockMock.mockImplementation(async (_chain, vault, calldata) => {
+      if (vault === "0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+        && calldata === `0x07a2d13a${encodeUint256(10n ** 18n)}`) {
+        return `0x${encodeUint256(1_111_493n)}`;
+      }
+      if (vault === "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
+        && calldata === `0x07a2d13a${encodeUint256(10n ** 6n)}`) {
+        return `0x${encodeUint256(1_022_324n)}`;
+      }
+      return null;
+    });
+    const overrides = await fetchLiveOverrides([
+      unpricedChild("susdc-spark-v1"),
+      unpricedChild("susdc-spark"),
+      freshParent("usdc-circle", 0.9999, "coingecko+pyth", { nowSec }),
+    ]);
+
+    expect(overrides.get("susdc-spark-v1")?.price).toBeCloseTo(1.111493 * 0.9999, 8);
+    expect(overrides.get("susdc-spark")?.price).toBeCloseTo(1.022324 * 0.9999, 8);
+  });
+
   it("allows scoped BOLD ERC-4626 wrappers to use a fresh high-confidence address-composite parent", async () => {
     const outputRaw = 1_062_000_000_000_000_000n.toString(16).padStart(64, "0");
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${outputRaw}`);

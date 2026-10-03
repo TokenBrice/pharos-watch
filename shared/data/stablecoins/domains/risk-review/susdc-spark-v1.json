@@ -1,0 +1,31 @@
+{
+  "id": "susdc-spark-v1",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Spark Savings documentation distinguishes Legacy V1 from V2",
+        "url": "https://docs.spark.finance/products/spark-savings"
+      },
+      {
+        "label": "Official Spark Ethereum deployment registry",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Ethereum.sol"
+      },
+      {
+        "label": "Verified exact vault deployment and source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+      },
+      {
+        "label": "Verified Legacy UsdcVault implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba"
+      },
+      {
+        "label": "Credential-free RPC endpoint; pinned read in review notes",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      }
+    ],
+    "evidence": "Observed 2026-10-02T22:43:52.688407+00:00 at ethereum block 26107702 (hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6). Native totalSupply 161342339855641335323322489 (18 decimals), asset 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (6 decimals), totalAssets 179331003650749, convertToAssets(10^18) 1111493. One-share redeem from actual holder 0xa09fe38187abecc2768b98b80ea30afbc2fbd774 returned 1111493 asset base units via eth_call at that same block; no transaction broadcast. Underlying USDC retains its issuer freeze authority; the pinned parent authority getter returned 0x0000000000000000000000000a06be16275b95a7d2567fbdae118b36c7da78f9. No direct receipt-transfer blacklist is asserted. Local governance/upgrade authority is reviewed separately from inherited asset freezing.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

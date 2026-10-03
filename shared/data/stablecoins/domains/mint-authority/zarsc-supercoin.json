@@ -1,0 +1,79 @@
+{
+  "id": "zarsc-supercoin",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "manual-review",
+    "summary": "Native issuance remains under issuer authority. ZARsc uses a System Program Solana mint signer; Fireblocks custody does not prove an on-chain threshold.",
+    "controls": [
+      {
+        "chain": "solana",
+        "address": "UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk",
+        "deploymentRefs": [
+          "solana:5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ"
+        ],
+        "label": "Solana Token-2022 mint authority",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 452748073,
+        "sources": [
+          {
+            "label": "Solana mint and authority observation",
+            "url": "https://solscan.io/token/5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ"
+          }
+        ],
+        "evidence": "Finalized mint account at slot 452748073 has decimals 6, supply 8177042.0, and mintAuthority UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk. Authority read at slot 452748181 is a nonexecutable zero-data System Program account; no on-chain quorum is demonstrated."
+      }
+    ],
+    "upgradeability": {
+      "model": "immutable",
+      "deploymentRefs": [
+        "solana:5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ"
+      ],
+      "canChangeMintLogic": false,
+      "sources": [
+        {
+          "label": "Token-2022 issuer deployment",
+          "url": "https://www.supercoin.co.za/assurance-reports"
+        }
+      ],
+      "observedAt": "2026-10-02"
+    },
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "review": {
+      "sources": [
+        {
+          "label": "Issuer issuance and holder terms",
+          "url": "https://www.supercoin.co.za/terms-of-service"
+        },
+        {
+          "label": "Retrieved independent reserve report",
+          "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf"
+        },
+        {
+          "label": "Solana mint and authority observation",
+          "url": "https://solscan.io/token/5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ"
+        }
+      ],
+      "evidence": "The named controls create native issuer liabilities without an independently enforced collateral cap. The issuer report archive publishes monthly AUP comparisons of Absa bank cash against issued supply less management-designated treasury circulation exclusions; this supports periodic reserve-to-circulation reconciliation, not prudential authorization.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "AUP has no audit/assurance opinion; legal trust/bankruptcy protection unproved.",
+        "Current issuer direct app redemption is not live; two-business-day promise is future-only.",
+        "Exchange liquidity/par execution not guaranteed; Orca pool ~USD16k and no observed 24h volume, VALR volumes small.",
+        "Solana authorities are ordinary signer accounts; no verified multisig threshold, key independence or timelock.",
+        "CG current circulation differs from historical report and issued total; use fresh CG market cap, no raw minted-supply override.",
+        "Requested 90-day chart spans only about nine days; normalize ZAR FX before depeg conclusions.",
+        "FSP53458 remains issuer/parent claim; no independently pinned regulator row."
+      ]
+    }
+  }
+}

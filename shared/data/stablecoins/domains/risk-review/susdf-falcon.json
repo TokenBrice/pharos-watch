@@ -1,0 +1,78 @@
+{
+  "id": "susdf-falcon",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Falcon Finance savings documentation",
+        "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md"
+      },
+      {
+        "label": "Falcon Finance official deployment roster",
+        "url": "https://docs.falcon.finance/resources/smart-contracts.md"
+      },
+      {
+        "label": "Verified current sUSDf implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d132bee412e6619a4863aeedad97541bfda3f34"
+      },
+      {
+        "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
+        "url": "https://etherscan.io/block/26107704"
+      }
+    ],
+    "evidence": "Verified StakedUSDf exposes setRestrictedStatus and redistributeLockedAmount to DEFAULT_ADMIN_ROLE. Deposits and withdrawals reject restricted caller, receiver and owner; administrators can burn or transfer restricted shares to TREASURY. The current transparent-proxy upgrade path can also replace token logic. Parent USDf transfer/compliance controls remain inherited.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "oracleRisk": {
+    "tier": "oracleless",
+    "summary": "sUSDf values local shares from onchain USDf custody and vested-reward accounting. It has no local collateral-liquidation engine or external market-price oracle; parent price and upstream mechanism risk remain inherited.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "rationale": "The ERC-4626 share-to-underlying exchange rate is the top-level mint/redemption authority. There are no borrower-owned collateral branches on the savings token.",
+      "sources": [
+        {
+          "label": "Falcon Finance savings documentation",
+          "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md"
+        },
+        {
+          "label": "Falcon Finance official deployment roster",
+          "url": "https://docs.falcon.finance/resources/smart-contracts.md"
+        },
+        {
+          "label": "Verified current sUSDf implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d132bee412e6619a4863aeedad97541bfda3f34"
+        },
+        {
+          "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
+          "url": "https://etherscan.io/block/26107704"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Falcon Finance savings documentation",
+        "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md"
+      },
+      {
+        "label": "Falcon Finance official deployment roster",
+        "url": "https://docs.falcon.finance/resources/smart-contracts.md"
+      },
+      {
+        "label": "Verified current sUSDf implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d132bee412e6619a4863aeedad97541bfda3f34"
+      },
+      {
+        "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
+        "url": "https://etherscan.io/block/26107704"
+      }
+    ]
+  }
+}

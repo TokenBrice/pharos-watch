@@ -1,4 +1,389 @@
 {
+  "jltxx-jpmorgan": {
+    "title": "Government fund, issuer-controlled tokens",
+    "text": "JLTXX represents Token Class shares in JPMorgan's registered government money-market fund, not a bank deposit or a guaranteed dollar payment claim. Its mandate combines short Treasury securities, overnight Treasury-collateralized repos and cash; the issuer publishes transaction NAV and class assets, while legal ownership remains on an off-chain Investor Register. Institutional shareholders can request cash redemption, ordinarily within seven days, but statutory suspensions and forced account closure remain possible. Token minting, upgrades and account-level transfer or redemption restrictions remain centrally controlled, and current independent whole-book assurance, subcustody coverage and insolvency terms are not established by the reviewed packet.",
+    "updatedAt": "2026-10-02"
+  },
+  "armusdcs-wintermute": {
+    "title": "Wintermute USDC with mixed lending collateral",
+    "text": "Wintermute USDC Select lends USDC through Morpho markets spanning wrapped bitcoin, liquid-staking and principal-token collateral. The strategy converts borrower interest into a rising share-to-USDC rate, with losses borne through the same accounting mechanism. A four-of-six Safe owns the vault, but the signing threshold does not establish independent key custody, and fee-setting actions carry no configured delay. The complete pinned lending inventory showed no borrower debt or posted collateral at the adapter level. Native withdrawals depend on idle assets and available market liquidity; the vault has no independently verified financial assurance or legal insolvency-priority protection.",
+    "updatedAt": "2026-10-02"
+  },
+  "pendleusdc-pendle": {
+    "title": "USDC lending against Pendle principal tokens",
+    "text": "Pendle Ecosystem USDC lends against principal tokens tied to reUSD, sUSDS and sUSDE maturities. Its USDC-denominated share price reflects borrower interest and losses, while the configured performance fee takes a portion of gains. A four-of-six Safe owns the vault, with three-day cap-increase delays and zero-delay fee-setting paths observed in the review. Share transfers and direct withdrawals have permanently disabled gates, but mutable deposit permissions can still affect a deposit-funded exit. Ordinary redemption returns available USDC, while an in-kind unwind can leave holders exposed to lending positions and their collateral recovery rather than immediate dollars.",
+    "updatedAt": "2026-10-02"
+  },
+  "susdat-saturn": {
+    "title": "Preferred-credit yield behind a USDat vault share",
+    "text": "Saturn sUSDat turns USDat deposits into a managed credit-vault share whose value depends mainly on STRCon, an Ondo note tracking Strategy preferred shares. Dividend income can increase the exchange rate, while preferred-credit losses can reduce it; cash-backed USDat provides only the liquidity buffer. Holders can trade on secondary markets or request queued USDat redemption, which depends on operator processing and realizable liquidity. Native and bridged tokens retain blacklist or recovery powers, and exact note terms, Saturn holder priority and independent whole-book reconciliation remain unverified. Those unresolved credit and control facts limit what can be concluded from the visible on-chain NAV.",
+    "updatedAt": "2026-10-03"
+  },
+  "arcusdc-galaxy": {
+    "title": "Galaxy USDC lending on Arc",
+    "text": "Galaxy USDC holds a USDC-denominated lending position against cirBTC on Arc. Holders own a pro-rata vault claim whose conversion rate reflects accrued interest and losses, without an independently established legal claim on Circle's reserve fund. The vault owner and curator are externally owned accounts, and several parameter changes have no delay. Its liquidity adapter was unset at the pinned review block, so ordinary withdrawal capacity cannot be inferred from total assets. Transfer and direct withdrawal gates are abdicated, but an in-kind exit still requires a workable underlying-market transaction and does not guarantee dollar settlement.",
+    "updatedAt": "2026-10-02"
+  },
+  "bbqusdc-steakhouse-v2": {
+    "title": "Steakhouse high-yield USDC Vault V2",
+    "text": "Steakhouse High Yield USDC is a distinct Morpho Vault V2, separate from the legacy Smokehouse vault that uses the same bbqUSDC ticker. It lends USDC against a broader collateral book and passes borrower interest, fees and credit losses into its share value. Ordinary redemption returns USDC only while idle assets and the selected liquidity market can fund the withdrawal; force-deallocation capacity is separate. The supervisor is controlled by a five-of-ten Safe, but curator replacement is immediate and its ownership delay does not protect every vault action. Direct share transfers and withdrawals are ungated with their setters abdicated, while deposit gating remains mutable and the underlying USDC freeze risk remains. The vault has no established independent financial reconciliation or legal priority for shareholders.",
+    "updatedAt": "2026-10-02"
+  },
+  "brsrv-blackrock": {
+    "title": "BlackRock government-fund shares with daily reinvestment",
+    "text": "BRSRV records ownership of BlackRock’s registered Daily Reinvestment Stablecoin Reserve Vehicle, a distinct fund from BUIDL. Its prospectus limits the portfolio to cash, short-dated U.S. Treasury obligations and Treasury-secured overnight repos, while income is reinvested in additional shares around a targeted $1 NAV. Securitize runs a permissioned shareholder register across Ethereum, Tempo and Solana, with whitelisted transfers and ordinary business-day wire redemption. The same prospectus names BNY Mellon as custodian and Deloitte as auditor, but no current signed asset-and-liability reconciliation was retrieved. Holder exit and token recovery depend on the transfer agent, and neither the target NAV nor BlackRock sponsorship guarantees principal.",
+    "updatedAt": "2026-10-02"
+  },
+  "btd-alpen": {
+    "title": "Planned BTC-only Liquity V2 dollar on Alpen",
+    "text": "Alpen announced Bitcoin Dollar in May 2025 as a BTC-only, overcollateralized debt token built from Liquity V2 for its Bitcoin ZK rollup. The January 2026 recap describes the intended flow: deposit BTC, choose an interest rate and mint BTD. Immutable code and no governance remain stated design goals, with BTC/USD oracle providers intended to be fixed at deployment. No exact BTD production contract, executable redemption route or deployed liquidation and backstop evidence is established. Alpen platform testnets and infrastructure audits do not establish a BTD token launch or audit.",
+    "updatedAt": "2026-10-02"
+  },
+  "chfsafo-spiko": {
+    "title": "CHF UCITS share with overnight swaps",
+    "text": "CHFSAFO gives holders a Swiss-franc accumulation share in the Spiko Amundi Overnight Swap Fund, with subscriptions and redemptions tied to the fund NAV. Amundi uses total-return swaps to exchange portfolio performance for an overnight-rate return, while CACEIS serves as depositary and the French UCITS structure separates fund assets from the management company. The issuer publishes current physical securities, signed derivative values and share totals, but those disclosures do not provide a complete independent reconciliation of every share class, collateral exposure and native register. Spiko retains permissioned holding, issuance and token-administration powers across eight native registers. Ordinary exit is KYC-gated and follows business-day dealing, with exceptional gates, suspension and swing pricing able to change settlement. Counterparty default can leave the fund exposed to the underlying securities and residual currency risk.",
+    "updatedAt": "2026-10-02"
+  },
+  "cscbusdc-clearstar": {
+    "title": "Clearstar Coinbase-asset lending vault",
+    "text": "Clearstar cbAssets Vault is a USDC-denominated Morpho Vault V2 on Base that lends against Coinbase-wrapped assets and other reviewed collateral positions. Its receipt appreciates with net borrower interest but bears market credit, collateral and smart-contract risk. USDC withdrawals depend on the selected liquidity market, and the separate force-deallocation route cannot be counted as additional ordinary redemption liquidity. A three-of-six owner Safe and two-of-three curator Safe govern the deployment, with allocation timelocks distinct from immediately changeable fee parameters. The share-transfer and direct-withdrawal gates are permanently disabled, although deposit gating and underlying USDC freezing remain relevant. Onchain positions identify operational custody, but borrower-side safeguards and shareholder insolvency priority remain unproven.",
+    "updatedAt": "2026-10-02"
+  },
+  "cumiu-chinaamc": {
+    "title": "ChinaAMC USD fund shares with an off-chain register",
+    "text": "CUMIU represents accumulating Class I USD shares in ChinaAMC’s tokenized money-market fund, with daily NAV redemption through eligible distributors. Its portfolio combines bank deposits and investment-grade money-market instruments, so the Treasury-fund classification does not imply Treasury-only backing. Standard Chartered entities administer the fund and token custody, while the official ownership register and investor settlement remain off-chain. Retrieved KPMG financial statements supply annual independent assurance; more recent interim accounts and NAV figures are issuer publications. The default administrator can mint, set NAV, freeze transfers and replace the token implementation without an on-chain delay. Holders depend on the distributor redemption channel rather than a peer-to-peer or intraday secondary market.",
+    "updatedAt": "2026-10-02"
+  },
+  "czkc-czkc": {
+    "title": "Czech koruna reserve design in testing",
+    "text": "CZKC a.s. describes a Czech koruna token fully backed by CZK reserves, with rCZKC representing those reserves on-chain. The developer book offers testnet guidance and plans Ethereum, Arbitrum and Gnosis, but leaves production entrypoints and implementations unpublished. CzechInvest named CZKC in its February 2026 sandbox testing cohort; that selection is not MiCA authorization. Pharos records the project as pre-launch without inventing an announcement or launch date. Production identity, binding redemption terms and independent reserve assurance remain unresolved.",
+    "updatedAt": "2026-10-02"
+  },
+  "earnusd-lido": {
+    "title": "Mellow strategies with queued USDC exits",
+    "text": "earnUSD compounds returns from Mellow-curated dollar-denominated protocol strategies into a transferable Lido vault share. The ordinary withdrawal route returns USDC through a request-and-claim queue, with a typical wait rather than a guaranteed settlement deadline. Share logic is upgradeable, holder restrictions can be configured, and the observed curator quorum differs from the published deployment table. Current look-through allocations and independent financial reconciliation remain unverified, so contract addresses and share accounting do not establish complete backing or recovery protection.",
+    "updatedAt": "2026-10-02"
+  },
+  "ethenausdc-steakhouse": {
+    "title": "Ethena and Steakhouse USDC lending on Base",
+    "text": "Ethena x Steakhouse USDC is a Morpho Vault V2 on Base that issues NAV-bearing shares against USDC deposits. Its current lender positions include Coinbase-wrapped collateral, with a concentrated credit book whose losses pass through to holders. Ordinary USDC redemption uses the configured liquidity market, while force-deallocation and in-kind exits require separate execution and capacity treatment. The vault owner is a supervisor controlled by a five-of-ten Safe; curator replacement is immediate, and allocation delays do not cover fee changes. Direct transfers and withdrawals have zero gates with their setters abdicated, although deposit gating remains mutable and USDC's upstream freeze exposure remains. No exact-vault financial attestation or enforceable shareholder insolvency priority was established.",
+    "updatedAt": "2026-10-02"
+  },
+  "eurw-newrails": {
+    "title": "Holder-wide euro redemption through SEPA",
+    "text": "EURW gives verified holders, including secondary-market buyers, a right to redeem at one euro through an own-name SEPA account without an issuer redemption fee. Newrails' Lithuanian electronic-money authorization and exact-token whitepaper establish the issuer and safeguarding framework, but they do not establish the current reserve portfolio. The published cash and money-market investment limits are policy bounds, and no dated token reserve reconciliation or named reserve banks were retrieved despite the product's monthly-attestation claim. The Monad contract separates minters and allowance approvers while retaining immediate upgrade and blacklist powers; the complete current role roster remains undisclosed. Holders remain dependent on issuer verification and SEPA settlement, with no numerical settlement guarantee or measured redemption-capacity bound in the reviewed terms.",
+    "updatedAt": "2026-10-02"
+  },
+  "filqa-fidelity-international": {
+    "title": "Fidelity accumulating shares with redemption-only exit",
+    "text": "FILQ-A represents an accumulating share in Fidelity International’s Cayman-domiciled USD Digital Liquidity Fund SP. The portfolio may hold non-government money-market credit, securitisations, asset-backed commercial paper and derivatives, so its short-duration fund classification should not be read as Treasury-only backing. Although issued on Ethereum, the prospectus rejects token transfers for on-chain investors and makes redemption through the transfer agent or Token Distributor the recognized exit. Daily NAV and named JPMorgan custody and accounting services establish the operating structure, but current portfolio weights and an independently signed token-to-fund reconciliation were not retrieved. Off-hours liquidity is conditional, and stress gates or redemption suspension can constrain that sole exit.",
+    "updatedAt": "2026-10-02"
+  },
+  "fiusd-sygnum": {
+    "title": "Fidelity fund units in a Sygnum ledger security",
+    "text": "FIUSD represents a Fidelity Institutional Liquidity Fund USD Class G Acc unit held through Sygnum, rather than a dollar payment token or bank deposit. Its accumulating NAV reflects a short-term money-market portfolio that can include non-government instruments, deposits and repos. Sygnum describes fiduciary unit custody and delivery rights, but current definitive client terms and an independently signed token-to-unit reconciliation were not retrieved. CoinGecko's reported units exceed the combined native zkSync and Arbitrum stock, so Pharos must value the complete on-chain roster rather than use that provider market cap. Redemption requires an onboarded bank-client account and permissioned custody, with current same-notional capacity and binding settlement terms unresolved.",
+    "updatedAt": "2026-10-02"
+  },
+  "frnt-wyoming": {
+    "title": "Wyoming trust-backed dollar with service-provider redemption",
+    "text": "FRNT is a dollar token issued by the Wyoming Stable Token Commission against a holder-benefit reserve trust, with ordinary redemption handled by approved service providers. The claim is limited to trust assets and carries neither the state’s general guarantee nor federal deposit insurance. Commission materials identify Treasury bills, cash and repurchase agreements, but the LedgerLens dashboard separates its non-assured metrics from independently issued examination reports that were not retrieved in this review. Eight native deployment liabilities share that reserve book, while current cross-chain transfers add Chainlink CCIP dependencies whose complete pool governance and limits remain unresolved.",
+    "updatedAt": "2026-10-02"
+  },
+  "gbp-vvtx": {
+    "title": "Sterling payments programme on a proprietary chain",
+    "text": "VVTX Limited proposes a fully reserved, 1:1 GBP stablecoin alongside a custodial wallet and planned debit card on a proprietary UK Layer-1. The FCA selected VVTX for stablecoin sandbox testing in February 2026, and the issuer continues to invite a waitlist. GBP-VVTX is Pharos's descriptive display label because no official token ticker is published. Technical chain identifiers, production contracts and direct holder-redemption terms are undisclosed. Neither card spending nor sandbox selection proves public token circulation, final authorization or an executable par exit.",
+    "updatedAt": "2026-10-02"
+  },
+  "gbpa-agant": {
+    "title": "Business-only direct sterling redemption",
+    "text": "GBPA gives approved UK distribution businesses a direct pound mint-and-redeem route while retail holders reach Agant through those businesses. The September reserve report names Griffin Bank cash and State Street money-market holdings in designated trust accounts, but the public platform terms do not provide the full holder agreement or prove insolvency priority. Nephos' report reconciles reserves to supply, yet its formal-assurance disclaimer conflicts with its examination language, limiting the assurance claim to independent attestation. Native issuance is controlled by EVM EOAs and a Solana 1-of-2 mint multisig, with LayerZero interoperability adding a separate message-validation exposure. Access to the issuer's banking workflow, incomplete holder terms and concentrated token administration remain the principal constraints.",
+    "updatedAt": "2026-10-02"
+  },
+  "gldon-ondo": {
+    "title": "SPDR Gold Shares through an Ondo issuer claim",
+    "text": "GLDON gives eligible investors economic exposure to SPDR Gold Shares through an Ondo debt-security tracker, without a right to receive ETF shares or physical gold. Its value follows the underlying gold fund rather than a fixed dollar peg. The legal structure names custodians and a security agent, but current GLDON-specific share, cash and other-collateral weights are not disclosed by the aggregate platform attestation. Redemption normally produces USDon, with USDC conversion dependent on the stablecoin swapper’s liquidity. Native issuance spans Ethereum, BNB Chain and Solana, while HyperEVM adds a bridge representation. Holders therefore depend on both the issuer’s secured-claim machinery and the available stablecoin exit rail when they want to realise the ETF exposure.",
+    "updatedAt": "2026-10-02"
+  },
+  "gtusdtp-gauntlet": {
+    "title": "Gauntlet-curated USDT lending shares",
+    "text": "Gauntlet USDT Prime V2 compounds USDT lending interest through a Gauntlet-curated Morpho V2 strategy. Holders own proportional vault shares whose value can fall when lending losses are recognized, rather than a direct claim on the parent issuer's reserves. The current immediate custody and lender positions are observable on-chain, but independent vault financial assurance, legal segregation and insolvency priority are not established. Ordinary redemptions depend on idle assets and the selected liquidity adapter; permissionless force-deallocation can recover other available market assets but cannot turn borrowed positions into immediately available dollars. Reviewed Safe configurations identify parameter controllers without establishing independent signers or a guaranteed stressed exit.",
+    "updatedAt": "2026-10-02"
+  },
+  "gusdcq-galaxy": {
+    "title": "Galaxy-curated USDC lending shares",
+    "text": "Galaxy USDC Quality compounds USDC lending interest through a Galaxy-curated Morpho V2 strategy. Holders own proportional vault shares whose value can fall when lending losses are recognized, rather than a direct claim on the parent issuer's reserves. The current immediate custody and lender positions are observable on-chain, but independent vault financial assurance, legal segregation and insolvency priority are not established. Ordinary redemptions depend on idle assets and the selected liquidity adapter; permissionless force-deallocation can recover other available market assets but cannot turn borrowed positions into immediately available dollars. Owner and curator addresses have no deployed code at the reviewed block, so the record does not grant multisig or institutional key-custody credit. The separately issued Base vault is excluded from this Ethereum instrument.",
+    "updatedAt": "2026-10-02"
+  },
+  "gusdtq-galaxy": {
+    "title": "Galaxy-curated USDT lending shares",
+    "text": "Galaxy USDT Quality compounds USDT lending interest through a Galaxy-curated Morpho V2 strategy. Holders own proportional vault shares whose value can fall when lending losses are recognized, rather than a direct claim on the parent issuer's reserves. The current immediate custody and lender positions are observable on-chain, but independent vault financial assurance, legal segregation and insolvency priority are not established. Ordinary redemptions depend on idle assets and the selected liquidity adapter; permissionless force-deallocation can recover other available market assets but cannot turn borrowed positions into immediately available dollars. Owner and curator addresses have no deployed code at the reviewed block, so the record does not grant multisig or institutional key-custody credit.",
+    "updatedAt": "2026-10-02"
+  },
+  "hyperusdca-hyperithm": {
+    "title": "Hyperithm USDC lending on Monad",
+    "text": "Hyperithm USDC Apex turns USDC deposits into NAV-bearing shares in a Morpho Vault V2 on Monad. Its lending book includes concentrated and structured borrower collateral, so the USDC denomination does not make the share a direct cash claim. The reviewed vault has no configured liquidity adapter, leaving ordinary withdrawals dependent on idle USDC; force-deallocation and in-kind exits are separate routes. A two-of-three owner Safe can replace the curator, an externally owned account, while allocation changes have their own delays and fee changes do not. Share-transfer and direct-withdrawal gate setters are abdicated, although deposit gating remains mutable and underlying USDC can be frozen. Credit losses reduce shareholder NAV, and no exact-vault financial attestation or legal insolvency priority was established.",
+    "updatedAt": "2026-10-02"
+  },
+  "jpydf-deltaforesight": {
+    "title": "Yen-targeted borrowing protocol before mainnet",
+    "text": "DeltaForesight announced JPYdf on September 25, 2026 as a yen-targeted token for borrowing against cryptoassets and stablecoins in the JPY DeFi protocol. The planned design uses overcollateralized smart-contract issuance and liquidation, while explicitly providing no yen monetary claim or yen redemption right. A September 29 roadmap announcement adds plans for related Fusion by IPOR vaults after mainnet, with chains and strategies still undecided. Mainnet timing, eligible collateral, liquidation parameters and holder exit terms remain unpublished.",
+    "updatedAt": "2026-10-02"
+  },
+  "kpkusdcprime-kpk": {
+    "title": "KPK-curated USDC lending shares",
+    "text": "KPK USDC Prime compounds USDC lending interest through a KPK-curated Morpho V2 strategy. Holders own proportional vault shares whose value can fall when lending losses are recognized, rather than a direct claim on the parent issuer's reserves. The current immediate custody and lender positions are observable on-chain, but independent vault financial assurance, legal segregation and insolvency priority are not established. Ordinary redemptions depend on idle assets and the selected liquidity adapter; permissionless force-deallocation can recover other available market assets but cannot turn borrowed positions into immediately available dollars. The curator Safe has an enabled module whose permissions are not closure-complete, so its nominal signer threshold does not bound every execution path.",
+    "updatedAt": "2026-10-02"
+  },
+  "kpkusdcyield-kpk": {
+    "title": "KPK-curated USDC lending shares",
+    "text": "KPK USDC Yield V2 compounds USDC lending interest through a KPK-curated Morpho V2 strategy. Holders own proportional vault shares whose value can fall when lending losses are recognized, rather than a direct claim on the parent issuer's reserves. The current immediate custody and lender positions are observable on-chain, but independent vault financial assurance, legal segregation and insolvency priority are not established. Ordinary redemptions depend on idle assets and the selected liquidity adapter; permissionless force-deallocation can recover other available market assets but cannot turn borrowed positions into immediately available dollars. The curator Safe has an enabled module whose permissions are not closure-complete, so its nominal signer threshold does not bound every execution path.",
+    "updatedAt": "2026-10-02"
+  },
+  "krusdc-keyrock": {
+    "title": "Keyrock USDC lending against cirBTC",
+    "text": "Keyrock Prime USDC places deposited USDC into a Morpho lending market backed by cirBTC collateral. Its share value follows the vault's net assets, so borrower interest can increase the conversion rate while lending losses reduce it. The owner is a single externally owned account, and fee-setting actions have no configured delay. Share-transfer and direct withdrawal gates are disabled with their setter authority abdicated, although the deposit gate remains mutable. Holders retain Circle's underlying USDC freeze exposure, and their ability to obtain USDC depends on available lending liquidity rather than the vault's headline assets.",
+    "updatedAt": "2026-10-02"
+  },
+  "krw-kb-kookmin": {
+    "title": "KB won-token pilot awaits commercial framework",
+    "text": "KB Financial Group announced on May 17, 2026 that it had completed an integrated won-stablecoin proof of concept with KG Inicis, Kaia and OpenAsset. The pilot connected issuance, Hollys offline QR payments, merchant settlement and remittance to a Vietnam bank account, with Kaia identifying KB Kookmin as the bank participant. KB plans actual services for implementation of Korean digital-asset legislation, without an announced launch date. The final legal issuer, official ticker, token-specific reserves and public-holder redemption terms remain unpublished; KRW-KB is an editorial display label.",
+    "updatedAt": "2026-10-02"
+  },
+  "mantrausd-mantra": {
+    "title": "MANTRA dollar with an EOA upgrade path",
+    "text": "mantraUSD is MANTRA's native settlement dollar and a direct wrapper of M0's M token. The product directs reserve yield toward ecosystem incentives rather than embedding yield accrual in the token. Reviewed on-chain M custody covered outstanding mantraUSD, while legal seniority and whole-book financial assurance remain upstream questions. An unprivileged address could qualify for conversion to wM through the deployed SwapFacility, but direct M output required an approved swapper. The operational administrator is a 3-of-5 Safe, yet a separate externally owned address controls token upgrades and can replace the mint logic. That upgrade path remains a local dependency even when parent backing is fully represented.",
+    "updatedAt": "2026-10-02"
+  },
+  "mxnt-tether": {
+    "title": "Peso claim on Tether's shared reserve book",
+    "text": "Mexican Peso Tether offers verified clients a contractual peso redemption claim on the issuer's shared fiat-token reserve book. BDO's quarterly reasonable-assurance report reconciles that aggregate book, which includes credit and market assets alongside Treasury instruments, but does not establish a dedicated MXNT allocation or custodian roster. Ethereum minting, blocked-balance destruction and upgrades are controlled by a legacy three-of-six wallet whose signer independence is unverified. The large redemption minimum and minimum fee restrict the primary exit to substantial verified clients. DefiLlama supplies the admitted current price and circulation path; the unresolved CoinGecko detail identity is deliberately excluded.",
+    "updatedAt": "2026-10-02"
+  },
+  "net-cloudflare": {
+    "title": "Cloudflare’s planned agent-payment dollar",
+    "text": "Cloudflare announced NET Dollar on September 25, 2025 for automated payments by agents, developers and creators. Its product FAQ promises one U.S. dollar of collateral per coin and still describes availability as forthcoming. CoinGecko identifies the product as net-dollar with symbol NET, but supplies no current price, market cap or deployment. The legal issuer, custody arrangements and NET-specific redemption and freeze terms remain undisclosed. No dated launch window is established.",
+    "updatedAt": "2026-10-02"
+  },
+  "oned-gennius": {
+    "title": "Coinbase-custodied USDC for Gennius",
+    "text": "ONED is Gennius's dollar-referenced token, backed by USDC held in Coinbase custody and issued natively on Base. Eligible Coinbase accounts can deposit externally held ONED and convert it one-for-one with USDC, subject to geographic and account restrictions. Coinbase publishes itemized reserve wallets and supply, and pinned on-chain balances corroborate that snapshot. Those wallet balances do not establish beneficial reserve title, legal segregation or the absence of off-chain claims. Role-gated minting and mutable token upgrades remain local control risks beyond Circle's USDC reserve structure. The holder exit depends on Coinbase eligibility and operations, with no guaranteed settlement time or measured secondary-market backup in the reviewed evidence.",
+    "updatedAt": "2026-10-02"
+  },
+  "plnq-quantoz": {
+    "title": "Deployed złoty token with zero supply",
+    "text": "Quantoz Payments has deployed PLNQ on Ethereum, but its published token roster says no PLNQ is circulating and no reserve exists yet. A pinned Ethereum read confirms six decimals and zero total supply, while the exact-contract price endpoint returns no quote. The whitepaper proposes 1:1 Polish złoty reserves safeguarded through Stichting Quantoz and par redemption for eligible registered holders after compliance checks. Polygon, Algorand, XRP Ledger and Xahau remain planned networks without verified production identities. Deployment and MiCA issuer registration do not establish an executable market or an operating holder exit.",
+    "updatedAt": "2026-10-02"
+  },
+  "pyusdx-moonpay": {
+    "title": "MoonPay PYUSD-backed issuer claim",
+    "text": "PYUSDx is issued by MoonPay Digital Assets Limited against PYUSD and uses M0 infrastructure for native issuance and cross-chain transfers. Eligible counterparties can redeem one token for one PYUSD, while downstream holders must first qualify with MoonPay and have no ownership interest in specific reserves. The reviewed control surface includes issuer minting, upgrades and an earner manager that can mint rewards directly, so the gateway's short queue delay does not bound every supply path. Underlying PYUSD assurance does not reconcile MoonPay's holdings against PYUSDx liabilities. Local custody protections and independent token-specific reserve assurance remain undisclosed.",
+    "updatedAt": "2026-10-02"
+  },
+  "regbp-restabilise": {
+    "title": "Institutional sterling token in FCA sandbox",
+    "text": "ReStabilise proposes reGBP as an institutional sterling token backed 1:1 by high-quality liquid assets held on trust for holders. Its issuer page promises par redemption by any holder on a T+1 basis and invites partnerships, pilots and early access. The FCA selected ReStabilise for stablecoin sandbox testing in February 2026, without granting final issuance authorization through that selection. Production chains, contracts and circulation are not publicly verified. The proposed trust and settlement commitments still need published legal terms, custody evidence and an operating redemption route.",
+    "updatedAt": "2026-10-02"
+  },
+  "sdai-gnosis": {
+    "title": "Gnosis savings over bridged xDAI",
+    "text": "Savings xDAI wraps Gnosis Chain’s WXDAI in an immutable savings vault, with yield reflected in the amount of WXDAI each share can redeem. Holders can convert shares back to WXDAI on-chain without a local cooldown, then unwrap into native xDAI. The fixed-asset contract has no local owner or privileged share minter, but that narrow control finding leaves the xDAI bridge and Sky reserve dependencies intact. Its balance and share accounting are reproducible on-chain; this does not establish independently audited financial reconciliation or legal priority over upstream reserves. The holder’s final dollar exit therefore depends on the underlying bridge and stablecoin system rather than a direct fiat redemption right.",
+    "updatedAt": "2026-10-02"
+  },
+  "senpathusd-sentora": {
+    "title": "Tempo pathUSD lending vault",
+    "text": "Sentora pathUSD is a Tempo vault share over pathUSD, with an observed portfolio held mostly as idle tokens alongside cbBTC-backed Morpho lending. Its share exchange rate is materially above one pathUSD, so a fixed dollar quote would misstate the holder instrument. Ordinary redemption returns the underlying token at the current exchange rate when vault and market liquidity permit. The owner and curator each use a one-signature Safe, with adapter and cap increases delayed by three days. On-chain accounting identifies the immediate assets but does not establish legal insolvency priority or remove the parent token’s reserve and freeze exposure.",
+    "updatedAt": "2026-10-02"
+  },
+  "senpyusdmain-sentora": {
+    "title": "Sentora PYUSD lending with single-key controls",
+    "text": "Paypal USD Main is an ERC-4626 share in a Sentora-curated Morpho Vault V2 denominated in PYUSD. Deposited stablecoins are supplied to collateralized lending markets, so borrower defaults, liquidation conditions and curator allocation choices can affect the share value. Interest accrues through NAV, while fee shares and realized losses can reduce the value retained by holders. Owner and curator each use a 1-of-1 Safe with a sole EOA signer, and the reviewed fee and cash-redemption-gate changes have no time delay. Ordinary redemption was simulated successfully, but a zero liquidity adapter means immediate cash withdrawal relies on idle PYUSD unless lending positions are first deallocated. Parent issuer freeze risk remains inherited, and neither a one-share exit nor protocol security audits establish full-size stressed cash recovery.",
+    "updatedAt": "2026-10-02"
+  },
+  "senpyusdmwin-sentora": {
+    "title": "PYUSD lending against mWIN",
+    "text": "Sentora mWIN Main lends PYUSD against mWIN collateral through a single Morpho lending market. Shareholders earn lending interest net of vault fees and absorb losses through a changing assets-per-share rate. The observed portfolio has little idle PYUSD, making available lending-market liquidity a central constraint on withdrawals. Its owner and curator each use a one-signature Safe, while adapter and cap increases have a three-day timelock. PYUSD reserve and freeze risks remain upstream, and exact-vault financial assurance and enforceable default priority were not established.",
+    "updatedAt": "2026-10-02"
+  },
+  "senpyusdprimev2-sentora": {
+    "title": "Sentora PYUSD lending against residential credit",
+    "text": "Sentora PRIME Main is an ERC-4626 share in a Sentora-curated Morpho Vault V2 denominated in PYUSD. Its deployed PYUSD loans are concentrated in the Hastra PRIME collateral market, which Sentora describes as home-equity credit exposure; the exact tracked PRIME identity and recovery priority remain unresolved. Interest accrues through NAV, while fee shares and realized losses can reduce the value retained by holders. Owner and curator each use a 1-of-1 Safe with a sole EOA signer, and the reviewed fee and cash-redemption-gate changes have no time delay. Ordinary redemption was simulated successfully, but a zero liquidity adapter means immediate cash withdrawal relies on idle PYUSD unless lending positions are first deallocated. Parent issuer freeze risk remains inherited, and neither a one-share exit nor protocol security audits establish full-size stressed cash recovery.",
+    "updatedAt": "2026-10-02"
+  },
+  "senpyusdpst-sentora": {
+    "title": "PYUSD lending against Huma PST",
+    "text": "Sentora Huma PST Main puts PYUSD into a Morpho vault whose lending exposure is backed by Huma PST collateral. Interest accrues through the share exchange rate, while credit losses can reduce the PYUSD recovered per share. The exact deployment holds idle PYUSD alongside a single lending-market position, so a quoted accounting value does not establish immediately available withdrawals for every holder. The owner and curator each use a one-signature Safe, with new adapters and cap increases subject to the observed three-day timelock. Parent PYUSD reserve and freeze exposure remains inherited, and the vault review does not establish enforceable insolvency priority or a funded default backstop.",
+    "updatedAt": "2026-10-02"
+  },
+  "senrlusdv2-sentora": {
+    "title": "Sentora RLUSD lending with single-key controls",
+    "text": "Sentora RLUSD Main is an ERC-4626 share in a Sentora-curated Morpho Vault V2 denominated in RLUSD. Deposited stablecoins are supplied to collateralized lending markets, so borrower defaults, liquidation conditions and curator allocation choices can affect the share value. Interest accrues through NAV, while fee shares and realized losses can reduce the value retained by holders. Owner and curator each use a 1-of-1 Safe with a sole EOA signer, and the reviewed fee and cash-redemption-gate changes have no time delay. Ordinary redemption was simulated successfully, but a zero liquidity adapter means immediate cash withdrawal relies on idle RLUSD unless lending positions are first deallocated. Parent issuer freeze risk remains inherited, and neither a one-share exit nor protocol security audits establish full-size stressed cash recovery.",
+    "updatedAt": "2026-10-02"
+  },
+  "sfrax-frax": {
+    "title": "Legacy FRAX savings share",
+    "text": "sFRAX is the savings share for legacy FRAX, distinct from the newer sfrxUSD wrapper over frxUSD. Frax distributes protocol-funded FRAX rewards through a linear ERC-4626 exchange rate, with an IORB-linked yield target that is not guaranteed. The reviewed vault holds the underlying FRAX directly, while the reward source and reserve risks remain on the Frax balance sheet. A parameter-control Safe can change the reward distribution cap, and no actual execution delay was demonstrated for that administrator. Holders redeem into FRAX at the current pro-rata rate rather than obtaining a direct claim on Treasuries or a guaranteed dollar cash exit.",
+    "updatedAt": "2026-10-02"
+  },
+  "sirloinusdc-steakhouse": {
+    "title": "USDC lending shares on Base",
+    "text": "sirloinUSDC is a Steakhouse-curated Morpho Vault V2 receipt over USDC, with lending interest reflected in assets per share. Holders redeem to the underlying token through idle balances and a selected liquidity adapter, so withdrawal capacity depends on available market liquidity. The immutable core requires deposited assets for user minting, but fee-share issuance and strategy losses can change each holder’s claim. The native Base contract charges a 25% performance fee, despite the product family’s generic 10% description. Parent-token reserve protections remain upstream, and no exact-vault signed financial reconciliation or funded stressed-recovery guarantee was established.",
+    "updatedAt": "2026-10-02"
+  },
+  "skymoneyusdsflagship-sky": {
+    "title": "Sky.money USDS lending share",
+    "text": "sky.money USDS Flagship holds USDS in an immutable Morpho Vault V2 and supplies it to markets selected by Sky.money. Its share value follows lending interest and realized losses, while the underlying stablecoin retains its own reserve and control risks. The reviewed strategy combines idle USDS with lending against PT-sUSDS, wstETH and cbBTC, so its risks differ from the Sky Savings Rate. Share-transfer and asset-withdrawal gates are permanently disabled, but curation and allocation remain controlled by the observed Safe. Ordinary withdrawal delivers the underlying token only when idle assets or lending-market liquidity are available; onchain accounting supplies no fiat redemption guarantee.",
+    "updatedAt": "2026-10-02"
+  },
+  "skymoneyusdtsavings-sky": {
+    "title": "Sky.money USDT lending against sUSDS",
+    "text": "sky.money USDT Savings holds USDT in an immutable Morpho Vault V2 and supplies it to markets selected by Sky.money. Its share value follows lending interest and realized losses, while the underlying stablecoin retains its own reserve and control risks. The reviewed lender positions use sUSDS collateral, creating a Sky dependency in addition to the Tether settlement asset. Share-transfer and asset-withdrawal gates are permanently disabled, but curation and allocation remain controlled by the observed Safe. Ordinary withdrawal delivers the underlying token only when idle assets or lending-market liquidity are available; onchain accounting supplies no fiat redemption guarantee.",
+    "updatedAt": "2026-10-02"
+  },
+  "sparkusdc-spark": {
+    "title": "Spark's Base cbBTC lending receipt",
+    "text": "Spark USDC Vault earns lending interest on Base through a Morpho vault curated by Spark. Its current supplied book is concentrated in a cbBTC-collateralized market, while the share remains denominated and redeemable in USDC. An increasing ERC-4626 exchange rate tracks the lender claim, but it does not establish a segregated fiat entitlement or eliminate borrower and liquidation risk. Withdrawals depend on available market liquidity, and a small executable redemption does not prove a full-supply exit under stress. Circle freeze exposure and Spark strategy controls remain separate constraints.",
+    "updatedAt": "2026-10-02"
+  },
+  "sparkusdtbc-spark": {
+    "title": "Spark's adapter-based USDT lending vault",
+    "text": "Spark Blue Chip USDT Vault routes USDT through a Morpho lending adapter into markets secured by wstETH, WBTC and sUSDS, with a negligible cbBTC position in the reviewed inventory. Holders own a transferable lender receipt whose asset exchange rate increases with net interest. The immutable vault separates strategy configuration from share accounting, though Spark controllers retain fee, allocation and withdrawal-gate powers. Ordinary USDT redemption is limited by liquid lending positions; emergency in-kind mechanics do not establish guaranteed cash realization. Tether issuer risk remains upstream, and the exact vault has no independently reconciled financial assurance or proven insolvency priority.",
+    "updatedAt": "2026-10-02"
+  },
+  "sreusd-resupply": {
+    "title": "Protocol-revenue savings in REUSD",
+    "text": "sreUSD is Resupply's savings share for REUSD, funded by the protocol's weekly revenue rather than separate reward-token emissions. Revenue streams through the vault's exchange rate, leaving holders exposed to REUSD's lending-collateral and liquidation risks. The native Ethereum contract holds REUSD and permits share redemption without a local cooldown or penalty fee; conversion from REUSD into other assets is a separate exit with the parent's costs and liquidity constraints. The savings implementation is nonproxy, while Resupply Core retains reward and potential bridge-configuration powers. Reproducible local balances establish the immediate position but do not establish independent audit coverage of the savings implementation or a funded stressed-recovery waterfall.",
+    "updatedAt": "2026-10-02"
+  },
+  "stbt-matrixdock": {
+    "title": "Rebasing Treasury exposure through unsecured issuer debt",
+    "text": "STBT distributes Treasury-portfolio income by increasing token balances while targeting one dollar per token. The issuer dashboard identifies short-term Treasury bills alongside USTB and BUIDL fund interests, but governing terms give holders an unsecured claim against Prometheus rather than ownership of those assets. Affiliates may borrow against or lend the underlying portfolio, and current broker and bank identities are undisclosed. Eligible investors can request issuer redemption, with limited same-day capacity and T+2 settlement for larger requests; liquidation losses and costs can reduce the payout. Native issuance, forced transfers and upgrades share a control contract whose current minimum delay is zero. No independently signed current STBT reserve reconciliation was retrieved, leaving issuer credit and operational control as durable constraints.",
+    "updatedAt": "2026-10-02"
+  },
+  "steakcusdc-steakhouse": {
+    "title": "Public shares behind confidential USDC deposits",
+    "text": "Steakhouse Confidential Prime USDC here identifies the public ERC-20 steakcUSDC vault share, not a separate confidential receipt. Zama's confidential deposit surface routes into the Morpho lending strategy, whose reviewed public vault holds USDC lender positions against blue-chip crypto collateral. Deposits into this public vault use a whitelist gate, while share transfers and direct withdrawals have zero gates whose setters are abdicated. Ordinary withdrawals return available USDC at NAV; lending losses can lower that NAV and no full-supply stressed exit is guaranteed. A Steakhouse supervisor owned by a five-of-ten Safe can replace the curator immediately despite separate delays on ownership and allocation actions. Confidential entry does not establish legal segregation, independent financial assurance or protection against underlying USDC freezing.",
+    "updatedAt": "2026-10-02"
+  },
+  "steakeurcv-steakhouse": {
+    "title": "EURCV lending shares on Ethereum",
+    "text": "steakEURCV is a Steakhouse-curated Morpho Vault V2 receipt over EURCV, with lending interest reflected in assets per share. Holders redeem to the underlying token through idle balances and a selected liquidity adapter, so withdrawal capacity depends on available market liquidity. The immutable core requires deposited assets for user minting, but fee-share issuance and strategy losses can change each holder’s claim. Parent-token reserve protections remain upstream, and no exact-vault signed financial reconciliation or funded stressed-recovery guarantee was established.",
+    "updatedAt": "2026-10-02"
+  },
+  "steakusdg-steakhouse": {
+    "title": "USDG lending shares on Robinhood Chain",
+    "text": "steakUSDG is a Steakhouse-curated Morpho Vault V2 receipt over USDG, with lending interest reflected in assets per share. Holders redeem to the underlying token through idle balances and a selected liquidity adapter, so withdrawal capacity depends on available market liquidity. The immutable core requires deposited assets for user minting, but fee-share issuance and strategy losses can change each holder’s claim. Morpho flags new deposits as disabled while existing holders retain a working redemption path. Parent-token reserve protections remain upstream, and no exact-vault signed financial reconciliation or funded stressed-recovery guarantee was established.",
+    "updatedAt": "2026-10-02"
+  },
+  "strusd-tori": {
+    "title": "Tori savings with a cooldown and seizure powers",
+    "text": "strUSD holds Tori’s trUSD in an Ethereum savings vault and distributes net trading rewards through a changing share exchange rate. Unstaking currently requires a seven-day cooldown and returns trUSD, with no protocol staking or unstaking fee. The vault is upgradeable through a 24-hour timelock, while separate admin powers can restrict addresses, redistribute blocked shares and seize blocked cooldown funds. Monad and Pharos tokens represent shares locked in the Ethereum CCIP pool, so their balances must not be counted as additional native issuance. On-chain share accounting establishes the local position, but parent reserve custody and discretionary repurchase terms still govern the economic dollar exit.",
+    "updatedAt": "2026-10-02"
+  },
+  "susdc-spark-v1": {
+    "title": "Legacy USDC savings through Sky",
+    "text": "Spark's legacy sUSDC converts deposited USDC through the Sky PSM and holds sUSDS to earn the Sky Savings Rate. This V1 proxy is distinct from the tracked Spark Savings V2 vault despite their shared USDC denomination. Share accounting follows sUSDS, so native USDC redemption also depends on PSM pocket liquidity and applicable fees. The verified implementation offers an escape hatch into sUSDS, preserving the underlying protocol exposure rather than promising an unconditional cash exit. Its CoinGecko identity is retained for detail routing, while current valuation requires the separate ERC-4626 NAV path because the published provider price is stale.",
+    "updatedAt": "2026-10-02"
+  },
+  "susdf-falcon": {
+    "title": "USDf savings with mutable withdrawals",
+    "text": "sUSDf is Falcon Finance's savings share for deposited USDf, with rewards from the protocol's trading strategies increasing its USDf exchange rate as they vest. The immediate backing is USDf in the Ethereum vault; Falcon's upstream collateral, hedging and custody risks remain part of the holder's exposure. Direct contract redemption currently has no cooldown, but administrators can introduce a delay of up to 90 days, restrict accounts and burn or move restricted shares. A 4-of-6 Safe controls the proxy upgrade path, while platform redemption separately requires approved onboarding. Local onchain accounting does not establish independent assurance of Falcon's net hedge positions or enforceable holder priority in a default.",
+    "updatedAt": "2026-10-02"
+  },
+  "susdx-axis": {
+    "title": "USDx rewards behind a serviced exit queue",
+    "text": "sUSDx is the accumulating savings receipt for USDx, not a second independently backed dollar. Realized strategy rewards vest into the vault's accounted assets, increasing each share's USDx claim while leaving the underlying exchange-held trading risks intact. Redemption burns shares into a pending request, waits through the configured seven-day cooldown and still requires a privileged servicer before assets become claimable. The contract reserves assets for pending and claimable exits, but this local accounting safeguard does not demonstrate the solvency of USDx's offchain portfolio. Governance can change operating parameters and restrict vault participants, making the serviced queue and parent backing essential limits on the otherwise permissionless savings wrapper.",
+    "updatedAt": "2026-10-02"
+  },
+  "sxsrlusd-sentora": {
+    "title": "Sentora and Spark RLUSD vault",
+    "text": "Sentora x Spark RLUSD holds mostly idle RLUSD with a smaller WBTC-backed Morpho lending position. Share interest and recognized losses change the amount of RLUSD recoverable per share, and ordinary withdrawals depend on available underlying liquidity. The exact vault has immutable share accounting and permanently disabled share-transfer gates, while parent RLUSD freeze exposure remains inherited. A 2-of-2 curator uses two nested Safe branches, and the owner is a wards-authorized SubProxy whose ultimate authorization census remains unresolved. Code-enforced redemption and current accounting do not establish a funded default backstop or enforceable holder insolvency priority.",
+    "updatedAt": "2026-10-02"
+  },
+  "syrupusdg-maple": {
+    "title": "Maple credit exposure in USDG",
+    "text": "syrupUSDG gives holders a proportional claim on Maple's USDG-denominated portfolio of institutional loans and supporting yield strategies. Interest increases share value, while impairments and borrower defaults can reduce principal. The legal structure ring-fences the USDG portfolio, but lenders share its losses and withdrawals depend on liquidity in a first-in, first-out queue with no guaranteed maximum wait. Maple's published independent collateral dashboard covers syrupUSDC and syrupUSDT, leaving syrupUSDG-specific financial reconciliation and current custody coverage unverified.",
+    "updatedAt": "2026-10-02"
+  },
+  "umint-ubs": {
+    "title": "UBS native money-market shares with private portfolio terms",
+    "text": "UMINT is UBS’s native Ethereum money-market fund share, with an accumulating NAV and subscription and redemption through authorized distributors. UBS confirms that DigiFT processed an in-production subscription and redemption, while the distributor’s public dossier separates the native share from its depositary-receipt proposal. That dossier names State Street as custodian and administrator, but the precise underlying strategy, current holdings and native private placement memorandum are not public. Fresh NAV and on-chain shares support runtime valuation without relying on CoinGecko’s stale June market cap; they do not establish an independent financial reconciliation. Current contractual cutoffs, fees, minimums and unconditional redemption capacity remain undisclosed.",
+    "updatedAt": "2026-10-02"
+  },
+  "uscc-superstate": {
+    "title": "Crypto carry shares with market-day exit",
+    "text": "USCC gives eligible holders a share of Bitwise's crypto carry fund through Superstate's tokenization infrastructure. Its returns come from crypto basis trades and staking alongside Treasury exposure, with changes in portfolio marks reflected in the share's NAV. Superstate publishes signed holdings and names Anchorage Digital and EY, but the retrieved public record supplies no current signed hedge reconciliation, margin buffer or first-loss allocation. The public token stock spans Ethereum, Plume and Solana and excludes shares held only in book-entry form. Holders depend on issuer-controlled allowlists and native mint keys, while ordinary USD or USDC redemption follows market-day T+1 or T+2 settlement.",
+    "updatedAt": "2026-10-02"
+  },
+  "usdfc-secured-finance": {
+    "title": "Filecoin collateral with upgradeable controls",
+    "text": "USDFC turns FIL collateral into dollar liquidity through Secured Finance’s Filecoin Troves, with direct redemption into oracle-valued FIL. Its single-asset backing avoids off-chain reserve custody but exposes the whole book to Filecoin’s native token and liquidation demand. Stability Pool funding covers only a small fraction of system debt, leaving redistribution to surviving Troves important when deposits run short. The contracts remain upgradeable under a two-of-three Safe, and the Tellor fallback depends on an operator-run update job. Holder exit therefore depends on both functioning collateral markets and a fresh protocol oracle, with redemption unavailable below the system’s minimum collateral ratio.",
+    "updatedAt": "2026-10-02"
+  },
+  "usdfr-forest-road": {
+    "title": "Forest Road credit-backed dollar",
+    "text": "USDfr turns a USDC deposit into a transferable dollar claim backed mainly by Forest Road-originated specialty-finance credit. Direct minting and redemption require KYC, while nonblocked holders can transfer the token or use its independent Uniswap market. The onchain reserve ledger separates idle USDC from deployed principal and accrued interest, but attester-signed loan facts do not establish independently verified borrower values or enforceable holder priority. Forest Road controls governance at launch and can change upgradeable logic through a two-day timelock. USDfr itself earns no yield; the separate sUSDfr vault receives credit income and carries its own queue and loss exposure. The durable exit constraint is the availability of idle USDC, alongside unresolved legal and financial-assurance evidence and disclosed open economic findings.",
+    "updatedAt": "2026-10-02"
+  },
+  "usdr-rise": {
+    "title": "RISE settlement dollar backed by M",
+    "text": "USDR is RISE's native settlement dollar, backed locally by M0's M token. RISE retains the reserve yield rather than passing it through to holders. The reviewed extension held enough M to cover its outstanding USDR, but this on-chain observation does not establish current legal priority or independent assurance over the upstream Treasury book. Public conversion through the deployed SwapFacility leads to wM; direct M output requires an approved swapper, and an eligibility read does not prove a completed cash exit. A 2-of-3 operational Safe and a separate 4-of-8 upgrade Safe govern local controls, including holder freezing. Holders therefore depend on both the M parent and RISE's configurable extension and exit routes.",
+    "updatedAt": "2026-10-02"
+  },
+  "usdsm-stable-mint": {
+    "title": "Malta-issued dollar with Etherlink-native supply",
+    "text": "USDSM gives holders a dollar redemption claim against Stable mint Ltd, with direct issuance reserved for onboarded legal-person participants. Its published terms also let natural-person holders complete onboarding for redemption, without an issuer fee or minimum, although bank charges and processing delays can apply. The exact issuer and USD whitepaper appear in ESMA’s electronic-money-token register, but the advertised reserve surplus lacks a retrieved dated financial reconciliation. Native Etherlink issuance and LayerZero-connected representations add issuer-key and messaging dependencies that the redemption claim does not remove.",
+    "updatedAt": "2026-10-02"
+  },
+  "usdso-somnia": {
+    "title": "Somnia dollar with direct frxUSD conversion",
+    "text": "USDso is a Frax-issued Somnia dollar backed by frxUSD in a local BrandedCustodian. The reviewed custodian held frxUSD equal to outstanding USDso and offered zero-fee, same-chain parent-token redemption under its current configuration. Somnia's terms give holders no reserve-yield entitlement and place redemption responsibility with Frax rather than the website operator. A 3-of-6 Safe controls the token's proxy and the custodian's beacon, so it can replace the logic that governs issuance and backing. The current custodian also contains owner-only recovery of reserve tokens, although a direct forwarding route from its factory owner was not established. Returning to frxUSD leaves holders exposed to its upstream custody and fiat-redemption restrictions.",
+    "updatedAt": "2026-10-02"
+  },
+  "usdu-universal": {
+    "title": "ADGM bank-deposit dollar with professional redemption",
+    "text": "Universal USD is backed by dollar bank deposits and issued under Universal Digital’s ADGM fiat-referenced-token permission. Crowe’s monthly examination reconciles exact Ethereum liabilities to bank-confirmed reserve balances, providing financial assurance distinct from the token’s security audit. Direct par redemption is reserved for onboarded professional clients through Aquanow and generally takes two business days after due diligence. The issuer retains blacklisting, balance-wiping and upgrade controls, while current minter caps and controlling key thresholds remain unresolved. Reserve account separation does not establish an independently verified holder insolvency priority, and ordinary market exit depends on the depth of a small USDU/USDT pool.",
+    "updatedAt": "2026-10-02"
+  },
+  "usdvb-versabank": {
+    "title": "VersaBank’s conditional dollar deposit-token pilot",
+    "text": "VersaBank USA announced an internal USDVB pilot on August 26, 2025, with limited designated external partner and client testing planned. Each USDVB represents one U.S. dollar deposited with the bank, with issuance and redemption through VersaVault. This exposes holders to a bank deposit rather than a separately segregated stablecoin reserve trust. The September 2026 filing still seeks regulatory confirmation of deposit-insurance eligibility and the ability to pay interest. Commercial launch, ordinary external-holder rights and official deployments must be established before active admission.",
+    "updatedAt": "2026-10-02"
+  },
+  "usdx-axis": {
+    "title": "Venue-held hedges with restricted primary access",
+    "text": "USDx turns Axis's venue-held trading portfolio into a transferable dollar-targeted token, with market-neutral hedges intended to offset directional inventory exposure. Accountable independently observes exchange-account reserves, but its cryptographic reporting does not establish legal segregation, complete hedge coverage or a funded loss-absorption layer. Direct redemption requires an approved primary-market account and an operator-settled signed order, so smaller holders depend on secondary-market liquidity. The governance Safe can expand roles and capacity without a delay even though proxy upgrades pass through a separate timelock. Published portfolio categories explain gross asset form, while unresolved venue identities, margin headroom and custody disclosures limit how much protection can be inferred from them.",
+    "updatedAt": "2026-10-02"
+  },
+  "ustx-tx": {
+    "title": "Brale-issued dollar for tx settlement",
+    "text": "tx announced USTX on September 23, 2026 as a native settlement asset for tokenized stocks, ETFs and other real-world assets. Brale is the announced issuer, with full 1:1 backing and an October 2026 launch window. Exact deployments, reserve allocation and holder redemption terms have not been established. Brale supports administrative token restrictions generally, but the controls enabled for USTX remain unverified. The record stays pre-launch until the native asset and an identity-bound price and circulating-supply path can be verified.",
+    "updatedAt": "2026-10-02"
+  },
+  "weur-aplauz": {
+    "title": "Aplauz euro token awaiting verified circulation",
+    "text": "Aplauz NL B.V. publishes WEUR as a euro e-money token with reserve assets safeguarded through a separate Dutch foundation. The whitepaper grants every holder par redemption after compliance checks and says EUR dispatch should generally occur within five business days of token receipt. ESMA lists the exact issuer and token, but notification does not approve the whitepaper or prove circulation. Public onboarding marketing conflicts with the amended whitepaper's statement that WEUR has not launched. Pharos retains a pre-launch record because production identity and circulation remain unverified.",
+    "updatedAt": "2026-10-02"
+  },
+  "xgld-unitas": {
+    "title": "XAUt-backed borrowing strategy",
+    "text": "Unitas Gold turns XAUt exposure into a leveraged strategy position by borrowing USDT against gold collateral and deploying it into delta-neutral strategies. Returns accrue through the token’s net asset value, adding borrowing, execution and custody dependencies to the underlying gold exposure. Direct minting and XAUt redemption are restricted to whitelisted users on BNB Chain, with a seven-day redemption cooldown and a 0.1% fee; other holders rely on swaps. Base tokens use a LayerZero representation and must return to BNB Chain for direct redemption. The reserve dashboard does not establish a complete net accounting of borrowed debt or the strategy book, so the parent’s gold backing cannot settle the position’s own solvency and exit risks.",
+    "updatedAt": "2026-10-02"
+  },
+  "xgz-goldzip": {
+    "title": "One-gram gold with unpublished reserve reports",
+    "text": "GoldZip Gold represents one gram of fine gold and offers AML-gated physical redemption in lots of at least 1,000 tokens. That smaller unit makes the gold claim divisible on Ethereum, while physical delivery remains a separate operational process. The issuer describes HKGX-recognised depositories but has not published a current named-custodian inventory or an independent reserve-to-token reconciliation on its transparency page. Its contract also exposes privileged freezing and forced burning, so holding a gold reference does not remove issuer control. The durable constraint is the gap between the stated physical claim and the evidence available to verify custody, delivery charges and recovery if the operator fails.",
+    "updatedAt": "2026-10-02"
+  },
+  "zarsc-supercoin": {
+    "title": "Cash-backed rand with exchange-only live exit",
+    "text": "ZAR Supercoin holds rand cash at Absa and transfers on Solana under Super Money SA's issuer controls. Moore's August reserve procedures obtained bank support and reconciled supply, while the circulation exclusion and matching treasury reserve allocation remain management designations. The engagement provides no assurance opinion and does not establish holder bankruptcy priority. Exchange sale and off-ramp routes are live, but the direct app redemption promise applies only after the wallet launches. A retained freeze authority and permanent delegate give the issuer direct holder controls, so neither exchange availability nor Fireblocks infrastructure removes the dependence on issuer operations.",
+    "updatedAt": "2026-10-02"
+  },
+  "zaru-blocktower": {
+    "title": "BlockTower rand with institutional redemption",
+    "text": "ZAR Universal is issued by Loop South Africa trading as BlockTower, with direct redemption restricted to verified institutions and retail access through network partners. Its retrieved reserve report identifies rand cash at Standard Bank and money-market funds at Sanlam, but describes a historical July balance rather than the current portfolio. Moore's agreed-upon procedures reconcile that snapshot without expressing an assurance opinion or establishing bankruptcy priority. On-chain controls remain concentrated in a Solana signer and an EVM administrator with mint, upgrade and recovery powers. The holder's exit depends on issuer and partner banking processes, while fees, minimums and money-market-fund look-through remain incompletely disclosed.",
+    "updatedAt": "2026-10-02"
+  },
   "usd3-3jane": {
     "title": "Senior Credit Is Still Credit",
     "text": "USD3 packages 3Jane's senior credit tranche into an ERC-4626 share: USDC enters, idle cash waits in Aave, and the rest finances fintech receivables and crypto credit lines. Its NAV can rise above a dollar because interest accrues into the share price, so the familiar ticker is doing fund accounting rather than promising a fixed $1 quote. sUSD3 absorbs losses first, but that protection is only as thick as the junior tranche, and recoveries from an impaired off-chain borrower can take months or years. Backing is the weakest of the three pillars behind the {{grade}} overall grade, and the reason is plain: the credit receivables, roughly nine-tenths of the book at the last on-chain capture, are scored as receivables rather than folded into the dollar they settle in, so the liquid Aave buffer and the deployed book are priced apart instead of averaged into a comfortable middle. That separation is the whole point, because the buffer, the exit route, and the unit of account are all the same dollar. A haircut upstream would reach every part of the structure at once. The senior seat is safer than the junior one; it is still a claim on 3Jane's credit book, not on the dollar it settles in.",
@@ -6937,7 +7322,7 @@
   },
   "aed-rakbank": {
     "title": "The First Commercial-Bank Dirham",
-    "text": "AED-RAKBANK is RAKBank's pre-launch dirham stablecoin, notable less for what it is than for who is issuing it: the first conventional commercial bank to win CBUAE in-principle approval for an AED payment token, as opposed to the digital-bank and sovereign-wealth vehicles (Zand AED, AE Coin, the FAB/ADQ/IHC effort) that got there first. The January 2026 nod arrives under the UAE's Payment Token Services Regulation, which permits payment use only for dirham-backed tokens and demands a published white paper plus full reserves. RAKBank's plan ticks the regulatory boxes: it calls for 1:1 dirhams in segregated regulated accounts, full par {{term:redemption}}redemption{{/term}}, audited contracts, and real-time reserve {{term:attestation}}attestation{{/term}}. However, 'in-principle' is doing heavy lifting: no ticker, no chain, no issuing subsidiary, and no launch date have been disclosed, and the regulation may force RAKBank into a separate licensed issuer it hasn't confirmed. Pharos tracks the AED peg as OTHER until dirham support is built. A pilot is promised 'in due course,' which in regulatory dialect means watch this space.",
+    "text": "AED-RAKBANK is RAKBank's pre-launch dirham stablecoin, notable less for what it is than for who is issuing it: the first conventional commercial bank to win CBUAE in-principle approval for an AED payment token, as opposed to the digital-bank and sovereign-wealth vehicles (Zand AED, AE Coin, the FAB/ADQ/IHC effort) that got there first. The January 2026 nod arrives under the UAE's Payment Token Services Regulation, which permits payment use only for dirham-backed tokens and demands a published white paper plus full reserves. RAKBank's plan ticks the regulatory boxes: it calls for 1:1 dirhams in segregated regulated accounts, full par {{term:redemption}}redemption{{/term}}, audited contracts, and real-time reserve {{term:attestation}}attestation{{/term}}. However, 'in-principle' is doing heavy lifting: no ticker, no chain, no issuing subsidiary, and no launch date have been disclosed, and the regulation may force RAKBank into a separate licensed issuer it hasn't confirmed. A pilot is promised 'in due course,' which in regulatory dialect means watch this space.",
     "updatedAt": "2026-06-13",
     "authoredBy": "ai",
     "model": "claude-opus-4-8",

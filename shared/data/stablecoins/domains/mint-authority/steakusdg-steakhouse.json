@@ -1,0 +1,149 @@
+{
+  "id": "steakusdg-steakhouse",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "manual-review",
+    "summary": "steakUSDG user shares mint against deposited USDG; interest accrual can mint fee shares. Immutable core and owner/curator parameter powers do not create native USDG, whose issuance remains inherited.",
+    "inheritedFrom": "usdg-paxos",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "immutable",
+      "deploymentRefs": [
+        "robinhood:0xbeeff033f34c046626b8d0a041844c5d1a5409dd"
+      ],
+      "canChangeMintLogic": false,
+      "controlRef": "steakUSDG immutable VaultV2 share issuance",
+      "observedAt": "2026-10-02",
+      "observedBlock": 78597801,
+      "sources": [
+        {
+          "label": "Morpho exact Steakhouse USDG deployment",
+          "url": "https://app.morpho.org/robinhood-chain/vault/0xBeEff033F34C046626B8D0A041844C5d1A5409dd/steakhouse-usdg"
+        },
+        {
+          "label": "Exact verified VaultV2 source (robinhood, 0xbeeff033f34c046626b8d0a041844c5d1a5409dd)",
+          "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "robinhood",
+        "address": "0xbeeff033f34c046626b8d0a041844c5d1a5409dd",
+        "deploymentRefs": [
+          "robinhood:0xbeeff033f34c046626b8d0a041844c5d1a5409dd"
+        ],
+        "label": "steakUSDG immutable VaultV2 share issuance",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 78597801,
+        "sources": [
+          {
+            "label": "Morpho exact Steakhouse USDG deployment",
+            "url": "https://app.morpho.org/robinhood-chain/vault/0xBeEff033F34C046626B8D0A041844C5d1A5409dd/steakhouse-usdg"
+          },
+          {
+            "label": "Exact verified VaultV2 source (robinhood, 0xbeeff033f34c046626b8d0a041844c5d1a5409dd)",
+            "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all"
+          }
+        ],
+        "evidence": "Exact verified VaultV2 enter() transfers deposited USDG before creating user shares; accrueInterest() may mint fee shares. Core has no upgrade entrypoint and EIP-1967 implementation slot was zero. Performance fee 0% of interest; management fee 0% at block 78597801."
+      },
+      {
+        "chain": "robinhood",
+        "address": "0xca50d23f1c18c1dfaff5d3cae3aa4b9dc5c8db73",
+        "deploymentRefs": [
+          "robinhood:0xbeeff033f34c046626b8d0a041844c5d1a5409dd"
+        ],
+        "label": "steakUSDG vault owner",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 78597801,
+        "sources": [
+          {
+            "label": "Morpho exact Steakhouse USDG deployment",
+            "url": "https://app.morpho.org/robinhood-chain/vault/0xBeEff033F34C046626B8D0A041844C5d1A5409dd/steakhouse-usdg"
+          },
+          {
+            "label": "Exact verified VaultV2 source (robinhood, 0xbeeff033f34c046626b8d0a041844c5d1a5409dd)",
+            "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all"
+          },
+          {
+            "label": "Morpho current vault identity and asset API",
+            "url": "https://api.morpho.org/graphql"
+          }
+        ],
+        "evidence": "owner() can replace curator and sentinels under the immutable core; owner internal authorization, key custody and signer independence remain unresolved."
+      },
+      {
+        "chain": "robinhood",
+        "address": "0x9023fbd6a08c666491a2d1648737e400cf42d2fb",
+        "deploymentRefs": [
+          "robinhood:0xbeeff033f34c046626b8d0a041844c5d1a5409dd"
+        ],
+        "label": "steakUSDG curator",
+        "role": "cap-admin",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 78597801,
+        "sources": [
+          {
+            "label": "Morpho exact Steakhouse USDG deployment",
+            "url": "https://app.morpho.org/robinhood-chain/vault/0xBeEff033F34C046626B8D0A041844C5d1A5409dd/steakhouse-usdg"
+          },
+          {
+            "label": "Exact verified VaultV2 source (robinhood, 0xbeeff033f34c046626b8d0a041844c5d1a5409dd)",
+            "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all"
+          },
+          {
+            "label": "Morpho current vault identity and asset API",
+            "url": "https://api.morpho.org/graphql"
+          }
+        ],
+        "evidence": "curator() schedules adapter, allocation-cap, fee and gate changes. Allocation-cap increases were delayed 604800 seconds; both fee selectors had zero delay. User issuance remains asset-backed; fee governance can dilute shares. Ultimate controller authorization is not granted favorable credit."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Morpho exact Steakhouse USDG deployment",
+          "url": "https://app.morpho.org/robinhood-chain/vault/0xBeEff033F34C046626B8D0A041844C5d1A5409dd/steakhouse-usdg"
+        },
+        {
+          "label": "Exact verified VaultV2 source (robinhood, 0xbeeff033f34c046626b8d0a041844c5d1a5409dd)",
+          "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all"
+        },
+        {
+          "label": "Morpho current vault identity and asset API",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Steakhouse DeFi vault governing terms",
+          "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+        }
+      ],
+      "evidence": "Fixed-block state and matched exact VaultV2 source bound asset-backed mint, fee-share mint and burn/redeem at robinhood block 78597801. Parent mint authority remains inherited. Owner/curator control addresses and selector delays are current; internal authorization closure receives no favorable assumption.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "Ultimate owner/curator authorization closure, signer independence and key-custody attestations are not established.",
+        "No independently signed exact-vault financial reconciliation or prudential supervision is established."
+      ]
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "id": "sparkusdc-spark",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Verified exact vault deployment and source",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a"
+      },
+      {
+        "label": "Credential-free RPC endpoint; pinned read in review notes",
+        "url": "https://base-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Morpho vault framework and holder exit mechanics",
+        "url": "https://docs.morpho.org/curate/tutorials-v1/vault-creation/"
+      }
+    ],
+    "evidence": "Observed 2026-10-02T22:43:43.966947+00:00 at base block 52095837 (hash 0x03974c717b8f0205ba3eef8dccfae70f5e044d6a8ac0a3f6e1b00ac938652604). Native totalSupply 306832432087111435323561004 (18 decimals), asset 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913 (6 decimals), totalAssets 331690048897426, convertToAssets(10^18) 1081013. One-share redeem from actual holder 0x2917956eff0b5eaf030abdb4ef4296df775009ca returned 1081013 asset base units via eth_call at that same block; no transaction broadcast. Underlying USDC retains its issuer freeze authority; the pinned parent authority getter returned 0x0000000000000000000000001f2e3a640175d20ac31ed523b6733b977173e277. No direct receipt-transfer blacklist is asserted. Local governance/upgrade authority is reviewed separately from inherited asset freezing.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

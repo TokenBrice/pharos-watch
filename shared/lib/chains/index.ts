@@ -17,6 +17,7 @@ const CHAIN_RESILIENCE_TIER: Partial<Record<string, ChainResilienceTier>> = {
 
   // Established non-EVM settlement chain; Scilla deployments use native readers.
   zilliqa: 2,
+  filecoin: 2,      // established storage L1; contracts use its FEVM interface
 
   // Tier 3 — known issues, high centralization, or unproven security
   pulsechain: 3,
@@ -34,6 +35,8 @@ const CHAIN_RESILIENCE_TIER: Partial<Record<string, ChainResilienceTier>> = {
   stable: 3,        // new USDT-focused chain
   bevm: 3,          // newer BTC-aligned L2
   arc: 3,           // new PoA-validator L1 from Circle
+  rise: 3,          // newer Ethereum L2
+  somnia: 3,        // newer high-performance L1
 
   // Everything else defaults to tier 2 via getChainResilienceTier()
 };

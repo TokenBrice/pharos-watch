@@ -58,6 +58,21 @@ function reviewedOn(
  * retains the earlier adverse assessment, never proves that a route is absent.
  */
 export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedemptionCoverageDisposition[] = [
+  {
+    id: "zarsc-supercoin",
+    disposition: "defer",
+    reasonCode: "route-status-unverified",
+    blocker:
+      "Supercoin terms section 7.1 describes direct issuer redemption through the Supercoin App only once launched; current Supported Exchange off-ramps have no guaranteed price, availability or settlement outcome.",
+    rationale:
+      "The future app's two-business-day bank-payment term is not a currently usable holder route. Trading or selling through an exchange cannot establish issuer par redemption or funded executable capacity.",
+    evidenceNeeded:
+      "Primary evidence that the Supercoin App redemption channel is live, with current onboarding, payout, minimum, fee, liquidity and settlement terms.",
+    evidenceUrls: ["https://www.supercoin.co.za/terms-of-service"],
+    reviewer: "Sol addition batch 2026-10-03 (orchestrated)",
+    reviewedDate: "2026-10-03",
+    allowedRouteFamilyIfProven: "offchain-issuer",
+  },
   reviewedOn("2026-10-01", {
     id: "bnusd-balanced",
     disposition: "defer",

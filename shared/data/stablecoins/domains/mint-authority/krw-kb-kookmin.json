@@ -1,0 +1,25 @@
+{
+  "id": "krw-kb-kookmin",
+  "mintAuthority": {
+    "mintPath": "unknown",
+    "authorityPosture": "unknown",
+    "confidence": "unknown",
+    "summary": "KB designed the pilot issuance process, but production mint authority, legal issuer and contract controls are unpublished.",
+    "review": {
+      "sources": [
+        { "label": "KB programme announcement", "url": "https://www.kbfg.com/kor/pr/press/view.htm?B=8&CONTENT=15055" },
+        { "label": "KB announcement content API", "url": "https://www.kbfg.com/api/kbfg/post/8/15055" },
+        { "label": "Kaia KRW infrastructure overview", "url": "https://www.kaia.io/krw" }
+      ],
+      "evidence": "KB states that it directly designed the full proof-of-concept process from won-token issuance to remittance and automated settlement with smart contracts. This establishes programme involvement, not a production mint-control identity. Kaia's generic dual-signature and compliance model cannot be attributed to a specific KB deployment. No token contract, controlling roles, key threshold, mint cap, upgrade path or reserve-to-supply reconciliation is disclosed in the reviewed programme materials.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Which legal entity issues the commercial token and which exact chain/contract deployment creates native liabilities?",
+        "Who can mint, authorize minting, change limits or upgrade mint logic, with what signer threshold and delay?",
+        "What token-specific reserve-to-supply reconciliation and issuance constraints apply?"
+      ]
+    }
+  }
+}

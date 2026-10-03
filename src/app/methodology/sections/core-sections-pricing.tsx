@@ -89,6 +89,29 @@ export function PricingPipelineMethodologySection() {
         </p>
 
         <p>
+          CZK and PLN use business-daily ECB references through Frankfurter; AED uses the calendar-daily secondary
+          currency feed. All three have currency-specific price and FX validation bands and support CoinGecko native
+          quotes. Those bands reject malformed inputs; neither the bands nor the dirham&apos;s currency peg substitute
+          for an admitted provider or eligible cached reference.
+        </p>
+
+        <p>
+          JLTXX pricing uses J.P. Morgan Asset Management&apos;s exact Token Class transaction NAV. A matched successful
+          reserve snapshot must pass separate fetch-age and dealing-date checks under the five-day business-day NAV
+          policy. Positive native token supply can use that observed NAV before the asset has a previous cache row.
+          Issuer-reported class assets remain diagnostic and do not become circulating supply or independent portfolio
+          assurance.
+        </p>
+
+        <p>
+          Universal USD can recover a missing price through its reviewed Ethereum Uniswap V3 USDU/USDT pool.
+          QuoterV2 sell quotes for 1,000 and 100,000 USDU must agree within 5%, fit actual token inventory and pass
+          reviewed code, implementation, pool identity and canonical-block checks. Proceeds use a fresh trusted USDT
+          price, with both block and parent newer than five minutes. The route never replaces a publishable price and
+          remains a fallback without replay-safe or standalone depeg authority.
+        </p>
+
+        <p>
           When AUDm, CHFm, CADm, COPm or JPYm has no usable market price, Pharos can use its verified Mento pool or Broker sell quote
           multiplied by a fresh USDm price. Contract identity, fees, available capacity and trading limits must support the exit. This remains a
           short-lived fallback price, subject to the same depeg and weak-source safeguards as other soft sources.
@@ -329,12 +352,14 @@ export function PricingPipelineMethodologySection() {
               <li><span className="text-foreground font-medium">USDai:</span> inherits tracked <code className="text-xs">PYUSD</code> pricing because base USDAI is treated as an instantly redeemable PYUSD wrapper</li>
               <li><span className="text-foreground font-medium">iUSD (Initia) / USDCx:</span> inherit tracked <code className="text-xs">AUSD</code> or <code className="text-xs">USDC</code> pricing when the parent rail is fresh and replay-safe</li>
               <li><span className="text-foreground font-medium">M / USDK / XO / USDnr:</span> inherit tracked <code className="text-xs">wM</code> pricing because Pharos treats them as base-unit or instantly redeemable M0 extension paths rather than free-floating market-priced assets; M requires wM itself to report fresh replay-safe single-source confidence</li>
+              <li><span className="text-foreground font-medium">ONED / PYUSDx:</span> reviewed one-for-one issuer-conversion references use tracked USDC or PYUSD. Fresh admitted own market prices win, including discounts; own market history is retained rather than replaced with parent history. These routes do not establish direct-wrapper classifications or guaranteed liquid market pegs</li>
               <li><span className="text-foreground font-medium">Nominal par references:</span> source-reviewed USD and FX redeemables with observable supply carry par as a separate <code className="text-xs">nominalPriceReference</code> (source <code className="text-xs">protocol-par</code>). Non-USD par is converted through a fresh or static FX reference, recorded on the reference as <code className="text-xs">fxReferenceType</code> and <code className="text-xs">fxObservedAt</code>. Par is never an observed price: a market quote wins only when the depeg detector would act on it without confirmation (fresh, not cached or fallback, and backed by depeg-authoritative exchange, oracle or on-chain sources). CoinGecko and DefiLlama agreement alone, thin, stale, cached or fallback marks never displace par. Otherwise the published price is par with <code className="text-xs">priceObservedAtMode = &quot;nominal_reference&quot;</code>, no observation time and no confidence, which cannot open depeg events, and replay preserves existing history instead of synthesizing par points</li>
-              <li><span className="text-foreground font-medium">ERC-4626 NAV wrappers:</span> audited vaults such as Sky sUSDS, Ethena sUSDe, Spark Savings, Gauntlet, Steakhouse, Yearn, Avant, Noon, Yuzu, and Aave Umbrella use canonical-chain <code className="text-xs">convertToAssets()</code> reads multiplied by a fresh trusted tracked parent price; without that parent price, the wrapper remains unpriced</li>
+              <li><span className="text-foreground font-medium">ERC-4626 NAV wrappers:</span> reviewed vaults such as Sky sUSDS, Ethena sUSDe, Spark Savings, Gauntlet, Steakhouse, Sentora, Falcon, Resupply, Frax, Keyrock, Wintermute, Galaxy, Clearstar, Hyperithm, Yearn, Avant, Noon, Yuzu, and Aave Umbrella use canonical-chain <code className="text-xs">convertToAssets()</code> reads multiplied by a fresh trusted tracked parent price, including EURCV for euro-denominated shares; without that parent price, the wrapper remains unpriced. Legacy Spark USDC is a separate 18-decimal-share deployment from 6-decimal-share Spark V2</li>
               <li><span className="text-foreground font-medium">sGHO / Idle tranches:</span> protocol-specific <code className="text-xs">previewRedeem()</code> or <code className="text-xs">virtualPrice()</code> reads price assets whose executable value is not represented by thin secondary markets</li>
               <li><span className="text-foreground font-medium">AZND thin-pool recovery:</span> the exact Curve AZND/USDC route must pass identity, freshness, balance-floor, and quote-impact guards; a guarded no-quote remains an explicit coverage gap, while a thrown provider failure counts against the route circuit</li>
               <li><span className="text-foreground font-medium">crvUSD (Curve):</span> <code className="text-xs">PriceAggregator.price()</code> enters primary consensus as a live market voice, not a protocol override</li>
             </ul>
+            <p>Pre-intake NAV supply valuation uses the same reviewed vault allowlist and the configured Worker RPC map as live enrichment, including Robinhood&apos;s existing keyed Dwellir route. It adds no endpoint or nominal-par fallback; an unavailable route or untrusted parent leaves valuation unavailable.</p>
             <p>DEX pool discovery uses DexScreener&apos;s complete single-token <code className="text-xs">token-pairs/v1</code> endpoint; the bounded multi-address pricing fallback remains on the separate <code className="text-xs">tokens/v1</code> endpoint.</p>
             <p>Apart from nominal par references, these overrides set <code className="text-xs">priceSource = &quot;protocol-redeem&quot;</code> and <code className="text-xs">priceConfidence = &quot;high&quot;</code> when the quote validates against peg bounds, and they are applied after the GeckoTerminal probe so later market checks cannot overwrite them. Recovery scheduling treats a current price as usable only when it is positive and carries publishable source and observation-time provenance, and each live candidate has a bounded slice of the shared budget so one stalled wrapper cannot skip the remaining active gaps. Parent trust is judged on the composite&apos;s replay-safe core, so an agreeing non-replay-safe corroborator that joins a parent&apos;s consensus label can neither strip trust from a high-confidence parent nor upgrade one the gate would otherwise reject. Vault NAV routes persist their last-good on-chain rate, and a failed live read can publish that cached rate times the fresh trusted parent price as an explicit low-confidence <code className="text-xs">protocol-redeem-cached-rate</code> source — bounded to 24 hours, never replacing a live price, and never depeg-authoritative. Audited wrapper exceptions can use a fresh high-confidence same-run parent consensus for live pricing while keeping historical replay on replay-safe sources.</p>
           </div>

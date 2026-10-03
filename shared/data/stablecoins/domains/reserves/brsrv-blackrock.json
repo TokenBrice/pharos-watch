@@ -1,0 +1,82 @@
+{
+  "id": "brsrv-blackrock",
+  "reserves": [
+    {
+      "name": "BlackRock Daily Reinvestment Stablecoin Reserve Vehicle fund shares",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "BlackRock Funds",
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "BlackRock July 31, 2026 OnChain share prospectus",
+        "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf"
+      },
+      {
+        "label": "BlackRock BRSRV fund reporting",
+        "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle"
+      },
+      {
+        "label": "Verified deployed token implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc4ecf0307ff0c45c0546e0debedbbd0e47ac3354"
+      },
+      {
+        "label": "Ethereum token deployment",
+        "url": "https://etherscan.io/address/0x3078bcf707e457d3af2f938a2a478bbeea50a942#code"
+      }
+    ],
+    "rationale": "The 100% slice describes the authenticated whole fund-share claim, following BUIDL single-fund-share presentation. It does not invent underlying Treasury, repo, deposit or credit weights. Cash, U.S. Treasury obligations with no more than 93 days to maturity, and Treasury-secured overnight repurchase agreements in BlackRock Daily Reinvestment Stablecoin Reserve Vehicle; BNY Mellon is custodian and accounting-services provider, Securitize is transfer agent. Current security-level weights are not established.",
+    "compositionBasis": "Standing authenticated fund-share identity, not a current position-weighted portfolio or token-to-assets reconciliation",
+    "scope": "classification-only",
+    "knownUnknownExposure": "All current underlying position weights and complete token-to-fund asset/liability reconciliation remain unavailable. Named custodians and auditors do not prove current whole-book custody allocation or financial assurance.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "BlackRock Daily Reinvestment Stablecoin Reserve Vehicle fund shares",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The direct fund-share identity is authenticated, but current look-through security weights are unavailable. The entire fund-share basket remains unresolved for constituent-weight mapping; no tracked stablecoin constituent is asserted."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "The Bank of New York Mellon",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "BlackRock July 31, 2026 OnChain share prospectus",
+        "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf"
+      },
+      {
+        "label": "BlackRock BRSRV fund reporting",
+        "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle"
+      }
+    ],
+    "uncertainty": "The prospectus names BNY Mellon as fund custodian and accounting-services provider. Subcustody, repo-counterparty and account-level allocations, complete segregation and recovery arrangements are not established.",
+    "knownUnknownExposurePct": 100
+  }
+}

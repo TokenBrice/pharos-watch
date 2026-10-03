@@ -1,0 +1,34 @@
+{
+  "id": "susdx-axis",
+  "name": "Staked Axis USD",
+  "symbol": "sUSDx",
+  "oneLiner": "sUSDx is Axis's USDx rewards vault; vested rewards raise its share value, while exits require a cooldown and permissioned queue servicing.",
+  "mechanismArchetype": "synthetic-delta-neutral",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "usdx-axis",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "usdx-axis",
+  "collateral": "Canonical USDx deposited into Axis's Ethereum StakedUSDx vault. Active principal and vested USDx rewards back outstanding shares; funded but unvested rewards and pending or claimable redemption liabilities are excluded from totalAssets and share pricing. Upstream USDx portfolio, venue and hedge risks remain inherited.",
+  "pegMechanism": "Users deposit USDx for ERC-4626 shares whose exchange rate rises as funded rewards vest. ERC-7540 requestRedeem burns shares and reserves USDx inside the vault; after the configured cooldown, a privileged servicer makes the request claimable. The cooldown was 604800 seconds at Ethereum block 26107703 on October 2, 2026, but does not guarantee completion after seven days. previewRedeem and previewWithdraw revert because exits are asynchronous; still-pending requests may be cancelled.",
+  "detailProvider": "coingecko",
+  "geckoId": "staked-axis-usd",
+  "links": [
+    { "label": "Website", "url": "https://www.axis.to/" },
+    { "label": "Stake and unstake", "url": "https://docs.axis.to/susdx-the-rewards-vault/stake-and-unstake.md" },
+    { "label": "Vault accounting reference", "url": "https://docs.axis.to/reference/staking-contracts.md" },
+    { "label": "Transparency", "url": "https://app.axis.to/transparency" }
+  ],
+  "jurisdiction": { "country": "British Virgin Islands" },
+  "contracts": [
+    { "chain": "ethereum", "address": "0xeb892628d1e58bc475a6dcb7f5dbc4f591632aa4", "decimals": 18 }
+  ],
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "yieldConfig": { "yieldSource": "Vested USDx rewards funded from Axis's market-neutral trading results", "yieldType": "nav-appreciation" }
+}

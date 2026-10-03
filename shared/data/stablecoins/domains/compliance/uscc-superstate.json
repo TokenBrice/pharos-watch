@@ -1,0 +1,38 @@
+{
+  "id": "uscc-superstate",
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "USCC is a NAV-accreting restricted private-fund share rather than a fixed-value payment stablecoin. The crypto carry strategy does not change that fund-share identity; no GENIUS issuer approval is asserted."
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Bitwise Crypto Carry Fund, a series of a Delaware Statutory Trust",
+    "issuerDomicile": "United States",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "USCC is a NAV-accreting restricted private-fund share rather than a fixed-value payment stablecoin. The crypto carry strategy does not change that fund-share identity; no GENIUS issuer approval is asserted.",
+    "references": [
+      {
+        "label": "USCC fund, service providers and October 1 holdings",
+        "url": "https://superstate.com/assets/uscc",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      },
+      {
+        "label": "USCC current investor terms",
+        "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      },
+      {
+        "label": "Superstate deployments and administrative powers",
+        "url": "https://docs.superstate.com/investors/smart-contracts",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      }
+    ],
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "id": "usdu-universal",
+  "name": "Universal USD",
+  "symbol": "USDU",
+  "oneLiner": "USDU is Universal Digital’s ADGM-authorized dollar, backed by USD bank deposits and redeemable at par by onboarded professional clients.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized"
+  },
+  "collateral": "U.S. dollar deposits at UAE banks; the August 31, 2026 Crowe examination reconciles $30,651,543.81 of deposits to the same number of Ethereum USDU tokens.",
+  "pegMechanism": "Universal mints against validated USD reserve deposits through Aquanow; onboarded professional clients redeem at $1 per USDU, generally within two business days after due diligence, with fees and extension rights.",
+  "mechanismArchetype": "fiat-cash",
+  "llamaId": "410",
+  "detailProvider": "defillama",
+  "geckoId": "universal-usd",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.universal.ae/transparency",
+    "provider": "Crowe Mak LLP",
+    "attestorTier": "regional",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United Arab Emirates",
+    "attestorLicense": "Registration No. 000002075",
+    "latestReport": {
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-18",
+      "publishedAtBasis": "signed-date-standin",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Crowe August 2026 ISAE3000 examination",
+          "url": "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf"
+        }
+      ]
+    }
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.universal.ae/"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://www.universal.ae/transparency"
+    },
+    {
+      "label": "Whitepaper",
+      "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"
+    },
+    {
+      "label": "FSRA issuer register",
+      "url": "https://www.adgm.com/public-registers/fsra/firms/financial-firms/universal-digital-intl-limited-250089"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United Arab Emirates",
+    "regulator": "ADGM Financial Services Regulatory Authority",
+    "license": "FSP 250089: Issuing a Fiat-Referenced Token; no Retail Clients"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xe4ca6596d2c28014c6f89964f57838e0be9f369b",
+      "decimals": 6
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity"
+}

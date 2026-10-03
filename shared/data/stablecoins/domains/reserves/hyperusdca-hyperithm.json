@@ -1,0 +1,136 @@
+{
+  "id": "hyperusdca-hyperithm",
+  "reserves": [
+    {
+      "sourceKey": "erc4626-single-asset:monad:0x754704bc059f8c67012fed69bc8a327a5aafb603",
+      "name": "Hyperithm USDC Apex idle USDC",
+      "pct": 8.354013857323368,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle USDC",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371:deployed",
+      "name": "Hyperithm USDC Apex deployed strategy positions",
+      "pct": 91.64598614267663,
+      "risk": "high",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Morpho market borrowers and Circle USDC",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "liquidity",
+        "smart-contract",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Exact Morpho Vault V2 deployment",
+        "url": "https://app.morpho.org/monad/vault/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
+      },
+      {
+        "label": "Verified deployment code identity",
+        "url": "https://monadscan.com/address/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371#code"
+      },
+      {
+        "label": "Pinned monad block 110016412",
+        "url": "https://monadscan.com/block/110016412"
+      },
+      {
+        "label": "Morpho complete current vault inventory",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho Vault V2 gates",
+        "url": "https://docs.morpho.org/curate/concepts/gates.md"
+      },
+      {
+        "label": "Morpho share accounting and loss realization",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "Exact Morpho lending adapter",
+        "url": "https://monadscan.com/address/0x068f22739a5f8a5c84619d7f355b678d00707908#code"
+      }
+    ],
+    "rationale": "At monad block 110016412 (0x68eb79c), observed 2026-10-02T22:44:15.638184+00:00, totalAssets was 50691589.059679 USDC, totalSupply 48736516.967017024755 shares, idle USDC 4234782.374543; all 7 adapter market IDs and expectedSupplyAssets were enumerated. Idle and deployed percentages use the same-block totalAssets denominator. The itemized market balances plus idle USDC reconcile to totalAssets. These slices classify the direct USDC-denominated claim; they do not reclassify all borrower collateral as cash.",
+    "compositionBasis": "Pinned ERC-4626 accounting assets and idle USDC, complete sole-adapter market census",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Direct idle and deployed categories are classified. Borrower collateral custody, legal priority and future allocations remain unresolved, and USDC parent reserve quality is not vault financial assurance.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Hyperithm USDC Apex VaultV2 0x78999cc96d2ba0341588c60ccb0e91c6c33cf371",
+        "role": "other"
+      },
+      {
+        "name": "MorphoMarketV1AdapterV2 0x068f22739a5f8a5c84619d7f355b678d00707908",
+        "role": "other"
+      },
+      {
+        "name": "Morpho lending markets 0xd5d960e8c380b724a48ac59e2dff1b2cb4a1eaee",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Exact Morpho Vault V2 deployment",
+        "url": "https://app.morpho.org/monad/vault/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
+      },
+      {
+        "label": "Verified deployment code identity",
+        "url": "https://monadscan.com/address/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371#code"
+      },
+      {
+        "label": "Pinned monad block 110016412",
+        "url": "https://monadscan.com/block/110016412"
+      },
+      {
+        "label": "Morpho complete current vault inventory",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho Vault V2 gates",
+        "url": "https://docs.morpho.org/curate/concepts/gates.md"
+      },
+      {
+        "label": "Morpho share accounting and loss realization",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "Exact Morpho lending adapter",
+        "url": "https://monadscan.com/address/0x068f22739a5f8a5c84619d7f355b678d00707908#code"
+      }
+    ],
+    "uncertainty": "The complete current immediate inventory is held by onchain vault/adapter/Morpho contracts. USDC is intentionally lent to borrowers. This identifies operational position custody, not legal segregation, borrower-collateral whole-book custody, signer independence or insolvency priority. The aggregate custodyModel remains unknown rather than inheriting an all-onchain claim from older precedents."
+  }
+}

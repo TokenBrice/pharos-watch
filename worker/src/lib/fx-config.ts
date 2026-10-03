@@ -20,6 +20,8 @@ export const PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS = [
   ["peggedKRW", "KRW"],
   ["peggedHKD", "HKD"],
   ["peggedINR", "INR"],
+  ["peggedCZK", "CZK"],
+  ["peggedPLN", "PLN"],
 ] as const;
 
 export const PRIMARY_FX_CURRENCIES = PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS.map(([, currency]) => currency);
@@ -45,6 +47,7 @@ export const SECONDARY_PEG_TYPE_TO_CURRENCY_PAIRS = [
   ["peggedCOP", "COP"],
   ["peggedCLP", "CLP"],
   ["peggedPEN", "PEN"],
+  ["peggedAED", "AED"],
 ] as const;
 
 export const SECONDARY_FX_CURRENCY_TO_PEG: Record<string, string> = Object.fromEntries(

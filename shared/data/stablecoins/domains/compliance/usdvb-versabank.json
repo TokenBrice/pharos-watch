@@ -1,0 +1,32 @@
+{
+  "id": "usdvb-versabank",
+  "genius": {
+    "applicability": "excluded-deposit",
+    "applicabilityBasis": {
+      "summary": "USDVB is described as a one-for-one representation of a bank deposit with VersaBank USA, not a nonbank-issued payment stablecoin. Explicit deposit-token classification prevents the pilot from being mistaken for GENIUS payment-stablecoin authorization."
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "VersaBank USA National Association",
+    "issuerDomicile": "United States",
+    "notes": "The U.S. bank deposit-token pilot is outside the tracked GENIUS payment-stablecoin authorization posture. The August 2025 release says OCC non-objection will be sought before commercialization. The September 2026 filing names the U.S. national-bank subsidiary and still seeks regulatory confirmation of federal deposit-insurance eligibility and the legal ability to pay interest. A bank charter and the VersaVault SOC2 system audit are not token-specific reserve assurance, holder insurance confirmation or GENIUS PPSI approval.",
+    "references": [
+      {
+        "label": "USDVB pilot announcement",
+        "url": "https://www.versabank.com/versabank-announces-versabank-usa-launch-of-tokenized-deposit-pilot-program-in-united-states/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02",
+        "sourceDate": "2025-08-26"
+      },
+      {
+        "label": "VersaBank Q3 2026 management discussion",
+        "url": "https://www.versabank.com/wp-content/uploads/2026/09/VB-Q326-MDA-vF.pdf",
+        "sourceKind": "issuer-filing",
+        "accessedAt": "2026-10-02",
+        "sourceDate": "2026-09-01"
+      }
+    ],
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

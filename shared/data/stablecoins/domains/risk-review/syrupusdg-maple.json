@@ -1,0 +1,582 @@
+{
+  "id": "syrupusdg-maple",
+  "blacklistabilityReview": {
+    "evidence": "At finalized Solana slot 452748856, the exact syrupUSDG SPL mint CYB6WRi2YuV4Ui6q1dieP5Raev6ah7qftGsQAxJiZo8f has non-null freezeAuthority 76QpxAGtsrbwP5nmdCVHyQe2AHVML7cqhxF9FpBxLJjp. This establishes a direct holder-freeze capability on an authored representation, despite its current zero supply; it does not claim a past freeze. Ethereum transfer permissions depend on the mutable manager and USDG issuer freeze exposure remains upstream. The active Solana freeze authority supersedes the packet unresolved-authority gap.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02",
+    "sources": [
+      {
+        "label": "Chainlink exact syrupUSDG deployments and pools",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+      },
+      {
+        "label": "Finalized Solana mint supply and authorities at slot 452748856",
+        "url": "https://solana-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Verified deployed contract 0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
+      }
+    ],
+    "reviewedStatus": true
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "Maple share conversion uses manager-derived pool accounting, with price-relevant unrealizedLosses controlled through privileged impairments. The exact syrupUSDG manager binding is verified; this discretionary loss input is distinct from automatic ERC-4626 arithmetic and from parent USDG pricing.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "rationale": "Pool accounting documents Pool Delegate/Governor impairment powers. Exact pool conversion depends on the observed manager; reviewed pricing is the whole credit-share conversion, not a fully inventoried collateral-oracle branch set.",
+      "sources": [
+        {
+          "label": "Maple pool accounting and impairment authority",
+          "url": "https://docs.maple.finance/technical-resources/pools/accounting/pool-accounting.md"
+        },
+        {
+          "label": "Verified deployed contract 0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
+        },
+        {
+          "label": "Ethereum RPC observation at block 26107703",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Maple pool accounting and impairment authority",
+        "url": "https://docs.maple.finance/technical-resources/pools/accounting/pool-accounting.md"
+      },
+      {
+        "label": "Verified deployed contract 0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
+      },
+      {
+        "label": "Ethereum RPC observation at block 26107703",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "Ethereum is the canonical Maple share-issuance deployment. Robinhood, Arbitrum, Ink and Solana are CCIP BurnMint representations collateralized through Ethereum LockRelease escrow. Remote shares are not additional canonical issuance. Pool/token identities and current Solana mint/freeze authorities are verified; full administrative, validator and limit controls remain bounded gaps.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Chainlink exact syrupUSDG deployments and pools",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+      },
+      {
+        "label": "Maple syrupUSDG legal claim and risk disclosures",
+        "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"
+      },
+      {
+        "label": "Ethereum RPC observation at block 26107703",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Finalized Solana mint supply and authorities at slot 452748856",
+        "url": "https://solana-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "arbitrum read-only RPC deployment and pool observation",
+        "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+      },
+      {
+        "label": "ink read-only RPC deployment and pool observation",
+        "url": "https://api-ink-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "robinhood read-only RPC deployment and pool observation",
+        "url": "https://api-robinhood-mainnet-archive.n.dwellir.com"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a",
+        "protocol": "Maple canonical vault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "Chainlink exact syrupUSDG deployments and pools",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+          },
+          {
+            "label": "Verified deployed contract 0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
+          },
+          {
+            "label": "Ethereum RPC observation at block 26107703",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "failureDomainKeys": [
+          "issuer:maple"
+        ],
+        "reviewNote": "Verified MaplePool native share issuance; remote representations are collateralized through the Ethereum LockRelease pool, not extra canonical supply.",
+        "observedBlock": 26107703
+      },
+      {
+        "id": "robinhood:0x40858070814a57fdf33a613ae84fe0a8b4a874f7",
+        "sourceChain": "ethereum",
+        "destinationChain": "robinhood",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x40858070814a57fdf33a613ae84fe0a8b4a874f7",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "Chainlink exact syrupUSDG deployments and pools",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+          },
+          {
+            "label": "robinhood RPC deployment and pool pin",
+            "url": "https://api-robinhood-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "failureDomainKeys": [
+          "bridge:chainlink-ccip",
+          "issuer:maple"
+        ],
+        "reviewNote": "Directory identifies this exact token and BurnMint representation; the Ethereum home pool is LockRelease, so the end-to-end route is lock-mint. No independent native monetary supply is asserted.",
+        "observedBlock": 78600073
+      },
+      {
+        "id": "arbitrum:0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762",
+        "sourceChain": "ethereum",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "Chainlink exact syrupUSDG deployments and pools",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+          },
+          {
+            "label": "arbitrum RPC deployment and pool pin",
+            "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "failureDomainKeys": [
+          "bridge:chainlink-ccip",
+          "issuer:maple"
+        ],
+        "reviewNote": "Directory identifies this exact token and BurnMint representation; the Ethereum home pool is LockRelease, so the end-to-end route is lock-mint. No independent native monetary supply is asserted.",
+        "observedBlock": 511124614
+      },
+      {
+        "id": "ink:0xebe9ed66efe0948d0c1b72b0157fc17733667018",
+        "sourceChain": "ethereum",
+        "destinationChain": "ink",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xebe9ed66efe0948d0c1b72b0157fc17733667018",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "Chainlink exact syrupUSDG deployments and pools",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+          },
+          {
+            "label": "ink RPC deployment and pool pin",
+            "url": "https://api-ink-mainnet.n.dwellir.com"
+          }
+        ],
+        "failureDomainKeys": [
+          "bridge:chainlink-ccip",
+          "issuer:maple"
+        ],
+        "reviewNote": "Directory identifies this exact token and BurnMint representation; the Ethereum home pool is LockRelease, so the end-to-end route is lock-mint. No independent native monetary supply is asserted.",
+        "observedBlock": 57482843
+      },
+      {
+        "id": "solana:CYB6WRi2YuV4Ui6q1dieP5Raev6ah7qftGsQAxJiZo8f",
+        "sourceChain": "ethereum",
+        "destinationChain": "solana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "CYB6WRi2YuV4Ui6q1dieP5Raev6ah7qftGsQAxJiZo8f",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "Chainlink exact syrupUSDG deployments and pools",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+          },
+          {
+            "label": "Finalized Solana mint supply and authorities at slot 452748856",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "failureDomainKeys": [
+          "bridge:chainlink-ccip",
+          "issuer:maple"
+        ],
+        "reviewNote": "Directory identifies this exact token and BurnMint representation; the Ethereum home pool is LockRelease, so the end-to-end route is lock-mint. No independent native monetary supply is asserted."
+      }
+    ],
+    "controls": [
+      {
+        "id": "ethereum-ccip-escrow",
+        "routeRefs": [
+          "ethereum:0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a",
+          "robinhood:0x40858070814a57fdf33a613ae84fe0a8b4a874f7",
+          "arbitrum:0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762",
+          "ink:0xebe9ed66efe0948d0c1b72b0157fc17733667018",
+          "solana:CYB6WRi2YuV4Ui6q1dieP5Raev6ah7qftGsQAxJiZo8f"
+        ],
+        "capabilities": [
+          "escrow"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x120391e1512287f0eb8036037d464de2da602543",
+        "label": "syrupUSDG Ethereum CCIP LockRelease escrow",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "unknown",
+        "failureDomainKeys": [
+          "bridge:chainlink-ccip"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "Chainlink exact syrupUSDG deployments and pools",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+          },
+          {
+            "label": "Ethereum RPC observation at block 26107703",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "evidence": "At block 26107703, getToken() bound this escrow to the canonical syrupUSDG pool; typeAndVersion() returned LockReleaseTokenPool 1.6.1 and owner() was 0x44835bbba9d40deda9b64858095ecfb2693c9449. Canonical escrow cannot be summed as additional monetary supply. Full limits, pause, router, owner execution and upgrade census remains unresolved."
+      },
+      {
+        "id": "arbitrum-ccip-burn-mint-pool",
+        "routeRefs": [
+          "arbitrum:0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x5355292a5c36c4094b93fb62aa1fefca6e28b75f",
+        "label": "syrupUSDG arbitrum CCIP BurnMint pool",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "unknown",
+        "failureDomainKeys": [
+          "bridge:chainlink-ccip"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 511124614,
+        "sources": [
+          {
+            "label": "Chainlink exact syrupUSDG deployments and pools",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+          },
+          {
+            "label": "arbitrum RPC pool identity and owner",
+            "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "evidence": "At block 511124614, pool getToken() returned the exact authored syrupUSDG token and typeAndVersion() returned BurnMintTokenPool 2.0.0. The directory identifies its burn/mint transfer role. Token decimals() was 6; pool owner() was 0x8a89770722c84b60ce02989aedb22ac4791f8c7f. Exhaustive role events and owner execution routes were not established."
+      },
+      {
+        "id": "arbitrum-ccip-pool-owner",
+        "routeRefs": [
+          "arbitrum:0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x8a89770722c84b60ce02989aedb22ac4791f8c7f",
+        "label": "syrupUSDG arbitrum CCIP pool owner",
+        "authorityType": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "failureDomainKeys": [
+          "controller:arbitrum:0x8a89770722c84b60ce02989aedb22ac4791f8c7f",
+          "bridge:chainlink-ccip"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 511124614,
+        "sources": [
+          {
+            "label": "Chainlink exact syrupUSDG deployments and pools",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+          },
+          {
+            "label": "arbitrum RPC pool owner",
+            "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "evidence": "Pool owner() at block 511124614 returned this address. Contract-versus-EOA classification, signer quorum, modules/guards, bypasses and exact privileged pool capabilities beyond ownership remain unresolved."
+      },
+      {
+        "id": "ink-ccip-burn-mint-pool",
+        "routeRefs": [
+          "ink:0xebe9ed66efe0948d0c1b72b0157fc17733667018"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "ink",
+        "controllerAddress": "0x376d6f0e7718b6f5642d92f13ca516c8b4f5a91f",
+        "label": "syrupUSDG ink CCIP BurnMint pool",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "unknown",
+        "failureDomainKeys": [
+          "bridge:chainlink-ccip"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 57482843,
+        "sources": [
+          {
+            "label": "Chainlink exact syrupUSDG deployments and pools",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+          },
+          {
+            "label": "ink RPC pool identity and owner",
+            "url": "https://api-ink-mainnet.n.dwellir.com"
+          }
+        ],
+        "evidence": "At block 57482843, pool getToken() returned the exact authored syrupUSDG token and typeAndVersion() returned BurnMintTokenPool 2.0.0. The directory identifies its burn/mint transfer role. Token decimals() was 6; pool owner() was 0x13ac97663d19ff20fe467bfa580748505e664beb. Exhaustive role events and owner execution routes were not established."
+      },
+      {
+        "id": "ink-ccip-pool-owner",
+        "routeRefs": [
+          "ink:0xebe9ed66efe0948d0c1b72b0157fc17733667018"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "ink",
+        "controllerAddress": "0x13ac97663d19ff20fe467bfa580748505e664beb",
+        "label": "syrupUSDG ink CCIP pool owner",
+        "authorityType": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "failureDomainKeys": [
+          "controller:ink:0x13ac97663d19ff20fe467bfa580748505e664beb",
+          "bridge:chainlink-ccip"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 57482843,
+        "sources": [
+          {
+            "label": "Chainlink exact syrupUSDG deployments and pools",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+          },
+          {
+            "label": "ink RPC pool owner",
+            "url": "https://api-ink-mainnet.n.dwellir.com"
+          }
+        ],
+        "evidence": "Pool owner() at block 57482843 returned this address. Contract-versus-EOA classification, signer quorum, modules/guards, bypasses and exact privileged pool capabilities beyond ownership remain unresolved."
+      },
+      {
+        "id": "robinhood-ccip-burn-mint-pool",
+        "routeRefs": [
+          "robinhood:0x40858070814a57fdf33a613ae84fe0a8b4a874f7"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "robinhood",
+        "controllerAddress": "0x01fa676ecc8662e6923fdf06ba5278a96ccd725c",
+        "label": "syrupUSDG robinhood CCIP BurnMint pool",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "unknown",
+        "failureDomainKeys": [
+          "bridge:chainlink-ccip"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 78600073,
+        "sources": [
+          {
+            "label": "Chainlink exact syrupUSDG deployments and pools",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+          },
+          {
+            "label": "robinhood RPC pool identity and owner",
+            "url": "https://api-robinhood-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "evidence": "At block 78600073, pool getToken() returned the exact authored syrupUSDG token and typeAndVersion() returned BurnMintTokenPool 1.6.1. The directory identifies its burn/mint transfer role. Token decimals() was 6; pool owner() was 0xf09afe78d3c7d359b334d7cb88995751f7ec5e13. Exhaustive role events and owner execution routes were not established."
+      },
+      {
+        "id": "robinhood-ccip-pool-owner",
+        "routeRefs": [
+          "robinhood:0x40858070814a57fdf33a613ae84fe0a8b4a874f7"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "robinhood",
+        "controllerAddress": "0xf09afe78d3c7d359b334d7cb88995751f7ec5e13",
+        "label": "syrupUSDG robinhood CCIP pool owner",
+        "authorityType": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "failureDomainKeys": [
+          "controller:robinhood:0xf09afe78d3c7d359b334d7cb88995751f7ec5e13",
+          "bridge:chainlink-ccip"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 78600073,
+        "sources": [
+          {
+            "label": "Chainlink exact syrupUSDG deployments and pools",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+          },
+          {
+            "label": "robinhood RPC pool owner",
+            "url": "https://api-robinhood-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "evidence": "Pool owner() at block 78600073 returned this address. Contract-versus-EOA classification, signer quorum, modules/guards, bypasses and exact privileged pool capabilities beyond ownership remain unresolved."
+      },
+      {
+        "id": "solana-syrupusdg-mint-authority",
+        "routeRefs": [
+          "solana:CYB6WRi2YuV4Ui6q1dieP5Raev6ah7qftGsQAxJiZo8f"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "Di9oiB9DRXG7vrvUKapLeXmiZX2GebRXDAsZ6tWmEcrE",
+        "label": "syrupUSDG Solana SPL mint authority",
+        "authorityType": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "failureDomainKeys": [
+          "bridge:chainlink-ccip"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 452748856,
+        "sources": [
+          {
+            "label": "Chainlink exact syrupUSDG deployments and pools",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+          },
+          {
+            "label": "Finalized Solana mint supply and authorities at slot 452748856",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "evidence": "At finalized slot 452748856, getAccountInfo(jsonParsed) returned this non-null SPL mintAuthority for the exact directory-listed BurnMint representation. getTokenSupply returned zero and decimals 6. Mint authority remains active despite zero circulation; PDA/program execution and full administrative census are not established."
+      },
+      {
+        "id": "solana-syrupusdg-freeze-authority",
+        "routeRefs": [
+          "solana:CYB6WRi2YuV4Ui6q1dieP5Raev6ah7qftGsQAxJiZo8f"
+        ],
+        "capabilities": [
+          "pause"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "76QpxAGtsrbwP5nmdCVHyQe2AHVML7cqhxF9FpBxLJjp",
+        "label": "syrupUSDG Solana SPL holder-freeze authority",
+        "authorityType": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "failureDomainKeys": [
+          "authority:solana:76QpxAGtsrbwP5nmdCVHyQe2AHVML7cqhxF9FpBxLJjp"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 452748856,
+        "sources": [
+          {
+            "label": "Chainlink exact syrupUSDG deployments and pools",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+          },
+          {
+            "label": "Finalized Solana mint supply and authorities at slot 452748856",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "evidence": "At finalized slot 452748856, the exact SPL mint has this non-null freezeAuthority. It can authorize account freezing, a direct holder-restriction surface separate from the bridge mint authority. No actual historical freeze or controller execution/quorum census is inferred."
+      }
+    ],
+    "scopedQuestions": [
+      {
+        "controlRef": "ethereum-ccip-escrow",
+        "question": "What exact current router, validators, rate limits, pause authorities, upgrade paths and owner signer/module/guard/bypass census cover all CCIP lanes?",
+        "reviewedAt": "2026-10-02",
+        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "sources": [
+          {
+            "label": "Chainlink exact syrupUSDG deployments and pools",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+          },
+          {
+            "label": "Ethereum RPC observation at block 26107703",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          }
+        ]
+      },
+      {
+        "controlRef": "solana-syrupusdg-mint-authority",
+        "question": "Which PDA/program and upgrade/admin execution paths control the live SPL mint and freeze authorities and directory pool account H1w3zL4yJKqHXut3dHvFQVCbjmYt5DZ3ioZcZrYZZD11?",
+        "reviewedAt": "2026-10-02",
+        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "sources": [
+          {
+            "label": "Chainlink exact syrupUSDG deployments and pools",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+          },
+          {
+            "label": "Finalized Solana mint supply and authorities at slot 452748856",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
+          }
+        ]
+      }
+    ]
+  }
+}

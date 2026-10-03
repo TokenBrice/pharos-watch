@@ -1,0 +1,246 @@
+{
+  "id": "senpyusdmain-sentora",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "senPYUSDmain issues asset-backed PYUSD vault shares and fee shares through immutable accounting. Owner and curator are separate 1-of-1 Safes, each controlled by one EOA; underlying issuance remains inherited from pyusd-paypal.",
+    "inheritedFrom": "pyusd-paypal",
+    "upgradeability": {
+      "model": "immutable",
+      "deploymentRefs": [
+        "ethereum:0xb576765fb15505433af24fee2c0325895c559fb2"
+      ],
+      "canChangeMintLogic": false,
+      "controlRef": "senPYUSDmain immutable asset-backed share accounting",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107702,
+      "sources": [
+        {
+          "label": "Paypal USD Main exact vault",
+          "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+        },
+        {
+          "label": "Exact verified VaultV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+        },
+        {
+          "label": "Exact current MorphoMarketV1AdapterV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+        },
+        {
+          "label": "Morpho Vault V2 accounting and redemption mechanics",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Ethereum RPC, pinned block 26107702",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Morpho exact-vault portfolio API",
+          "url": "https://api.morpho.org/graphql"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xb576765fb15505433af24fee2c0325895c559fb2",
+        "deploymentRefs": [
+          "ethereum:0xb576765fb15505433af24fee2c0325895c559fb2"
+        ],
+        "label": "senPYUSDmain immutable asset-backed share accounting",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "Paypal USD Main exact vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact verified VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+          },
+          {
+            "label": "Morpho Vault V2 accounting and redemption mechanics",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Ethereum RPC, pinned block 26107702",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho exact-vault portfolio API",
+            "url": "https://api.morpho.org/graphql"
+          }
+        ],
+        "evidence": "Exact VaultV2 source transfers assets before issuing depositor shares and separately creates fee shares during accrueInterest(). Corrected EIP-1967 implementation, admin and beacon slots are zero. No discretionary arbitrary-share mint or bytecode upgrade path was found."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "deploymentRefs": [
+          "ethereum:0xb576765fb15505433af24fee2c0325895c559fb2"
+        ],
+        "label": "Sentora owner 1-of-1 Safe",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 1,
+        "signerCount": 1,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 26107702,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "Paypal USD Main exact vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact verified VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+          },
+          {
+            "label": "Morpho Vault V2 accounting and redemption mechanics",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Ethereum RPC, pinned block 26107702",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho exact-vault portfolio API",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Sentora owner 1-of-1 Safe",
+            "url": "https://etherscan.io/address/0xe8c9c99ecad0686a14a00d8521c572281e938008"
+          }
+        ],
+        "evidence": "Pinned block 26107702: getThreshold()=1, getOwners() contains sole signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9, whose code is empty (EOA); no enabled modules and zero guard. This is single-key control, not an independent multi-signer quorum. Owner appoints curator and sentinels."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+        "deploymentRefs": [
+          "ethereum:0xb576765fb15505433af24fee2c0325895c559fb2"
+        ],
+        "label": "Sentora curator 1-of-1 Safe",
+        "role": "cap-admin",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 1,
+        "signerCount": 1,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x992592e073aa9b98daed79ee05c4af832e1d0abe"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 26107702,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "Paypal USD Main exact vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact verified VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+          },
+          {
+            "label": "Morpho Vault V2 accounting and redemption mechanics",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Ethereum RPC, pinned block 26107702",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho exact-vault portfolio API",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Sentora curator 1-of-1 Safe",
+            "url": "https://etherscan.io/address/0x9e396de3312d373b87f9bd8763fb48184b42aac0"
+          }
+        ],
+        "evidence": "Pinned block 26107702: getThreshold()=1, getOwners() contains sole signer 0x992592e073aa9b98daed79ee05c4af832e1d0abe, whose code is empty (EOA); no enabled modules and zero guard. This is single-key control, not an independent multi-signer quorum. Curator can configure allocation caps, fees and the send-assets gate. Fee and send-assets-gate actions have zero timelock; adding an adapter and increasing absolute caps have a three-day timelock. No arbitrary direct share mint is established."
+      }
+    ],
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Paypal USD Main exact vault",
+          "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+        },
+        {
+          "label": "Exact verified VaultV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+        },
+        {
+          "label": "Exact current MorphoMarketV1AdapterV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+        },
+        {
+          "label": "Morpho Vault V2 accounting and redemption mechanics",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Ethereum RPC, pinned block 26107702",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Morpho exact-vault portfolio API",
+          "url": "https://api.morpho.org/graphql"
+        }
+      ],
+      "evidence": "Pinned block 26107702 confirms native asset, immutable source, zero proxy slots, separate 1-of-1 owner/curator Safes, empty signer EOA code, no modules and zero guards. performanceFee=0; managementFee=317097919 (contract-native units). Fee-share issuance is not omitted; zero-delay fee and redemption-gate parameter changes remain concentrated economic controls. Parent reserve reports are not exact-vault financial reconciliation.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "unresolvedQuestions": [
+        "Signer organizational independence and key custody are undisclosed.",
+        "Complete latent authorization closure across future registry/adapters and upstream collateral control systems is not established."
+      ]
+    }
+  }
+}

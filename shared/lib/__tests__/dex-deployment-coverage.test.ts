@@ -213,7 +213,7 @@ describe("DEX deployment coverage ownership", () => {
     });
 
     expect(missing).toEqual([]);
-    expect(DEX_COVERAGE_WAIVERS).toHaveLength(1);
+    expect(DEX_COVERAGE_WAIVERS).toHaveLength(4);
     expect(DEX_COVERAGE_WAIVERS.every((waiver) => waiver.owner.length > 0 && waiver.expiresAt > REVIEW_AT_SEC)).toBe(
       true,
     );

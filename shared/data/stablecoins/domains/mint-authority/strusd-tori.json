@@ -1,0 +1,176 @@
+{
+  "id": "strusd-tori",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "collateral-gated",
+    "confidence": "manual-review",
+    "summary": "Deposits mint trUSD-backed shares; the timelock can replace native share-mint logic and the admin controls rewards and cooldowns.",
+    "inheritedFrom": "trusd-tori",
+    "economicCapSemantics": "collateral-gated",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x280839980a7ed0d7717f64125fe241012e5f5815",
+        "deploymentRefs": [
+          "ethereum:0x280839980a7ed0d7717f64125fe241012e5f5815"
+        ],
+        "label": "StakedTrUSD ERC-4626 vault",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107706,
+        "sources": [
+          {
+            "label": "Tori strUSD staking and unstaking terms",
+            "url": "https://docs.tori.finance/products/strusd.md"
+          },
+          {
+            "label": "Tori canonical vault and CCIP deployments",
+            "url": "https://docs.tori.finance/resources/contracts.md"
+          },
+          {
+            "label": "Tori roles and timelock disclosure",
+            "url": "https://docs.tori.finance/security/roles.md"
+          },
+          {
+            "label": "Verified StakedTrUSD implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6561272e3ebc9f2e07cdb12b7c474db9132b977a"
+          },
+          {
+            "label": "Tori reserve ownership and holder-rights terms",
+            "url": "https://docs.tori.finance/legal/trusd-terms.md"
+          },
+          {
+            "label": "Pinned Ethereum block 26107706",
+            "url": "https://etherscan.io/block/26107706"
+          }
+        ],
+        "evidence": "Reviewed source and asset/share reads establish deposit-backed share minting, not an unrestricted privileged native share minter."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xa952453e39f77108ee37c1b92de593f1c59a6ef4",
+        "deploymentRefs": [
+          "ethereum:0x280839980a7ed0d7717f64125fe241012e5f5815"
+        ],
+        "label": "StakedTrUSD native UUPS timelock",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 86400,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107706,
+        "sources": [
+          {
+            "label": "Tori strUSD staking and unstaking terms",
+            "url": "https://docs.tori.finance/products/strusd.md"
+          },
+          {
+            "label": "Tori canonical vault and CCIP deployments",
+            "url": "https://docs.tori.finance/resources/contracts.md"
+          },
+          {
+            "label": "Tori roles and timelock disclosure",
+            "url": "https://docs.tori.finance/security/roles.md"
+          },
+          {
+            "label": "Verified StakedTrUSD implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6561272e3ebc9f2e07cdb12b7c474db9132b977a"
+          },
+          {
+            "label": "Tori reserve ownership and holder-rights terms",
+            "url": "https://docs.tori.finance/legal/trusd-terms.md"
+          },
+          {
+            "label": "Pinned Ethereum block 26107706",
+            "url": "https://etherscan.io/block/26107706"
+          }
+        ],
+        "evidence": "Current implementation _authorizeUpgrade requires TIMELOCK_ADMIN_ROLE. Pinned hasRole returned true for this timelock and false for the owner Safe; getMinDelay returned 86400. This path can replace native deposit and share-issuance constraints after the delay."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Tori strUSD staking and unstaking terms",
+          "url": "https://docs.tori.finance/products/strusd.md"
+        },
+        {
+          "label": "Tori canonical vault and CCIP deployments",
+          "url": "https://docs.tori.finance/resources/contracts.md"
+        },
+        {
+          "label": "Tori roles and timelock disclosure",
+          "url": "https://docs.tori.finance/security/roles.md"
+        },
+        {
+          "label": "Verified StakedTrUSD implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6561272e3ebc9f2e07cdb12b7c474db9132b977a"
+        },
+        {
+          "label": "Tori reserve ownership and holder-rights terms",
+          "url": "https://docs.tori.finance/legal/trusd-terms.md"
+        },
+        {
+          "label": "Pinned Ethereum block 26107706",
+          "url": "https://etherscan.io/block/26107706"
+        }
+      ],
+      "evidence": "At Ethereum block 26107706, the UUPS implementation is 0x6561272e3ebc9f2e07cdb12b7c474db9132b977a. The current timelock 0xa952453e39f77108ee37c1b92de593f1c59a6ef4 holds TIMELOCK_ADMIN_ROLE and has 86400-second minimum delay; the owner Safe is 3-of-5 with no enabled modules and zero guard slots. Admin cooldown, blacklist/seizure and reward loss-write-down powers are retained, not counted as bridge issuance.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable"
+    },
+    "upgradeability": {
+      "model": "uups",
+      "canChangeMintLogic": true,
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107706,
+      "sources": [
+        {
+          "label": "Tori strUSD staking and unstaking terms",
+          "url": "https://docs.tori.finance/products/strusd.md"
+        },
+        {
+          "label": "Tori canonical vault and CCIP deployments",
+          "url": "https://docs.tori.finance/resources/contracts.md"
+        },
+        {
+          "label": "Tori roles and timelock disclosure",
+          "url": "https://docs.tori.finance/security/roles.md"
+        },
+        {
+          "label": "Verified StakedTrUSD implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6561272e3ebc9f2e07cdb12b7c474db9132b977a"
+        },
+        {
+          "label": "Tori reserve ownership and holder-rights terms",
+          "url": "https://docs.tori.finance/legal/trusd-terms.md"
+        },
+        {
+          "label": "Pinned Ethereum block 26107706",
+          "url": "https://etherscan.io/block/26107706"
+        }
+      ],
+      "deploymentRefs": [
+        "ethereum:0x280839980a7ed0d7717f64125fe241012e5f5815"
+      ],
+      "proxyAddresses": [
+        "0x280839980a7ed0d7717f64125fe241012e5f5815"
+      ],
+      "implementationAddresses": [
+        "0x6561272e3ebc9f2e07cdb12b7c474db9132b977a"
+      ],
+      "adminAddresses": [
+        "0xa952453e39f77108ee37c1b92de593f1c59a6ef4"
+      ],
+      "delaySec": 86400,
+      "controlRef": "StakedTrUSD native UUPS timelock"
+    }
+  }
+}

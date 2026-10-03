@@ -1,0 +1,149 @@
+{
+  "id": "sirloinusdc-steakhouse",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "manual-review",
+    "summary": "sirloinUSDC user shares mint against deposited USDC; interest accrual can mint fee shares. Immutable core and owner/curator parameter powers do not create native USDC, whose issuance remains inherited.",
+    "inheritedFrom": "usdc-circle",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "immutable",
+      "deploymentRefs": [
+        "base:0xbeeff2490feffa212fac2f6553682c219e6a8845"
+      ],
+      "canChangeMintLogic": false,
+      "controlRef": "sirloinUSDC immutable VaultV2 share issuance",
+      "observedAt": "2026-10-02",
+      "observedBlock": 52095842,
+      "sources": [
+        {
+          "label": "Morpho exact Steakhouse High Yield USDC Edition deployment",
+          "url": "https://app.morpho.org/base/vault/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+        },
+        {
+          "label": "Exact verified VaultV2 source (base, 0xbeeff2490feffa212fac2f6553682c219e6a8845)",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=all"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "base",
+        "address": "0xbeeff2490feffa212fac2f6553682c219e6a8845",
+        "deploymentRefs": [
+          "base:0xbeeff2490feffa212fac2f6553682c219e6a8845"
+        ],
+        "label": "sirloinUSDC immutable VaultV2 share issuance",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 52095842,
+        "sources": [
+          {
+            "label": "Morpho exact Steakhouse High Yield USDC Edition deployment",
+            "url": "https://app.morpho.org/base/vault/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+          },
+          {
+            "label": "Exact verified VaultV2 source (base, 0xbeeff2490feffa212fac2f6553682c219e6a8845)",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=all"
+          }
+        ],
+        "evidence": "Exact verified VaultV2 enter() transfers deposited USDC before creating user shares; accrueInterest() may mint fee shares. Core has no upgrade entrypoint and EIP-1967 implementation slot was zero. Performance fee 25% of interest; management fee 0% at block 52095842."
+      },
+      {
+        "chain": "base",
+        "address": "0x639bfa26472906ccd40513408284a8ad292bc5d6",
+        "deploymentRefs": [
+          "base:0xbeeff2490feffa212fac2f6553682c219e6a8845"
+        ],
+        "label": "sirloinUSDC vault owner",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 52095842,
+        "sources": [
+          {
+            "label": "Morpho exact Steakhouse High Yield USDC Edition deployment",
+            "url": "https://app.morpho.org/base/vault/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+          },
+          {
+            "label": "Exact verified VaultV2 source (base, 0xbeeff2490feffa212fac2f6553682c219e6a8845)",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=all"
+          },
+          {
+            "label": "Morpho current vault identity and asset API",
+            "url": "https://api.morpho.org/graphql"
+          }
+        ],
+        "evidence": "owner() can replace curator and sentinels under the immutable core; owner internal authorization, key custody and signer independence remain unresolved."
+      },
+      {
+        "chain": "base",
+        "address": "0x827e86072b06674a077f592a531dce4590adecdb",
+        "deploymentRefs": [
+          "base:0xbeeff2490feffa212fac2f6553682c219e6a8845"
+        ],
+        "label": "sirloinUSDC curator",
+        "role": "cap-admin",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 52095842,
+        "sources": [
+          {
+            "label": "Morpho exact Steakhouse High Yield USDC Edition deployment",
+            "url": "https://app.morpho.org/base/vault/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+          },
+          {
+            "label": "Exact verified VaultV2 source (base, 0xbeeff2490feffa212fac2f6553682c219e6a8845)",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=all"
+          },
+          {
+            "label": "Morpho current vault identity and asset API",
+            "url": "https://api.morpho.org/graphql"
+          }
+        ],
+        "evidence": "curator() schedules adapter, allocation-cap, fee and gate changes. Allocation-cap increases were delayed 259200 seconds; both fee selectors had zero delay. User issuance remains asset-backed; fee governance can dilute shares. Ultimate controller authorization is not granted favorable credit."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Morpho exact Steakhouse High Yield USDC Edition deployment",
+          "url": "https://app.morpho.org/base/vault/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+        },
+        {
+          "label": "Exact verified VaultV2 source (base, 0xbeeff2490feffa212fac2f6553682c219e6a8845)",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=all"
+        },
+        {
+          "label": "Morpho current vault identity and asset API",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Steakhouse DeFi vault governing terms",
+          "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+        }
+      ],
+      "evidence": "Fixed-block state and matched exact VaultV2 source bound asset-backed mint, fee-share mint and burn/redeem at base block 52095842. Parent mint authority remains inherited. Owner/curator control addresses and selector delays are current; internal authorization closure receives no favorable assumption.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "Ultimate owner/curator authorization closure, signer independence and key-custody attestations are not established.",
+        "No independently signed exact-vault financial reconciliation or prudential supervision is established."
+      ]
+    }
+  }
+}

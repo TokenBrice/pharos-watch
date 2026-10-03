@@ -1,0 +1,211 @@
+{
+  "id": "mantrausd-mantra",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "inheritedFrom": "m-m0",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "Mantra USD inherits base M issuance and uses chain-local M-extension wrapping. Local proxy upgrades and operational role administration remain additional controls; public wM conversion is distinct from approved direct M output.",
+    "controls": [
+      {
+        "chain": "mantra",
+        "address": "0xafb3280b22d966c17ce62e8d06b9515bd91e155a",
+        "deploymentRefs": [
+          "mantra:0xd2b95283011e47257917770d28bb3ee44c849f6f"
+        ],
+        "label": "mantraUSD token ProxyAdmin owner",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 18531313,
+        "sources": [
+          {
+            "label": "Mantra USD product documentation (accessed 2026-10-02)",
+            "url": "https://mantrausd.com/"
+          },
+          {
+            "label": "Verified token implementation",
+            "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8"
+          },
+          {
+            "label": "Pinned mantra RPC at block 18531313",
+            "url": "https://evm.mantrachain.io"
+          },
+          {
+            "label": "M0 published platform deployments",
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
+          },
+          {
+            "label": "M0 liquidity routes and issuer onboarding",
+            "url": "https://docs.m0.org/build/accessing-liquidity"
+          }
+        ],
+        "evidence": "At block 18531313, token EIP-1967 admin is 0x13c1805d4f01370a5b05360c50d9defb3684a717, whose owner() returns 0xafb3280b22d966c17ce62e8d06b9515bd91e155a. eth_getCode(owner)=0x, so a direct EOA controls replacement of mint logic independently of the operational Safe.",
+        "canRaiseCap": true
+      },
+      {
+        "chain": "mantra",
+        "address": "0xb6807116b3b1b321a390594e31ecd6e0076f6278",
+        "deploymentRefs": [
+          "mantra:0xd2b95283011e47257917770d28bb3ee44c849f6f"
+        ],
+        "label": "mantraUSD local SwapFacility wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 18531313,
+        "sources": [
+          {
+            "label": "Mantra USD product documentation (accessed 2026-10-02)",
+            "url": "https://mantrausd.com/"
+          },
+          {
+            "label": "Verified token implementation",
+            "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8"
+          },
+          {
+            "label": "Pinned mantra RPC at block 18531313",
+            "url": "https://evm.mantrachain.io"
+          },
+          {
+            "label": "M0 published platform deployments",
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
+          },
+          {
+            "label": "M0 liquidity routes and issuer onboarding",
+            "url": "https://docs.m0.org/build/accessing-liquidity"
+          }
+        ],
+        "evidence": "Verified wrap transfers the parent M claim before minting child balances. The facility is the constructor-bound caller of wrap/unwrap; direct M input/output is approved-swapper-gated. The route does not create base M liabilities.",
+        "canRaiseCap": "unknown",
+        "capDescription": "Parent-token inventory gates the reviewed M wrapping path; upgradeable local logic and route permissioning are not immutable limits."
+      },
+      {
+        "chain": "mantra",
+        "address": "0x3b49208e7e831b29ea2e93fb09f315f414fd7343",
+        "deploymentRefs": [
+          "mantra:0xd2b95283011e47257917770d28bb3ee44c849f6f"
+        ],
+        "label": "mantraUSD operational DEFAULT_ADMIN Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 18531313,
+        "sources": [
+          {
+            "label": "Mantra USD product documentation (accessed 2026-10-02)",
+            "url": "https://mantrausd.com/"
+          },
+          {
+            "label": "Verified token implementation",
+            "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8"
+          },
+          {
+            "label": "Pinned mantra RPC at block 18531313",
+            "url": "https://evm.mantrachain.io"
+          },
+          {
+            "label": "M0 published platform deployments",
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
+          },
+          {
+            "label": "M0 liquidity routes and issuer onboarding",
+            "url": "https://docs.m0.org/build/accessing-liquidity"
+          }
+        ],
+        "evidence": "Fresh hasRole(DEFAULT_ADMIN_ROLE,Safe)=true. The Safe can grant/change the roles defined by the reviewed extension; the current MYieldToOne implementation conserves M through the SwapFacility. The direct ProxyAdmin EOA is a separate upgrade path.",
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 18531313,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true
+      }
+    ],
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "mantra:0xd2b95283011e47257917770d28bb3ee44c849f6f"
+      ],
+      "proxyAddresses": [
+        "0xd2b95283011e47257917770d28bb3ee44c849f6f"
+      ],
+      "implementationAddresses": [
+        "0x9d7a7b406568668e7943740f5b370c86e13dcca8"
+      ],
+      "adminAddresses": [
+        "0x13c1805d4f01370a5b05360c50d9defb3684a717"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "mantraUSD token ProxyAdmin owner",
+      "observedAt": "2026-10-02",
+      "observedBlock": 18531313,
+      "sources": [
+        {
+          "label": "Mantra USD product documentation (accessed 2026-10-02)",
+          "url": "https://mantrausd.com/"
+        },
+        {
+          "label": "Verified token implementation",
+          "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8"
+        },
+        {
+          "label": "Pinned mantra RPC at block 18531313",
+          "url": "https://evm.mantrachain.io"
+        },
+        {
+          "label": "M0 published platform deployments",
+          "url": "https://docs.m0.org/resources/addresses/m0-platform"
+        },
+        {
+          "label": "M0 liquidity routes and issuer onboarding",
+          "url": "https://docs.m0.org/build/accessing-liquidity"
+        }
+      ]
+    },
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "continuous",
+    "supervision": "unknown",
+    "review": {
+      "sources": [
+        {
+          "label": "Mantra USD product documentation (accessed 2026-10-02)",
+          "url": "https://mantrausd.com/"
+        },
+        {
+          "label": "Verified token implementation",
+          "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8"
+        },
+        {
+          "label": "Pinned mantra RPC at block 18531313",
+          "url": "https://evm.mantrachain.io"
+        },
+        {
+          "label": "M0 published platform deployments",
+          "url": "https://docs.m0.org/resources/addresses/m0-platform"
+        },
+        {
+          "label": "M0 liquidity routes and issuer onboarding",
+          "url": "https://docs.m0.org/build/accessing-liquidity"
+        }
+      ],
+      "evidence": "At mantra block 18531313, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 439,646.447844 M against 434,703.845695 mantraUSD supply. M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right. Local role/proxy reach is authored separately from inherited M authority and the parent bridge layer.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "Establish the EOA upgrade owner operational custody and any enforceable delay; no Safe protection is inferred for this path.",
+        "Enumerate operational Safe modules/guards and signer independence; resolve all local role holders and SwapFacility governance."
+      ]
+    }
+  }
+}

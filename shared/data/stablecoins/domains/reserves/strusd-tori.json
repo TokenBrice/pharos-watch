@@ -1,0 +1,100 @@
+{
+  "id": "strusd-tori",
+  "reserves": [
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0xd0580192e98ea6ceb9c7b6191ed2e27560911697",
+      "name": "trUSD held by StakedTrUSD",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "trusd-tori",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tori (BVI) Limited",
+      "riskFactors": [
+        "smart-contract",
+        "counterparty",
+        "liquidity"
+      ],
+      "liquidityHorizon": "seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Tori strUSD staking and unstaking terms",
+        "url": "https://docs.tori.finance/products/strusd.md"
+      },
+      {
+        "label": "Tori canonical vault and CCIP deployments",
+        "url": "https://docs.tori.finance/resources/contracts.md"
+      },
+      {
+        "label": "Tori roles and timelock disclosure",
+        "url": "https://docs.tori.finance/security/roles.md"
+      },
+      {
+        "label": "Verified StakedTrUSD implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6561272e3ebc9f2e07cdb12b7c474db9132b977a"
+      },
+      {
+        "label": "Tori reserve ownership and holder-rights terms",
+        "url": "https://docs.tori.finance/legal/trusd-terms.md"
+      },
+      {
+        "label": "Pinned Ethereum block 26107706",
+        "url": "https://etherscan.io/block/26107706"
+      }
+    ],
+    "rationale": "At Ethereum block 26107706, asset() returned tracked trUSD and totalSupply was 43340867.809940872216080268 shares. totalAssets was 44539660.969214475465229229 trUSD, equal to the separately read 44539892.811952570703324467 trUSD balance less 231.842738095238095238 unvested rewards. The immediate vault exposure is entirely trUSD; high legacy risk follows the parent synthetic strategy rather than duplicating its reserve percentages. Burned cooldown liabilities and their silo assets are separate from outstanding share accounting.",
+    "compositionBasis": "Exact ERC-4626 underlying-asset relationship and pinned balance/share reads",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Immediate parent identity is known. This review does not independently close parent reserves, offchain legal segregation, or stressed recovery.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Ethereum StakedTrUSD 0x280839980a7ed0d7717f64125fe241012e5f5815",
+        "role": "other",
+        "jurisdiction": "ethereum"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Tori strUSD staking and unstaking terms",
+        "url": "https://docs.tori.finance/products/strusd.md"
+      },
+      {
+        "label": "Tori canonical vault and CCIP deployments",
+        "url": "https://docs.tori.finance/resources/contracts.md"
+      },
+      {
+        "label": "Tori roles and timelock disclosure",
+        "url": "https://docs.tori.finance/security/roles.md"
+      },
+      {
+        "label": "Verified StakedTrUSD implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6561272e3ebc9f2e07cdb12b7c474db9132b977a"
+      },
+      {
+        "label": "Tori reserve ownership and holder-rights terms",
+        "url": "https://docs.tori.finance/legal/trusd-terms.md"
+      },
+      {
+        "label": "Pinned Ethereum block 26107706",
+        "url": "https://etherscan.io/block/26107706"
+      }
+    ],
+    "uncertainty": "Immediate trUSD is held in the vault and cooldown silo 0xf7c0d8853e69dcd37ee7599c6280d2632f3360b4; bridge units rely on the Ethereum CCIP pool. Parent offchain reserve institutions and enforceable insolvency protections remain unresolved. Restricted-holder funds can be redistributed or seized by the admin."
+  }
+}

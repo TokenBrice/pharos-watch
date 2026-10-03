@@ -1,0 +1,60 @@
+{
+  "id": "susdat-saturn",
+  "name": "Saturn sUSDat",
+  "symbol": "sUSDat",
+  "oneLiner": "sUSDat is Saturn's USDat-denominated credit vault, backed mainly by STRCon exposure to Strategy preferred shares and exited through a withdrawal queue.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "variantOf": "usdat-saturn",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "usdat-saturn",
+  "mechanismArchetype": "rwa-credit-fund",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "The native ERC-4626 receipt accepts USDat, but its current totalAssets includes a dominant STRCon position rather than preserving the cash-backed parent reserve. At Ethereum block 26108096, STRCon recognized value was 62,533,457.640130 USDat-equivalent out of 66,668,382.380280 totalAssets. Ondo identifies STRCon as Strategy Stretch Preferred exposure and its family documents describe structured notes issued by Ondo Global Markets (BVI) Limited. The local rwa-credit-fund override preserves preferred-equity, note-issuer and Saturn operational risks; it does not assert direct ownership, enforceable priority or a complete legal recovery claim. Missing exact terms remain unavailable, and no numerical rating is promised.",
+    "sources": [
+      { "label": "Saturn sUSDat vault overview", "url": "https://saturncredit.gitbook.io/saturn-docs/solution/susdat-overview.md" },
+      { "label": "Current Saturn V2 migration runbook", "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md" },
+      { "label": "Strategy Stretch Preferred tokenized note identity", "url": "https://app.ondo.finance/assets/strcon" },
+      { "label": "Ondo structured-note legal framework", "url": "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md" },
+      { "label": "Ethereum block 26108096", "url": "https://etherscan.io/block/26108096" }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "geckoId": "saturn-susdat",
+  "collateral": "Ethereum vault-held STRCon structured notes tracking Strategy Stretch Preferred (STRC), plus a USDat liquidity buffer. At block 26108096 the observed NAV mix was 93.797773% STRCon recognized value and 6.202227% USDat; the legacy STRC mirror recognized zero. STRCon is an Ondo note, not direct ownership of Strategy shares. Exact Saturn gift, seniority, legal recovery and whole-book independent reconciliation remain unverified.",
+  "pegMechanism": "USDat deposits mint ERC-4626 shares priced from USDat accounting balances and STRCon recognized value. Credit dividends and vested surplus can increase the share exchange rate, while preferred-share losses can reduce it. Holders request queued USDat redemption and receive an NFT; an operator processes requests using available USDat and STRCon unwind proceeds before the holder claims. Current V2 Elevated mode charges 25 bps deposits and 50 bps processed redemptions, superseding older 10 bps documentation. Processing time and full stressed capacity are undisclosed. Exact Ethereum Curve trading provides a separate, depth-limited USDC exit; neither route guarantees par or immediate whole-position liquidity.",
+  "links": [
+    { "label": "Website", "url": "https://saturn.credit/" },
+    { "label": "Docs", "url": "https://saturncredit.gitbook.io/saturn-docs/solution/susdat-overview.md" },
+    { "label": "App", "url": "https://app.saturn.credit/" },
+    { "label": "Current implementation and migration runbook", "url": "https://github.com/saturn-organization/saturn-yield-dollar" },
+    { "label": "Official deployments", "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md" },
+    { "label": "STRCon product", "url": "https://app.ondo.finance/assets/strcon" },
+    { "label": "Terms and restrictions", "url": "https://saturn.credit/legal/terms-conditions" }
+  ],
+  "jurisdiction": { "country": "British Virgin Islands" },
+  "contracts": [
+    { "chain": "ethereum", "address": "0xd166337499e176bbc38a1fbd113ab144e5bd2df7", "decimals": 18 },
+    { "chain": "bsc", "address": "0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25", "decimals": 18 },
+    { "chain": "monad", "address": "0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25", "decimals": 18 }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "yieldConfig": { "yieldSource": "STRCon/Strategy preferred-credit dividends recognized in Saturn vault NAV", "yieldType": "nav-appreciation" },
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Preferred-credit exposure and incomplete recovery evidence",
+      "message": "Most vault NAV is STRCon, an Ondo structured note tracking Strategy preferred shares. Cash-backed USDat is only a liquidity buffer. Exact note terms, Saturn holder priority and executed recovery arrangements have not been verified; on-chain holdings do not establish legal ownership or independent financial assurance. Queued redemption depends on operator processing and realizable liquidity, with no verified maximum delay."
+    }
+  ]
+}

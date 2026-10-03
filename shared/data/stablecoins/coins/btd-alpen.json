@@ -1,0 +1,47 @@
+{
+  "id": "btd-alpen",
+  "name": "Alpen Bitcoin Dollar",
+  "symbol": "BTD",
+  "oneLiner": "BTD is Alpen’s planned BTC-only dollar debt token built from Liquity V2, with deployed oracle, bridge and liquidation details unverified.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "decentralized"
+  },
+  "collateral": "Pre-launch: BTC is the sole announced collateral for an overcollateralized Liquity V2-derived debt system on Alpen’s Bitcoin ZK rollup. No deployed collateral/liability ratio, reserve conservation or liquidation/backstop capacity is established.",
+  "pegMechanism": "Planned collateralized debt position system: deposit BTC, choose a borrower interest rate and mint BTD. Alpen proposes immutable contracts, no governance and BTC/USD oracle providers fixed at deployment. Exact redemption, liquidation, bad-debt and shutdown rules and oracle/bridge controls remain unverified; BOLD parameters are not inherited as facts.",
+  "mechanismArchetype": "cdp",
+  "infrastructures": [
+    "liquity-v2"
+  ],
+  "custodyModel": "unknown",
+  "links": [
+    {
+      "label": "Announcement",
+      "url": "https://www.alpen.org/blog/bitcoin-dollar"
+    },
+    {
+      "label": "2025 development recap",
+      "url": "https://www.alpen.org/blog/inside-alpens-2025"
+    }
+  ],
+  "status": "pre-launch",
+  "announcedDate": "2025-05-08",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "Alpen announced BTD on May 8, 2025 as a BTC-only Liquity V2-derived stablecoin intended for immutable deployment on its Bitcoin ZK rollup. Its January 5, 2026 recap reiterates the deposit-BTC, set-interest, mint-BTD design and reports platform testnets; these do not establish a BTD production deployment or token audit. No issuer-stated dated BTD launch window or official token contract is established.",
+  "milestones": [
+    {
+      "date": "2025-05-08",
+      "type": "announcement",
+      "title": "Alpen announces Bitcoin Dollar built from Liquity V2",
+      "sourceUrl": "https://www.alpen.org/blog/bitcoin-dollar",
+      "description": "BTC-only collateral, no governance and immutable code are announced design goals, not verified deployed controls."
+    },
+    {
+      "date": "2026-01-05",
+      "type": "milestone",
+      "title": "Alpen recap reiterates BTD design and platform testnets",
+      "sourceUrl": "https://www.alpen.org/blog/inside-alpens-2025",
+      "description": "The recap describes the intended borrowing flow; platform testnets and infrastructure audits do not confirm a BTD token launch."
+    }
+  ]
+}

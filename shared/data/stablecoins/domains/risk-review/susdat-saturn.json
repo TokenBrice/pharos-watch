@@ -1,0 +1,220 @@
+{
+  "id": "susdat-saturn",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "sources": [
+      { "label": "Verified deployed StakedUSDat blacklist/enforcement source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b7074cf6681382b70e239063931ebe83c0f4e0a" },
+      { "label": "SaturnOFT representation restrictions and recovery", "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol" },
+      { "label": "Saturn terms explicitly name sUSDat seizure", "url": "https://saturn.credit/legal/terms-conditions" }
+    ],
+    "evidence": "At Ethereum block 26108096 the implementation remained 0x2b7074cf6681382b70e239063931ebe83c0f4e0a. Its verified code has BLACKLISTER_ROLE, ENFORCER_ROLE, native blacklist checks, inherited USDat freeze checks and a seize function moving shares from blacklisted holders. Saturn's terms section 9 explicitly acknowledges a seize mechanism in USDat and sUSDat. BNB and Monad SaturnOFT representations enforce restricted transfers and DEFAULT_ADMIN_ROLE recoverFunds; allowlistMode() returned 1 on both at blocks 125385350 and 110032586. These are direct holder-control powers, not an inference from mint roles or centralized governance."
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "The native share rate includes STRConModule recognized value; its deployed pricing and parameter authority is material to NAV and queued redemption. The V2 runbook identifies a guarded STRCon oracle, but this addition does not establish the complete current feed freshness, replacement authority and fail-closed inventory. No borrower liquidation branches or independently assured asset valuation are inferred.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "limited",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "rationale": "Verified totalAssets sums USDat, vested surplus and STRConModule recognized value in a vault share rate. This is a top-level NAV authority, not a borrower collateral liquidation market.",
+      "sources": [
+        { "label": "Deployed vault totalAssets formula", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b7074cf6681382b70e239063931ebe83c0f4e0a" }
+      ]
+    },
+    "sources": [
+      { "label": "Saturn V2 oracle identity and configured guards", "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md" },
+      { "label": "Verified deployed STRCon module", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c0f0b502aa7c2ed85620f7f52b8efb8049b1ecf" },
+      { "label": "Ethereum block 26108096", "url": "https://etherscan.io/block/26108096" }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "Ethereum is the native sUSDat ERC-4626 liability with a CCIP LockRelease pool. BNB and Monad are CCIP BurnWithFromMint representations, not additional independent vault supply. Current exact pool/token pairs and destination pool mint/burn membership are verified. Representation upgrades/default administration use a two-day Saturn timelock. Full peers, rate limits, role census and validation/controller closure remain unresolved; no destination supplies are summed into native supply.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      { "label": "Chainlink exact sUSDat directory", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" },
+      { "label": "Saturn official token addresses", "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md" },
+      { "label": "Saturn representation role-gated mint/burn and recovery source", "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol" }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+        "protocol": "Saturn native ERC-4626 vault / CCIP LockRelease home",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26108096,
+        "reviewNote": "asset() is USDat and decimals() is 18. Exact CCIP pool 0xf3fc7fde5081192177f38895e57a1489e4bd56f2 returns this token and LockReleaseTokenPool 1.6.1. Its owner is 0x44835bbba9d40deda9b64858095ecfb2693c9449; escrow is a bridge custody rail, not another native issuer.",
+        "sources": [
+          { "label": "Official sUSDat CCIP home pool", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" },
+          { "label": "Ethereum observation block", "url": "https://etherscan.io/block/26108096" }
+        ]
+      },
+      {
+        "id": "bsc:0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25",
+        "sourceChain": "ethereum",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25",
+        "protocol": "Chainlink CCIP BurnWithFromMintTokenPool 1.6.1",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "bsc",
+        "controllerAddress": "0xe2f5aeff1c065fac95e7f48ba854470d41b66b7c",
+        "observedAt": "2026-10-03",
+        "observedBlock": 125385528,
+        "reviewNote": "The official directory and pool getToken bind this 18-decimal sUSDat representation. At block 125385528 the pool held MINTER_ROLE and BURNER_ROLE and returned BurnWithFromMintTokenPool 1.6.1. A prior historical-state read failed and was retried at a fresh pin; failure was not treated as zero supply or absent authority.",
+        "sources": [
+          { "label": "Official exact sUSDat BNB pool", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" },
+          { "label": "BNB sUSDat representation", "url": "https://bscscan.com/address/0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25" }
+        ]
+      },
+      {
+        "id": "monad:0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25",
+        "sourceChain": "ethereum",
+        "destinationChain": "monad",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25",
+        "protocol": "Chainlink CCIP BurnWithFromMintTokenPool 1.6.1",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "monad",
+        "controllerAddress": "0x2768f0d350ac6876e5d056317ccf394ecd5d7c5e",
+        "observedAt": "2026-10-03",
+        "observedBlock": 110032851,
+        "reviewNote": "The official directory and pool getToken bind this 18-decimal sUSDat representation. At block 110032851 the pool held MINTER_ROLE and BURNER_ROLE and returned BurnWithFromMintTokenPool 1.6.1. Its owner was 0x0c43bb1a15a1ff1cbddff2b8f9518c1b0d3b17e2; complete owner key custody and peer/rate-limit closure are unverified.",
+        "sources": [
+          { "label": "Official exact sUSDat Monad pool", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" },
+          { "label": "Monad sUSDat representation", "url": "https://monadscan.com/address/0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25" }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "susdat-ethereum-ccip-lockbox",
+        "label": "sUSDat Ethereum CCIP lock/release pool",
+        "routeRefs": ["ethereum:0xd166337499e176bbc38a1fbd113ab144e5bd2df7"],
+        "capabilities": ["escrow"],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xf3fc7fde5081192177f38895e57a1489e4bd56f2",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26108096,
+        "sources": [{ "label": "Exact sUSDat CCIP directory", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" }],
+        "evidence": "getToken() returned native sUSDat, typeAndVersion() returned LockReleaseTokenPool 1.6.1 and owner() returned 0x44835bbba9d40deda9b64858095ecfb2693c9449 at block 26108096. Current peer/rate-limit and owner authority closure were not enumerated."
+      },
+      {
+        "id": "susdat-bsc-ccip-pool",
+        "label": "sUSDat BNB CCIP representation mint/burn pool",
+        "routeRefs": ["bsc:0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"],
+        "capabilities": ["bridge-mint", "bridge-burn"],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xe2f5aeff1c065fac95e7f48ba854470d41b66b7c",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 125385528,
+        "sources": [{ "label": "Exact sUSDat CCIP directory", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" }],
+        "evidence": "The representation returned true for pool MINTER_ROLE and BURNER_ROLE membership; pool getToken() returned this exact representation, typeAndVersion() was BurnWithFromMintTokenPool 1.6.1 and owner() was 0x950350b073956bd1d22bb1c18c4d45263b5aa3a5 at block 125385528. No sole-role-holder or full controller closure claim is made."
+      },
+      {
+        "id": "susdat-monad-ccip-pool",
+        "label": "sUSDat Monad CCIP representation mint/burn pool",
+        "routeRefs": ["monad:0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"],
+        "capabilities": ["bridge-mint", "bridge-burn"],
+        "controllerChain": "monad",
+        "controllerAddress": "0x2768f0d350ac6876e5d056317ccf394ecd5d7c5e",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 110032851,
+        "sources": [{ "label": "Exact sUSDat CCIP directory", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" }],
+        "evidence": "The representation returned true for pool MINTER_ROLE and BURNER_ROLE membership; pool getToken() returned this exact representation, typeAndVersion() was BurnWithFromMintTokenPool 1.6.1 and owner() was 0x0c43bb1a15a1ff1cbddff2b8f9518c1b0d3b17e2 at block 110032851. No sole-role-holder or full controller closure claim is made."
+      },
+      {
+        "id": "susdat-bsc-representation-admin",
+        "label": "sUSDat BNB two-day representation admin timelock",
+        "routeRefs": ["bsc:0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"],
+        "capabilities": ["upgrade", "admin"],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xf0237a1cb794ea830129966049ef99243082ff0c",
+        "authorityType": "timelock",
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 125386141,
+        "sources": [
+          { "label": "Saturn representation source", "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol" },
+          { "label": "BNB representation proxy", "url": "https://bscscan.com/address/0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25" }
+        ],
+        "evidence": "The EIP-1967 admin slot returned ProxyAdmin 0x158828e0476f6e52bdcb35f7c141b19ce9455f8e, whose owner() was this timelock. Token DEFAULT_ADMIN_ROLE membership was true and getMinDelay() returned 172800 seconds at block 125386141. Full proposer/executor and additional admin census remain unknown."
+      },
+      {
+        "id": "susdat-monad-representation-admin",
+        "label": "sUSDat Monad two-day representation admin timelock",
+        "routeRefs": ["monad:0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"],
+        "capabilities": ["upgrade", "admin"],
+        "controllerChain": "monad",
+        "controllerAddress": "0xf0237a1cb794ea830129966049ef99243082ff0c",
+        "authorityType": "timelock",
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 110033773,
+        "sources": [
+          { "label": "Saturn representation source", "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol" },
+          { "label": "Monad representation proxy", "url": "https://monadscan.com/address/0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25" }
+        ],
+        "evidence": "The EIP-1967 admin slot returned ProxyAdmin 0x158828e0476f6e52bdcb35f7c141b19ce9455f8e, whose owner() was this timelock. Token DEFAULT_ADMIN_ROLE membership was true and getMinDelay() returned 172800 seconds at block 110033773. Full proposer/executor and additional admin census remain unknown."
+      }
+    ],
+    "scopedQuestions": [
+      {
+        "controlRef": "susdat-ethereum-ccip-lockbox",
+        "question": "What complete current peer, rate-limit, owner and validator inventory constrains the canonical sUSDat escrow and both representation pools?",
+        "reviewedAt": "2026-10-03",
+        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "sources": [{ "label": "Exact sUSDat CCIP directory", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" }]
+      },
+      {
+        "controlRef": "susdat-bsc-representation-admin",
+        "question": "What is the complete current destination admin/proposer/executor census, including alternate representation mint authorities and emergency bypasses?",
+        "reviewedAt": "2026-10-03",
+        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "sources": [{ "label": "Representation source and admin roles", "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol" }]
+      },
+      {
+        "controlRef": "susdat-monad-representation-admin",
+        "question": "What is the complete current Monad admin/proposer/executor census, including alternate representation mint authorities and emergency bypasses?",
+        "reviewedAt": "2026-10-03",
+        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "sources": [{ "label": "Representation source and admin roles", "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol" }]
+      }
+    ]
+  }
+}

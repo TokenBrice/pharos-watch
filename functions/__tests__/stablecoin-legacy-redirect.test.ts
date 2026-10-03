@@ -68,7 +68,7 @@ describe("stablecoin legacy redirects", () => {
     expect(ctx.assetsFetch).toHaveBeenCalledWith(request);
   });
 
-  it.each(["999999", "411"])("passes unreviewed numeric stablecoin %s through to static 404 handling", async (id) => {
+  it.each(["999999", "999998"])("passes unreviewed numeric stablecoin %s through to static 404 handling", async (id) => {
     const request = new Request(`https://pharos.watch/stablecoin/${id}/`);
     const ctx = makeContext(request);
     ctx.assetsFetch.mockResolvedValueOnce(new Response("not found", { status: 404 }));
