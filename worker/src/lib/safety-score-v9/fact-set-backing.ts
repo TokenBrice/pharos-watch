@@ -463,6 +463,13 @@ function assertCompatibleReserveClassification(
   }
 }
 
+/**
+ * Admitted reserve weights summing to within this of 1 are complete: the gap is
+ * float accumulation (e.g. 0.7 + 0.2 + 0.1), not an unidentified holding. Equal
+ * to the fact schema's whole-asset denominator conservation tolerance.
+ */
+const RESERVE_DENOMINATOR_FLOAT_TOLERANCE = 1e-9;
+
 export function buildReserves(context: AssetBuildContext): {
   reserveStatus: V9FactStatusV2;
   reserveExposures: V9ReserveExposureFactV2[];
@@ -665,6 +672,11 @@ export function buildReserves(context: AssetBuildContext): {
     envelopeEvidenceIds.push(...evidenceIds);
     const liquidityHorizon = classification?.liquidityHorizon ?? raw.liquidityHorizon ?? null;
     const maturityDaysMax = classification?.maturityDaysMax ?? raw.maturityDaysMax ?? null;
+    // Maturity is scoring-not-applicable for policy-listed classes (the evaluator
+    // already scores it so); publish that applicability instead of a U gap no
+    // research could close. Stale envelopes keep their freshness gap.
+    const maturityNotApplicable = assetClass !== null && status.observationState !== "stale" &&
+      V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.maturityNotApplicableClasses.includes(assetClass);
     const factorStatuses: NonNullable<V9ReserveExposureFactV2["factorStatuses"]> = {};
     for (const [factorKey, requiredDatum, missing] of [
       ["assetClass", "assetClass", assetClass === null],
@@ -672,6 +684,14 @@ export function buildReserves(context: AssetBuildContext): {
       ["maturity", "maturityDaysMax", maturityDaysMax === null],
       ["obligorConcentration", "issuerOrObligorKey", issuerOrObligorKey === null],
     ] as const) {
+      if (factorKey === "maturity" && maturityNotApplicable) {
+        factorStatuses.maturity = createV9FactStatus({
+          applicability: notApplicableV9Fact("v9.backing.reserve-classification",
+            `Maturity is scoring-not-applicable for the admitted ${assetClass} reserve class.`),
+          observationState: "known", evidenceRefIds: evidenceIds,
+        });
+        continue;
+      }
       factorStatuses[factorKey] = missing || status.observationState === "stale"
         ? missingLocalFact(context, {
             componentKey: `reserve:${exposureKey}:${factorKey}`, reasonCode: "material-reserve-slice-unstructured",
@@ -739,7 +759,7 @@ export function buildReserves(context: AssetBuildContext): {
     reconciliationRow.weight -= excess;
     admittedWeight = 1;
   }
-  if (admittedWeight < 1) {
+  if (1 - admittedWeight > RESERVE_DENOMINATOR_FLOAT_TOLERANCE) {
     const tail = missingLocalFact(context, {
       componentKey: "reserve-residual:unidentified", reasonCode: "partial-reserve-review", ownerDomain: "backing",
       responsibility: "unresearched", policyRuleId: "v9.backing.reserve-composition",

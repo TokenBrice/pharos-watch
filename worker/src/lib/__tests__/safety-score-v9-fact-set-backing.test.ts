@@ -212,14 +212,17 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
     }
   });
 
-  it("does not hide unknown reserve factors behind a known whole row", () => {
+  function compileSingleReserve(row: Partial<ReserveSlice>) {
     const fixed = makeV9FixedInput({ reserves: [{
-      sourceKey: "fixture:cash", name: "Cash", pct: 100, risk: "very-low", assetClass: "cash",
-      liquidityHorizon: "unknown", issuerOrObligor: "custodian:alpha",
+      sourceKey: "fixture:holding", name: "Holding", pct: 100, risk: "very-low", issuerOrObligor: "custodian:alpha", ...row,
     }] });
-    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, makeV9Extension({
+    return compileSafetyScoreV9FactSetFromFixedInput(fixed, makeV9Extension({
       registryFingerprint: fixed.registryFingerprint,
     })).assets[0]!;
+  }
+
+  it("does not hide unknown reserve factors behind a known whole row", () => {
+    const asset = compileSingleReserve({ assetClass: "bank-deposit", liquidityHorizon: "unknown" });
     const exposure = asset.reserveExposures[0]!;
     expect(exposure.status.observationState).toBe("known");
     for (const [factorKey, requiredDatum] of [["liquidity", "liquidityHorizon"], ["maturity", "maturityDaysMax"]] as const) {
@@ -232,6 +235,39 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
     expect(asset.reserveResiduals).toEqual([]);
     expect(exposure.weight).toBe(1);
   });
+
+  it.each(V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.maturityNotApplicableClasses)(
+    "publishes maturity as not-applicable, not a researchable gap, for admitted %s reserves", (assetClass) => {
+      const asset = compileSingleReserve({ assetClass, liquidityHorizon: "immediate" });
+      const exposure = asset.reserveExposures[0]!;
+      expect(exposure.factorStatuses!.maturity).toMatchObject({
+        observationState: "known", gapIds: [], applicability: { state: "not-applicable" },
+      });
+      expect(asset.gaps.filter((gap) => gap.causeScope?.requiredDatum === "maturityDaysMax")).toEqual([]);
+      expect(V9AssetFactsV3Schema.safeParse(asset).success).toBe(true);
+      // The policy still scores the factor at its best rung, so it remains an included contribution.
+      const backing = evaluateV9ReserveExposures({ ...asset, resolvedUpstreamExposures: [] }, V9_CANDIDATE_POLICY_V1);
+      const factor = backing.contributions.find(entry => entry.componentKey === `reserve:${exposure.exposureKey}`)!
+        .factors!.find(entry => entry.componentKey === `reserve:${exposure.exposureKey}:maturity`)!;
+      expect(factor).toMatchObject({ cause: null, causeGapIds: [], scoringDisposition: "included" });
+      expect(factor.score).toBeGreaterThan(0);
+      expect(factor.effectiveScoringWeight).toBeGreaterThan(0);
+    });
+
+  it.each([
+    { label: "maturity-applicable class", assetClass: "bank-deposit" as const },
+    { label: "unadmitted class", assetClass: undefined },
+  ])("keeps the unknown maturity gap for a $label", ({ assetClass }) => {
+    const asset = compileSingleReserve({ ...(assetClass === undefined ? {} : { assetClass }), liquidityHorizon: "immediate" });
+    const exposure = asset.reserveExposures[0]!;
+    expect(exposure.assetClass).toBe(assetClass ?? null);
+    const status = exposure.factorStatuses!.maturity!;
+    expect(status.applicability.state).toBe("required");
+    const gap = asset.gaps.find((row) => row.gapId === status.gapIds[0])!;
+    expect(gap.causeProof.cause).toBe("U");
+    expect(gap.causeScope).toMatchObject({ factorKey: "maturity", requiredDatum: "maturityDaysMax" });
+  });
+
   function compileLivePartition(rows: ReserveSlice[]) {
     const fixed = makeV9FixedInput({ assetId: ASSET_ID, clockSec: NO_HISTORY_CLOCK_SEC, reserves: rows });
     const extension = buildSafetyScoreV9BaselineExtension(fixed, {
@@ -280,20 +316,28 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
   });
 
 
-  it("retains a sub-microfraction rounding remainder without erasing identified holdings", () => {
-    const fixed = makeV9FixedInput({ reserves: [{
-      sourceKey: "fixture:cash", name: "Cash", pct: 99.999999, risk: "very-low", assetClass: "cash",
-      liquidityHorizon: "immediate", issuerOrObligor: "custodian:alpha", maturityDaysMax: 0,
-    }] });
-    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, makeV9Extension({
-      registryFingerprint: fixed.registryFingerprint,
-    })).assets[0]!;
-    expect(asset.reserveExposures[0]!.weight).toBeCloseTo(0.99999999, 12);
-    expect(asset.reserveResiduals[0]!.weight).toBeCloseTo(0.00000001, 12);
+  it.each([
+    { pct: 99.9999, remainder: 1e-6 },
+    { pct: 99.999999, remainder: 1e-8 },
+  ])("retains a genuine $remainder rounding remainder without erasing identified holdings", ({ pct, remainder }) => {
+    const asset = compileSingleReserve({ name: "Cash", pct, assetClass: "cash", liquidityHorizon: "immediate", maturityDaysMax: 0 });
+    expect(asset.reserveExposures[0]!.weight).toBeCloseTo(1 - remainder, 12);
+    expect(asset.reserveResiduals[0]!.weight).toBeCloseTo(remainder, 12);
     expect(asset.reserveExposures[0]!.weight + asset.reserveResiduals[0]!.weight).toBe(1);
     const gap = asset.gaps.find((row) => row.gapId === asset.reserveResiduals[0]!.status.gapIds[0])!;
     expect(gap.causeProof.cause).toBe("U");
     expect(gap.causeScope?.requiredDatum).toBe("reserveCompositionRemainder");
+  });
+
+  it("treats a float-accumulation shortfall as a complete composition, not an unidentified remainder", () => {
+    const asset = compileSingleReserve({ name: "Cash", pct: 99.99999999999999, assetClass: "cash", liquidityHorizon: "immediate" });
+    const dust = 1 - asset.reserveExposures[0]!.weight;
+    expect(dust).toBeGreaterThan(0);
+    expect(dust).toBeLessThan(1e-15);
+    expect(asset.reserveResiduals).toEqual([]);
+    expect(asset.gaps.filter((gap) => gap.causeScope?.requiredDatum === "reserveCompositionRemainder")).toEqual([]);
+    expect(asset.reserveStatus).toMatchObject({ observationState: "known", gapIds: [] });
+    expect(V9AssetFactsV3Schema.safeParse(asset).success).toBe(true);
   });
 
   it.each([false, true])("uses only the admitted envelope for an all-unknown tail when live=%s", (withLive) => {

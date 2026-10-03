@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V10: readonly MethodologyChangelogEntry[] = [
   {
+    version: "10.03",
+    title: "No unresearched facts for inapplicable maturity or float dust",
+    date: "2026-10-04",
+    effectiveAt: 1791115200,
+    summary:
+      "Safety Score v10.03 stops publishing two compiler artifacts as unresearched (U) evidence facts that no research could close: maturity gaps on reserve classes the policy already scores as maturity-not-applicable, and whole-asset remainders that are only floating-point accumulation dust. No card score, grade or rating status changes on the replayed production capture; the unresearched fact count falls by 599.",
+    impact: [
+      "Maturity on an admitted, current reserve row whose class is in the policy's maturityNotApplicableClasses compiles as a known not-applicable fact instead of a U material-reserve-slice-unstructured gap on maturityDaysMax. The factor still scores at the policy's 100 rung and publishes as an included contribution, so backing arithmetic is unchanged. Unadmitted classes, maturity-applicable classes and stale envelopes keep their existing gaps.",
+      "Admitted reserve weights that fall short of the whole-asset denominator by at most 1e-9, the fact schema's conservation tolerance, are complete. Machine-precision shortfalls such as 0.9999999999999999 no longer create a U partial-reserve-review reserveCompositionRemainder tail; genuine shortfalls above the tolerance, including the 1e-8 rounding remainder, keep it.",
+      "Release impact on the 2026-10-03 21:46:42 UTC capture (clockSec 1791064002, 396 cards): no card score, grade or rating status changes, and no grade flips. 574 maturity gaps on cash, stablecoin, cryptoasset, hedged-crypto, protocol-position and commodity-allocated rows and 25 dust remainders on 25 assets leave the published unresearched responsibility, which falls from 3957 to 3358 facts across 206 cards. Removing the dust rows moves four full-precision Backing pillar values by less than 1e-11 (fpi-frax, frax-frax, jpyt-dephaser, usdo-openeden) without changing any published score.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "10.02",
     title: "Governed unbounded issuance and uniform D14",
     date: "2026-10-03",

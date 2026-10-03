@@ -30,7 +30,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
-      "sha256": "49c7c7e5ac1ea95b53b922d1f592788ed80b2053c5f65e9c1e867033481634ac"
+      "sha256": "93aa3a44bbab685f9196c5f213e5bc49cb0975b70411316122b442e97fa88c01"
     },
     {
       "path": "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
@@ -106,7 +106,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/methodology-versions/current-version.json",
-      "sha256": "717a47565e66a9629a2c3ce3c582f1f7c840d35c063e48359ab1e456d6c6549a"
+      "sha256": "6ddd5ca8995221ac8b3d29722dd873891bffa3a360b875a8c7d0e7d6cfff7d25"
     },
     {
       "path": "shared/lib/p4-exit-route-amm-simulation.ts",
@@ -290,7 +290,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/backing.ts",
-      "sha256": "4bfe945676bfd9faf4a27f4c61a989cb828fa736d139a3485f188b8ec85ab436"
+      "sha256": "c66b3cf435580fc9e7566109e2ac1c02d6e107bbbd8511a94cdeb5293252f80e"
     },
     {
       "path": "shared/lib/safety-score-v9/compile.ts",
@@ -750,7 +750,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-backing.ts",
-      "sha256": "7bf5bf6100b1989357b1e64fac173da92059b00fa9bdd32df6cc49b573f7b7aa"
+      "sha256": "2e4392630bfca8b00eae223e03528b30dc0b78a04c2b8c4cef967232cac4a29c"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-boundary.ts",
@@ -843,7 +843,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-03-block-26110811-shock-coverage.json.gz"
     }
   ],
-  "digest": "dd06d15685c86f5611a6acf711df57631df05a0b1f77faf169889c960e6f363b"
+  "digest": "5fa113664f5c5fb8129b5618a539013297ebf0171fd18a8eae3c65272fc78f39"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

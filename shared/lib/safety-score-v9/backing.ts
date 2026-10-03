@@ -199,7 +199,11 @@ function scoreV9ReserveExposureClassification(
   const traces: V9BackingFactorContribution[] = [];
   for (const factor of factors) {
     const status = exposure.factorStatuses?.[factor.key] ?? exposure.status;
-    const attribution = v9BackingStatusCause(status, index, factor.missing && factor.coveredShare < 1);
+    // A datum the policy marks not-applicable (maturity of cash-like classes) is
+    // still scored at its policy rung, so it contributes as an included factor.
+    const attribution = status.applicability.state === "not-applicable" && !factor.missing
+      ? { cause: null, causeGapIds: [] as readonly string[], scoringDisposition: "included" as const }
+      : v9BackingStatusCause(status, index, factor.missing && factor.coveredShare < 1);
     const excluded = attribution.cause === "A" || attribution.cause === "B";
     const coverage = factor.missing ? factor.coveredShare : 0;
     const remainingShare = 1 - coverage;
