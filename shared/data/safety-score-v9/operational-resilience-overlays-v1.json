@@ -3944,6 +3944,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "susdai-usd-ai",
+      "reviewedAt": "2026-10-03T22:47:55Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "W1R19 primary-source research",
+      "notes": "Dated exact-token operating evidence establishes only a lower bound of live history. No independently verified continuity, redemption throughput, reserve reconciliation or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Private beta: participants can mint USDai and sUSDai on Arbitrum",
+          "publisher": "USD.AI",
+          "publishedAt": "2025-06-10",
+          "url": "https://usd.ai/insights/private-beta-is-live",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 15,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdai-usd-ai",
+      "reviewedAt": "2026-10-03T22:47:55Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "W1R19 primary-source research",
+      "notes": "Dated exact-token operating evidence establishes only a lower bound of live history. No independently verified continuity, redemption throughput, reserve reconciliation or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Private beta: participants can mint USDai and sUSDai on Arbitrum",
+          "publisher": "USD.AI",
+          "publishedAt": "2025-06-10",
+          "url": "https://usd.ai/insights/private-beta-is-live",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 15,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "moveusd-cfx",
+      "reviewedAt": "2026-10-03T22:47:55Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "W1R19 primary-source research",
+      "notes": "Dated exact-token operating evidence establishes only a lower bound of live history. No independently verified continuity, redemption throughput, reserve reconciliation or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "CFX exact MoveUSD launch and early institutional availability",
+          "publisher": "CFX",
+          "publishedAt": "2025-04-01",
+          "url": "https://www.prnewswire.com/news-releases/cfx-launches-moveusd-enhancing-us-dollar-competitiveness-with-the-first-instant-transfer-bank-integrated-global-settlement-network-302416929.html",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 18,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "pathusd-bridge",
+      "reviewedAt": "2026-10-03T22:47:55Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "W1R19 primary-source research",
+      "notes": "Dated exact-token operating evidence establishes only a lower bound of live history. No independently verified continuity, redemption throughput, reserve reconciliation or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Dated pathUSD circulating liabilities and reserves observation",
+          "publisher": "Bridge",
+          "publishedAt": "2026-10-03",
+          "url": "https://transparency.bridge.xyz/v0/stablecoins/path_usd",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 0,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

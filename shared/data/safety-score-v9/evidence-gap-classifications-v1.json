@@ -8483,6 +8483,464 @@
           "assertion": "Public proportional ratio/penalty formula is disclosed, but no captured same-notional stress-bound evaluation is available. Current reviewed-variable-cost schema does not encode this formula as a numerical fee bound; W15 permits B for disclosed unquantified fees."
         }
       ]
+    },
+    {
+      "id": "uw-susdai-usd-ai-e8118e1b3aee991c",
+      "assetId": "susdai-usd-ai",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:susdai-usd-ai:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
+      "sources": [
+        {
+          "url": "https://docs.usd.ai/depositor/susdai.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": null,
+          "location": "Queue Processing and Critical Constraints",
+          "excerpt": "Unfulfilled requests carry to the next 30-day epoch",
+          "assertion": "FIFO may roll over indefinitely; 30 days is an epoch, not final settlement maximum."
+        },
+        {
+          "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": "2026-09-25",
+          "location": "Nature of Holder Rights",
+          "excerpt": "or a guaranteed return, redemption date, exchange rate, or market price.",
+          "assertion": "Terms do not promise a final completion maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
+        "https://docs.usd.ai/depositor/susdai.md",
+        "https://docs.usd.ai/depositor/susdai/susdai-withdrawal-estimates.md",
+        "https://docs.usd.ai/technical-overview/technical-protocol-overview.md",
+        "https://docs.usd.ai/borrower/onchain-offchain-interplay.md",
+        "https://docs.usd.ai/usdai/proof-of-loans.md",
+        "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161"
+      ],
+      "rationale": "The exact maximum from sUSDai queue request to completed USDai delivery is not published. Cash-constrained FIFO requests roll across epochs; the 30-day timer is not an end-to-end bound. Terms expressly deny a guaranteed redemption date."
+    },
+    {
+      "id": "uw-susdai-usd-ai-bf46541ab25c84e7",
+      "assetId": "susdai-usd-ai",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:susdai-usd-ai:queue-redeem"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:51:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
+      "sources": [
+        {
+          "url": "https://docs.usd.ai/depositor/susdai/susdai-withdrawal-estimates.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": null,
+          "location": "Dynamic forward pricing explanation",
+          "excerpt": "sUSDai instead uses dynamic forward pricing to make the pricing more economically accurate.",
+          "assertion": "Disclosed deposit/redemption NAV spread depends on repayments; current same-notional route producer does not evaluate the public pricing formula."
+        },
+        {
+          "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": null,
+          "location": "Share Pricing - Net Asset Value",
+          "excerpt": "The **deposit share price** is computed from the **optimistic net asset value**, while the **redemption share price** is computed from the **conservative net asset value**.",
+          "assertion": "A variable valuation formula, not an undisclosed fixed exit fee. Existing cost producer needs exact evaluated same-notional pricing."
+        }
+      ]
+    },
+    {
+      "id": "uw-susdai-usd-ai-de8d56099af9d868",
+      "assetId": "susdai-usd-ai",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:25Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
+      "sources": [
+        {
+          "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": "2026-09-25",
+          "location": "Nature of Holder Rights",
+          "excerpt": "a User does not obtain direct ownership of a specific GPU or other physical asset, a direct contractual claim against a specific borrower",
+          "assertion": "Holder rights differ from conditional loan-level legal protections."
+        },
+        {
+          "url": "https://docs.usd.ai/borrower/onchain-offchain-interplay.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": null,
+          "location": "Capital Flow, Funding",
+          "excerpt": "The remainder is transferred into an offchain escrow account at the Escrow Agent, where it earns a reduced rate pending release.",
+          "assertion": "Mixed offchain escrow/loan layers prevent blanket fully-onchain allocation proof."
+        },
+        {
+          "url": "https://docs.usd.ai/usdai/proof-of-loans.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": "2026-07-15",
+          "location": "Scope of the Report",
+          "excerpt": "The engagement is not a financial statement audit or review",
+          "assertion": "Loan attribute AUP is not whole-vault borrowing, insolvency or reuse certification."
+        },
+        {
+          "url": "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyihtTguEhuWiLBn09qwl%2Fuploads%2FR0FeqBaE9BClO1cNw37T%2FUSD.AI%20Issued%20Attestation%20Report%20as%20of%20July%2015%2C%202026.pdf?alt=media&token=34ae6ee1-5f94-4ce9-87e8-c98bcec11762",
+          "observedAt": "2026-10-03T22:54:25Z",
+          "datumAsOf": "2026-07-15",
+          "location": "Independent Accountant Report, page 2",
+          "excerpt": "We did not perform any procedures regarding the operating effectiveness of the Foundation's, Permian Labs\u2019, or GPU Finance's internal controls.",
+          "assertion": "Loan attributes are inspected, but complete wrapper-layer controls/borrowing/encumbrance protections are not verified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
+        "https://docs.usd.ai/depositor/susdai.md",
+        "https://docs.usd.ai/depositor/susdai/susdai-withdrawal-estimates.md",
+        "https://docs.usd.ai/technical-overview/technical-protocol-overview.md",
+        "https://docs.usd.ai/borrower/onchain-offchain-interplay.md",
+        "https://docs.usd.ai/usdai/proof-of-loans.md",
+        "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161",
+        "https://docs.usd.ai/borrower/faq.md",
+        "https://raw.githubusercontent.com/usdai-foundation/usdai-contracts/66e974e884cc62ab755b144d140e9eab4f03ed79/src/StakedUSDai.sol",
+        "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyihtTguEhuWiLBn09qwl%2Fuploads%2FR0FeqBaE9BClO1cNw37T%2FUSD.AI%20Issued%20Attestation%20Report%20as%20of%20July%2015%2C%202026.pdf?alt=media&token=34ae6ee1-5f94-4ce9-87e8-c98bcec11762"
+      ],
+      "rationale": "Whole-vault sUSDai segregation, holder insolvency remoteness and layer allocation remain undisclosed. Wilmington escrow and borrower-SPV protections are conditional loan-layer facts, not protection for the whole vault or holders."
+    },
+    {
+      "id": "uw-susdai-usd-ai-01a7c7a653048d9c",
+      "assetId": "susdai-usd-ai",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "rehypothecationCorrelation",
+        "pillar": "backing",
+        "requiredDatum": "rehypothecationCorrelation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:25Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
+      "sources": [
+        {
+          "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": "2026-09-25",
+          "location": "Nature of Holder Rights",
+          "excerpt": "a User does not obtain direct ownership of a specific GPU or other physical asset, a direct contractual claim against a specific borrower",
+          "assertion": "Holder rights differ from conditional loan-level legal protections."
+        },
+        {
+          "url": "https://docs.usd.ai/borrower/onchain-offchain-interplay.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": null,
+          "location": "Capital Flow, Funding",
+          "excerpt": "The remainder is transferred into an offchain escrow account at the Escrow Agent, where it earns a reduced rate pending release.",
+          "assertion": "Mixed offchain escrow/loan layers prevent blanket fully-onchain allocation proof."
+        },
+        {
+          "url": "https://docs.usd.ai/usdai/proof-of-loans.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": "2026-07-15",
+          "location": "Scope of the Report",
+          "excerpt": "The engagement is not a financial statement audit or review",
+          "assertion": "Loan attribute AUP is not whole-vault borrowing, insolvency or reuse certification."
+        },
+        {
+          "url": "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyihtTguEhuWiLBn09qwl%2Fuploads%2FR0FeqBaE9BClO1cNw37T%2FUSD.AI%20Issued%20Attestation%20Report%20as%20of%20July%2015%2C%202026.pdf?alt=media&token=34ae6ee1-5f94-4ce9-87e8-c98bcec11762",
+          "observedAt": "2026-10-03T22:54:25Z",
+          "datumAsOf": "2026-07-15",
+          "location": "Independent Accountant Report, page 2",
+          "excerpt": "We did not perform any procedures regarding the operating effectiveness of the Foundation's, Permian Labs\u2019, or GPU Finance's internal controls.",
+          "assertion": "Loan attributes are inspected, but complete wrapper-layer controls/borrowing/encumbrance protections are not verified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
+        "https://docs.usd.ai/depositor/susdai.md",
+        "https://docs.usd.ai/depositor/susdai/susdai-withdrawal-estimates.md",
+        "https://docs.usd.ai/technical-overview/technical-protocol-overview.md",
+        "https://docs.usd.ai/borrower/onchain-offchain-interplay.md",
+        "https://docs.usd.ai/usdai/proof-of-loans.md",
+        "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161",
+        "https://docs.usd.ai/borrower/faq.md",
+        "https://raw.githubusercontent.com/usdai-foundation/usdai-contracts/66e974e884cc62ab755b144d140e9eab4f03ed79/src/StakedUSDai.sol",
+        "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyihtTguEhuWiLBn09qwl%2Fuploads%2FR0FeqBaE9BClO1cNw37T%2FUSD.AI%20Issued%20Attestation%20Report%20as%20of%20July%2015%2C%202026.pdf?alt=media&token=34ae6ee1-5f94-4ce9-87e8-c98bcec11762"
+      ],
+      "rationale": "No complete sUSDai whole-book pledge/reuse covenant, lender-of-record encumbrance roster or correlation allocation is published. Onchain lending and conditional SPV security are disclosed, but do not establish whole-dimension capital reuse."
+    },
+    {
+      "id": "uw-susdai-usd-ai-703a98fe71abdfa4",
+      "assetId": "susdai-usd-ai",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "leverage",
+        "pillar": "backing",
+        "requiredDatum": "leverage",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:25Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
+      "sources": [
+        {
+          "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": "2026-09-25",
+          "location": "Nature of Holder Rights",
+          "excerpt": "a User does not obtain direct ownership of a specific GPU or other physical asset, a direct contractual claim against a specific borrower",
+          "assertion": "Holder rights differ from conditional loan-level legal protections."
+        },
+        {
+          "url": "https://docs.usd.ai/borrower/onchain-offchain-interplay.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": null,
+          "location": "Capital Flow, Funding",
+          "excerpt": "The remainder is transferred into an offchain escrow account at the Escrow Agent, where it earns a reduced rate pending release.",
+          "assertion": "Mixed offchain escrow/loan layers prevent blanket fully-onchain allocation proof."
+        },
+        {
+          "url": "https://docs.usd.ai/usdai/proof-of-loans.md",
+          "observedAt": "2026-10-03T22:51:36Z",
+          "datumAsOf": "2026-07-15",
+          "location": "Scope of the Report",
+          "excerpt": "The engagement is not a financial statement audit or review",
+          "assertion": "Loan attribute AUP is not whole-vault borrowing, insolvency or reuse certification."
+        },
+        {
+          "url": "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyihtTguEhuWiLBn09qwl%2Fuploads%2FR0FeqBaE9BClO1cNw37T%2FUSD.AI%20Issued%20Attestation%20Report%20as%20of%20July%2015%2C%202026.pdf?alt=media&token=34ae6ee1-5f94-4ce9-87e8-c98bcec11762",
+          "observedAt": "2026-10-03T22:54:25Z",
+          "datumAsOf": "2026-07-15",
+          "location": "Independent Accountant Report, page 2",
+          "excerpt": "We did not perform any procedures regarding the operating effectiveness of the Foundation's, Permian Labs\u2019, or GPU Finance's internal controls.",
+          "assertion": "Loan attributes are inspected, but complete wrapper-layer controls/borrowing/encumbrance protections are not verified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
+        "https://docs.usd.ai/depositor/susdai.md",
+        "https://docs.usd.ai/depositor/susdai/susdai-withdrawal-estimates.md",
+        "https://docs.usd.ai/technical-overview/technical-protocol-overview.md",
+        "https://docs.usd.ai/borrower/onchain-offchain-interplay.md",
+        "https://docs.usd.ai/usdai/proof-of-loans.md",
+        "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161",
+        "https://docs.usd.ai/borrower/faq.md",
+        "https://raw.githubusercontent.com/usdai-foundation/usdai-contracts/66e974e884cc62ab755b144d140e9eab4f03ed79/src/StakedUSDai.sol",
+        "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FyihtTguEhuWiLBn09qwl%2Fuploads%2FR0FeqBaE9BClO1cNw37T%2FUSD.AI%20Issued%20Attestation%20Report%20as%20of%20July%2015%2C%202026.pdf?alt=media&token=34ae6ee1-5f94-4ce9-87e8-c98bcec11762"
+      ],
+      "rationale": "No whole-book sUSDai borrowing/guarantee/encumbrance census or binding local leverage maximum is disclosed. GPU borrower LTV and the vault share-price formula are not the wrapper layer leverage bound; the AUP does not test entity solvency or controls."
+    },
+    {
+      "id": "uw-moveusd-cfx-b217e002b2419dbb",
+      "assetId": "moveusd-cfx",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:14Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
+      "sources": [
+        {
+          "url": "https://cfx.to/treasury",
+          "observedAt": "2026-10-03T22:53:14Z",
+          "datumAsOf": null,
+          "location": "How it works, Reconcile",
+          "excerpt": "Every entry reconciles continuously, with an audit trail.",
+          "assertion": "This describes internal bank/customer ledger entries, not total MOVEUSD and offchain liability reconciliation to same-clock reserve balances."
+        },
+        {
+          "url": "https://docs.cfx.to/reference/get_v1-ledger-accounts-id.md",
+          "observedAt": "2026-10-03T22:53:14Z",
+          "datumAsOf": "2026-06-29",
+          "location": "Ledger Account API description",
+          "excerpt": "Each account holds a MoveUSD balance, is backed by an on-chain Solana account",
+          "assertion": "Individual balances are exposed; aggregate bank reserve reconciliation cadence and coverage are not."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://cfx.to/",
+        "https://trust.cfx.to/",
+        "https://cfx.to/treasury",
+        "https://cfx.to/on-chain",
+        "https://cfx.to/legal/terms-and-conditions",
+        "https://docs.cfx.to/llms.txt",
+        "https://docs.cfx.to/docs/key-features.md",
+        "https://docs.cfx.to/reference/get_v1-ledger-accounts-id.md",
+        "https://docs.cfx.to/reference/get_v1-withdrawal-estimate.md",
+        "https://docs.cfx.to/reference/post_v1-withdrawal-quote.md",
+        "https://explorer.solana.com/address/3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm"
+      ],
+      "rationale": "The dated whole-supply MOVEUSD reserve-to-on/off-chain-liabilities procedure, cadence and exceptions are not published. Continuous customer-ledger matching and the 1:1 bank-deposit assertion do not establish total token/backing reconciliation. No public dated financial report or supply-to-bank reconciliation was located."
+    },
+    {
+      "id": "uw-moveusd-cfx-62988acf2c72d54d",
+      "assetId": "moveusd-cfx",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:14Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
+      "sources": [
+        {
+          "url": "https://cfx.to/",
+          "observedAt": "2026-10-03T22:53:14Z",
+          "datumAsOf": null,
+          "location": "Hero reserve assertion",
+          "excerpt": "Every dollar is a cash deposit placed across 3,000+ FDIC-insured banks and tokenized 1:1, one token per deposited dollar.",
+          "assertion": "Standing category claim has no dated actual reserve balance/whole-book denominator."
+        },
+        {
+          "url": "https://trust.cfx.to/",
+          "observedAt": "2026-10-03T22:53:14Z",
+          "datumAsOf": null,
+          "location": "Issuer custody description",
+          "excerpt": "Customer funds are held in segregated custodial accounts with FDIC-member banks",
+          "assertion": "Names neither reserve banks nor current amounts. No dated composition report is available."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://cfx.to/",
+        "https://trust.cfx.to/",
+        "https://cfx.to/treasury",
+        "https://cfx.to/on-chain",
+        "https://cfx.to/legal/terms-and-conditions",
+        "https://docs.cfx.to/llms.txt",
+        "https://docs.cfx.to/docs/key-features.md",
+        "https://docs.cfx.to/reference/get_v1-ledger-accounts-id.md",
+        "https://docs.cfx.to/reference/get_v1-withdrawal-estimate.md",
+        "https://docs.cfx.to/reference/post_v1-withdrawal-quote.md",
+        "https://explorer.solana.com/address/3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm"
+      ],
+      "rationale": "The current dated whole-asset MOVEUSD reserve composition and balance denominator are undisclosed. The issuer standing 1:1 bank-deposit category claim and customer ledger API are not a current financial reserve snapshot; existing July static composition cannot be honestly date-refreshed."
+    },
+    {
+      "id": "uw-moveusd-cfx-8d6670102e106bd6",
+      "assetId": "moveusd-cfx",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:moveusd-cfx:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:14Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
+      "sources": [
+        {
+          "url": "https://docs.cfx.to/reference/post_v1-withdrawal-quote.md",
+          "observedAt": "2026-10-03T22:53:14Z",
+          "datumAsOf": "2026-05-08",
+          "location": "Withdrawal quote introduction",
+          "excerpt": "This Create Quote generates a binding quote, which includes an unsigned Solana transaction facilitating the transfer of funds from the nominated user wallet into a CFX withdrawal wallet.",
+          "assertion": "Exact fees are private authenticated quote outputs, not a public applicable fee schedule."
+        },
+        {
+          "url": "https://docs.cfx.to/reference/get_v1-withdrawal-estimate.md",
+          "observedAt": "2026-10-03T22:53:14Z",
+          "datumAsOf": null,
+          "location": "Fee type enum",
+          "excerpt": "CFX_VARIABLE_FEE_PCT",
+          "assertion": "Fee taxonomy is disclosed without a public rate/minimum/cap for the scoped USD off-ramp."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://cfx.to/",
+        "https://trust.cfx.to/",
+        "https://cfx.to/treasury",
+        "https://cfx.to/on-chain",
+        "https://cfx.to/legal/terms-and-conditions",
+        "https://docs.cfx.to/llms.txt",
+        "https://docs.cfx.to/docs/key-features.md",
+        "https://docs.cfx.to/reference/get_v1-ledger-accounts-id.md",
+        "https://docs.cfx.to/reference/get_v1-withdrawal-estimate.md",
+        "https://docs.cfx.to/reference/post_v1-withdrawal-quote.md",
+        "https://explorer.solana.com/address/3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm"
+      ],
+      "rationale": "No public numeric or evaluable fee schedule for MOVEUSD-to-USD designated-channel redemption was located. CFX publishes fee classes and authenticated binding quotes, not applicable customer/provider rates or all-in caps. A demonstration $0 swap is neither a redemption fee schedule nor same-notional cost."
+    },
+    {
+      "id": "uw-pathusd-bridge-c6b196689ec6c5d1",
+      "assetId": "pathusd-bridge",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:pathusd-bridge:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:14Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R19)",
+      "sources": [
+        {
+          "url": "https://www.bridge.xyz/legal/fee-disclosure-statement/overview",
+          "observedAt": "2026-10-03T22:53:14Z",
+          "datumAsOf": null,
+          "location": "Service Charge",
+          "excerpt": "The decision to impose such a charge, including its amount, is determined solely by the Partner.",
+          "assertion": "No pathUSD applicable partner fee amount/rate/cap is published."
+        },
+        {
+          "url": "https://www.bridge.xyz/legal/row-user-terms/bridge-building-limited",
+          "observedAt": "2026-10-03T22:53:14Z",
+          "datumAsOf": "2026-05-05",
+          "location": "7.1 Fees",
+          "excerpt": "You can access the fees we charge for Orders through your Partner Account",
+          "assertion": "Fees are account-specific, not a public same-notional pathUSD schedule."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.bridge.xyz/",
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "https://www.bridge.xyz/legal/fee-disclosure-statement/overview",
+        "https://www.bridge.xyz/legal/row-user-terms/bridge-building-limited",
+        "https://apidocs.bridge.xyz/platform/issuance/faq",
+        "https://apidocs.bridge.xyz/platform/issuance/reserve-management",
+        "https://apidocs.bridge.xyz/platform/issuance/reserves",
+        "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency",
+        "https://transparency.bridge.xyz/v0/stablecoins/path_usd",
+        "https://tempo.xyz/developers/docs/protocol/exchange/quote-tokens"
+      ],
+      "rationale": "Exact all-in pathUSD-to-USDC issuer-redemption cost is not public. The Bridge fee disclosure leaves partner service-charge amounts to the partner, passes variable gas through, and directs users to account-specific fees. Neither issuance FAQ nor pathUSD docs/API supplies a numeric schedule or evaluable complete formula."
     }
   ]
 }
