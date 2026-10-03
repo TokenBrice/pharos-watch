@@ -2,7 +2,7 @@
   "id": "usdglo-glo",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "USDGLO is issuer-native on six EVM chains and Stellar; every reviewed deployment is a canonical native-issuance route, not a bridge representation. The six GloDollarV3 UUPS proxies consolidate MINTER_ROLE, DEFAULT_ADMIN_ROLE, PAUSER_ROLE, and UPGRADER_ROLE in one Brale-operated EOA with no on-chain cap; the Stellar issuer account independently retains revocable and clawback-enabled authorization. Brale operates the 1:1 issuance backend and publishes monthly reserve reports. No bridge-only authority is included in Mint Authority.",
     "upgradeability": {

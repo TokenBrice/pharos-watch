@@ -2,7 +2,7 @@
   "id": "usdr-stablr",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "compromised",
     "confidence": "verified",
     "summary": "USDR is a single-chain Ethereum MiCA EMT; token owner is a 2/2 legacy multisig (no modules), proxy admin is a separate 2/2 multisig (no modules), both confirmed at current block. Prior record had proxy admin as 1/1, corrected.",
     "mintIncidents": [

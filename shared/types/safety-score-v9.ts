@@ -925,6 +925,7 @@ const V9ControlPolicySchema = z
         "none-resolved": ScoreSchema,
         "bounded-admin": ScoreSchema,
         "partially-bounded-admin": ScoreSchema,
+        "unbounded-governed": ScoreSchema,
         "concentrated-admin": ScoreSchema,
         // MINT-LADDER 9.32 (2026-08-21): collateral is a real economic bound,
         // but the privileged administrator surface remains concentrated.
@@ -932,8 +933,15 @@ const V9ControlPolicySchema = z
         "unbounded-reconciled": ScoreSchema,
         // Unknown reconciliation compares the ordinary unbounded family, not generic mint.
         "unbounded-reconciliation-unknown": ScoreSchema,
-        "unbounded-or-compromised": ScoreSchema,
+        "unbounded-unreconciled": ScoreSchema,
+        compromised: ScoreSchema,
         unknown: ScoreSchema,
+      })
+      .strict(),
+    governedIssuance: z
+      .object({
+        minUnavoidableDelaySec: z.number().int().positive(),
+        admissibleVotingPower: z.array(z.enum(["lock-escrowed", "past-block-checkpoint"])).min(1),
       })
       .strict(),
     mintPostureGrading: z
@@ -981,7 +989,7 @@ const V9ControlPolicySchema = z
         unattestedEoaPenalty: z.number().finite().nonnegative(),
         // Bounded quorum-granularity adjustment replacing the binary
         // strong-quorum test. Credits can never leapfrog the next posture rung;
-        // penalties can never push below the unbounded-or-compromised rung.
+        // penalties can never push below the unbounded-unreconciled rung.
         multisigQuorumAdjustment: z
           .object({
             unknownTopology: z.number().finite().max(0),

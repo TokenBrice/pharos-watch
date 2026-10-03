@@ -2,7 +2,7 @@
   "id": "usdnr-nerona",
   "mintAuthority": {
     "mintPath": "m0-permissioned-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "USDnr's sole canonical native-issuance deployment is Ethereum, where M0's MinterGateway and SwapFacility back the extension's 1:1 wrapping path. Fluent USDnr is a spoke representation whose local M wrapping is bridge-backed, not an independent native issuance path; its Portal, Hyperlane, and Fluent upgrade controls are reviewed separately under Bridge Risk.",
     "controls": [

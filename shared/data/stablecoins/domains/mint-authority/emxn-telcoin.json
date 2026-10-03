@@ -2,7 +2,7 @@
   "id": "emxn-telcoin",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "eMXN is issued by Telcoin LLC on Polygon under the eXYZ terms, separately from Telcoin Digital Asset Bank's eUSD. The token's proxy upgrade and mint roles are controlled by Safe multisigs; at the reviewed block the primary minter is 3-of-6, the default-admin/minter is 2-of-7, and the proxy-admin owner is 3-of-6.",
     "upgradeability": {

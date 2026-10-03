@@ -2,9 +2,9 @@
   "id": "xtusd-xt",
   "mintAuthority": {
     "mintPath": "immutable-user-collateralized",
-    "authorityPosture": "bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
-    "summary": "XTUSD is minted by a live MakerDAO DSS-style CDP system on XSC: users draw Vat credit against Wrapped XT (ilk XT-A) and the DaiJoin adapter 0xa57cde0585010aa1bcfadb3bf6f3445349bb98ab, the sole ward on the token, mints on exit. The 1,000,000,000 XTUSD per-collateral debt ceiling matches the issuer announcement and is effectively frozen because the deployer was revoked from every ward set and the only Vat wards are non-governance system contracts. The token and all system contracts are non-proxy with no upgrade path.",
+    "summary": "D14 review 2026-10-03: corrected Vat canRaiseCap to false to match the existing effectively-frozen governance evidence; this is not a new ward-census claim. XSC block 47838017 hash 0x90d5c535ff88f0cab61b2ab7eeb54d0135fc69d29c6d7ad74b090f432598b9f2 was retrieved. Explorer sourceCodeDetail returns empty sourceFiles and null compilation for Vat, DaiJoin, GemJoin and Jug; Sourcify does not support chain 520. No verified-source/bytecode-matched construction certificate is available, and the July review cannot exclude a never-used ward. Economic cap is unknown, not an assertion that governance can presently raise it; retained can-authorize conservatively encodes the unbounded branch and continuous reconciliation yields unbounded-reconciled.",
     "controls": [
       {
         "chain": "xsc",
@@ -37,7 +37,7 @@
         "role": "minter-admin",
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": true,
+        "canRaiseCap": false,
         "capDescription": "Holds the XT-A debt ceiling (line = 1e54 rad) and global Line (~1.456e54 rad). Only Vat wards can file new ceilings or rely new adapters; the current wards are the Jug and the XT-A GemJoin, neither of which exposes such a call, and the deployer was revoked, so parameter governance is effectively frozen.",
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-27",
@@ -111,13 +111,13 @@
         }
       ]
     },
-    "economicCapSemantics": "bounded",
+    "economicCapSemantics": "unknown",
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "2026-07-27 re-review (supersedes the 2026-07-20 unresolved review): the previously missing block explorer exists at xscscan.pub with a public API (api.xscscan.pub), and the XTDao system is a MakerDAO DSS fork whose contracts are all readable via datarpc1.xsc.pub at block 47,838,017. The XTUSD token 0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0 (3,991-byte non-proxy, EIP-1967 impl slot zero) reverts mint(address,uint256) with XTUSD/not-authorized from every tested non-ward; token.wards() returns 1 only for the DaiJoin 0xa57cde0585010aa1bcfadb3bf6f3445349bb98ab (dai() = token, vat() = 0xf9d4810f1b140d869d2f92ca8da1755ea55e786b, live() = 1) and 0 for the deployer 0xE8864ba6b3A6e2f5104A0ECFFd90E2C9fd2cb4Dc and every other contract observed across the system's xscscan transaction history. The Vat (live) has exactly the Jug 0x8276a38e... and GemJoin 0xdec7d8fe... as wards among tested system contracts, with the deployer revoked; ilks('XT-A').line = 1e54 rad and Line() ~= 1.456e54 rad, matching the issuer's announced 1,000,000,000 XTUSD per-collateral supply design, and neither Vat ward exposes a call that could raise the ceilings. The token ward set is effectively frozen because its sole ward (DaiJoin) contains no path to call rely on the token. The CDP manager 0x5611e8f241a6fd545b642dff90c6ad8c68f89b99 and user DSProxies (e.g. 0x34ed2cdd..., owner-gated by ds-auth) are user entry points, not mint authorities. Confidence is capped at manual-review because DSS ward mappings cannot be enumerated by direct reads: every ward candidate visible in four years of system transactions was probed and the deployer revoke was verified, but a never-used ward granted at setup cannot be excluded by this method. M-2 evidence binding 2026-08-08: reconciliation continuous is structural - at XSC block 47,838,017 the token's only mint ward is the DaiJoin bound to the sourced Vat (MakerDAO DSS fork), so every mint passes through vault collateral accounting; supply reconciles against locked collateral by construction. This binds the mint mechanism only - the exchange's own PoR page publishes no data (recorded separately on the proofOfReserves record).",
-      "reviewer": "Kimi data review",
-      "reviewedAt": "2026-07-27",
+      "evidence": "2026-07-27 re-review (supersedes the 2026-07-20 unresolved review): the previously missing block explorer exists at xscscan.pub with a public API (api.xscscan.pub), and the XTDao system is a MakerDAO DSS fork whose contracts are all readable via datarpc1.xsc.pub at block 47,838,017. The XTUSD token 0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0 (3,991-byte non-proxy, EIP-1967 impl slot zero) reverts mint(address,uint256) with XTUSD/not-authorized from every tested non-ward; token.wards() returns 1 only for the DaiJoin 0xa57cde0585010aa1bcfadb3bf6f3445349bb98ab (dai() = token, vat() = 0xf9d4810f1b140d869d2f92ca8da1755ea55e786b, live() = 1) and 0 for the deployer 0xE8864ba6b3A6e2f5104A0ECFFd90E2C9fd2cb4Dc and every other contract observed across the system's xscscan transaction history. The Vat (live) has exactly the Jug 0x8276a38e... and GemJoin 0xdec7d8fe... as wards among tested system contracts, with the deployer revoked; ilks('XT-A').line = 1e54 rad and Line() ~= 1.456e54 rad, matching the issuer's announced 1,000,000,000 XTUSD per-collateral supply design, and neither Vat ward exposes a call that could raise the ceilings. The token ward set is effectively frozen because its sole ward (DaiJoin) contains no path to call rely on the token. The CDP manager 0x5611e8f241a6fd545b642dff90c6ad8c68f89b99 and user DSProxies (e.g. 0x34ed2cdd..., owner-gated by ds-auth) are user entry points, not mint authorities. Confidence is capped at manual-review because DSS ward mappings cannot be enumerated by direct reads: every ward candidate visible in four years of system transactions was probed and the deployer revoke was verified, but a never-used ward granted at setup cannot be excluded by this method. M-2 evidence binding 2026-08-08: reconciliation continuous is structural - at XSC block 47,838,017 the token's only mint ward is the DaiJoin bound to the sourced Vat (MakerDAO DSS fork), so every mint passes through vault collateral accounting; supply reconciles against locked collateral by construction. This binds the mint mechanism only - the exchange's own PoR page publishes no data (recorded separately on the proofOfReserves record). D14 review 2026-10-03: corrected Vat canRaiseCap to false to match the existing effectively-frozen governance evidence; this is not a new ward-census claim. XSC block 47838017 hash 0x90d5c535ff88f0cab61b2ab7eeb54d0135fc69d29c6d7ad74b090f432598b9f2 was retrieved. Explorer sourceCodeDetail returns empty sourceFiles and null compilation for Vat, DaiJoin, GemJoin and Jug; Sourcify does not support chain 520. No verified-source/bytecode-matched construction certificate is available, and the July review cannot exclude a never-used ward. Economic cap is unknown, not an assertion that governance can presently raise it; retained can-authorize conservatively encodes the unbounded branch and continuous reconciliation yields unbounded-reconciled.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U11BoundedB)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
       "sources": [
         {

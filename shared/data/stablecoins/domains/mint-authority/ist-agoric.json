@@ -2,9 +2,9 @@
   "id": "ist-agoric",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unknown",
     "confidence": "manual-review",
-    "summary": "IST's native issuance is confined to Agoric Inter Protocol vault and PSM contracts. Governance approved the protocol wind-down in mid-2025, disabled new minting, and completed the sunset process on June 26, 2025. The authored Osmosis denomination is an ICS-20 bridge representation reviewed separately under bridgeRouteRisk.",
+    "summary": "IST's documented native issuance uses Agoric Inter Protocol vaults and PSMs. The protocol's 2025 wind-down and current zero vault debt limit support the frozen ordinary borrowing state, but do not certify closure of deployed Zoe bundles, bootstrap mint capabilities or privileged PSM creator facets. Economic cap semantics and the mint control's canRaiseCap are unknown; the retained control encoding derives unknown. The authored Osmosis denomination is an ICS-20 bridge representation reviewed separately under bridgeRouteRisk.",
     "controls": [
       {
         "chain": "agoric",
@@ -35,14 +35,26 @@
         "evidence": "Inter Protocol governance docs describe two-tier governance: BLD stakers for major changes and collateral onboarding, and an elected Economic Committee with parameter-level control, mint-limit setting, and emergency contract pausing. The current frozen state reports zero vault DebtLimits, but the governance model historically retains the ability to raise issuance parameters on the Agoric native route."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unknown",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "Inter Protocol documentation describes IST as a decentralized stablecoin minted via overcollateralized vaults plus a PSM, governed by BLD stakers and an elected Economic Committee that sets parameters, mint limits, and emergency pauses. The canonical issuance scope is Agoric only; the authored Osmosis ibc/92BE0717F4678905E53F4E45B2DED18BC0CB97BF1F8B6A25AFEDF3D5A879B4D5 denomination is an ICS-20 representation and is excluded from Mint Authority. At Agoric block 26894424 on 2026-08-16, native uist supply was 217275917509 micro-IST and all six live vault-manager governance records reported DebtLimit +0, consistent with the approved wind-down. Historical governance remains able to set or raise mint limits; no off-chain reserve claim or prudential supervisor applies.",
-      "reviewer": "OpenAI Codex migration review",
-      "reviewedAt": "2026-08-16",
+      "evidence": "Inter Protocol documentation describes IST as a decentralized stablecoin minted via overcollateralized vaults plus a PSM, governed by BLD stakers and an elected Economic Committee that sets parameters, mint limits, and emergency pauses. The canonical issuance scope is Agoric only; the authored Osmosis ibc/92BE0717F4678905E53F4E45B2DED18BC0CB97BF1F8B6A25AFEDF3D5A879B4D5 denomination is an ICS-20 representation and is excluded from Mint Authority. At Agoric block 26894424 on 2026-08-16, native uist supply was 217275917509 micro-IST and all six live vault-manager governance records reported DebtLimit +0, consistent with the approved wind-down. Historical governance remains able to set or raise mint limits; no off-chain reserve claim or prudential supervisor applies. D14/A7 review on 2026-10-03 at agoric block 27633357 (0x0826cea67930b03cf403c6a4e910be389563a294ceb1fdf640c868fe6b368e1b): height-bound vstorage retains manager0 DebtLimit +0 and the published PSM governance record. Node information reports agoriccosmos 0.36.0-u23.1 / commit cc25a298dc; its Inter Protocol PSM source has collateral-funded wantMinted and privileged restore-metrics/fee-collection facets. Node binary source is not a certificate of the deployed Zoe contract bundle or of every party holding bootstrap feeMintAccess and creator capabilities. Zero mint limits and sunset documentation do not prove absence of a root authorizing unbacked issuance. A11 sets economicCapSemantics to unknown without capSemanticsReview. The cap-limited mint control retains canRaiseCap unknown, so the compiler derives unknown despite the same-chain parameter raiser. Curated authorityPosture is unknown, fail-closed. Current authority closure remains unresolved and no D29 claim is authored. This D14 refresh does not re-date older quorum or reserve-reconciliation observations.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12bNativeCapReviews)",
+      "reviewedAt": "2026-10-03",
       "sources": [
+        {
+          "label": "Agoric node source version",
+          "url": "https://main.api.agoric.net/cosmos/base/tendermint/v1beta1/node_info"
+        },
+        {
+          "label": "PSM source at reported node commit (deployed bundle correspondence unresolved)",
+          "url": "https://github.com/Agoric/agoric-sdk/blob/cc25a298dc/packages/inter-protocol/src/psm/psm.js"
+        },
+        {
+          "label": "Agoric pinned observation block",
+          "url": "https://main.api.agoric.net/cosmos/base/tendermint/v1beta1/blocks/27633357"
+        },
         {
           "label": "Inter Protocol governance docs",
           "url": "https://docs.inter.trade/inter-protocol-system-documentation/protocol-and-chain-governance"

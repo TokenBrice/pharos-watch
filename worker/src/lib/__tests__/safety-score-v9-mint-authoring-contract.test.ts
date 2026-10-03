@@ -2,14 +2,16 @@ import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { MintAuthorityProfile } from "@shared/types/core";
-import { MintAuthorityProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
+import type { MintAuthorityControl, MintAuthorityProfile } from "@shared/types/core";
+import { reviewedScope, SCOPE_CLOCK, SCOPE_CONTROLLER } from "@shared/lib/__tests__/safety-score-v9-control-scope.test-support";
+import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
+import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension-shared";
 import { describe, expect, it } from "vitest";
 import { normalizeFixedInput } from "../report-cards-fixed-input";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
-import { v9TestClockSec } from "../../test-helpers/v9-fixed-input";
+import { makeV9FixedInput, v9TestClockSec } from "../../test-helpers/v9-fixed-input";
 
 const AS_OF_SEC = 1_785_456_000;
 // Derived, never hardcoded: the extension rejects a reviewedAt later than the
@@ -69,10 +71,10 @@ const UNRESOLVED_INHERITED_MINT_CONTROL = {
  * existing `review.sources` (and each control's `sources`) — the reviewed fields
  * do not carry their own citations.
  *
- *   economicCapSemantics: supersedes the contract-encoding cap. A self-controlled
- *     no-timelock raiseable cap is economically "unbounded"; an independent
- *     timelock / third-party bound may earn "raiseable"; a firm cap is "bounded".
- *     Never edit directMintAbility to express this — economic semantics only.
+ *   economicCapSemantics: supersedes the contract-encoding cap. A root able to
+ *     create durable unbacked supply is economically "unbounded" (D14).
+ *     Bounded, raiseable and collateral-gated issuance powers require a sourced
+ *     capSemanticsReview. Never edit directMintAbility to express this.
  *   reconciliation:        supply-vs-reserve attestation cadence ("continuous" |
  *     "periodic"); supersedes the engine's proof-of-reserves inference.
  *   supervision:           prudential-supervision regime ("prudential" for a named
@@ -260,14 +262,10 @@ function mintReviewFor(profile: MintAuthorityProfile | undefined) {
   const controlReview = asset.controlReview;
   const controls = controlReview && "controls" in controlReview ? controlReview.controls : [];
   const mintControl = controls.find((control) => control.controlKey === review.controlKey) ?? null;
-  return { review, mintControl };
+  return { review, mintControl, controls };
 }
 
 describe("Safety Score v9 mint authoring contract (authoring-contract batch, owner rulings Batch 3)", () => {
-  it("accepts the reference profile shape against the strict MintAuthorityProfile schema", () => {
-    expect(() => MintAuthorityProfileSchema.parse(AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE)).not.toThrow();
-  });
-
   it("lets reviewed fields supersede the inferred / encoding behavior", () => {
     const { review, mintControl } = mintReviewFor(AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE);
     expect(review.supervision).toBe("prudential");
@@ -285,6 +283,13 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       economicCapSemantics: "collateral-gated",
       reconciliation: "periodic",
       supervision: "none",
+      capSemanticsReview: {
+        verdict: "bounded-by-construction",
+        rationale: "The verified issuance path requires matching collateral deposits before any authorized minter can create new circulating supply.",
+        reviewedAt: "2026-07-10",
+        reviewer: "@example-reviewer",
+        sources: [{ label: "Verified mint implementation", url: "https://example.com/mint-controller" }],
+      },
     };
     const { review, mintControl } = mintReviewFor(profile);
     expect(mintControl?.capSemantics.kind).toBe("collateral-gated");
@@ -409,7 +414,7 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     });
     expect(profile.review.unresolvedQuestions).toBeUndefined();
     expect(profile.controls?.find((control) => `${control.chain}:${control.address}` === DAO_PROXY_ADMIN_AUTHORITY)).toMatchObject({
-      timelockDelaySec: 172800,
+      timelockDelaySec: 86400,
     });
     expect(profile.controls?.find((control) => `${control.chain}:${control.address}` === SECURITY_COUNCIL_AUTHORITY)).toMatchObject({
       timelockDelaySec: 0,
@@ -420,13 +425,22 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       ],
     });
     expect(controlReview.state).toBe("reviewed-controls");
-    expect(new Set(mintControls.map((control) => control.controlKey)).size).toBe(5);
+    const feeTimelockControl = mintControls.find((control) =>
+      control.authority?.authorityKey === "ethereum:0x38542447c49d24e617fc06113295d7aaa3bec4b6",
+    );
+    expect(feeTimelockControl).toMatchObject({
+      capabilities: ["parameter-change"],
+      economicLossScope: "global-claim",
+    });
     // The scoped historical review establishes incident absence positively, so no
     // control is left at the fail-closed "unknown" incident state.
     expect(mintControls.map((control) => control.incidentState)).toEqual(
       Array.from({ length: mintControls.length }, () => "none"),
     );
     expect(asset.economicControlReview?.mint.status.observationState).toBe("known");
+    expect(mintControls.find((control) =>
+      control.controlKey === controlKeyByAuthority.get(DAO_PROXY_ADMIN_AUTHORITY),
+    )?.capabilities).toEqual(["mint", "upgrade"]);
     // Mint selection lands on the fee-share dilution control and the upgrade path on the DAO proxy
     // admin; the Security Council's recovery-module control carries only parameter-change capability.
     expect(asset.economicControlReview?.mint.controlKey).toBe(controlKeyByAuthority.get(FEE_SHARE_AUTHORITY));
@@ -713,5 +727,432 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       (candidate) => candidate.assetId === assetId,
     )!;
     expect(evaluated.control.reasons.map((reason) => reason.code)).toContain("mint-control-question");
+  });
+});
+
+function governedControl(
+  address = SCOPE_CONTROLLER.split(":")[1]!,
+  overrides: Partial<MintAuthorityControl> = {},
+): MintAuthorityControl {
+  const deployment = `ethereum:${address}`;
+  const scope = reviewedScope({ controllerDeployment: deployment });
+  scope.paths[0] = {
+    ...scope.paths[0]!,
+    targetDeployment: deployment,
+    affectedLiabilityIds: [ASSET_ID],
+    affectedDeployments: [deployment],
+    capSemantics: { kind: "unbounded", bound: null },
+    claimImpairment: "unbounded",
+    unavoidableDelaySec: 259200,
+  };
+  scope.pin = { ...scope.pin, signerIdentity: `Only governor ${SCOPE_CONTROLLER.split(":")[1]} can cause execution.` };
+  scope.observedState = { ...scope.pin };
+  return {
+    chain: "ethereum",
+    address,
+    label: "Token governor",
+    role: "governor",
+    authorityType: "dao-governor",
+    directMintAbility: "can-authorize",
+    executionScope: scope,
+    sources: [{ label: "Pinned executable", url: "https://example.com/source" }],
+    ...overrides,
+  };
+}
+
+function governedProfile(controls = [governedControl()]): MintAuthorityProfile {
+  return {
+    ...AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE,
+    authorityPosture: "unbounded-governed",
+    controls,
+    reconciliation: "none",
+    supervision: "none",
+    review: { ...AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE.review, reviewedAt: "2026-10-01" },
+    governedIssuance: {
+      governorControlRef: SCOPE_CONTROLLER,
+      votingPower: "lock-escrowed",
+      votingPowerEvidence: "Voting weight remains locked throughout the voting and executable delay interval.",
+      enumerability: { authorizationEvents: ["Authorized(address)"], capacityReads: ["capacity(address)"] },
+      observedAt: "2026-10-01",
+      observedBlock: 100,
+      reviewedAt: "2026-10-01",
+      reviewer: "Fixture Reviewer",
+      sources: [{ label: "Governor source", url: "https://example.com/governor" }],
+    },
+  };
+}
+
+function governedRows(profile: MintAuthorityProfile, clockSec = SCOPE_CLOCK) {
+  const input = fixedInput([ASSET_ID], {}, {
+    clockSec, capturedAt: new Date(clockSec * 1000).toISOString(),
+  });
+  const extension = buildSafetyScoreV9BaselineExtension(input, { metaById: metaWith(profile) });
+  const controlReview = extension.assets[0]!.controlReview;
+  const rows = controlReview && "controls" in controlReview ? controlReview.controls : [];
+  const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
+  return {
+    rows: rows.filter((row) => row.controlKey.startsWith(`mint-meta:${ASSET_ID}:`)),
+    compiledRows: compiled.assets[0]!.controls.filter((row) => row.controlKey.startsWith(`mint-meta:${ASSET_ID}:`)),
+  };
+}
+
+describe("Governed issuance compilation (D29)", () => {
+  it("omits the governance stamp when the authored block is absent", () => {
+    const profile = governedProfile();
+    delete profile.governedIssuance;
+    profile.authorityPosture = "unbounded-unreconciled";
+    const { rows, compiledRows } = governedRows(profile);
+    expect(rows.map((row) => row.issuanceGovernance)).toEqual([undefined]);
+    expect(compiledRows.map((row) => row.issuanceGovernance)).toEqual([undefined]);
+  });
+
+  it("uses the minimum path delay, not overlapping-clock sums, and stamps every emitted path", () => {
+    const governor = governedControl();
+    const minter = governedControl("0x2222222222222222222222222222222222222222", {
+      label: "Governed minter", authorityType: "contract", role: "direct-minter", directMintAbility: "direct",
+      timelockDelaySec: 604800,
+    });
+    const scope = minter.executionScope!;
+    scope.paths[0]!.unavoidableDelaySec = 172800;
+    scope.paths.push({
+      ...scope.paths[0]!, id: "upgrade", capabilities: ["upgrade"], unavoidableDelaySec: 200000,
+    });
+    const profile = governedProfile([governor, minter]);
+    const { rows, compiledRows } = governedRows(profile);
+    const expected = {
+      coverage: "complete",
+      incompleteReasons: [],
+      governorAuthorityKey: SCOPE_CONTROLLER,
+      minUnavoidableDelaySec: 172800,
+      votingPower: "lock-escrowed",
+      enumerable: true,
+      nonGovernorUnboundedPathKeys: [],
+    };
+    expect(rows.map((row) => row.controlKey.split(":path:")[1]).sort()).toEqual(["issuance", "issuance", "upgrade"]);
+    expect(rows.map((row) => row.issuanceGovernance)).toEqual([expected, expected, expected]);
+    expect(compiledRows.map((row) => row.issuanceGovernance)).toEqual([expected, expected, expected]);
+  });
+
+  it("preserves the asset-wide stamp on deployment-local path rows", () => {
+    const localDeployment = "base:0x3333333333333333333333333333333333333333";
+    const local = governedControl("0x2222222222222222222222222222222222222222", {
+      label: "Governed local upgrader", authorityType: "contract", role: "proxy-admin",
+      directMintAbility: "upgrade-only", deploymentRefs: [localDeployment],
+    });
+    Object.assign(local.executionScope!.paths[0]!, {
+      capabilities: ["upgrade"], reach: "deployment", economicLossScope: "deployment",
+      affectedDeployments: [localDeployment], unavoidableDelaySec: 172800,
+    });
+    const profile = governedProfile([
+      governedControl(undefined, { deploymentRefs: [SCOPE_CONTROLLER, localDeployment] }), local,
+    ]);
+    const source = { label: "Native route source", url: "https://example.com/routes" };
+    const routes = [SCOPE_CONTROLLER, localDeployment].map((id) => ({
+      id, destinationChain: id.split(":")[0]!, contractAddress: id.split(":")[1]!,
+      protocol: "Native fixture", issuanceModel: "native-issuance" as const, routeClass: "native" as const,
+      riskTier: "single-chain-or-native" as const, semantics: "native-mint" as const, scope: "canonical" as const,
+      reviewDisposition: "reviewed" as const, observedAt: "2026-10-01", sources: [source],
+    }));
+    const meta: V9ExtensionRegistryMeta = {
+      ...metaWith(profile).get(ASSET_ID)!,
+      contracts: routes.map((route) => ({ chain: route.destinationChain, address: route.contractAddress, decimals: 18 })),
+      bridgeRouteRisk: {
+        tier: "issuer-native-burn-mint", summary: "Reviewed native deployments share the same governance.",
+        reviewedAt: "2026-10-01", reviewer: "Fixture Reviewer", confidence: "verified", sources: [source], routes,
+      },
+    };
+    const input = makeV9FixedInput({
+      assetId: ASSET_ID, clockSec: SCOPE_CLOCK,
+      chainSupplyByChain: {
+        ethereum: { current: 8_000_000, circulatingPrevDay: 8_000_000, circulatingPrevWeek: 8_000_000, circulatingPrevMonth: 8_000_000 },
+        base: { current: 2_000_000, circulatingPrevDay: 2_000_000, circulatingPrevWeek: 2_000_000, circulatingPrevMonth: 2_000_000 },
+      },
+    });
+    const extension = buildSafetyScoreV9BaselineExtension(input, { metaById: new Map([[ASSET_ID, meta]]) });
+    const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
+    const rows = compiled.assets[0]!.controls.filter((row) => row.controlKey.startsWith(`mint-meta:${ASSET_ID}:`));
+    expect(rows.find((row) => row.scope === "global")).toMatchObject({
+      materialSupplyShare: null, capabilities: ["mint"],
+    });
+    expect(rows.find((row) => row.scope === "deployment")).toMatchObject({
+      deploymentKey: localDeployment, materialSupplyShare: 0.2, capabilities: ["upgrade"],
+    });
+    const expected = {
+      coverage: "complete", incompleteReasons: [], governorAuthorityKey: SCOPE_CONTROLLER,
+      minUnavoidableDelaySec: 172800, votingPower: "lock-escrowed", enumerable: true, nonGovernorUnboundedPathKeys: [],
+    };
+    expect(rows.map((row) => row.issuanceGovernance)).toEqual([expected, expected]);
+  });
+
+  it.each(["parameter", "restriction", "delegated", "contract"] as const)(
+    "requires a complete scope on every authored %s control", (kind) => {
+      const control = governedControl("0x2222222222222222222222222222222222222222", {
+        label: `${kind} control`, authorityType: "contract", role: "direct-minter",
+        directMintAbility: kind === "parameter" ? "parameter-only" : kind === "restriction" ? "none" : "cap-limited",
+        canRaiseCap: false,
+      });
+      control.executionScope!.inventory = "partial";
+      control.executionScope!.confidence = "partial";
+      const profile = governedProfile([governedControl(), control]);
+      const { rows } = governedRows(profile);
+      expect(rows.map((row) => row.issuanceGovernance?.incompleteReasons)).toEqual([
+        [`control-scope-incomplete:${kind} control`], [`control-scope-incomplete:${kind} control`],
+      ]);
+      expect(rows.map((row) => row.issuanceGovernance?.coverage)).toEqual(["incomplete", "incomplete"]);
+      delete control.executionScope;
+      expect(governedRows(profile).rows[0]!.issuanceGovernance?.incompleteReasons)
+        .toContain(`control-scope-incomplete:${kind} control`);
+    },
+  );
+
+  it("reports an unresolved reference and a governor whose projected authority is not governance", () => {
+    const missing = governedProfile();
+    missing.governedIssuance!.governorControlRef = "ethereum:0x3333333333333333333333333333333333333333";
+    expect(governedRows(missing).rows[0]!.issuanceGovernance?.incompleteReasons).toEqual(["governor-control-missing"]);
+    const nongovernor = governedProfile([governedControl(undefined, { authorityType: "contract" })]);
+    expect(governedRows(nongovernor).rows[0]!.issuanceGovernance?.incompleteReasons).toEqual(["governor-not-governance"]);
+  });
+
+  it.each(["lock-escrowed", "past-block-checkpoint"] as const)(
+    "rejects signer-quorum claims on the %s governor during compilation", (votingPower) => {
+      for (const field of ["weightedQuorum", "threshold", "signerCount"] as const) {
+        const governor = governedControl();
+        if (field === "weightedQuorum") {
+          governor.weightedQuorum = {
+            scheme: "contract", deployment: SCOPE_CONTROLLER,
+            signers: [{ account: governor.address!, weight: 1 }], quorum: 1, totalWeight: 1,
+            pin: governor.executionScope!.pin, status: "verified",
+            reviewedAt: "2026-10-01", expiresAt: "2026-10-31",
+            reviewer: "Fixture Reviewer", sources: governor.sources!,
+          };
+        } else {
+          governor[field] = 1;
+        }
+        const profile = governedProfile([governor]);
+        profile.governedIssuance!.votingPower = votingPower;
+        expect(governedRows(profile).rows[0]!.issuanceGovernance).toMatchObject({
+          coverage: "incomplete", incompleteReasons: ["governor-not-governance"],
+        });
+      }
+    },
+  );
+
+  it.each(["unbounded", "unknown"] as const)(
+    "includes a non-governor parameter-change path with %s cap in rooting and the delay minimum", (kind) => {
+      const parameter = governedControl("0x2222222222222222222222222222222222222222", {
+        label: "Parameter authority", authorityType: "eoa", role: "minter-admin", directMintAbility: "parameter-only",
+      });
+      Object.assign(parameter.executionScope!.paths[0]!, {
+        capabilities: ["parameter-change"], capSemantics: { kind, bound: null },
+        claimImpairment: "none", unavoidableDelaySec: 86400,
+      });
+      expect(governedRows(governedProfile([governedControl(), parameter])).rows[0]!.issuanceGovernance)
+        .toMatchObject({
+          coverage: "complete", minUnavoidableDelaySec: 86400,
+          nonGovernorUnboundedPathKeys: ["Parameter authority:issuance"],
+        });
+    },
+  );
+
+  it("fails closed for null delay and no unbounded issuance paths", () => {
+    const delayed = governedControl();
+    const unknownDelay = governedControl("0x2222222222222222222222222222222222222222", {
+      label: "Governed minter", authorityType: "contract", role: "direct-minter",
+    });
+    unknownDelay.executionScope!.paths[0]!.unavoidableDelaySec = null;
+    expect(governedRows(governedProfile([delayed, unknownDelay])).rows[0]!.issuanceGovernance?.minUnavoidableDelaySec).toBeNull();
+    const boundedGovernor = governedControl();
+    boundedGovernor.executionScope!.paths[0]!.capSemantics = { kind: "bounded", bound: { amount: 1, unit: "supply-fraction" } };
+    boundedGovernor.executionScope!.paths[0]!.claimImpairment = "bounded";
+    expect(governedRows(governedProfile([boundedGovernor])).rows[0]!.issuanceGovernance?.minUnavoidableDelaySec).toBeNull();
+  });
+
+  it.each(["timelock", "safe", "multisig", "eoa", "issuer-backend", "custodian", "validator-quorum", "dao-governor"] as const)(
+    "does not treat a %s-owned unbounded route as governor-rooted", (authorityType) => {
+      const bypass = governedControl("0x2222222222222222222222222222222222222222", {
+        label: "Other authority", authorityType, role: "direct-minter", threshold: 2, signerCount: 3,
+      });
+      const { rows } = governedRows(governedProfile([governedControl(), bypass]));
+      expect(rows[0]!.issuanceGovernance?.nonGovernorUnboundedPathKeys).toEqual(["Other authority:issuance"]);
+    },
+  );
+
+  it("rejects contract paths whose certificate omits the governor", () => {
+    const bypass = governedControl("0x2222222222222222222222222222222222222222", {
+      label: "Unbound contract", authorityType: "contract", role: "direct-minter",
+    });
+    bypass.executionScope!.pin.signerIdentity = "Safe owners alone can execute.";
+    bypass.executionScope!.observedState = { ...bypass.executionScope!.pin };
+    expect(governedRows(governedProfile([governedControl(), bypass])).rows[0]!.issuanceGovernance?.nonGovernorUnboundedPathKeys)
+      .toEqual(["Unbound contract:issuance"]);
+  });
+
+  it.each([
+    `Governor ${SCOPE_CONTROLLER.split(":")[1]} or 0x3333333333333333333333333333333333333333 can execute.`,
+    `Governor f${SCOPE_CONTROLLER.split(":")[1]} can execute.`,
+    `Governor ${SCOPE_CONTROLLER.split(":")[1]}a can execute.`,
+  ])("rejects unauthored parties and non-standalone governor tokens (%s)", (signerIdentity) => {
+    const minter = governedControl("0x2222222222222222222222222222222222222222", {
+      label: "Contract minter", authorityType: "contract", role: "direct-minter",
+    });
+    minter.executionScope!.pin.signerIdentity = signerIdentity;
+    minter.executionScope!.observedState = { ...minter.executionScope!.pin };
+    expect(governedRows(governedProfile([governedControl(), minter])).rows[0]!.issuanceGovernance?.nonGovernorUnboundedPathKeys)
+      .toEqual(["Contract minter:issuance"]);
+  });
+
+  it.each(["2 of 3", "2 out of 3", "2/3", "2-of-3", "Safe", "safes", "multisig", "multisigs", "multisignature", "threshold", "thresholds", "signer", "signers", "owner", "owners", "quorum"])(
+    "rejects contract certificates containing %s party phrasing", (phrasing) => {
+      const minter = governedControl("0x2222222222222222222222222222222222222222", {
+        label: "Contract minter", authorityType: "contract", role: "direct-minter",
+      });
+      minter.executionScope!.pin.signerIdentity = `${phrasing}; governor ${SCOPE_CONTROLLER.split(":")[1]} can execute.`;
+      minter.executionScope!.observedState = { ...minter.executionScope!.pin };
+      expect(governedRows(governedProfile([governedControl(), minter])).rows[0]!.issuanceGovernance?.nonGovernorUnboundedPathKeys)
+        .toEqual(["Contract minter:issuance"]);
+    },
+  );
+
+  it("admits a governor chain through another authored and governor-rooted contract control", () => {
+    const minter = governedControl("0x2222222222222222222222222222222222222222", {
+      label: "Contract minter", authorityType: "contract", role: "direct-minter",
+    });
+    const hop = governedControl("0x3333333333333333333333333333333333333333", {
+      label: "Execution hop", authorityType: "contract", role: "minter-admin",
+    });
+    minter.executionScope!.pin.signerIdentity = `Only governor ${SCOPE_CONTROLLER.split(":")[1]} through contract ${hop.address} can execute.`;
+    minter.executionScope!.observedState = { ...minter.executionScope!.pin };
+    const profile = governedProfile([governedControl(), minter, hop]);
+    expect(governedRows(profile).rows[0]!.issuanceGovernance).toMatchObject({
+      coverage: "complete", nonGovernorUnboundedPathKeys: [],
+    });
+    hop.authorityType = "eoa";
+    expect(governedRows(profile).rows[0]!.issuanceGovernance?.nonGovernorUnboundedPathKeys)
+      .toEqual(["Contract minter:issuance", "Execution hop:issuance"]);
+  });
+
+  it("matches checksum-case governor tokens after case folding", () => {
+    const governorAddress = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+    const governor = governedControl(governorAddress.toLowerCase());
+    const minter = governedControl("0x2222222222222222222222222222222222222222", {
+      label: "Contract minter", authorityType: "contract", role: "direct-minter",
+    });
+    minter.executionScope!.pin.signerIdentity = `Only governor (${governorAddress}) can execute.`;
+    minter.executionScope!.observedState = { ...minter.executionScope!.pin };
+    const profile = governedProfile([governor, minter]);
+    profile.governedIssuance!.governorControlRef = `ethereum:${governor.address}`;
+    expect(governedRows(profile).rows[0]!.issuanceGovernance?.nonGovernorUnboundedPathKeys).toEqual([]);
+  });
+
+  it.each(["governor", "execution-hop"] as const)(
+    "rejects a same-address %s token authored only on another chain", (party) => {
+      const minter = governedControl("0x2222222222222222222222222222222222222222", {
+        label: "Contract minter", authorityType: "contract", role: "direct-minter",
+      });
+      const hop = governedControl("0x3333333333333333333333333333333333333333", {
+        label: "Execution hop", authorityType: "contract", role: "minter-admin",
+      });
+      hop.executionScope!.paths[0]!.capSemantics = { kind: "bounded", bound: { amount: 1, unit: "supply-fraction" } };
+      hop.executionScope!.paths[0]!.claimImpairment = "bounded";
+      minter.executionScope!.pin.signerIdentity =
+        `Only governor ${SCOPE_CONTROLLER.split(":")[1]} through contract ${hop.address} can execute.`;
+      minter.executionScope!.observedState = { ...minter.executionScope!.pin };
+      const crossChainControl = party === "governor" ? minter : hop;
+      crossChainControl.chain = "base";
+      const deployment = `base:${crossChainControl.address}`;
+      crossChainControl.executionScope!.controllerDeployment = deployment;
+      crossChainControl.executionScope!.paths[0]!.targetDeployment = deployment;
+      crossChainControl.executionScope!.paths[0]!.affectedDeployments = [deployment];
+      expect(governedRows(governedProfile([governedControl(), minter, hop])).rows[0]!.issuanceGovernance)
+        .toMatchObject({ coverage: "complete", nonGovernorUnboundedPathKeys: ["Contract minter:issuance"] });
+    },
+  );
+
+  it.each(["bounded", "raiseable", "collateral-gated"] as const)(
+    "does not charge delay to %s delegated actors or restriction-only paths", (kind) => {
+      const delegated = governedControl("0x2222222222222222222222222222222222222222", {
+        label: "Delegated minter", authorityType: "eoa", role: "direct-minter", directMintAbility: "cap-limited",
+      });
+      delegated.executionScope!.paths[0]!.capSemantics = kind === "bounded"
+        ? { kind, bound: { amount: 1, unit: "supply-fraction" } } : { kind, bound: null };
+      delegated.executionScope!.paths[0]!.claimImpairment = "bounded";
+      delegated.executionScope!.paths[0]!.unavoidableDelaySec = null;
+      const restriction = governedControl("0x3333333333333333333333333333333333333333", {
+        label: "Pause-only authority", authorityType: "eoa", role: "direct-minter", directMintAbility: "none",
+      });
+      restriction.executionScope!.paths[0]!.capabilities = ["freeze"];
+      restriction.executionScope!.paths[0]!.capSemantics = { kind: "not-applicable", bound: null };
+      restriction.executionScope!.paths[0]!.claimImpairment = "none";
+      restriction.executionScope!.paths[0]!.unavoidableDelaySec = null;
+      expect(governedRows(governedProfile([governedControl(), delegated, restriction])).rows[0]!.issuanceGovernance)
+        .toMatchObject({ coverage: "complete", minUnavoidableDelaySec: 259200, nonGovernorUnboundedPathKeys: [] });
+    },
+  );
+
+  it.each(["mint", "upgrade", "bridge-mint"] as const)(
+    "admits the governor's complete reachable %s path outside the asset liability projection", (capability) => {
+      const governor = governedControl();
+      Object.assign(governor.executionScope!.paths[0]!, {
+        capabilities: [capability], reach: "other-liability", affectedLiabilityIds: ["another-asset"],
+      });
+      const minter = governedControl("0x2222222222222222222222222222222222222222", {
+        label: "Governed minter", authorityType: "contract", role: "direct-minter",
+      });
+      minter.executionScope!.paths[0]!.unavoidableDelaySec = 172800;
+      expect(governedRows(governedProfile([governor, minter])).rows[0]!.issuanceGovernance).toMatchObject({
+        coverage: "complete", incompleteReasons: [], minUnavoidableDelaySec: 172800,
+      });
+    },
+  );
+
+  it("requires a reachable mint, upgrade or bridge-mint path on the governor", () => {
+    for (const [mutate, minUnavoidableDelaySec] of [
+      [(control: MintAuthorityControl) => { control.executionScope!.paths[0]!.capabilities = ["parameter-change"]; }, 259200],
+      [(control: MintAuthorityControl) => { control.executionScope!.paths[0]!.activation = "disabled-final"; }, null],
+    ] as const) {
+      const governor = governedControl();
+      mutate(governor);
+      expect(governedRows(governedProfile([governor])).rows[0]!.issuanceGovernance)
+        .toMatchObject({ coverage: "incomplete", incompleteReasons: ["governor-without-issuance-path"], minUnavoidableDelaySec });
+    }
+  });
+
+  it("compiles evidence coverage and voting power without applying evaluator thresholds", () => {
+    const profile = governedProfile();
+    profile.controls![0]!.executionScope!.paths[0]!.unavoidableDelaySec = 1;
+    profile.governedIssuance!.votingPower = "live-balance";
+    expect(governedRows(profile).rows[0]!.issuanceGovernance).toMatchObject({
+      coverage: "complete", incompleteReasons: [], votingPower: "live-balance", minUnavoidableDelaySec: 1, enumerable: true,
+    });
+    profile.governedIssuance!.enumerability.capacityReads = [];
+    expect(governedRows(profile).rows[0]!.issuanceGovernance?.enumerable).toBe(false);
+  });
+
+  it("emits sorted coverage reasons for review, scoped questions, active incidents and expired governance", () => {
+    const profile = governedProfile();
+    profile.review.disposition = "unresolved";
+    profile.review.scopedQuestions = [{
+      controlRef: SCOPE_CONTROLLER, question: "Is every issuance route included in the certificate?",
+      reviewedAt: "2026-10-01", reviewer: "Fixture Reviewer",
+    }];
+    profile.authorityPosture = "compromised";
+    profile.mintIncidents = [{
+      date: "2026-10-01", status: "active", summary: "An active issuance compromise remains unresolved.",
+      sources: [{ label: "Incident report", url: "https://example.com/incident" }],
+    }];
+    profile.governedIssuance!.reviewedAt = "2025-09-01";
+    expect(governedRows(profile).rows[0]!.issuanceGovernance?.incompleteReasons).toEqual([
+      "active-incident", "governed-review-expired", "review-incomplete", "scoped-question-open",
+    ]);
+  });
+
+  it("uses the inclusive governed review freshness boundary and rejects future review relief", () => {
+    const profile = governedProfile();
+    const reviewSec = Date.parse(`${profile.governedIssuance!.reviewedAt}T00:00:00Z`) / 1000;
+    const later = reviewSec + V9_REVIEW_EVIDENCE_MAX_AGE_SEC;
+    expect(governedRows(profile, later).rows[0]!.issuanceGovernance?.incompleteReasons).not.toContain("governed-review-expired");
+    expect(governedRows(profile, later + 1).rows[0]!.issuanceGovernance?.incompleteReasons).toContain("governed-review-expired");
+    profile.governedIssuance!.reviewedAt = "2026-10-03";
+    expect(governedRows(profile).rows[0]!.issuanceGovernance?.incompleteReasons).toEqual(["governed-review-expired"]);
   });
 });

@@ -20,10 +20,12 @@ describe("V9 mint posture bands", () => {
     expect(resolveV9MintPostureBand("none-resolved")).toBe("hardened");
     expect(resolveV9MintPostureBand("bounded-admin")).toBe("hardened");
     expect(resolveV9MintPostureBand("partially-bounded-admin")).toBe("governed");
+    expect(resolveV9MintPostureBand("unbounded-governed")).toBe("governed");
     expect(resolveV9MintPostureBand("unbounded-reconciled")).toBe("managed");
     expect(resolveV9MintPostureBand("concentrated-admin")).toBe("concentrated");
     expect(resolveV9MintPostureBand("collateral-gated")).toBe("concentrated");
-    expect(resolveV9MintPostureBand("unbounded-or-compromised")).toBe("exposed");
+    expect(resolveV9MintPostureBand("unbounded-unreconciled")).toBe("exposed");
+    expect(resolveV9MintPostureBand("compromised")).toBe("exposed");
     expect(resolveV9MintPostureBand("unbounded-reconciliation-unknown")).toBe("exposed");
     expect(resolveV9MintPostureBand("unknown")).toBeNull();
   });
@@ -63,14 +65,16 @@ describe("mint posture predicates", () => {
       unbounded: false,
     },
     "unbounded-reconciled": { noPrivilegedMint: false, noPrivilegedMintChain: false, fragile: true, unbounded: true },
+    "unbounded-governed": { noPrivilegedMint: false, noPrivilegedMintChain: false, fragile: true, unbounded: true },
     "concentrated-admin": { noPrivilegedMint: false, noPrivilegedMintChain: false, fragile: true, unbounded: false },
     "collateral-gated": { noPrivilegedMint: false, noPrivilegedMintChain: false, fragile: true, unbounded: false },
-    "unbounded-or-compromised": {
+    "unbounded-unreconciled": {
       noPrivilegedMint: false,
       noPrivilegedMintChain: false,
       fragile: true,
       unbounded: true,
     },
+    compromised: { noPrivilegedMint: false, noPrivilegedMintChain: false, fragile: true, unbounded: true },
     "unbounded-reconciliation-unknown": {
       noPrivilegedMint: false,
       noPrivilegedMintChain: false,
@@ -128,14 +132,14 @@ describe("V9 curated mint posture queue", () => {
 
   it("classifies each disagreement direction and orders entries by asset id", () => {
     const queue = buildV9CuratedMintPostureQueue([
-      { assetId: "z-optimistic", curatedPosture: "bounded-admin", derivedPosture: "unbounded-or-compromised" },
+      { assetId: "z-optimistic", curatedPosture: "bounded-admin", derivedPosture: "unbounded-unreconciled" },
       { assetId: "a-adverse", curatedPosture: "concentrated-admin", derivedPosture: "partially-bounded-admin" },
       { assetId: "m-unreviewed", curatedPosture: "unknown", derivedPosture: "bounded-admin" },
       { assetId: "d-unresolved", curatedPosture: "bounded-admin", derivedPosture: "unknown" },
       // No longer suppressed: the curated vocabulary can now express the
       // reconciled rung, so a stale adverse annotation over it is a real
       // curation item.
-      { assetId: "b-stale-adverse", curatedPosture: "unbounded-or-compromised", derivedPosture: "unbounded-reconciled" },
+      { assetId: "b-stale-adverse", curatedPosture: "unbounded-unreconciled", derivedPosture: "unbounded-reconciled" },
     ]);
     expect(queue.entries.map((entry) => [entry.assetId, entry.disagreement])).toEqual([
       ["a-adverse", "curated-adverse"],
@@ -182,7 +186,7 @@ describe("V9 curated mint posture queue", () => {
     expect(
       buildV9CuratedMintPostureQueue([
         ...inputs.slice(1),
-        { ...inputs[0]!, derivedPosture: "unbounded-or-compromised" },
+        { ...inputs[0]!, derivedPosture: "unbounded-unreconciled" },
       ]).queueDigest,
     ).not.toBe(buildV9CuratedMintPostureQueue(inputs).queueDigest);
   });

@@ -1,6 +1,22 @@
 {
   "id": "sparkusdtbc-spark",
   "mintAuthority": {
+    "capSemanticsReview": {
+      "verdict": "bounded-by-construction",
+      "rationale": "Pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). The pinned immutable VaultV2 source routes deposit/mint through enter(), which transfers underlying assets before createShares(). Curator increaseAbsoluteCap/increaseRelativeCap and addAdapter govern allocation limits, not arbitrary recipient minting; owner/curator, deposit-gate and fee-recipient settings cannot bypass this accounting. accrueInterest() separately creates fee shares under immutable MAX_PERFORMANCE_FEE (50% of interest) and MAX_MANAGEMENT_FEE (5% annualized) limits, not discretionary arbitrary-share issuance. There is no local upgrade entrypoint. Inherited controls concern usdt-tether, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "sources": [
+        {
+          "label": "Verified current local mint implementation/source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
+        },
+        {
+          "label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2",
+          "url": "https://etherscan.io/block/26113624"
+        }
+      ]
+    },
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "none-resolved-mint",
     "confidence": "unknown",
@@ -127,6 +143,8 @@
     "supervision": "none",
     "review": {
       "sources": [
+        {"label": "Verified current local mint implementation/source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91"},
+        {"label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2", "url": "https://etherscan.io/block/26113624"},
         {
           "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
           "url": "https://api.morpho.org/graphql"
@@ -148,8 +166,8 @@
           "url": "https://eth.blockscout.com/tx/0x9ddf415a09a25af3a72dd6a81acb61ab7771e7304a5cc50ce33b51f50ed6da95"
         }
       ],
-      "evidence": "Observed 2026-10-02T22:43:49.516688+00:00 at ethereum block 26107702 (hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6). Native totalSupply 88558225018782413763816976 (18 decimals), asset 0xdac17f958d2ee523a2206206994597c13d831ec7 (6 decimals), totalAssets 89911293130474, convertToAssets(10^18) 1015278. One-share redeem from actual holder 0x1601843c5e9bc251a3272907010afa41fa18347e returned 1015278 asset base units via eth_call at that same block; no transaction broadcast. Parent mint authority remains inherited. Current exact-token operational controls are recorded without promoting local accounting into independent reserve assurance. Exact implementation creation transaction 0x9ddf415a09a25af3a72dd6a81acb61ab7771e7304a5cc50ce33b51f50ed6da95, block 24794487, timestamp 2026-04-02T21:02:35+00:00, was independently joined from Blockscout creation identity to RPC transaction receipt and block timestamp; issuer founding and parent launch were not substituted. Separate signer/key-custody observation, recorded per identified control rather than as an aggregate issuance-census gap: Safe signer independence and offchain key custody are not publicly established. Calibration v2 field re-justification: reconciliation=not-applicable describes the immutable deposit-backed local share mechanism and does not assert parent reserve-to-total-liability financial assurance; supervision=none grants no prudential-supervision credit. Source-defined share accounting and independent financial assurance retain separate scopes.",
-      "reviewer": "Sol refinement Refine11",
+      "evidence": "Observed 2026-10-02T22:43:49.516688+00:00 at ethereum block 26107702 (hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6). Native totalSupply 88558225018782413763816976 (18 decimals), asset 0xdac17f958d2ee523a2206206994597c13d831ec7 (6 decimals), totalAssets 89911293130474, convertToAssets(10^18) 1015278. One-share redeem from actual holder 0x1601843c5e9bc251a3272907010afa41fa18347e returned 1015278 asset base units via eth_call at that same block; no transaction broadcast. Parent mint authority remains inherited. Current exact-token operational controls are recorded without promoting local accounting into independent reserve assurance. Exact implementation creation transaction 0x9ddf415a09a25af3a72dd6a81acb61ab7771e7304a5cc50ce33b51f50ed6da95, block 24794487, timestamp 2026-04-02T21:02:35+00:00, was independently joined from Blockscout creation identity to RPC transaction receipt and block timestamp; issuer founding and parent launch were not substituted. Separate signer/key-custody observation, recorded per identified control rather than as an aggregate issuance-census gap: Safe signer independence and offchain key custody are not publicly established. Calibration v2 field re-justification: reconciliation=not-applicable describes the immutable deposit-backed local share mechanism and does not assert parent reserve-to-total-liability financial assurance; supervision=none grants no prudential-supervision credit. Source-defined share accounting and independent financial assurance retain separate scopes. D14/A7/A10 review 2026-10-03, pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). The pinned immutable VaultV2 source routes deposit/mint through enter(), which transfers underlying assets before createShares(). Curator increaseAbsoluteCap/increaseRelativeCap and addAdapter govern allocation limits, not arbitrary recipient minting; owner/curator, deposit-gate and fee-recipient settings cannot bypass this accounting. accrueInterest() separately creates fee shares under immutable MAX_PERFORMANCE_FEE (50% of interest) and MAX_MANAGEMENT_FEE (5% annualized) limits, not discretionary arbitrary-share issuance. There is no local upgrade entrypoint. Inherited controls concern usdt-tether, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
       "reviewedAt": "2026-10-03",
       "disposition": "unresolved",
       "unresolvedQuestions": [

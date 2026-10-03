@@ -2,7 +2,7 @@
   "id": "bnusd-balanced",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "Tracked v1 bnUSD(old) minting is restricted on ICON to the registered Balanced Loans and Peg Stability SCOREs. At block 118950736 the token's debt ceiling read 0, replacing the historical 8,000,000 value; its Governance SCORE remains owned by a single EOA able to raise the ceiling or replace mint-critical SCORE logic.",
     "upgradeability": {

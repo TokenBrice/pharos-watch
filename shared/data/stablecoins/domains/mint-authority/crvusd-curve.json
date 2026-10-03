@@ -2,14 +2,14 @@
   "id": "crvusd-curve",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-governed",
     "confidence": "verified",
-    "summary": "crvUSD's immutable ControllerFactory is the token minter and normally pre-mints lending-controller inventory up to DAO-set debt ceilings. The factory's privileged set_debt_ceiling path does not require the recipient to be a registered controller or check collateral: Curve DAO's intermediary can authorize minting to an arbitrary address. User borrowing remains collateral-checked, while the 5-of-9 emergency multisig cannot increase ceilings.",
+    "summary": "crvUSD retains economically unbounded arbitrary-recipient issuance through its immutable ControllerFactory. The complete pinned control census roots every unbounded mint, permission and upgrade path in Curve DAO Ownership Voting, which uses lock-escrowed veCRV and rejects execution until the 604800-second voting period ends. Agent, intermediary, Kernel, ACL and pinned EVMScript registry are separately modeled execution hops. The 5-of-9 emergency Safe has only reviewed restriction/parameter paths with bounded impairment, including callback/policy changes that preserve collateral and authenticated inventory-transfer checks.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
-      "observedAt": "2026-10-01",
-      "observedBlock": 26095803,
+      "observedAt": "2026-10-03",
+      "observedBlock": 26112822,
       "sources": [
         {
           "label": "crvUSD token verified contract",
@@ -35,8 +35,8 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The factory cannot raise its own admin-set recipient ceilings. Normal user borrowing through controllers is collateral-checked, but privileged set_debt_ceiling accepts an arbitrary recipient and mints increased inventory without a controller-registration or collateral check. DAO can raise these ceilings; they are not an immutable aggregate supply cap.",
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095803,
+        "observedAt": "2026-10-03",
+        "observedBlock": 26112822,
         "sources": [
           {
             "label": "crvUSD ControllerFactory",
@@ -51,7 +51,508 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79"
           }
         ],
-        "evidence": "At Ethereum block 26095803, crvUSD.minter() returned this factory and factory.admin() returned 0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79. Verified _set_debt_ceiling calls STABLECOIN.mint(addr, amount) on a ceiling increase without validating addr against registered controllers or requiring collateral. A read-only eth_call from the current DAO Agent through intermediary.execute(factory, set_debt_ceiling(0x000000000000000000000000000000000000dEaD, 1e18)) succeeded at the pinned block; no transaction was sent. Token/factory verified direct-deployment source and zero proxy slots corroborate unchanged native logic, not a limit on governance-authorized issuance."
+        "evidence": "At Ethereum block 26095803, crvUSD.minter() returned this factory and factory.admin() returned 0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79. Verified _set_debt_ceiling calls STABLECOIN.mint(addr, amount) on a ceiling increase without validating addr against registered controllers or requiring collateral. A read-only eth_call from the current DAO Agent through intermediary.execute(factory, set_debt_ceiling(0x000000000000000000000000000000000000dEaD, 1e18)) succeeded at the pinned block; no transaction was sent. Token/factory verified direct-deployment source and zero proxy slots corroborate unchanged native logic, not a limit on governance-authorized issuance. D14/D29 review at block 26112822 (0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a): verified source/bytecode match; every mint-reaching entrypoint is inventoried, including add_market, collect_fees_above_ceiling and public rug_debt_ceiling. Privileged arbitrary allocation/admin/blueprint changes trace to Ownership Voting -> Agent -> intermediary and require the 604800-second vote window. Public rug_debt_ceiling uses the already-set ceiling; it cannot increase debt_ceiling or choose a new authorized ceiling. Native factory/token are immutable; blueprint replacement affects future markets and is separately modeled as governance upgrade power.",
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xc9332fdcb1c491dcc683bae86fe3cb70360738bc",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U1CrvusdGoverned)",
+          "confidence": "verified",
+          "sources": [
+            {
+              "label": "Verified source 0xc9332fdcb1c491dcc683bae86fe3cb70360738bc",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc9332fdcb1c491dcc683bae86fe3cb70360738bc"
+            },
+            {
+              "label": "Verified source 0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79"
+            },
+            {
+              "label": "Verified source 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+            },
+            {
+              "label": "Verified source 0xe478de485ad2fe566d49342cbd03e49ed7db3356",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe478de485ad2fe566d49342cbd03e49ed7db3356"
+            },
+            {
+              "label": "Verified source 0xa4d1a2693589840babb7f3a44d14fdf41b3bf1fe",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa4d1a2693589840babb7f3a44d14fdf41b3bf1fe"
+            }
+          ],
+          "pin": {
+            "position": "ethereum:26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "keccak256:0x0d3f87cb418b8edf6536a6e3fe9e03d96590802dfec656106027e82d97da176a",
+            "signerIdentity": "Governance execution: 0xe478de485ad2fe566d49342cbd03e49ed7db3356 -> 0x40907540d8a6c65c637785e8f8b742ae6b0b9968 -> 0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79."
+          },
+          "observedState": {
+            "position": "ethereum:26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "keccak256:0x0d3f87cb418b8edf6536a6e3fe9e03d96590802dfec656106027e82d97da176a",
+            "signerIdentity": "Governance execution: 0xe478de485ad2fe566d49342cbd03e49ed7db3356 -> 0x40907540d8a6c65c637785e8f8b742ae6b0b9968 -> 0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79."
+          },
+          "inventory": "complete",
+          "closure": {
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
+          },
+          "paths": [
+            {
+              "id": "factory-arbitrary-allocation",
+              "targetDeployment": "ethereum:0xc9332fdcb1c491dcc683bae86fe3cb70360738bc",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x8a82f1fe",
+                "0xb933c50a",
+                "0xdf068aba"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 604800,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "factory-admin-and-blueprints",
+              "targetDeployment": "ethereum:0xc9332fdcb1c491dcc683bae86fe3cb70360738bc",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x9af8f23c",
+                "0xe9333fab"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 604800,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "factory-fee-receiver",
+              "targetDeployment": "ethereum:0xc9332fdcb1c491dcc683bae86fe3cb70360738bc",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xe41ab771"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 604800,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "factory-public-inventory-adjustment",
+              "targetDeployment": "ethereum:0xc9332fdcb1c491dcc683bae86fe3cb70360738bc",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x2651990f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn"
+              ],
+              "capSemantics": {
+                "kind": "raiseable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xe478de485ad2fe566d49342cbd03e49ed7db3356",
+        "deploymentRefs": [
+          "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+        ],
+        "label": "Curve DAO Ownership Voting",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26112822,
+        "sources": [
+          {
+            "label": "Verified source 0xe478de485ad2fe566d49342cbd03e49ed7db3356",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe478de485ad2fe566d49342cbd03e49ed7db3356"
+          },
+          {
+            "label": "Verified source 0xa4d1a2693589840babb7f3a44d14fdf41b3bf1fe",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa4d1a2693589840babb7f3a44d14fdf41b3bf1fe"
+          },
+          {
+            "label": "Verified source 0x5f3b5dfeb7b28cdbd7faba78963ee202a494e2a2",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5f3b5dfeb7b28cdbd7faba78963ee202a494e2a2"
+          },
+          {
+            "label": "Verified source 0x1b13e8e7b85b2f92ca4436f98f88ce169f63d567",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1b13e8e7b85b2f92ca4436f98f88ce169f63d567"
+          },
+          {
+            "label": "Verified source 0xbf1ce0bc4edaad8e576b3b55e19c4c15cf6999eb",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbf1ce0bc4edaad8e576b3b55e19c4c15cf6999eb"
+          },
+          {
+            "label": "Verified source 0x5ceb19e1890f677c3676d5ecdf7c501eba01a054",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5ceb19e1890f677c3676d5ecdf7c501eba01a054"
+          },
+          {
+            "label": "Verified source 0xbd0697ba421e7fec529e3e76d9e9f3a710490369",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd0697ba421e7fec529e3e76d9e9f3a710490369"
+          }
+        ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xe478de485ad2fe566d49342cbd03e49ed7db3356",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U1CrvusdGoverned)",
+          "confidence": "verified",
+          "sources": [
+            {
+              "label": "Verified source 0xe478de485ad2fe566d49342cbd03e49ed7db3356",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe478de485ad2fe566d49342cbd03e49ed7db3356"
+            },
+            {
+              "label": "Verified source 0xa4d1a2693589840babb7f3a44d14fdf41b3bf1fe",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa4d1a2693589840babb7f3a44d14fdf41b3bf1fe"
+            },
+            {
+              "label": "Verified source 0x5f3b5dfeb7b28cdbd7faba78963ee202a494e2a2",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5f3b5dfeb7b28cdbd7faba78963ee202a494e2a2"
+            },
+            {
+              "label": "Verified source 0x1b13e8e7b85b2f92ca4436f98f88ce169f63d567",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1b13e8e7b85b2f92ca4436f98f88ce169f63d567"
+            },
+            {
+              "label": "Verified source 0xbf1ce0bc4edaad8e576b3b55e19c4c15cf6999eb",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbf1ce0bc4edaad8e576b3b55e19c4c15cf6999eb"
+            },
+            {
+              "label": "Verified source 0x5ceb19e1890f677c3676d5ecdf7c501eba01a054",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5ceb19e1890f677c3676d5ecdf7c501eba01a054"
+            },
+            {
+              "label": "Verified source 0xbd0697ba421e7fec529e3e76d9e9f3a710490369",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd0697ba421e7fec529e3e76d9e9f3a710490369"
+            }
+          ],
+          "pin": {
+            "position": "ethereum:26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "keccak256:0xb9c1c929064cd21734c102a698e68bf617feefcfa5a9f62407c45401546736bf",
+            "signerIdentity": "Lock-escrowed veCRV proposal and successful vote execution."
+          },
+          "observedState": {
+            "position": "ethereum:26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "keccak256:0xb9c1c929064cd21734c102a698e68bf617feefcfa5a9f62407c45401546736bf",
+            "signerIdentity": "Lock-escrowed veCRV proposal and successful vote execution."
+          },
+          "inventory": "complete",
+          "closure": {
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
+          },
+          "paths": [
+            {
+              "id": "ownership-vote-authorized-execution",
+              "targetDeployment": "ethereum:0xe478de485ad2fe566d49342cbd03e49ed7db3356",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x1e526610",
+                "0xd5db2c80",
+                "0xd948d468",
+                "0xdf133bca",
+                "0xf4b00513",
+                "0xf98a4eca"
+              ],
+              "callMode": "delegatecall",
+              "capabilities": [
+                "mint",
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 604800,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "ownership-governance-parameters",
+              "targetDeployment": "ethereum:0xe478de485ad2fe566d49342cbd03e49ed7db3356",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x5eb24332",
+                "0x7c1d0b87",
+                "0x93f89a80",
+                "0xc91d956c"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 604800,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "ownership-vote-creation-gates",
+              "targetDeployment": "ethereum:0xe478de485ad2fe566d49342cbd03e49ed7db3356",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xdc177eec",
+                "0xdf136602"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "none",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "ownership-recovery",
+              "targetDeployment": "ethereum:0xe478de485ad2fe566d49342cbd03e49ed7db3356",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x9d4941d8"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "custody-transfer"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "ownership-proxy-upgrade",
+              "targetDeployment": "ethereum:0xad06868167bc5ac5cfcbef2cafa82bc76961d72d",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xae5b2540"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 604800,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "existing-initialization",
+              "targetDeployment": "ethereum:0xe478de485ad2fe566d49342cbd03e49ed7db3356",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xa87f8624"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "none",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 604800,
+              "activation": "disabled-reactivatable",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [
+                "ownership-proxy-upgrade"
+              ],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [
+                "ownership-proxy-upgrade"
+              ],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "evidence": "At block 26112822 (0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a), implementation=0xa4d1a2693589840babb7f3a44d14fdf41b3bf1fe, proxyType=2, voteTime=604800, supportRequiredPct=51e16, minAcceptQuorumPct=30e16, token=veCRV. _newVote snapshots block.number-1; _canExecute returns false before any majority test while _isVoteOpen, so every execution route including newVote/vote forwarding rejects early-majority execution. Read-only canExecute(1499) returned false while the pinned vote was open. Parameter/self-upgrade paths require successful delayed governance; CREATE_VOTES_ROLE is public but proposer minBalance/minTime and snapshot checks remain. The separate one-use vote-creation gates cannot execute a proposal or alter voteTime. EVMScript registry is pinned; storage slot0=2 and executors(1)=enabled CallsScript 0x5ceb19e1890f677c3676d5ecdf7c501eba01a054, executors(2)=zero; sole CallsScript uses CALL, not arbitrary user-selected delegatecall. Registry activation, ACL grant and app upgrades are covered as delayed Agent-governed paths."
       },
       {
         "chain": "ethereum",
@@ -59,14 +560,14 @@
         "deploymentRefs": [
           "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
         ],
-        "label": "Curve DAO Agent for crvUSD factory",
+        "label": "Curve DAO Agent execution contract",
         "role": "governor",
-        "authorityType": "dao-governor",
+        "authorityType": "contract",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095803,
+        "observedAt": "2026-10-03",
+        "observedBlock": 26112822,
         "sources": [
           {
             "label": "crvUSD ControllerFactory admin Etherscan",
@@ -77,7 +578,1146 @@
             "url": "https://etherscan.io/address/0x40907540d8a6C65c637785e8f8B742ae6b0b9968#code"
           }
         ],
-        "evidence": "At Ethereum block 26095803, the factory-admin intermediary's dao() returned this Curve DAO Aragon Agent. The verified intermediary gates execute and factory-ownership transfer to DAO. Its arbitrary-call execution path can invoke factory set_debt_ceiling for an arbitrary recipient, not only a registered collateral controller; a pinned read-only simulation of this full path succeeded. The Agent's own governance execution prerequisites remain separately governed and were not simplified to a single-key signer."
+        "evidence": "At Ethereum block 26095803, the factory-admin intermediary's dao() returned this Curve DAO Aragon Agent. The verified intermediary gates execute and factory-ownership transfer to DAO. Its arbitrary-call execution path can invoke factory set_debt_ceiling for an arbitrary recipient, not only a registered collateral controller; a pinned read-only simulation of this full path succeeded. The Agent's own governance execution prerequisites remain separately governed and were not simplified to a single-key signer. At block 26112822 (0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a), implementation=0x3a93c17fc82cc33420d1809dda9fb715cc89dd37 and proxyType=2. Full ACL genesis-to-pin reconstruction has 67 events and no permission parameters: Ownership Voting is the only EXECUTE_ROLE holder and manager; SAFE_EXECUTE_ROLE/RUN_SCRIPT_ROLE are uncreated. Kernel APP_MANAGER_ROLE and ACL CREATE_PERMISSIONS_ROLE are held and managed only by this Agent. Proxy/implementation correspondence is pinned; upgrade, permission reactivation and script paths are explicitly included, not called immutable or absent.",
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x40907540d8a6c65c637785e8f8b742ae6b0b9968",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U1CrvusdGoverned)",
+          "confidence": "verified",
+          "sources": [
+            {
+              "label": "Verified source 0x40907540d8a6c65c637785e8f8b742ae6b0b9968",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x40907540d8a6c65c637785e8f8b742ae6b0b9968"
+            },
+            {
+              "label": "Verified source 0x3a93c17fc82cc33420d1809dda9fb715cc89dd37",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3a93c17fc82cc33420d1809dda9fb715cc89dd37"
+            },
+            {
+              "label": "Verified source 0xbd0697ba421e7fec529e3e76d9e9f3a710490369",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd0697ba421e7fec529e3e76d9e9f3a710490369"
+            },
+            {
+              "label": "Verified source 0x81f7564e413586f1f99fde55740ac52b43ca99c9",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x81f7564e413586f1f99fde55740ac52b43ca99c9"
+            },
+            {
+              "label": "Verified source 0xad06868167bc5ac5cfcbef2cafa82bc76961d72d",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xad06868167bc5ac5cfcbef2cafa82bc76961d72d"
+            },
+            {
+              "label": "Verified source 0x2b33cf282f867a7ff693a66e11b0fcc5552e4425",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b33cf282f867a7ff693a66e11b0fcc5552e4425"
+            }
+          ],
+          "pin": {
+            "position": "ethereum:26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "keccak256:0xb9c1c929064cd21734c102a698e68bf617feefcfa5a9f62407c45401546736bf",
+            "signerIdentity": "Governance execution: 0xe478de485ad2fe566d49342cbd03e49ed7db3356."
+          },
+          "observedState": {
+            "position": "ethereum:26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "keccak256:0xb9c1c929064cd21734c102a698e68bf617feefcfa5a9f62407c45401546736bf",
+            "signerIdentity": "Governance execution: 0xe478de485ad2fe566d49342cbd03e49ed7db3356."
+          },
+          "inventory": "complete",
+          "closure": {
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
+          },
+          "paths": [
+            {
+              "id": "agent-execute",
+              "targetDeployment": "ethereum:0x40907540d8a6c65c637785e8f8b742ae6b0b9968",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xb61d27f6"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 604800,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "agent-permission-and-script-routes",
+              "targetDeployment": "ethereum:0x40907540d8a6c65c637785e8f8b742ae6b0b9968",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xab23c345",
+                "0xd948d468"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 604800,
+              "activation": "disabled-reactivatable",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [
+                "agent-execute"
+              ],
+              "permissionChangeRefs": [
+                "agent-execute"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "agent-other-administration",
+              "targetDeployment": "ethereum:0x40907540d8a6c65c637785e8f8b742ae6b0b9968",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x4c7ec0b0",
+                "0x578eb50b",
+                "0x6298e902",
+                "0xa83e52b4",
+                "0xbeabacc8"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change",
+                "custody-transfer"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 604800,
+              "activation": "disabled-reactivatable",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [
+                "agent-execute"
+              ],
+              "permissionChangeRefs": [
+                "agent-execute"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "agent-upgrade",
+              "targetDeployment": "ethereum:0xad06868167bc5ac5cfcbef2cafa82bc76961d72d",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xae5b2540"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 604800,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "existing-initialization",
+              "targetDeployment": "ethereum:0x40907540d8a6c65c637785e8f8b742ae6b0b9968",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x8129fc1c"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "none",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 604800,
+              "activation": "disabled-reactivatable",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [
+                "agent-upgrade"
+              ],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [
+                "agent-upgrade"
+              ],
+              "bypassRefs": []
+            },
+            {
+              "id": "agent-public-receipt-recovery",
+              "targetDeployment": "ethereum:0x40907540d8a6c65c637785e8f8b742ae6b0b9968",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x150b7a02",
+                "0x47e7ef24",
+                "0x9d4941d8"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "custody-transfer"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79",
+        "deploymentRefs": [
+          "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+        ],
+        "label": "crvUSD factory-admin intermediary",
+        "role": "cap-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26112822,
+        "sources": [
+          {
+            "label": "Verified source 0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79"
+          },
+          {
+            "label": "Verified source 0xc9332fdcb1c491dcc683bae86fe3cb70360738bc",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc9332fdcb1c491dcc683bae86fe3cb70360738bc"
+          },
+          {
+            "label": "Verified source 0x40907540d8a6c65c637785e8f8b742ae6b0b9968",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x40907540d8a6c65c637785e8f8b742ae6b0b9968"
+          }
+        ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U1CrvusdGoverned)",
+          "confidence": "verified",
+          "sources": [
+            {
+              "label": "Verified source 0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79"
+            },
+            {
+              "label": "Verified source 0xc9332fdcb1c491dcc683bae86fe3cb70360738bc",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc9332fdcb1c491dcc683bae86fe3cb70360738bc"
+            },
+            {
+              "label": "Verified source 0x40907540d8a6c65c637785e8f8b742ae6b0b9968",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x40907540d8a6c65c637785e8f8b742ae6b0b9968"
+            }
+          ],
+          "pin": {
+            "position": "ethereum:26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "keccak256:0x2801de2a23bd9aaf1c8ae0e39acdeb301a8df35746e03f1da1269670e076e190",
+            "signerIdentity": "Governance execution: 0xe478de485ad2fe566d49342cbd03e49ed7db3356 -> 0x40907540d8a6c65c637785e8f8b742ae6b0b9968."
+          },
+          "observedState": {
+            "position": "ethereum:26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "keccak256:0x2801de2a23bd9aaf1c8ae0e39acdeb301a8df35746e03f1da1269670e076e190",
+            "signerIdentity": "Governance execution: 0xe478de485ad2fe566d49342cbd03e49ed7db3356 -> 0x40907540d8a6c65c637785e8f8b742ae6b0b9968."
+          },
+          "inventory": "complete",
+          "closure": {
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
+          },
+          "paths": [
+            {
+              "id": "intermediary-dao-execute",
+              "targetDeployment": "ethereum:0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x1cff79cd"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 604800,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "intermediary-dao-factory-transfer",
+              "targetDeployment": "ethereum:0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x4e8cef1c"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 604800,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "intermediary-dao-emergency-configuration",
+              "targetDeployment": "ethereum:0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x71248623"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 604800,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "intermediary-emergency-parameters",
+              "targetDeployment": "ethereum:0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xf0579235",
+                "0xa90e562b",
+                "0xbd5bd558",
+                "0x25d7c640",
+                "0x251c5b16",
+                "0x2c2ca161",
+                "0x744c1c9f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change",
+                "burn"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "evidence": "Verified direct-deployment Vyper source and pinned runtime match; dao() is Agent and emergency() is the reviewed Safe. Only dao may arbitrary execute, transfer factory admin or choose emergency; dao storage has no setter. Emergency parameter selectors are exact and retain downstream authentication, collateral and rate/fee limits; reduce_debt_ceiling explicitly requires amount<=current ceiling. No delegatecall, fallback or self-upgrade in the intermediary. Unbounded authority roots exclusively in the 604800-second Ownership Voting path; emergency restrictions are separately bounded."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xad06868167bc5ac5cfcbef2cafa82bc76961d72d",
+        "deploymentRefs": [
+          "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+        ],
+        "label": "Curve DAO Aragon Kernel",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26112822,
+        "sources": [
+          {
+            "label": "Verified source 0xad06868167bc5ac5cfcbef2cafa82bc76961d72d",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xad06868167bc5ac5cfcbef2cafa82bc76961d72d"
+          },
+          {
+            "label": "Verified source 0x2b33cf282f867a7ff693a66e11b0fcc5552e4425",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b33cf282f867a7ff693a66e11b0fcc5552e4425"
+          },
+          {
+            "label": "Verified source 0xbd0697ba421e7fec529e3e76d9e9f3a710490369",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd0697ba421e7fec529e3e76d9e9f3a710490369"
+          }
+        ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xad06868167bc5ac5cfcbef2cafa82bc76961d72d",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U1CrvusdGoverned)",
+          "confidence": "verified",
+          "sources": [
+            {
+              "label": "Verified source 0xad06868167bc5ac5cfcbef2cafa82bc76961d72d",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xad06868167bc5ac5cfcbef2cafa82bc76961d72d"
+            },
+            {
+              "label": "Verified source 0x2b33cf282f867a7ff693a66e11b0fcc5552e4425",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b33cf282f867a7ff693a66e11b0fcc5552e4425"
+            },
+            {
+              "label": "Verified source 0xbd0697ba421e7fec529e3e76d9e9f3a710490369",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd0697ba421e7fec529e3e76d9e9f3a710490369"
+            }
+          ],
+          "pin": {
+            "position": "ethereum:26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "keccak256:0x9a80ab6c17130878ed084a87761dcad89f9fcda9f8dd49be3dc9ef8bcd9e3a64",
+            "signerIdentity": "Governance execution: 0xe478de485ad2fe566d49342cbd03e49ed7db3356 -> 0x40907540d8a6c65c637785e8f8b742ae6b0b9968."
+          },
+          "observedState": {
+            "position": "ethereum:26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "keccak256:0x9a80ab6c17130878ed084a87761dcad89f9fcda9f8dd49be3dc9ef8bcd9e3a64",
+            "signerIdentity": "Governance execution: 0xe478de485ad2fe566d49342cbd03e49ed7db3356 -> 0x40907540d8a6c65c637785e8f8b742ae6b0b9968."
+          },
+          "inventory": "complete",
+          "closure": {
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
+          },
+          "paths": [
+            {
+              "id": "kernel-app-and-upgrade-authority",
+              "targetDeployment": "ethereum:0xad06868167bc5ac5cfcbef2cafa82bc76961d72d",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x397edd41",
+                "0x80cd5ac3",
+                "0x8c61757d",
+                "0x958fde82",
+                "0xae5b2540",
+                "0xc050a7a6"
+              ],
+              "callMode": "delegatecall",
+              "capabilities": [
+                "upgrade",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 604800,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "kernel-public-proxy-construction",
+              "targetDeployment": "ethereum:0xad06868167bc5ac5cfcbef2cafa82bc76961d72d",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xd162f8b0",
+                "0xe156a8f3",
+                "0xede658b0",
+                "0xff289fc5"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "none",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "kernel-recovery",
+              "targetDeployment": "ethereum:0xad06868167bc5ac5cfcbef2cafa82bc76961d72d",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x9d4941d8"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "custody-transfer"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "kernel-existing-initialization",
+              "targetDeployment": "ethereum:0xad06868167bc5ac5cfcbef2cafa82bc76961d72d",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x485cc955"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "none",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 604800,
+              "activation": "disabled-reactivatable",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [
+                "kernel-app-and-upgrade-authority"
+              ],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [
+                "kernel-app-and-upgrade-authority"
+              ],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "evidence": "Pinned KernelProxy and Kernel implementation 0x2b33cf282f867a7ff693a66e11b0fcc5552e4425 bytecodes match verified source. Full ACL grants and permission managers put APP_MANAGER_ROLE only in Agent; no parameterized permissions exist. setApp includes core, app-base and app-address namespaces and can upgrade Agent/Voting/Kernel/ACL; all require the 604800-second Ownership Voting route. Public proxy-construction helpers alone neither grant ACL permissions nor change authoritative app mappings. Initialization block is nonzero; initialization cannot be repeated in the current implementation."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xbd0697ba421e7fec529e3e76d9e9f3a710490369",
+        "deploymentRefs": [
+          "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+        ],
+        "label": "Curve DAO Aragon ACL",
+        "role": "cap-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26112822,
+        "sources": [
+          {
+            "label": "Verified source 0xbd0697ba421e7fec529e3e76d9e9f3a710490369",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd0697ba421e7fec529e3e76d9e9f3a710490369"
+          },
+          {
+            "label": "Verified source 0x81f7564e413586f1f99fde55740ac52b43ca99c9",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x81f7564e413586f1f99fde55740ac52b43ca99c9"
+          },
+          {
+            "label": "Verified source 0xad06868167bc5ac5cfcbef2cafa82bc76961d72d",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xad06868167bc5ac5cfcbef2cafa82bc76961d72d"
+          }
+        ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xbd0697ba421e7fec529e3e76d9e9f3a710490369",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U1CrvusdGoverned)",
+          "confidence": "verified",
+          "sources": [
+            {
+              "label": "Verified source 0xbd0697ba421e7fec529e3e76d9e9f3a710490369",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd0697ba421e7fec529e3e76d9e9f3a710490369"
+            },
+            {
+              "label": "Verified source 0x81f7564e413586f1f99fde55740ac52b43ca99c9",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x81f7564e413586f1f99fde55740ac52b43ca99c9"
+            },
+            {
+              "label": "Verified source 0xad06868167bc5ac5cfcbef2cafa82bc76961d72d",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xad06868167bc5ac5cfcbef2cafa82bc76961d72d"
+            }
+          ],
+          "pin": {
+            "position": "ethereum:26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "keccak256:0xb9c1c929064cd21734c102a698e68bf617feefcfa5a9f62407c45401546736bf",
+            "signerIdentity": "Governance execution: 0xe478de485ad2fe566d49342cbd03e49ed7db3356 -> 0x40907540d8a6c65c637785e8f8b742ae6b0b9968."
+          },
+          "observedState": {
+            "position": "ethereum:26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "keccak256:0xb9c1c929064cd21734c102a698e68bf617feefcfa5a9f62407c45401546736bf",
+            "signerIdentity": "Governance execution: 0xe478de485ad2fe566d49342cbd03e49ed7db3356 -> 0x40907540d8a6c65c637785e8f8b742ae6b0b9968."
+          },
+          "inventory": "complete",
+          "closure": {
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
+          },
+          "paths": [
+            {
+              "id": "acl-permission-authority",
+              "targetDeployment": "ethereum:0xbd0697ba421e7fec529e3e76d9e9f3a710490369",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x0808343e",
+                "0x09699ff5",
+                "0x0a8ed3db",
+                "0x6815c992",
+                "0x9d0effdb",
+                "0xa885508a",
+                "0xafd925df",
+                "0xbe038478"
+              ],
+              "callMode": "delegatecall",
+              "capabilities": [
+                "mint",
+                "upgrade",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 604800,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "acl-recovery",
+              "targetDeployment": "ethereum:0xbd0697ba421e7fec529e3e76d9e9f3a710490369",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x9d4941d8"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "custody-transfer"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "acl-proxy-upgrade",
+              "targetDeployment": "ethereum:0xad06868167bc5ac5cfcbef2cafa82bc76961d72d",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xae5b2540"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 604800,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "existing-initialization",
+              "targetDeployment": "ethereum:0xbd0697ba421e7fec529e3e76d9e9f3a710490369",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xc4d66de8"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "none",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 604800,
+              "activation": "disabled-reactivatable",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [
+                "acl-proxy-upgrade"
+              ],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [
+                "acl-proxy-upgrade"
+              ],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "evidence": "Pinned ACL proxy/implementation source correspondence and initialization block are reviewed. Full genesis-through-26112822 ACL history: 67 events, zero SetPermissionParams. Current CREATE_PERMISSIONS_ROLE and its manager are only Agent; Agent EXECUTE_ROLE holder/manager is only Ownership Voting; Kernel APP_MANAGER_ROLE holder/manager is only Agent. Role managers on Ownership Voting parameter powers are itself; the separate one-use vote-creation manager cannot execute votes or alter the execution window. Permission grants/revocations and mutable authorization targets are inventoried and require delayed governance; no wildcard execution permission or emergency mint/upgrading grant is present."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x1b13e8e7b85b2f92ca4436f98f88ce169f63d567",
+        "deploymentRefs": [
+          "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+        ],
+        "label": "Curve DAO pinned EVMScript registry",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26112822,
+        "sources": [
+          {
+            "label": "Verified source 0x1b13e8e7b85b2f92ca4436f98f88ce169f63d567",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1b13e8e7b85b2f92ca4436f98f88ce169f63d567"
+          },
+          {
+            "label": "Verified source 0xbf1ce0bc4edaad8e576b3b55e19c4c15cf6999eb",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbf1ce0bc4edaad8e576b3b55e19c4c15cf6999eb"
+          },
+          {
+            "label": "Verified source 0x5ceb19e1890f677c3676d5ecdf7c501eba01a054",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5ceb19e1890f677c3676d5ecdf7c501eba01a054"
+          },
+          {
+            "label": "Verified source 0xbd0697ba421e7fec529e3e76d9e9f3a710490369",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd0697ba421e7fec529e3e76d9e9f3a710490369"
+          }
+        ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x1b13e8e7b85b2f92ca4436f98f88ce169f63d567",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U1CrvusdGoverned)",
+          "confidence": "verified",
+          "sources": [
+            {
+              "label": "Verified source 0x1b13e8e7b85b2f92ca4436f98f88ce169f63d567",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1b13e8e7b85b2f92ca4436f98f88ce169f63d567"
+            },
+            {
+              "label": "Verified source 0xbf1ce0bc4edaad8e576b3b55e19c4c15cf6999eb",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbf1ce0bc4edaad8e576b3b55e19c4c15cf6999eb"
+            },
+            {
+              "label": "Verified source 0x5ceb19e1890f677c3676d5ecdf7c501eba01a054",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5ceb19e1890f677c3676d5ecdf7c501eba01a054"
+            },
+            {
+              "label": "Verified source 0xbd0697ba421e7fec529e3e76d9e9f3a710490369",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd0697ba421e7fec529e3e76d9e9f3a710490369"
+            }
+          ],
+          "pin": {
+            "position": "ethereum:26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "keccak256:0xe684b4c75b19e2fd536d1c5815993293a64f0600084e5446dc482e69b97cd383",
+            "signerIdentity": "Governance execution: 0xe478de485ad2fe566d49342cbd03e49ed7db3356 -> 0x40907540d8a6c65c637785e8f8b742ae6b0b9968 -> 0xbd0697ba421e7fec529e3e76d9e9f3a710490369."
+          },
+          "observedState": {
+            "position": "ethereum:26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "keccak256:0xe684b4c75b19e2fd536d1c5815993293a64f0600084e5446dc482e69b97cd383",
+            "signerIdentity": "Governance execution: 0xe478de485ad2fe566d49342cbd03e49ed7db3356 -> 0x40907540d8a6c65c637785e8f8b742ae6b0b9968 -> 0xbd0697ba421e7fec529e3e76d9e9f3a710490369."
+          },
+          "inventory": "complete",
+          "closure": {
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
+          },
+          "paths": [
+            {
+              "id": "registry-executor-admission",
+              "targetDeployment": "ethereum:0x1b13e8e7b85b2f92ca4436f98f88ce169f63d567",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x5ca4d4bb",
+                "0x87a16f12",
+                "0xcff606a0"
+              ],
+              "callMode": "delegatecall",
+              "capabilities": [
+                "upgrade",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 604800,
+              "activation": "disabled-reactivatable",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [
+                "registry-permission-reactivation"
+              ],
+              "permissionChangeRefs": [
+                "registry-permission-reactivation"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "registry-permission-reactivation",
+              "targetDeployment": "ethereum:0xbd0697ba421e7fec529e3e76d9e9f3a710490369",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xbe038478"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 604800,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "registry-recovery",
+              "targetDeployment": "ethereum:0x1b13e8e7b85b2f92ca4436f98f88ce169f63d567",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x9d4941d8"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "custody-transfer"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "registry-existing-initialization",
+              "targetDeployment": "ethereum:0x1b13e8e7b85b2f92ca4436f98f88ce169f63d567",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x8129fc1c"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "none",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "disabled-final",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "evidence": "Registry proxyType is pinned by verified AppProxyPinned source; implementation 0xbf1ce0bc4edaad8e576b3b55e19c4c15cf6999eb is bytecode matched. executorsNextIndex in slot0 is 2, so only id1 exists; id1 is enabled bytecode-matched CallsScript 0x5ceb19e1890f677c3676d5ecdf7c501eba01a054. CallsScript applies ordinary CALL and maintains script blacklist checks; the enclosing runner uses the fixed executor delegatecall and protects kernel/appId storage. Full ACL census shows registry admission and management roles ungranted with zero managers. Agent-controlled ACL may create them only through delayed Ownership Voting, modeled explicitly rather than declaring them finally disabled."
       },
       {
         "chain": "ethereum",
@@ -92,9 +1732,9 @@
         "threshold": 5,
         "signerCount": 9,
         "canRaiseCap": false,
-        "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-07-14",
-        "observedBlock": 25530324,
+        "modulesOrGuardsStatus": "present",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26112822,
         "sources": [
           {
             "label": "crvUSD emergency multisig",
@@ -105,10 +1745,1026 @@
             "url": "https://etherscan.io/address/0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79#code"
           }
         ],
-        "evidence": "At Ethereum block 25530324, getThreshold() returned 5, getOwners() returned nine owners, and getModulesPaginated() returned no enabled modules. The intermediary's verified reduce_debt_ceiling() function accepts the emergency address but asserts the new ceiling cannot exceed the current ceiling; arbitrary execute() remains DAO-only."
+        "evidence": "At block 26112822 (0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a), Safe 1.3.0 singleton=0xd9db270c1b5e3bd161e8c8503c55ceabee709552; threshold=5, nine accounts; complete getModulesPaginated(0x1,100) returned no modules and next=0x1, guard slot is zero, fallback handler=0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. Source/runtime match for proxy, singleton and handler; fallback signature methods check Safe authorization and simulations always roll back. Modules, guards, fallback and delegatecall may be changed only through existing authorized Safe execution and cannot acquire intermediary DAO authorization. All nine Controller/LLAMMA pairs are bytecode matched: LM callback targets receive ordinary share-notification calls, no approvals/delegatecall; controller/AMM authenticated and nonreentrant loan/withdraw/swap paths retain collateral/input checks. Monetary policy returns are capped by MAX_RATE; compiled borrowing-discount and fee limits remain enforced. Emergency cannot change controller price oracles or factory admin/blueprints/fee receiver, invoke intermediary execute, raise debt ceilings or call collect_fees_above_ceiling. Four PegKeepers share Agent admin and regulator 0x36a04caffc681fa179558b2aaba30395cddd855f; emergency only changes regulator kill flags, not its oracle/fee/risk settings; update retains pool-balance, profitability and LP-claim accounting. YieldBasis emergency kill and forced withdrawal paths retain receiver==owner and burn that account shares, with debt settlement; FastBridge emergency only holds KILLER_ROLE. These are restriction/parameter-only capabilities with bounded impairment, not arbitrary issuance. The EIP-7702 account is explicitly recorded as custody identity, not inferred plain EOA.",
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x467947ee34af926cf1dcac093870f613c96b1e0c",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U1CrvusdGoverned)",
+          "confidence": "verified",
+          "sources": [
+            {
+              "label": "Verified source 0x467947ee34af926cf1dcac093870f613c96b1e0c",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x467947ee34af926cf1dcac093870f613c96b1e0c"
+            },
+            {
+              "label": "Verified source 0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd9db270c1b5e3bd161e8c8503c55ceabee709552"
+            },
+            {
+              "label": "Verified source 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4"
+            },
+            {
+              "label": "Verified source 0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79"
+            },
+            {
+              "label": "Verified source 0x36a04caffc681fa179558b2aaba30395cddd855f",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x36a04caffc681fa179558b2aaba30395cddd855f"
+            },
+            {
+              "label": "Verified Controller 0x8472a9a7632b173c8cf3a86d3afec50c35548e76",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8472a9a7632b173c8cf3a86d3afec50c35548e76"
+            },
+            {
+              "label": "Verified Controller 0x100daa78fc509db39ef7d04de0c1abd299f4c6ce",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x100daa78fc509db39ef7d04de0c1abd299f4c6ce"
+            },
+            {
+              "label": "Verified Controller 0x4e59541306910ad6dc1dac0ac9dfb29bd9f15c67",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4e59541306910ad6dc1dac0ac9dfb29bd9f15c67"
+            },
+            {
+              "label": "Verified Controller 0xa920de414ea4ab66b97da1bfe9e6eca7d4219635",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa920de414ea4ab66b97da1bfe9e6eca7d4219635"
+            },
+            {
+              "label": "Verified Controller 0xec0820efafc41d8943ee8de495fc9ba8495b15cf",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xec0820efafc41d8943ee8de495fc9ba8495b15cf"
+            },
+            {
+              "label": "Verified Controller 0x1c91da0223c763d2e0173243eadaa0a2ea47e704",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1c91da0223c763d2e0173243eadaa0a2ea47e704"
+            },
+            {
+              "label": "Verified Controller 0x652aea6b22310c89dcc506710cad24d2dba56b11",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x652aea6b22310c89dcc506710cad24d2dba56b11"
+            },
+            {
+              "label": "Verified Controller 0xf8c786b1064889ffd3c8a08b48d5e0c159f4cbe3",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf8c786b1064889ffd3c8a08b48d5e0c159f4cbe3"
+            },
+            {
+              "label": "Verified Controller 0x8aca5a776a878ea1f8967e70a23b8563008f58ef",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8aca5a776a878ea1f8967e70a23b8563008f58ef"
+            },
+            {
+              "label": "Verified LLAMMA 0x136e783846ef68c8bd00a3369f787df8d683a696",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x136e783846ef68c8bd00a3369f787df8d683a696"
+            },
+            {
+              "label": "Verified LLAMMA 0x37417b2238aa52d0dd2d6252d989e728e8f706e4",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x37417b2238aa52d0dd2d6252d989e728e8f706e4"
+            },
+            {
+              "label": "Verified LLAMMA 0xe0438eb3703bf871e31ce639bd351109c88666ea",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe0438eb3703bf871e31ce639bd351109c88666ea"
+            },
+            {
+              "label": "Verified LLAMMA 0x1681195c176239ac5e72d9aebacf5b2492e0c4ee",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1681195c176239ac5e72d9aebacf5b2492e0c4ee"
+            },
+            {
+              "label": "Verified LLAMMA 0xfa96ad0a9e64261db86950e2da362f5572c5c6fd",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfa96ad0a9e64261db86950e2da362f5572c5c6fd"
+            },
+            {
+              "label": "Verified LLAMMA 0xf9bd9da2427a50908c4c6d1599d8e62837c2bcb0",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf9bd9da2427a50908c4c6d1599d8e62837c2bcb0"
+            },
+            {
+              "label": "Verified LLAMMA 0xed325262f54b2987e74436f4556a27f748146da1",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xed325262f54b2987e74436f4556a27f748146da1"
+            },
+            {
+              "label": "Verified LLAMMA 0xb6e62aa178a5421d0a51d17e720a05de78d3137a",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb6e62aa178a5421d0a51d17e720a05de78d3137a"
+            },
+            {
+              "label": "Verified LLAMMA 0x9a2e6bb3114b1eeb5492d97188a3ecb09e39fac8",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9a2e6bb3114b1eeb5492d97188a3ecb09e39fac8"
+            },
+            {
+              "label": "Verified YieldBasis LT 0x6095a220c5567360d459462a25b1ad5aead45204",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6095a220c5567360d459462a25b1ad5aead45204"
+            },
+            {
+              "label": "Verified YieldBasis LT 0xd6a1147666f6e4d7161caf436d9923d44d901112",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd6a1147666f6e4d7161caf436d9923d44d901112"
+            },
+            {
+              "label": "Verified YieldBasis LT 0x2b513ebe7070cff91cf699a0bfe5075020c732ff",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b513ebe7070cff91cf699a0bfe5075020c732ff"
+            },
+            {
+              "label": "Verified YieldBasis LT 0xfbf3c16676055776ab9b286492d8f13e30e2e763",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfbf3c16676055776ab9b286492d8f13e30e2e763"
+            },
+            {
+              "label": "Verified YieldBasis LT 0xac0cfa7742069a8af0c63e14ffd0fe6b3e1bf8d2",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xac0cfa7742069a8af0c63e14ffd0fe6b3e1bf8d2"
+            },
+            {
+              "label": "Verified YieldBasis LT 0xac0a340c1644321d0bbc6404946d828c1ebfac92",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xac0a340c1644321d0bbc6404946d828c1ebfac92"
+            },
+            {
+              "label": "Verified YieldBasis LT 0x931d40dd07b25b91932b481b63631ea86d236e09",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x931d40dd07b25b91932b481b63631ea86d236e09"
+            },
+            {
+              "label": "Verified YieldBasis LT 0x651d4b8168488fa163d85304662e8278d4c55baa",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x651d4b8168488fa163d85304662e8278d4c55baa"
+            },
+            {
+              "label": "Verified YieldBasis LT 0x722fc3640ba007c3e9867ccdb0dca59f2e2f29f9",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x722fc3640ba007c3e9867ccdb0dca59f2e2f29f9"
+            },
+            {
+              "label": "Verified YieldBasis LT 0x771f7290428d830ecd41e980745c327e507823ec",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x771f7290428d830ecd41e980745c327e507823ec"
+            },
+            {
+              "label": "Verified YieldBasis LT 0x2b9c9f3bdceb5d8e36a4704f08a78fca53343cea",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b9c9f3bdceb5d8e36a4704f08a78fca53343cea"
+            },
+            {
+              "label": "Verified source 0xadb10d2d5a95e58ddb1a0744a0d2d7b55db7843d",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xadb10d2d5a95e58ddb1a0744a0d2d7b55db7843d"
+            },
+            {
+              "label": "Verified source 0x97d024859b68394122b3d0bb407dd7299cc8e937",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x97d024859b68394122b3d0bb407dd7299cc8e937"
+            },
+            {
+              "label": "Verified source 0x5ef620631aa46e7d2f6f963b6be4f6823521b9ec",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5ef620631aa46e7d2f6f963b6be4f6823521b9ec"
+            }
+          ],
+          "pin": {
+            "position": "ethereum:26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "keccak256:0xaea7d4252f6245f301e540cfbee27d3a88de543af8e49c5c62405d5499fab7e5",
+            "signerIdentity": "Five signatures from nine accounts: 0xe9a65fe8190fa5a4b5e277b84f0aace686fdc174, 0x7a1057e6e9093da9c1d4c1d049609b6889fc4c67, 0x2b47c57a4c9fc1649b43500f4c0cda6cf29be278, 0xdaa094a0ed166fedf8a0a4310f3f74a1e96f9195, 0x99bc02c239025e431d5741cc1dba8ce77fc51ce3, 0xaf17517acd484429fc0da2312fd1f42039592cd0, 0xc6f3aac21d8282f166938a8b30a9ec62de30accc, 0xaac0aa431c237c2c0b5f041c8e59b3f1a43ac78f, 0x8a7dbc2824acac4d272289a33b255c3f1f3cdf32. Account 0xc6f3aac21d8282f166938a8b30a9ec62de30accc delegates through EIP-7702 to 0x63c0c19a282a1b52b07dd5a65b58948a07dae32b; this is custody, not a separate issuance path."
+          },
+          "observedState": {
+            "position": "ethereum:26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "keccak256:0xaea7d4252f6245f301e540cfbee27d3a88de543af8e49c5c62405d5499fab7e5",
+            "signerIdentity": "Five signatures from nine accounts: 0xe9a65fe8190fa5a4b5e277b84f0aace686fdc174, 0x7a1057e6e9093da9c1d4c1d049609b6889fc4c67, 0x2b47c57a4c9fc1649b43500f4c0cda6cf29be278, 0xdaa094a0ed166fedf8a0a4310f3f74a1e96f9195, 0x99bc02c239025e431d5741cc1dba8ce77fc51ce3, 0xaf17517acd484429fc0da2312fd1f42039592cd0, 0xc6f3aac21d8282f166938a8b30a9ec62de30accc, 0xaac0aa431c237c2c0b5f041c8e59b3f1a43ac78f, 0x8a7dbc2824acac4d272289a33b255c3f1f3cdf32. Account 0xc6f3aac21d8282f166938a8b30a9ec62de30accc delegates through EIP-7702 to 0x63c0c19a282a1b52b07dd5a65b58948a07dae32b; this is custody, not a separate issuance path."
+          },
+          "inventory": "complete",
+          "closure": {
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
+          },
+          "paths": [
+            {
+              "id": "emergency-signed-parameter-calls",
+              "targetDeployment": "ethereum:0x467947ee34af926cf1dcac093870f613c96b1e0c",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x6a761202"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change",
+                "burn"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "emergency-self-configuration",
+              "targetDeployment": "ethereum:0x467947ee34af926cf1dcac093870f613c96b1e0c",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x0d582f13",
+                "0xd4d9bdcd",
+                "0x694e80c3",
+                "0xe009cfde",
+                "0x610b5925",
+                "0xf8dc5dd9",
+                "0xf08a0323",
+                "0xe19a9dd9",
+                "0xe318b52b"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "emergency-module-route",
+              "targetDeployment": "ethereum:0x467947ee34af926cf1dcac093870f613c96b1e0c",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x468721a7",
+                "0x5229073f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change",
+                "burn"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "disabled-reactivatable",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [
+                "emergency-self-configuration"
+              ],
+              "permissionChangeRefs": [
+                "emergency-self-configuration"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "emergency-intermediary-restrictions",
+              "targetDeployment": "ethereum:0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xf0579235",
+                "0xa90e562b",
+                "0xbd5bd558",
+                "0x25d7c640",
+                "0x251c5b16",
+                "0x2c2ca161",
+                "0x744c1c9f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change",
+                "burn"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "emergency-regulator-pause",
+              "targetDeployment": "ethereum:0x36a04caffc681fa179558b2aaba30395cddd855f",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xaa7c366c"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "emergency-rollback-only",
+              "targetDeployment": "ethereum:0x467947ee34af926cf1dcac093870f613c96b1e0c",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xc4ca3a9c",
+                "0xb4faba09"
+              ],
+              "callMode": "delegatecall",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "none",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "disabled-final",
+              "affectedLiabilityIds": [],
+              "affectedDeployments": [],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "emergency-existing-initialization",
+              "targetDeployment": "ethereum:0x467947ee34af926cf1dcac093870f613c96b1e0c",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xb63e800d"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "none",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "disabled-reactivatable",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [
+                "emergency-self-configuration"
+              ],
+              "permissionChangeRefs": [
+                "emergency-self-configuration"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "emergency-signed-delegatecall",
+              "targetDeployment": "ethereum:0x467947ee34af926cf1dcac093870f613c96b1e0c",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x6a761202"
+              ],
+              "callMode": "delegatecall",
+              "capabilities": [
+                "parameter-change",
+                "burn"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "emergency-yb-6095a220",
+              "targetDeployment": "ethereum:0x6095a220c5567360d459462a25b1ad5aead45204",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x90b22997",
+                "0xd5569431",
+                "0xb78be802",
+                "0xec46bf8f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change",
+                "custody-transfer"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "emergency-yb-d6a11476",
+              "targetDeployment": "ethereum:0xd6a1147666f6e4d7161caf436d9923d44d901112",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x90b22997",
+                "0xd5569431",
+                "0xb78be802",
+                "0xec46bf8f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change",
+                "custody-transfer"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "emergency-yb-2b513ebe",
+              "targetDeployment": "ethereum:0x2b513ebe7070cff91cf699a0bfe5075020c732ff",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x90b22997",
+                "0xd5569431",
+                "0xb78be802",
+                "0xec46bf8f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change",
+                "custody-transfer"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "emergency-yb-fbf3c166",
+              "targetDeployment": "ethereum:0xfbf3c16676055776ab9b286492d8f13e30e2e763",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x90b22997",
+                "0xd5569431",
+                "0xb78be802",
+                "0xec46bf8f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change",
+                "custody-transfer"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "emergency-yb-ac0cfa77",
+              "targetDeployment": "ethereum:0xac0cfa7742069a8af0c63e14ffd0fe6b3e1bf8d2",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x90b22997",
+                "0xd5569431",
+                "0xb78be802",
+                "0xec46bf8f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change",
+                "custody-transfer"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "emergency-yb-ac0a340c",
+              "targetDeployment": "ethereum:0xac0a340c1644321d0bbc6404946d828c1ebfac92",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x90b22997",
+                "0xd5569431",
+                "0xb78be802",
+                "0xec46bf8f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change",
+                "custody-transfer"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "emergency-yb-931d40dd",
+              "targetDeployment": "ethereum:0x931d40dd07b25b91932b481b63631ea86d236e09",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x90b22997",
+                "0xd5569431",
+                "0xb78be802",
+                "0xec46bf8f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change",
+                "custody-transfer"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "emergency-yb-651d4b81",
+              "targetDeployment": "ethereum:0x651d4b8168488fa163d85304662e8278d4c55baa",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x90b22997",
+                "0xd5569431",
+                "0xb78be802",
+                "0xec46bf8f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change",
+                "custody-transfer"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "emergency-yb-722fc364",
+              "targetDeployment": "ethereum:0x722fc3640ba007c3e9867ccdb0dca59f2e2f29f9",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x90b22997",
+                "0xd5569431",
+                "0xb78be802",
+                "0xec46bf8f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change",
+                "custody-transfer"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "emergency-yb-771f7290",
+              "targetDeployment": "ethereum:0x771f7290428d830ecd41e980745c327e507823ec",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x90b22997",
+                "0xd5569431",
+                "0xb78be802",
+                "0xec46bf8f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change",
+                "custody-transfer"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "emergency-yb-2b9c9f3b",
+              "targetDeployment": "ethereum:0x2b9c9f3bdceb5d8e36a4704f08a78fca53343cea",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x90b22997",
+                "0xd5569431",
+                "0xb78be802",
+                "0xec46bf8f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change",
+                "custody-transfer"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "emergency-bridge-kill-adb10d2d",
+              "targetDeployment": "ethereum:0xadb10d2d5a95e58ddb1a0744a0d2d7b55db7843d",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x90b22997",
+                "0xce91764f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "emergency-bridge-kill-97d02485",
+              "targetDeployment": "ethereum:0x97d024859b68394122b3d0bb407dd7299cc8e937",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x90b22997",
+                "0xce91764f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "emergency-bridge-kill-5ef62063",
+              "targetDeployment": "ethereum:0x5ef620631aa46e7d2f6f963b6be4f6823521b9ec",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x90b22997",
+                "0xce91764f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "crvusd-curve"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ],
+          "extensions": {
+            "exhaustive": true,
+            "paginationEnd": "0x0000000000000000000000000000000000000001",
+            "sourceRuntimeCorrespondence": true,
+            "entries": [
+              {
+                "deployment": "ethereum:0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+                "runtimeIdentity": "keccak256:0x03e69f7ce809e81687c69b19a7d7cca45b6d551ffdec73d9bb87178476de1abf",
+                "kind": "fallback-handler",
+                "pathRefs": [
+                  "emergency-rollback-only"
+                ],
+                "mutableReachClosed": true
+              }
+            ]
+          }
+        }
       }
     ],
     "economicCapSemantics": "unbounded",
+    "governedIssuance": {
+      "governorControlRef": "ethereum:0xe478de485ad2fe566d49342cbd03e49ed7db3356",
+      "votingPower": "lock-escrowed",
+      "votingPowerEvidence": "Pinned Ownership Voting.token() is veCRV 0x5f3b5dfeb7b28cdbd7faba78963ee202a494e2a2. Bytecode-matched VotingEscrow verified source requires CRV transferFrom into a time lock, rounds lock expiry by week, caps duration at four years and permits withdraw only after expiry. Voting uses totalSupplyAt/balanceOfAt for the block.number-1 snapshot; live transferable or flash-borrowed CRV cannot provide voting power. Current Voting implementation enforces voteTime=604800 before execution even after an absolute majority.",
+      "enumerability": {
+        "authorizationEvents": [
+          "ControllerFactory.SetDebtCeiling(address,uint256)",
+          "ControllerFactory.AddMarket(address,address,address,address,uint256)",
+          "ACL.SetPermission(address,address,bytes32,bool)",
+          "ACL.ChangePermissionManager(address,bytes32,address)"
+        ],
+        "capacityReads": [
+          "ControllerFactory.debt_ceiling(address)",
+          "ControllerFactory.debt_ceiling_residual(address)"
+        ]
+      },
+      "observedAt": "2026-10-03",
+      "observedBlock": 26112822,
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U1CrvusdGoverned)",
+      "sources": [
+        {
+          "label": "Verified source 0xc9332fdcb1c491dcc683bae86fe3cb70360738bc",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc9332fdcb1c491dcc683bae86fe3cb70360738bc"
+        },
+        {
+          "label": "Verified source 0xe478de485ad2fe566d49342cbd03e49ed7db3356",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe478de485ad2fe566d49342cbd03e49ed7db3356"
+        },
+        {
+          "label": "Verified source 0xa4d1a2693589840babb7f3a44d14fdf41b3bf1fe",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa4d1a2693589840babb7f3a44d14fdf41b3bf1fe"
+        },
+        {
+          "label": "Verified source 0x5f3b5dfeb7b28cdbd7faba78963ee202a494e2a2",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5f3b5dfeb7b28cdbd7faba78963ee202a494e2a2"
+        },
+        {
+          "label": "Verified source 0xbd0697ba421e7fec529e3e76d9e9f3a710490369",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd0697ba421e7fec529e3e76d9e9f3a710490369"
+        }
+      ]
+    },
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
@@ -132,11 +2788,59 @@
         {
           "label": "Verified Curve DAO factory intermediary source",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79"
+        },
+        {
+          "label": "Verified source 0xc9332fdcb1c491dcc683bae86fe3cb70360738bc",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc9332fdcb1c491dcc683bae86fe3cb70360738bc"
+        },
+        {
+          "label": "Verified source 0xe478de485ad2fe566d49342cbd03e49ed7db3356",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe478de485ad2fe566d49342cbd03e49ed7db3356"
+        },
+        {
+          "label": "Verified source 0xa4d1a2693589840babb7f3a44d14fdf41b3bf1fe",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa4d1a2693589840babb7f3a44d14fdf41b3bf1fe"
+        },
+        {
+          "label": "Verified source 0x5f3b5dfeb7b28cdbd7faba78963ee202a494e2a2",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5f3b5dfeb7b28cdbd7faba78963ee202a494e2a2"
+        },
+        {
+          "label": "Verified source 0xbd0697ba421e7fec529e3e76d9e9f3a710490369",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd0697ba421e7fec529e3e76d9e9f3a710490369"
+        },
+        {
+          "label": "Verified source 0x467947ee34af926cf1dcac093870f613c96b1e0c",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x467947ee34af926cf1dcac093870f613c96b1e0c"
+        },
+        {
+          "label": "Verified source 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4"
+        },
+        {
+          "label": "Verified source 0x36a04caffc681fa179558b2aaba30395cddd855f",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x36a04caffc681fa179558b2aaba30395cddd855f"
+        },
+        {
+          "label": "Verified source 0xad06868167bc5ac5cfcbef2cafa82bc76961d72d",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xad06868167bc5ac5cfcbef2cafa82bc76961d72d"
+        },
+        {
+          "label": "Verified source 0x2b33cf282f867a7ff693a66e11b0fcc5552e4425",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b33cf282f867a7ff693a66e11b0fcc5552e4425"
+        },
+        {
+          "label": "Verified source 0x1b13e8e7b85b2f92ca4436f98f88ce169f63d567",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1b13e8e7b85b2f92ca4436f98f88ce169f63d567"
+        },
+        {
+          "label": "Verified source 0xbf1ce0bc4edaad8e576b3b55e19c4c15cf6999eb",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbf1ce0bc4edaad8e576b3b55e19c4c15cf6999eb"
         }
       ],
-      "evidence": "Re-reviewed at Ethereum block 26098749 on 2026-10-01. crvUSD.minter() identifies ControllerFactory 0xc9332fdcb1c491dcc683bae86fe3cb70360738bc; factory.admin() identifies intermediary 0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79; intermediary.dao() identifies Curve DAO Agent 0x40907540d8a6c65c637785e8f8b742ae6b0b9968. Verified factory set_debt_ceiling accepts an arbitrary recipient and increases minted inventory without controller-registration, collateral, or same-transaction repayment checks. A read-only eth_call from the current DAO Agent through intermediary.execute(factory, set_debt_ceiling(0x000000000000000000000000000000000000dEaD, 1e18)) succeeded; the same call from the emergency address reverted with Only DAO. No transaction was sent. Emergency identity remains 0x467947ee34af926cf1dcac093870f613c96b1e0c, with five required signatures and nine owners; its verified reduce_debt_ceiling path cannot increase ceilings. Under owner ruling D14, the least-constrained durable DAO issuance path determines unbounded economic cap semantics and unbounded-or-compromised posture; no compromise is alleged. Numeric DAO-adjustable ceilings and normal collateral-checked borrowing do not bound this privileged path. Native immutability, prudential supervision, independent attestation, and emergency signer custody are not inferred from these reads.",
-      "reviewer": "Sol curation pass 2026-10-01 (R2WCurve)",
-      "reviewedAt": "2026-10-01",
+      "evidence": "Re-reviewed at Ethereum block 26098749 on 2026-10-01. crvUSD.minter() identifies ControllerFactory 0xc9332fdcb1c491dcc683bae86fe3cb70360738bc; factory.admin() identifies intermediary 0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79; intermediary.dao() identifies Curve DAO Agent 0x40907540d8a6c65c637785e8f8b742ae6b0b9968. Verified factory set_debt_ceiling accepts an arbitrary recipient and increases minted inventory without controller-registration, collateral, or same-transaction repayment checks. A read-only eth_call from the current DAO Agent through intermediary.execute(factory, set_debt_ceiling(0x000000000000000000000000000000000000dEaD, 1e18)) succeeded; the same call from the emergency address reverted with Only DAO. No transaction was sent. Emergency identity remains 0x467947ee34af926cf1dcac093870f613c96b1e0c, with five required signatures and nine owners; its verified reduce_debt_ceiling path cannot increase ceilings. Under owner ruling D14, the least-constrained durable DAO issuance path determines unbounded economic cap semantics; D29's separately certified governance closure yields the current unbounded-governed posture. No compromise is alleged. Numeric DAO-adjustable ceilings and normal collateral-checked borrowing do not bound this privileged path. Native immutability, prudential supervision, independent attestation, and emergency signer custody are not inferred from these reads. D14/D29 sweep on 2026-10-03 pinned to Ethereum block 26112822, hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a. D14 remains unbounded: set_debt_ceiling accepts an arbitrary recipient without collateral; the pinned DAO route simulation succeeded without sending a transaction. D29 now has complete execution certificates for Ownership Voting and seven authored execution/restriction controls, including Agent, intermediary, Kernel, ACL, EVMScript registry and emergency Safe. Full ACL grant/manager and script-executor censuses close authorization, upgrades and bypasses; no early-vote execution shortcut exists, and the minimum unavoidable unbounded-path delay is 604800 seconds. veCRV is lock-escrowed. Full 67 SetDebtCeiling-event reconstruction yields 31 historical recipients and 17 nonzero ceilings, all agreeing with pinned debt_ceiling reads. Emergency mutable callback/policy targets preserve guarded collateral/input checks across all nine bytecode-matched Controller/LLAMMA pairs; PegKeeper regulator rights are kill-only; YieldBasis forced withdrawal retains receiver==owner/share burn/debt settlement; FastBridge rights are kill-only. Safe module enumeration ends at sentinel, guard is zero, and the bytecode-matched compatibility fallback is explicitly certified. The delegated EIP-7702 account is custody identity only. Current derived-consistent posture is unbounded-governed. Token.set_minter is minter-only, and the factory verified complete entrypoint census contains no callable route to it; this does not constitute an independent native-upgrade or authorization bypass.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U1CrvusdGoverned)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable"
     }
   }

@@ -2,7 +2,7 @@
   "id": "susdd-tron-dao-reserve",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "bounded-admin",
     "confidence": "verified",
     "summary": "sUSDD has independent native issuance on Ethereum and BNB Chain through immutable SavingsUsdd ERC-4626 wrappers. Each wrapper mints shares only against deposits of its chain-local USDD and burns shares on withdrawal; inherited USDD Join and GovActionsProxy authority is enumerated below and remains Mint Authority, not Bridge Risk.",
     "inheritedFrom": "usdd-tron-dao-reserve",
@@ -267,6 +267,22 @@
       }
     ],
     "economicCapSemantics": "bounded",
+    "capSemanticsReview": {
+      "verdict": "bounded-by-construction",
+      "rationale": "D14 review 2026-10-03, applying D08 wrapper-local scope: verified SavingsUsdd deposit/mint reaches _mint only after usdd.transferFrom, usddJoin.join and pot.join; shares are converted from or rounded up against deposited assets. Neither immutable wrapper has owner, arbitrary-mint role or minter-registration entrypoint. Inherited USDD GovActionsProxy/EOA controls concern parent USDD issuance carried by the serial-claim dependency edge, not wrapper-local mint authorization; parent risk must not be charged twice. Keep bounded with bounded-by-construction review.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U11BoundedB)",
+      "sources": [
+        {
+          "label": "Verified Ethereum SavingsUsdd source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc5d6a7b61d18afa11435a889557b068bb9f29930"
+        },
+        {
+          "label": "Verified BSC SavingsUsdd source",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d?fields=sources,compilation"
+        }
+      ]
+    },
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
@@ -292,9 +308,9 @@
           "url": "https://docs.usdd.io/system-architecture/susdd-mechanism.md"
         }
       ],
-      "evidence": "Reviewed 2026-08-16: Ethereum block 25771107 and BSC block 116365577 confirm that both sUSDD deployments are immutable SavingsUsdd ERC-4626 wrappers with no owner, role admin, pause, proxy, or upgrade path. Each wrapper's immutable asset() points to its chain-local native USDD deployment; deposit/mint creates shares only against deposited USDD and withdraw/redeem burns shares. The inherited USDD Join, GovActionsProxy, and owner controls are explicitly enumerated for both chains above and remain native parent issuance authority, not bridge machinery. Reconciliation review remains not-applicable because the mint path creates no off-chain reserve claim; local sUSDD issuance remains deposit-gated with on-chain parent accounting and no prudential regulator or independent attestor.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-2 (lead usdc-circle); Sol economic-posture batch 2026-08-15; Codex mint-bridge boundary migration",
-      "reviewedAt": "2026-08-16"
+      "evidence": "Reviewed 2026-08-16: Ethereum block 25771107 and BSC block 116365577 confirm that both sUSDD deployments are immutable SavingsUsdd ERC-4626 wrappers with no owner, role admin, pause, proxy, or upgrade path. Each wrapper's immutable asset() points to its chain-local native USDD deployment; deposit/mint creates shares only against deposited USDD and withdraw/redeem burns shares. The inherited USDD Join, GovActionsProxy, and owner controls are explicitly enumerated for both chains above and remain native parent issuance authority, not bridge machinery. Reconciliation review remains not-applicable because the mint path creates no off-chain reserve claim; local sUSDD issuance remains deposit-gated with on-chain parent accounting and no prudential regulator or independent attestor. D14 review 2026-10-03, applying D08 wrapper-local scope: verified SavingsUsdd deposit/mint reaches _mint only after usdd.transferFrom, usddJoin.join and pot.join; shares are converted from or rounded up against deposited assets. Neither immutable wrapper has owner, arbitrary-mint role or minter-registration entrypoint. Inherited USDD GovActionsProxy/EOA controls concern parent USDD issuance carried by the serial-claim dependency edge, not wrapper-local mint authorization; parent risk must not be charged twice. Keep bounded with bounded-by-construction review.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U11BoundedB)",
+      "reviewedAt": "2026-10-03"
     }
   }
 }

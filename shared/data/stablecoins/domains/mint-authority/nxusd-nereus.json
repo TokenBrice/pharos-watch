@@ -2,7 +2,7 @@
   "id": "nxusd-nereus",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "NXUSD is a BoringOwnable CDP stablecoin with two independent native issuance deployments. On Avalanche, mint() is onlyOwner under Gnosis Safe 0xdd3de3b819edd3a014fda93868d7dfc873341467, a 2-of-3 Safe with no modules or guard; on Polygon, owner-only minting is controlled by Gnosis Safe 0xc4eca7d55db3dc217a2edfff3da05fca4d8a7ef8, also 2-of-3 with no modules or guard. Both owner Safes administer their native NXUSD deployment and Nereus CDP parameters.",
     "upgradeability": {

@@ -2,7 +2,7 @@
   "id": "srusd-reservoir",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "srUSD's Ethereum Savingcoin is the sole reviewed native-issuance route and is minted only by Savings Module 0x5475... (MINTER role confirmed). DEFAULT_ADMIN = EOA 0xb7570e32...; the wrapper has no proxy/upgrade path. Base rUSD mint authority remains inherited from Reservoir PSM/Credit Enforcer controls, while the Berachain LayerZero OFT and Ethereum OFT adapter are Bridge Risk machinery.",
     "upgradeability": {

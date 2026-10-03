@@ -2,7 +2,7 @@
   "id": "usdq-quill",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "USDQ is minted when users borrow against overcollateralized CDPs (wETH/wstETH/weETH/SCR) in Quill's Liquity-v2/BOLD fork on Scroll; minting is restricted to registered branch contracts. USDQ is a UUPS token controlled through QuillAccessManager. The AccessManager is an ERC-1967 proxy whose current verified implementation exposes no UUPS upgrade entrypoint. ADMIN_ROLE of the AccessManager is held by a Gnosis Safe 1.4.1 (0x32fd58b8, 3-of-6, has a guard at 0x075233a1), making token logic mutable through multisig-controlled roles.",
     "controls": [

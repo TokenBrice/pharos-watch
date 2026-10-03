@@ -1,6 +1,22 @@
 {
   "id": "sgho-aave",
   "mintAuthority": {
+    "capSemanticsReview": {
+      "verdict": "raiseable-collateral-only",
+      "rationale": "Pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). The pinned sGho implementation inherits ERC4626 _deposit, which safeTransferFroms GHO before _mint. supplyCap and rate parameters change deposit capacity/share conversion, not discretionary issuance to a chosen recipient without asset funding. The Aave Level-1 Executor ProxyAdmin upgrade power can replace this construction but is upgrade-only, not a new D14 mint trigger; the currently verified local mint path remains GHO-deposit backed. Inherited controls concern gho-aave, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "sources": [
+        {
+          "label": "Verified current local mint implementation/source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xff229a0bbb614a284de8ae0e41e5974878fd7c04"
+        },
+        {
+          "label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2",
+          "url": "https://etherscan.io/block/26113624"
+        }
+      ]
+    },
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
@@ -94,6 +110,8 @@
     "supervision": "none",
     "review": {
       "sources": [
+        {"label": "Verified current local mint implementation/source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xff229a0bbb614a284de8ae0e41e5974878fd7c04"},
+        {"label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2", "url": "https://etherscan.io/block/26113624"},
         {
           "label": "Aave GHO facilitators",
           "url": "https://aave.com/help/gho-stablecoin/facilitators"
@@ -107,9 +125,9 @@
           "url": "https://etherscan.io/address/0xe1753f2e00940cc31213dd92013cf019dfe4ca1d#readContract"
         }
       ],
-      "evidence": "At Ethereum block 25573280, asset() on the recorded sGHO token returned GHO 0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f. The wrapper is an EIP-1967 transparent proxy with implementation 0xff229a0bbb614a284de8ae0e41e5974878fd7c04 and ProxyAdmin 0xc15700631020eba02317964550365b95a9a28adb. Its ProxyAdmin owner is the Aave Governance V3 Level-1 Executor 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a. Shares are local deposit accounting; durable GHO issuance remains inherited from the reviewed parent. No named prudential supervisor applies to the wrapper.",
-      "reviewer": "GPT SOL-BIND wave6",
-      "reviewedAt": "2026-07-22",
+      "evidence": "At Ethereum block 25573280, asset() on the recorded sGHO token returned GHO 0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f. The wrapper is an EIP-1967 transparent proxy with implementation 0xff229a0bbb614a284de8ae0e41e5974878fd7c04 and ProxyAdmin 0xc15700631020eba02317964550365b95a9a28adb. Its ProxyAdmin owner is the Aave Governance V3 Level-1 Executor 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a. Shares are local deposit accounting; durable GHO issuance remains inherited from the reviewed parent. No named prudential supervisor applies to the wrapper. D14/A7/A10 review 2026-10-03, pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). The pinned sGho implementation inherits ERC4626 _deposit, which safeTransferFroms GHO before _mint. supplyCap and rate parameters change deposit capacity/share conversion, not discretionary issuance to a chosen recipient without asset funding. The Aave Level-1 Executor ProxyAdmin upgrade power can replace this construction but is upgrade-only, not a new D14 mint trigger; the currently verified local mint path remains GHO-deposit backed. Inherited controls concern gho-aave, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
       "noLocalIssuance": {
         "kind": "inherited-parent-issuance",

@@ -2,7 +2,7 @@
   "id": "usda-alpha-partner",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "manual-review",
     "summary": "USDA's BSC token has an uncapped MINT role. At BSC block 125055866, the previously recorded minter contract and EOA still hold MINT; the EOA still holds DEFAULT_ADMIN_ROLE and can appoint minters. The minter contract retains its separate EOA owner. Exhaustive current role-holder enumeration was not repeated, so no claim of a sole administrator or exactly two minters is made. Address ownership, key custody, and the unverified minter contract's downstream policy remain undisclosed.",
     "controls": [

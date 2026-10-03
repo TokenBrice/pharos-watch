@@ -2,7 +2,7 @@
   "id": "euro3-3a-dao",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "EURO3 on Polygon and Linea uses a MintableToken + MintableTokenOwner pattern. Historical Polygon reads authorized VaultFactory 0x4760847023fa0833221ae76e01db1e483a5d20e0 and second minter 0x027a597ad044bddb7a6b7ef9ed2b641122801220. At Linea block 32198858, the authorized factory is 0x65c6fd9b3a2a892096881e28f07c732ed128893e; those two Polygon addresses are not Linea minters. Both token-owner chains still terminate through per-chain OwnerProxy contracts at operator 0x84d28251143df55df1768870fc26983f50364557. This concentrated operator can administer mint authorization; the tested candidate addresses are not a complete current minter census.",
     "upgradeability": {

@@ -2,7 +2,7 @@
   "id": "home-homecoin",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "manual-review",
     "summary": "HOME is an EIP-1967 proxy pointing to Pool16. ProxyAdmin 0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f is owned by Gnosis Safe v1.3.0 0xa42f6fb68607048dde54fcd53d2195cc8ca5f486, currently 3-of-5. The Safe is also the Pool16 servicer. Loan origination is lien-gated, but proxy upgrades can replace mint-critical logic without a recorded delay.",
     "upgradeability": {

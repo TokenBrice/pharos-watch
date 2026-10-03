@@ -2,9 +2,9 @@
   "id": "scusd-rings",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "bounded-admin",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
-    "summary": "scUSD has two independent canonical native-issuance domains on Ethereum and Sonic. Each immutable Veda BoringVault authorizes its same-chain LayerZeroTeller for collateral-gated deposit/enter share issuance, while a chain-specific 4/6 Veda/Paladin Safe controls role grants through a one-day TimelockController and RolesAuthority. The teller is dual-use: its LayerZero share burn/mint route is assessed separately in Bridge Risk.",
+    "summary": "D14 review 2026-10-03: verified BoringVault.enter(from,asset,assetAmount,to,shareAmount) mints the caller-specified shareAmount and transfers assets only when assetAmount > 0. Governance can authorize a new native enter caller through RolesAuthority, who can use assetAmount=0 and an arbitrary recipient/shareAmount; this root path is native authorization, not an assertion about the separate LayerZero bridge route. The one-day Safe-controlled timelock does not make this collateral-bounded or D29 token-governed. Economic cap is unbounded; not-applicable reconciliation and no supervision yield unbounded-unreconciled.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
@@ -386,7 +386,7 @@
         "evidence": "At Sonic block 75897805, RolesAuthority.canCall(this Safe, Accountant 0xA76E0F..., updateExchangeRate selector 0x3458113d)=true. Safe reads returned version 1.4.1, threshold 2, four owners, no modules, zero guard/module guard, and the standard fallback handler."
       }
     ],
-    "economicCapSemantics": "bounded",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
@@ -412,9 +412,9 @@
           "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/treasury-backing-address"
         }
       ],
-      "evidence": "At Ethereum block 25526164 and Sonic block 75897805, current RolesAuthority capabilities and complete role histories resolved the sole direct BoringVault enter caller, both chain-specific governance Safes, and all four Accountant role-11 rate updater Safes. Safe thresholds, owners, modules, guards, fallback handlers, and master copies were read onchain. The deployed BoringVault and LayerZeroTeller contracts are immutable non-proxy deployments. The native deposit() path enters each chain's collateral-gated BoringVault share accounting; the same LayerZeroTeller's cross-chain vault.exit()/zero-asset vault.enter() path is separately scored under Bridge Risk and is not a native unbounded-mint observation. Reconciliation review (2026-08-08): deposited stablecoins are locked 1:1 in an Ethereum Veda BoringVault and deployed only into on-chain lending and staking protocols, with the strategy whitelist explicitly limited to audited protocols above $100M TVL and backing addresses disclosed across three Ethereum and three Sonic vaults. The mint path creates no off-chain reserve claim, so reconciliation is not-applicable. The only third-party work is smart-contract auditing (Spearbit, 0xMacro, OpenZeppelin), and no regulator appears anywhere in the stack. Economic-posture fields reviewed 2026-08-16: bounded immutable vault-share issuance remains collateral-gated; the on-chain-only claim is not applicable to reserve reconciliation and has no regulator or attestor.",
-      "reviewer": "Codex mint-authority review; mint-bridge boundary migration 2026-08-16",
-      "reviewedAt": "2026-08-16",
+      "evidence": "At Ethereum block 25526164 and Sonic block 75897805, current RolesAuthority capabilities and complete role histories resolved the sole direct BoringVault enter caller, both chain-specific governance Safes, and all four Accountant role-11 rate updater Safes. Safe thresholds, owners, modules, guards, fallback handlers, and master copies were read onchain. The deployed BoringVault and LayerZeroTeller contracts are immutable non-proxy deployments. The native deposit() path enters each chain's collateral-gated BoringVault share accounting; the same LayerZeroTeller's cross-chain vault.exit()/zero-asset vault.enter() path is separately scored under Bridge Risk and is not a native unbounded-mint observation. Reconciliation review (2026-08-08): deposited stablecoins are locked 1:1 in an Ethereum Veda BoringVault and deployed only into on-chain lending and staking protocols, with the strategy whitelist explicitly limited to audited protocols above $100M TVL and backing addresses disclosed across three Ethereum and three Sonic vaults. The mint path creates no off-chain reserve claim, so reconciliation is not-applicable. The only third-party work is smart-contract auditing (Spearbit, 0xMacro, OpenZeppelin), and no regulator appears anywhere in the stack. Economic-posture fields reviewed 2026-08-16: bounded immutable vault-share issuance remains collateral-gated; the on-chain-only claim is not applicable to reserve reconciliation and has no regulator or attestor. D14 review 2026-10-03: verified BoringVault.enter(from,asset,assetAmount,to,shareAmount) mints the caller-specified shareAmount and transfers assets only when assetAmount > 0. Governance can authorize a new native enter caller through RolesAuthority, who can use assetAmount=0 and an arbitrary recipient/shareAmount; this root path is native authorization, not an assertion about the separate LayerZero bridge route. The one-day Safe-controlled timelock does not make this collateral-bounded or D29 token-governed. Economic cap is unbounded; not-applicable reconciliation and no supervision yield unbounded-unreconciled.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U11BoundedB)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable"
     }
   }

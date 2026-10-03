@@ -362,20 +362,21 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     expect(left.candidate.resultDigest).toBe(left.evaluatedSet.scoreResultDigest);
     expect(left.candidate.factSetDigest).toBe(left.compiledFacts.v9FactSetDigest);
     expect(left.candidate.cards[0]?.backingFromLiveReserves).toBe(true);
+    expect(left.compilerFactSchemaIdentity).toMatchObject({
+      compiledFactSchemaVersion: 4,
+      compilerAdapter: "exact-fixed-input-to-v9-facts.v3",
+    });
     expect(left.compilerFactSchemaIdentity.compiledFactSchemaCapabilities).toEqual([
       "canonical-chain-supply-distribution.v1",
       "canonical-lock-mint-supply-attribution.v1",
       "exit-route-modeled-confidence.v1",
       "fact-gap-cause-proofs.v1",
+      "governed-issuance.v1",
       "journaled-cdp-shock-coverage.v1",
       "reviewed-deployment-unit-supply-attribution.v1",
       "reviewed-transfer-deployments.v1",
       "wrapper-local-facts.v1",
     ]);
-    expect(left.compilerFactSchemaIdentity).toMatchObject({
-      compiledFactSchemaVersion: 4,
-      compilerAdapter: "exact-fixed-input-to-v9-facts.v3",
-    });
     expect(left.producerCapabilityIdentity.sourceAdapters.dexExitRoutes).toBe("fixed-input.dex-exit-observations.v2");
     expect(left.producerCapabilityIdentity.sourceAdapters.redemptionExitRoutes).toBe(
       "fixed-input.redemption-exit-observations.v2",

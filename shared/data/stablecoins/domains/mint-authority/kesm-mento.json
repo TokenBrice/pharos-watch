@@ -2,9 +2,9 @@
   "id": "kesm-mento",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "Operational KESm issuance runs through the Mento Broker, which burns the incoming Mento stable token and mints the outgoing token during USDm/KESm swaps. StableTokenV2 also authorizes the Celo ValidatorsProxy, but its current implementation only mints registry USDm for EpochManager; its Celo-Governance-owned proxy is therefore a latent upgrade-controlled KESm mint surface. exchange() is zero, and the two-day Mento Timelock can change token authorization slots and upgrade the KESm token and Broker.",
+    "summary": "Operational KESm issuance runs through the Mento Broker, which burns the incoming Mento stable token and mints the outgoing token during USDm/KESm swaps. StableTokenV2 also authorizes the Celo ValidatorsProxy, but its current implementation only mints registry USDm for EpochManager; its Celo-Governance-owned proxy is therefore a latent upgrade-controlled KESm mint surface. exchange() is zero, and the two-day Mento Timelock can change token authorization slots and upgrade the KESm token and Broker. D14: issuance is economically unbounded because the token owner can set an arbitrary Broker/minter with no token-level collateral check; the two-day delay does not bound the amount. D29 is not certified because the authorized Validators proxy has separate Celo Governance upgrade authority.",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -130,11 +130,31 @@
         "evidence": "At finalized Celo block 72780426, ValidatorsProxy _getOwner() returned this GovernanceProxy and _getImplementation() returned 0x13B0B89F3242f815C1FC6C9CF56e1Ab5aEA4dC58. Governance can change the authorized proxy's implementation, creating a latent KESm mint path, but has no current direct KESm call."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
       "sources": [
+        {
+          "label": "Pinned Celo block",
+          "url": "https://celo.blockscout.com/block/79142378"
+        },
+        {
+          "label": "Verified token implementation",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+        },
+        {
+          "label": "veMENTO locking implementation (D29 voting-power screen)",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x5a2c50efa0f63f0f97da9f002fefef3f64ed7d46"
+        },
+        {
+          "label": "Timelock full-history role grants through pinned block",
+          "url": "https://celo.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=79142378&address=0x890db8a597940165901372dd7db61c9f246e2147&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        },
+        {
+          "label": "Timelock full-history role revocations through pinned block",
+          "url": "https://celo.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=79142378&address=0x890db8a597940165901372dd7db61c9f246e2147&topic0=0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b"
+        },
         {
           "label": "Finalized Celo block 72780426",
           "url": "https://celo.blockscout.com/block/72780426"
@@ -148,9 +168,9 @@
           "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol"
         }
       ],
-      "evidence": "At finalized Celo block 72780426, KESm broker(), owner(), validators(), and exchange() returned the Mento Broker, two-day Mento Timelock, Celo ValidatorsProxy, and zero address respectively. Proxy introspection resolved the current token and Broker implementations and administrators. The Broker is the live swap mint/burn path; the current Validators implementation can only mint Registry USDm, while its Celo-Governance-owned proxy remains a latent upgrade-controlled authorization surface. Economic-posture fields reviewed 2026-08-15: Mento administration is delayed two days or controlled by Celo governance, the live shared-reserve feed covers the reserve basket, and no regulator or independent attestor is evidenced.",
-      "reviewer": "OpenAI Codex SOL-UPGRADE evidence review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At finalized Celo block 72780426, KESm broker(), owner(), validators(), and exchange() returned the Mento Broker, two-day Mento Timelock, Celo ValidatorsProxy, and zero address respectively. Proxy introspection resolved the current token and Broker implementations and administrators. The Broker is the live swap mint/burn path; the current Validators implementation can only mint Registry USDm, while its Celo-Governance-owned proxy remains a latent upgrade-controlled authorization surface. Economic-posture fields reviewed 2026-08-15: Mento administration is delayed two days or controlled by Celo governance, the live shared-reserve feed covers the reserve basket, and no regulator or independent attestor is evidenced. D14/D29 review 2026-10-03 at Celo block 79142378 (hash 0xe5ac3917c420c5f097992356e3a8934c336d354a139b8a1207fe547af3569c6c): owner(), _getOwner(), and the EIP-1967 admin slot resolve to Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147, not the migration Safe; the implementation slot resolves to verified StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e. Read-only setBroker(0x000000000000000000000000000000000000dead) from that owner succeeds, and mint(chosenRecipient,1e18) from the configured Broker succeeds. Verified setBroker accepts an arbitrary address; onlyMinter gates mint by caller identity and imposes no collateral/deposit check or economic ceiling. The 172800-second Timelock delay does not make arbitrary minter authorization economically bounded. D29 screening confirms MentoGovernor proposer/canceller membership, open execution, Timelock administration, and no such Safe roles; the separately observed canceller 0xe6951c4176aab41097c6f5fe11e9c515b7108acd is not asserted to have mint power. The governor uses the verified lock-escrowed veMENTO contract. However validators() on this token resolves to 0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58, whose proxy owner is separate Celo Governance 0xd533ca259b330c7a88f74e000a3faea2d63b7972: independently replacing this token-authorized implementation is not rooted in MentoGovernor. Current Validators targets registry USDm, not this token; that observation does not close its independent upgrade path. Complete governor-only issuance closure is therefore not certified and no governedIssuance or complete executionScope is authored. This D14 verdict supersedes any earlier raiseable/partially-bounded economic inference; reconciliation and supervision are unchanged.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U4MentoFamily)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable"
     }
   }

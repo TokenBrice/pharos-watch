@@ -2,16 +2,16 @@
   "id": "kau-kinesis",
   "mintAuthority": {
     "mintPath": "unknown",
-    "authorityPosture": "unknown",
+    "authorityPosture": "none-resolved-mint",
     "confidence": "unknown",
     "summary": "The authored Ethereum KAU ERC-20 is a non-canonical, reserve-backed representation of native Kinesis KAU issued by Kinesis Cayman. Its representation minter, administrator, and UUPS upgrade path are reviewed under Bridge Risk and do not compile as native Kinesis mint authority. The Kinesis-network issuer, ledger-level emission rule, and current control state remain unresolved.",
     "economicCapSemantics": "unknown",
     "reconciliation": "unknown",
     "supervision": "unknown",
     "review": {
-      "evidence": "Kinesis' official product materials identify Ethereum KAU as an ERC-20 claim on Kinesis KAU held in reserve by KMS Labs, while Kinesis KAU is issued by Kinesis Cayman on the Kinesis network. The authored Ethereum deployment therefore cannot establish the native Kinesis mint posture. The Ethereum ERC20F MINTER_ROLE, DEFAULT_ADMIN_ROLE, and UUPS implementation-admin observations are preserved in bridgeRouteRisk rather than counted as global native mint risk. The native Kinesis ledger's issuance authority, supply rule, and current controls were not resolved in this review.",
-      "reviewer": "Codex mint-bridge-boundary migration FIX-03",
-      "reviewedAt": "2026-08-16",
+      "evidence": "Kinesis' official product materials identify Ethereum KAU as an ERC-20 claim on Kinesis KAU held in reserve by KMS Labs, while Kinesis KAU is issued by Kinesis Cayman on the Kinesis network. The authored Ethereum deployment therefore cannot establish the native Kinesis mint posture. The Ethereum ERC20F MINTER_ROLE, DEFAULT_ADMIN_ROLE, and UUPS implementation-admin observations are preserved in bridgeRouteRisk rather than counted as global native mint risk. The native Kinesis ledger's issuance authority, supply rule, and current controls were not resolved in this review. Queue convergence review 2026-10-03 re-read KMS Labs terms sections 1, 3, 4 and 8: they identify the exact Ethereum KAU contract, reserve-backed issuance solely by KMS Labs, and a separate Kinesis Cayman issuer for the underlying Kinesis-network KAU. The reviewed external-only-representation exception covers the sole authored deployment and no native mint control is authored, so adaptMintReview emits a known not-applicable mint review with null controlKey and no mint controls; the published posture is none-resolved. Annotate none-resolved-mint only for this scoped absence, not absence of representation-admin or native Kinesis issuer powers. The unresolved native-ledger questions, mintPath unknown, confidence unknown, and Bridge Risk controls remain unchanged; no new on-chain read or reserve-verification claim is made.",
+      "reviewer": "Sol v10.02 posture-queue convergence (QueueResolve)",
+      "reviewedAt": "2026-10-03",
       "disposition": "unresolved",
       "unresolvedQuestions": [
         "Which Kinesis-network issuer or ledger authority creates native KAU liabilities?",
@@ -49,6 +49,10 @@
         {
           "label": "ERC20F verified implementation source (Blockscout)",
           "url": "https://eth.blockscout.com/address/0x0f25045d15c163478bb67c56c5d9d602628f4f62?tab=contract"
+        },
+        {
+          "label": "KMS Labs terms: Ethereum representation issuance and native Kinesis reserve issuer",
+          "url": "https://kmslabs.money/kms-labs-tcs/"
         }
       ]
     }

@@ -2,7 +2,7 @@
   "id": "aid-gaib",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "AID's canonical Ethereum deployment uses role-gated issuer minting. Two contract MINTER_ROLE holders are confirmed active (4099 and 3162 bytes), while DEFAULT_ADMIN_ROLE is held by both a 3/5 Safe and an EOA with no bytecode. The Ethereum token is a UUPS proxy whose role-gated admin path can replace mint-critical logic; Arbitrum, Base, and BSC representation controls are assessed separately under Bridge Risk.",
     "controls": [

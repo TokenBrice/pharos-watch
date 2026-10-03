@@ -2,7 +2,7 @@
   "id": "frxusd-frax",
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "Ethereum frxUSD can be minted and redeemed through governance-approved FrxUSDCustodian contracts with per-custodian caps; the token and custodians are owned by the current 4/7 frxUSD owner/custodian admin Safe, while Ethereum proxy upgrades require the same Safe to pass through a 24-hour timelock. Fraxtal frxUSD3 also exposes a direct minter_mint path to an owner/timelock-controlled minter set with no source-level cap or max-supply check; the Fraxtal L2 bridge and canonical-side lockboxes are bridge machinery assessed separately under bridgeRouteRisk, and Tempo remains unresolved.",
     "upgradeability": {

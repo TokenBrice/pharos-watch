@@ -147,12 +147,36 @@
       }
     ],
     "economicCapSemantics": "raiseable",
+    "capSemanticsReview": {
+      "verdict": "raiseable-collateral-only",
+      "rationale": "D14/A7 review on 2026-10-03 at kava block 22858316 (0x0a53ef4b48a349e92eb13de6bfb32ac0ff19649fea0e2e9b5889a754123d1dd8): an ABCI Query/Params read returned code 0 at the exact height, and the archive RPC block hash agrees with the LCD block pin. Node information reports Kava 0.28.2 / source commit 686d591443a1de7c5566bc7d92faf5b56743f25f. That source's x/cdp Keeper.AddCdp validates collateral, owner balance, debt limit and collateralization, then transfers collateral into the module before MintCoins; AddPrincipal rechecks collateralization against existing posted collateral before minting additional USDX to the owner. Raising GlobalDebtLimit or per-collateral limits only increases capacity of those same checked routes and does not confer a bank raw-mint permission. Collateral/oracle parameter admission and validator-adopted software upgrades are not standalone D14 triggers. Retain raiseable with raiseable-collateral-only proof; no non-EVM D29 certificate is expressible or authored.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12bNativeCapReviews)",
+      "sources": [
+        {
+          "label": "Kava running binary source commit",
+          "url": "https://api.data.kava.io/cosmos/base/tendermint/v1beta1/node_info"
+        },
+        {
+          "label": "Kava x/cdp collateral-funded creation source",
+          "url": "https://github.com/Kava-Labs/kava/blob/686d591443a1de7c5566bc7d92faf5b56743f25f/x/cdp/keeper/cdp.go"
+        },
+        {
+          "label": "Kava x/cdp collateral-checked debt drawing source",
+          "url": "https://github.com/Kava-Labs/kava/blob/686d591443a1de7c5566bc7d92faf5b56743f25f/x/cdp/keeper/draw.go"
+        },
+        {
+          "label": "Kava height-bound CDP parameters via ABCI",
+          "url": "https://rpc.data.kava.io/abci_query?path=%22/kava.cdp.v1beta1.Query/Params%22&data=0x&height=22858316&prove=false"
+        }
+      ]
+    },
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "Primary Kava LCD reads on 2026-09-04 at height 22415285 (chain_id kava_2222-10) identify the native USDX issuance path: x/cdp debt_param denom usdx with conversion factor 6 and global debt limit 8723000000000 usdx base units; module accounts identify cdp at kava1wq9ts6l7atfn45ryxrtg4a2gwegsh3xha9e6rp with [minter, burner]; the bank supply endpoint returned 10013573129816 usdx base units; evmutil parameters expose no USDX conversion pair; send_enabled?denoms=usdx returned no override, so transfers were enabled while the governance-wired bank keeper retains MsgSetSendEnabled restriction capability. The observed native Kava issuance cannot currently be authored in the catalog because CHAIN_META.kava is type \"evm\" and contracts[]/tradedContracts require a 0x...40 EVM address. The authored deployment is therefore the reviewed Osmosis ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE representation, with its transfer rail reviewed under Bridge Risk.",
-      "reviewer": "Codex CTRL batch; Kava native-control observation 2026-09-04",
-      "reviewedAt": "2026-09-04",
+      "evidence": "Primary Kava LCD reads on 2026-09-04 at height 22415285 (chain_id kava_2222-10) identify the native USDX issuance path: x/cdp debt_param denom usdx with conversion factor 6 and global debt limit 8723000000000 usdx base units; module accounts identify cdp at kava1wq9ts6l7atfn45ryxrtg4a2gwegsh3xha9e6rp with [minter, burner]; the bank supply endpoint returned 10013573129816 usdx base units; evmutil parameters expose no USDX conversion pair; send_enabled?denoms=usdx returned no override, so transfers were enabled while the governance-wired bank keeper retains MsgSetSendEnabled restriction capability. The observed native Kava issuance cannot currently be authored in the catalog because CHAIN_META.kava is type \"evm\" and contracts[]/tradedContracts require a 0x...40 EVM address. The authored deployment is therefore the reviewed Osmosis ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE representation, with its transfer rail reviewed under Bridge Risk. D14/A7 review on 2026-10-03 at kava block 22858316 (0x0a53ef4b48a349e92eb13de6bfb32ac0ff19649fea0e2e9b5889a754123d1dd8): an ABCI Query/Params read returned code 0 at the exact height, and the archive RPC block hash agrees with the LCD block pin. Node information reports Kava 0.28.2 / source commit 686d591443a1de7c5566bc7d92faf5b56743f25f. That source's x/cdp Keeper.AddCdp validates collateral, owner balance, debt limit and collateralization, then transfers collateral into the module before MintCoins; AddPrincipal rechecks collateralization against existing posted collateral before minting additional USDX to the owner. Raising GlobalDebtLimit or per-collateral limits only increases capacity of those same checked routes and does not confer a bank raw-mint permission. Collateral/oracle parameter admission and validator-adopted software upgrades are not standalone D14 triggers. Retain raiseable with raiseable-collateral-only proof; no non-EVM D29 certificate is expressible or authored. This D14 refresh does not re-date older quorum or reserve-reconciliation observations.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12bNativeCapReviews)",
+      "reviewedAt": "2026-10-03",
       "noLocalIssuance": {
         "kind": "external-only-representation",
         "reviewedAt": "2026-09-04",
@@ -182,6 +206,22 @@
         ]
       },
       "sources": [
+        {
+          "label": "Kava running binary source commit",
+          "url": "https://api.data.kava.io/cosmos/base/tendermint/v1beta1/node_info"
+        },
+        {
+          "label": "Kava x/cdp collateral-funded creation source",
+          "url": "https://github.com/Kava-Labs/kava/blob/686d591443a1de7c5566bc7d92faf5b56743f25f/x/cdp/keeper/cdp.go"
+        },
+        {
+          "label": "Kava x/cdp collateral-checked debt drawing source",
+          "url": "https://github.com/Kava-Labs/kava/blob/686d591443a1de7c5566bc7d92faf5b56743f25f/x/cdp/keeper/draw.go"
+        },
+        {
+          "label": "Kava height-bound CDP parameters via ABCI",
+          "url": "https://rpc.data.kava.io/abci_query?path=%22/kava.cdp.v1beta1.Query/Params%22&data=0x&height=22858316&prove=false"
+        },
         {
           "label": "Kava x/cdp params API",
           "url": "https://api.data.kava.io/kava/cdp/v1beta1/params"

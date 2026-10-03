@@ -2,9 +2,9 @@
   "id": "usde-ethena",
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "USDe has one proven native issuance deployment on Ethereum: signed-order flows through direct-deployment EthenaMinting V2. The Ethereum OFT adapter and all satellite representations are bridge machinery assessed only under Bridge Risk. At Ethereum block 25711751, the one-day TimelockController owned the USDe token and held the active minter contract's default-admin role; the 5/10 Ethena Safe held its proposer, canceller, and executor roles.",
+    "summary": "USDe native Ethereum issuance uses EthenaMinting V2 signed-order flows, but the 86,400-second owner/default-admin timelock can replace the token minter with an arbitrary address whose USDe.mint needs no collateral or durable supply bound. Its 5-of-10 Safe root and one-day delay fail governed issuance gates. The 200,000,000 USDe per-block setting is a rate limit, not a durable bound; periodic third-party backing reconciliation yields unbounded-reconciled.",
     "upgradeability": {
       "model": "custom",
       "deploymentRefs": [
@@ -241,7 +241,7 @@
         "evidence": "At Ethereum block 25711751, this 86,400-second TimelockController owned USDe and could invoke owner-only setMinter(address). That custom replacement path can substitute the mint-critical controller without upgrading token bytecode, so it is modeled separately as the upgrade-only authority referenced by upgradeability.controlRef."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
@@ -293,11 +293,19 @@
         {
           "label": "Ethena June 2026 custodian attestations",
           "url": "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-june-3"
+        },
+        {
+          "label": "Verified USDe unrestricted owner-authorized minter",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4c9edd5852cd905f086c759e8383e09bff1e68b3"
+        },
+        {
+          "label": "Verified EthenaMinting V2 per-block rate-limit setters",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe3490297a08d6fc8da46edb7b6142e4f461b62d3"
         }
       ],
-      "evidence": "Mint/bridge boundary review completed 2026-08-16: Ethereum is the sole reviewed native USDe issuance route; the Ethereum OFT adapter and all other authored deployments are representations assessed under Bridge Risk, not native Mint Authority. At Ethereum block 25711751: USDe minter() returned EthenaMinting V2 0xe3490297; owner() returned timelock 0xe8dc0fab; getMinDelay() returned 86400; the timelock held EthenaMinting V2 DEFAULT_ADMIN_ROLE; and the 5/10 Safe held its PROPOSER_ROLE, CANCELLER_ROLE, and EXECUTOR_ROLE. The Safe still had no enabled modules, and Safe API reported guard 0x74abe7805541c28f31953b3cda9711dc96278d29. globalConfig() remained a 200,000,000 USDe global mint maximum per block and a 10,000,000 USDe global redeem maximum per block. Complete RoleGranted and RoleRevoked replay through block 25576200 resolved the 20 MINTER_ROLE EOAs recorded in the signer-cohort control; incremental Blockscout queries returned zero RoleGranted and zero RoleRevoked events from block 25576201 through 25711751, establishing that the cohort remained current at the observation block. Ethena's latest reviewed publication, issued July 1, 2026 for June 2026, describes the nineteenth monthly report from all integrated custodians and an independent third-party assessment of backing assets; the monthly reconciliation therefore qualifies as periodic. Searches of the BVI FSC and Dubai VARA public registers did not establish prudential supervision of the USDe issuer, so supervision is attestation-only. Economic-posture fields reviewed 2026-08-15: the one-day timelock constrains cap and minter changes, monthly third-party backing reports provide periodic reconciliation, and no named prudential supervisor is evidenced. Validator observation 2026-10-01: the issuer Key Addresses page identifies this same Dev Safe 0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862 as 5/11, while getThreshold() and getOwners() at Ethereum block 26096029 return threshold 5 and ten owners. The documented quorum differs from pinned state; the on-chain 5/10 control fields remain unchanged.",
-      "reviewer": "OpenAI Codex C01 control review; Sol economic-posture batch 2026-08-15; mint/bridge boundary migration 2026-08-16",
-      "reviewedAt": "2026-08-16",
+      "evidence": "Mint/bridge boundary review completed 2026-08-16: Ethereum is the sole reviewed native USDe issuance route; OFT adapters and satellite representations are assessed under Bridge Risk. Historical block 25711751 resolved owner/default-admin to Timelock 0xe8dc0fab349ea169283c48ccfd09d797e6db7c94 and proposer/canceller/executor to the 5-of-10 Ethena Safe. Complete role-event replay through block 25576200 plus no changes through 25711751 established the recorded 20 MINTER_ROLE EOAs at that observation, not a refreshed cohort today. The July 1, 2026 publication for June described monthly reports from integrated custodians and an independent third-party backing assessment; reconciliation remains periodic and supervision attestation-only, with no named prudential supervisor evidenced. The 2026-10-01 documentation discrepancy (5/11 versus on-chain 5/10) remains historical. D14/D29 sweep 2026-10-03 at Ethereum block 26113561 (hash 0xf8669491a2d5c3e0dfe4c4233ed6861dcbe45f046fac9804a60c40ae5ee6846e): owner() and minter() remain the timelock and EthenaMinting V2 0xe3490297a08d6fc8da46edb7b6142e4f461b62d3; the timelock holds DEFAULT_ADMIN_ROLE and getMinDelay() is 86400. Verified USDe.setMinter(address) has no collateral-admission constraint, and USDe.mint(address,uint256) checks only that caller equals minter, so authorization can create durable unbacked supply for a chosen recipient. D14 is unbounded independently of upgradeability. globalConfig() reads 200,000,000 USDe/block mint and 20,000,000 USDe/block redeem: these are rate limits, not durable total-supply caps. Safe threshold/owners remains 5-of-10 and hasRole confirms proposer/executor/canceller. D29 G1 fails because the root is a Safe rather than on-chain token voting; G2 fails because 86400 is below 172800 seconds. Every-control execution closure is also uncertified. No governedIssuance is authored; periodic reconciliation with attestation-only supervision takes precedence and yields unbounded-reconciled.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U6GovAmbiguousB)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable"
     }
   }

@@ -2,9 +2,9 @@
   "id": "pusd-polymarket",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
-    "summary": "PUSD has one authored Polygon-native UUPS-proxy ERC-20 deployment. The reviewed wrapper contracts deposit USDC or USDC.e before minting; three upgradeable market modules hold its separate minter role and mint against position-claim settlement in their current implementations. A 3-of-7 Safe controls the 12-hour Timelock. The newly identified PermissionedRamp holds wrapper role 2 and requires witness signatures. The token and all three module implementations have changed since the July observation. External transfer rails remain separately reviewed under Bridge Risk; PUSD does not create base USDC supply.",
+    "summary": "PUSD has one authored Polygon-native UUPS-proxy ERC-20 deployment. The reviewed wrapper contracts deposit USDC or USDC.e before minting; three upgradeable market modules hold its separate minter role and mint against position-claim settlement in their current implementations. A 3-of-7 Safe controls the 12-hour Timelock. The newly identified PermissionedRamp holds wrapper role 2 and requires witness signatures. The token and all three module implementations have changed since the July observation. External transfer rails remain separately reviewed under Bridge Risk; PUSD does not create base USDC supply. D14 review 2026-10-03: verified CollateralToken implementation 0xce84e053301a82937f90ee2c2c1889cab1db25de exposes owner-only addMinter(address) and role-only mint(address,uint256) with no collateral transfer or cap check. The Safe can authorize an arbitrary recipient minter through its 43200-second timelock; deposit-backed ramps do not bound that independent token-local path. Economic semantics are unbounded; no token-governor D29 qualification is claimed.",
     "inheritedFrom": "usdc-circle",
     "upgradeability": {
       "model": "uups",
@@ -307,13 +307,13 @@
         "evidence": "At Polygon block 94755001, PUSD rolesOf(PermissionedRamp) returned 2, owner() returned the Timelock, and correct EIP-1967 implementation/admin slots were zero. Verified PermissionedRamp source gates wrap/unwrap on per-asset pause state and an EIP-712 witness signature, then transfers collateral before wrapping. The witness-role census remains unverified; the signature gate is not represented as an independent protective multisig."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "Pinned Polygon block 94755001 confirms changed token and module implementations, unchanged Timelock ownership, four previously authored wrapper holders plus PermissionedRamp with wrapper role 2, and three market modules with minter role 1. Each Timelock role returns the same Safe and minDelay() remains 43200. Polygon block 94755196 shows the Safe is now 3-of-7 with a nonzero fallback handler. Current verified source retains collateral-backed wrapping and position-claim settlement, but this session did not establish a complete token role history, PermissionedRamp witness census, or module bridge-role conservation boundary; no exhaustive authority claim is inferred.",
-      "reviewer": "Sol curation pass 2026-10-01 (CurA12RLUSD)",
-      "reviewedAt": "2026-10-01",
+      "evidence": "Pinned Polygon block 94755001 confirms changed token and module implementations, unchanged Timelock ownership, four previously authored wrapper holders plus PermissionedRamp with wrapper role 2, and three market modules with minter role 1. Each Timelock role returns the same Safe and minDelay() remains 43200. Polygon block 94755196 shows the Safe is now 3-of-7 with a nonzero fallback handler. Current verified source retains collateral-backed wrapping and position-claim settlement, but this session did not establish a complete token role history, PermissionedRamp witness census, or module bridge-role conservation boundary; no exhaustive authority claim is inferred. D14 review 2026-10-03: verified CollateralToken implementation 0xce84e053301a82937f90ee2c2c1889cab1db25de exposes owner-only addMinter(address) and role-only mint(address,uint256) with no collateral transfer or cap check. The Safe can authorize an arbitrary recipient minter through its 43200-second timelock; deposit-backed ramps do not bound that independent token-local path. Economic semantics are unbounded; no token-governor D29 qualification is claimed.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U8SafeRootedFloorB)",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "Polymarket pUSD docs",

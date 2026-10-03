@@ -2,7 +2,7 @@
   "id": "zeusd-zoth",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciliation-unknown",
     "confidence": "verified",
     "summary": "ZeUSD token minting is restricted to the V1 router contract; every layer of the canonical control chain (token admin, router admin, router upgrade, and AccessController upgrade) resolves to the single Zoth admin EOA 0x3604582f56565d7060d73829ffb9ebd579218dca, verified with no contract bytecode. The router's shared deposit/redemption pause remained active at the reviewed block.",
     "mintIncidents": [

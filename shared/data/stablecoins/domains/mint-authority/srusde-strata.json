@@ -130,6 +130,22 @@
       ]
     },
     "economicCapSemantics": "raiseable",
+    "capSemanticsReview": {
+      "verdict": "raiseable-collateral-only",
+      "rationale": "At Ethereum block 26113561 (hash 0xf8669491a2d5c3e0dfe4c4233ed6861dcbe45f046fac9804a60c40ae5ee6846e), the wrapper's EIP-1967 implementation remains verified Tranche 0xe894055ca1c73648927e225f3ca38ed48e30210b and asset() is USDe. Tranche's base-asset deposit/mint delegates to ERC4626Upgradeable, whose _deposit transfers assets before minting shares; its meta-token _deposit likewise safeTransferFroms the token before _mint and calls CDO.deposit. No external privileged share mint or minter-registration function is present in this implementation. The 3-of-4 Safe can schedule wrapper upgrades through the 172800-second timelock, but upgrade authority alone is not a D14 trigger. Allocation, strategy and deposit-limit changes are parameter powers, not deposit-free share issuance. Ethena's unbounded parent USDe issuance is carried by inheritedFrom and the serial-claim dependency edge, not charged again as wrapper-local mint authority.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U6GovAmbiguousB)",
+      "sources": [
+        {
+          "label": "Verified current Tranche implementation and ERC4626Upgradeable deposit/share mechanics",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe894055ca1c73648927e225f3ca38ed48e30210b"
+        },
+        {
+          "label": "Verified Strata timelock upgrade scheduler",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb2a3cf69c97afd4de7882e5fee120e4efc77b706"
+        }
+      ]
+    },
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
@@ -149,11 +165,15 @@
         {
           "label": "Strata 3-of-4 proposer Safe",
           "url": "https://etherscan.io/address/0xa27ca9292268ee0f0258b749f1d5740c9bb68b50"
+        },
+        {
+          "label": "Verified Tranche implementation: deposit-backed base and meta share issuance",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe894055ca1c73648927e225f3ca38ed48e30210b"
         }
       ],
-      "evidence": "Re-verified 2026-07-20 at Ethereum block 25570877: the srUSDe wrapper 0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003 is a transparent proxy (EIP-1967 impl 0xe894055ca1c73648927e225f3ca38ed48e30210b, admin ProxyAdmin 0x30a17d6bcbdbf1579d6fbba453acf776d01fbb50); ProxyAdmin.owner() returned 0xb2a3cf69c97afd4de7882e5fee120e4efc77b706, a TimelockController-style contract (6726 bytes; getMinDelay() = 172800 seconds; getRoleMember enumeration reverts). RoleGranted event history from deployment block 23049699 to 25570823 (zero RoleRevoked events) plus a confirming hasRole() read resolve the full governance chain: PROPOSER_ROLE is held solely by Safe 0xa27ca9292268ee0f0258b749f1d5740c9bb68b50 (171-byte Safe proxy, getThreshold() = 3, getOwners() = 0x791fb9322132e7bd7a84d233371aa8c21aad5a510, 0x296400d87be5cfb63c5025904cd006ebb23d15d5, 0xd796e125af489cffb4a766df4ded9272e458249c, 0x206cff3df3c6af6f03eeb86fba2c3dfa420b4ac7, a 3-of-4 Strata Safe); CANCELLER_ROLE is held by the same Safe plus the 23-byte contract 0x277d26a45add5775f21256159f089769892cea5b; EXECUTOR_ROLE was granted to the zero address (permissionless execution after the two-day delay); DEFAULT_ADMIN_ROLE is held only by the timelock itself. The previously unresolved upgrade-governance question is therefore resolved: wrapper upgrades require a 2-day timelock proposed by the 3-of-4 Strata Safe. Wrapper minting is deposit/share accounting; durable USDe mint authority is inherited from the reviewed Ethena controls.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
+      "evidence": "Historical review on 2026-07-20 resolved the srUSDe transparent proxy to Tranche 0xe894055ca1c73648927e225f3ca38ed48e30210b and ProxyAdmin 0x30a17d6bcbdbf1579d6fbba453acf776d01fbb50, owned by Timelock 0xb2a3cf69c97afd4de7882e5fee120e4efc77b706. Role-event history identified the 3-of-4 proposer Safe, open executor role and self-administered timelock; wrapper minting was deposit/share accounting over parent USDe. D14/D29 sweep 2026-10-03 at Ethereum block 26113561 (hash 0xf8669491a2d5c3e0dfe4c4233ed6861dcbe45f046fac9804a60c40ae5ee6846e): asset() still returns USDe, the implementation slot still names verified Tranche, ProxyAdmin.owner() still names the same timelock and getMinDelay() remains 172800. Full RoleGranted/RoleRevoked replay and hasRole confirm sole proposer Safe 0xa27ca9292268ee0f0258b749f1d5740c9bb68b50 and open executor; threshold/owners remains 3-of-4. Verified base and meta deposit/mint paths require asset transfers before share issuance; there is no wrapper-local privileged arbitrary mint/minter authorization in the current implementation. The Safe's can-authorize power is wrapper upgrade scheduling only, which D14 explicitly does not treat as arbitrary minting. Parent Ethena issuance remains on the serial-claim dependency edge and is not counted twice. Keep raiseable with sourced raiseable-collateral-only capSemanticsReview. D29 is not authored: even if an unbounded wrapper path existed, the Safe proposer fails G1; every-control execution closure is uncertified.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U6GovAmbiguousB)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable"
     }
   }

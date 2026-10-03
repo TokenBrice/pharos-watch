@@ -191,11 +191,10 @@ export type MintAuthorityMintPath = (typeof MINT_AUTHORITY_MINT_PATH_VALUES)[num
 
 // Ordered strongest-first, matching `V9_MINT_POSTURE_BAND_ORDER`.
 //
-// `unbounded-reconciled` describes economically unbounded minting that is
-// nonetheless reconciled against reserves or run under a supervisory regime.
-// V9 has derived it since 9.1; the curated vocabulary lacked it, so a supervised
-// issuer had to be annotated `unbounded-or-compromised` — the same rung as an
-// issuer with no reconciliation at all. The two are not the same fact.
+// Economically unbounded issuance is annotated separately by reconciliation,
+// delayed on-chain governance, and an active incident. `unbounded-governed`
+// requires reviewed governance and complete execution-scope evidence (D29);
+// `compromised` is reserved for an active mint incident.
 //
 // `none-resolved` and `none-resolved-mint` are the two scopes of the same
 // finding. `none-resolved` is whole-of-chain: no privileged control of any kind
@@ -212,10 +211,12 @@ export const MINT_AUTHORITY_POSTURE_VALUES = [
   "bounded-admin",
   "partially-bounded-admin",
   "unbounded-reconciled",
+  "unbounded-governed",
   "concentrated-admin",
   "collateral-gated",
   "unbounded-reconciliation-unknown",
-  "unbounded-or-compromised",
+  "unbounded-unreconciled",
+  "compromised",
   "unknown",
 ] as const;
 export type MintAuthorityPosture = (typeof MINT_AUTHORITY_POSTURE_VALUES)[number];

@@ -2,7 +2,7 @@
   "id": "usdv-solomon",
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "USDv is minted by Solomon's own Solana program D4AiKFxj via its Deposit instruction, which CPI-signs SPL mintTo with the program-owned PDA 7XAdHs5Q (the SPL mint authority); the freeze authority is null. Direct mint/redeem is restricted to Solomon-approved entities. The program is BPF-upgradeable and its upgrade authority is a 3-of-9 Squads v4 multisig vault with no timelock, so mint logic can be replaced by that multisig. Backing collateral sits off-chain with Ceffu.",
     "upgradeability": {

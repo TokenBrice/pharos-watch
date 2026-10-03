@@ -1,5 +1,5 @@
 import type { V9DeploymentControlFactV2, V9FactGapV3 } from "../../types/safety-score-v9-facts";
-import { isKnownRequired, resolveV9StatusCauses, type V9ControlPolicy } from "./control-primitives";
+import { isKnownRequired, isV9GovernedIssuanceQualified, resolveV9StatusCauses, type V9ControlPolicy } from "./control-primitives";
 import { effectiveAuthoritySignatureRequirement } from "./control-scope";
 
 /**
@@ -154,7 +154,7 @@ export function applyMergedMintSignals(
     const ceiling = nextRung === undefined ? base : nextRung - 1;
     score = Math.min(base + adjustment, Math.max(base, ceiling));
   } else if (adjustment < 0) {
-    score = Math.max(base + adjustment, controlPolicy.mintPostureQuality["unbounded-or-compromised"]);
+    score = Math.max(base + adjustment, controlPolicy.mintPostureQuality["unbounded-unreconciled"]);
   }
   if (mintControl.incidentState === "resolved") {
     score = Math.min(score, resolvedIncidentQualityCap(resolvedIncidentAgeMonths, controlPolicy));
@@ -166,9 +166,10 @@ export function applyMergedMintSignals(
  * LEVER 5 (2026-07-21): grade a verified control row on its own authority facts
  * instead of the bounded-unknown default. Derives strictly from the passed row
  * (wards / Safe threshold / timelock / authority.model), never from asset-generic
- * facts, and grades UP or DOWN relative to the 45 default: a live compromise or an
- * economically unbounded control grades below it, a hardened governed/multisig
- * path above it. issuer-backend and unknown authority stay at the neutral default.
+ * facts, and grades UP or DOWN relative to the 45 default: a live compromise or
+ * unreconciled unbounded control grades below it; D29 qualified governance and
+ * hardened bounded paths grade above it. Other issuer-backend / unknown rows
+ * stay at the neutral default.
  *
  * AUTHORITY-LADDER 9.46: `validator-quorum` — an external message-validation
  * quorum (LayerZero DVN set, CCIP DON/RMN, Bantu AMTP group, IBC light-client
@@ -180,18 +181,14 @@ export function applyMergedMintSignals(
  */
 export function gradeVerifiedControlAuthority(control: V9DeploymentControlFactV2, controlPolicy: V9ControlPolicy, gaps?: readonly V9FactGapV3[]): number {
   const quality = controlPolicy.mintPostureQuality;
+  if (control.incidentState === "active") return quality.compromised;
+  if (control.capSemantics.kind === "unbounded" || control.claimImpairment === "unbounded") {
+    return isV9GovernedIssuanceQualified(control, controlPolicy.governedIssuance)
+      ? quality["unbounded-governed"]
+      : quality["unbounded-unreconciled"];
+  }
   const authority = control.authority;
   if (authority === null || authority.model === "unknown") return controlPolicy.boundedUnknownQuality;
-
-  // A live compromise or an economically unbounded control is weak regardless of
-  // who holds the key: grade it below the neutral default, never above.
-  if (
-    control.incidentState === "active" ||
-    control.capSemantics.kind === "unbounded" ||
-    control.claimImpairment === "unbounded"
-  ) {
-    return quality["unbounded-or-compromised"];
-  }
 
   const timelocked = control.delaySec !== null && control.delaySec > 0;
   switch (authority.model) {
@@ -215,7 +212,7 @@ export function gradeVerifiedControlAuthority(control: V9DeploymentControlFactV2
         multisigQuorumRawAdjustment(control, controlPolicy, gaps) +
         modulesOrGuardsAdjustment(control, controlPolicy);
       return Math.max(
-        quality["unbounded-or-compromised"],
+        quality["unbounded-unreconciled"],
         Math.min(graded, quality["partially-bounded-admin"]),
       );
     }
@@ -237,7 +234,7 @@ export function gradeVerifiedControlAuthority(control: V9DeploymentControlFactV2
         return controlPolicy.mintMergedSignals.attestedKeyCustodyQuality;
       }
       // A single externally-owned key is a weak control posture: grade below 45.
-      return quality["unbounded-or-compromised"];
+      return quality["unbounded-unreconciled"];
     default:
       return controlPolicy.boundedUnknownQuality;
   }

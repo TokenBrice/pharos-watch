@@ -2,7 +2,7 @@
   "id": "zkusd-goal3",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "zkUSD is issued through Goal3's lockdrop portal on ZKsync Era. The token and minting portal are UUPS proxies owned by EOA 0x49a67aff9d3807351b8bb450f37ffc98af9def4d, with no permissionless mint route or upgrade delay.",
     "controls": [

@@ -2,9 +2,9 @@
   "id": "kusd-kerne",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
-    "summary": "Anyone can mint kUSD permissionlessly by depositing USDC 1:1 into the live Peg Stability Module (10 bps fee, 10,000,000 USDC cap), which holds the kUSD MINTER_ROLE. Since 2026-08-06, kUSD role administration and the three PSMs' administration and manager configuration sit behind an OpenZeppelin TimelockController with a 48-hour minimum delay. The 2-of-3 Safe is the timelock's sole proposer, executor, and canceller. A fixed PauseGuardian preserves immediate Safe-triggered PSM pausing but cannot mint, raise caps, unpause, or change configuration. The separate, non-upgradeable skUSD wrapper remains directly administered by the Safe, but its wrapper powers do not authorize kUSD minting or PSM changes.",
+    "summary": "Current kUSD issuance deposits USDC into the capped PSM, but the 48-hour TimelockController can grant MINTER_ROLE to arbitrary addresses and the token mint function has no collateral gate. D14 root issuance is economically unbounded, with continuous reconciliation. The 2-of-3 Safe is the timelock root, not on-chain token governance; the fixed PauseGuardian only pauses and skUSD wrapper powers do not authorize kUSD minting.",
     "controls": [
       {
         "chain": "base",
@@ -125,11 +125,15 @@
         "observedBlock": 49788701
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
       "sources": [
+        {
+          "label": "Verified kUSD and AccessControl source",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0x5c2efdf0d8d286959b42308966bc2b97f5680aa3"
+        },
         {
           "label": "Timelock operation scheduled on 2026-08-03",
           "url": "https://basescan.org/tx/0x2c6d001391e219ff375edabe90e590168200a3a2cb20c8abfec3d1dcfd302070"
@@ -155,9 +159,9 @@
           "url": "https://basescan.org/address/0x96f5102c15b839757f811a98cec3725ac21dfa14#code"
         }
       ],
-      "evidence": "Pharos independently reconstructed the handover and re-read the live state at Base block 49788701. Four separate Safe transactions granted the TimelockController DEFAULT_ADMIN_ROLE on kUSD and the three PSMs on 2026-08-03. A 13-call operation was then scheduled at block 49505169 and executed at block 49623130 after 65 hours 32 minutes: it granted the timelock and code-limited PauseGuardian MANAGER_ROLE on every PSM, then removed the Safe's manager and default-admin seats. Current reads confirmed the timelock's 172800-second minimum delay, self-admin role, and the Safe's sole proposer/executor/canceller topology; they also confirmed the live PSM is the only kUSD MINTER_ROLE holder and remains enabled, unpaused, and capped at 10,000,000 USDC. skUSD remains directly administered by the Safe, but verified wrapper code provides no kUSD mint or PSM-control path, so it is recorded as a separate wrapper authority rather than a timelock bypass. Economic-posture fields reviewed 2026-08-15: cap and minter changes require the enforced 48-hour timelock, the real-time reserve verification covers the PSM-backed supply, and no prudential supervisor is evidenced.",
-      "reviewer": "Pharos on-chain review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "Pharos independently reconstructed the handover and re-read the live state at Base block 49788701. Four separate Safe transactions granted the TimelockController DEFAULT_ADMIN_ROLE on kUSD and the three PSMs on 2026-08-03. A 13-call operation was then scheduled at block 49505169 and executed at block 49623130 after 65 hours 32 minutes: it granted the timelock and code-limited PauseGuardian MANAGER_ROLE on every PSM, then removed the Safe's manager and default-admin seats. Current reads confirmed the timelock's 172800-second minimum delay, self-admin role, and the Safe's sole proposer/executor/canceller topology; they also confirmed the live PSM is the only kUSD MINTER_ROLE holder and remains enabled, unpaused, and capped at 10,000,000 USDC. skUSD remains directly administered by the Safe, but verified wrapper code provides no kUSD mint or PSM-control path, so it is recorded as a separate wrapper authority rather than a timelock bypass. Economic-posture fields reviewed 2026-08-15: cap and minter changes require the enforced 48-hour timelock, the real-time reserve verification covers the PSM-backed supply, and no prudential supervisor is evidenced. D14/D29 review on 2026-10-03 re-read hasRole(DEFAULT_ADMIN_ROLE, timelock) as true at Base block 49788701 (hash 0xe9b77922fcb6a3443a2d1d8f56f0a2a987849fb950ecb55ed04c637636903e9d). Verified kUSD source implements mint(address,uint256) as onlyRole(MINTER_ROLE) followed by _mint, without collateral checks; inherited AccessControl lets DEFAULT_ADMIN_ROLE grant MINTER_ROLE to an arbitrary address. The timelock can therefore authorize an unrestricted minter after the Safe-originated delay, independently of the current deposit-gated PSM and its cap. Semantics are unbounded; a Safe root behind a 48-hour timelock is not D29 token governance. Continuous reconciliation derives unbounded-reconciled.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U7SafeRootedFloorA)",
+      "reviewedAt": "2026-10-03"
     }
   }
 }

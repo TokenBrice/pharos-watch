@@ -2,9 +2,9 @@
   "id": "m-m0",
   "mintAuthority": {
     "mintPath": "m0-permissioned-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "M has one native issuance route: the immutable Ethereum MinterGateway. Approved Minters, Validator attestations, mint-delay review, collateral/debt checks, and TTG-governed issuance parameters constrain native M liabilities; Solana and the other authored deployments are bridge representations assessed under Bridge Risk.",
+    "summary": "M's immutable Ethereum MinterGateway currently uses approved minters, validator attestations and collateral/debt accounting. TTG can appoint minters/validators and set the attestation threshold to zero, permitting arbitrary reported off-chain collateral and durable issuance to a chosen destination without posted deposits. D14 is unbounded with periodic attestation reconciliation. Emergency governance has no unavoidable 48-hour execution delay; the mutable 300-second mint delay is not that delay. Bridge representations remain assessed separately.",
     "upgradeability": {
       "model": "immutable",
       "deploymentRefs": [
@@ -129,7 +129,7 @@
         "evidence": "At Ethereum block 25712124, MinterGateway.ttgRegistrar() returned this Registrar. M0's primary governance and role specifications assign approved-minter, validator, and issuance-parameter changes to Two Token Governance. This control can authorize new issuance participants and raise replaceable mint constraints but cannot bypass MinterGateway's transaction checks directly."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
@@ -157,11 +157,27 @@
         {
           "label": "M0 Research: approved collateral structures for Minters (2024-11-20)",
           "url": "https://research.m0.org/research/expanding-available-collateral-structures-for-minters"
+        },
+        {
+          "label": "Verified MinterGateway: collateral signatures and mint destination",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e"
+        },
+        {
+          "label": "Verified TTG Registrar: Standard and Emergency governor setters",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x119fbeedd4f4f4298fb59b720d5654442b81ae2c"
+        },
+        {
+          "label": "Verified EmergencyGovernor: zero voting delay and early execution",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x886d405949f709bc3f4451491bdd07ff51cdf90a"
+        },
+        {
+          "label": "Ethereum pinned block 26113566",
+          "url": "https://eth.blockscout.com/block/26113566"
         }
       ],
-      "evidence": "At Ethereum block 25773291, MToken.minterGateway() still resolved to the immutable MinterGateway and ttgRegistrar() returned 0x119fbeedd4f4f4298fb59b720d5654442b81ae2c. Existing pinned reads establish mint ratio 9950, mint delay 300 seconds, validator threshold 1, and a 108000-second collateral update interval; expired collateral counts as zero. M0's primary specifications assign replaceable issuance parameters and approved minter/validator sets to TTG governance, so native M issuance remains collateral/debt and Validator constrained while aggregate cap semantics are raiseable. Validator attestations support periodic reconciliation; no unified prudential supervisor or public native mint-authority incident was identified in the reviewed primary sources. Solana and the other authored deployments are bridge representations and their route controls are assessed separately under Bridge Risk.",
-      "reviewer": "Codex mint-bridge-boundary migration",
-      "reviewedAt": "2026-08-16",
+      "evidence": "At Ethereum block 25773291, MToken.minterGateway() still resolved to the immutable MinterGateway and ttgRegistrar() returned 0x119fbeedd4f4f4298fb59b720d5654442b81ae2c. Existing pinned reads establish mint ratio 9950, mint delay 300 seconds, validator threshold 1, and a 108000-second collateral update interval; expired collateral counts as zero. M0's primary specifications assign replaceable issuance parameters and approved minter/validator sets to TTG governance, so native M issuance remains collateral/debt and Validator constrained while aggregate cap semantics are raiseable. Validator attestations support periodic reconciliation; no unified prudential supervisor or public native mint-authority incident was identified in the reviewed primary sources. Solana and the other authored deployments are bridge representations and their route controls are assessed separately under Bridge Risk. D14/D29 sweep 2026-10-03 supersedes the historical raiseable classification: at Ethereum block 26113566 (hash 0x8ee5bf8702023bb24470045b03b62f22fe10f1c46654ea9e79377e5dac7193b9), mintDelay()=300, mintRatio()=9950 and updateCollateralValidatorThreshold()=1. Verified Registrar.setKey/addToList admit Standard Governor 0xb024ac5a7c6bc92fbacc8c3387e628a07e1da016 and Emergency Governor 0x886d405949f709bc3f4451491bdd07ff51cdf90a. The signature threshold has no positive lower bound; setting it to zero permits an approved minter to report arbitrary collateral with empty signature arrays, then proposeMint(amount,destination) and mintM after the configured delay. These balances are off-chain attestations, not posted deposits; governance can also appoint its own minter and validator. D14 is unbounded notwithstanding current checks. D29 fails the minimum-delay gate: Emergency ThresholdGovernor has zero voting delay and a supermajority proposal can execute while the current voting epoch is open, without an enforced 48-hour timelock. The mutable 300-second mint delay is not a governance delay. Registrar is not itself the sole token-vote governor; complete recursive TTG/minter/validator executionScope closure is not certified. Periodic validator reconciliation and attestation-only supervision yield unbounded-reconciled.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U5GovAmbiguousA)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable"
     }
   }

@@ -2,7 +2,7 @@
   "id": "ctusd-citrea",
   "mintAuthority": {
     "mintPath": "m0-permissioned-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "ctUSD is the canonical Citrea M0-backed extension; its native wrapping routes through the Citrea SwapFacility while inherited base M issuance remains on the Ethereum MinterGateway. The M0 issuance and extension checks below are native liability controls, not bridge machinery. Current M0 Portal configuration does not authorize a direct ctUSD bridge representation, and Bridge Risk retains the reviewed Citrea native route only.",
     "upgradeability": {

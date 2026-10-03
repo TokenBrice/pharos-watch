@@ -20,7 +20,7 @@
         }
       ]
     },
-    "summary": "NECT is a Liquity v2-style overcollateralized stablecoin on Berachain, minted from collateral-vault (Den) branches such as iBGT, WBERA, BTC/ETH variants, and Kodiak Island LPs. Beraborrow retains admin/governance control over collateral branch onboarding (some collateral is permissioned); renouncement is not confirmed.",
+    "summary": "NECT currently mints through collateral-vault branches, with Registry admission administered by a 4-of-7 Safe and a reviewed 3-day delay. Verified source proving every admissible branch/minter remains collateral-gated could not be recovered, and arbitrary minter admission is not independently proven. Economic cap semantics are unknown; the authored authorization power conservatively derives unbounded-unreconciled rather than retaining an unsupported favorable bound.",
     "controls": [
       {
         "chain": "berachain",
@@ -31,7 +31,7 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "NECT mints only via registered Beraborrow collateral-vault (Den) branches against overcollateralized positions, with Liquity-style $1-face-value redemptions; supply is bounded by collateralized borrowing. Branch registration and debt ceilings are controlled by the Registry owner (4-of-7 Beraborrow Safe behind a 3-day timelock), which can raise mint capacity by registering new branches or adjusting parameters.",
+        "capDescription": "Current Beraborrow Den branches are described as collateralized borrowing paths. The reviewed Registry owner can admit branches and change capacity, but verified source proving construction-enforced collateral checks for every admissible minter was not recovered. Root economic cap semantics are unknown, not a certified collateral bound.",
         "evidence": "Beraborrow docs describe Dens depositing collateral to mint the overcollateralized stablecoin NECT (Liquity v2-style), with NECT token at 0x1cE0a25D13CE4d52071aE7e02Cf1F6606F4C79d3.",
         "observedAt": "2026-10-01",
         "observedBlock": 26911487,
@@ -81,13 +81,13 @@
         }
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unknown",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "At Berachain block 22088792: NECT token has no Ownable/AccessControl in bytecode; owner() reverts; mint() reverts with 'Debt: Caller not BO/DM' (whitelisted contract minting). Registry at 0x27393e8a6f8f2e32b870903279999c820e984dc7 owned by 0xce7d3fd5 (4/7 Gnosis Safe L2, confirmed via RPC getOwners/getThreshold), timelock delay 3 days. Control is NOT renounced. Safe retains authority to add branch minters via Registry. Reclassification to immutable-user-collateralized is NOT appropriate. Berachain RPC reads at block 22089745 resolved the Registry owner Safe: getModulesPaginated returned no modules and the guard slot is zero, clearing the final modules/guards blocker. Economic-posture fields reviewed 2026-08-15: registered collateral branches mint NECT and the 4-of-7 Safe can add branches or raise capacity only through the enforced three-day registry timelock; no supervisor or attestor is identified.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-6 (lead usde-ethena); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At Berachain block 22088792: NECT token has no Ownable/AccessControl in bytecode; owner() reverts; mint() reverts with 'Debt: Caller not BO/DM' (whitelisted contract minting). Registry at 0x27393e8a6f8f2e32b870903279999c820e984dc7 owned by 0xce7d3fd5 (4/7 Gnosis Safe L2, confirmed via RPC getOwners/getThreshold), timelock delay 3 days. Control is NOT renounced. Safe retains authority to add branch minters via Registry. Reclassification to immutable-user-collateralized is NOT appropriate. Berachain RPC reads at block 22089745 resolved the Registry owner Safe: getModulesPaginated returned no modules and the guard slot is zero, clearing the final modules/guards blocker. Economic-posture fields reviewed 2026-08-15: registered collateral branches mint NECT and the 4-of-7 Safe can add branches or raise capacity only through the enforced three-day registry timelock; no supervisor or attestor is identified. D14/D29 review on 2026-10-03 confirmed Registry owner() remains the reviewed Safe at Berachain block 26911487 (hash 0x3ec4636c9ee6291df05b8328f41013bb5776cfd8f1bdab90a8a109dca16d3304). Existing pinned reviews establish Registry-controlled branch/minter admission and token caller whitelisting, but do not prove whether admission is constrained to immutable collateral-checked branch implementations or can install an unrestricted borrower/debt-manager minter. Verified construction could not be recovered: Berascan returned HTTP 403, Sourcify had no full/partial/v2 match, Blockscout had no deployed record and Routescan did not support the chain. Neither deposit-only construction nor an arbitrary registration bypass is certified. Economic cap semantics are unknown, with no capSemanticsReview. The authored can-authorize control conservatively encodes an unbounded path, deriving unbounded-unreconciled with not-applicable reconciliation and no supervision; Safe authority is not D29 token governance.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U7SafeRootedFloorA)",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "Beraborrow docs",

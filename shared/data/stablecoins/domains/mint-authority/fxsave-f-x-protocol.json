@@ -1,6 +1,22 @@
 {
   "id": "fxsave-f-x-protocol",
   "mintAuthority": {
+    "capSemanticsReview": {
+      "verdict": "raiseable-collateral-only",
+      "rationale": "Pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). The pinned SavingFxUSD implementation uses ERC4626 _deposit with safeTransferFrom before _mint; depositGauge likewise transfers gauge receipts before minting. Parameter changes affect deposit/redemption and investment settings, not an arbitrary share mint. The AladdinDAO TimelockController can replace implementation through ProxyAdmin, but upgrade-only authority is outside the unchanged D14 trigger; under the currently verified implementation, raising limits admits only asset-funded deposits. Inherited controls concern fxusd-f-x-protocol, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "sources": [
+        {
+          "label": "Verified current local mint implementation/source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe4031e271809d20074e4bef1caeefec5f710e8a6"
+        },
+        {
+          "label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2",
+          "url": "https://etherscan.io/block/26113624"
+        }
+      ]
+    },
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
@@ -111,10 +127,12 @@
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "fxSAVE (variantOf fxusd-f-x-protocol, variantKind strategy-vault) is a yield-bearing vault receipt over fxUSD. At Ethereum block 25573280, asset() confirmed the fxUSD Stability Pool and the proxy chain resolved to ProxyAdmin 0x9b54b7703551d9d0ced177a78367560a8b2edda4 owned by TimelockController 0x68863fb8855b04509a835082478d6e3d0be4e61a with a 259200-second minimum delay. No privileged share mint outside deposit accounting was found; changing that accounting requires the delayed upgrade path. The wrapper has no issuer reserve or named prudential supervisor of its own.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
+      "evidence": "fxSAVE (variantOf fxusd-f-x-protocol, variantKind strategy-vault) is a yield-bearing vault receipt over fxUSD. At Ethereum block 25573280, asset() confirmed the fxUSD Stability Pool and the proxy chain resolved to ProxyAdmin 0x9b54b7703551d9d0ced177a78367560a8b2edda4 owned by TimelockController 0x68863fb8855b04509a835082478d6e3d0be4e61a with a 259200-second minimum delay. No privileged share mint outside deposit accounting was found; changing that accounting requires the delayed upgrade path. The wrapper has no issuer reserve or named prudential supervisor of its own. D14/A7/A10 review 2026-10-03, pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). The pinned SavingFxUSD implementation uses ERC4626 _deposit with safeTransferFrom before _mint; depositGauge likewise transfers gauge receipts before minting. Parameter changes affect deposit/redemption and investment settings, not an arbitrary share mint. The AladdinDAO TimelockController can replace implementation through ProxyAdmin, but upgrade-only authority is outside the unchanged D14 trigger; under the currently verified implementation, raising limits admits only asset-funded deposits. Inherited controls concern fxusd-f-x-protocol, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "reviewedAt": "2026-10-03",
       "sources": [
+        {"label": "Verified current local mint implementation/source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe4031e271809d20074e4bef1caeefec5f710e8a6"},
+        {"label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2", "url": "https://etherscan.io/block/26113624"},
         {
           "label": "f(x) Protocol docs",
           "url": "https://fxprotocol.gitbook.io/fx-docs"

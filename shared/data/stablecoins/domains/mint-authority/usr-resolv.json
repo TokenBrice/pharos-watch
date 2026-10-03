@@ -2,7 +2,7 @@
   "id": "usr-resolv",
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "compromised",
     "confidence": "verified",
     "summary": "USR has one reviewed native issuance deployment on Ethereum. Its off-chain SERVICE_ROLE backend can mint directly without an on-chain oracle, ratio, per-transaction, or max-supply check; a compromised signer minted 80M unbacked USR in March 2026. The Ethereum LayerZero adapter and six remote SimpleOFT deployments are bridge machinery assessed separately under bridgeRouteRisk and do not change the native issuance posture.",
     "mintIncidents": [

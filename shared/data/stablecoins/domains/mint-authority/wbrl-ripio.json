@@ -2,7 +2,7 @@
   "id": "wbrl-ripio",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "WBRL has independent native issuer deployments on Ethereum, Base, World Chain, BSC, Polygon, Gnosis, and since the 2026-09-05 closeout also Celo and HyperEVM. On the six original deployments the shared Ripio EOA holds MINTER_ROLE and UPGRADER_ROLE, the 4-of-7 Safe holds DEFAULT_ADMIN_ROLE, and the issuer's LimitedMinter facility is a native cap-limited minter on Ethereum, BSC, Polygon, and Gnosis; on the Celo and HyperEVM deployments the same 4-of-7 Safe itself holds MINTER_ROLE, PAUSER_ROLE, UPGRADER_ROLE, and DEFAULT_ADMIN_ROLE while the shared EOA held no token roles at the 2026-09-05 fixed reads. The separate LimitedMinterBridge/BridgeDeposit burn-mint rail is reviewed under Bridge Risk.",
     "upgradeability": {

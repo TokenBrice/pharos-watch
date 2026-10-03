@@ -25,8 +25,10 @@ export type V9MintPosture =
   | "concentrated-admin"
   | "collateral-gated"
   | "unbounded-reconciled"
+  | "unbounded-governed"
   | "unbounded-reconciliation-unknown"
-  | "unbounded-or-compromised"
+  | "unbounded-unreconciled"
+  | "compromised"
   | "unknown";
 export type V9OracleTier = OracleRiskTier;
 export type V9BridgeTier = BridgeRouteRiskTier;
@@ -174,27 +176,49 @@ export interface V9EconomicControlResult {
   structuralFailures: readonly V9ControlStructuralFailure[];
   failureDomains: readonly V9FailureDomainRef[];
 }
+/** Admit only complete, delayed, flash-resistant and enumerable governance issuance. */
+export function isV9GovernedIssuanceQualified(
+  control: V9DeploymentControlFactV2,
+  policy: V9GovernedIssuancePolicy,
+): boolean {
+  const governance = control.issuanceGovernance;
+  const admissibleVotingPower: readonly string[] = policy.admissibleVotingPower;
+  return governance !== undefined &&
+    governance.coverage === "complete" &&
+    governance.incompleteReasons.length === 0 &&
+    governance.nonGovernorUnboundedPathKeys.length === 0 &&
+    governance.minUnavoidableDelaySec !== null &&
+    governance.minUnavoidableDelaySec >= policy.minUnavoidableDelaySec &&
+    admissibleVotingPower.includes(governance.votingPower) &&
+    governance.enumerable;
+}
+
 /** Derive posture from recorded semantics; aggregate review confidence cannot clear an adverse fact. */
 export function deriveV9MintPosture(
   control: V9DeploymentControlFactV2 | null,
   mint: V9MintMechanismReview,
   immutableMechanism: boolean,
+  governedPolicy: V9GovernedIssuancePolicy,
 ): V9MintPosture {
-  if (control?.incidentState === "active") return "unbounded-or-compromised";
+  if (control?.incidentState === "active") return "compromised";
   if (!control) return immutableMechanism ? "none-resolved" : "unknown";
   if (control.economicLossScope === "unknown") return "unknown";
   if (control.capSemantics.kind === "unbounded" || control.claimImpairment === "unbounded") {
-    if (
-      mint.reconciliation === "continuous" ||
-      mint.reconciliation === "periodic" ||
-      mint.supervision === "prudential"
-    ) return "unbounded-reconciled";
+    const reconciled = mint.reconciliation === "continuous" || mint.reconciliation === "periodic";
+    if (reconciled && (mint.supervision === "prudential" || mint.supervision === "attestation-only")) {
+      return "unbounded-reconciled";
+    }
+    // D29: after independently graded reconciliation, only complete governor-only
+    // issuance with unavoidable delay, flash-resistant voting and enumerability
+    // outranks base reconciliation or an unreconciled / unverified mint process.
+    if (isV9GovernedIssuanceQualified(control, governedPolicy)) return "unbounded-governed";
+    if (reconciled || mint.supervision === "prudential") return "unbounded-reconciled";
     // An internal ledger process resolves the mint-process question, not
     // reserve reconciliation: retain the unverified rung without supervision.
     if (mint.reconciliation === "unknown" || mint.reconciliation === "internal-ledger") {
       return "unbounded-reconciliation-unknown";
     }
-    return "unbounded-or-compromised";
+    return "unbounded-unreconciled";
   }
   if (control.capSemantics.kind === "unknown" || control.claimImpairment === "unknown") return "unknown";
   if (control.claimImpairment === "none") return "none-resolved";
@@ -268,6 +292,7 @@ export function bindingByMateriality(
   return share === null || share >= materialShareThreshold;
 }
 export type V9ControlPolicy = V9ValidatedPolicyEnvelope["policy"]["semantic"]["control"];
+export type V9GovernedIssuancePolicy = V9ControlPolicy["governedIssuance"];
 
 /** Resolve only admitted gap proofs; legacy owner labels never authorize exclusion. */
 export function resolveV9StatusCauses(

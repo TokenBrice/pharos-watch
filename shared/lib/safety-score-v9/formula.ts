@@ -616,7 +616,7 @@ function anyPillarBelowFloor(
     const score = pillars[pillar];
     if (score === null) return false;
     // F-gate control threshold (owner rulings 2026-07-21, D1+D5): control 25 is
-    // the ladder's DEFINED measured minimum (`unbounded-or-compromised`), not a
+    // the ladder's DEFINED measured minimum (`unbounded-unreconciled` / `compromised`), not a
     // below-plausible reading — a verified-adverse mint is a D-range fact
     // priced in-pillar, so only a control score below the measured scale reads
     // as danger for the F-vs-D decision. The withhold gate keeps the

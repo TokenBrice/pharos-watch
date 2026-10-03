@@ -2,9 +2,9 @@
   "id": "usds-sky",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
-    "summary": "USDS ERC-20 supply is minted through USDS_JOIN against Vat.dai balances, while Sky governance/Pause Proxy remains authorized to change system modules, parameters, and USDS permissions.",
+    "summary": "USDS governance issuance is economically unbounded: the Sky Pause Proxy is a USDS ward and can mint arbitrary durable tokens directly without collateral, as well as create unbacked Vat.dai for USDS_JOIN.exit. The Chief/Pause route enforces 48 hours after plotting, but the complete 129-ward Vat inventory, savings accrual, allocator/relayer and emergency paths are not execution-certified; no governed-issuance credit is claimed.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -49,12 +49,12 @@
         "label": "USDS_JOIN token adapter",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "cap-limited",
+        "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Mints ERC-20 USDS only against existing Vat.dai balance; not an unrestricted off-protocol minter.",
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095803,
+        "capDescription": "USDS_JOIN.exit converts Vat.dai credit into durable USDS without an adapter numeric ceiling or external-collateral test. Vat.suck can supply unbacked credit; internal accounting credit is not an economic mint cap.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26112822,
         "sources": [
           {
             "label": "Sky Chainlog",
@@ -65,7 +65,85 @@
             "url": "https://github.com/sky-ecosystem/usds"
           }
         ],
-        "evidence": "Sky Chainlog lists USDS_JOIN at this address. USDS.wards(USDS_JOIN) returned 1 at Ethereum block 25294731. eth_getCode confirms contract bytecode present. Re-verified at Ethereum block 26095803 on 2026-10-01: USDS.wards(USDS_JOIN)=1; USDS_JOIN.vat()=0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B; USDS_JOIN.usds()=0xdC035D45d973E3EC169d2276DDab16f1e407384F."
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x3c0f895007ca717aa01c8693e59df1e8c3777feb",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U2SkyGoverned)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified immutable USDS_JOIN source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c0f895007ca717aa01c8693e59df1e8c3777feb"
+            },
+            {
+              "label": "Verified Vat authorization and suck",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b"
+            },
+            {
+              "label": "Ethereum observation block 26112822",
+              "url": "https://etherscan.io/block/26112822"
+            }
+          ],
+          "pin": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:7c4855a3669b6e1093704c90f6fe6ac45437a3e54930c5da03cbf7fa6d9d2b02",
+            "signerIdentity": "exit public against caller Vat.dai and Vat.hope(USDS_JOIN);USDS.wards(USDS_JOIN)=1;129 live Vat wards and non-ward credit funding paths remain uncertified"
+          },
+          "observedState": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:7c4855a3669b6e1093704c90f6fe6ac45437a3e54930c5da03cbf7fa6d9d2b02",
+            "signerIdentity": "exit public against caller Vat.dai and Vat.hope(USDS_JOIN);USDS.wards(USDS_JOIN)=1;129 live Vat wards and non-ward credit funding paths remain uncertified"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "vat-credit-to-usds",
+              "targetDeployment": "ethereum:0x3c0f895007ca717aa01c8693e59df1e8c3777feb",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xef693bed"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "usds-sky"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "evidence": "At Ethereum block 26112822, hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a, USDS.wards(USDS_JOIN)=1 and the adapter runtime exactly matched verified source. The full-history token ward census leaves USDS_JOIN and Pause Proxy as the two live USDS wards. Verified exit calls vat.move(msg.sender,address(this),RAY*wad) and usds.mint(usr,wad), without a numeric adapter ceiling. It is public and immediately executable against credit, so its signer identity cannot claim governance as the only executing party. The complete upstream Vat.dai-creating inventory is not closed."
       },
       {
         "chain": "ethereum",
@@ -76,13 +154,13 @@
         "label": "Sky Pause Proxy governance executor",
         "role": "governor",
         "authorityType": "dao-governor",
-        "directMintAbility": "can-authorize",
+        "directMintAbility": "direct",
         "timelockDelaySec": 172800,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Sky governance executes through the Pause Proxy after the current 2-day Pause delay and can change system modules, parameters, and USDS authorizations.",
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095803,
+        "capDescription": "Pause Proxy is a USDS ward and can directly call Usds.mint(address,uint256) without collateral or a numeric economic cap after the current 48-hour Pause. Its Vat ward, authorization and UUPS upgrade powers are additional paths, not a requirement for arbitrary minting.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26112822,
         "sources": [
           {
             "label": "Sky Chainlog",
@@ -93,10 +171,139 @@
             "url": "https://developers.skyeco.com/protocol/governance/pause/"
           }
         ],
-        "evidence": "USDS.wards(MCD_PAUSE_PROXY) returned 1 at Ethereum block 25294731. MCD_PAUSE (0xbE286431454714F511008713973d3B053A2d38f3) storage slot 4 = 172800 (delay confirmed). eth_getCode confirms contract bytecode on both addresses. Re-verified at Ethereum block 26095803 on 2026-10-01: USDS.wards(MCD_PAUSE_PROXY)=1 and MCD_PAUSE.delay()=172800; the USDS EIP-1967 implementation remains 0x1923DfeE706A8E78157416C29cBCCFDe7cdF4102."
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xbe8e3e3618f7474f8cb1d074a26affef007e98fb",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U2SkyGoverned)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified USDS implementation authenticated mint",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1923dfee706a8e78157416c29cbccfde7cdf4102"
+            },
+            {
+              "label": "Verified Pause Proxy executor",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbe8e3e3618f7474f8cb1d074a26affef007e98fb"
+            },
+            {
+              "label": "Verified DSPause delay",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbe286431454714f511008713973d3b053a2d38f3"
+            },
+            {
+              "label": "Verified SKY Chief locked approval weight",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x929d9a1435662357f54adcf64dcee4d6b867a6f9"
+            }
+          ],
+          "pin": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:ab4f2b404904fa69f1402692bd3be3c8dcfd2ab89ee0f7604b77d8cf7b431cb9",
+            "signerIdentity": "0xbe8e3e3618f7474f8cb1d074a26affef007e98fb owned only by DSPause 0xbe286431454714f511008713973d3b053a2d38f3;Pause.owner=0;Pause.authority=SKY Chief 0x929d9a1435662357f54adcf64dcee4d6b867a6f9;Chief.hat=0xf01b594af26fc8a8ae1e24dcaf904ecb6fd1badc;locked SKY approvals;Pause.delay=172800;alternative Vat paths not execution-closed"
+          },
+          "observedState": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:ab4f2b404904fa69f1402692bd3be3c8dcfd2ab89ee0f7604b77d8cf7b431cb9",
+            "signerIdentity": "0xbe8e3e3618f7474f8cb1d074a26affef007e98fb owned only by DSPause 0xbe286431454714f511008713973d3b053a2d38f3;Pause.owner=0;Pause.authority=SKY Chief 0x929d9a1435662357f54adcf64dcee4d6b867a6f9;Chief.hat=0xf01b594af26fc8a8ae1e24dcaf904ecb6fd1badc;locked SKY approvals;Pause.delay=172800;alternative Vat paths not execution-closed"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "governance-direct-usds-mint",
+              "targetDeployment": "ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x40c10f19",
+                "0x65fae35e",
+                "0x9c52a7f1",
+                "0x4f1ef286"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "parameter-change",
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 172800,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "usds-sky"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "evidence": "Pinned block 26112822 confirms USDS.wards(Pause Proxy)=1, Vat.wards(Pause Proxy)=1, Pause.delay=172800, Pause.owner=0, Pause.authority=SKY Chief and Proxy.owner=Pause. The prior pinned Usds.mint(dead,1e18) and Vat.suck(dead,dead,1e45) read-only simulations from Pause Proxy both succeeded. Verified current USDS mint checks only auth, not collateral or a debt ceiling. The governance chain uses escrowed SKY approval weight in Chief, no fixed voting duration, and a 48-hour Pause after plotting. These positively established root powers do not certify all delegated, alternative-ward or emergency paths, so the execution scope remains partial."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
+    "governedIssuance": {
+      "governorControlRef": "ethereum:0xbe8e3e3618f7474f8cb1d074a26affef007e98fb",
+      "votingPower": "lock-escrowed",
+      "votingPowerEvidence": "Pinned Chief.gov is SKY 0x56072c95faa701256059aa122697b133aded9279. Verified Chief.lock transfers SKY into the Chief and increases deposits/approval weight; vote uses deposits, not the voter's live wallet balance. free removes approval weight and requires block.number > last, while lift sets last, preventing same-block lift-and-release. Chief has no fixed vote duration; liftCooldown=10 constrains repeated lifts and the current unavoidable governance issuance delay is DSPause's 172800 seconds after plot. This is locked approval stake, not time-locked veSKY.",
+      "enumerability": {
+        "authorizationEvents": [
+          "Vat full-history anonymous DSNote rely(address) 0x65fae35e / deny(address) 0x9c52a7f1; indexed ward is topic1, not topic2; blocks 0..26112822",
+          "USDS full-history Rely(address) / Deny(address) token ward census; blocks 0..26112822",
+          "sUSDS full-history Rely(address) / Deny(address); Pause Proxy and SPBEAM are live wards at block 26112822"
+        ],
+        "capacityReads": [
+          "Vat.wards(address) for all 144 historical ward candidates including the revoked constructor deployer; 129 live",
+          "USDS.wards(USDS_JOIN)=1; USDS.wards(Pause Proxy)=1",
+          "Vat.Line(); Vat.ilks/Vat.urns/Auto-Line.ilks for all eight Chainlog allocator vaults: BLOOM, NOVA, SPARK, OBEX, PATTERN, PRYSM, INTERVAL and GROVE",
+          "DSPause.delay()=172800; owner()=0; authority()=SKY Chief; Pause Proxy.owner()=DSPause",
+          "Chief.gov(), hat(), last(), live() and liftCooldown()=10",
+          "sUSDS.asset(), getImplementation(), usdsJoin(), ssr() and wards(address); SPBEAM.cfgs(SSR), tau()=57600 and susds()"
+        ]
+      },
+      "observedAt": "2026-10-03",
+      "observedBlock": 26112822,
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U2SkyGoverned)",
+      "sources": [
+        {
+          "label": "Verified SKY Chief lock, free, vote and lift",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x929d9a1435662357f54adcf64dcee4d6b867a6f9"
+        },
+        {
+          "label": "Verified DSPause and Pause Proxy delay enforcement",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbe286431454714f511008713973d3b053a2d38f3"
+        },
+        {
+          "label": "Verified Vat DSNote authorization inventory and suck",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b"
+        },
+        {
+          "label": "Pinned Ethereum block 26112822",
+          "url": "https://etherscan.io/block/26112822"
+        }
+      ]
+    },
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
@@ -116,11 +323,35 @@
         {
           "label": "USDS token Etherscan",
           "url": "https://etherscan.io/address/0xdc035d45d973e3ec169d2276ddab16f1e407384f#readContract"
+        },
+        {
+          "label": "Verified USDS implementation authenticated mint",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1923dfee706a8e78157416c29cbccfde7cdf4102"
+        },
+        {
+          "label": "Verified Vat unbacked credit and full-history ward event format",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b"
+        },
+        {
+          "label": "Verified sUSDS parent-USDS accrual",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0"
+        },
+        {
+          "label": "Verified SPBEAM delegated rate-setting constraints",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x36b072ed8afe665e3aa6daba79decbec63752b22"
+        },
+        {
+          "label": "Verified SKY Chief locked approval weight",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x929d9a1435662357f54adcf64dcee4d6b867a6f9"
+        },
+        {
+          "label": "Pinned Ethereum block 26112822",
+          "url": "https://etherscan.io/block/26112822"
         }
       ],
-      "evidence": "At Ethereum block 25294731: USDS.wards(USDS_JOIN=0x3C0f895007CA717Aa01c8693e59DF1e8C3777FEB)=1; USDS.wards(MCD_PAUSE_PROXY=0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB)=1; MCD_PAUSE.delay()=172800 (storage slot 4). Both controls are contracts with bytecode present. USDS_JOIN mints only against Vat.dai balance (cap-limited by Vat debt ceilings); Pause Proxy can authorize new modules with 2-day delay. Economic-posture fields reviewed 2026-08-15: debt-ceiling raises and replacement mint authorizations execute through Sky's enforced two-day Pause, while Vat-backed CDP accounting needs no separate reserve reconciliation and has no named supervisor.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "D14/D29 reviewed 2026-10-03 at Ethereum block 26112822, hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a. The prior pinned read-only Usds.mint(dead,1e18) simulation from Pause Proxy succeeded, and verified mint requires only token ward authorization with no collateral or numeric economic cap. Vat.suck from the same root also succeeded; USDS_JOIN.exit converts that unbacked credit to durable tokens. The former raiseable cap semantics are corrected to unbounded. Reconciliation and supervision remain not-applicable/none; incomplete governed evidence therefore derives unbounded-unreconciled, not compromise. Full-history Vat rely/deny census returned 158 logs, 144 distinct historical candidates and 129 live wards, with every latest event agreeing with pinned storage: 61 collateral joins, 47 clippers and 21 other modules. All 129 returned verified sources; 128 runtimes matched exactly, while CRVV1ETHSTETH Clipper 0x1926862f899410bfc19fefb8a3c69c7aed22463a lacks a usable deployed-bytecode field. D29 remains uncertified for the full ward set, including Pot/Jug drip, D3M exec/uncull, DAI/USDS vesting, Teleport, STUSDS, Lockstake, Kicker/Flopper, Auto-Line and LineMom; End.snip/skip use suck and ESM is not certified restriction-only. Vow downstream accounting, LitePSM.fill, all Allocator draw paths and Spark ALM relayers have incomplete ceiling/admin/bypass closure. sUSDS is itself a Vat ward whose public drip creates parent USDS through suck and exit; its live SPBEAM/Pause rate and upgrade authorities lack a complete parent-issuance certificate. SPBEAM is a verified bounded rate-setting delegate, not a demonstrated share minter; its complete facilitator/admin scope is still missing. Public USDS_JOIN.exit has no delay against existing credit and cannot claim governance as its only caller. Chief votes use escrowed SKY, with no fixed voting duration and the enforced 48-hour Pause on the proven governor path. The exact ward inventory and path gaps are retained in U2SkyGoverned's research result; authored scopes intentionally remain partial.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U2SkyGoverned)",
+      "reviewedAt": "2026-10-03"
     }
   }
 }

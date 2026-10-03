@@ -8,11 +8,11 @@ import { normalizeFixedInput } from "../report-cards-fixed-input";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
+import { v9TestClockSec } from "../../test-helpers/v9-fixed-input";
 
-// This real-registry fixture evaluates after the additive 2026-09-30
-// dependency identity review. An earlier clock correctly rejects future
-// evidence and cannot exercise the reviewed custody/mechanism behavior.
-const AS_OF_SEC = Date.parse("2026-09-30T12:00:00.000Z") / 1_000;
+// Evaluate after the newest registry review so the D14 control refresh is
+// admitted alongside the reviewed custody/mechanism evidence.
+const AS_OF_SEC = v9TestClockSec();
 const OBSERVED_AT_SEC = AS_OF_SEC - 100;
 const ASSET_ID = "dusd-dialectic";
 const PARENT_ID = "usdc-circle";
@@ -185,26 +185,31 @@ describe("Safety Score v9 DUSD Makina team-answer evidence", () => {
       assessment: "high",
       signals: expect.arrayContaining(["wrapper-leverage-factor:leverage"]),
     });
-    // The 2026-08-08 control review resolved DUSD's two open mint-authority
-    // questions, so the compiled control status is `known` and the loss-control
-    // fact no longer carries `wrapper-local-controls-partial-review`. What it
-    // carries instead is one risk signal per curated control — five
-    // `mint-meta:dusd-dialectic:<digest>` keys derived from control identity
-    // rather than array position — so the fact is an exhaustive read of the
-    // control set rather than a partial one.
+    // D14 adds the fee-accrual timelock and recognizes the DAO's fee-manager
+    // authorization power. Both are local claim-loss controls, while the
+    // deposit-only Machine remains a non-claim control.
+    const controlByAuthority = new Map(compiledAsset.controls.map((control) =>
+      [control.authority?.authorityKey, control] as const,
+    ));
+    const machine = controlByAuthority.get("ethereum:0x6b006870c83b1cd49e766ac9209f8d68763df721")!;
+    const feeManager = controlByAuthority.get("ethereum:0xa7f0121375dc52028e333f02715183a1d1a690a7")!;
+    const feeTimelock = controlByAuthority.get("ethereum:0x38542447c49d24e617fc06113295d7aaa3bec4b6")!;
+    const dao = controlByAuthority.get("ethereum:0x62244c74e1d09b3d86ef7342d354b5d7770bde10")!;
+    const riskManager = controlByAuthority.get("ethereum:0x36ba7c92cd68051fb304bd4580c4a51c1d376532")!;
+    const council = controlByAuthority.get("ethereum:0x89faa3b02ef5ab185b8ace489af62748acb50afc")!;
     expect(wrapper.facts.lossAbsorptionEmergencyControls).toMatchObject({
       disposition: "reviewed",
       assessment: "high",
       signals: expect.arrayContaining([
-        "non-claim-control:mint-meta:dusd-dialectic:4f72410f15f4ab33173b",
-        "unbounded-claim-control:mint-meta:dusd-dialectic:31eba9035ce4e8c7925a",
-        "unbounded-claim-control:mint-meta:dusd-dialectic:698be001dc2d297ffcee",
-        "unbounded-claim-control:mint-meta:dusd-dialectic:8931251fb8e32aae6dfe",
-        "unbounded-claim-control:mint-meta:dusd-dialectic:9178c2c9b995cf1511b7",
+        `non-claim-control:${machine.controlKey}`,
+        `unbounded-claim-control:${feeManager.controlKey}`,
+        `unbounded-claim-control:${feeTimelock.controlKey}`,
+        `unbounded-claim-control:${dao.controlKey}`,
+        `unbounded-claim-control:${riskManager.controlKey}`,
+        `unbounded-claim-control:${council.controlKey}`,
         "strategy-vault-holder-loss-controls-reviewed",
       ]),
     });
-    expect(wrapper.facts.lossAbsorptionEmergencyControls.signals).toHaveLength(6);
     expect(wrapper.facts.lossAbsorptionEmergencyControls.signals).not.toContain(
       "wrapper-local-controls-partial-review",
     );

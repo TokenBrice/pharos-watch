@@ -1,6 +1,38 @@
 {
   "id": "yousd-yield-optimizer",
   "mintAuthority": {
+    "capSemanticsReview": {
+      "verdict": "raiseable-collateral-only",
+      "rationale": "Pinned base block 52131494 (hash 0x3d31cbc91a3065f9b4817af44865cd30cc82c4e13d49a1e322571745d55e15e5); ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2); arbitrum block 511381065 (hash 0x742a908012ae932727a3051c4789339771dbeaa342de71120780231622544950). Pinned Base, Ethereum and Arbitrum proxies resolve to the same verified YoVault implementation. Public deposit/mint inherit ERC4626 _deposit, where _transferIn safeTransferFroms local USDC before _mint; deposit fees transfer assets rather than mint extra shares. RolesAuthority strategy/pause/queued-redemption and oracle-conversion settings are not arbitrary share-mint entrypoints. The TimelockController ProxyAdmin path can replace this construction, but upgrade-only authority remains outside the unchanged D14 trigger. Inherited controls concern usdc-circle, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "sources": [
+        {
+          "label": "Verified current local mint implementation/source",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0xc84a6e01bff58996540f1abc22355a9dfe0d78dc"
+        },
+        {
+          "label": "Verified current local mint implementation/source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc84a6e01bff58996540f1abc22355a9dfe0d78dc"
+        },
+        {
+          "label": "Verified current local mint implementation/source",
+          "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xc84a6e01bff58996540f1abc22355a9dfe0d78dc"
+        },
+        {
+          "label": "base D14 observation block 52131494, hash 0x3d31cbc91a3065f9b4817af44865cd30cc82c4e13d49a1e322571745d55e15e5",
+          "url": "https://mainnet.base.org"
+        },
+        {
+          "label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2",
+          "url": "https://etherscan.io/block/26113624"
+        },
+        {
+          "label": "arbitrum D14 observation block 511381065, hash 0x742a908012ae932727a3051c4789339771dbeaa342de71120780231622544950",
+          "url": "https://arb1.arbitrum.io/rpc"
+        }
+      ]
+    },
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
@@ -367,11 +399,17 @@
       ]
     },
     "review": {
-      "evidence": "Pinned 2026-10-01 census: Base 52024964, Ethereum 26095939, Arbitrum 510590098. All three proxies now use implementation 0xc84a6e01bff58996540f1abc22355a9dfe0d78dc. Local USDC assets, Safe ownership, RolesAuthority and ProxyAdmin/timelock paths match the earlier review; six Safe owners and threshold four remain, but signer 0xd42ec163464da30a6116499254816c9b8da9f87b was replaced by 0xd770a384b34169f4683deed78e2961cba1e22cd3. Mint/deposit capability bitmaps remain zero and verified source retains public asset-funded ERC4626 share creation. Current implementation uses YoOracle for share conversions and privileged operators can settle queued withdrawals at a lower current oracle price. All three Safes have empty module pagination, zero guard, fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, and VERSION 1.4.1.",
-      "reviewer": "Sol curation pass 2026-10-01 (CurM14USDX)",
-      "reviewedAt": "2026-10-01",
+      "evidence": "Pinned 2026-10-01 census: Base 52024964, Ethereum 26095939, Arbitrum 510590098. All three proxies now use implementation 0xc84a6e01bff58996540f1abc22355a9dfe0d78dc. Local USDC assets, Safe ownership, RolesAuthority and ProxyAdmin/timelock paths match the earlier review; six Safe owners and threshold four remain, but signer 0xd42ec163464da30a6116499254816c9b8da9f87b was replaced by 0xd770a384b34169f4683deed78e2961cba1e22cd3. Mint/deposit capability bitmaps remain zero and verified source retains public asset-funded ERC4626 share creation. Current implementation uses YoOracle for share conversions and privileged operators can settle queued withdrawals at a lower current oracle price. All three Safes have empty module pagination, zero guard, fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, and VERSION 1.4.1. D14/A7/A10 review 2026-10-03, pinned base block 52131494 (hash 0x3d31cbc91a3065f9b4817af44865cd30cc82c4e13d49a1e322571745d55e15e5); ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2); arbitrum block 511381065 (hash 0x742a908012ae932727a3051c4789339771dbeaa342de71120780231622544950). Pinned Base, Ethereum and Arbitrum proxies resolve to the same verified YoVault implementation. Public deposit/mint inherit ERC4626 _deposit, where _transferIn safeTransferFroms local USDC before _mint; deposit fees transfer assets rather than mint extra shares. RolesAuthority strategy/pause/queued-redemption and oracle-conversion settings are not arbitrary share-mint entrypoints. The TimelockController ProxyAdmin path can replace this construction, but upgrade-only authority remains outside the unchanged D14 trigger. Inherited controls concern usdc-circle, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
       "sources": [
+        {"label": "Verified current local mint implementation/source", "url": "https://base.blockscout.com/api/v2/smart-contracts/0xc84a6e01bff58996540f1abc22355a9dfe0d78dc"},
+        {"label": "Verified current local mint implementation/source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc84a6e01bff58996540f1abc22355a9dfe0d78dc"},
+        {"label": "Verified current local mint implementation/source", "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xc84a6e01bff58996540f1abc22355a9dfe0d78dc"},
+        {"label": "base D14 observation block 52131494, hash 0x3d31cbc91a3065f9b4817af44865cd30cc82c4e13d49a1e322571745d55e15e5", "url": "https://mainnet.base.org"},
+        {"label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2", "url": "https://etherscan.io/block/26113624"},
+        {"label": "arbitrum D14 observation block 511381065, hash 0x742a908012ae932727a3051c4789339771dbeaa342de71120780231622544950", "url": "https://arb1.arbitrum.io/rpc"},
         {
           "label": "YO Protocol docs",
           "url": "https://docs.yo.xyz"

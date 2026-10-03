@@ -2,16 +2,16 @@
   "id": "usdb-blast",
   "mintAuthority": {
     "mintPath": "unknown",
-    "authorityPosture": "unknown",
+    "authorityPosture": "none-resolved-mint",
     "confidence": "unknown",
     "summary": "The sole authored USDB deployment is Blast's bridge representation. The Ethereum USDYieldManager/L1BlastBridge route anchors reserve and bridge accounting, but no independently authored native-USDB issuance deployment is claimed; bridge mint/burn and upgrade controls are reviewed only in Bridge Risk.",
     "economicCapSemantics": "unknown",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "At Blast block 39052431 (2026-08-16), the authored USDB deployment 0x4300000000000000000000000000000000000003 resolved to a bridge-only mint/burn path through L2BlastBridge 0x4300000000000000000000000000000000000005, and the official USDB source restricts mint and burn to that bridge. At Ethereum block 25770239 (2026-08-16), L1BlastBridge and USDYieldManager reads establish the paired deposit, conversion, and withdrawal route; USDYieldManager totalValue() and sharePrice() describe route-level reserve accounting, not a native USDB issuance cap. The former bridge-admin and proxy-admin facts are preserved in bridgeRouteRisk and are not counted as native Mint Authority.",
-      "reviewer": "Codex mint-bridge-boundary migration FIX2-20",
-      "reviewedAt": "2026-08-16",
+      "evidence": "At Blast block 39052431 (2026-08-16), the authored USDB deployment 0x4300000000000000000000000000000000000003 resolved to a bridge-only mint/burn path through L2BlastBridge 0x4300000000000000000000000000000000000005, and the official USDB source restricts mint and burn to that bridge. At Ethereum block 25770239 (2026-08-16), L1BlastBridge and USDYieldManager reads establish the paired deposit, conversion, and withdrawal route; USDYieldManager totalValue() and sharePrice() describe route-level reserve accounting, not a native USDB issuance cap. The former bridge-admin and proxy-admin facts are preserved in bridgeRouteRisk and are not counted as native Mint Authority. Queue convergence review 2026-10-03 re-read USDB.sol at pinned source commit b82105486bfe33c8b12986e7cd42388fbab7d1d2: mint(address,uint256) and burn(address,uint256) both require onlyBridge, which rejects callers other than immutable BRIDGE. With the reviewed external-only-representation exception covering the sole authored deployment and no authored native mint control, adaptMintReview emits a known not-applicable mint review with null controlKey and no mint controls; the published posture is none-resolved. Annotate none-resolved-mint for that native-mint scope only. The unresolved distinct-native-liability question, mintPath unknown, confidence unknown, and adverse Bridge Risk controls are retained; this source re-read does not claim a new live implementation pin or absence of bridge upgrade powers.",
+      "reviewer": "Sol v10.02 posture-queue convergence (QueueResolve)",
+      "reviewedAt": "2026-10-03",
       "disposition": "unresolved",
       "unresolvedQuestions": [
         "No separate canonical Ethereum USDB contract is authored; if a distinct native-liability deployment exists outside the reviewed Blast route, it remains to be identified."

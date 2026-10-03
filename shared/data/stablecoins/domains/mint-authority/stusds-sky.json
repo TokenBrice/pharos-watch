@@ -1,6 +1,22 @@
 {
   "id": "stusds-sky",
   "mintAuthority": {
+    "capSemanticsReview": {
+      "verdict": "raiseable-collateral-only",
+      "rationale": "Pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). The pinned StUsds implementation routes deposit/mint through internal _mint: usds.transferFrom precedes share creation and the mutable cap constrains deposited assets. Wards may file cap/rate parameters and cut holder value, but no privileged arbitrary-share mint is exposed by this implementation. PauseProxy wards-gated UUPS upgrades can replace accounting but remain upgrade-only outside the unchanged D14 trigger; cap raises currently admit USDS-funded deposits. Inherited controls concern usds-sky, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "sources": [
+        {
+          "label": "Verified current local mint implementation/source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22"
+        },
+        {
+          "label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2",
+          "url": "https://etherscan.io/block/26113624"
+        }
+      ]
+    },
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
@@ -96,6 +112,8 @@
     },
     "review": {
       "sources": [
+        {"label": "Verified current local mint implementation/source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22"},
+        {"label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2", "url": "https://etherscan.io/block/26113624"},
         {
           "label": "Sky stUSDS docs",
           "url": "https://developers.skyeco.com/protocol/tokens/stusds/"
@@ -109,9 +127,9 @@
           "url": "https://etherscan.io/address/0xbE286431454714F511008713973d3B053A2d38f3#readContract"
         }
       ],
-      "evidence": "Re-reviewed 2026-10-01 at Ethereum block 26095796. asset() returned USDS and the implementation remained 0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22. Correct EIP-1967 admin and beacon slots returned zero. The Sky Pause Proxy remained warded; its owner remained DSPause with a 172800-second delay. Pinned implementation source confirms wards-gated UUPS upgrades, deposit-backed share minting, mutable caps, and governance cut() slashing. The protective delay does not prevent governance from changing local logic or slashing holder value.",
-      "reviewer": "Sol curation pass 2026-10-01 (CurA43KAG)",
-      "reviewedAt": "2026-10-01",
+      "evidence": "Re-reviewed 2026-10-01 at Ethereum block 26095796. asset() returned USDS and the implementation remained 0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22. Correct EIP-1967 admin and beacon slots returned zero. The Sky Pause Proxy remained warded; its owner remained DSPause with a 172800-second delay. Pinned implementation source confirms wards-gated UUPS upgrades, deposit-backed share minting, mutable caps, and governance cut() slashing. The protective delay does not prevent governance from changing local logic or slashing holder value. D14/A7/A10 review 2026-10-03, pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). The pinned StUsds implementation routes deposit/mint through internal _mint: usds.transferFrom precedes share creation and the mutable cap constrains deposited assets. Wards may file cap/rate parameters and cut holder value, but no privileged arbitrary-share mint is exposed by this implementation. PauseProxy wards-gated UUPS upgrades can replace accounting but remain upgrade-only outside the unchanged D14 trigger; cap raises currently admit USDS-funded deposits. Inherited controls concern usds-sky, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable"
     }
   }

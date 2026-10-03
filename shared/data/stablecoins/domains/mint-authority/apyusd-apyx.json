@@ -2,7 +2,7 @@
   "id": "apyusd-apyx",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "apyUSD is an ERC-4626-style strategy wrapper over apxUSD. The canonical Ethereum wrapper mints shares only through deposit/mint flows against apxUSD, while its UUPS mint-logic path is controlled by the Apyx AccessManager and 4/7 Safe. Durable apxUSD issuance is inherited from the reviewed apxUSD issuer authority. Accountable documents continuous parent-asset balance verification and apxUSD supply visibility; exact apyUSD reserve-to-liability reconciliation is not established.",
     "inheritedFrom": "apxusd-apyx",
@@ -131,6 +131,18 @@
       ]
     },
     "economicCapSemantics": "raiseable",
+    "capSemanticsReview": {
+      "verdict": "raiseable-collateral-only",
+      "rationale": "D14 review of Sourcify-verified implementation 0xfd616567ecc1607f61073951a1e822f7315bb112: ApyUSD._deposit delegates to ERC4626Upgradeable._deposit, which safeTransferFroms apxUSD from the caller before _mint(receiver,shares). Slippage entry points delegate to the same deposit/mint flow; local administrative functions expose no privileged share mint or share-minter authorization. The inherited MinterV0/backend control issues parent apxUSD, not apyUSD shares, and is carried by the serial-claim dependency edge without charging parent issuance twice. UUPS upgrade-only authority remains outside the D14 trigger.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U8SafeRootedFloorB)",
+      "sources": [
+        {
+          "label": "Verified ApyUSD implementation and ERC4626 source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xfd616567ecc1607f61073951a1e822f7315bb112?fields=sources"
+        }
+      ]
+    },
     "reconciliation": "unknown",
     "supervision": "attestation-only",
     "review": {
@@ -168,9 +180,9 @@
           "url": "https://tidresearch.com/reports/apyusd/"
         }
       ],
-      "evidence": "At Ethereum block 25905191, apyUSD is a UUPS proxy with implementation 0xfd616567ecc1607f61073951a1e822f7315bb112 and AccessManager authority 0xe167330e2eac88666de253e9607c6d9ae0ca2824. The Apyx source defines apyUSD as an ERC-4626 wrapper over apxUSD: local shares mint against deposited apxUSD, while durable apxUSD issuance remains inherited from the reviewed parent profile. The Ethereum AccessManager role 24 controls upgradeToAndCall and resolves to the same 4/7 Safe with a 259200-second delay; the Safe added owner 0x6c927e5B7B895E7f41fBE8B35328Ad2d5E324e79 and raised its threshold from 3 to 4 in transaction 0xd7692f068fd795bae4418b828087e0e86c3cc85ad102af25a2717176f87f5aae at block 25877561. The prior 2026-08-16 review credited hourly TID wrapper/backing monitoring as continuous reconciliation. On 2026-10-01, D22 review distinguishes those live totals from exact-token reserve-to-liability procedures: issuer Accountable documentation verifies parent asset balances and apxUSD supply, while the August Wolf examination covers securities at two dates. No apyUSD liability reconciliation procedure was established, so reconciliation is unknown; no cessation of internal monitoring is asserted. Wolf & Company's recurring examinations remain attestation-only supervision. Base, BNB, and Solana bridge representations and their unresolved administrative surfaces are retained under Bridge Risk rather than Mint Authority.",
-      "reviewer": "Codex mint/bridge boundary migration; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-16",
+      "evidence": "At Ethereum block 25905191, apyUSD is a UUPS proxy with implementation 0xfd616567ecc1607f61073951a1e822f7315bb112 and AccessManager authority 0xe167330e2eac88666de253e9607c6d9ae0ca2824. The Apyx source defines apyUSD as an ERC-4626 wrapper over apxUSD: local shares mint against deposited apxUSD, while durable apxUSD issuance remains inherited from the reviewed parent profile. The Ethereum AccessManager role 24 controls upgradeToAndCall and resolves to the same 4/7 Safe with a 259200-second delay; the Safe added owner 0x6c927e5B7B895E7f41fBE8B35328Ad2d5E324e79 and raised its threshold from 3 to 4 in transaction 0xd7692f068fd795bae4418b828087e0e86c3cc85ad102af25a2717176f87f5aae at block 25877561. The prior 2026-08-16 review credited hourly TID wrapper/backing monitoring as continuous reconciliation. On 2026-10-01, D22 review distinguishes those live totals from exact-token reserve-to-liability procedures: issuer Accountable documentation verifies parent asset balances and apxUSD supply, while the August Wolf examination covers securities at two dates. No apyUSD liability reconciliation procedure was established, so reconciliation is unknown; no cessation of internal monitoring is asserted. Wolf & Company's recurring examinations remain attestation-only supervision. Base, BNB, and Solana bridge representations and their unresolved administrative surfaces are retained under Bridge Risk rather than Mint Authority. D14 review of Sourcify-verified implementation 0xfd616567ecc1607f61073951a1e822f7315bb112: ApyUSD._deposit delegates to ERC4626Upgradeable._deposit, which safeTransferFroms apxUSD from the caller before _mint(receiver,shares). Slippage entry points delegate to the same deposit/mint flow; local administrative functions expose no privileged share mint or share-minter authorization. The inherited MinterV0/backend control issues parent apxUSD, not apyUSD shares, and is carried by the serial-claim dependency edge without charging parent issuance twice. UUPS upgrade-only authority remains outside the D14 trigger.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U8SafeRootedFloorB)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable"
     }
   }

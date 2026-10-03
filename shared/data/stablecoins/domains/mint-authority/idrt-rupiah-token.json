@@ -2,7 +2,7 @@
   "id": "idrt-rupiah-token",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "IDRT is a non-upgradeable Ownable ERC20 on Ethereum, BSC, and Polygon. Each active native token owner() is a distinct chain-local 4-of-6 Safe with the same six-signatory set. The owner controls mint and burn. Harmony 1IDRT is excluded from native issuance because it is a legacy bridge representation, reviewed separately in Bridge Risk; the Harmony network remains RPC-reachable.",
     "controls": [

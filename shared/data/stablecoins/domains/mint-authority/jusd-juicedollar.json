@@ -2,7 +2,7 @@
   "id": "jusd-juicedollar",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "JUSD is an ownerless Frankencoin fork with native issuance on Citrea. owner() reverts and there is no EIP-1967 proxy admin. mint() is gated to registered minters, but an accepted minter can mint an unrestricted amount; qualified JUICE pool-share holders can veto proposed minters during the application period. The four canonical-side StablecoinBridge routes are separately assessed under Bridge Risk: their lock/mint paths are route-capped and supply-conserving, but do not bound the token-level accepted-minter path.",
     "upgradeability": {

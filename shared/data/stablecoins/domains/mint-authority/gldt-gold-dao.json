@@ -2,9 +2,9 @@
   "id": "gldt-gold-dao",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
-    "summary": "GLDT is minted exclusively by the Gold DAO dapp/swap canister 6f6ua-hqaaa-aaaar-qairq-cai, which the ICRC-1 ledger metadata confirms as the ledger's sole minting account; minting is economically bounded at 100 GLDT per gram of locked GLD NFT per the issuer whitepaper. Both the swap canister and the ledger are controlled by Gold DAO Root tw2vt-hqaaa-aaaaq-aab6a-cai, which sits in the standard SNS Root/Governance loop, so the Gold DAO SNS can upgrade the mint code and alter the bound through governance. The live code enforcing the locked-NFT rule is not independently verified, capping confidence at manual-review.",
+    "summary": "D14 review 2026-10-03: current ICRC ledger metadata still identifies 6f6ua-hqaaa-aaaar-qairq-cai as minting account; IC API reports its sole controller as Gold DAO Root and module hash 720c3678a3605755a1d010532235b6ecc2b8e441ca5ccfda05db1bda1ef5fd8c. The live module is not bound to verified source enforcing NFT-backed minting. The whitepaper is not a construction certificate. Economic cap is unknown, not an asserted arbitrary-mint finding; the existing direct minter conservatively encodes the unbounded branch and periodic reconciliation yields unbounded-reconciled. SNS upgrade authority alone is not a new D14 trigger. No D29 certificate is asserted.",
     "controls": [
       {
         "label": "GLDT ledger minting account (Gold DAO dapp/swap canister)",
@@ -73,9 +73,9 @@
       }
     ],
     "review": {
-      "evidence": "Follow-up 2026-07-27 resolves the 2026-07-20 open questions with reproducible primary ICP reads. (1) The ICRC API's GLDT ledger metadata returns icrc1_minting_account.owner = 6f6ua-hqaaa-aaaar-qairq-cai (total supply 59450000000000 at 8 decimals), binding the live ledger minting account to the Gold DAO dapp/swap canister. (2) The IC API enumerates the complete controller chain: the minting canister and the GLDT ledger are each controlled solely by Gold DAO Root tw2vt-hqaaa-aaaaq-aab6a-cai, Root is controlled by Gold DAO Governance tr3th-kiaaa-aaaaq-aab6q-cai, and Governance is controlled by Root, the standard SNS loop, so the Gold DAO SNS is the only authority that can alter the mint code or its economic bound, via proposal-driven canister upgrade. (3) The live code path enforcing the 100-GLDT-per-gram locked-GLD-NFT rule remains unverified at source level; the bound is taken from the issuer whitepaper, so confidence stays manual-review rather than verified. GLDT supply is backed by locked GLD NFTs representing KPMG-audited Swiss vault gold on a quarterly attestation cycle.",
-      "reviewer": "P2 mint-free cohort; Kimi data review (2026-07-27)",
-      "reviewedAt": "2026-07-27",
+      "evidence": "Follow-up 2026-07-27 resolves the 2026-07-20 open questions with reproducible primary ICP reads. (1) The ICRC API's GLDT ledger metadata returns icrc1_minting_account.owner = 6f6ua-hqaaa-aaaar-qairq-cai (total supply 59450000000000 at 8 decimals), binding the live ledger minting account to the Gold DAO dapp/swap canister. (2) The IC API enumerates the complete controller chain: the minting canister and the GLDT ledger are each controlled solely by Gold DAO Root tw2vt-hqaaa-aaaaq-aab6a-cai, Root is controlled by Gold DAO Governance tr3th-kiaaa-aaaaq-aab6q-cai, and Governance is controlled by Root, the standard SNS loop, so the Gold DAO SNS is the only authority that can alter the mint code or its economic bound, via proposal-driven canister upgrade. (3) The live code path enforcing the 100-GLDT-per-gram locked-GLD-NFT rule remains unverified at source level; the bound is taken from the issuer whitepaper, so confidence stays manual-review rather than verified. GLDT supply is backed by locked GLD NFTs representing KPMG-audited Swiss vault gold on a quarterly attestation cycle. D14 review 2026-10-03: current ICRC ledger metadata still identifies 6f6ua-hqaaa-aaaar-qairq-cai as minting account; IC API reports its sole controller as Gold DAO Root and module hash 720c3678a3605755a1d010532235b6ecc2b8e441ca5ccfda05db1bda1ef5fd8c. The live module is not bound to verified source enforcing NFT-backed minting. The whitepaper is not a construction certificate. Economic cap is unknown, not an asserted arbitrary-mint finding; the existing direct minter conservatively encodes the unbounded branch and periodic reconciliation yields unbounded-reconciled. SNS upgrade authority alone is not a new D14 trigger. No D29 certificate is asserted.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U11BoundedB)",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "Gold DAO key canisters",
@@ -127,7 +127,7 @@
         }
       ]
     },
-    "economicCapSemantics": "bounded",
+    "economicCapSemantics": "unknown",
     "reconciliation": "periodic",
     "supervision": "attestation-only"
   }

@@ -14,6 +14,9 @@ import { makeV9Pillar as pillar, makeV9ProductionScoreInput as assetInput } from
 import { evaluateV9EconomicControl } from "@shared/lib/safety-score-v9/control";
 import {
   makeEconomicControlArgs,
+  makeDeploymentControl,
+  makeEconomicControlFacts,
+  makeReviewedMintInput,
 } from "./safety-score-v9-fixtures.test-support";
 
 const POLICY = V9_CANDIDATE_POLICY_V1;
@@ -447,15 +450,37 @@ describe("Pin sentinels stay F (danger-held, never withheld or floored)", () => 
 });
 
 describe("Reshape-v3 T5 — seasoned-issuer credit (R2)", () => {
-  const policy = POLICY.policy.semantic;
+  const unbounded = makeDeploymentControl("mint:seasoned", "mint", {
+    authority: { authorityKey: "authority:issuer", model: "issuer-backend", threshold: null },
+    capSemantics: { kind: "unbounded", bound: null },
+    claimImpairment: "unbounded",
+  });
 
-  it("policy carries the ruled credit knobs", () => {
-    // D5 (2026-07-22): T5 mint seasoned credit 5 -> 10, still next-rung-capped.
-    // 9.32: adverse rungs earn the same credit under a dedicated ceiling (39).
-    expect(policy.control.mintPostureGrading.seasonedCreditPoints).toBe(10);
-    expect(policy.control.mintPostureGrading.seasonedCreditMinMonths).toBe(60);
-    expect(policy.control.mintPostureGrading.adverseSeasonedCreditCeiling).toBe(39);
-    expect(policy.backing.assuranceSeasonedCredit).toEqual({ points: 3, minMonths: 60 });
+  it.each([[59, 55], [60, 59], [120, 59]] as const)(
+    "caps a %i-month 55-base reconciled mint at %i below governed issuance", (trackRecordMonths, score) => {
+      const result = evaluateV9EconomicControl(makeEconomicControlArgs({
+        facts: makeEconomicControlFacts([unbounded]),
+        mint: makeReviewedMintInput(unbounded.controlKey, { reconciliation: "continuous", supervision: "none" }),
+        trackRecordMonths,
+      }));
+      expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
+        posture: "unbounded-reconciled", score,
+      });
+    },
+  );
+
+  it("keeps unreconciled seasoning under its dedicated ceiling rather than the ordinary ladder", () => {
+    const changedPolicy = structuredClone(POLICY.policy);
+    changedPolicy.semantic.control.mintPostureQuality["unbounded-unreconciled"] = 30;
+    const result = evaluateV9EconomicControl(makeEconomicControlArgs({
+      policy: loadV9MethodologyPolicy(changedPolicy),
+      facts: makeEconomicControlFacts([unbounded]),
+      mint: makeReviewedMintInput(unbounded.controlKey, { reconciliation: "none", supervision: "none" }),
+      trackRecordMonths: 60,
+    }));
+    expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
+      posture: "unbounded-unreconciled", score: 39,
+    });
   });
 
 

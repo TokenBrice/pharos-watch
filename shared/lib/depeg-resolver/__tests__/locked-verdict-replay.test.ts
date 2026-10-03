@@ -366,7 +366,7 @@ function reconstructResolutionInput(row: LockedVerdictRow): DdrResolveInput {
 
   if (k1) {
     coin.authorityPosture =
-      k1.severity === "severe" ? "unbounded-or-compromised" : "concentrated-admin";
+      k1.severity === "severe" ? "unbounded-unreconciled" : "concentrated-admin";
     coin.mintPath = "issuer-direct-mint";
   }
 

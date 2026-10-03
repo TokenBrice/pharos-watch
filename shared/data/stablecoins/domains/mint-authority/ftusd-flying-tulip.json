@@ -2,9 +2,9 @@
   "id": "ftusd-flying-tulip",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "ftUSD on both Ethereum and Sonic is controlled by the same self-controlled, no-timelock 3-of-5 Safe (0x1118e1c0): it is token owner, masterMinter, and owner of the upgradeable minter contract (0x56c5892b). Ethereum has a Safe Allowance Module with a bounded native-asset allowance; it has no reviewed ftUSD minter call path. Sonic reports no enabled module.",
+    "summary": "ftUSD on Ethereum and Sonic is controlled by the same no-timelock 3-of-5 Safe. FtUSDCore owner authority can admit arbitrary modules and remove both global and module debt ceilings; core minting checks authorization and ceilings, not posted collateral. D14 issuance is economically unbounded with continuous reconciliation. Ethereum’s transfer-only Safe Allowance Module does not establish an additional mint/admin bypass.",
     "upgradeability": {
       "model": "custom",
       "deploymentRefs": [
@@ -188,11 +188,15 @@
         "evidence": "At Sonic block 77315268, token owner(), masterMinter(), and minter owner() all returned this Safe. The Sonic Safe API separately returned the same five owners, threshold 3, zero guard, no enabled modules, and the same fallback handler as Ethereum. No timelock was established."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
       "sources": [
+        {
+          "label": "Verified FtUSDCore implementation source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x986841b77f3aa934d315d48121842e3c622e5440"
+        },
         {
           "label": "Flying Tulip docs",
           "url": "https://docs.flyingtulip.com/"
@@ -206,9 +210,9 @@
           "url": "https://docs.flyingtulip.com/contract-addresses/"
         }
       ],
-      "evidence": "At Ethereum block 25819379 and Sonic block 78025120, token owner() and masterMinter() returned 0x1118e1c0, token minter() returned 0x56c5892b, and FtUSDCore owner() returned the same Safe. Ethereum FtUSDCore globalDebtCeiling() and moduleConfig(0xAa48EcBC843cF7E9A29155D112b8Cb27902bD23C) both returned the finite 100000000000000-unit ceiling; Sonic globalDebtCeiling() and moduleConfig(0x0C6f8eC81c3eA5BFf06F6CD0791780f9f050eE31) both returned the finite 5000000000000-unit ceiling. The verified FtUSDCore source makes both setters owner-only, and the same 3-of-5 Safe controls the core and upgrade surface without an independent timelock, so the ceilings are raiseable rather than unbounded. Ethereum's enabled Allowance Module had one signer-delegate and a 2 ETH weekly allowance but zero reviewed ftUSD/stablecoin allowances and no established minter call path; Sonic had no enabled module. Backing remains issuer-reported without independent attestation, reconciliation is unknown, and no financial regulator was identified for the issuer. Economic-posture fields reviewed 2026-08-23.",
-      "reviewer": "Codex ftUSD correction review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "At Ethereum block 25819379 and Sonic block 78025120, token owner() and masterMinter() returned 0x1118e1c0, token minter() returned 0x56c5892b, and FtUSDCore owner() returned the same Safe. Ethereum FtUSDCore globalDebtCeiling() and moduleConfig(0xAa48EcBC843cF7E9A29155D112b8Cb27902bD23C) both returned the finite 100000000000000-unit ceiling; Sonic globalDebtCeiling() and moduleConfig(0x0C6f8eC81c3eA5BFf06F6CD0791780f9f050eE31) both returned the finite 5000000000000-unit ceiling. The verified FtUSDCore source makes both setters owner-only, and the same 3-of-5 Safe controls the core and upgrade surface without an independent timelock, so the ceilings are raiseable rather than unbounded. Ethereum's enabled Allowance Module had one signer-delegate and a 2 ETH weekly allowance but zero reviewed ftUSD/stablecoin allowances and no established minter call path; Sonic had no enabled module. Backing remains issuer-reported without independent attestation, reconciliation is unknown, and no financial regulator was identified for the issuer. Economic-posture fields reviewed 2026-08-23. D14/D29 review on 2026-10-03 confirmed FtUSDCore owner() at Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a) and read its verified implementation 0x986841b77f3aa934d315d48121842e3c622e5440. configureModule(address,bool,uint256) admits any nonzero module address; mint(address,uint256) checks module authorization and debt ceilings but no collateral or deposit. Owner-only setGlobalDebtCeiling and configureModule can set both ceilings to zero, which disables the corresponding limit. The Safe can therefore authorize an unrestricted module and mint to a chosen recipient without upgrading; finite current ceilings are not a D14 bound. Safe authority is not D29 token governance. Continuous reconciliation derives unbounded-reconciled.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U7SafeRootedFloorA)",
+      "reviewedAt": "2026-10-03"
     }
   }
 }

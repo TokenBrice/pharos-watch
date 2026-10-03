@@ -2,7 +2,7 @@
   "id": "usdm-mega",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciliation-unknown",
     "confidence": "verified",
     "summary": "USDM's canonical native issuance is on Ethereum through the non-upgradeable USDmMinting collateral/order gateway, whose current MINTER_ROLE EOAs are constrained by collateral validation and global/per-asset per-block caps. The Ethereum token is a UUPS OFT owned by a 4-of-8 Safe that can add an arbitrary direct minter or replace mint-critical logic without a timelock; MegaETH is a LayerZero burn/mint representation assessed separately under Bridge Risk.",
     "upgradeability": {

@@ -2,10 +2,22 @@
   "id": "yzusd-yuzu",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
     "summary": "yzUSD issuance requires USDT0 transfers from the caller before calculated shares are minted. MINTER_ROLE is receiver eligibility, not an arbitrary token-mint privilege: the earlier block 33896709 census of 101 eligible accounts (97 no-code, four contracts) does not establish 101 independent unbacked issuance paths. The current V3 implementation and collateral-funded path were reverified at Plasma block 33932322. Upgrades remain behind the reviewed 48-hour timelock and limit/restriction parameters behind the reviewed 12-hour timelock; stored NAV remains privileged internal pricing. Fordefi manages protocol collateral operations, not investor eligibility keys.",
     "economicCapSemantics": "raiseable",
+    "capSemanticsReview": {
+      "verdict": "raiseable-collateral-only",
+      "rationale": "D14/A7 review on 2026-10-03 at plasma block 34111101 (0x76ec454a35b7d9034b400e7684654382a2a27820b8b26c8c5be241468aadc2e3): the proxy still resolves to verified YuzuUSDV3 0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5. YuzuUSDV3.mint/deposit call YuzuIssuer._deposit, which transfers USDT0 from the caller to the buffer/treasury before __yuzu_mint. MINTER_ROLE determines receiver eligibility; setSupplyCap and throttle/restriction administration expand admitted deposit capacity but do not bypass that transfer. Stored NAV affects share pricing and remains an oracle/valuation surface, not a new collateral-free mint privilege. Upgrade authority alone is not D14. Retain raiseable with raiseable-collateral-only proof and correct curated posture to partially-bounded-admin, the compiler-derived posture for the reviewed raiseable cap; no D29 certificate is authored. A current MINTER_ROLE receiver 0xc72f80402c060d6fb89359f319d1daa20166f282 was re-read and its one-yzUSD mint simulation reverted ERC20: transfer amount exceeds allowance.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12bNativeCapReviews)",
+      "sources": [
+        {
+          "label": "Verified current YuzuUSDV3 and inherited funded mint source",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5"
+        }
+      ]
+    },
     "reconciliation": "continuous",
     "supervision": "attestation-only",
     "upgradeability": {
@@ -179,10 +191,14 @@
       }
     ],
     "review": {
-      "evidence": "The round-1 Plasma block 33896709 review established a 48-hour upgrade timelock, 4-of-5 upgrade proposer Safe, 12-hour parameter timelock, 3-of-5 parameter proposer Safe, and restricted executors. Its complete grant census found 101 active MINTER_ROLE accounts (97 without bytecode and four contracts), replacing the July 40-account census. Round 2 at Plasma block 33932322 retains the same verified V3 implementation and resolves the economic meaning of that role: it is receiver eligibility; every ordinary mint/deposit transfers USDT0 from the caller before minting calculated shares. An eligible receiver's unpaid mint reverted on collateral allowance. The unsupported backend-direct-minter and mixed-holder arbitrary-mint descriptions are replaced by one collateral-funded contract control, while live upgrade, cap, restriction, treasury and NAV administration remain. The raiseable supply cap is not claimed immutable or collateral-gated under the 24-hour methodology threshold; stored NAV remains in oracleRisk. Fordefi MPC infrastructure is not inferred to hold eligible investors' keys.",
-      "reviewer": "Sol curation pass 2026-10-01 (R2WYuzu)",
-      "reviewedAt": "2026-10-01",
+      "evidence": "The round-1 Plasma block 33896709 review established a 48-hour upgrade timelock, 4-of-5 upgrade proposer Safe, 12-hour parameter timelock, 3-of-5 parameter proposer Safe, and restricted executors. Its complete grant census found 101 active MINTER_ROLE accounts (97 without bytecode and four contracts), replacing the July 40-account census. Round 2 at Plasma block 33932322 retains the same verified V3 implementation and resolves the economic meaning of that role: it is receiver eligibility; every ordinary mint/deposit transfers USDT0 from the caller before minting calculated shares. An eligible receiver's unpaid mint reverted on collateral allowance. The unsupported backend-direct-minter and mixed-holder arbitrary-mint descriptions are replaced by one collateral-funded contract control, while live upgrade, cap, restriction, treasury and NAV administration remain. The raiseable supply cap is not claimed immutable or collateral-gated under the 24-hour methodology threshold; stored NAV remains in oracleRisk. Fordefi MPC infrastructure is not inferred to hold eligible investors' keys. D14/A7 review on 2026-10-03 at plasma block 34111101 (0x76ec454a35b7d9034b400e7684654382a2a27820b8b26c8c5be241468aadc2e3): the proxy still resolves to verified YuzuUSDV3 0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5. YuzuUSDV3.mint/deposit call YuzuIssuer._deposit, which transfers USDT0 from the caller to the buffer/treasury before __yuzu_mint. MINTER_ROLE determines receiver eligibility; setSupplyCap and throttle/restriction administration expand admitted deposit capacity but do not bypass that transfer. Stored NAV affects share pricing and remains an oracle/valuation surface, not a new collateral-free mint privilege. Upgrade authority alone is not D14. Retain raiseable with raiseable-collateral-only proof and correct curated posture to partially-bounded-admin, the compiler-derived posture for the reviewed raiseable cap; no D29 certificate is authored. A current MINTER_ROLE receiver 0xc72f80402c060d6fb89359f319d1daa20166f282 was re-read and its one-yzUSD mint simulation reverted ERC20: transfer amount exceeds allowance. This D14 refresh does not re-date older quorum or reserve-reconciliation observations.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12bNativeCapReviews)",
+      "reviewedAt": "2026-10-03",
       "sources": [
+        {
+          "label": "Verified current YuzuUSDV3 and inherited funded mint source",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5"
+        },
         {
           "label": "Yuzu Stablecoin (yzUSD) docs",
           "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"

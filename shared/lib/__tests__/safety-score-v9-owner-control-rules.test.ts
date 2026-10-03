@@ -87,7 +87,7 @@ describe("owner Control rules", () => {
         mint: makeReviewedMintInput(mintControl.controlKey, { reconciliation: "internal-ledger", supervision }),
       }));
       expect(compromised.components.find((row) => row.kind === "mint")).toMatchObject({
-        posture: "unbounded-or-compromised", score: 25,
+        posture: "compromised", score: 25,
       });
       expect(compromised.structuralFailures).toContainEqual(expect.objectContaining({
         kind: "centralized-mint", severity: "critical",
@@ -139,8 +139,8 @@ describe("owner Control rules", () => {
       }));
       expect(unresolved.score).toBe(measured.score);
       expect(unresolved.components.find((row) => row.kind === "mint")).toMatchObject({
-        posture: reconciliation === "unknown" ? "unbounded-reconciliation-unknown" : "unbounded-or-compromised",
-        score: reconciliation === "unknown" ? 65 : 35,
+        posture: reconciliation === "unknown" ? "unbounded-reconciliation-unknown" : "unbounded-unreconciled",
+        score: reconciliation === "unknown" ? 59 : 35,
       });
       expect(unresolved.reasons).toContainEqual(expect.objectContaining({ code: "unresolved-mint-authority" }));
       expect(unresolved.structuralFailures).toContainEqual(expect.objectContaining({ kind: "centralized-mint", severity: "high" }));
@@ -160,7 +160,7 @@ describe("owner Control rules", () => {
       mint: makeReviewedMintInput(mintControl.controlKey, { status }), trackRecordMonths: 61,
     }));
     expect(result.components.find((row) => row.kind === "mint")).toMatchObject({
-      posture: "unbounded-or-compromised", score: 35,
+      posture: "unbounded-unreconciled", score: 35,
     });
     expect(result.reasons).toContainEqual(expect.objectContaining({ code: "mint-control-question" }));
   });
@@ -183,7 +183,7 @@ describe("owner Control rules", () => {
       trackRecordMonths: 61,
     }));
     expect(result.components.find((row) => row.kind === "mint")).toMatchObject({
-      posture: "unbounded-or-compromised", score: 25,
+      posture: "compromised", score: 25,
     });
     expect(result.structuralFailures).toContainEqual(expect.objectContaining({
       kind: "centralized-mint", severity: "critical",
