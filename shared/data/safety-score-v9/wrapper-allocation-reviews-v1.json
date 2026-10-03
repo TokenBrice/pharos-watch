@@ -4487,7 +4487,7 @@
       "custody": "fully-onchain-no-offchain-custodian",
       "localLeverage": "no-borrowing-surface",
       "capitalReuse": "long-tail-overcollateralized-lending",
-      "rationale": "At base block 52139143, complete sole-adapter census (7 markets) plus idle underlying reconciles real assets; EURCV NAV is rate-capped below real assets, not missing allocation. Exact vault and adapter runtime bytecode matches verified source. Core self-delegatecall is confined to the vault; adapter permits supply/withdraw/skim and has no borrow, collateral-posting or arbitrary-call surface. Every adapter market position has zero borrow shares and zero posted collateral. Loan claims constitute capital reuse, not no-reuse. Immediate custody is onchain; parent stablecoin reserve custody and borrower collateral rights are not declared segregated or bankruptcy-remote.",
+      "rationale": "At base block 52139143, complete sole-adapter census (7 markets) plus idle underlying reconciles real assets exactly with totalAssets. Exact vault and adapter runtime bytecode matches verified source. Core self-delegatecall is confined to the vault; adapter permits supply/withdraw/skim and has no borrow, collateral-posting or arbitrary-call surface. Every adapter market position has zero borrow shares and zero posted collateral. Loan claims constitute capital reuse, not no-reuse. Immediate custody is onchain; parent stablecoin reserve custody and borrower collateral rights are not declared segregated or bankruptcy-remote.",
       "observations": [
         {
           "chain": "base",
@@ -4577,7 +4577,7 @@
       "custody": "fully-onchain-no-offchain-custodian",
       "localLeverage": "no-borrowing-surface",
       "capitalReuse": "long-tail-overcollateralized-lending",
-      "rationale": "At robinhood block 79450688, complete sole-adapter census (5 markets) plus idle underlying reconciles real assets; EURCV NAV is rate-capped below real assets, not missing allocation. Exact vault and adapter runtime bytecode matches verified source. Core self-delegatecall is confined to the vault; adapter permits supply/withdraw/skim and has no borrow, collateral-posting or arbitrary-call surface. Every adapter market position has zero borrow shares and zero posted collateral. Loan claims constitute capital reuse, not no-reuse. Immediate custody is onchain; parent stablecoin reserve custody and borrower collateral rights are not declared segregated or bankruptcy-remote.",
+      "rationale": "At robinhood block 79450688, complete sole-adapter census (5 markets) plus idle underlying reconciles real assets exactly with totalAssets. Exact vault and adapter runtime bytecode matches verified source. Core self-delegatecall is confined to the vault; adapter permits supply/withdraw/skim and has no borrow, collateral-posting or arbitrary-call surface. Every adapter market position has zero borrow shares and zero posted collateral. Loan claims constitute capital reuse, not no-reuse. Immediate custody is onchain; parent stablecoin reserve custody and borrower collateral rights are not declared segregated or bankruptcy-remote.",
       "observations": [
         {
           "chain": "robinhood",
