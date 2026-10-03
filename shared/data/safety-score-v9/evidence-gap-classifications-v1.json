@@ -9949,6 +9949,264 @@
         "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/module/weusd_mint_redeem"
       ],
       "rationale": "Current docs claim USDC backing and reserve-lock minting but publish no dated measured whole-WEUSD book/denominator or recurring common-clock reconciliation covering all native deployments, mint/burn and cross-chain reserves/deficits. Security audits, transaction monitoring and local reserve getter ABIs do not establish that financial scope. Prior conflicting basket descriptions remain unresolved; no 100% USDC composition or favorable reconciliation is invented."
+    },
+    {
+      "id": "uw-usdo-openeden-2ad47a6e40d5fada",
+      "assetId": "usdo-openeden",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:4c87c4c5fde6c235507c1710",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:33Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R32)",
+      "sources": [
+        {
+          "url": "https://docs.openeden.com/tbill/introduction",
+          "observedAt": "2026-10-03T22:52:33Z",
+          "datumAsOf": null,
+          "location": "Key features, portfolio duration",
+          "excerpt": "Short duration, portfolio has a weighted-average maturity of less than 3 months",
+          "assertion": "Discloses a portfolio weighted average, not the maximum maturity of the TBILL holding or every asset backing it."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.openeden.com/tbill/introduction",
+        "https://docs.openeden.com/tbill/redemptions",
+        "https://docs.openeden.com/tbill/trust-and-transparency",
+        "https://docs.openeden.com/tbill/legal/user-agreement",
+        "https://docs.openeden.com/usdo/usdo-token/reserve-assets",
+        "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
+      ],
+      "rationale": "The exact missing datum is maturityDaysMax for USDO's held TBILL tokenized-security slice. Issuer introduction, transparency, reserve roster and public user-agreement PDF disclose revolving Treasury exposure, weighted-average maturity and redemption mechanics, but no per-slice maximum. A weighted average below three months is not a worst-case cap; do not propagate it as maturityDaysMax."
+    },
+    {
+      "id": "uw-usdo-openeden-c84f3b7556503f95",
+      "assetId": "usdo-openeden",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:9ba1cb7a618ba63b892bb8f9",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:33Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R32)",
+      "sources": [
+        {
+          "url": "https://www.prnewswire.com/news-releases/vaneck-launches-first-tokenized-fund-vbill-on-securitize-302453863.html",
+          "observedAt": "2026-10-03T22:52:33Z",
+          "datumAsOf": "2025-05-13",
+          "location": "General Disclosures, Fund investment mandate",
+          "excerpt": "The Fund will invest in securities with maturities of (or deemed maturities of) 397 days or less",
+          "assertion": "This cap applies to portfolio securities, not the VBILL fund shares USDO holds; the mandate also permits pooled investment vehicles."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.openeden.com/usdo/usdo-token/reserve-assets",
+        "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last",
+        "https://www.prnewswire.com/news-releases/vaneck-launches-first-tokenized-fund-vbill-on-securitize-302453863.html",
+        "https://securitize.io/primary-market/vaneck-vbill"
+      ],
+      "rationale": "The exact missing datum is maturityDaysMax of USDO's VBILL tokenized-security holding. The issuer's launch disclosure identifies fund shares, a securities cap of 397 days, WAM of 60 days and WAL of 120 days, while permitting other pooled vehicles. None is a finite maturity of the held share or a complete look-through bound on all holdings. No maximum for the held VBILL claim is published in the reviewed public surfaces."
+    },
+    {
+      "id": "uw-eusd-electronic-usd-24d73ae24ec06687",
+      "assetId": "eusd-electronic-usd",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:337b1d4c58ef181ab8ca9810",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:33Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R32)",
+      "sources": [
+        {
+          "url": "https://aave.com/help/supplying/withdraw-tokens",
+          "observedAt": "2026-10-03T22:52:33Z",
+          "datumAsOf": "2024-08-09",
+          "location": "Withdrawal availability",
+          "excerpt": "provided there is sufficient liquidity in the pool",
+          "assertion": "Immediate withdrawal is conditional on available pool liquidity, not a maximum realizability horizon for the entire receipt position."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0adc69041a2b086f8772acce2a754f410f211bed",
+          "observedAt": "2026-10-03T22:52:33Z",
+          "datumAsOf": null,
+          "location": "Verified StaticATokenV3LM source, maxRedeem",
+          "excerpt": "// otherwise users can withdraw up to the available amount",
+          "assertion": "Exact held Aave receipt gates redemption by underlying liquidity and paused/active flags; it supplies no maximum wait for whole-position liquidity."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xeb74ec1d4c1dab412d5d6674f6833fd19d3118ce",
+          "observedAt": "2026-10-03T22:52:33Z",
+          "datumAsOf": null,
+          "location": "Verified CFiatV3Wrapper source, _withdraw",
+          "excerpt": "IERC20(address(underlyingComet)).safeTransfer(dst, (amount / 10) * 10);",
+          "assertion": "Exact held USDT wrapper transfers Comet receipts, not guaranteed liquid USDT; the corresponding USDC wrapper uses the same receipt-only exit."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.reserve.org/core-components/yield-dtfs/minting-and-redeeming",
+        "https://docs.reserve.org/risks",
+        "https://aave.com/help/supplying/withdraw-tokens",
+        "https://docs.compound.finance/collateral-and-borrowing",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0adc69041a2b086f8772acce2a754f410f211bed",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xeb74ec1d4c1dab412d5d6674f6833fd19d3118ce",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x27f2f159fe990ba83d57f39fd69661764bebf37a"
+      ],
+      "rationale": "The exact missing liquidityHorizon is for each entire held wcUSDCv3, wcUSDTv3 and saEthUSDC position. Reserve in-kind redemption and permissionless unwrap functions do not bound conversion of the whole lending receipt into liquid collateral. Verified wrappers and lending withdrawal docs disclose conditional available-liquidity exits and receipt transfers, but no finite maximum wait under utilization or pause constraints. No arbitrary immediate horizon is inferred."
+    },
+    {
+      "id": "uw-eusd-electronic-usd-b5e1e7810a31f17f",
+      "assetId": "eusd-electronic-usd",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:3a4d62271b96a43a1200b56c",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:33Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R32)",
+      "sources": [
+        {
+          "url": "https://aave.com/help/supplying/withdraw-tokens",
+          "observedAt": "2026-10-03T22:52:33Z",
+          "datumAsOf": "2024-08-09",
+          "location": "Withdrawal availability",
+          "excerpt": "provided there is sufficient liquidity in the pool",
+          "assertion": "Immediate withdrawal is conditional on available pool liquidity, not a maximum realizability horizon for the entire receipt position."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0adc69041a2b086f8772acce2a754f410f211bed",
+          "observedAt": "2026-10-03T22:52:33Z",
+          "datumAsOf": null,
+          "location": "Verified StaticATokenV3LM source, maxRedeem",
+          "excerpt": "// otherwise users can withdraw up to the available amount",
+          "assertion": "Exact held Aave receipt gates redemption by underlying liquidity and paused/active flags; it supplies no maximum wait for whole-position liquidity."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xeb74ec1d4c1dab412d5d6674f6833fd19d3118ce",
+          "observedAt": "2026-10-03T22:52:33Z",
+          "datumAsOf": null,
+          "location": "Verified CFiatV3Wrapper source, _withdraw",
+          "excerpt": "IERC20(address(underlyingComet)).safeTransfer(dst, (amount / 10) * 10);",
+          "assertion": "Exact held USDT wrapper transfers Comet receipts, not guaranteed liquid USDT; the corresponding USDC wrapper uses the same receipt-only exit."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.reserve.org/core-components/yield-dtfs/minting-and-redeeming",
+        "https://docs.reserve.org/risks",
+        "https://aave.com/help/supplying/withdraw-tokens",
+        "https://docs.compound.finance/collateral-and-borrowing",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0adc69041a2b086f8772acce2a754f410f211bed",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xeb74ec1d4c1dab412d5d6674f6833fd19d3118ce",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x27f2f159fe990ba83d57f39fd69661764bebf37a"
+      ],
+      "rationale": "The exact missing liquidityHorizon is for each entire held wcUSDCv3, wcUSDTv3 and saEthUSDC position. Reserve in-kind redemption and permissionless unwrap functions do not bound conversion of the whole lending receipt into liquid collateral. Verified wrappers and lending withdrawal docs disclose conditional available-liquidity exits and receipt transfers, but no finite maximum wait under utilization or pause constraints. No arbitrary immediate horizon is inferred."
+    },
+    {
+      "id": "uw-eusd-electronic-usd-5e0b8dc1e37857f7",
+      "assetId": "eusd-electronic-usd",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:7938b9c429cf9f6f53783296",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:33Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R32)",
+      "sources": [
+        {
+          "url": "https://aave.com/help/supplying/withdraw-tokens",
+          "observedAt": "2026-10-03T22:52:33Z",
+          "datumAsOf": "2024-08-09",
+          "location": "Withdrawal availability",
+          "excerpt": "provided there is sufficient liquidity in the pool",
+          "assertion": "Immediate withdrawal is conditional on available pool liquidity, not a maximum realizability horizon for the entire receipt position."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0adc69041a2b086f8772acce2a754f410f211bed",
+          "observedAt": "2026-10-03T22:52:33Z",
+          "datumAsOf": null,
+          "location": "Verified StaticATokenV3LM source, maxRedeem",
+          "excerpt": "// otherwise users can withdraw up to the available amount",
+          "assertion": "Exact held Aave receipt gates redemption by underlying liquidity and paused/active flags; it supplies no maximum wait for whole-position liquidity."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xeb74ec1d4c1dab412d5d6674f6833fd19d3118ce",
+          "observedAt": "2026-10-03T22:52:33Z",
+          "datumAsOf": null,
+          "location": "Verified CFiatV3Wrapper source, _withdraw",
+          "excerpt": "IERC20(address(underlyingComet)).safeTransfer(dst, (amount / 10) * 10);",
+          "assertion": "Exact held USDT wrapper transfers Comet receipts, not guaranteed liquid USDT; the corresponding USDC wrapper uses the same receipt-only exit."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.reserve.org/core-components/yield-dtfs/minting-and-redeeming",
+        "https://docs.reserve.org/risks",
+        "https://aave.com/help/supplying/withdraw-tokens",
+        "https://docs.compound.finance/collateral-and-borrowing",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0adc69041a2b086f8772acce2a754f410f211bed",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xeb74ec1d4c1dab412d5d6674f6833fd19d3118ce",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x27f2f159fe990ba83d57f39fd69661764bebf37a"
+      ],
+      "rationale": "The exact missing liquidityHorizon is for each entire held wcUSDCv3, wcUSDTv3 and saEthUSDC position. Reserve in-kind redemption and permissionless unwrap functions do not bound conversion of the whole lending receipt into liquid collateral. Verified wrappers and lending withdrawal docs disclose conditional available-liquidity exits and receipt transfers, but no finite maximum wait under utilization or pause constraints. No arbitrary immediate horizon is inferred."
+    },
+    {
+      "id": "uw-usbd-bima-16b876f2bf732fa6",
+      "assetId": "usbd-bima",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usbd-bima:collateral-redeem"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:52:33Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R32)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/Bima-Labs/bima-v1-core/mainnet-v2/contracts/core/TroveManager.sol",
+          "observedAt": "2026-10-03T22:52:33Z",
+          "datumAsOf": null,
+          "location": "_calcRedemptionRate and _getRedemptionFee",
+          "excerpt": "rate = BimaMath._min(\n            redemptionFeeFloor + _baseRate,\n            maxRedemptionFee // cap at a maximum of 100%\n        );",
+          "assertion": "W15: public redemption-cost formula depends on mutable fee floor, cap and decayed/request-updated baseRate. Current scalar cost factor cannot evaluate this at the scenario notional; a fixed bps value is unsafe."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/Bima-Labs/bima-v1-core/mainnet-v2/docs/mainnet.md",
+          "observedAt": "2026-10-03T22:52:33Z",
+          "datumAsOf": null,
+          "location": "Mainnet contracts, TroveManager and implementation",
+          "excerpt": "0xa20c3DC27C8c1A1aDC92E3b443607914Ed800FF2",
+          "assertion": "Deployment registry binds the legacy USBD collateral redemption mechanism; do not import the new USDC collar-loan fee schedule as USBD terms."
+        }
+      ]
     }
   ]
 }

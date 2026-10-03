@@ -4538,6 +4538,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "usdo-openeden",
+      "reviewedAt": "2026-10-03T22:47:46Z",
+      "expiresAt": "2027-10-03T22:47:46Z",
+      "reviewer": "W1R32 primary-source research",
+      "notes": "Exact-token dated launch, live integration or creation establishes only a lower bound of operating/deployment history. No verified performance, redemption throughput, stress recovery, reconciliation continuity or incident-free claim is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-exact-token-history",
+          "label": "USDO launch",
+          "publisher": "OpenEden",
+          "publishedAt": "2025-02-21",
+          "url": "https://openeden.com/news/openeden-launches-usdo-new-regulated-stablecoin",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 19,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-exact-token-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "cusdo-openeden",
+      "reviewedAt": "2026-10-03T22:47:46Z",
+      "expiresAt": "2027-10-03T22:47:46Z",
+      "reviewer": "W1R32 primary-source research",
+      "notes": "Exact-token dated launch, live integration or creation establishes only a lower bound of operating/deployment history. No verified performance, redemption throughput, stress recovery, reconciliation continuity or incident-free claim is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-exact-token-history",
+          "label": "cUSDO live collateral integration",
+          "publisher": "OpenEden",
+          "publishedAt": "2025-07-15",
+          "url": "https://openeden.com/news/openeden-ceffu-launch-first-yield-bearing-collateral-mirrorrsv",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 14,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-exact-token-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usbd-bima",
+      "reviewedAt": "2026-10-03T22:47:46Z",
+      "expiresAt": "2027-10-03T22:47:46Z",
+      "reviewer": "W1R32 primary-source research",
+      "notes": "Exact-token dated launch, live integration or creation establishes only a lower bound of operating/deployment history. No verified performance, redemption throughput, stress recovery, reconciliation continuity or incident-free claim is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-exact-token-history",
+          "label": "BIMA issuer USBD mainnet launch",
+          "publisher": "BIMA",
+          "publishedAt": "2025-04-09",
+          "url": "https://www.globenewswire.com/news-release/2025/04/09/3058514/0/en/bima-launches-mainnet-for-bitcoin-backed-yield-generation.html",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 17,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-exact-token-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "eusd-electronic-usd",
+      "reviewedAt": "2026-10-03T22:47:46Z",
+      "expiresAt": "2027-10-03T22:47:46Z",
+      "reviewer": "W1R32 primary-source research",
+      "notes": "Exact-token dated launch, live integration or creation establishes only a lower bound of operating/deployment history. No verified performance, redemption throughput, stress recovery, reconciliation continuity or incident-free claim is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-exact-token-history",
+          "label": "Exact eUSD contract creation at Ethereum block 16687620",
+          "publisher": "Ethereum / Blockscout",
+          "publishedAt": "2023-02-23",
+          "url": "https://eth.blockscout.com/tx/0x7518e84ea12f03ae513c4f0beeefb0b0b923fcb148fe2372a163cef8ebe69287",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 43,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-exact-token-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "fdusd-first-digital",
+      "reviewedAt": "2026-10-03T22:47:46Z",
+      "expiresAt": "2027-10-03T22:47:46Z",
+      "reviewer": "W1R32 primary-source research",
+      "notes": "Exact-token dated launch, live integration or creation establishes only a lower bound of operating/deployment history. No verified performance, redemption throughput, stress recovery, reconciliation continuity or incident-free claim is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-exact-token-history",
+          "label": "Exact FDUSD contract creation at Ethereum block 17144262",
+          "publisher": "Ethereum / Blockscout",
+          "publishedAt": "2023-04-28",
+          "url": "https://eth.blockscout.com/tx/0x0bf3a20c0f392a31fee52815bfaa93e66348a97fd8e1e124d3eeec97986eb074",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 41,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-exact-token-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
