@@ -398,7 +398,7 @@ Returns the current stablecoin catalogue, prices, supply, chain breakdowns, and 
 
 ### `GET /api/stablecoin/:id`
 
-Returns the full current and historical detail payload for one canonical Pharos stablecoin ID. Since 2026-09-28 (pricing v6.38), nominal par routes may carry `nominalPriceReference`; a `priceObservedAtMode` of `nominal_reference` marks a published par reference, not an observed price.
+Full current/historical detail for a canonical Pharos ID; nominal references follow the pricing v6.38 (2026-09-28) contract above.
 
 - **Operation ID:** `stablecoinStablecoinId`
 - **Path:** `/api/stablecoin/{stablecoinId}`
@@ -408,7 +408,7 @@ Returns the full current and historical detail payload for one canonical Pharos 
 
 ### `GET /api/stablecoin-summary/:id`
 
-Returns the compact stablecoin projection used by lightweight consumers. Since 2026-09-28 (pricing v6.38), nominal par routes may carry `nominalPriceReference`; a `priceObservedAtMode` of `nominal_reference` marks a published par reference, not an observed price.
+Compact stablecoin projection for lightweight consumers; nominal references follow the pricing v6.38 (2026-09-28) contract above.
 
 - **Operation ID:** `stablecoinSummaryStablecoinId`
 - **Path:** `/api/stablecoin-summary/{stablecoinId}`
@@ -495,9 +495,7 @@ Returns aggregate blacklist counts and exposure totals.
 
 ### `GET /api/depeg-events`
 
-Returns detected depeg incidents with filters for asset, state, and review status. The response exposes pagination totals through `total` and optional `totalExact`; it no longer includes an aggregate `counts` field. Clients that need threshold-crossing totals should sum each event&rsquo;s `constituentEventCount` after loading all pages. Since 2026-09-28 `auditVerdict` accepts only confirmed, repaired, false_positive, disputed, no_data, or null; unknown archived verdicts are rejected rather than converted into scoreable evidence.
-
-Since peg methodology 6.31, optional `events[].priceCoverage` carries `{ intervals: [startSec, endSec][], lastTrustedObservationAt: number | null, gapStartedAt: number | null }`. Intervals bound trusted off-peg duration; their complement within the event is unknown. A null/absent object on an open legacy event means unrecorded coverage, not uninterrupted off-peg time. Closed legacy/replay durations retain their recorded interpretation.
+Incidents filtered by asset, state and review. `total`/optional `totalExact` replace `counts`; sum `constituentEventCount` across all pages for threshold-crossing totals. Since 2026-09-28, `auditVerdict` accepts confirmed, repaired, false_positive, disputed, no_data, or null; unknown archived values are rejected. v6.31 adds optional `priceCoverage`: `intervals` ([startSec,endSec][]), `lastTrustedObservationAt` and `gapStartedAt` (nullable seconds). Intervals bound trusted off-peg time; gaps are unknown. Open legacy null/absent coverage is unknown; closed legacy/replay durations are retained.
 
 - **Operation ID:** `depegEvents`
 - **Path:** `/api/depeg-events`
@@ -515,7 +513,7 @@ Since peg methodology 6.31, optional `events[].priceCoverage` carries `{ interva
 
 ### `GET /api/depeg-resolver`
 
-Returns machine-resolved depeg-duration evidence used by risk surfaces. Since 2026-09-28 unknown audit verdicts fail closed. DDR excludes false_positive, disputed, and no_data; PegScore excludes false_positive and disputed but retains no_data. Null retains legacy eligibility.
+Resolved depeg-duration evidence. Since 2026-09-28, unknown audit verdicts fail closed; DDR excludes false_positive/disputed/no_data, PegScore only false_positive/disputed. Null keeps legacy eligibility.
 
 - **Operation ID:** `depegResolver`
 - **Path:** `/api/depeg-resolver`
@@ -535,9 +533,7 @@ Returns the reviewer-oriented projection of depeg-duration decisions.
 
 ### `GET /api/peg-summary`
 
-Returns the current cross-market peg-monitoring summary.
-
-Since peg methodology 6.31, `coins[].unknownCoverageSeconds` optionally reports merged unknown event time excluded from both duration penalties and the occupancy denominator. `coins[].pegPct` and `coins[].recent90d.pegPct` are `number | null`: null means no known time remains, never 0% or 100% occupancy. `recent90d.observedDays` excludes those blind spans and `coverageLimited` flags them. Observed `currentDeviationBps` and `pegReference` are admitted independently of supply; the $1M floor still governs new depeg events, with `depegEventCoverageLimited` retained.
+Cross-market peg summary. v6.31: optional `coins[].unknownCoverageSeconds` removes merged blind spans from occupancy and duration penalties; `pegPct`/`recent90d.pegPct` are null if wholly blind (not 0%/100%). Recent `observedDays` excludes blind spans; `coverageLimited` flags them. Observed `currentDeviationBps`/`pegReference` ignore the $1M new-incident floor.
 
 - **Operation ID:** `pegSummary`
 - **Path:** `/api/peg-summary`
