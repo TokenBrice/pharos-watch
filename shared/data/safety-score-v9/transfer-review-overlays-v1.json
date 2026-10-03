@@ -5074,31 +5074,44 @@
     },
     {
       "assetId": "eearn-ember",
-      "reviewedAt": "2026-07-22",
-      "reviewer": "GPT SOL-TRANSFER wave6",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Unknown wave W1R71 verified Ethereum and Sui transfer review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x9be9294722f8aad37b11a9792be2c782182cafa2",
           "scope": "canonical",
-          "posture": "restrictable",
-          "evidence": "At Ethereum block 25590384, the EIP-1967 implementation was 0xab222201c5bd8a18dc6b340ba78a709589e01781, owner() was CTGOneGovernance Timelock 0x12917e06b55995e7a5d73681ce491774c73b7c6a, and getMinDelay() returned 86400 seconds. UPGRADE_INTERFACE_VERSION() returned 5.0.0 and a state-simulated upgradeToAndCall from the timelock succeeded. Although current EmberVault code leaves ordinary secondary transfers open, the timelock can replace the transfer implementation, so the deployment is restrictable.",
+          "posture": "permissionless",
+          "evidence": "EIP-1967 implementation slot pinned at Ethereum block 0x18e7be1 resolves to verified EmberVault implementation 0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e. EmberVault inherits OpenZeppelin ERC20/4626 without overriding the ordinary _update/_transfer path. Blacklist/protocol-pause gates apply to deposit, queued redemption and bridgeBurn, not ordinary ERC20 transfer/transferFrom. Owner upgrade authority is not a present transfer allowlist.",
           "sources": [
             {
-              "label": "Etherscan eEARN proxy",
-              "url": "https://etherscan.io/address/0x9be9294722f8aad37b11a9792be2c782182cafa2#code"
+              "label": "Exact eEARN Ethereum proxy and current verified implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9be9294722f8aad37b11a9792be2c782182cafa2"
             },
             {
-              "label": "Etherscan current EmberVault implementation",
-              "url": "https://etherscan.io/address/0xab222201c5bd8a18dc6b340ba78a709589e01781#code"
+              "label": "Full verified current EmberVault source and inherited ERC20",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e"
             },
             {
-              "label": "Etherscan governance timelock",
-              "url": "https://etherscan.io/address/0x12917e06b55995e7a5d73681ce491774c73b7c6a#code"
+              "label": "Pinned EIP-1967 storage read provider, block 0x18e7be1",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "chainId": "sui",
+          "contractOrTokenId": "0x34469c8accdd673df02600265cbbad3688577f0e716866e257f88d448d463492::eearn::EEARN",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "Canonical GraphQL package disassembly was fetched 2026-10-03T23:16:45Z. Exact eearn module has only EEARN witness and init: it calls coin::create_currency<EEARN>, shares CoinMetadata, and transfers TreasuryCap to publisher. It does not create a regulated coin, DenyCap, or a custom holder-transfer module. Standard Coin<EEARN> objects therefore retain Sui public transfer behavior; TreasuryCap mint authority is not holder-transfer permissioning.",
+          "sources": [
+            {
+              "label": "Sui canonical package disassembly via GraphQL Query.package/module",
+              "url": "https://graphql.mainnet.sui.io/graphql"
             },
             {
-              "label": "Ethereum observation block 25590384",
-              "url": "https://etherscan.io/block/25590384"
+              "label": "Exact eEARN Sui package identifier",
+              "url": "https://suiscan.xyz/mainnet/object/0x34469c8accdd673df02600265cbbad3688577f0e716866e257f88d448d463492"
             }
           ]
         }

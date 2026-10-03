@@ -27402,6 +27402,803 @@
         "https://www.cointree.com/company/pds/audf-pds/"
       ],
       "rationale": "AUDF reserve bank-deposit maximum contractual maturity and whole-position liquidity horizon are not disclosed. Issuer transparency/workflow, August bank reserve audit, complete whitepaper and distributor PDS describe cash backing and conditional redemption but not bank-account term/withdrawal conditions. Open-ended or on-demand holder liabilities do not establish the underlying deposit maturity."
+    },
+    {
+      "id": "uw-eurq-quantoz-110bdf0107e489cf",
+      "assetId": "eurq-quantoz",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1b87855f33d756089ea2716b",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R71)",
+      "sources": [
+        {
+          "url": "https://www.quantoz.com/transparency",
+          "observedAt": "2026-10-03T23:02:57Z",
+          "datumAsOf": "2026-08-30",
+          "location": "EURQ reserve snapshot and Reserve policy",
+          "excerpt": "Relationships with Tier 1 European banks.",
+          "assertion": "Reports cash 33% and bonds 66%; no named banks, deposit term, bond maximum maturity or scoped realization bound."
+        },
+        {
+          "url": "https://www.quantoz.com/documents/eurq-wp-1.4-30-4-2026.pdf",
+          "observedAt": "2026-10-03T23:04:42Z",
+          "datumAsOf": "2026-04-30",
+          "location": "pp.11-12, Market Risk and Liquidity Risk",
+          "excerpt": "EURQ reserves may consist of assets that are not guaranteed to be readily realizable, including certain short-term financial assets.",
+          "assertion": "Highly liquid and short-term descriptions do not establish a maximum maturity or quantified bond realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quantoz.com/",
+        "https://www.quantoz.com/transparency",
+        "https://www.quantoz.com/whitepapers/",
+        "https://www.quantoz.com/documents/eurq-wp-1.4-30-4-2026.pdf",
+        "https://www.quantoz.com/documents/terms-of-service-q-s-30-4-2026.pdf",
+        "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418",
+        "https://www.quantoz.com/tokens/#identifiers"
+      ],
+      "rationale": "EURQ disclosures identify Dutch/German government bonds and multiple unnamed Tier 1 bank deposits, but do not give maximum bond/deposit maturity days, a per-bond-slice realization horizon, deposit-bank identities, or the obligor/maturity/liquidity of the unexplained 1% left by 33%+66%. The full whitepaper, terms, document archive, regulator register and deployment register do not supply those exact reserve data. Redemption processing schedules are not bond realization guarantees; no rounding or pro-rata residual attribution is inferred."
+    },
+    {
+      "id": "uw-eurq-quantoz-3c7f86a1859e611f",
+      "assetId": "eurq-quantoz",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1b87855f33d756089ea2716b",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R71)",
+      "sources": [
+        {
+          "url": "https://www.quantoz.com/transparency",
+          "observedAt": "2026-10-03T23:02:57Z",
+          "datumAsOf": "2026-08-30",
+          "location": "EURQ reserve snapshot and Reserve policy",
+          "excerpt": "Relationships with Tier 1 European banks.",
+          "assertion": "Reports cash 33% and bonds 66%; no named banks, deposit term, bond maximum maturity or scoped realization bound."
+        },
+        {
+          "url": "https://www.quantoz.com/documents/eurq-wp-1.4-30-4-2026.pdf",
+          "observedAt": "2026-10-03T23:04:42Z",
+          "datumAsOf": "2026-04-30",
+          "location": "pp.11-12, Market Risk and Liquidity Risk",
+          "excerpt": "EURQ reserves may consist of assets that are not guaranteed to be readily realizable, including certain short-term financial assets.",
+          "assertion": "Highly liquid and short-term descriptions do not establish a maximum maturity or quantified bond realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quantoz.com/",
+        "https://www.quantoz.com/transparency",
+        "https://www.quantoz.com/whitepapers/",
+        "https://www.quantoz.com/documents/eurq-wp-1.4-30-4-2026.pdf",
+        "https://www.quantoz.com/documents/terms-of-service-q-s-30-4-2026.pdf",
+        "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418",
+        "https://www.quantoz.com/tokens/#identifiers"
+      ],
+      "rationale": "EURQ disclosures identify Dutch/German government bonds and multiple unnamed Tier 1 bank deposits, but do not give maximum bond/deposit maturity days, a per-bond-slice realization horizon, deposit-bank identities, or the obligor/maturity/liquidity of the unexplained 1% left by 33%+66%. The full whitepaper, terms, document archive, regulator register and deployment register do not supply those exact reserve data. Redemption processing schedules are not bond realization guarantees; no rounding or pro-rata residual attribution is inferred."
+    },
+    {
+      "id": "uw-eurq-quantoz-6219077c2c99ed55",
+      "assetId": "eurq-quantoz",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:559324c1286fa6298c111e60",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R71)",
+      "sources": [
+        {
+          "url": "https://www.quantoz.com/transparency",
+          "observedAt": "2026-10-03T23:02:57Z",
+          "datumAsOf": "2026-08-30",
+          "location": "EURQ reserve snapshot and Reserve policy",
+          "excerpt": "Relationships with Tier 1 European banks.",
+          "assertion": "Reports cash 33% and bonds 66%; no named banks, deposit term, bond maximum maturity or scoped realization bound."
+        },
+        {
+          "url": "https://www.quantoz.com/documents/eurq-wp-1.4-30-4-2026.pdf",
+          "observedAt": "2026-10-03T23:04:42Z",
+          "datumAsOf": "2026-04-30",
+          "location": "pp.11-12, Market Risk and Liquidity Risk",
+          "excerpt": "EURQ reserves may consist of assets that are not guaranteed to be readily realizable, including certain short-term financial assets.",
+          "assertion": "Highly liquid and short-term descriptions do not establish a maximum maturity or quantified bond realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quantoz.com/",
+        "https://www.quantoz.com/transparency",
+        "https://www.quantoz.com/whitepapers/",
+        "https://www.quantoz.com/documents/eurq-wp-1.4-30-4-2026.pdf",
+        "https://www.quantoz.com/documents/terms-of-service-q-s-30-4-2026.pdf",
+        "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418",
+        "https://www.quantoz.com/tokens/#identifiers"
+      ],
+      "rationale": "EURQ disclosures identify Dutch/German government bonds and multiple unnamed Tier 1 bank deposits, but do not give maximum bond/deposit maturity days, a per-bond-slice realization horizon, deposit-bank identities, or the obligor/maturity/liquidity of the unexplained 1% left by 33%+66%. The full whitepaper, terms, document archive, regulator register and deployment register do not supply those exact reserve data. Redemption processing schedules are not bond realization guarantees; no rounding or pro-rata residual attribution is inferred."
+    },
+    {
+      "id": "uw-eurq-quantoz-7f4975f023f3e821",
+      "assetId": "eurq-quantoz",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:559324c1286fa6298c111e60",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R71)",
+      "sources": [
+        {
+          "url": "https://www.quantoz.com/transparency",
+          "observedAt": "2026-10-03T23:02:57Z",
+          "datumAsOf": "2026-08-30",
+          "location": "EURQ reserve snapshot and Reserve policy",
+          "excerpt": "Relationships with Tier 1 European banks.",
+          "assertion": "Reports cash 33% and bonds 66%; no named banks, deposit term, bond maximum maturity or scoped realization bound."
+        },
+        {
+          "url": "https://www.quantoz.com/documents/eurq-wp-1.4-30-4-2026.pdf",
+          "observedAt": "2026-10-03T23:04:42Z",
+          "datumAsOf": "2026-04-30",
+          "location": "pp.11-12, Market Risk and Liquidity Risk",
+          "excerpt": "EURQ reserves may consist of assets that are not guaranteed to be readily realizable, including certain short-term financial assets.",
+          "assertion": "Highly liquid and short-term descriptions do not establish a maximum maturity or quantified bond realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quantoz.com/",
+        "https://www.quantoz.com/transparency",
+        "https://www.quantoz.com/whitepapers/",
+        "https://www.quantoz.com/documents/eurq-wp-1.4-30-4-2026.pdf",
+        "https://www.quantoz.com/documents/terms-of-service-q-s-30-4-2026.pdf",
+        "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418",
+        "https://www.quantoz.com/tokens/#identifiers"
+      ],
+      "rationale": "EURQ disclosures identify Dutch/German government bonds and multiple unnamed Tier 1 bank deposits, but do not give maximum bond/deposit maturity days, a per-bond-slice realization horizon, deposit-bank identities, or the obligor/maturity/liquidity of the unexplained 1% left by 33%+66%. The full whitepaper, terms, document archive, regulator register and deployment register do not supply those exact reserve data. Redemption processing schedules are not bond realization guarantees; no rounding or pro-rata residual attribution is inferred."
+    },
+    {
+      "id": "uw-eurq-quantoz-88571c0da078d7d3",
+      "assetId": "eurq-quantoz",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:559324c1286fa6298c111e60",
+        "factorKey": "obligorConcentration",
+        "pillar": "backing",
+        "requiredDatum": "issuerOrObligorKey",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R71)",
+      "sources": [
+        {
+          "url": "https://www.quantoz.com/transparency",
+          "observedAt": "2026-10-03T23:02:57Z",
+          "datumAsOf": "2026-08-30",
+          "location": "EURQ reserve snapshot and Reserve policy",
+          "excerpt": "Relationships with Tier 1 European banks.",
+          "assertion": "Reports cash 33% and bonds 66%; no named banks, deposit term, bond maximum maturity or scoped realization bound."
+        },
+        {
+          "url": "https://www.quantoz.com/documents/eurq-wp-1.4-30-4-2026.pdf",
+          "observedAt": "2026-10-03T23:04:42Z",
+          "datumAsOf": "2026-04-30",
+          "location": "pp.11-12, Market Risk and Liquidity Risk",
+          "excerpt": "EURQ reserves may consist of assets that are not guaranteed to be readily realizable, including certain short-term financial assets.",
+          "assertion": "Highly liquid and short-term descriptions do not establish a maximum maturity or quantified bond realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quantoz.com/",
+        "https://www.quantoz.com/transparency",
+        "https://www.quantoz.com/whitepapers/",
+        "https://www.quantoz.com/documents/eurq-wp-1.4-30-4-2026.pdf",
+        "https://www.quantoz.com/documents/terms-of-service-q-s-30-4-2026.pdf",
+        "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418",
+        "https://www.quantoz.com/tokens/#identifiers"
+      ],
+      "rationale": "EURQ disclosures identify Dutch/German government bonds and multiple unnamed Tier 1 bank deposits, but do not give maximum bond/deposit maturity days, a per-bond-slice realization horizon, deposit-bank identities, or the obligor/maturity/liquidity of the unexplained 1% left by 33%+66%. The full whitepaper, terms, document archive, regulator register and deployment register do not supply those exact reserve data. Redemption processing schedules are not bond realization guarantees; no rounding or pro-rata residual attribution is inferred."
+    },
+    {
+      "id": "uw-eurq-quantoz-85f3ad5de6b3f151",
+      "assetId": "eurq-quantoz",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:bd6126afe7e55ea0140ee759",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R71)",
+      "sources": [
+        {
+          "url": "https://www.quantoz.com/transparency",
+          "observedAt": "2026-10-03T23:02:57Z",
+          "datumAsOf": "2026-08-30",
+          "location": "EURQ reserve snapshot and Reserve policy",
+          "excerpt": "Relationships with Tier 1 European banks.",
+          "assertion": "Reports cash 33% and bonds 66%; no named banks, deposit term, bond maximum maturity or scoped realization bound."
+        },
+        {
+          "url": "https://www.quantoz.com/documents/eurq-wp-1.4-30-4-2026.pdf",
+          "observedAt": "2026-10-03T23:04:42Z",
+          "datumAsOf": "2026-04-30",
+          "location": "pp.11-12, Market Risk and Liquidity Risk",
+          "excerpt": "EURQ reserves may consist of assets that are not guaranteed to be readily realizable, including certain short-term financial assets.",
+          "assertion": "Highly liquid and short-term descriptions do not establish a maximum maturity or quantified bond realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quantoz.com/",
+        "https://www.quantoz.com/transparency",
+        "https://www.quantoz.com/whitepapers/",
+        "https://www.quantoz.com/documents/eurq-wp-1.4-30-4-2026.pdf",
+        "https://www.quantoz.com/documents/terms-of-service-q-s-30-4-2026.pdf",
+        "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418",
+        "https://www.quantoz.com/tokens/#identifiers"
+      ],
+      "rationale": "EURQ disclosures identify Dutch/German government bonds and multiple unnamed Tier 1 bank deposits, but do not give maximum bond/deposit maturity days, a per-bond-slice realization horizon, deposit-bank identities, or the obligor/maturity/liquidity of the unexplained 1% left by 33%+66%. The full whitepaper, terms, document archive, regulator register and deployment register do not supply those exact reserve data. Redemption processing schedules are not bond realization guarantees; no rounding or pro-rata residual attribution is inferred."
+    },
+    {
+      "id": "uw-eurq-quantoz-fc72cc976b89ea9f",
+      "assetId": "eurq-quantoz",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:bd6126afe7e55ea0140ee759",
+        "factorKey": "obligorConcentration",
+        "pillar": "backing",
+        "requiredDatum": "issuerOrObligorKey",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R71)",
+      "sources": [
+        {
+          "url": "https://www.quantoz.com/transparency",
+          "observedAt": "2026-10-03T23:02:57Z",
+          "datumAsOf": "2026-08-30",
+          "location": "EURQ reserve snapshot and Reserve policy",
+          "excerpt": "Relationships with Tier 1 European banks.",
+          "assertion": "Reports cash 33% and bonds 66%; no named banks, deposit term, bond maximum maturity or scoped realization bound."
+        },
+        {
+          "url": "https://www.quantoz.com/documents/eurq-wp-1.4-30-4-2026.pdf",
+          "observedAt": "2026-10-03T23:04:42Z",
+          "datumAsOf": "2026-04-30",
+          "location": "pp.11-12, Market Risk and Liquidity Risk",
+          "excerpt": "EURQ reserves may consist of assets that are not guaranteed to be readily realizable, including certain short-term financial assets.",
+          "assertion": "Highly liquid and short-term descriptions do not establish a maximum maturity or quantified bond realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quantoz.com/",
+        "https://www.quantoz.com/transparency",
+        "https://www.quantoz.com/whitepapers/",
+        "https://www.quantoz.com/documents/eurq-wp-1.4-30-4-2026.pdf",
+        "https://www.quantoz.com/documents/terms-of-service-q-s-30-4-2026.pdf",
+        "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418",
+        "https://www.quantoz.com/tokens/#identifiers"
+      ],
+      "rationale": "EURQ disclosures identify Dutch/German government bonds and multiple unnamed Tier 1 bank deposits, but do not give maximum bond/deposit maturity days, a per-bond-slice realization horizon, deposit-bank identities, or the obligor/maturity/liquidity of the unexplained 1% left by 33%+66%. The full whitepaper, terms, document archive, regulator register and deployment register do not supply those exact reserve data. Redemption processing schedules are not bond realization guarantees; no rounding or pro-rata residual attribution is inferred."
+    },
+    {
+      "id": "uw-eearn-ember-3fa481e2ca97cfc4",
+      "assetId": "eearn-ember",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:eearn-ember:stablecoin-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R71)",
+      "sources": [
+        {
+          "url": "https://learn.ember.so/ember-protocol/faqs",
+          "observedAt": "2026-10-03T23:04:42Z",
+          "datumAsOf": null,
+          "location": "How long does it take for a Vault withdrawal to be processed?",
+          "excerpt": "Sometimes it may take longer depending on the Curators strategies, since they are actively deploying this capital every day and need to re-balance as withdrawals get requested.",
+          "assertion": "Published withdrawal period is not an end-to-end maximum; rebalancing can extend it."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e",
+          "observedAt": "2026-10-03T23:09:43Z",
+          "datumAsOf": null,
+          "location": "EmberVault.sol, processWithdrawalRequests and totalAssets",
+          "excerpt": "function processWithdrawalRequests(uint256 numRequests) external nonReentrant onlyOperator {",
+          "assertion": "Operator processes the funded queue; totalAssets is calculated from share rate, not a complete realized strategy balance."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ember.so/earn/eEARN",
+        "https://learn.ember.so/ember-protocol/core-concepts",
+        "https://learn.ember.so/ember-protocol/faqs",
+        "https://learn.ember.so/ember-protocol/legal/terms-and-conditions",
+        "https://learn.ember.so/ember-protocol/legal/risk-disclosure",
+        "https://learn.ember.so/ember-protocol/security",
+        "https://learn.ember.so/ember-protocol/vault-managers",
+        "https://learn.ember.so/ember-protocol/api-docs",
+        "https://learn.ember.so/llms.txt",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9be9294722f8aad37b11a9792be2c782182cafa2",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e",
+        "https://trade.bluefin.io/ember/eEARN"
+      ],
+      "rationale": "For eEARN deployed strategies, no complete position-realization bound or final redemption maximum is published in the reviewed core docs, FAQ, risk and legal terms, manager/API index and verified Ethereum implementation. FIFO operator processing requires liquid funds, but imposes no completion deadline. A displayed withdrawal period is explicitly extendable for rebalancing, not a hard SLA; rate-derived totalAssets and standard ERC4626 maxWithdraw do not establish immediately realizable deployed backing."
+    },
+    {
+      "id": "uw-eearn-ember-afeafe5cfcb5b007",
+      "assetId": "eearn-ember",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c7fee30ae9d69070a7860814",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R71)",
+      "sources": [
+        {
+          "url": "https://learn.ember.so/ember-protocol/faqs",
+          "observedAt": "2026-10-03T23:04:42Z",
+          "datumAsOf": null,
+          "location": "How long does it take for a Vault withdrawal to be processed?",
+          "excerpt": "Sometimes it may take longer depending on the Curators strategies, since they are actively deploying this capital every day and need to re-balance as withdrawals get requested.",
+          "assertion": "Published withdrawal period is not an end-to-end maximum; rebalancing can extend it."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e",
+          "observedAt": "2026-10-03T23:09:43Z",
+          "datumAsOf": null,
+          "location": "EmberVault.sol, processWithdrawalRequests and totalAssets",
+          "excerpt": "function processWithdrawalRequests(uint256 numRequests) external nonReentrant onlyOperator {",
+          "assertion": "Operator processes the funded queue; totalAssets is calculated from share rate, not a complete realized strategy balance."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ember.so/earn/eEARN",
+        "https://learn.ember.so/ember-protocol/core-concepts",
+        "https://learn.ember.so/ember-protocol/faqs",
+        "https://learn.ember.so/ember-protocol/legal/terms-and-conditions",
+        "https://learn.ember.so/ember-protocol/legal/risk-disclosure",
+        "https://learn.ember.so/ember-protocol/security",
+        "https://learn.ember.so/ember-protocol/vault-managers",
+        "https://learn.ember.so/ember-protocol/api-docs",
+        "https://learn.ember.so/llms.txt",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9be9294722f8aad37b11a9792be2c782182cafa2",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e",
+        "https://trade.bluefin.io/ember/eEARN"
+      ],
+      "rationale": "For eEARN deployed strategies, no complete position-realization bound or final redemption maximum is published in the reviewed core docs, FAQ, risk and legal terms, manager/API index and verified Ethereum implementation. FIFO operator processing requires liquid funds, but imposes no completion deadline. A displayed withdrawal period is explicitly extendable for rebalancing, not a hard SLA; rate-derived totalAssets and standard ERC4626 maxWithdraw do not establish immediately realizable deployed backing."
+    },
+    {
+      "id": "uw-eearn-ember-b54ec597cf434222",
+      "assetId": "eearn-ember",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R71)",
+      "sources": [
+        {
+          "url": "https://learn.ember.so/ember-protocol/core-concepts",
+          "observedAt": "2026-10-03T23:04:42Z",
+          "datumAsOf": null,
+          "location": "Yield Accrual",
+          "excerpt": "Vault curators deploy the pooled deposits into various yield-generating strategies (DeFi, Cross-Chain, CeFi, etc.).",
+          "assertion": "Discloses pooled multi-venue deployment, not eEARN-specific custody rights, borrowing ceiling or whole-allocation reuse terms."
+        },
+        {
+          "url": "https://learn.ember.so/ember-protocol/legal/terms-and-conditions",
+          "observedAt": "2026-10-03T23:04:42Z",
+          "datumAsOf": "2026-09-29",
+          "location": "Protocol scope introductory clauses",
+          "excerpt": "The Protocol comprises a system of open-source smart contracts that enable users to deposit and pool crypto assets",
+          "assertion": "Terms cover infrastructure and third-party managers, without exact eEARN segregation/remoteness or a binding book-wide leverage/reuse limit."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e",
+          "observedAt": "2026-10-03T23:09:43Z",
+          "datumAsOf": null,
+          "location": "EmberVault.sol, processWithdrawalRequests and totalAssets",
+          "excerpt": "function processWithdrawalRequests(uint256 numRequests) external nonReentrant onlyOperator {",
+          "assertion": "Operator processes the funded queue; totalAssets is calculated from share rate, not a complete realized strategy balance."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ember.so/earn/eEARN",
+        "https://learn.ember.so/ember-protocol/core-concepts",
+        "https://learn.ember.so/ember-protocol/faqs",
+        "https://learn.ember.so/ember-protocol/legal/terms-and-conditions",
+        "https://learn.ember.so/ember-protocol/legal/risk-disclosure",
+        "https://learn.ember.so/ember-protocol/security",
+        "https://learn.ember.so/ember-protocol/vault-managers",
+        "https://learn.ember.so/ember-protocol/api-docs",
+        "https://learn.ember.so/llms.txt",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9be9294722f8aad37b11a9792be2c782182cafa2",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e",
+        "https://trade.bluefin.io/ember/eEARN"
+      ],
+      "rationale": "The public legal/risk/core/security/manager and API documentation plus exact Ethereum vault implementation disclose pooled manager deployment, subaccount transfers and operator queues. They publish no eEARN-specific legal segregation/bankruptcy-remoteness rights covering all deployed assets, binding whole-book borrowing maximum, or complete capital-reuse/correlation terms across subaccounts and underlying venues. No absence of borrowing or reuse is inferred from the vault ABI. General protocol liquidation warnings and holder looping are not exact eEARN local leverage bounds."
+    },
+    {
+      "id": "uw-eearn-ember-65c7040d574ee5d7",
+      "assetId": "eearn-ember",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "leverage",
+        "pillar": "backing",
+        "requiredDatum": "leverage",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R71)",
+      "sources": [
+        {
+          "url": "https://learn.ember.so/ember-protocol/core-concepts",
+          "observedAt": "2026-10-03T23:04:42Z",
+          "datumAsOf": null,
+          "location": "Yield Accrual",
+          "excerpt": "Vault curators deploy the pooled deposits into various yield-generating strategies (DeFi, Cross-Chain, CeFi, etc.).",
+          "assertion": "Discloses pooled multi-venue deployment, not eEARN-specific custody rights, borrowing ceiling or whole-allocation reuse terms."
+        },
+        {
+          "url": "https://learn.ember.so/ember-protocol/legal/terms-and-conditions",
+          "observedAt": "2026-10-03T23:04:42Z",
+          "datumAsOf": "2026-09-29",
+          "location": "Protocol scope introductory clauses",
+          "excerpt": "The Protocol comprises a system of open-source smart contracts that enable users to deposit and pool crypto assets",
+          "assertion": "Terms cover infrastructure and third-party managers, without exact eEARN segregation/remoteness or a binding book-wide leverage/reuse limit."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e",
+          "observedAt": "2026-10-03T23:09:43Z",
+          "datumAsOf": null,
+          "location": "EmberVault.sol, processWithdrawalRequests and totalAssets",
+          "excerpt": "function processWithdrawalRequests(uint256 numRequests) external nonReentrant onlyOperator {",
+          "assertion": "Operator processes the funded queue; totalAssets is calculated from share rate, not a complete realized strategy balance."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ember.so/earn/eEARN",
+        "https://learn.ember.so/ember-protocol/core-concepts",
+        "https://learn.ember.so/ember-protocol/faqs",
+        "https://learn.ember.so/ember-protocol/legal/terms-and-conditions",
+        "https://learn.ember.so/ember-protocol/legal/risk-disclosure",
+        "https://learn.ember.so/ember-protocol/security",
+        "https://learn.ember.so/ember-protocol/vault-managers",
+        "https://learn.ember.so/ember-protocol/api-docs",
+        "https://learn.ember.so/llms.txt",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9be9294722f8aad37b11a9792be2c782182cafa2",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e",
+        "https://trade.bluefin.io/ember/eEARN"
+      ],
+      "rationale": "The public legal/risk/core/security/manager and API documentation plus exact Ethereum vault implementation disclose pooled manager deployment, subaccount transfers and operator queues. They publish no eEARN-specific legal segregation/bankruptcy-remoteness rights covering all deployed assets, binding whole-book borrowing maximum, or complete capital-reuse/correlation terms across subaccounts and underlying venues. No absence of borrowing or reuse is inferred from the vault ABI. General protocol liquidation warnings and holder looping are not exact eEARN local leverage bounds."
+    },
+    {
+      "id": "uw-eearn-ember-d6f5fe8bf36137f3",
+      "assetId": "eearn-ember",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "rehypothecationCorrelation",
+        "pillar": "backing",
+        "requiredDatum": "rehypothecationCorrelation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R71)",
+      "sources": [
+        {
+          "url": "https://learn.ember.so/ember-protocol/core-concepts",
+          "observedAt": "2026-10-03T23:04:42Z",
+          "datumAsOf": null,
+          "location": "Yield Accrual",
+          "excerpt": "Vault curators deploy the pooled deposits into various yield-generating strategies (DeFi, Cross-Chain, CeFi, etc.).",
+          "assertion": "Discloses pooled multi-venue deployment, not eEARN-specific custody rights, borrowing ceiling or whole-allocation reuse terms."
+        },
+        {
+          "url": "https://learn.ember.so/ember-protocol/legal/terms-and-conditions",
+          "observedAt": "2026-10-03T23:04:42Z",
+          "datumAsOf": "2026-09-29",
+          "location": "Protocol scope introductory clauses",
+          "excerpt": "The Protocol comprises a system of open-source smart contracts that enable users to deposit and pool crypto assets",
+          "assertion": "Terms cover infrastructure and third-party managers, without exact eEARN segregation/remoteness or a binding book-wide leverage/reuse limit."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e",
+          "observedAt": "2026-10-03T23:09:43Z",
+          "datumAsOf": null,
+          "location": "EmberVault.sol, processWithdrawalRequests and totalAssets",
+          "excerpt": "function processWithdrawalRequests(uint256 numRequests) external nonReentrant onlyOperator {",
+          "assertion": "Operator processes the funded queue; totalAssets is calculated from share rate, not a complete realized strategy balance."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ember.so/earn/eEARN",
+        "https://learn.ember.so/ember-protocol/core-concepts",
+        "https://learn.ember.so/ember-protocol/faqs",
+        "https://learn.ember.so/ember-protocol/legal/terms-and-conditions",
+        "https://learn.ember.so/ember-protocol/legal/risk-disclosure",
+        "https://learn.ember.so/ember-protocol/security",
+        "https://learn.ember.so/ember-protocol/vault-managers",
+        "https://learn.ember.so/ember-protocol/api-docs",
+        "https://learn.ember.so/llms.txt",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9be9294722f8aad37b11a9792be2c782182cafa2",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e",
+        "https://trade.bluefin.io/ember/eEARN"
+      ],
+      "rationale": "The public legal/risk/core/security/manager and API documentation plus exact Ethereum vault implementation disclose pooled manager deployment, subaccount transfers and operator queues. They publish no eEARN-specific legal segregation/bankruptcy-remoteness rights covering all deployed assets, binding whole-book borrowing maximum, or complete capital-reuse/correlation terms across subaccounts and underlying venues. No absence of borrowing or reuse is inferred from the vault ABI. General protocol liquidation warnings and holder looping are not exact eEARN local leverage bounds."
+    },
+    {
+      "id": "uw-usdq-quantoz-3f5a30189318e11a",
+      "assetId": "usdq-quantoz",
+      "scope": {
+        "componentKey": "reserve-residual",
+        "exposureId": "reserve:559324c1286fa6298c111e60",
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserveClassification",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:28Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R71)",
+      "sources": [
+        {
+          "url": "https://www.quantoz.com/transparency",
+          "observedAt": "2026-10-03T23:02:57Z",
+          "datumAsOf": "2026-08-30",
+          "location": "USDQ reserve snapshot and Reserve policy",
+          "excerpt": "Relationships with Tier 1 European banks.",
+          "assertion": "USDQ reports 33% cash and 66% bonds; policy identifies US Treasuries. It does not identify cash banks or the residual one percentage point, or quantify deposit/bond maximum maturity or bond realization horizon."
+        },
+        {
+          "url": "https://www.quantoz.com/documents/usdq-wp-1.4-30-04-2026.pdf",
+          "observedAt": "2026-10-03T23:18:28Z",
+          "datumAsOf": "2026-04-30",
+          "location": "pp.10-12, Counterparty Risk, Market Risk and Liquidity Risk; p.40 Redemption Plan",
+          "excerpt": "USDQ reserves may consist of assets that are not guaranteed to be readily realizable, including certain short-term financial assets.",
+          "assertion": "Full whitepaper names no reserve banks or maximum maturity schedule, and qualitative highly-liquid bonds do not establish a quantified realization guarantee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quantoz.com/",
+        "https://www.quantoz.com/transparency",
+        "https://www.quantoz.com/whitepapers/",
+        "https://www.quantoz.com/documents/usdq-wp-1.4-30-04-2026.pdf",
+        "https://www.quantoz.com/documents/terms-of-service-q-s-30-4-2026.pdf",
+        "https://www.quantoz.com/tokens/#identifiers",
+        "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
+      ],
+      "rationale": "The admitted August 30 composition exposes five previously masked reserve gaps. Current issuer snapshot, complete USDQ whitepaper, archive, terms, deployments and regulator register do not disclose the unexplained 1% composition, cash-bank identities, deposit/bond maximum maturity days or exact bond-slice realization bound. Do not attribute the 1% to rounding, identify a Tier 1 bank by inference, convert short-term to a numeric cap, or reuse issuer processing/wind-down schedules as a reserve-asset liquidation guarantee."
+    },
+    {
+      "id": "uw-usdq-quantoz-03dea4cda30075d2",
+      "assetId": "usdq-quantoz",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1b87855f33d756089ea2716b",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:28Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R71)",
+      "sources": [
+        {
+          "url": "https://www.quantoz.com/transparency",
+          "observedAt": "2026-10-03T23:02:57Z",
+          "datumAsOf": "2026-08-30",
+          "location": "USDQ reserve snapshot and Reserve policy",
+          "excerpt": "Relationships with Tier 1 European banks.",
+          "assertion": "USDQ reports 33% cash and 66% bonds; policy identifies US Treasuries. It does not identify cash banks or the residual one percentage point, or quantify deposit/bond maximum maturity or bond realization horizon."
+        },
+        {
+          "url": "https://www.quantoz.com/documents/usdq-wp-1.4-30-04-2026.pdf",
+          "observedAt": "2026-10-03T23:18:28Z",
+          "datumAsOf": "2026-04-30",
+          "location": "pp.10-12, Counterparty Risk, Market Risk and Liquidity Risk; p.40 Redemption Plan",
+          "excerpt": "USDQ reserves may consist of assets that are not guaranteed to be readily realizable, including certain short-term financial assets.",
+          "assertion": "Full whitepaper names no reserve banks or maximum maturity schedule, and qualitative highly-liquid bonds do not establish a quantified realization guarantee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quantoz.com/",
+        "https://www.quantoz.com/transparency",
+        "https://www.quantoz.com/whitepapers/",
+        "https://www.quantoz.com/documents/usdq-wp-1.4-30-04-2026.pdf",
+        "https://www.quantoz.com/documents/terms-of-service-q-s-30-4-2026.pdf",
+        "https://www.quantoz.com/tokens/#identifiers",
+        "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
+      ],
+      "rationale": "The admitted August 30 composition exposes five previously masked reserve gaps. Current issuer snapshot, complete USDQ whitepaper, archive, terms, deployments and regulator register do not disclose the unexplained 1% composition, cash-bank identities, deposit/bond maximum maturity days or exact bond-slice realization bound. Do not attribute the 1% to rounding, identify a Tier 1 bank by inference, convert short-term to a numeric cap, or reuse issuer processing/wind-down schedules as a reserve-asset liquidation guarantee."
+    },
+    {
+      "id": "uw-usdq-quantoz-59f9b692efc347b8",
+      "assetId": "usdq-quantoz",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1b87855f33d756089ea2716b",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:28Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R71)",
+      "sources": [
+        {
+          "url": "https://www.quantoz.com/transparency",
+          "observedAt": "2026-10-03T23:02:57Z",
+          "datumAsOf": "2026-08-30",
+          "location": "USDQ reserve snapshot and Reserve policy",
+          "excerpt": "Relationships with Tier 1 European banks.",
+          "assertion": "USDQ reports 33% cash and 66% bonds; policy identifies US Treasuries. It does not identify cash banks or the residual one percentage point, or quantify deposit/bond maximum maturity or bond realization horizon."
+        },
+        {
+          "url": "https://www.quantoz.com/documents/usdq-wp-1.4-30-04-2026.pdf",
+          "observedAt": "2026-10-03T23:18:28Z",
+          "datumAsOf": "2026-04-30",
+          "location": "pp.10-12, Counterparty Risk, Market Risk and Liquidity Risk; p.40 Redemption Plan",
+          "excerpt": "USDQ reserves may consist of assets that are not guaranteed to be readily realizable, including certain short-term financial assets.",
+          "assertion": "Full whitepaper names no reserve banks or maximum maturity schedule, and qualitative highly-liquid bonds do not establish a quantified realization guarantee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quantoz.com/",
+        "https://www.quantoz.com/transparency",
+        "https://www.quantoz.com/whitepapers/",
+        "https://www.quantoz.com/documents/usdq-wp-1.4-30-04-2026.pdf",
+        "https://www.quantoz.com/documents/terms-of-service-q-s-30-4-2026.pdf",
+        "https://www.quantoz.com/tokens/#identifiers",
+        "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
+      ],
+      "rationale": "The admitted August 30 composition exposes five previously masked reserve gaps. Current issuer snapshot, complete USDQ whitepaper, archive, terms, deployments and regulator register do not disclose the unexplained 1% composition, cash-bank identities, deposit/bond maximum maturity days or exact bond-slice realization bound. Do not attribute the 1% to rounding, identify a Tier 1 bank by inference, convert short-term to a numeric cap, or reuse issuer processing/wind-down schedules as a reserve-asset liquidation guarantee."
+    },
+    {
+      "id": "uw-usdq-quantoz-452f3e42d920fbfb",
+      "assetId": "usdq-quantoz",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:bd6126afe7e55ea0140ee759",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:28Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R71)",
+      "sources": [
+        {
+          "url": "https://www.quantoz.com/transparency",
+          "observedAt": "2026-10-03T23:02:57Z",
+          "datumAsOf": "2026-08-30",
+          "location": "USDQ reserve snapshot and Reserve policy",
+          "excerpt": "Relationships with Tier 1 European banks.",
+          "assertion": "USDQ reports 33% cash and 66% bonds; policy identifies US Treasuries. It does not identify cash banks or the residual one percentage point, or quantify deposit/bond maximum maturity or bond realization horizon."
+        },
+        {
+          "url": "https://www.quantoz.com/documents/usdq-wp-1.4-30-04-2026.pdf",
+          "observedAt": "2026-10-03T23:18:28Z",
+          "datumAsOf": "2026-04-30",
+          "location": "pp.10-12, Counterparty Risk, Market Risk and Liquidity Risk; p.40 Redemption Plan",
+          "excerpt": "USDQ reserves may consist of assets that are not guaranteed to be readily realizable, including certain short-term financial assets.",
+          "assertion": "Full whitepaper names no reserve banks or maximum maturity schedule, and qualitative highly-liquid bonds do not establish a quantified realization guarantee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quantoz.com/",
+        "https://www.quantoz.com/transparency",
+        "https://www.quantoz.com/whitepapers/",
+        "https://www.quantoz.com/documents/usdq-wp-1.4-30-04-2026.pdf",
+        "https://www.quantoz.com/documents/terms-of-service-q-s-30-4-2026.pdf",
+        "https://www.quantoz.com/tokens/#identifiers",
+        "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
+      ],
+      "rationale": "The admitted August 30 composition exposes five previously masked reserve gaps. Current issuer snapshot, complete USDQ whitepaper, archive, terms, deployments and regulator register do not disclose the unexplained 1% composition, cash-bank identities, deposit/bond maximum maturity days or exact bond-slice realization bound. Do not attribute the 1% to rounding, identify a Tier 1 bank by inference, convert short-term to a numeric cap, or reuse issuer processing/wind-down schedules as a reserve-asset liquidation guarantee."
+    },
+    {
+      "id": "uw-usdq-quantoz-1e0aae0bc3ba407e",
+      "assetId": "usdq-quantoz",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:bd6126afe7e55ea0140ee759",
+        "factorKey": "obligorConcentration",
+        "pillar": "backing",
+        "requiredDatum": "issuerOrObligorKey",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:28Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R71)",
+      "sources": [
+        {
+          "url": "https://www.quantoz.com/transparency",
+          "observedAt": "2026-10-03T23:02:57Z",
+          "datumAsOf": "2026-08-30",
+          "location": "USDQ reserve snapshot and Reserve policy",
+          "excerpt": "Relationships with Tier 1 European banks.",
+          "assertion": "USDQ reports 33% cash and 66% bonds; policy identifies US Treasuries. It does not identify cash banks or the residual one percentage point, or quantify deposit/bond maximum maturity or bond realization horizon."
+        },
+        {
+          "url": "https://www.quantoz.com/documents/usdq-wp-1.4-30-04-2026.pdf",
+          "observedAt": "2026-10-03T23:18:28Z",
+          "datumAsOf": "2026-04-30",
+          "location": "pp.10-12, Counterparty Risk, Market Risk and Liquidity Risk; p.40 Redemption Plan",
+          "excerpt": "USDQ reserves may consist of assets that are not guaranteed to be readily realizable, including certain short-term financial assets.",
+          "assertion": "Full whitepaper names no reserve banks or maximum maturity schedule, and qualitative highly-liquid bonds do not establish a quantified realization guarantee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quantoz.com/",
+        "https://www.quantoz.com/transparency",
+        "https://www.quantoz.com/whitepapers/",
+        "https://www.quantoz.com/documents/usdq-wp-1.4-30-04-2026.pdf",
+        "https://www.quantoz.com/documents/terms-of-service-q-s-30-4-2026.pdf",
+        "https://www.quantoz.com/tokens/#identifiers",
+        "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
+      ],
+      "rationale": "The admitted August 30 composition exposes five previously masked reserve gaps. Current issuer snapshot, complete USDQ whitepaper, archive, terms, deployments and regulator register do not disclose the unexplained 1% composition, cash-bank identities, deposit/bond maximum maturity days or exact bond-slice realization bound. Do not attribute the 1% to rounding, identify a Tier 1 bank by inference, convert short-term to a numeric cap, or reuse issuer processing/wind-down schedules as a reserve-asset liquidation guarantee."
     }
   ]
 }

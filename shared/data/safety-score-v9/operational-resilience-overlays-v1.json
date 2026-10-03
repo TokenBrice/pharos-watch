@@ -12266,6 +12266,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "eurq-quantoz",
+      "reviewedAt": "2026-10-03T23:04:42Z",
+      "expiresAt": "2027-10-03T23:04:42Z",
+      "reviewer": "Unknown wave W1R71 primary-source review",
+      "notes": "Exact-token live-history lower bound only. No independently verified operating continuity, redemption throughput, stress recovery, reconciliation or incident-free history is asserted. DUSD lower bound starts at the announced October 27 2025 managed-strategy launch; eEARN scope is its exact Ethereum first mint, not parent USDC or Sui history.",
+      "sources": [
+        {
+          "sourceId": "exact-token-live-history",
+          "label": "EURQ and USDQ issuance announcement",
+          "publisher": "Quantoz Payments",
+          "publishedAt": "2024-11-18",
+          "url": "https://www.quantoz.com/articles/quantoz-payments-issues-euro-and-us-dollar-stablecoins/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 22,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdq-quantoz",
+      "reviewedAt": "2026-10-03T23:04:42Z",
+      "expiresAt": "2027-10-03T23:04:42Z",
+      "reviewer": "Unknown wave W1R71 primary-source review",
+      "notes": "Exact-token live-history lower bound only. No independently verified operating continuity, redemption throughput, stress recovery, reconciliation or incident-free history is asserted. DUSD lower bound starts at the announced October 27 2025 managed-strategy launch; eEARN scope is its exact Ethereum first mint, not parent USDC or Sui history.",
+      "sources": [
+        {
+          "sourceId": "exact-token-live-history",
+          "label": "EURQ and USDQ issuance announcement",
+          "publisher": "Quantoz Payments",
+          "publishedAt": "2024-11-18",
+          "url": "https://www.quantoz.com/articles/quantoz-payments-issues-euro-and-us-dollar-stablecoins/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 22,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "eearn-ember",
+      "reviewedAt": "2026-10-03T23:04:42Z",
+      "expiresAt": "2027-10-03T23:04:42Z",
+      "reviewer": "Unknown wave W1R71 primary-source review",
+      "notes": "Exact-token live-history lower bound only. No independently verified operating continuity, redemption throughput, stress recovery, reconciliation or incident-free history is asserted. DUSD lower bound starts at the announced October 27 2025 managed-strategy launch; eEARN scope is its exact Ethereum first mint, not parent USDC or Sui history.",
+      "sources": [
+        {
+          "sourceId": "exact-token-live-history",
+          "label": "Exact Ethereum eEARN first mint at block 24497690",
+          "publisher": "Ethereum / Blockscout",
+          "publishedAt": "2026-02-20",
+          "url": "https://eth.blockscout.com/api?module=account&action=tokentx&contractaddress=0x9be9294722f8aad37b11a9792be2c782182cafa2&page=1&offset=1&sort=asc",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 7,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "dusd-dialectic",
+      "reviewedAt": "2026-10-03T23:04:42Z",
+      "expiresAt": "2027-10-03T23:04:42Z",
+      "reviewer": "Unknown wave W1R71 primary-source review",
+      "notes": "Exact-token live-history lower bound only. No independently verified operating continuity, redemption throughput, stress recovery, reconciliation or incident-free history is asserted. DUSD lower bound starts at the announced October 27 2025 managed-strategy launch; eEARN scope is its exact Ethereum first mint, not parent USDC or Sui history.",
+      "sources": [
+        {
+          "sourceId": "exact-token-live-history",
+          "label": "DUSD live Machine migration announcement",
+          "publisher": "Makina",
+          "publishedAt": "2025-10-24",
+          "url": "https://makinafi.substack.com/p/makina-protocol-launch-the-machines",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 11,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "mglobal-midas-fasanara",
+      "reviewedAt": "2026-10-03T23:04:42Z",
+      "expiresAt": "2027-10-03T23:04:42Z",
+      "reviewer": "Unknown wave W1R71 primary-source review",
+      "notes": "Exact-token live-history lower bound only. No independently verified operating continuity, redemption throughput, stress recovery, reconciliation or incident-free history is asserted. DUSD lower bound starts at the announced October 27 2025 managed-strategy launch; eEARN scope is its exact Ethereum first mint, not parent USDC or Sui history.",
+      "sources": [
+        {
+          "sourceId": "exact-token-live-history",
+          "label": "mGLOBAL live Aave Horizon listing",
+          "publisher": "Midas",
+          "publishedAt": "2026-06-23",
+          "url": "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 3,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

@@ -3,11 +3,11 @@
   "reserves": [
     {
       "sourceKey": "quantoz-transparency:government-bonds",
-      "name": "Government bonds (Netherlands, Germany, and US)",
-      "pct": 70,
+      "name": "US Treasuries",
+      "pct": 66,
       "risk": "very-low",
       "assetClass": "government-security",
-      "issuerOrObligor": "Sovereign issuers of the Netherlands, Germany, and United States",
+      "issuerOrObligor": "United States Treasury",
       "riskFactors": [
         "duration",
         "liquidity",
@@ -18,22 +18,28 @@
     {
       "sourceKey": "quantoz-transparency:cash",
       "name": "Cash deposits at Tier 1 European banks",
-      "pct": 30,
+      "pct": 33,
       "risk": "very-low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "Undisclosed Tier 1 European banking partners",
       "riskFactors": [
         "counterparty",
         "custody",
         "concentration"
       ],
       "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Unclassified residual in published reserve percentages",
+      "pct": 1,
+      "risk": "high",
+      "unclassifiedResidual": true,
+      "residualReason": "insufficient-evidence"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Kimi Code R08 reserve research",
-    "confidence": "probable",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Unknown wave W1R71 primary-source reserve review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Quantoz transparency",
@@ -48,12 +54,21 @@
         "url": "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
       }
     ],
-    "rationale": "The authored composition remains the historical June 30, 2026 snapshot reviewed on 2026-08-08. Re-check 2026-10-01: the issuer publishes a 30 August 2026 USDQ snapshot with 33% cash, 66% government bonds and a 101.91% reserve ratio. The published categories total 99%; no undisclosed remainder is inferred or normalized. The dollar reserve policy names US Treasuries. These newer disclosures do not refresh the historical weights or their composition date.",
-    "compositionBasis": "Quantoz Reserve Status Overview updated June 30, 2026",
-    "compositionAsOf": "2026-06-30",
+    "rationale": "The issuer snapshot explicitly published 30 August 2026 reports USDQ reserves at 33% cash and 66% government bonds, with 101.91% reserve coverage. Dollar reserve policy identifies US Treasuries. The named percentages sum to 99%; retain the unexplained 1% as a measured unclassified tail without normalizing the named categories. The publication date is the only dated basis disclosed, not an independent attestation or an assertion of a later measured book.",
+    "compositionBasis": "Whole USDQ reserve denominator in the issuer snapshot published 30 August 2026: 33% cash + 66% government bonds + 1% unexplained residual",
+    "compositionAsOf": "2026-08-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The two disclosed categories cover the full reserve allocation, but Quantoz does not identify individual banking partners, bond security identifiers, country weights, or a maximum maturity. Liquidity horizon therefore remains unknown for the government-bond bucket.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "The issuer does not classify the missing percentage point, name its deposit banks, give a maximum maturity, or quantify bond realization time. The 1% tail remains unclassified.",
+    "knownUnknownExposurePct": 1,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 2,
+        "reserveName": "Unclassified residual in published reserve percentages",
+        "pct": 1,
+        "disposition": "insufficient-evidence",
+        "rationale": "The disclosed 33% cash and 66% bonds sum to 99%. The issuer does not identify the remaining percentage point or confirm a rounding interpretation."
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [
