@@ -9824,6 +9824,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "wcop-ripio",
+      "reviewedAt": "2026-10-03T23:05:04Z",
+      "expiresAt": "2027-10-03T23:05:04Z",
+      "reviewer": "W1R94 primary-source unknown-wave review",
+      "notes": "Exact-token first mint on WorldChain reported by Ripio on 2025-10-20; 11 full calendar months through 2026-10-03 is a lower bound, not independently verified continuous operation. No redemption throughput, stress recovery, reserve reconciliation continuity or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "ripio-first-mint",
+          "label": "Ripio release log: wcop-ripio first mint",
+          "publisher": "Ripio",
+          "publishedAt": "2025-10-20",
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 11,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "ripio-first-mint"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "wclp-ripio",
+      "reviewedAt": "2026-10-03T23:05:04Z",
+      "expiresAt": "2027-10-03T23:05:04Z",
+      "reviewer": "W1R94 primary-source unknown-wave review",
+      "notes": "Exact-token first mint on WorldChain reported by Ripio on 2025-12-03; 10 full calendar months through 2026-10-03 is a lower bound, not independently verified continuous operation. No redemption throughput, stress recovery, reserve reconciliation continuity or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "ripio-first-mint",
+          "label": "Ripio release log: wclp-ripio first mint",
+          "publisher": "Ripio",
+          "publishedAt": "2025-12-03",
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 10,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "ripio-first-mint"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "wmxn-ripio",
+      "reviewedAt": "2026-10-03T23:05:04Z",
+      "expiresAt": "2027-10-03T23:05:04Z",
+      "reviewer": "W1R94 primary-source unknown-wave review",
+      "notes": "Exact-token first mint on WorldChain reported by Ripio on 2025-10-17; 11 full calendar months through 2026-10-03 is a lower bound, not independently verified continuous operation. No redemption throughput, stress recovery, reserve reconciliation continuity or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "ripio-first-mint",
+          "label": "Ripio release log: wmxn-ripio first mint",
+          "publisher": "Ripio",
+          "publishedAt": "2025-10-17",
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 11,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "ripio-first-mint"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "wpen-ripio",
+      "reviewedAt": "2026-10-03T23:05:04Z",
+      "expiresAt": "2027-10-03T23:05:04Z",
+      "reviewer": "W1R94 primary-source unknown-wave review",
+      "notes": "Exact-token first mint on WorldChain reported by Ripio on 2025-12-03; 10 full calendar months through 2026-10-03 is a lower bound, not independently verified continuous operation. No redemption throughput, stress recovery, reserve reconciliation continuity or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "ripio-first-mint",
+          "label": "Ripio release log: wpen-ripio first mint",
+          "publisher": "Ripio",
+          "publishedAt": "2025-12-03",
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 10,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "ripio-first-mint"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "wbrl-ripio",
+      "reviewedAt": "2026-10-03T23:05:04Z",
+      "expiresAt": "2027-10-03T23:05:04Z",
+      "reviewer": "W1R94 primary-source unknown-wave review",
+      "notes": "Exact-token first mint on WorldChain reported by Ripio on 2025-10-10; 11 full calendar months through 2026-10-03 is a lower bound, not independently verified continuous operation. No redemption throughput, stress recovery, reserve reconciliation continuity or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "ripio-first-mint",
+          "label": "Ripio release log: wbrl-ripio first mint",
+          "publisher": "Ripio",
+          "publishedAt": "2025-10-10",
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 11,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "ripio-first-mint"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

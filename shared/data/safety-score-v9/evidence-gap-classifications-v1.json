@@ -20964,6 +20964,388 @@
         "https://docs.alchemix.fi/user/concepts/fees"
       ],
       "rationale": "The captured legacy alUSD-to-DAI queue route has no published final maximum: governance flow rate is a maximum on funds entering the Transmuter, conditional on actual buffered funds, harvest and repayment. It is not a guaranteed completion minimum/SLA. Current V3 fixed-term MYT payout is a different route and cannot establish a maximum for the retained DAI route."
+    },
+    {
+      "id": "uw-wcop-ripio-08688d04a82f3b7b",
+      "assetId": "wcop-ripio",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:07:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R94)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": null,
+          "location": "Version 1.0, October 2025; Economic model & collateralization, page 2",
+          "excerpt": "Strict reconciliation processes are kept, and issuer may publish independent third-party attestations periodically to ensure transparency and proof of backing.",
+          "assertion": "An internal-process assertion and optional periodic publication do not identify a whole-supply reconciliation cadence, clock, operator or exclusions."
+        },
+        {
+          "url": "https://action.ripio.com/en/wfiat-attestations",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Public report index",
+          "excerpt": "Third-party verification of reserve balances for every wFIAT stablecoin issued on-chain.",
+          "assertion": "June 2026 reports exist for wBRL, wMXN, wCOP and wCLP; none for wPEN. Point-in-time reports do not themselves establish a recurring whole-supply procedure."
+        },
+        {
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCOP%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Professional Work Performed and Other Clarifications, pages 1-2",
+          "excerpt": "The information contained herein refers solely to the wCOP token.",
+          "assertion": "The accountant checks dated on-chain issuance/burn records and bank statements, including Celo; it is an asset-specific snapshot, not a published ongoing cadence."
+        },
+        {
+          "url": "https://github.com/ripio/latam-stables",
+          "observedAt": "2026-10-03T23:07:56Z",
+          "datumAsOf": null,
+          "location": "README, Bridge Contracts / Architecture",
+          "excerpt": "The bridge infrastructure enables cross-chain token transfers using a burn-and-mint mechanism.",
+          "assertion": "Technical mint/burn and bridge accounting are disclosed, but do not reconcile every fiat backing position and token liability on a recurring common clock."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "https://action.ripio.com/en/wfiat-attestations",
+        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+        "https://terms.ripio.com/",
+        "https://terms.ripio.com/co/wallet",
+        "https://terms.ripio.com/br/wallet",
+        "https://terms.ripio.com/mx/wallet",
+        "https://terms.ripio.com/cl/wallet",
+        "https://www.ripio.com/en/seguridad",
+        "https://github.com/ripio/latam-stables",
+        "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol",
+        "https://celo.blockscout.com/api/v2/smart-contracts/0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "https://celo.blockscout.com/api/v2/smart-contracts/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652"
+      ],
+      "rationale": "For each named wFIAT asset, no documented recurring whole-supply liability-to-fiat-backing reconciliation cadence, common clock, process operator and complete scope was found. The whitepaper claims strict internal processes and optional attestations; March/June report endpoints are historical snapshots, not evidence of every intervening period or a defined recurring regime. June certificates for wBRL/wMXN/wCOP/wCLP were read individually; wCLP has contradictory currency/date text. Exchange custody PoR, bridge counters and ERC20 supply are not this datum. Explicit unknown scalars are preserved."
+    },
+    {
+      "id": "uw-wclp-ripio-ca6ecfd27618a5d5",
+      "assetId": "wclp-ripio",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:07:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R94)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": null,
+          "location": "Version 1.0, October 2025; Economic model & collateralization, page 2",
+          "excerpt": "Strict reconciliation processes are kept, and issuer may publish independent third-party attestations periodically to ensure transparency and proof of backing.",
+          "assertion": "An internal-process assertion and optional periodic publication do not identify a whole-supply reconciliation cadence, clock, operator or exclusions."
+        },
+        {
+          "url": "https://action.ripio.com/en/wfiat-attestations",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Public report index",
+          "excerpt": "Third-party verification of reserve balances for every wFIAT stablecoin issued on-chain.",
+          "assertion": "June 2026 reports exist for wBRL, wMXN, wCOP and wCLP; none for wPEN. Point-in-time reports do not themselves establish a recurring whole-supply procedure."
+        },
+        {
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCOP%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Professional Work Performed and Other Clarifications, pages 1-2",
+          "excerpt": "The information contained herein refers solely to the wCOP token.",
+          "assertion": "The accountant checks dated on-chain issuance/burn records and bank statements, including Celo; it is an asset-specific snapshot, not a published ongoing cadence."
+        },
+        {
+          "url": "https://github.com/ripio/latam-stables",
+          "observedAt": "2026-10-03T23:07:56Z",
+          "datumAsOf": null,
+          "location": "README, Bridge Contracts / Architecture",
+          "excerpt": "The bridge infrastructure enables cross-chain token transfers using a burn-and-mint mechanism.",
+          "assertion": "Technical mint/burn and bridge accounting are disclosed, but do not reconcile every fiat backing position and token liability on a recurring common clock."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "https://action.ripio.com/en/wfiat-attestations",
+        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+        "https://terms.ripio.com/",
+        "https://terms.ripio.com/co/wallet",
+        "https://terms.ripio.com/br/wallet",
+        "https://terms.ripio.com/mx/wallet",
+        "https://terms.ripio.com/cl/wallet",
+        "https://www.ripio.com/en/seguridad",
+        "https://github.com/ripio/latam-stables",
+        "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol",
+        "https://celo.blockscout.com/api/v2/smart-contracts/0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "https://celo.blockscout.com/api/v2/smart-contracts/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652"
+      ],
+      "rationale": "For each named wFIAT asset, no documented recurring whole-supply liability-to-fiat-backing reconciliation cadence, common clock, process operator and complete scope was found. The whitepaper claims strict internal processes and optional attestations; March/June report endpoints are historical snapshots, not evidence of every intervening period or a defined recurring regime. June certificates for wBRL/wMXN/wCOP/wCLP were read individually; wCLP has contradictory currency/date text. Exchange custody PoR, bridge counters and ERC20 supply are not this datum. Explicit unknown scalars are preserved."
+    },
+    {
+      "id": "uw-wmxn-ripio-96541a2ce107df3e",
+      "assetId": "wmxn-ripio",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:07:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R94)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": null,
+          "location": "Version 1.0, October 2025; Economic model & collateralization, page 2",
+          "excerpt": "Strict reconciliation processes are kept, and issuer may publish independent third-party attestations periodically to ensure transparency and proof of backing.",
+          "assertion": "An internal-process assertion and optional periodic publication do not identify a whole-supply reconciliation cadence, clock, operator or exclusions."
+        },
+        {
+          "url": "https://action.ripio.com/en/wfiat-attestations",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Public report index",
+          "excerpt": "Third-party verification of reserve balances for every wFIAT stablecoin issued on-chain.",
+          "assertion": "June 2026 reports exist for wBRL, wMXN, wCOP and wCLP; none for wPEN. Point-in-time reports do not themselves establish a recurring whole-supply procedure."
+        },
+        {
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCOP%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Professional Work Performed and Other Clarifications, pages 1-2",
+          "excerpt": "The information contained herein refers solely to the wCOP token.",
+          "assertion": "The accountant checks dated on-chain issuance/burn records and bank statements, including Celo; it is an asset-specific snapshot, not a published ongoing cadence."
+        },
+        {
+          "url": "https://github.com/ripio/latam-stables",
+          "observedAt": "2026-10-03T23:07:56Z",
+          "datumAsOf": null,
+          "location": "README, Bridge Contracts / Architecture",
+          "excerpt": "The bridge infrastructure enables cross-chain token transfers using a burn-and-mint mechanism.",
+          "assertion": "Technical mint/burn and bridge accounting are disclosed, but do not reconcile every fiat backing position and token liability on a recurring common clock."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "https://action.ripio.com/en/wfiat-attestations",
+        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+        "https://terms.ripio.com/",
+        "https://terms.ripio.com/co/wallet",
+        "https://terms.ripio.com/br/wallet",
+        "https://terms.ripio.com/mx/wallet",
+        "https://terms.ripio.com/cl/wallet",
+        "https://www.ripio.com/en/seguridad",
+        "https://github.com/ripio/latam-stables",
+        "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol",
+        "https://celo.blockscout.com/api/v2/smart-contracts/0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "https://celo.blockscout.com/api/v2/smart-contracts/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652"
+      ],
+      "rationale": "For each named wFIAT asset, no documented recurring whole-supply liability-to-fiat-backing reconciliation cadence, common clock, process operator and complete scope was found. The whitepaper claims strict internal processes and optional attestations; March/June report endpoints are historical snapshots, not evidence of every intervening period or a defined recurring regime. June certificates for wBRL/wMXN/wCOP/wCLP were read individually; wCLP has contradictory currency/date text. Exchange custody PoR, bridge counters and ERC20 supply are not this datum. Explicit unknown scalars are preserved."
+    },
+    {
+      "id": "uw-wpen-ripio-7707d5a07a78c3d9",
+      "assetId": "wpen-ripio",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:07:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R94)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": null,
+          "location": "Version 1.0, October 2025; Economic model & collateralization, page 2",
+          "excerpt": "Strict reconciliation processes are kept, and issuer may publish independent third-party attestations periodically to ensure transparency and proof of backing.",
+          "assertion": "An internal-process assertion and optional periodic publication do not identify a whole-supply reconciliation cadence, clock, operator or exclusions."
+        },
+        {
+          "url": "https://action.ripio.com/en/wfiat-attestations",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Public report index",
+          "excerpt": "Third-party verification of reserve balances for every wFIAT stablecoin issued on-chain.",
+          "assertion": "June 2026 reports exist for wBRL, wMXN, wCOP and wCLP; none for wPEN. Point-in-time reports do not themselves establish a recurring whole-supply procedure."
+        },
+        {
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCOP%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Professional Work Performed and Other Clarifications, pages 1-2",
+          "excerpt": "The information contained herein refers solely to the wCOP token.",
+          "assertion": "The accountant checks dated on-chain issuance/burn records and bank statements, including Celo; it is an asset-specific snapshot, not a published ongoing cadence."
+        },
+        {
+          "url": "https://github.com/ripio/latam-stables",
+          "observedAt": "2026-10-03T23:07:56Z",
+          "datumAsOf": null,
+          "location": "README, Bridge Contracts / Architecture",
+          "excerpt": "The bridge infrastructure enables cross-chain token transfers using a burn-and-mint mechanism.",
+          "assertion": "Technical mint/burn and bridge accounting are disclosed, but do not reconcile every fiat backing position and token liability on a recurring common clock."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "https://action.ripio.com/en/wfiat-attestations",
+        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+        "https://terms.ripio.com/",
+        "https://terms.ripio.com/co/wallet",
+        "https://terms.ripio.com/br/wallet",
+        "https://terms.ripio.com/mx/wallet",
+        "https://terms.ripio.com/cl/wallet",
+        "https://www.ripio.com/en/seguridad",
+        "https://github.com/ripio/latam-stables",
+        "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol",
+        "https://celo.blockscout.com/api/v2/smart-contracts/0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "https://celo.blockscout.com/api/v2/smart-contracts/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652"
+      ],
+      "rationale": "For each named wFIAT asset, no documented recurring whole-supply liability-to-fiat-backing reconciliation cadence, common clock, process operator and complete scope was found. The whitepaper claims strict internal processes and optional attestations; March/June report endpoints are historical snapshots, not evidence of every intervening period or a defined recurring regime. June certificates for wBRL/wMXN/wCOP/wCLP were read individually; wCLP has contradictory currency/date text. Exchange custody PoR, bridge counters and ERC20 supply are not this datum. Explicit unknown scalars are preserved."
+    },
+    {
+      "id": "uw-wbrl-ripio-2fc604956b1fa3c9",
+      "assetId": "wbrl-ripio",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:07:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R94)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": null,
+          "location": "Version 1.0, October 2025; Economic model & collateralization, page 2",
+          "excerpt": "Strict reconciliation processes are kept, and issuer may publish independent third-party attestations periodically to ensure transparency and proof of backing.",
+          "assertion": "An internal-process assertion and optional periodic publication do not identify a whole-supply reconciliation cadence, clock, operator or exclusions."
+        },
+        {
+          "url": "https://action.ripio.com/en/wfiat-attestations",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Public report index",
+          "excerpt": "Third-party verification of reserve balances for every wFIAT stablecoin issued on-chain.",
+          "assertion": "June 2026 reports exist for wBRL, wMXN, wCOP and wCLP; none for wPEN. Point-in-time reports do not themselves establish a recurring whole-supply procedure."
+        },
+        {
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCOP%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Professional Work Performed and Other Clarifications, pages 1-2",
+          "excerpt": "The information contained herein refers solely to the wCOP token.",
+          "assertion": "The accountant checks dated on-chain issuance/burn records and bank statements, including Celo; it is an asset-specific snapshot, not a published ongoing cadence."
+        },
+        {
+          "url": "https://github.com/ripio/latam-stables",
+          "observedAt": "2026-10-03T23:07:56Z",
+          "datumAsOf": null,
+          "location": "README, Bridge Contracts / Architecture",
+          "excerpt": "The bridge infrastructure enables cross-chain token transfers using a burn-and-mint mechanism.",
+          "assertion": "Technical mint/burn and bridge accounting are disclosed, but do not reconcile every fiat backing position and token liability on a recurring common clock."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "https://action.ripio.com/en/wfiat-attestations",
+        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+        "https://terms.ripio.com/",
+        "https://terms.ripio.com/co/wallet",
+        "https://terms.ripio.com/br/wallet",
+        "https://terms.ripio.com/mx/wallet",
+        "https://terms.ripio.com/cl/wallet",
+        "https://www.ripio.com/en/seguridad",
+        "https://github.com/ripio/latam-stables",
+        "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol",
+        "https://celo.blockscout.com/api/v2/smart-contracts/0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "https://celo.blockscout.com/api/v2/smart-contracts/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652"
+      ],
+      "rationale": "For each named wFIAT asset, no documented recurring whole-supply liability-to-fiat-backing reconciliation cadence, common clock, process operator and complete scope was found. The whitepaper claims strict internal processes and optional attestations; March/June report endpoints are historical snapshots, not evidence of every intervening period or a defined recurring regime. June certificates for wBRL/wMXN/wCOP/wCLP were read individually; wCLP has contradictory currency/date text. Exchange custody PoR, bridge counters and ERC20 supply are not this datum. Explicit unknown scalars are preserved."
+    },
+    {
+      "id": "uw-wpen-ripio-ce35f196d88943be",
+      "assetId": "wpen-ripio",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:07:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R94)",
+      "sources": [
+        {
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": null,
+          "location": "Available local stablecoins and What does wrapped mean",
+          "excerpt": "backed by liquid instruments denominated in the local currency",
+          "assertion": "wPEN and PEN are identified, but broad local-currency backing does not disclose dated holdings, amounts, instrument weights or a whole-book denominator."
+        },
+        {
+          "url": "https://action.ripio.com/en/wfiat-attestations",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Complete public attestation index",
+          "excerpt": "wCLP Attestation: June 2026",
+          "assertion": "The index lists wARS, wBRL, wMXN, wCOP and wCLP June certifications, with no wPEN certificate; sibling reports cannot supply its book."
+        },
+        {
+          "url": "https://www.ripio.com/en/seguridad",
+          "observedAt": "2026-10-03T23:07:56Z",
+          "datumAsOf": null,
+          "location": "Proof of Reserves",
+          "excerpt": "We only display balances held in cold wallets managed by Ripio.",
+          "assertion": "Exchange customer-crypto custody balances are a different denominator from wPEN's fiat reserve book."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "https://action.ripio.com/en/wfiat-attestations",
+        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+        "https://action.ripio.com/es/blog/las-stablecoins-wfiat-ya-estan-disponibles-en-celo",
+        "https://terms.ripio.com/",
+        "https://www.ripio.com/en/seguridad",
+        "https://github.com/ripio/latam-stables"
+      ],
+      "rationale": "The exact wPEN whole-asset reserve composition is not publicly disclosed on the searched issuer, legal, technical and attestation surfaces: no dated PEN reserve balances, instrument shares, or measurable denominator/tail. General 1:1 claims and the wPEN on-chain dashboard establish denomination/activity, not bank holdings. No Peru legal page is linked from the issuer terms index; the attempted /pe/wallet 404 is not relied on as non-disclosure evidence. No sibling reserve weights are transferred."
     }
   ]
 }
