@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  BUSINESS_DAILY_FX_PEGS,
+  CALENDAR_DAILY_FX_PEGS,
   getNaturalFxCadence,
   inferFxSourceCadence,
 } from "../fx-cadence";
@@ -45,7 +47,11 @@ const CALENDAR_DAILY_PEGS = [
 ];
 
 describe("fx cadence classification", () => {
-
+  it("keeps the canonical business-daily and calendar-daily peg sets in parity", () => {
+    expect([...BUSINESS_DAILY_FX_PEGS]).toEqual(BUSINESS_DAILY_PEGS);
+    expect([...CALENDAR_DAILY_FX_PEGS]).toEqual(CALENDAR_DAILY_PEGS);
+    expect(BUSINESS_DAILY_PEGS.filter((pegKey) => CALENDAR_DAILY_FX_PEGS.has(pegKey))).toEqual([]);
+  });
   it.each(BUSINESS_DAILY_PEGS)("classifies %s as business-daily", (pegKey) => {
     expect(getNaturalFxCadence(pegKey)).toBe("business-daily");
     expect(inferFxSourceCadence(pegKey)).toBe("business-daily");

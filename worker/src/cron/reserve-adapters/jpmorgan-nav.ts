@@ -6,7 +6,7 @@ import { fetchTextWithRetry, requireHtmlInput, verifiedFreshnessMetadata } from 
 import type { AdapterContext, AdapterResult } from "./types";
 
 export const JPMORGAN_JLTXX_PUBLISHER_URL = "https://am.jpmorgan.com/FundsMarketingHandler/slim/product.md?cusip=46655r119&country=us&role=adv&language=en";
-export const JPMORGAN_JLTXX_SOURCE_KEY = "jpmorgan-nav:class:4397";
+const JPMORGAN_JLTXX_SOURCE_KEY = "jpmorgan-nav:class:4397";
 
 function field(body: string, label: string): string {
   const prefix = `- **${label}**: `;

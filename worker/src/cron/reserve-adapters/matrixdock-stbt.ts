@@ -3,7 +3,7 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { fetchTextWithRetry, parseFiniteNumber, requireHtmlInput, requireRecord, slicesFromValues, unverifiedFreshnessMetadata } from "./helpers";
 import type { AdapterContext, AdapterResult } from "./types";
 
-export const MATRIXDOCK_STBT_URL = "https://www.matrixdock.com/stbt";
+const MATRIXDOCK_STBT_URL = "https://www.matrixdock.com/stbt";
 const BUCKETS: Record<string, { name: string; risk: "low" | "medium" }> = {
   asset_nav_t_bill: { name: "U.S. Treasury bills (STBT issuer reserves)", risk: "low" },
   asset_nav_repo: { name: "Treasury repos (STBT issuer reserves)", risk: "low" },

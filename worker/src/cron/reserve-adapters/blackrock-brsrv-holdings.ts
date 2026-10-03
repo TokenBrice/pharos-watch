@@ -4,7 +4,7 @@ import { BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC } from "@shared/types/live-reserve-
 import { fetchTextWithRetry, parseFiniteNumber, requireHtmlInput, slicesFromValues, verifiedFreshnessMetadata } from "./helpers";
 import type { AdapterContext, AdapterResult } from "./types";
 
-export const BLACKROCK_BRSRV_HOLDINGS_URL = "https://www.blackrock.com/cash/en-us/products/351891/fund/1464253357814.ajax?fileType=csv&fileName=RSVXX_holdings&dataType=fund";
+const BLACKROCK_BRSRV_HOLDINGS_URL = "https://www.blackrock.com/cash/en-us/products/351891/fund/1464253357814.ajax?fileType=csv&fileName=RSVXX_holdings&dataType=fund";
 const MONTHS: Record<string, string> = { Jan: "01", Feb: "02", Mar: "03", Apr: "04", May: "05", Jun: "06", Jul: "07", Aug: "08", Sep: "09", Oct: "10", Nov: "11", Dec: "12" };
 const TYPES: Record<string, { key: string; name: string }> = {
   "U.S. Treasury Debt": { key: "treasury-debt", name: "U.S. Treasury securities (disclosed BRSRV holdings)" },
