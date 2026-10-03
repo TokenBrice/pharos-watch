@@ -17,14 +17,18 @@
         "custody",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA09USDG)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W1R35 primary-source unknown-wave review",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Avant savUSD unstaking: 24-hour cooldown then avUSD withdrawal",
+        "url": "https://docs.avantprotocol.com/overview/using-avant-protocol/unstaking-savassets"
+      },
       {
         "label": "Avant Protocol documentation",
         "url": "https://docs.avantprotocol.com/"
@@ -42,7 +46,7 @@
         "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x06d47f3fb376649c3a9dafe069b3d6e35572219e"
       }
     ],
-    "rationale": "savUSD's live ERC-4626 adapter emits one 100% avUSD savings-vault share exposure, and avUSD is the tracked upstream dependency. The wrapper relationship is classified directly; avUSD's underlying collateral remains the upstream asset's reserve question and is not duplicated as savUSD backing.",
+    "rationale": "savUSD's live ERC-4626 adapter emits one 100% avUSD savings-vault share exposure, and avUSD is the tracked upstream dependency. Avant's current unstaking documentation specifies a 24-hour savUSD-to-avUSD cooldown followed by withdrawal to the wallet. The one-day horizon describes this direct parent-token realization only, not USDC or USD settlement; another unstaking request resets the timer. avUSD's strategy backing and subsequent redemption remain upstream risks and are not duplicated here.",
     "compositionBasis": "Standing single-asset ERC-4626 structure: verified StakedAvUSDV2 source and asset() pinned at Avalanche block 96511220 (2026-10-01T06:53:44Z); this dates the direct wrapper exposure, not the parent avUSD strategy composition.",
     "compositionAsOf": "2026-10-01",
     "scope": "full-composition",

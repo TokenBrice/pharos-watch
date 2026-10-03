@@ -86,7 +86,7 @@
     },
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
-    "supervision": "unknown",
+    "supervision": "none",
     "review": {
       "disposition": "scoreable",
       "sources": [
@@ -111,8 +111,8 @@
           "url": "https://etherscan.io/address/0xc06036793272219179f846ef6bfc3b16e820df0b#code"
         }
       ],
-      "evidence": "At Ethereum block 26110197, complete role-event replay (seven grants/revocations) and direct hasRole/code reads resolve the current default-admin EOA 0xdac87349d8afd2989515deadb3692bb8edf749c4 and minter/enforcer EOA 0x3797416c447778b514939362cf1b41bbe23dcf58. Default admin inherits every role; standalone verified source has uncapped mint and mutable rule-engine authorization, but no code-replacement path. The native share is distinct from DigiFT depositary receipts. Public materials do not supply binding native PPM, current independent financial reconciliation, or organizational signing independence; immutable mint bytecode supplies none of those missing facts. Organizational identity, independence and MPC/HSM signing policies of the two identified EOA controllers remain undisclosed. Native PPM and current independent token-to-fund financial reconciliation remain private.",
-      "reviewer": "Refine04 pinned native role census",
+      "evidence": "At Ethereum block 26110197, complete role-event replay (seven grants/revocations) and direct hasRole/code reads resolve the current default-admin EOA 0xdac87349d8afd2989515deadb3692bb8edf749c4 and minter/enforcer EOA 0x3797416c447778b514939362cf1b41bbe23dcf58. Default admin inherits every role; standalone verified source has uncapped mint and mutable rule-engine authorization, but no code-replacement path. The native share is distinct from DigiFT depositary receipts. Public materials do not supply binding native PPM, current independent financial reconciliation, or organizational signing independence; immutable mint bytecode supplies none of those missing facts. Organizational identity, independence and MPC/HSM signing policies of the two identified EOA controllers remain undisclosed. Native PPM and current independent token-to-fund financial reconciliation remain private. W1R35 re-read DigiFT's March 20, 2025 native-fund legal disclosure: the Singapore VCC fund is neither regulated nor supervised by MAS, although its investment manager holds a MAS capital-markets-services licence. Supervision none applies to the fund claim, not to the separately regulated manager or distributor, and does not imply that those entities lack regulation.",
+      "reviewer": "Refine04 pinned native role census; W1R35 primary-source fund-supervision review",
       "reviewedAt": "2026-10-03",
       "unresolvedQuestions": [],
       "scopedQuestions": [

@@ -4802,6 +4802,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "avusd-avant",
+      "reviewedAt": "2026-10-03T22:55:47Z",
+      "expiresAt": "2027-10-03T22:47:34Z",
+      "reviewer": "W1R35 primary-source unknown-wave review",
+      "notes": "Issuer-reported lower-bound live history only. No independently assured continuity, redemption throughput, stress recovery, reserve reconciliation or incident-free history is asserted. The dated exact-product source establishes operation by the source date; it is not financial assurance.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Avant avUSD product-suite launch and historical operating charts",
+          "publisher": "Avant Protocol",
+          "publishedAt": "2025-01-01",
+          "url": "https://app.avantprotocol.com/transparency",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 21,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "savusd-avant",
+      "reviewedAt": "2026-10-03T22:55:47Z",
+      "expiresAt": "2027-10-03T22:47:34Z",
+      "reviewer": "W1R35 primary-source unknown-wave review",
+      "notes": "Issuer-reported lower-bound live history only. No independently assured continuity, redemption throughput, stress recovery, reserve reconciliation or incident-free history is asserted. savUSD evidence is its own historical APY/share-value series, not borrowed parent longevity.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "savUSD-specific historical APY and share-value charts from product launch",
+          "publisher": "Avant Protocol",
+          "publishedAt": "2025-01-01",
+          "url": "https://app.avantprotocol.com/transparency",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 21,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "cgo-comtech",
+      "reviewedAt": "2026-10-03T22:55:47Z",
+      "expiresAt": "2027-10-03T22:47:34Z",
+      "reviewer": "W1R35 primary-source unknown-wave review",
+      "notes": "Issuer-reported lower-bound live history only. No independently assured continuity, redemption throughput, stress recovery, reserve reconciliation or incident-free history is asserted. The dated exact-product source establishes operation by the source date; it is not financial assurance.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "DMCC announcement quoting issuer: 122 kilograms already tokenised as CGO",
+          "publisher": "DMCC / Comtech Gold issuer quotation",
+          "publishedAt": "2022-12-10",
+          "url": "https://dmcc.ae/latest-news/dmcc-digitises-gold-trading-through-tokenisation-comtech-gold-bullion-backed-dmccs-tradeflow-platform",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 45,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "umint-ubs",
+      "reviewedAt": "2026-10-03T22:55:47Z",
+      "expiresAt": "2027-10-03T22:47:34Z",
+      "reviewer": "W1R35 primary-source unknown-wave review",
+      "notes": "Issuer-reported lower-bound live history only. No independently assured continuity, redemption throughput, stress recovery, reserve reconciliation or incident-free history is asserted. The dated exact-product source establishes operation by the source date; it is not financial assurance.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Exact uMINT Ethereum token launch",
+          "publisher": "UBS Asset Management",
+          "publishedAt": "2024-11-01",
+          "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20241101-first-tokenized-investment-fund.html",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 23,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "euri-banking-circle",
+      "reviewedAt": "2026-10-03T22:55:47Z",
+      "expiresAt": "2027-10-03T22:47:34Z",
+      "reviewer": "W1R35 primary-source unknown-wave review",
+      "notes": "Issuer-reported lower-bound live history only. No independently assured continuity, redemption throughput, stress recovery, reserve reconciliation or incident-free history is asserted. The dated exact-product source establishes operation by the source date; it is not financial assurance.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Exact EURI issuer launch announcement",
+          "publisher": "Banking Circle S.A.",
+          "publishedAt": "2024-08-26",
+          "url": "https://www.bankingcircle.com/banking-circle-launches-the-first-bank-backed-mica-compliant-stablecoin-euri/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 25,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

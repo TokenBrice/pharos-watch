@@ -10348,6 +10348,488 @@
         "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
       ],
       "rationale": "The exact liquidityHorizon of each entire idle-plus-lent protocol-position slice is not published. Source exit() pays available underlying or uses the configured liquidity adapter; pinned block 26114898 shows no liquidity adapter in all three wrappers. Docs/legal terms describe liquidity-conditional ordinary exit and in-kind position transfer, but no whole-slice cash realization bound. Collateral-token redemption SLAs are not lender-vault PYUSD/RLUSD realization SLAs; no immediate/one-day/seven-day scalar is justified."
+    },
+    {
+      "id": "uw-avusd-avant-426038f745ffca82",
+      "assetId": "avusd-avant",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:48Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R35)",
+      "sources": [
+        {
+          "url": "https://docs.avantprotocol.com/security/contract-and-opsec-audits",
+          "observedAt": "2026-10-03T22:52:48Z",
+          "datumAsOf": null,
+          "location": "Audit strategy",
+          "excerpt": "Our audit strategy covers two critical domains:",
+          "assertion": "Disclosed audits are smart-contract and operational-security reviews, not a whole-supply backing reconciliation cadence."
+        },
+        {
+          "url": "https://app.avantprotocol.com/api/metrics/avusd",
+          "observedAt": "2026-10-03T22:52:48Z",
+          "datumAsOf": "2026-09-29",
+          "location": "transparency.nav",
+          "excerpt": "\"netNav\": 126041395.5232356",
+          "assertion": "Dated portfolio NAV and leveraged assets/debts are disclosed; no all-chain token-liability reconciliation procedure or cadence is supplied."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.avantprotocol.com/",
+        "https://docs.avantprotocol.com/llms.txt",
+        "https://app.avantprotocol.com/transparency",
+        "https://app.avantprotocol.com/api/metrics/avusd",
+        "https://docs.avantprotocol.com/yield-strategies-and-revenue/strategy-addresses",
+        "https://docs.avantprotocol.com/security/contract-and-opsec-audits",
+        "https://docs.avantprotocol.com/legal-and-risk/terms-of-use",
+        "https://docs.avantprotocol.com/security/contract-addresses"
+      ],
+      "rationale": "Whole-supply avUSD token liabilities versus reserve/hedge backing on a common clock and its actual reconciliation cadence remain undisclosed. Weekly NAV, security/OPSEC audits, strategy-wallet lists and mint architecture are nearby disclosures, not proof that every native/bridged liability, mint/burn and financing position is reconciled."
+    },
+    {
+      "id": "uw-avusd-avant-f86080d6c50377d6",
+      "assetId": "avusd-avant",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:48Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R35)",
+      "sources": [
+        {
+          "url": "https://app.avantprotocol.com/api/metrics/avusd",
+          "observedAt": "2026-10-03T22:52:48Z",
+          "datumAsOf": "2026-09-29",
+          "location": "transparency.leverage",
+          "excerpt": "\"assetsUsd\": 1011936129.476998",
+          "assertion": "Gross long assets and financing liabilities are reported; positive gross holdings cannot be normalized to a holder-level reserve denominator."
+        },
+        {
+          "url": "https://docs.avantprotocol.com/legal-and-risk/terms-of-use",
+          "observedAt": "2026-10-03T22:52:48Z",
+          "datumAsOf": null,
+          "location": "1.1",
+          "excerpt": "the Protocol-Accepted Assets exchanged for Protocol-Generated Assets become part of the Reserves and are beneficially owned by the Foundation",
+          "assertion": "Legal reserve ownership is disclosed, but not exact receipt/escrow identities, debt-netting allocation or token-level reserve weights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.avantprotocol.com/",
+        "https://docs.avantprotocol.com/llms.txt",
+        "https://app.avantprotocol.com/transparency",
+        "https://app.avantprotocol.com/api/metrics/avusd",
+        "https://docs.avantprotocol.com/yield-strategies-and-revenue/strategy-addresses",
+        "https://docs.avantprotocol.com/security/contract-and-opsec-audits",
+        "https://docs.avantprotocol.com/legal-and-risk/terms-of-use",
+        "https://docs.avantprotocol.com/security/contract-addresses"
+      ],
+      "rationale": "A current reconciled whole-token reserve composition remains undisclosed: the September 29 API contains gross assets, negative financing/hedge positions and net NAV, while the wallet registry lacks exhaustive position/receipt identities and liability-netting rules. Neither gross longs nor net signed categories form a disjoint positive holder-level 100% reserve mix; no invented normalization or USDC-only composition is used."
+    },
+    {
+      "id": "uw-umint-ubs-7ffe0b0dd54898cd",
+      "assetId": "umint-ubs",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:48Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R35)",
+      "sources": [
+        {
+          "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20251104-chainlink.html",
+          "observedAt": "2026-10-03T22:52:48Z",
+          "datumAsOf": "2025-11-04",
+          "location": "Workflow description",
+          "excerpt": "This new end-to-end tokenized fund workflow can cover every stage of the fund lifecycle, including order taking, execution, settlement, and data synchronization across all on-chain and off-chain systems.",
+          "assertion": "A completed subscription/redemption workflow and data synchronization are disclosed, not a recurring whole-supply token-to-fund backing reconciliation."
+        },
+        {
+          "url": "https://forum.arbitrum.foundation/t/digift-dr-umint-step2-application/28764",
+          "observedAt": "2026-10-03T22:52:48Z",
+          "datumAsOf": "2025-03-20",
+          "location": "Plan design question 3",
+          "excerpt": "For further information, please revert to the Private Placement Memorandum (PPM), provided directly to Arbitrum\u2019s consideration as a potential eligible accredited investor.",
+          "assertion": "Binding fund terms are privately provided; public daily NAV and distribution disclosures do not establish supply/backing reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.ubs.com/global/en/investment-bank/tokenize.html",
+        "https://www.ubs.com/global/en/media/display-page-ndp/en-20241101-first-tokenized-investment-fund.html",
+        "https://www.ubs.com/global/en/media/display-page-ndp/en-20251104-chainlink.html",
+        "https://forum.arbitrum.foundation/t/digift-dr-umint-step2-application/28764",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xc06036793272219179f846ef6bfc3b16e820df0b",
+        "https://etherscan.io/address/0xc06036793272219179f846ef6bfc3b16e820df0b/advanced",
+        "https://eservices.mas.gov.sg/fid/institution/detail/773-UBS-ASSET-MANAGEMENT-SINGAPORE-LTD"
+      ],
+      "rationale": "Native uMINT whole-supply on/off-chain fund-share liabilities against fund backing, mint/burn/register movements at a common observation clock and actual cadence are not publicly disclosed. DTA processing/reconciliation of one transaction and daily NAV do not establish that datum. Public UBS, distributor legal/offering and exact native token source surfaces provide no recurring complete financial reconciliation packet."
+    },
+    {
+      "id": "uw-umint-ubs-e9d5b405ef6bbaac",
+      "assetId": "umint-ubs",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:48Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R35)",
+      "sources": [
+        {
+          "url": "https://forum.arbitrum.foundation/t/digift-dr-umint-step2-application/28764",
+          "observedAt": "2026-10-03T22:52:48Z",
+          "datumAsOf": "2025-03-20",
+          "location": "Key Information: Underlying asset",
+          "excerpt": "DigiFT is a regulated entity in a Tier-1 jurisdiction and will not be able to share this information publicly. DigiFT had sent the information via email.",
+          "assertion": "The exact underlying asset information is expressly withheld publicly. High-quality instruments/AUM/mandate are not current position weights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.ubs.com/global/en/investment-bank/tokenize.html",
+        "https://www.ubs.com/global/en/media/display-page-ndp/en-20241101-first-tokenized-investment-fund.html",
+        "https://www.ubs.com/global/en/media/display-page-ndp/en-20251104-chainlink.html",
+        "https://forum.arbitrum.foundation/t/digift-dr-umint-step2-application/28764",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xc06036793272219179f846ef6bfc3b16e820df0b",
+        "https://etherscan.io/address/0xc06036793272219179f846ef6bfc3b16e820df0b/advanced",
+        "https://eservices.mas.gov.sg/fid/institution/detail/773-UBS-ASSET-MANAGEMENT-SINGAPORE-LTD"
+      ],
+      "rationale": "The current native uMINT whole-fund holdings/weights and scoped denominator are not public. The authorized distributor explicitly sends underlying asset information privately and the PPM privately to eligible investors. General money-market mandates, historical underlying AUM and native token supply cannot form a current measured 100% portfolio or refresh the existing static fund-share description."
+    },
+    {
+      "id": "uw-umint-ubs-2111b954bc1d19d2",
+      "assetId": "umint-ubs",
+      "scope": {
+        "componentKey": "economic-control:oracle",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "economic-control:oracle",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:48Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R35)",
+      "sources": [
+        {
+          "url": "https://forum.arbitrum.foundation/t/digift-dr-umint-step2-application/28764",
+          "observedAt": "2026-10-03T22:52:48Z",
+          "datumAsOf": "2025-03-20",
+          "location": "Plan design question 10",
+          "excerpt": "For uMINT: Daily subscription and redemption with daily NAV. The settlement time is T+0. Dr-uMINT will follow the same feature.",
+          "assertion": "Daily administered NAV is disclosed, but exact native class valuation-feed execution, controller/fallback and binding valuation methodology are not."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc06036793272219179f846ef6bfc3b16e820df0b",
+          "observedAt": "2026-10-03T22:52:48Z",
+          "datumAsOf": null,
+          "location": "decoded_constructor_args: information_",
+          "excerpt": "Class AT-acc (USD) Shares",
+          "assertion": "Verified constructor binds native class identity; it does not publish the private valuation mandate or a scoped native NAVLink address/controller."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.ubs.com/global/en/investment-bank/tokenize.html",
+        "https://www.ubs.com/global/en/media/display-page-ndp/en-20241101-first-tokenized-investment-fund.html",
+        "https://www.ubs.com/global/en/media/display-page-ndp/en-20251104-chainlink.html",
+        "https://forum.arbitrum.foundation/t/digift-dr-umint-step2-application/28764",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xc06036793272219179f846ef6bfc3b16e820df0b",
+        "https://etherscan.io/address/0xc06036793272219179f846ef6bfc3b16e820df0b/advanced",
+        "https://eservices.mas.gov.sg/fid/institution/detail/773-UBS-ASSET-MANAGEMENT-SINGAPORE-LTD"
+      ],
+      "rationale": "The complete current native uMINT NAV pricing authority/topology and binding valuation methodology remain undisclosed. Daily NAV and Chainlink DTA workflow announcements do not identify the deployed native-class feed, its privileged updater/fallback or valuation execution terms; the PPM is private. Preserve the limited internal-pricing profile and unresolved branch-applicability diagnostic rather than invent oracle independence."
+    },
+    {
+      "id": "uw-cgo-comtech-4a7edd5947a14d81",
+      "assetId": "cgo-comtech",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:28Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R35)",
+      "sources": [
+        {
+          "url": "https://cgold.ae/assets/pdf/Terms_and_Conditions.pdf",
+          "observedAt": "2026-10-03T22:54:28Z",
+          "datumAsOf": "2022-08-23",
+          "location": "Storage section, PDF p.7",
+          "excerpt": "The Digital Gold Holder shall provide a periodic statement from the custodian of the Gold Reserves showing the details of the Gold reserves in the Vault.",
+          "assertion": "Periodic gold-stock statement disclosure does not specify complete CGO supply-to-physical-reserve reconciliation, scope or cadence."
+        },
+        {
+          "url": "https://comtechgold.com/assets/pdf/ComtechGold_New_Audit.pdf",
+          "observedAt": "2026-10-03T22:54:28Z",
+          "datumAsOf": "2023-10-06",
+          "location": "Audit information, PDF p.2",
+          "excerpt": "CGOController.sol, Goldtoken.sol",
+          "assertion": "CGOController/Goldtoken code audit proves issuer mint workflow, not offchain financial backing reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://cgold.ae/Digitalgold",
+        "https://cgold.ae/Routine",
+        "https://comtechgold.com/proof-of-gold-audit",
+        "https://comtechgold.com/assets/pdf/ComTech%20FZCO%20-%20Gold%20Stock%20as%20on%2026th%20February%202026.pdf",
+        "https://cgold.ae/assets/pdf/ComTech_Gold_FAQ_Final.pdf",
+        "https://cgold.ae/assets/pdf/Terms_and_Conditions.pdf",
+        "https://comtechgold.com/assets/pdf/ComtechGold_New_Audit.pdf",
+        "https://dmcc.ae/latest-news/dmcc-digitises-gold-trading-through-tokenisation-comtech-gold-bullion-backed-dmccs-tradeflow-platform"
+      ],
+      "rationale": "The exact recurring whole-supply CGO token-liability versus physical-bar/custody reconciliation and cadence remain undisclosed. Bar/warrant maker-checker mint logic, periodic custodian stock confirmations and security audit scope are disclosed but do not reconcile all token liabilities, interim unbacked allowances, custody movements and participating financed gold on a common clock."
+    },
+    {
+      "id": "uw-cgo-comtech-ea72e4c95841a85b",
+      "assetId": "cgo-comtech",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:28Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R35)",
+      "sources": [
+        {
+          "url": "https://comtechgold.com/assets/pdf/ComTech%20FZCO%20-%20Gold%20Stock%20as%20on%2026th%20February%202026.pdf",
+          "observedAt": "2026-10-03T22:54:28Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Gold Stock confirmation",
+          "excerpt": "This is to confirm that the Gold Stock as on 26th February 2026 with ComTech FZCO is the total of 39 x 1 kgs of gold.",
+          "assertion": "Located 2026 stock confirmation is historical, not a current within-window whole-CGO reserve checkpoint."
+        },
+        {
+          "url": "https://cgold.ae/Digitalgold",
+          "observedAt": "2026-10-03T22:54:28Z",
+          "datumAsOf": null,
+          "location": "Transparency current gold supply",
+          "excerpt": "CURRENT GOLD SUPPLY",
+          "assertion": "Current webpage shows 3,000 grams but no checkpoint date, complete bar roster or matching scoped token-liability reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://cgold.ae/Digitalgold",
+        "https://cgold.ae/Routine",
+        "https://comtechgold.com/proof-of-gold-audit",
+        "https://comtechgold.com/assets/pdf/ComTech%20FZCO%20-%20Gold%20Stock%20as%20on%2026th%20February%202026.pdf",
+        "https://cgold.ae/assets/pdf/ComTech_Gold_FAQ_Final.pdf",
+        "https://cgold.ae/assets/pdf/Terms_and_Conditions.pdf",
+        "https://comtechgold.com/assets/pdf/ComtechGold_New_Audit.pdf",
+        "https://dmcc.ae/latest-news/dmcc-digitises-gold-trading-through-tokenisation-comtech-gold-bullion-backed-dmccs-tradeflow-platform"
+      ],
+      "rationale": "No current dated, scoped whole-CGO reserve composition/denominator is disclosed. Both issuer domains were checked: old domain redirects to cgold, whose archive ends March 2025; a located February 2026 39kg stock report is also stale. Current undated 3,000g webpage, historical stock confirmations and 100%-gold legal terms cannot truthfully renew measured allocation/report dates or establish the current matching token backing book."
+    },
+    {
+      "id": "uw-cgo-comtech-26fa640277eaf355",
+      "assetId": "cgo-comtech",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:cgo-comtech"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:28Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R35)",
+      "sources": [
+        {
+          "url": "https://cgold.ae/assets/pdf/Terms_and_Conditions.pdf",
+          "observedAt": "2026-10-03T22:54:28Z",
+          "datumAsOf": "2022-08-23",
+          "location": "Clause 8.2, PDF p.8",
+          "excerpt": "The Digitization Entity shall procure the release of the underlying Gold Reserves of the Redeemed Digital Gold Units",
+          "assertion": "Physical release/collection is promised without a maximum release/delivery or final spendable-USD settlement time."
+        },
+        {
+          "url": "https://cgold.ae/assets/pdf/ComTech_Gold_FAQ_Final.pdf",
+          "observedAt": "2026-10-03T22:54:28Z",
+          "datumAsOf": null,
+          "location": "How can I withdraw my gold?, PDF pp.3-4",
+          "excerpt": "The delivery can be tracked at any time by logging into your ComTech Gold wallet account.",
+          "assertion": "Tracking and delivery geography are specified but no delivery maximum or bank/spendable USD completion SLA is supplied."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://cgold.ae/Digitalgold",
+        "https://cgold.ae/Routine",
+        "https://comtechgold.com/proof-of-gold-audit",
+        "https://comtechgold.com/assets/pdf/ComTech%20FZCO%20-%20Gold%20Stock%20as%20on%2026th%20February%202026.pdf",
+        "https://cgold.ae/assets/pdf/ComTech_Gold_FAQ_Final.pdf",
+        "https://cgold.ae/assets/pdf/Terms_and_Conditions.pdf",
+        "https://comtechgold.com/assets/pdf/ComtechGold_New_Audit.pdf",
+        "https://dmcc.ae/latest-news/dmcc-digitises-gold-trading-through-tokenisation-comtech-gold-bullion-backed-dmccs-tradeflow-platform"
+      ],
+      "rationale": "Neither a maximum physical gold release/delivery settlement nor an end-to-end physical-to-spendable-USD maximum is published. Terms/FAQ describe collection, delivery tracking and app sale proceeds into a platform account, but omit maximum issuer release and the bank cash-out endpoint/time. Physical possession or platform credit is not spendable USD; no typical time or invented calendar SLA is supplied."
+    },
+    {
+      "id": "uw-cgo-comtech-6d85a5f4080bd1e8",
+      "assetId": "cgo-comtech",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:cgo-comtech:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:28Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R35)",
+      "sources": [
+        {
+          "url": "https://cgold.ae/assets/pdf/Terms_and_Conditions.pdf",
+          "observedAt": "2026-10-03T22:54:28Z",
+          "datumAsOf": "2022-08-23",
+          "location": "Clause 8.2, PDF p.8",
+          "excerpt": "The Digitization Entity shall procure the release of the underlying Gold Reserves of the Redeemed Digital Gold Units",
+          "assertion": "Physical release/collection is promised without a maximum release/delivery or final spendable-USD settlement time."
+        },
+        {
+          "url": "https://cgold.ae/assets/pdf/ComTech_Gold_FAQ_Final.pdf",
+          "observedAt": "2026-10-03T22:54:28Z",
+          "datumAsOf": null,
+          "location": "How can I withdraw my gold?, PDF pp.3-4",
+          "excerpt": "The delivery can be tracked at any time by logging into your ComTech Gold wallet account.",
+          "assertion": "Tracking and delivery geography are specified but no delivery maximum or bank/spendable USD completion SLA is supplied."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://cgold.ae/Digitalgold",
+        "https://cgold.ae/Routine",
+        "https://comtechgold.com/proof-of-gold-audit",
+        "https://comtechgold.com/assets/pdf/ComTech%20FZCO%20-%20Gold%20Stock%20as%20on%2026th%20February%202026.pdf",
+        "https://cgold.ae/assets/pdf/ComTech_Gold_FAQ_Final.pdf",
+        "https://cgold.ae/assets/pdf/Terms_and_Conditions.pdf",
+        "https://comtechgold.com/assets/pdf/ComtechGold_New_Audit.pdf",
+        "https://dmcc.ae/latest-news/dmcc-digitises-gold-trading-through-tokenisation-comtech-gold-bullion-backed-dmccs-tradeflow-platform"
+      ],
+      "rationale": "Neither a maximum physical gold release/delivery settlement nor an end-to-end physical-to-spendable-USD maximum is published. Terms/FAQ describe collection, delivery tracking and app sale proceeds into a platform account, but omit maximum issuer release and the bank cash-out endpoint/time. Physical possession or platform credit is not spendable USD; no typical time or invented calendar SLA is supplied."
+    },
+    {
+      "id": "uw-cgo-comtech-d0933dbfb566e913",
+      "assetId": "cgo-comtech",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:cgo-comtech:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:28Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R35)",
+      "sources": [
+        {
+          "url": "https://cgold.ae/assets/pdf/ComTech_Gold_FAQ_Final.pdf",
+          "observedAt": "2026-10-03T22:54:28Z",
+          "datumAsOf": null,
+          "location": "How can I withdraw my gold?, PDF p.3",
+          "excerpt": "Each physical delivery option will have different making charges, based on the weight and design of the coin. You must confirm the transaction by paying the additional making and delivery charge.",
+          "assertion": "Applicable making/delivery charges are disclosed as required but no numeric schedule or upper bound establishes the all-in route cost."
+        },
+        {
+          "url": "https://cgold.ae/Digitalgold",
+          "observedAt": "2026-10-03T22:54:28Z",
+          "datumAsOf": null,
+          "location": "Fee Structure",
+          "excerpt": "Physical Gold Redemption Fees",
+          "assertion": "Current fee table discloses 0.50% physical redemption and 0.50% transfer, but not the additional making/delivery/all-in charges."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://cgold.ae/Digitalgold",
+        "https://cgold.ae/Routine",
+        "https://comtechgold.com/proof-of-gold-audit",
+        "https://comtechgold.com/assets/pdf/ComTech%20FZCO%20-%20Gold%20Stock%20as%20on%2026th%20February%202026.pdf",
+        "https://cgold.ae/assets/pdf/ComTech_Gold_FAQ_Final.pdf",
+        "https://cgold.ae/assets/pdf/Terms_and_Conditions.pdf",
+        "https://comtechgold.com/assets/pdf/ComtechGold_New_Audit.pdf",
+        "https://dmcc.ae/latest-news/dmcc-digitises-gold-trading-through-tokenisation-comtech-gold-bullion-backed-dmccs-tradeflow-platform"
+      ],
+      "rationale": "The complete same-notional physical redemption cost is not published. Current table supplies transfer/redemption percentages and nil custody/insurance, while FAQ requires extra making and delivery charges by denomination/design and governing terms reserve additional fees. No public numeric schedule or capped formula for those residual charges was found; partial published fees are not zero all-in cost or a complete W15 formula."
+    },
+    {
+      "id": "uw-euri-banking-circle-e9b07a06df4a8b89",
+      "assetId": "euri-banking-circle",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:28Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R35)",
+      "sources": [
+        {
+          "url": "https://www.eurite.com/about-us/",
+          "observedAt": "2026-10-03T22:54:28Z",
+          "datumAsOf": null,
+          "location": "Safeguarded and secure reserves",
+          "excerpt": "Ernst & Young conducts periodic attestation on Banking Circle S.A. to ensure that Eurite (EURI) is always backed by reserves on a 1:1 basis.",
+          "assertion": "Issuer describes reserve attestation, but linked audit is a 2024 smart-contract audit and bank financial statements do not publish current EURI holdings/weights."
+        },
+        {
+          "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-white-paper.html",
+          "observedAt": "2026-10-03T22:54:28Z",
+          "datumAsOf": "2024-07-16",
+          "location": "Part D.9 fiduciary estate",
+          "excerpt": "Within the fiduciary structure, all EURI holder funds received in exchange of EURI will be segregated and held in cash and/or low risk cash equivalents in a bankruptcy remote structure.",
+          "assertion": "Standing legal reserve mandate is disclosed, not a current dated holding split or complete EURI-specific portfolio."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.eurite.com/",
+        "https://www.eurite.com/about-us/",
+        "https://www.eurite.com/wp-content/uploads/2024/08/EURI-white-paper.html",
+        "https://www.eurite.com/wp-content/uploads/2025/07/Banking-Circle-S.A_Annual-Accounts_31.12.2024_Final_Signed-by-all-1.pdf",
+        "https://www.bankingcircle.com/insights/euro-stablecoin-whitepaper/",
+        "https://www.bankingcircle.com/banking-circle-launches-the-first-bank-backed-mica-compliant-stablecoin-euri/"
+      ],
+      "rationale": "Current EURI-specific reserve holdings/weights and as-of denominator are not published on the issuer transparency/audit index, whitepaper or bank annual-accounts surfaces. Legal cash/cash-equivalent eligibility and 1:1 EY-attestation claims do not supply a current measured mix; the linked smart-contract audit and consolidated bank balance sheet are not EURI reserve attestations. The old static 100% mixed class is not date-bumped."
     }
   ]
 }
