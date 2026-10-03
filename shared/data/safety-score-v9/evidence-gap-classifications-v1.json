@@ -15195,6 +15195,395 @@
           "assertion": "Exact immutable runtime has no upgrade entrypoint. Independent immutable-code fact cannot currently clear wrapper contractMutability while unrelated registry/delegated authorization questions keep aggregate mint non-known."
         }
       ]
+    },
+    {
+      "id": "uw-fxsave-f-x-protocol-aef6423aa209a73d",
+      "assetId": "fxsave-f-x-protocol",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:fxsave-f-x-protocol:stablecoin-redeem"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave.md",
+          "observedAt": "2026-10-03T23:02:11Z",
+          "datumAsOf": null,
+          "location": "Scenario 2: Redeeming fxUSD",
+          "excerpt": "USDC needs to be swapped into fxUSD via the converter.",
+          "assertion": "Published fxUSD-only route combines mutable instantRedeemFeeRatio with converter execution. Current producer stores a documented formula but cannot evaluate same-notional net fxUSD cost; fixed 100 bps would omit conversion."
+        },
+        {
+          "url": "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/fees.md",
+          "observedAt": "2026-10-03T23:02:11Z",
+          "datumAsOf": null,
+          "location": "Stability Pool fees",
+          "excerpt": "1%",
+          "assertion": "Published early-exit component is not the complete converter-dependent same-notional cost."
+        }
+      ]
+    },
+    {
+      "id": "uw-fxsave-f-x-protocol-6e98aa6dbec79939",
+      "assetId": "fxsave-f-x-protocol",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:45c8a74a34f217637ae5efe5",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave.md",
+          "observedAt": "2026-10-03T23:02:11Z",
+          "datumAsOf": null,
+          "location": "Method 2, Step 1",
+          "excerpt": "After redeeming, you will receive the corresponding amount of fxSP tokens.",
+          "assertion": "Native redemption returns a pool receipt, not USD. Atomic basket exits and a cooldown exist; no whole strategy-position final-value realization bound is published."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://fxprotocol.gitbook.io/fx-docs/llms.txt",
+        "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/stability-pool.md",
+        "https://fxprotocol.gitbook.io/fx-docs/guides/how-to-unstake-from-the-stability-pool.md",
+        "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe4031e271809d20074e4bef1caeefec5f710e8a6",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd023aac0e2d46c93d4c6e8e2a449bf2d4687804f"
+      ],
+      "rationale": "The exact whole-slice liquidityHorizon of fxSAVE deployed strategy positions is not disclosed. Documentation and current contracts specify receipt redemption, cooldown and basket conversions, but no all-position realization horizon at a known USD value. The pinned onchain principal census establishes custody, not market conversion or Aave withdrawal capacity."
+    },
+    {
+      "id": "uw-fxusd-f-x-protocol-9a3b142ddcdc37f1",
+      "assetId": "fxusd-f-x-protocol",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:0137717dd14ab3c851abe172",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/long-pool-integration.md",
+          "observedAt": "2026-10-03T23:02:11Z",
+          "datumAsOf": null,
+          "location": "3. CreditNote Received",
+          "excerpt": "If it happens that the long pool does not have enough collateral in the contract",
+          "assertion": "Liquidation can deliver credit notes when collateral is lent to short pools; no full WBTC/wstETH branch realization deadline is stated."
+        },
+        {
+          "url": "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": null,
+          "location": "Finalization",
+          "excerpt": "If there is enough ether to fulfill the request.",
+          "assertion": "Lido withdrawal depends on available ETH and oracle finalization, not an unconditional wstETH whole-position deadline."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://fxprotocol.gitbook.io/fx-docs/llms.txt",
+        "https://fxprotocol.gitbook.io/fx-docs/risk-management/advanced-peg-protection-mechanisms/understanding-the-redemption-mechanism.md",
+        "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/long-pool-integration.md",
+        "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/creditnotes.md",
+        "https://wbtc.network/",
+        "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9"
+      ],
+      "rationale": "Neither WBTC nor wstETH collateral exposure has a published whole-slice liquidityHorizon. The protocol documents conditional rebalances/liquidations and credit-note substitution. Redemption, underlying market access and Lido queue finalization do not establish a guaranteed realization horizon for the entire scoped branch."
+    },
+    {
+      "id": "uw-fxusd-f-x-protocol-e0e863aac7054d55",
+      "assetId": "fxusd-f-x-protocol",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:67b0ca334fe4dd4b5475cf7d",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/long-pool-integration.md",
+          "observedAt": "2026-10-03T23:02:11Z",
+          "datumAsOf": null,
+          "location": "3. CreditNote Received",
+          "excerpt": "If it happens that the long pool does not have enough collateral in the contract",
+          "assertion": "Liquidation can deliver credit notes when collateral is lent to short pools; no full WBTC/wstETH branch realization deadline is stated."
+        },
+        {
+          "url": "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": null,
+          "location": "Finalization",
+          "excerpt": "If there is enough ether to fulfill the request.",
+          "assertion": "Lido withdrawal depends on available ETH and oracle finalization, not an unconditional wstETH whole-position deadline."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://fxprotocol.gitbook.io/fx-docs/llms.txt",
+        "https://fxprotocol.gitbook.io/fx-docs/risk-management/advanced-peg-protection-mechanisms/understanding-the-redemption-mechanism.md",
+        "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/long-pool-integration.md",
+        "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/creditnotes.md",
+        "https://wbtc.network/",
+        "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9"
+      ],
+      "rationale": "Neither WBTC nor wstETH collateral exposure has a published whole-slice liquidityHorizon. The protocol documents conditional rebalances/liquidations and credit-note substitution. Redemption, underlying market access and Lido queue finalization do not establish a guaranteed realization horizon for the entire scoped branch."
+    },
+    {
+      "id": "uw-fxd-fathom-ad30a9d40bbf4091",
+      "assetId": "fxd-fathom",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:01ba9e9e0b5953570d4e52f0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://docs.stakexdc.com/docs/liquid-staking/withdrawals",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": null,
+          "location": "The queue is public \u2014 position, not a date",
+          "excerpt": "No settlement date is shown or promised",
+          "assertion": "psXDC queues depend on funding tranches and masternode unbonding; approximately 35 days is not a promised whole-position horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.fathom.fi/llms.txt",
+        "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network.md",
+        "https://docs.fathom.fi/fxd-stablecoin/risk-management.md",
+        "https://docs.fathom.fi/terms-of-service.md",
+        "https://docs.stakexdc.com/docs/liquid-staking/architecture",
+        "https://docs.stakexdc.com/docs/liquid-staking/withdrawals",
+        "https://xdcscan.com/block/107486464"
+      ],
+      "rationale": "No exact full psXDC-collateral slice liquidityHorizon is published. Fathom exposes collateral pools and conditional liquidation; PrimeStaked publishes instant-or-queued withdrawal rules, funding lanes and approximate unbonding, expressly without a settlement date. Neither establishes full scoped FXD collateral realization at a known value."
+    },
+    {
+      "id": "uw-fxd-fathom-9fd17e515d0559f4",
+      "assetId": "fxd-fathom",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:63ca7f2ed31b0df9b4bedb9b",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://docs.fathom.fi/terms-of-service.md",
+          "observedAt": "2026-10-03T23:02:11Z",
+          "datumAsOf": "2024-04-09",
+          "location": "8.4 Not Registered with the SEC or Any Other Agency",
+          "excerpt": "we do not (and cannot) guarantee market best pricing or best execution through our Products",
+          "assertion": "Published third-party market execution does not establish the entire WXDC collateral slice realization horizon."
+        },
+        {
+          "url": "https://docs.fathom.fi/fxd-stablecoin/risk-management.md",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": null,
+          "location": "Liquidation Risks",
+          "excerpt": "Governance decides on the Close Factor value",
+          "assertion": "Conditional partial liquidations do not promise all-position USD availability."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.fathom.fi/introduction.md",
+        "https://docs.fathom.fi/llms.txt",
+        "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network.md",
+        "https://docs.fathom.fi/fxd-stablecoin/user-guides/repay-and-close-fxd-position.md",
+        "https://docs.fathom.fi/fxd-stablecoin/risk-management.md",
+        "https://docs.fathom.fi/terms-of-service.md",
+        "https://xdcscan.com/block/107486464"
+      ],
+      "rationale": "No exact whole WXDC collateral pool liquidityHorizon is published in Fathom deployment, repayment, risk, liquidation or legal sources. Onchain unwrap/transfer and borrower debt closure are not a bound for final realization of all FXD backing; the protocol explicitly relies on third-party liquidity and disclaims best execution."
+    },
+    {
+      "id": "uw-fxd-fathom-60af023bdc795070",
+      "assetId": "fxd-fathom",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:90c347f557383f87fc8fa7cf",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://comtechgold.com/assets/pdf/Terms_and_Conditions.pdf",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": "2022-08-23",
+          "location": "8.1 Redemption of Digital Gold to physical gold",
+          "excerpt": "You may instruct the Digitization Entity to convert Digital Gold to physical gold from the Gold Reserves of a minimum quantity of one kilogram",
+          "assertion": "CGO physical redemption has a 1 kg minimum; no guaranteed final USD liquidation or delivery deadline is specified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network.md",
+        "https://docs.fathom.fi/fxd-stablecoin/risk-management.md",
+        "https://docs.fathom.fi/terms-of-service.md",
+        "https://comtechgold.com/assets/pdf/Terms_and_Conditions.pdf",
+        "https://comtechgold.com/assets/pdf/cgo_whitepaper_v1.pdf",
+        "https://xdcscan.com/block/107486464"
+      ],
+      "rationale": "No exact full CGO collateral slice liquidityHorizon is disclosed. Fathom documents conditional liquidation; Comtech terms describe minimum-size gold conversion, identification, delivery and variable charges without a final-delivery or USD settlement bound. Current measured Fathom CGO holding is far below the physical redemption minimum."
+    },
+    {
+      "id": "uw-bc3m-backed-0fe86a7c3cd04e82",
+      "assetId": "bc3m-backed",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:bc3m-backed:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": "2026-07-27",
+          "location": "VI.v.c Settlement, p.115",
+          "excerpt": "Until the fifth Business Day following the receipt of the Investor's Products (i.e. T+5)",
+          "assertion": "T+5 bounds instructions/liquidation steps, not final bank receipt; VIII.ii permits payment postponement without a finite cap."
+        },
+        {
+          "url": "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": "2026-07-27",
+          "location": "VIII.ii.b Underlying Illiquidity, p.118",
+          "excerpt": "May postpone the determination (fixing) and/or the payment of the relevant Redemption Amount accordingly",
+          "assertion": "No finite calendar-second final-settlement SLA is imposed when collateral is illiquid."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.backed.fi/products/bc3m",
+        "https://assets.backed.fi/legal-documentation",
+        "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
+        "https://backed.fi/news-updates/the-future-is-xstocks-upgrading-btokens",
+        "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
+        "https://www.amundietf.it/pdfDocuments/annual-report/FR0010754200/ENG/20250630",
+        "https://eth.blockscout.com/tx/0xed24a874126443f07e7976ea89d84499999346ef574b78d4b2dd3daf9bb84128"
+      ],
+      "rationale": "The exact settlementSlaSec for final bC3M redemption proceeds is not disclosed. T+5 business days concerns deactivation, collateral sale, amount calculation and payment instructions; it is not a final-receipt SLA. Underlying-illiquidity terms permit payment postponement for the number of business days the issuer determines necessary. Wind-down notice keeps standard redemption, not a new finite SLA."
+    },
+    {
+      "id": "uw-bc3m-backed-d52d3adf7e9860f3",
+      "assetId": "bc3m-backed",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:5b88ab39ffe7a05d24df56b5",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": "2026-04-16",
+          "location": "R\u00e8glement Article 3, p.29",
+          "excerpt": "le rachat par le Fonds de ses parts, comme l\u2019\u00e9mission de parts nouvelles, peuvent \u00eatre suspendus",
+          "assertion": "Five-day post-valuation settlement can extend to 30 days, and redemptions can also be suspended; no whole-slice unconditional horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.backed.fi/products/bc3m",
+        "https://assets.backed.fi/legal-documentation",
+        "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
+        "https://backed.fi/news-updates/the-future-is-xstocks-upgrading-btokens",
+        "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
+        "https://www.amundietf.it/pdfDocuments/annual-report/FR0010754200/ENG/20250630",
+        "https://eth.blockscout.com/tx/0xed24a874126443f07e7976ea89d84499999346ef574b78d4b2dd3daf9bb84128"
+      ],
+      "rationale": "No exact whole ETF-share reserve liquidityHorizon is published. Primary orders normally settle J+2, regulations allow five days after valuation and up to 30 days in exceptional asset sales; gates and temporary suspension occur before final payment. These conditional schedules do not bound the entire bC3M backing slice under all admitted restrictions."
+    },
+    {
+      "id": "uw-bc3m-backed-0dac2ca6802cc7d1",
+      "assetId": "bc3m-backed",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:5b88ab39ffe7a05d24df56b5",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": "2026-04-16",
+          "location": "R\u00e8glement Article 1, p.28",
+          "excerpt": "La dur\u00e9e du Fonds est de 99 ans \u00e0 compter de sa cr\u00e9ation, sauf dans les cas de dissolution anticip\u00e9e ou de la prorogation pr\u00e9vue au pr\u00e9sent r\u00e8glement.",
+          "assertion": "Fund duration can be extended and is not a nonextendable maximum maturity of its shares; 0\u20136 months is the bond-index mandate."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.backed.fi/products/bc3m",
+        "https://assets.backed.fi/legal-documentation",
+        "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
+        "https://backed.fi/news-updates/the-future-is-xstocks-upgrading-btokens",
+        "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
+        "https://www.amundietf.it/pdfDocuments/annual-report/FR0010754200/ENG/20250630",
+        "https://eth.blockscout.com/tx/0xed24a874126443f07e7976ea89d84499999346ef574b78d4b2dd3daf9bb84128"
+      ],
+      "rationale": "No finite maximum maturityDaysMax of the fund-share claim is disclosed. This is a fund-share reserve, not individual bills: the 0\u20136 month index mandate is not share maturity. The fund has a 99-year organizational life expressly subject to extension, so neither 180 days nor a conversion of 99 years is a hard share-claim maximum."
     }
   ]
 }

@@ -4350,6 +4350,88 @@
           "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits.md"
         }
       ]
+    },
+    {
+      "assetId": "fxsave-f-x-protocol",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-02",
+      "reviewer": "W1R46 block-pinned allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "multi-strategy-reuse",
+      "rationale": "At block 26114901 all 81624191680494464837425163 fxSP units in SavingFxUSD.totalAssets equal gauge.balanceOf(the Convex staking vault); idle fxSP and direct gauge balances are zero. The gauge manager is zero, staking vault owner is fxSAVE, and stakingToken/gaugeAddress match fxSP/the gauge. Reviewed SavingFxUSD and inherited source expose deposit, withdrawal, harvesting and locking but no borrowing or arbitrary-call entry point to the staking proxy's owner-only execute. Gauge custody holds fxSP onchain. fxSP combines stability-pool peg arbitrage and liquidation absorption with an active USDC AaveV3CompoundStrategy, so capital reuse is multi-strategy, not none. This local custody conclusion does not assert legal remoteness or erase fxUSD/USDC parent risk, mutable upgrades, loss exposure or measured unwind.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39",
+          "function": "asset()/vault()/gauge()/totalAssets()/EIP1967 implementation",
+          "value": "asset=0x65c9a641afceb9c0e6034e558a319488fa0fa3be; vault=0x4bfc5292da18e32ed2354350e07e417ce4796f9c; gauge=0xed92dde3214c24ae04f5f96927e3be8f8dbc3289; totalAssets=81624191680494464837425163; implementation=0xe4031e271809d20074e4bef1caeefec5f710e8a6",
+          "block": 26114901
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x65c9a641afceb9c0e6034e558a319488fa0fa3be",
+          "function": "balanceOf(fxSAVE)/allocations(fxUSD)/allocations(USDC)/EIP1967 implementation",
+          "value": "idle fxSP=0; fxUSD strategy=0x0000000000000000000000000000000000000000; USDC strategy=0xd023aac0e2d46c93d4c6e8e2a449bf2d4687804f; implementation=0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9",
+          "block": 26114901
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xed92dde3214c24ae04f5f96927e3be8f8dbc3289",
+          "function": "balanceOf(stakingVault)/balanceOf(fxSAVE)/manager()/stakingToken()/EIP1967 implementation",
+          "value": "stakingVault balance=81624191680494464837425163; fxSAVE balance=0; manager=0x0000000000000000000000000000000000000000; stakingToken=0x65c9a641afceb9c0e6034e558a319488fa0fa3be; implementation=0xf62f458d2f6dd2ad074e715655064d7632e136d6",
+          "block": 26114901
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x4bfc5292da18e32ed2354350e07e417ce4796f9c",
+          "function": "owner()/stakingToken()/gaugeAddress()/clone implementation",
+          "value": "owner=fxSAVE; stakingToken=fxSP; gaugeAddress=0xed92dde3214c24ae04f5f96927e3be8f8dbc3289; EIP1167 implementation=0x359c1efd3fc7e3a9b7a043c185fd5d39dec1fc81",
+          "block": 26114901
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xd023aac0e2d46c93d4c6e8e2a449bf2d4687804f",
+          "function": "ASSET()/ATOKEN()/POOL()/operator()/totalSupply()",
+          "value": "ASSET=USDC; ATOKEN=0x98c23e9d8f34fefb1b7bd6a91b7ff122f4e16f5c; POOL=0x87870bca3f3fd6335c3f4ce8392d69350b4fa4e2; operator=fxSP; totalSupply=19336719",
+          "block": 26114901
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact SavingFxUSD implementation and inherited sources",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe4031e271809d20074e4bef1caeefec5f710e8a6"
+        },
+        {
+          "label": "Exact SharedLiquidityGauge implementation and inherited sources",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf62f458d2f6dd2ad074e715655064d7632e136d6"
+        },
+        {
+          "label": "Exact Convex staking proxy implementation and inherited sources",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x359c1efd3fc7e3a9b7a043c185fd5d39dec1fc81"
+        },
+        {
+          "label": "Exact fxSP implementation and AssetManagement source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9"
+        },
+        {
+          "label": "Active USDC Aave strategy and inherited source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd023aac0e2d46c93d4c6e8e2a449bf2d4687804f"
+        },
+        {
+          "label": "f(x) Stability Pool mechanisms and fxSAVE",
+          "url": "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/stability-pool.md"
+        },
+        {
+          "label": "Ethereum block 26114901",
+          "url": "https://eth.blockscout.com/block/26114901"
+        },
+        {
+          "label": "Block-pinned Ethereum RPC reads",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
     }
   ]
 }
