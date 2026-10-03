@@ -13875,6 +13875,296 @@
         "https://docs.maple.finance/technical-resources/pools/accounting/pool-accounting.md"
       ],
       "rationale": "Exact syrupUSDT whole circulating share supply-to-net-backing reconciliation scope, cadence and exception handling are not disclosed. NetworkFirm verifies aggregate USDC/USDT loan collateral, not all loan principal, idle funds, strategies, bridged liabilities and impairment-adjusted share supply. Public native accounting and collateral graphs do not close that reconciliation scope."
+    },
+    {
+      "id": "uw-susdc-spark-cd291dccce296499",
+      "assetId": "susdc-spark",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:37Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
+      "sources": [
+        {
+          "url": "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
+          "observedAt": "2026-10-03T23:00:36Z",
+          "datumAsOf": "2026-06-30",
+          "location": "2.1 Spark Liquidity Layer",
+          "excerpt": "This structure extends Spark's capital coordination into custody-supported institutional credit markets beyond onchain venues.",
+          "assertion": "SLL includes offchain institutional custody; no asset-specific complete custody roster or insolvency safeguards accompanies this disclosure."
+        },
+        {
+          "url": "https://docs.spark.finance/dev/savings/spark-vaults-v2",
+          "observedAt": "2026-10-03T23:00:36Z",
+          "datumAsOf": null,
+          "location": "Taker Mechanism",
+          "excerpt": "Transfers `value` units of `asset` from the vault to `msg.sender` and emits `Take(msg.sender, value)`.",
+          "assertion": "Contract discloses taker transfer, not legal segregation/remoteness of downstream savings holdings."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.spark.finance/products/spark-savings",
+        "https://docs.spark.finance/dev/savings/spark-vaults-v2",
+        "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy",
+        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
+        "https://docs.spark.finance/mica/4",
+        "https://spark.finance/",
+        "https://data.spark.finance/financials",
+        "https://app.spark.finance/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
+      ],
+      "rationale": "The exact savings claim has no disclosed complete downstream custody roster, legal segregation, bankruptcy-remoteness regime or attributable unknown-custody fraction. Reviewed product/risk docs, legal white paper (SPK-only; not savings rights), financial report, linked transparency surfaces and exact vault source. Non-custodial shares/intents and USDS backstop are not proof of safeguards for the taker-deployed book; no protections or zero unknown exposure are inferred."
+    },
+    {
+      "id": "uw-susdc-spark-9b5b22514b67dbc9",
+      "assetId": "susdc-spark",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:bb712f786d4d05531807f7c8",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:37Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
+      "sources": [
+        {
+          "url": "https://docs.spark.finance/products/spark-savings",
+          "observedAt": "2026-10-03T23:00:36Z",
+          "datumAsOf": null,
+          "location": "Liquidity",
+          "excerpt": "large withdrawal requests are usually fulfilled within a few minutes.",
+          "assertion": "Typical intent timing is not an enforceable maximum for realization of all deployed strategy positions."
+        },
+        {
+          "url": "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy",
+          "observedAt": "2026-10-03T23:00:36Z",
+          "datumAsOf": "2026-05-05",
+          "location": "Deployment Snapshot (May 5, 2026)",
+          "excerpt": "2-7 day redemption lag",
+          "assertion": "Maple-specific historical lag does not bound the entire savings deployed aggregate."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.spark.finance/products/spark-savings",
+        "https://docs.spark.finance/dev/savings/spark-vaults-v2",
+        "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy",
+        "https://docs.spark.finance/dev/savings/savings-vault-intents",
+        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
+        "https://docs.spark.finance/mica/4",
+        "https://data.spark.finance/financials",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
+      ],
+      "rationale": "No whole-slice maximum realization bound is published for the taker-deployed aggregate. Docs disclose idle-only atomic withdrawal, typically-minutes refill/intents, a user-set expiry that can lapse unfilled, and historical venue-specific lags. Neither these nor the protocol financial report supplies a current exact savings aggregate realization maximum; do not translate average timing or request expiry into immediate/seven-day liquidity."
+    },
+    {
+      "id": "uw-susdt-spark-e0452af4d765f4b5",
+      "assetId": "susdt-spark",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:37Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
+      "sources": [
+        {
+          "url": "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
+          "observedAt": "2026-10-03T23:00:36Z",
+          "datumAsOf": "2026-06-30",
+          "location": "2.1 Spark Liquidity Layer",
+          "excerpt": "This structure extends Spark's capital coordination into custody-supported institutional credit markets beyond onchain venues.",
+          "assertion": "SLL includes offchain institutional custody; no asset-specific complete custody roster or insolvency safeguards accompanies this disclosure."
+        },
+        {
+          "url": "https://docs.spark.finance/dev/savings/spark-vaults-v2",
+          "observedAt": "2026-10-03T23:00:36Z",
+          "datumAsOf": null,
+          "location": "Taker Mechanism",
+          "excerpt": "Transfers `value` units of `asset` from the vault to `msg.sender` and emits `Take(msg.sender, value)`.",
+          "assertion": "Contract discloses taker transfer, not legal segregation/remoteness of downstream savings holdings."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.spark.finance/products/spark-savings",
+        "https://docs.spark.finance/dev/savings/spark-vaults-v2",
+        "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy",
+        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
+        "https://docs.spark.finance/mica/4",
+        "https://spark.finance/",
+        "https://data.spark.finance/financials",
+        "https://app.spark.finance/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe2e7a17dff93280dec073c995595155283e3c372"
+      ],
+      "rationale": "The exact savings claim has no disclosed complete downstream custody roster, legal segregation, bankruptcy-remoteness regime or attributable unknown-custody fraction. Reviewed product/risk docs, legal white paper (SPK-only; not savings rights), financial report, linked transparency surfaces and exact vault source. Non-custodial shares/intents and USDS backstop are not proof of safeguards for the taker-deployed book; no protections or zero unknown exposure are inferred."
+    },
+    {
+      "id": "uw-susdt-spark-b961e5a15ca5eb24",
+      "assetId": "susdt-spark",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:7fd1f6e757dc56ee53bd46a0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:37Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
+      "sources": [
+        {
+          "url": "https://docs.spark.finance/products/spark-savings",
+          "observedAt": "2026-10-03T23:00:36Z",
+          "datumAsOf": null,
+          "location": "Liquidity",
+          "excerpt": "large withdrawal requests are usually fulfilled within a few minutes.",
+          "assertion": "Typical intent timing is not an enforceable maximum for realization of all deployed strategy positions."
+        },
+        {
+          "url": "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy",
+          "observedAt": "2026-10-03T23:00:36Z",
+          "datumAsOf": "2026-05-05",
+          "location": "Deployment Snapshot (May 5, 2026)",
+          "excerpt": "2-7 day redemption lag",
+          "assertion": "Maple-specific historical lag does not bound the entire savings deployed aggregate."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.spark.finance/products/spark-savings",
+        "https://docs.spark.finance/dev/savings/spark-vaults-v2",
+        "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy",
+        "https://docs.spark.finance/dev/savings/savings-vault-intents",
+        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
+        "https://docs.spark.finance/mica/4",
+        "https://data.spark.finance/financials",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe2e7a17dff93280dec073c995595155283e3c372"
+      ],
+      "rationale": "No whole-slice maximum realization bound is published for the taker-deployed aggregate. Docs disclose idle-only atomic withdrawal, typically-minutes refill/intents, a user-set expiry that can lapse unfilled, and historical venue-specific lags. Neither these nor the protocol financial report supplies a current exact savings aggregate realization maximum; do not translate average timing or request expiry into immediate/seven-day liquidity."
+    },
+    {
+      "id": "uw-sparkusdtbc-spark-e82fe90f4da237a1",
+      "assetId": "sparkusdtbc-spark",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:59709ff6bcf4a35db16b90ec",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:37Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
+      "sources": [
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
+          "observedAt": "2026-10-03T23:00:36Z",
+          "datumAsOf": null,
+          "location": "VaultV2.exit",
+          "excerpt": "deallocateInternal(liquidityAdapter, liquidityData, assets - idleAssets);",
+          "assertion": "Ordinary exit requires selected adapter liquidity; no elapsed-time completion maximum is specified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy",
+        "https://docs.spark.finance/products/isolated-markets",
+        "https://docs.morpho.org/curate/tutorials-v2/withdraw/",
+        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
+        "https://docs.spark.finance/mica/4",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xef4cb7e87f212f128f0b24cf35861e52b3c78a6a"
+      ],
+      "rationale": "The scoped idle-plus-Morpho lender aggregate has no guaranteed realization horizon: all assets are supplied across four markets; zero idle USDT at the pinned block. Source permits ordinary selected-adapter exit conditional on market liquidity, plus separate force-deallocation paths, not a promised repayment maximum. Strategy documents describe junior stress priority and historical allocation rather than a current contractual bound for the whole lender claim."
+    },
+    {
+      "id": "uw-sparkusdc-spark-c15f4e5d093eaf75",
+      "assetId": "sparkusdc-spark",
+      "scope": {
+        "componentKey": "control:mint-meta:sparkusdc-spark:836f8253a7150ceeed01",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:sparkusdc-spark:836f8253a7150ceeed01",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:37Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
+      "sources": [
+        {
+          "url": "https://vote.sky.money/executive/template-executive-vote-reduce-rewards-emissions-complete-guni-vault-offboardings-whitelist-keel-subproxy-to-send-cross-chain-messages-adjust-grove-dc-iam-parameters-delegate-compensation-star-agent-proxy-spells-january-15-2026",
+          "observedAt": "2026-10-03T23:00:37Z",
+          "datumAsOf": "2026-01-15",
+          "location": "Spark Morpho Vault - Update Vault Roles",
+          "excerpt": "Threshold: **3 of 5**",
+          "assertion": "Governance publishes exact Safe address/quorum, but not signer human/operator independence, key custody or recovery controls."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vote.sky.money/executive/template-executive-vote-reduce-rewards-emissions-complete-guni-vault-offboardings-whitelist-keel-subproxy-to-send-cross-chain-messages-adjust-grove-dc-iam-parameters-delegate-compensation-star-agent-proxy-spells-january-15-2026",
+        "https://docs.spark.finance/dev/security/security-and-audits",
+        "https://docs.spark.finance/products/isolated-markets",
+        "https://docs.spark.finance/mica/4",
+        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
+        "https://base.blockscout.com/api/v2/smart-contracts/0x0f963a8a8c01042b69054e787e5763abbb0646a3",
+        "https://docs.morpho.org/curate/concepts/roles/"
+      ],
+      "rationale": "Scoped question asks independently evidenced Safe signer independence and offchain key custody. Official governance, security/role docs, legal and financial disclosures name the exact curator/quorum but publish no identity-to-owner mapping, independent operator attestations, custody/recovery policy. Fresh block-pinned getOwners/getThreshold/modules confirm 3-of-5 cryptographic topology on both chains, not independent humans. Incident-state uncertainty remains a separate U and is not asserted resolved."
+    },
+    {
+      "id": "uw-sparkusdtbc-spark-b95dd0bfa8fc93b8",
+      "assetId": "sparkusdtbc-spark",
+      "scope": {
+        "componentKey": "control:mint-meta:sparkusdtbc-spark:c1b6ffe83625f92cee82",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:sparkusdtbc-spark:c1b6ffe83625f92cee82",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:37Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
+      "sources": [
+        {
+          "url": "https://vote.sky.money/executive/template-executive-vote-reduce-rewards-emissions-complete-guni-vault-offboardings-whitelist-keel-subproxy-to-send-cross-chain-messages-adjust-grove-dc-iam-parameters-delegate-compensation-star-agent-proxy-spells-january-15-2026",
+          "observedAt": "2026-10-03T23:00:37Z",
+          "datumAsOf": "2026-01-15",
+          "location": "Spark Morpho Vault - Update Vault Roles",
+          "excerpt": "Threshold: **3 of 5**",
+          "assertion": "Governance publishes exact Safe address/quorum, but not signer human/operator independence, key custody or recovery controls."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vote.sky.money/executive/template-executive-vote-reduce-rewards-emissions-complete-guni-vault-offboardings-whitelist-keel-subproxy-to-send-cross-chain-messages-adjust-grove-dc-iam-parameters-delegate-compensation-star-agent-proxy-spells-january-15-2026",
+        "https://docs.spark.finance/dev/security/security-and-audits",
+        "https://docs.spark.finance/products/isolated-markets",
+        "https://docs.spark.finance/mica/4",
+        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f963a8a8c01042b69054e787e5763abbb0646a3",
+        "https://docs.morpho.org/curate/concepts/roles/"
+      ],
+      "rationale": "Scoped question asks independently evidenced Safe signer independence and offchain key custody. Official governance, security/role docs, legal and financial disclosures name the exact curator/quorum but publish no identity-to-owner mapping, independent operator attestations, custody/recovery policy. Fresh block-pinned getOwners/getThreshold/modules confirm 3-of-5 cryptographic topology on both chains, not independent humans. Incident-state uncertainty remains a separate U and is not asserted resolved."
     }
   ]
 }

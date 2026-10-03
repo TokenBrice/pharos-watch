@@ -4413,6 +4413,92 @@
           "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md"
         }
       ]
+    },
+    {
+      "assetId": "sparkusdc-spark",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R14 pinned exact-vault whole-allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "bluechip-overcollateralized-lending",
+      "rationale": "Exact nonproxy MetaMorphoV1_1 deployed runtime matches verified source. All three withdrawal/supply-queue markets are onchain Morpho lender positions; source can supply/withdraw/reallocate, not borrow or pledge collateral. Pinned positions have zero borrow shares and collateral. Expected-accrued supply claims sum exactly to totalAssets; 49154985 donated idle USDC base units are excluded by source totalAssets, not missing offchain backing. Active funded collateral is cbBTC; WETH and the zero-collateral idle market have zero supply claims. All current allocation and local capital reuse is onchain overcollateralized lending; USDC parent issuer custody is inherited, not a local offchain custodian.",
+      "observations": [
+        {
+          "chain": "base",
+          "address": "0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a",
+          "function": "asset()/totalAssets()/complete allocation roster/runtime",
+          "value": "asset=0x000000000000000000000000833589fcd6edb6e08f4c7c32d4f71b54bda02913; totalAssets=330239346876417; underlying idle=49154985; runtime matches explorer deployed bytecode; block hash=0x430c0304d9b7ec31752510fe2b541907e603302caaf0dadfa8a760533d5a1058; roster=[\"0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836\",\"0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda\",\"0x38c846197ac32a752a60c25d4536ebb0c3920c532e9a859c38c91efb7b8c2abb\"]",
+          "block": 52139151
+        },
+        {
+          "chain": "base",
+          "address": "0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb",
+          "function": "complete markets / supply claims / borrow shares / collateral",
+          "value": "Morpho complete withdraw queue: [{\"id\":\"0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836\",\"params\":\"0x000000000000000000000000833589fcd6edb6e08f4c7c32d4f71b54bda02913000000000000000000000000cbb7c0000ab88b473b1f5afd9ef808440eed33bf000000000000000000000000663becd10dae6c4a3dcd89f1d76c1174199639b900000000000000000000000046415998764c29ab2a25cbea6254146d50d226870000000000000000000000000000000000000000000000000bef55718ad60000\",\"position\":\"0x00000000000000000000000000000000000000000000001028afb7e284f64cb500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\",\"expectedAssets\":330239346876417},{\"id\":\"0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda\",\"params\":\"0x000000000000000000000000833589fcd6edb6e08f4c7c32d4f71b54bda029130000000000000000000000004200000000000000000000000000000000000006000000000000000000000000fea2d58cefcb9fcb597723c6bae66ffe4193afe400000000000000000000000046415998764c29ab2a25cbea6254146d50d226870000000000000000000000000000000000000000000000000bef55718ad60000\",\"position\":\"0x000000000000000000000000000000000000000000000000000000000006b49200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\",\"expectedAssets\":0},{\"id\":\"0x38c846197ac32a752a60c25d4536ebb0c3920c532e9a859c38c91efb7b8c2abb\",\"params\":\"0x000000000000000000000000833589fcd6edb6e08f4c7c32d4f71b54bda029130000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\",\"position\":\"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\",\"expectedAssets\":0}]",
+          "block": 52139151
+        }
+      ],
+      "sources": [
+        {
+          "label": "Verified exact immutable vault implementation",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a"
+        },
+        {
+          "label": "Pinned chain read endpoint",
+          "url": "https://mainnet.base.org"
+        },
+        {
+          "label": "Spark isolated-market lending risk architecture",
+          "url": "https://docs.spark.finance/products/isolated-markets"
+        }
+      ]
+    },
+    {
+      "assetId": "sparkusdtbc-spark",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R14 pinned exact-vault whole-allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "bluechip-overcollateralized-lending",
+      "rationale": "Exact immutable VaultV2 and sole adapter deployed runtimes match verified source. Complete adapter marketIds enumerates four lender positions (sUSDS, wstETH, WBTC, cbBTC); each position has zero borrow shares and collateral. Idle USDT is zero; sum of expectedSupplyAssets equals adapter realAssets and vault totalAssets exactly. Vault multicall only delegatecalls itself; allocation calls reviewed adapter which only supplies/withdraws Morpho, with no borrowing/pledging surface. Fee accrual mints formula-derived shares, not debt. This is fully onchain local bluechip overcollateralized lending; underlying USDT issuer custody is inherited. Owner can change adapters/strategy policy, so this 31-day allocation observation is not a guarantee of immutable future allocations.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
+          "function": "asset()/totalAssets()/complete allocation roster/runtime",
+          "value": "asset=0x000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7; totalAssets=86852888030511; underlying idle=0; runtime matches explorer deployed bytecode; block hash=0xacfd1635574095212e3ce1303b8b9d563339a7df9d9e22e32a1d08d80a248aaf; roster=[\"0x000000000000000000000000ef4cb7e87f212f128f0b24cf35861e52b3c78a6a\"]",
+          "block": 26114898
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xef4cb7e87f212f128f0b24cf35861e52b3c78a6a",
+          "function": "complete markets / supply claims / borrow shares / collateral",
+          "value": "Single MorphoMarketV1AdapterV2: [{\"id\":\"0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b\",\"params\":\"0x000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7000000000000000000000000a3931d71877c0e7a3148cb7eb4463524fec27fbd0000000000000000000000000c426d174fc88b7a25d59945ab2f7274bf7b4c79000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000d645e6320408000\",\"position\":\"0x0000000000000000000000000000000000000000000000004bcfae854802d10300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\",\"expectedAssets\":\"0x00000000000000000000000000000000000000000000000000000554a35fe95d\"},{\"id\":\"0xe7e9694b754c4d4f7e21faf7223f6fa71abaeb10296a4c43a54a7977149687d2\",\"params\":\"0x000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec70000000000000000000000007f39c581f595b53c5cb19bd0b3f8da6c935e2ca000000000000000000000000095db30fab9a3754e42423000df27732cb2396992000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000bef55718ad60000\",\"position\":\"0x000000000000000000000000000000000000000000000002b1ef1f1d5c91a18300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\",\"expectedAssets\":\"0x0000000000000000000000000000000000000000000000000000335112e8dda1\"},{\"id\":\"0xa921ef34e2fc7a27ccc50ae7e4b154e16c9799d3387076c421423ef52ac4df99\",\"params\":\"0x000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec70000000000000000000000002260fac5e5542a773aa44fbcfedf7c193bc2c599000000000000000000000000008bf4b1cda0cc9f0e882e0697f036667652e1ef000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000bef55718ad60000\",\"position\":\"0x0000000000000000000000000000000000000000000000012c8eb662bd9b50ed00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\",\"expectedAssets\":\"0x000000000000000000000000000000000000000000000000000016569e812b9e\"},{\"id\":\"0x45671fb8d5dea1c4fbca0b8548ad742f6643300eeb8dbd34ad64a658b2b05bca\",\"params\":\"0x000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7000000000000000000000000cbb7c0000ab88b473b1f5afd9ef808440eed33bf0000000000000000000000000e053750dfa4e809e5f7b119832c799c2aa138ac000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000bef55718ad60000\",\"position\":\"0x0000000000000000000000000000000000000000000000000018f4dfd949613f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\",\"expectedAssets\":\"0x00000000000000000000000000000000000000000000000000000001aebffa93\"}]",
+          "block": 26114898
+        }
+      ],
+      "sources": [
+        {
+          "label": "Verified exact immutable vault implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
+        },
+        {
+          "label": "Pinned chain read endpoint",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Spark isolated-market lending risk architecture",
+          "url": "https://docs.spark.finance/products/isolated-markets"
+        },
+        {
+          "label": "Exact sole reachable Morpho adapter source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xef4cb7e87f212f128f0b24cf35861e52b3c78a6a"
+        }
+      ]
     }
   ]
 }

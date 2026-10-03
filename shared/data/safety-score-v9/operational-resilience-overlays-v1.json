@@ -6650,6 +6650,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "sparkusdc-spark",
+      "reviewedAt": "2026-10-03T22:46:43Z",
+      "expiresAt": "2027-04-01T22:46:43Z",
+      "reviewer": "W1R14 unknown-wave primary-source review",
+      "notes": "Exact vault deployment inception is an issuer-reported eligibility-only operating-history lower bound under P2. This is not parent history, independent operational assurance, measured redemption throughput, complete incident absence or reserve reconciliation. Creation identity and transaction timestamp were independently retrieved from Blockscout API.",
+      "sources": [
+        {
+          "sourceId": "exact-vault-creation",
+          "label": "Exact vault creation transaction and block timestamp",
+          "publisher": "Blockscout exact deployment record",
+          "publishedAt": "2024-12-30",
+          "url": "https://base.blockscout.com/tx/0x4ce6e5d051d2a7951781dc6dd7dc7e0e0cbac3d4723d0ba63faa4f24850370cd",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 21,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-vault-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "sparkusdtbc-spark",
+      "reviewedAt": "2026-10-03T22:46:43Z",
+      "expiresAt": "2027-04-01T22:46:43Z",
+      "reviewer": "W1R14 unknown-wave primary-source review",
+      "notes": "Exact vault deployment inception is an issuer-reported eligibility-only operating-history lower bound under P2. This is not parent history, independent operational assurance, measured redemption throughput, complete incident absence or reserve reconciliation. Creation identity and transaction timestamp were independently retrieved from Blockscout API.",
+      "sources": [
+        {
+          "sourceId": "exact-vault-creation",
+          "label": "Exact vault creation transaction and block timestamp",
+          "publisher": "Blockscout exact deployment record",
+          "publishedAt": "2026-04-02",
+          "url": "https://eth.blockscout.com/tx/0x9ddf415a09a25af3a72dd6a81acb61ab7771e7304a5cc50ce33b51f50ed6da95",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 6,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-vault-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "susdc-spark",
+      "reviewedAt": "2026-10-03T22:46:43Z",
+      "expiresAt": "2027-04-01T22:46:43Z",
+      "reviewer": "W1R14 unknown-wave primary-source review",
+      "notes": "Exact vault deployment inception is an issuer-reported eligibility-only operating-history lower bound under P2. This is not parent history, independent operational assurance, measured redemption throughput, complete incident absence or reserve reconciliation. Creation identity and transaction timestamp were independently retrieved from Blockscout API.",
+      "sources": [
+        {
+          "sourceId": "exact-vault-creation",
+          "label": "Exact vault creation transaction and block timestamp",
+          "publisher": "Blockscout exact deployment record",
+          "publishedAt": "2025-10-01",
+          "url": "https://eth.blockscout.com/tx/0xebbeb171c33498b2ad47af8bb8bfcc17990db86dd0444b8e64754c250ae1a0b2",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 12,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-vault-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "susdt-spark",
+      "reviewedAt": "2026-10-03T22:46:43Z",
+      "expiresAt": "2027-04-01T22:46:43Z",
+      "reviewer": "W1R14 unknown-wave primary-source review",
+      "notes": "Exact vault deployment inception is an issuer-reported eligibility-only operating-history lower bound under P2. This is not parent history, independent operational assurance, measured redemption throughput, complete incident absence or reserve reconciliation. Creation identity and transaction timestamp were independently retrieved from Blockscout API.",
+      "sources": [
+        {
+          "sourceId": "exact-vault-creation",
+          "label": "Exact vault creation transaction and block timestamp",
+          "publisher": "Blockscout exact deployment record",
+          "publishedAt": "2025-10-01",
+          "url": "https://eth.blockscout.com/tx/0x4fe047d7749d8c1fbfcad10ebd54dd34adeb296356d9c5d8a77f0a60e4c8bab2",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 12,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-vault-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

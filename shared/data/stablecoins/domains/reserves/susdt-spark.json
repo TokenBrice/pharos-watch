@@ -16,7 +16,7 @@
         "counterparty",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "immediate"
     },
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xe2e7a17dff93280dec073c995595155283e3c372:deployed",
@@ -35,10 +35,14 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency-map review 2026-09-30",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W1R14 exact Spark Savings idle liquidity review",
     "confidence": "probable",
     "sources": [
+      {
+        "label": "Spark V2 idle underlying availability and exact Ethereum spUSDT identity, reviewed 2026-10-03",
+        "url": "https://docs.spark.finance/dev/savings/spark-vaults-v2"
+      },
       {
         "label": "Spark Savings V2 backing and risk architecture (accessed 2026-09-30)",
         "url": "https://docs.spark.finance/products/spark-savings"
@@ -72,7 +76,7 @@
         "url": "https://etherscan.io/block/26079396"
       }
     ],
-    "rationale": "At Ethereum block 26079396 (2026-09-28T23:59:59Z), asset() identifies USDT, totalAssets() is 397809076331145 and USDT balanceOf(spUSDT) is 77934639501976, both in 6-decimal units. This separates measured idle USDT from the 80.409034348653% non-idle accounting exposure. SparkVault permits TAKER_ROLE to withdraw assets and computes totalAssets from shares and accrued chi; the remainder is a Spark protocol position rather than proof of a reconciled downstream portfolio. Its constituent asset, venue and custodian weights remain unknown. No hard maturity maximum is disclosed, so maturityDaysMax is omitted.",
+    "rationale": "Historical composition remains from Ethereum block 26079396 (2026-09-28T23:59:59Z), with no weight or composition-date refresh. October 3 metadata-only review: exact spUSDT implementation documentation identifies native USDT and atomic withdraw/redeem capped at the idle token balance. The entire idle-underlying accounting slice is therefore immediately available in-kind, not a whole-vault USD exit or assurance that taker-deployed claims are immediately liquid. Pinned fresh reads at block 26114898 confirm asset=USDT and assetsOutstanding=totalAssets minus idle balance, without replacing historical percentages. Deployed strategies remain protocol-position claims with unknown constituent asset, venue, custodian weights and realization maximum; no scalar maturity is fabricated for either scoring-inapplicable class.",
     "compositionBasis": "Archive eth_call of asset(), totalAssets() and USDT balanceOf(spUSDT) at Ethereum block 26079396; category-level classification from the pinned Spark vault implementation and address registry",
     "compositionAsOf": "2026-09-28",
     "scope": "full-composition",
