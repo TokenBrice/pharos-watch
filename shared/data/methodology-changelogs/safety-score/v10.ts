@@ -5,7 +5,7 @@ export const SAFETY_SCORE_V10: readonly MethodologyChangelogEntry[] = [
     version: "10.02",
     title: "Governed unbounded issuance and uniform D14",
     date: "2026-10-03",
-    effectiveAt: 1791066600,
+    effectiveAt: 1791066120,
     summary:
       "Safety Score v10.02 implements owner ruling D29: D14's unchanged economic-bound question and the actor's issuance process are separate axes. Positively proven, delayed, flash-resistant on-chain token governance can derive unbounded-governed without making issuance economically bounded. The release splits active compromise from unreconciled unbounded issuance, adds the 60-point mint-quality rung, and applies a uniformly sourced D14 sweep with fail-closed governance and cap-review validators. On the captured 331-card production base, 88 cards change and 34 grades flip; every change is declared.",
     impact: [
