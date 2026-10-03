@@ -684,12 +684,18 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       // the read is unavailable the route is left unrated instead of
       // assuming full-supply immediacy.
       outputAssetType: "bluechip-collateral",
-      costModel: documentedVariableFee(
-        "Yamato docs describe on-chain CJPY-for-ETH redemption against the riskiest pledge; fee structure is set by protocol mechanics rather than a single fixed bps number",
+      costModel: fixedFee(
+        0,
+        "YamatoRedeemerV5 (verified source behind Yamato.redeemer() at Ethereum block 26114984, reviewed 2026-10-03): ordinary holder redemption returns both the effective ETH payout and the gas compensation to the redeeming sender, so there is no net protocol redemption haircut; network gas and base-unit rounding apply",
       ),
       docs: [
         sourceRef("Yamato Protocol", "https://yamato.jp/", ["route"]),
         sourceRefRouteCapacityFees("Yamato docs", "https://yamato-protocol.gitbook.io/docs/"),
+        sourceRef(
+          "YamatoRedeemerV5 verified source (reviewed 2026-10-03)",
+          "https://eth.blockscout.com/address/0xd869dd57566daf8f160090fc0f3ff362f953a019?tab=contract",
+          ["fees"],
+        ),
       ],
       notes: [
         "On-chain redemption redeems 1 CJPY for 1 JPY worth of ETH from the riskiest pledge, providing a permissionless hard floor",
@@ -750,12 +756,18 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       settlementModel: "days",
       executionModel: "rules-based-nav",
       outputAssetType: "mixed-collateral",
-      costModel: undisclosedReviewedFee(
-        "Hive conversions settle over the protocol conversion window and can be affected by HBD debt-ratio haircut mechanics; public docs reviewed do not publish a fixed redemption fee",
+      costModel: fixedFee(
+        0,
+        "Hive's HBD page states the conversion turns set amounts of HBD into $1 USD worth of HIVE with no extra fees; the debt-ratio haircut and the 3.5-day median-price window affect output value, not a conversion fee",
       ),
       notes: [
         "HBD is modeled as a protocol conversion route rather than a fiat issuer rail: holders can convert HBD through Hive mechanics, but the output and haircut behavior depend on protocol debt-ratio conditions",
       ],
+      v9RouteReviewTerms: {
+        settlementDelaySec: 302_400,
+        reviewedAt: "2026-10-03",
+        docs: [sourceRef("Hive HBD conversion terms (reviewed 2026-10-03)", "https://hive.io/hbd/", ["route", "fees", "settlement"])],
+      },
       docs: [sourceRef("Hive HBD", "https://hive.io/hbd/", ["route", "capacity", "fees", "settlement"])],
     }),
     "djed-coti": defineReviewedCollateralConfig(REVIEWED_STABLECOIN_AUDIT_AT, {
@@ -811,13 +823,19 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       settlementModel: "days",
       executionModel: "rules-based-nav",
       outputAssetType: "bluechip-collateral",
-      costModel: documentedVariableFee(
-        "SMARDEX docs describe USDN burn/redemption for underlying vault value, with oracle validation and imbalance restrictions rather than one fixed redemption fee",
+      costModel: fixedFee(
+        4,
+        "SMARDEX docs charge a 0.04% vault fee (_vaultFeeBps) on each USDN deposit or withdrawal, and getVaultFeeBps() returned 4 at Ethereum block 26114894 (2026-10-03); gas, Pyth oracle, and security-deposit contingencies are separate",
       ),
       docs: [
         sourceRefFull(
           "SMARDEX USDN protocol",
           "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol",
+        ),
+        sourceRef(
+          "SMARDEX USDN protocol fees (reviewed 2026-10-03)",
+          "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/fees/protocol-fees",
+          ["fees"],
         ),
       ],
       notes: [

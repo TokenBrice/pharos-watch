@@ -46,12 +46,14 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "cadc-cad-coin": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: undisclosedReviewedFee(
-      "Direct 1:1 redemption for CAD through Loon / PayTrie; public fee schedule not disclosed",
+    costModel: fixedFee(
+      0,
+      "Loon's support centre states no fees from Loon and that standard on-chain gas applies per transaction. This is the issuer fee only; partner-ramp, bank, and network charges are not promised to be zero",
     ),
     docs: [
       sourceRefRouteCapacity("CADC FAQ", "https://faq.paytrie.com/col/cadc-faqs"),
       sourceRef("Loon website", "https://loon.finance/", ["route"]),
+      sourceRef("Loon support centre (reviewed 2026-10-03)", "https://loon.finance/support-centre/", ["fees"]),
     ],
   },
   ...expandIds(["vchf-vnx", "vgbp-vnx"], vnxGitbookBase),
@@ -198,7 +200,18 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       sourceRef("Schuman reserve audits", "https://schuman.io/reserve-attestations/", ["capacity"]),
     ],
   },
-  ...expandIds(["eurau-allunity"], allunityBase),
+  "eurau-allunity": {
+    ...allunityBase,
+    costModel: fixedFee(
+      0,
+      "AllUnity's ecosystem page states institutions can mint and redeem AllUnity stablecoins at no cost. This is the currently advertised issuer fee only: the governing terms defer issuance and redemption fees to a separate fee schedule, and holders pay third-party blockchain gas",
+    ),
+    docs: [
+      sourceRefRouteCapacity("AllUnity whitepaper", "https://allunity.com/whitepaper/"),
+      sourceRef("AllUnity trust center", "https://allunity.com/trust-center/", ["capacity"]),
+      sourceRef("AllUnity ecosystem (reviewed 2026-10-03)", "https://allunity.com/ecosystem", ["fees"]),
+    ],
+  },
   "chfau-allunity": {
     ...allunityBase,
     reviewedAt: "2026-10-02",
@@ -304,8 +317,9 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-05-24"),
     settlementModel: "days",
-    costModel: undisclosedReviewedFee(
-      "Eligible FinChain customers mint and redeem FUSD through the issuer against a tokenized Treasury and money-market fund reserve portfolio; public docs reviewed do not publish one fixed redemption fee",
+    costModel: fixedFee(
+      50,
+      "FinChain's FUSD fees page states a 50 bps (0.5%) redemption fee is charged on each transaction and deducted from the FUSD redeemed. It does not cover bank or network charges and does not resolve the documented USDT payout identity",
     ),
     docs: [
       sourceRefRouteCapacityAccess("FUSD introduction", "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction"),
@@ -314,6 +328,11 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
         "settlement",
       ]),
       sourceRef("FUSD token", "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token", ["route"]),
+      sourceRef(
+        "FUSD fees (reviewed 2026-10-03)",
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/fees",
+        ["fees"],
+      ),
       sourceRef("FUSD website", "https://fusd.finchain.global/", ["fees", "access"]),
     ],
     notes: [
@@ -425,14 +444,20 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ],
   },
   /** iauon-ondo and slvon-ondo share the Ondo GM shape; they differ only in ticker,
-   *  asset page URL, and the underlying-fund name in the notes. */
+   *  asset page URL, Final Terms document, and the underlying-fund name in the notes. */
   ...Object.fromEntries(
     (
       [
-        ["iauon-ondo", "IAUon", "iauon", "IAU", "iShares Gold Trust"],
-        ["slvon-ondo", "SLVon", "slvon", "SLV", "iShares Silver Trust"],
+        [
+          "iauon-ondo", "IAUon", "iauon", "IAU", "iShares Gold Trust",
+          "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf",
+        ],
+        [
+          "slvon-ondo", "SLVon", "slvon", "SLV", "iShares Silver Trust",
+          "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf",
+        ],
       ] as const
-    ).map(([id, label, slug, underlyingTicker, fundName]) => [
+    ).map(([id, label, slug, underlyingTicker, fundName, finalTermsUrl]) => [
       id,
       {
         ...issuerBase,
@@ -440,9 +465,12 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
         settlementModel: "days",
         executionModel: "rules-based-nav",
         outputAssetType: "nav",
-        costModel: undisclosedReviewedFee(
-          `Ondo Global Markets subscriptions and redemptions follow the tokenized ${underlyingTicker} economic exposure for eligible investors; public materials reviewed do not publish one fixed redemption fee`,
-        ),
+        costModel: {
+          ...documentedVariableFee(
+            `${label} Final Terms (2025-11-11) set the maximum issuer redemption fee at up to 0.1% of the ${underlyingTicker} market price, at the issuer's discretion; the live quote and user gas are separate`,
+          ),
+          feeBpsMax: 10,
+        },
         docs: [
           sourceRefRouteCapacity(`${label} asset page`, `https://app.ondo.finance/assets/${slug}`),
           sourceRef("Ondo Global Markets overview", "https://docs.ondo.finance/ondo-global-markets/overview", [
@@ -460,6 +488,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
             "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
             ["capacity"],
           ),
+          sourceRef(`${label} Final Terms (dated 2025-11-11; reviewed 2026-10-03)`, finalTermsUrl, ["fees"]),
         ],
         notes: [
           `${label} is modeled as an eligible-investor NAV redemption route to Ondo GM value, not as direct holder ownership or delivery of underlying ${fundName} shares.`,

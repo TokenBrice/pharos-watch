@@ -377,7 +377,10 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "ausd-agora": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: undisclosedReviewedFee("Fees may apply; public docs do not publish a fixed redemption rate"),
+    costModel: fixedFee(
+      0,
+      "Agora's Stablecoin API page states no fees on AUSD to and from USD. This is the issuer fee only: the terms reserve a platform fee schedule, and bank, network, and third-party charges are not promised to be zero",
+    ),
     docs: [
       sourceRef("Agora Bermuda terms of use", "https://static.agora.finance/termsofuse.pdf", [
         "route",
@@ -385,6 +388,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
         "access",
         "settlement",
       ]),
+      sourceRef("Agora Stablecoin API (reviewed 2026-10-03)", "https://www.agora.finance/product/stablecoin-api", ["fees"]),
     ],
   },
   "usdo-openeden": {
@@ -425,12 +429,18 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "fidd-fidelity": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: undisclosedReviewedFee(
-      "Eligible Fidelity clients can buy, sell, and redeem FIDD at a guaranteed $1 price; public fee schedule not disclosed",
+    costModel: fixedFee(
+      0,
+      "FIDD terms: FDA does not charge fees for purchasing FIDD from FDA or for redeeming FIDD with FDA. This is the issuer fee only; Crypto Account Agreement fees, bank or third-party funds-transfer fees, and network gas are not promised to be zero",
     ),
     docs: [
       sourceRefRouteCapacity("Fidelity Digital Dollar overview", "https://www.fidelitydigitalassets.com/stablecoin"),
-      sourceRefRouteCapacityAccess("FIDD terms and conditions", "https://www.fidelitydigitalassets.com/fidd-terms"),
+      sourceRef("FIDD terms and conditions (dated 2026-04-13; reviewed 2026-10-03)", "https://www.fidelitydigitalassets.com/fidd-terms", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+      ]),
     ],
   },
   "usdcv-societe-generale-forge": {
@@ -475,10 +485,14 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "eurs-stasis": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: undisclosedReviewedFee("1:1 redemption through STSS (Malta) Limited; public fee schedule not disclosed"),
+    costModel: fixedFee(
+      0,
+      "STASIS Terms of Business section 8.8: no fees apply to redemption transactions and each EURS is redeemed at its EUR 1 par value. This is the issuer fee only; network transaction fees are separate",
+    ),
     docs: [
       sourceRefRouteCapacity("STASIS transparency", "https://stasis.net/transparency"),
       sourceRef("STASIS website", "https://stasis.net/", ["route"]),
+      sourceRef("STASIS Terms of Business, section 8.8 (reviewed 2026-10-03)", "https://stasis.net/terms", ["route", "fees"]),
     ],
   },
   "brz-transfero": {
@@ -523,8 +537,9 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "documented-bound", basis: "hot-buffer" },
-    costModel: documentedVariableFee(
-      "Direct 1:1 mint and redemption; BUIDL shares redeemable 24/7 via atomic swap with Securitize",
+    costModel: fixedFee(
+      0,
+      "Anchorage Covered Stablecoin Service Fee Schedule (2026-08-25): no Covered Stablecoin Service Fees are charged in connection with USDtb. This is the issuer fee only; holders remain responsible for gas or network fees",
     ),
     reviewedAt: "2026-05-17",
     docs: [
@@ -532,6 +547,11 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       sourceRef("USDtb reserve attestations", "https://www.anchorage.com/platform/usdtb-reserve-attestations", [
         "capacity",
       ]),
+      sourceRef(
+        "Anchorage Covered Stablecoin Service Fee Schedule (dated 2026-08-25; reviewed 2026-10-03)",
+        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-service-fee-schedule",
+        ["fees"],
+      ),
     ],
     notes: [
       "Tracked USDtb metadata records a 10% USDC redemption reserve; Pharos uses that reserve slice as the documented hot-buffer lower bound and does not promote the unvalidated 30% proposal.",
@@ -555,8 +575,9 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_EXIT_CREDIT_AT),
     settlementModel: "days",
-    costModel: undisclosedReviewedFee(
-      "Anchorage redeems at Par Value net of any applicable fees disclosed in its Covered Stablecoin Fee Schedule, which is not published publicly",
+    costModel: fixedFee(
+      0,
+      "Anchorage Covered Stablecoin Service Fee Schedule (2026-08-25): no Covered Stablecoin Service Fees are charged in connection with USDPT. This is the issuer fee only; network, Western Union cash-out, and other third-party charges are separate",
     ),
     docs: [
       sourceRefFull(
@@ -573,6 +594,11 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
         "Anchorage and Western Union launch USDPT",
         "https://www.anchorage.com/insights/anchorage-digital-western-union-partner-launch-usdpt-federally-regulated-stablecoin-solana",
         ["route"],
+      ),
+      sourceRef(
+        "Anchorage Covered Stablecoin Service Fee Schedule (dated 2026-08-25; reviewed 2026-10-03)",
+        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-service-fee-schedule",
+        ["fees"],
       ),
     ],
     notes: [

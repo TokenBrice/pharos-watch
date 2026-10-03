@@ -324,12 +324,18 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     ],
   }),
   "susdai-usd-ai": defineReviewedQueueRedeemConfig("2026-04-04", {
-    costModel: undisclosedReviewedFee(
-      "USD.AI documents sUSDai unstaking as a queued withdrawal into USDai with fixed 30-day processing windows; public docs reviewed do not publish a numeric redemption fee or a quantified instant-liquidity bound",
+    costModel: documentedVariableFee(
+      "sUSDai redemptions use conservative NAV while deposits use optimistic NAV; the dynamic forward-pricing spread varies with loan repayments rather than a fixed redemption fee, and no same-notional bound is evaluated",
+      "formula",
     ),
     docs: [
       sourceRef("USD.AI FAQ", "https://docs.usd.ai/faq/usdai-and-susdai-101", ["route", "capacity", "settlement"]),
       sourceRef("USDai product page", "https://usd.ai/usdai", ["route", "settlement"]),
+      sourceRef(
+        "USD.AI sUSDai withdrawal estimates (reviewed 2026-10-03)",
+        "https://docs.usd.ai/depositor/susdai/susdai-withdrawal-estimates",
+        ["fees"],
+      ),
     ],
     notes: [
       "Current route models sUSDai as an eventual queued exit back into USDai rather than as an immediate stablecoin redemption rail",
@@ -438,13 +444,19 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
     executionModel: "rules-based-nav",
-    costModel: undisclosedReviewedFee(
-      "Brix protocol materials describe standard wiTRY unstaking through a 3-day cooldown plus a fast-withdraw option with an additional fee; public materials reviewed do not publish one global fixed fee",
+    costModel: fixedFee(
+      0,
+      "The canonical Ethereum wiTRY cooldownShares/unstake path (verified source, read at block 26114896 on 2026-10-03) withdraws the full assets from the silo with no protocol exit fee; the role-gated fast-redeem branch, gas, and cross-chain transport are separate",
     ),
     docs: [
       sourceRefFull("Brix iTRY audit scope overview", "https://hackmd.io/@EKJz7PaeT2GeAUJS83WWVw/SJPLb3QZWe"),
       sourceRefRouteCapacityAccess("Code4rena Brix Money audit repository", "https://github.com/code-423n4/2025-11-brix-money"),
       sourceRef("Brix website", "https://www.brix.money/", ["route", "access"]),
+      sourceRef(
+        "wiTRY verified source (Sourcify, reviewed 2026-10-03)",
+        "https://sourcify.dev/server/v2/contract/1/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee?fields=sources,abi",
+        ["fees"],
+      ),
     ],
     notes: [
       "wiTRY is the staked ERC-4626-style wrapper over iTRY; unstaking returns iTRY after the documented 3-day cooldown unless the holder uses the fee-bearing fast-withdraw path (re-confirmed 2026-07-27 against the issuer-published audit scope overview, Kimi data review).",
@@ -626,8 +638,20 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       ),
       sourceRefRouteCapacity("Avant core tokens", "https://docs.avantprotocol.com/overview/core-tokens"),
     ],
+    v9RouteReviewTerms: {
+      settlementDelaySec: 604_800,
+      reviewedAt: "2026-10-03",
+      docs: [
+        sourceRef(
+          "Avant redeeming avAssets (reviewed 2026-10-03)",
+          "https://docs.avantprotocol.com/overview/using-avant-protocol/redeeming-avassets",
+          ["route", "settlement"],
+        ),
+      ],
+    },
     notes: [
       "Avant docs describe redeeming avUSD back into USDC through an onchain request flow that usually completes within hours but can take up to 7 days depending on liquidity",
+      "Settlement reviewed 2026-10-03: the redemption docs state requests can take up to 7 days depending on market liquidity and other conditions, so V9 uses that published 604,800-second maximum. It is not independent proof of funded execution.",
     ],
   }),
   "usdu-unitas": defineQueueRedeemConfig({
@@ -655,10 +679,18 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     accessModel: "issuer-api",
     outputAssets: ["usdt-tether"],
     settlementModel: "days",
-    costModel: undisclosedReviewedFee(),
+    costModel: fixedFee(
+      0,
+      "Queued redeem orders carry redeemOrderFeePpm()=0 at Plasma block 34126349 (2026-10-03); the separate direct-redeem fee (3000 ppm) does not apply to this queued route. The fee is role-mutable and gas is separate",
+    ),
     docs: [
       sourceRefRouteCapacityAccess("Yuzu Money documentation", "https://yuzu-money.gitbook.io/yuzu-money"),
       sourceRef("Yuzu Accountable dashboard", "https://yuzu.accountable.capital/", ["capacity"]),
+      sourceRef(
+        "Yuzu redemption contract verified source (Routescan, reviewed 2026-10-03)",
+        "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
+        ["fees"],
+      ),
     ],
     notes: [
       "Yuzu documents primary minting and redemption for eligible KYC / AML-cleared investors; current model treats that rail as a reviewed queued exit rather than assuming continuously available public stablecoin liquidity",

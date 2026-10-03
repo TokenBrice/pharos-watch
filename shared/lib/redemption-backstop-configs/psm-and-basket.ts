@@ -58,15 +58,20 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     capacityModel: { kind: "reserve-sync-metadata", basis: "live-direct-telemetry" },
     reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     outputAssets: ["usdc-circle", "usdt-tether", "pyusd-paypal", "usde-ethena"],
-    costModel: documentedVariableFee(
-      "Normal redemptions are asset-specific: 0 bps for USDT/byUSD and 5 bps for USDC/USDe; stress Basket Mode returns a proportional collateral basket instead",
-    ),
+    costModel: {
+      ...documentedVariableFee(
+        "Normal redemptions are asset-specific: 0 bps for USDT/byUSD and 5 bps for USDC/USDe; stress Basket Mode returns a proportional collateral basket instead. The current collateral-specific fee table (reviewed 2026-10-03) caps the redemption fee at 5 bps; gas and live redeem-rate constraints remain",
+      ),
+      feeBpsMin: 0,
+      feeBpsMax: 5,
+    },
     docs: [
       sourceRefRouteCapacityFees("Berachain Honey docs", "https://docs.berachain.com/general/tokens/honey"),
       sourceRefRouteCapacityFees(
         "Berachain HoneyFactory source",
         "https://github.com/berachain/contracts/blob/main/src/honey/HoneyFactory.sol",
       ),
+      sourceRef("Berachain BUSD collateral fee table (reviewed 2026-10-03)", "https://docs.berachain.com/general/tokens/busd", ["fees"]),
     ],
     notes: [
       "Modeled against Basket Mode because the stress-state redemption path turns exits into proportional basket withdrawals when collateral becomes unstable",

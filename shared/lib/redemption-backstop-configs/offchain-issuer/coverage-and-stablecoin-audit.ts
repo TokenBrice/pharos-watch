@@ -75,6 +75,13 @@ const MIDAS_LYT_FEE_DISCLOSURES: Partial<
     label: "Midas Open Liquidity Architecture",
     url: "https://docs.midas.app/liquidity-and-composability/open-liquidity-architecture",
   },
+  "mglobal-midas-fasanara": {
+    statement:
+      "Standard redemption, settled monthly at the official NAV with no fee; this does not apply to instant-liquidity routes.",
+    feeBpsMax: 0,
+    label: "Midas mGLOBAL Aave Horizon launch (2026-06-23; reviewed 2026-10-03)",
+    url: "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/",
+  },
   "mhyper-midas": {
     statement: "Tokenholder Fee 0.50 percent redemption fee and 10 percent interest fee",
     feeBpsMax: 50,
@@ -86,6 +93,13 @@ const MIDAS_LYT_FEE_DISCLOSURES: Partial<
     feeBpsMax: 50,
     label: "Midas mMEV Final Terms",
     url: "https://2732961456-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FsPjk0ggBxEJCCnVFFkDR%2Fuploads%2FEoSLAqc1ZoCEV1LBkiup%2FMidas_Final_Terms_mMEV_Update_2025.pdf?alt=media&token=d58efef6-7d01-4889-9af7-3c86f1a9e932",
+  },
+  "mapollo-midas": {
+    statement:
+      "mAPOLLO Final Terms signed July 17, 2026 list Redemption Fees 0% for standard redemption; the separate Instant Redemption Fee of 0.5% does not apply to this route, and all-in transaction cost is not asserted zero.",
+    feeBpsMax: 0,
+    label: "Midas mAPOLLO Final Terms (signed 2026-07-17; reviewed 2026-10-03)",
+    url: "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2F7sSYvDMJYrWvBsvKGQFI%2F20260714_mAPOLLO_FT_signed_final.pdf?alt=media",
   },
 };
 assertKnownTableKeys(
@@ -116,9 +130,9 @@ const MIDAS_LYT_TERMS_GAPS: Partial<Record<string, MidasLytTermsGap>> = {
       "The product was discontinued, and the reviewed materials checked on 2026-09-04 do not establish which residual mMEV route remains executable or its post-retirement capacity, settlement SLA, and all-in cost.",
   },
   "mapollo-midas": {
-    missingScoringFields: ["capacity", "settlement", "cost"],
+    missingScoringFields: ["capacity", "settlement"],
     rationale:
-      "The shared Midas liquidity architecture establishes a redemption mechanism, but the mAPOLLO materials checked on 2026-09-04 publish no current executable capacity, binding calendar-day fallback SLA, or all-in cost.",
+      "The reviewed standard-redemption fee is retained: the mAPOLLO Final Terms signed July 17, 2026 list Redemption Fees 0% and a separate 0.5% Instant Redemption Fee. The shared Midas liquidity architecture establishes a redemption mechanism, but the mAPOLLO materials publish no current executable capacity or binding calendar-day fallback SLA, so capacity and settlement remain withheld.",
   },
 };
 assertKnownTableKeys(
@@ -823,8 +837,9 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "days",
     routeStatus: "open",
-    costModel: undisclosedReviewedFee(
-      "Blox materials describe 1:1 MYRC redemption for Malaysian Ringgit; product terms leave issuance and redemption subject to Blox terms and do not publish one fixed redemption fee",
+    costModel: fixedFee(
+      0,
+      "BLOX transaction fee structure (effective 2025-07-14) clause 2.2: all Service Fees are absorbed by the Company and no charges are imposed on Users for Platform transactions. This is the issuer service fee only; separately incurred bank, network, and third-party costs are not promised to be zero, and the Company may revise fees",
     ),
     docs: [
       sourceRefFull("Blox MYRC", "https://www.blox.my/myrc"),
@@ -834,6 +849,11 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         "fees",
         "access",
       ]),
+      sourceRef(
+        "BLOX transaction fee structure (effective 2025-07-14; reviewed 2026-10-03)",
+        "https://www.blox.my/policies/transaction-fee-structure",
+        ["fees"],
+      ),
     ],
     notes: [
       "Modeled as Malaysian eKYC and bank-account redemption through Blox/FPX rails; the route is jurisdiction- and account-limited.",

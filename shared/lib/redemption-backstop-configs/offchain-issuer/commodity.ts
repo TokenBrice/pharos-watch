@@ -372,8 +372,9 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
         { url: "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2Frlo39Pv6A1ZIVdLEROOh%2FMatrixdock%20Silver%20Bureau%20Veritas%20Audit%20Jul%202026.pdf?alt=media&token=d5a97752-ca3b-46d3-9077-16ac2bc11ee8", quote: "HERAEUS Silver Bar 1000 toz – 999.0 Fineness | 64 PCS | BRINK’S HK. HERAEUS Silver Bar 1000 toz – 999.0 Fineness | 2 PCS | MALCA-AMIT SG" },
       ],
     },
-    costModel: documentedVariableFee(
-      "Matrixdock mint/redeem route is available for KYC users and follows the issuer's XAGm silver-per-token framework; public materials reviewed do not expose one global fixed XAGm redemption fee",
+    costModel: fixedFee(
+      50,
+      "Matrixdock's XAGm FAQ and March 17, 2026 whitepaper charge 0.50% for each redemption order. Physical delivery, collection, currency, and gas costs remain separate",
     ),
     docs: [
       sourceRefFull("XAGm physical redemption terms", "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming"),
@@ -382,9 +383,10 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
         "Matrixdock XAGm announcement",
         "https://www.matrixdock.com/blog/announcements/matrixdock-launches-xagm-bringing-lbma-good-delivery-silver-on-chain",
       ),
+      sourceRef("Matrixdock XAGm FAQ (reviewed 2026-10-03)", "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/faq", ["fees"]),
     ],
     notes: [
-      "XAGm redemption value follows Matrixdock's published silver-per-token mechanics, so Pharos treats the route as documented but not a fixed-fee public commodity exit",
+      "XAGm redemption value follows Matrixdock's published silver-per-token mechanics; the issuer redemption fee is the published 0.50% per order, while physical delivery and cash-out costs are not part of that fixed fee",
     ],
   },
   "ggbr-goldfish-gold": {
