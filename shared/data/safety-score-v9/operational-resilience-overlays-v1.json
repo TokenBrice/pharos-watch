@@ -5495,6 +5495,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "onyc-onre",
+      "reviewedAt": "2026-10-03T22:46:57Z",
+      "expiresAt": "2027-10-03T22:46:57Z",
+      "reviewer": "W1R47 primary-source unknown review",
+      "notes": "Dated exact-token operating evidence establishes only a conservative history lower bound. Deployment date is accepted for contract-source rows; no independent continuity, redeemed throughput, reconciliation or incident-free performance asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-token-history",
+          "label": "OnRe dated ONyc launch",
+          "publisher": "OnRe",
+          "publishedAt": "2025-07-03",
+          "url": "https://www.onre.finance/blog/onre-evolves-one-into-onyc-to-power-stablecoin-adoption-across-defi-and-traditional-markets",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 15,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-token-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdq-quill",
+      "reviewedAt": "2026-10-03T22:46:57Z",
+      "expiresAt": "2027-10-03T22:46:57Z",
+      "reviewer": "W1R47 primary-source unknown review",
+      "notes": "Dated exact-token operating evidence establishes only a conservative history lower bound. Deployment date is accepted for contract-source rows; no independent continuity, redeemed throughput, reconciliation or incident-free performance asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-token-history",
+          "label": "Current USDQ creation at Scroll block 15217932",
+          "publisher": "Scroll Blockscout",
+          "publishedAt": "2025-05-05",
+          "url": "https://scrollscan.com/tx/0x2de93494fb5d1e36a97ec0063baafd758dc60883a94350f6f56430a2be4164e7",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 16,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-token-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdnr-nerona",
+      "reviewedAt": "2026-10-03T22:46:57Z",
+      "expiresAt": "2027-10-03T22:46:57Z",
+      "reviewer": "W1R47 primary-source unknown review",
+      "notes": "Dated exact-token operating evidence establishes only a conservative history lower bound. Deployment date is accepted for contract-source rows; no independent continuity, redeemed throughput, reconciliation or incident-free performance asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-token-history",
+          "label": "USDnr creation at Ethereum block 24216323",
+          "publisher": "Ethereum Blockscout",
+          "publishedAt": "2026-01-12",
+          "url": "https://eth.blockscout.com/tx/0x52a074a90edf1f2f80480d714e123bce2f7a86445c759ba97f330e878f25c209",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 8,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-token-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "lisusd-lista",
+      "reviewedAt": "2026-10-03T22:46:57Z",
+      "expiresAt": "2027-10-03T22:46:57Z",
+      "reviewer": "W1R47 primary-source unknown review",
+      "notes": "Dated exact-token operating evidence establishes only a conservative history lower bound. Deployment date is accepted for contract-source rows; no independent continuity, redeemed throughput, reconciliation or incident-free performance asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-token-history",
+          "label": "Dated lisUSD circulation disclosure",
+          "publisher": "Lista DAO",
+          "publishedAt": "2025-01-09",
+          "url": "https://blog.lista.org/lista-dao-annual-report-for-2024",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 20,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-token-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

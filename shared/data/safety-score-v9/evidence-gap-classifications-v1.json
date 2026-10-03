@@ -11799,6 +11799,334 @@
         "https://www.blackrock.com/cash/en-us/products/282772/fed-trust-%28institutional%29-fund"
       ],
       "rationale": "No finite maturityDaysMax for the actual demand-deposit claims or held money-market-fund share claims is published. The report gives demand deposits and fund Maturity Date N/A, not portfolio maxima. Underlying bill limits/WAM/WAL do not establish expiry of the fund-share claims. Do not invent zero or apply an underlying mandate across the mixed fund bucket."
+    },
+    {
+      "id": "uw-usdq-quill-24c7e74e7b76b73c",
+      "assetId": "usdq-quill",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:47dcfb5b865be0ae3099be07",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://docs.quill.finance/faq/risks-and-disclosures.md",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "In DeFi, risks include **smart contract risk** (vulnerabilities in the code), **protocol risk** (potential for governance or operational issues), **market risk** (fluctuations in asset prices) and **liquidity risk** (availability of assets during high demand).",
+          "assertion": "Quill discloses collateral/liquidity risk and onchain redemption, but no whole-position USD realization horizon for SCR, WETH, wstETH or weETH."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quill.finance/",
+        "https://app.quill.finance/",
+        "https://docs.quill.finance/llms.txt",
+        "https://docs.quill.finance/faq/borrowing.md",
+        "https://docs.quill.finance/faq/fee-model.md",
+        "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions.md",
+        "https://docs.quill.finance/faq/risks-and-disclosures.md",
+        "https://docs.quill.finance/documentation/contract-addresses.md",
+        "https://docs.quill.finance/documentation/audits.md",
+        "https://scrollscan.com/api/v2/smart-contracts/0x358d90036e70542ae24b3813c0efecc1f8811442"
+      ],
+      "rationale": "Docs, risk disclosure, branch address inventory and verified token/registry source distinguish pledged collateral from free assets. No published maximum for realizing the entire SCR, WETH, wstETH or weETH collateral slice into USD was located; collateral redemption speed alone does not establish that horizon."
+    },
+    {
+      "id": "uw-usdq-quill-0641a52c94f73cd3",
+      "assetId": "usdq-quill",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:68594bcc0742a1c26a1c9ca5",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://docs.quill.finance/faq/risks-and-disclosures.md",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "In DeFi, risks include **smart contract risk** (vulnerabilities in the code), **protocol risk** (potential for governance or operational issues), **market risk** (fluctuations in asset prices) and **liquidity risk** (availability of assets during high demand).",
+          "assertion": "Quill discloses collateral/liquidity risk and onchain redemption, but no whole-position USD realization horizon for SCR, WETH, wstETH or weETH."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quill.finance/",
+        "https://app.quill.finance/",
+        "https://docs.quill.finance/llms.txt",
+        "https://docs.quill.finance/faq/borrowing.md",
+        "https://docs.quill.finance/faq/fee-model.md",
+        "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions.md",
+        "https://docs.quill.finance/faq/risks-and-disclosures.md",
+        "https://docs.quill.finance/documentation/contract-addresses.md",
+        "https://docs.quill.finance/documentation/audits.md",
+        "https://scrollscan.com/api/v2/smart-contracts/0x358d90036e70542ae24b3813c0efecc1f8811442"
+      ],
+      "rationale": "Docs, risk disclosure, branch address inventory and verified token/registry source distinguish pledged collateral from free assets. No published maximum for realizing the entire SCR, WETH, wstETH or weETH collateral slice into USD was located; collateral redemption speed alone does not establish that horizon."
+    },
+    {
+      "id": "uw-usdq-quill-e6890233f7778b44",
+      "assetId": "usdq-quill",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:a301b79207c96314b21d329d",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://docs.quill.finance/faq/risks-and-disclosures.md",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "In DeFi, risks include **smart contract risk** (vulnerabilities in the code), **protocol risk** (potential for governance or operational issues), **market risk** (fluctuations in asset prices) and **liquidity risk** (availability of assets during high demand).",
+          "assertion": "Quill discloses collateral/liquidity risk and onchain redemption, but no whole-position USD realization horizon for SCR, WETH, wstETH or weETH."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quill.finance/",
+        "https://app.quill.finance/",
+        "https://docs.quill.finance/llms.txt",
+        "https://docs.quill.finance/faq/borrowing.md",
+        "https://docs.quill.finance/faq/fee-model.md",
+        "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions.md",
+        "https://docs.quill.finance/faq/risks-and-disclosures.md",
+        "https://docs.quill.finance/documentation/contract-addresses.md",
+        "https://docs.quill.finance/documentation/audits.md",
+        "https://scrollscan.com/api/v2/smart-contracts/0x358d90036e70542ae24b3813c0efecc1f8811442"
+      ],
+      "rationale": "Docs, risk disclosure, branch address inventory and verified token/registry source distinguish pledged collateral from free assets. No published maximum for realizing the entire SCR, WETH, wstETH or weETH collateral slice into USD was located; collateral redemption speed alone does not establish that horizon."
+    },
+    {
+      "id": "uw-usdq-quill-17ede80556fd01cc",
+      "assetId": "usdq-quill",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:cc80f6ed653591ecc51ccde0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://docs.quill.finance/faq/risks-and-disclosures.md",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "In DeFi, risks include **smart contract risk** (vulnerabilities in the code), **protocol risk** (potential for governance or operational issues), **market risk** (fluctuations in asset prices) and **liquidity risk** (availability of assets during high demand).",
+          "assertion": "Quill discloses collateral/liquidity risk and onchain redemption, but no whole-position USD realization horizon for SCR, WETH, wstETH or weETH."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quill.finance/",
+        "https://app.quill.finance/",
+        "https://docs.quill.finance/llms.txt",
+        "https://docs.quill.finance/faq/borrowing.md",
+        "https://docs.quill.finance/faq/fee-model.md",
+        "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions.md",
+        "https://docs.quill.finance/faq/risks-and-disclosures.md",
+        "https://docs.quill.finance/documentation/contract-addresses.md",
+        "https://docs.quill.finance/documentation/audits.md",
+        "https://scrollscan.com/api/v2/smart-contracts/0x358d90036e70542ae24b3813c0efecc1f8811442"
+      ],
+      "rationale": "Docs, risk disclosure, branch address inventory and verified token/registry source distinguish pledged collateral from free assets. No published maximum for realizing the entire SCR, WETH, wstETH or weETH collateral slice into USD was located; collateral redemption speed alone does not establish that horizon."
+    },
+    {
+      "id": "uw-onyc-onre-afec61e8de932ba9",
+      "assetId": "onyc-onre",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:16b7da85962152dcaf6eb9d5",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:52Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://kamino.com/docs/products/borrow/supplying.md",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "You can withdraw at any time as long as the pool has available liquidity \u2014 that is, not all deposited assets are currently borrowed.",
+          "assertion": "Withdrawal depends on liquidity; no guaranteed all-position realization time for OnRe Kamino lending slices."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.onre.finance/for-capital-providers/collateral-composition",
+        "https://docs.onre.finance/legal/platform-terms-of-use.md",
+        "https://docs.onre.finance/security-and-verification/independent-attestations.md",
+        "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-bLCCxKNCB2GHgFV5Jo6_fbv4t3CT60dwPMbUDfwhHglt5GBoLp47jp1wcCOY8Ob1ZgjA6KXNczdq/pub?output=csv&gid=1591707661&single=true",
+        "https://kamino.com/docs/llms.txt",
+        "https://kamino.com/docs/products/borrow/supplying.md"
+      ],
+      "rationale": "OnRe identifies USDC and USDG supplied to Kamino, but provides no slice-specific liquidity horizon. Kamino explicitly conditions withdrawal on available pool liquidity and gives no full-position realization deadline. Source-native conditional availability is not an immediate whole-slice bound."
+    },
+    {
+      "id": "uw-onyc-onre-67036e1fd616fe30",
+      "assetId": "onyc-onre",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:cc2850adad80c09884d1cbba",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:52Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://kamino.com/docs/products/borrow/supplying.md",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "You can withdraw at any time as long as the pool has available liquidity \u2014 that is, not all deposited assets are currently borrowed.",
+          "assertion": "Withdrawal depends on liquidity; no guaranteed all-position realization time for OnRe Kamino lending slices."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.onre.finance/for-capital-providers/collateral-composition",
+        "https://docs.onre.finance/legal/platform-terms-of-use.md",
+        "https://docs.onre.finance/security-and-verification/independent-attestations.md",
+        "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-bLCCxKNCB2GHgFV5Jo6_fbv4t3CT60dwPMbUDfwhHglt5GBoLp47jp1wcCOY8Ob1ZgjA6KXNczdq/pub?output=csv&gid=1591707661&single=true",
+        "https://kamino.com/docs/llms.txt",
+        "https://kamino.com/docs/products/borrow/supplying.md"
+      ],
+      "rationale": "OnRe identifies USDC and USDG supplied to Kamino, but provides no slice-specific liquidity horizon. Kamino explicitly conditions withdrawal on available pool liquidity and gives no full-position realization deadline. Source-native conditional availability is not an immediate whole-slice bound."
+    },
+    {
+      "id": "uw-onyc-onre-14b6843746f46e76",
+      "assetId": "onyc-onre",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:8c681fb5ffeb76135fa1384f",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://bitwiseinvestments.com/crypto-funds/uscc",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "Ownership in the Fund is via the USCC token or book-entry record keeping.",
+          "assertion": "Fund-share claims are disclosed, but no contractual maximum maturity of the fund share is published."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.onre.finance/for-capital-providers/collateral-composition/uscc-or-bitwise-crypto-carry-fund.md",
+        "https://bitwiseinvestments.com/crypto-funds/uscc",
+        "https://s3.us-east-1.amazonaws.com/static.bitwiseinvestments.com/uscc/bitwise-crypto-carry-fund-uscc-fact-sheet.pdf",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
+      ],
+      "rationale": "The scoped USCC holding is a fund share, not the underlying Treasury or futures instruments. Public issuer holdings, structuring and redemption documents do not publish a maximum maturityDaysMax for that share claim. Short duration, dated underlying positions and daily redemption are not a share-maturity covenant."
+    },
+    {
+      "id": "uw-onyc-onre-f6eebc1b3555f3e9",
+      "assetId": "onyc-onre",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2e3053db34e2d87f05122e2f",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://usyc.docs.hashnote.com/overview/product-structuring.md",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "Tokens represent shares in the fund, thus all token holders need to be onboarded and KYC/AML\u2019d to be able to own SDYF shares.",
+          "assertion": "Fund-share claims are disclosed, but no contractual maximum maturity of the fund share is published."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.onre.finance/for-capital-providers/collateral-composition/usyc-or-us-yield-coin.md",
+        "https://usyc.docs.hashnote.com/llms.txt",
+        "https://usyc.docs.hashnote.com/overview/introduction.md",
+        "https://usyc.docs.hashnote.com/overview/product-structuring.md",
+        "https://usyc.docs.hashnote.com/overview/subscription-and-redemption.md",
+        "https://www.hashnote.com/legal-disclosures"
+      ],
+      "rationale": "The scoped USYC holding is a fund share, not the underlying Treasury or futures instruments. Public issuer holdings, structuring and redemption documents do not publish a maximum maturityDaysMax for that share claim. Short duration, dated underlying positions and daily redemption are not a share-maturity covenant."
+    },
+    {
+      "id": "uw-onyc-onre-807403c731f0e76f",
+      "assetId": "onyc-onre",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:fbc58fbcf982e8298134e5b0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "Direct redemption is subject to onboarding, available liquidity, operational controls, program terms, and processing windows.",
+          "assertion": "USDv redemption is explicitly conditional; no full-position liquidity-horizon bound is provided."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.onre.finance/for-capital-providers/collateral-composition/usdv-or-usdv.md",
+        "https://docs.solomonlabs.org/",
+        "https://docs.solomonlabs.org/usdv/",
+        "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming",
+        "https://docs.solomonlabs.org/usdv/transparency-and-risk"
+      ],
+      "rationale": "Exact replacement mint is identified in the issuer docs. The acquisition/redemption terms describe venues and conditional institutional access but no guaranteed full-position realization horizon for OnRe\u2019s held USDv. Liquid/composable marketing is not a maximum time bound."
     }
   ]
 }
