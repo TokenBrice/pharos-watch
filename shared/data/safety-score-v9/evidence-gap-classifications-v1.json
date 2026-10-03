@@ -5853,6 +5853,361 @@
         "https://etherscan.io/address/0x61a10E8556BEd032eA176330e7F17D6a12a10000"
       ],
       "rationale": "Neither exact reserve composition nor financial issuer liability/reserve reconciliation is disclosed. The complete official sitemap and linked whitepaper/source/deployment materials disclose infrastructure, mint controls, contract security audit and liquidity claims, but no dated reserve asset allocation, financial attestation, accountant liability reconciliation or legal reserve claim. On-chain balances and security audits do not establish financial backing."
+    },
+    {
+      "id": "uw-vcred-vcred-17a54e20aba3800f",
+      "assetId": "vcred-vcred",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:47Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
+      "sources": [
+        {
+          "url": "https://vcred.trade/",
+          "observedAt": "2026-10-03T22:52:47Z",
+          "datumAsOf": null,
+          "location": "AI Liquidity Layer and VCRED product tile; footer Terms/Privacy labels are nonlinked spans",
+          "excerpt": "Stake VCRED token to get access to your perp portfolio",
+          "assertion": "Website discloses portfolio-access marketing but no exact Hemi reserve denominator, stablecoin holder claim or supply/backing reconciliation cadence."
+        },
+        {
+          "url": "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1",
+          "observedAt": "2026-10-03T22:52:47Z",
+          "datumAsOf": null,
+          "location": "contracts/VC1.sol notice and mint(address,uint256)",
+          "excerpt": "ERC20-compliant stablecoin pegged to the US Dollar.",
+          "assertion": "Exact token is verified owner-minted ERC20; source contains no reserve, payout, NAV or supply/backing reconciliation regime."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vcred.trade/",
+        "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1",
+        "https://explorer.hemi.xyz/tx/0x8fb15ea8eb517f7503e73ddf4c3e7d28facb54d8cbac30ee64c3566314030be2",
+        "https://medium.com/@vcred",
+        "https://medium.com/@vcred/ai-powered-smart-market-maker-d4517404484a"
+      ],
+      "rationale": "Exact Hemi VCRED whole-supply reconciliation process/cadence, usable whole-book reserve composition/denominator and binding current stablecoin claim/model remain unpublished. The complete linked site has inert legal labels, no transparency/report archive or regulator identity. Verified exact source establishes owner issuance only, not a debt-fund/portfolio claim. Indexed historical product materials are not exact-deployment evidence; Medium direct fetch was blocked and is not the basis of nondisclosure."
+    },
+    {
+      "id": "uw-vcred-vcred-49362164ce878407",
+      "assetId": "vcred-vcred",
+      "scope": {
+        "componentKey": "mechanism-risk-review",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "mechanism-risk-review",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:47Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
+      "sources": [
+        {
+          "url": "https://vcred.trade/",
+          "observedAt": "2026-10-03T22:52:47Z",
+          "datumAsOf": null,
+          "location": "AI Liquidity Layer and VCRED product tile; footer Terms/Privacy labels are nonlinked spans",
+          "excerpt": "Stake VCRED token to get access to your perp portfolio",
+          "assertion": "Website discloses portfolio-access marketing but no exact Hemi reserve denominator, stablecoin holder claim or supply/backing reconciliation cadence."
+        },
+        {
+          "url": "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1",
+          "observedAt": "2026-10-03T22:52:47Z",
+          "datumAsOf": null,
+          "location": "contracts/VC1.sol notice and mint(address,uint256)",
+          "excerpt": "ERC20-compliant stablecoin pegged to the US Dollar.",
+          "assertion": "Exact token is verified owner-minted ERC20; source contains no reserve, payout, NAV or supply/backing reconciliation regime."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vcred.trade/",
+        "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1",
+        "https://explorer.hemi.xyz/tx/0x8fb15ea8eb517f7503e73ddf4c3e7d28facb54d8cbac30ee64c3566314030be2",
+        "https://medium.com/@vcred",
+        "https://medium.com/@vcred/ai-powered-smart-market-maker-d4517404484a"
+      ],
+      "rationale": "Exact Hemi VCRED whole-supply reconciliation process/cadence, usable whole-book reserve composition/denominator and binding current stablecoin claim/model remain unpublished. The complete linked site has inert legal labels, no transparency/report archive or regulator identity. Verified exact source establishes owner issuance only, not a debt-fund/portfolio claim. Indexed historical product materials are not exact-deployment evidence; Medium direct fetch was blocked and is not the basis of nondisclosure."
+    },
+    {
+      "id": "uw-vcred-vcred-8ef84ffbe0fbff32",
+      "assetId": "vcred-vcred",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:47Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
+      "sources": [
+        {
+          "url": "https://vcred.trade/",
+          "observedAt": "2026-10-03T22:52:47Z",
+          "datumAsOf": null,
+          "location": "AI Liquidity Layer and VCRED product tile; footer Terms/Privacy labels are nonlinked spans",
+          "excerpt": "Stake VCRED token to get access to your perp portfolio",
+          "assertion": "Website discloses portfolio-access marketing but no exact Hemi reserve denominator, stablecoin holder claim or supply/backing reconciliation cadence."
+        },
+        {
+          "url": "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1",
+          "observedAt": "2026-10-03T22:52:47Z",
+          "datumAsOf": null,
+          "location": "contracts/VC1.sol notice and mint(address,uint256)",
+          "excerpt": "ERC20-compliant stablecoin pegged to the US Dollar.",
+          "assertion": "Exact token is verified owner-minted ERC20; source contains no reserve, payout, NAV or supply/backing reconciliation regime."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vcred.trade/",
+        "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1",
+        "https://explorer.hemi.xyz/tx/0x8fb15ea8eb517f7503e73ddf4c3e7d28facb54d8cbac30ee64c3566314030be2",
+        "https://medium.com/@vcred",
+        "https://medium.com/@vcred/ai-powered-smart-market-maker-d4517404484a"
+      ],
+      "rationale": "Exact Hemi VCRED whole-supply reconciliation process/cadence, usable whole-book reserve composition/denominator and binding current stablecoin claim/model remain unpublished. The complete linked site has inert legal labels, no transparency/report archive or regulator identity. Verified exact source establishes owner issuance only, not a debt-fund/portfolio claim. Indexed historical product materials are not exact-deployment evidence; Medium direct fetch was blocked and is not the basis of nondisclosure."
+    },
+    {
+      "id": "uw-nect-beraborrow-f02f28e770f6406e",
+      "assetId": "nect-beraborrow",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2bb4f6fb77609e4b22e6cbd3",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:58Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
+      "sources": [
+        {
+          "url": "https://documentation.kodiak.finance/protocol/islands.md",
+          "observedAt": "2026-10-03T22:53:15Z",
+          "datumAsOf": null,
+          "location": "Island redemption semantics",
+          "excerpt": "These tokens can be freely transferred, traded, or redeemed for the underlying assets at any time.",
+          "assertion": "Whole Island withdrawal is a basket in-kind claim; transferable/redeemable receipt does not establish full-slice realization at known value."
+        },
+        {
+          "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
+          "observedAt": "2026-10-03T22:54:58Z",
+          "datumAsOf": null,
+          "location": "Process",
+          "excerpt": "For an x amount of `$NECT`, users receive an x dollar worth of `Collateral` in return.",
+          "assertion": "NECT redemption discloses in-kind collateral and algorithmic fee, not end-to-end whole-collateral liquidity completion."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/collateral-screening-and-parameter-methodology.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/eth-and-btc-based-derivatives.md",
+        "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
+        "https://documentation.kodiak.finance/protocol/islands.md",
+        "https://beraborrow.gitbook.io/docs/audits/audits.md",
+        "https://documentation.kodiak.finance/informational/terms-of-use.md",
+        "https://documentation.kodiak.finance/developers/kodiak-islands/smart-contract-reference/kodiak-island.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/kodiak-islands-as-collateral.md"
+      ],
+      "rationale": "The exact Kodiak scoped collateral liquidityHorizon remains undisclosed as an end-to-end whole-position realization bound. Registry, collateral descriptions, risk-parameter methodology, in-kind NECT redemption terms and native withdrawal/implementation documentation explain mechanics but publish no complete per-slice realization maximum or funded instant guarantee. In-kind receipt withdrawability and typical settlement are not proof of immediate whole-slice USD liquidity."
+    },
+    {
+      "id": "uw-nect-beraborrow-61a1342b81c113b5",
+      "assetId": "nect-beraborrow",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:646b1f4492cd11e423abcf59",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:58Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
+      "sources": [
+        {
+          "url": "https://documentation.kodiak.finance/protocol/islands.md",
+          "observedAt": "2026-10-03T22:53:15Z",
+          "datumAsOf": null,
+          "location": "Island redemption semantics",
+          "excerpt": "These tokens can be freely transferred, traded, or redeemed for the underlying assets at any time.",
+          "assertion": "Whole Island withdrawal is a basket in-kind claim; transferable/redeemable receipt does not establish full-slice realization at known value."
+        },
+        {
+          "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
+          "observedAt": "2026-10-03T22:54:58Z",
+          "datumAsOf": null,
+          "location": "Process",
+          "excerpt": "For an x amount of `$NECT`, users receive an x dollar worth of `Collateral` in return.",
+          "assertion": "NECT redemption discloses in-kind collateral and algorithmic fee, not end-to-end whole-collateral liquidity completion."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/collateral-screening-and-parameter-methodology.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/eth-and-btc-based-derivatives.md",
+        "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
+        "https://documentation.kodiak.finance/protocol/islands.md",
+        "https://beraborrow.gitbook.io/docs/audits/audits.md",
+        "https://documentation.kodiak.finance/informational/terms-of-use.md",
+        "https://documentation.kodiak.finance/developers/kodiak-islands/smart-contract-reference/kodiak-island.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/kodiak-islands-as-collateral.md"
+      ],
+      "rationale": "The exact Kodiak scoped collateral liquidityHorizon remains undisclosed as an end-to-end whole-position realization bound. Registry, collateral descriptions, risk-parameter methodology, in-kind NECT redemption terms and native withdrawal/implementation documentation explain mechanics but publish no complete per-slice realization maximum or funded instant guarantee. In-kind receipt withdrawability and typical settlement are not proof of immediate whole-slice USD liquidity."
+    },
+    {
+      "id": "uw-nect-beraborrow-cd3e0445f866b7b7",
+      "assetId": "nect-beraborrow",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:674c86bbe81b7659ef6d17d7",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:58Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
+      "sources": [
+        {
+          "url": "https://documentation.kodiak.finance/protocol/islands.md",
+          "observedAt": "2026-10-03T22:53:15Z",
+          "datumAsOf": null,
+          "location": "Island redemption semantics",
+          "excerpt": "These tokens can be freely transferred, traded, or redeemed for the underlying assets at any time.",
+          "assertion": "Whole Island withdrawal is a basket in-kind claim; transferable/redeemable receipt does not establish full-slice realization at known value."
+        },
+        {
+          "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
+          "observedAt": "2026-10-03T22:54:58Z",
+          "datumAsOf": null,
+          "location": "Process",
+          "excerpt": "For an x amount of `$NECT`, users receive an x dollar worth of `Collateral` in return.",
+          "assertion": "NECT redemption discloses in-kind collateral and algorithmic fee, not end-to-end whole-collateral liquidity completion."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/collateral-screening-and-parameter-methodology.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/eth-and-btc-based-derivatives.md",
+        "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
+        "https://documentation.kodiak.finance/protocol/islands.md",
+        "https://beraborrow.gitbook.io/docs/audits/audits.md",
+        "https://documentation.kodiak.finance/informational/terms-of-use.md",
+        "https://documentation.kodiak.finance/developers/kodiak-islands/smart-contract-reference/kodiak-island.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/kodiak-islands-as-collateral.md"
+      ],
+      "rationale": "The exact Kodiak scoped collateral liquidityHorizon remains undisclosed as an end-to-end whole-position realization bound. Registry, collateral descriptions, risk-parameter methodology, in-kind NECT redemption terms and native withdrawal/implementation documentation explain mechanics but publish no complete per-slice realization maximum or funded instant guarantee. In-kind receipt withdrawability and typical settlement are not proof of immediate whole-slice USD liquidity."
+    },
+    {
+      "id": "uw-nect-beraborrow-c37f80a1a9707638",
+      "assetId": "nect-beraborrow",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:607968cd426b1b59f3f97e1a",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:58Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
+      "sources": [
+        {
+          "url": "https://dinero.xyz/docs/pirex-eth-sol",
+          "observedAt": "2026-10-03T22:53:17Z",
+          "datumAsOf": null,
+          "location": "Withdrawal/redemption implementation documentation",
+          "excerpt": "Users can also redeem their pxETH for ETH or upxETH.",
+          "assertion": "Native underlying offers queued and instant routes, with pause/fee controls; no guaranteed whole scoped bridged-position realization bound is stated."
+        },
+        {
+          "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
+          "observedAt": "2026-10-03T22:54:58Z",
+          "datumAsOf": null,
+          "location": "Process",
+          "excerpt": "For an x amount of `$NECT`, users receive an x dollar worth of `Collateral` in return.",
+          "assertion": "NECT redemption discloses in-kind collateral and algorithmic fee, not end-to-end whole-collateral liquidity completion."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/collateral-screening-and-parameter-methodology.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/eth-and-btc-based-derivatives.md",
+        "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
+        "https://dinero.xyz/docs/pirex-eth-sol",
+        "https://beraborrow.gitbook.io/docs/audits/audits.md",
+        "https://dinero.xyz/docs/px-eth-faq",
+        "https://dinero.xyz/docs/beraeth"
+      ],
+      "rationale": "The exact beraETH scoped collateral liquidityHorizon remains undisclosed as an end-to-end whole-position realization bound. Registry, collateral descriptions, risk-parameter methodology, in-kind NECT redemption terms and native withdrawal/implementation documentation explain mechanics but publish no complete per-slice realization maximum or funded instant guarantee. In-kind receipt withdrawability and typical settlement are not proof of immediate whole-slice USD liquidity."
+    },
+    {
+      "id": "uw-nect-beraborrow-6b309fc09d8f3633",
+      "assetId": "nect-beraborrow",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c26dee587597ad303f87df33",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:58Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
+      "sources": [
+        {
+          "url": "https://docs.stakestone.io/stakestone/stone-eth/how-it-works/unstake-and-omnichain-withdrawal/request",
+          "observedAt": "2026-10-03T22:53:17Z",
+          "datumAsOf": null,
+          "location": "Withdrawal/redemption implementation documentation",
+          "excerpt": "The requested ETH will be available to claim after the next settlement, which typically occurs a few days later depending on the total amount of ETH requested.",
+          "assertion": "Typical request settlement is amount-dependent, not a maximum full-slice liquidity horizon."
+        },
+        {
+          "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
+          "observedAt": "2026-10-03T22:54:58Z",
+          "datumAsOf": null,
+          "location": "Process",
+          "excerpt": "For an x amount of `$NECT`, users receive an x dollar worth of `Collateral` in return.",
+          "assertion": "NECT redemption discloses in-kind collateral and algorithmic fee, not end-to-end whole-collateral liquidity completion."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/collateral-screening-and-parameter-methodology.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/eth-and-btc-based-derivatives.md",
+        "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
+        "https://docs.stakestone.io/stakestone/stone-eth/how-it-works/unstake-and-omnichain-withdrawal/request",
+        "https://beraborrow.gitbook.io/docs/audits/audits.md",
+        "https://docs.stakestone.io/stakestone/additionals/terms-of-service.md",
+        "https://docs.stakestone.io/stakestone/stone-eth/how-it-works/unstake-and-omnichain-withdrawal/instant.md",
+        "https://docs.stakestone.io/stakestone/stone-eth/how-it-works/bridging.md"
+      ],
+      "rationale": "The exact Stakestone ETH scoped collateral liquidityHorizon remains undisclosed as an end-to-end whole-position realization bound. Registry, collateral descriptions, risk-parameter methodology, in-kind NECT redemption terms and native withdrawal/implementation documentation explain mechanics but publish no complete per-slice realization maximum or funded instant guarantee. In-kind receipt withdrawability and typical settlement are not proof of immediate whole-slice USD liquidity."
     }
   ]
 }

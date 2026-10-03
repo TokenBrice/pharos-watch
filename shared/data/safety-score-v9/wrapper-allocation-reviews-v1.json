@@ -4152,6 +4152,40 @@
           "url": "https://sky.money/vaults"
         }
       ]
+    },
+    {
+      "assetId": "susdc-spark-v1",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-02",
+      "reviewer": "W1R44 exact Legacy UsdcVault allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "Ethereum block 26114892: exact UUPS implementation matches verified UsdcVault source. Local positions are sUSDS receipts plus USDC idle and USDS rounding dust. sUSDS.balanceOf(vault)=160854789721919923392586423 equals totalSupply; native totalAssets=178806448434865 values those shares only. Local source has deposit/mint, withdraw/redeem and exit(sUSDS), no loan, pledge or strategy allocation surface. Parent Sky lending and offchain RWA risks are not local custody/reuse absence claims, and remain upstream. Upgrade powers are separately reviewed, not immutable allocation guarantees.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe",
+          "function": "ERC1967 implementation / susds / totalSupply / totalAssets / sUSDS.balanceOf / USDC.balanceOf / USDS.balanceOf / runtime bytecode",
+          "value": "implementation=0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba; runtime matches verified source; susds=0xa3931d71877c0e7a3148cb7eb4463524fec27fbd; totalSupply=sUSDS.balanceOf=160854789721919923392586423; totalAssets=178806448434865; idleUSDC=1004961; USDSdust=2683592584333002",
+          "block": 26114892
+        }
+      ],
+      "sources": [
+        {
+          "label": "Verified exact Legacy UsdcVault implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba"
+        },
+        {
+          "label": "Spark documentation distinguishing V1 and V2",
+          "url": "https://docs.spark.finance/products/spark-savings"
+        },
+        {
+          "label": "Block-pinned Ethereum RPC observation",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
     }
   ]
 }

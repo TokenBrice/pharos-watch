@@ -2855,6 +2855,105 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "nect-beraborrow",
+      "reviewedAt": "2026-10-03T22:50:37Z",
+      "expiresAt": "2027-10-03T22:55:00Z",
+      "reviewer": "W1R44 unknown-resolver research",
+      "notes": "Eligibility-only lower bound from 2025-02-21 to 2026-10-03; exact asset deployment or dated primary protocol-participant operating disclosure. No independent assurance, continuous operation, redemption throughput, stress recovery or incident-free performance asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-history",
+          "label": "Brevis protocol integration announcement",
+          "publisher": "Brevis Network",
+          "publishedAt": "2025-02-21",
+          "url": "https://blog.brevis.network/2025/02/21/brevis-and-beraborrow-are-bringing-continuous-protocol-incentivization-to-berachain/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 19,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "susdc-spark-v1",
+      "reviewedAt": "2026-10-03T22:50:37Z",
+      "expiresAt": "2027-10-03T22:55:00Z",
+      "reviewer": "W1R44 unknown-resolver research",
+      "notes": "Eligibility-only lower bound from 2025-03-03 to 2026-10-03; exact asset deployment or dated primary protocol-participant operating disclosure. No independent assurance, continuous operation, redemption throughput, stress recovery or incident-free performance asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-history",
+          "label": "Exact legacy sUSDC creation, Ethereum block 21969024",
+          "publisher": "Ethereum / Etherscan",
+          "publishedAt": "2025-03-03",
+          "url": "https://etherscan.io/tx/0x549d8f23f755f10ac453949f7ce76f19cfd3007ca8402588fe66b0e54ada627c",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 19,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "vcred-vcred",
+      "reviewedAt": "2026-10-03T22:50:37Z",
+      "expiresAt": "2027-10-03T22:55:00Z",
+      "reviewer": "W1R44 unknown-resolver research",
+      "notes": "Eligibility-only lower bound from 2025-05-19 to 2026-10-03; exact asset deployment or dated primary protocol-participant operating disclosure. No independent assurance, continuous operation, redemption throughput, stress recovery or incident-free performance asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-history",
+          "label": "Exact Hemi VCRED creation and initial mint, block 1813663",
+          "publisher": "Hemi / Blockscout",
+          "publishedAt": "2025-05-19",
+          "url": "https://explorer.hemi.xyz/tx/0x8fb15ea8eb517f7503e73ddf4c3e7d28facb54d8cbac30ee64c3566314030be2",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 16,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
