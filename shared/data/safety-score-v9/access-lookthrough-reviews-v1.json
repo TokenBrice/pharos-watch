@@ -14,12 +14,13 @@
             "claimAddress": "0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f"
           },
           "assetId": "nusd-nexus",
-          "noCurrentReach": false,
+          "noCurrentReach": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "reviewedAt": "2026-10-03T23:08:20Z",
             "sources": [
-              "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655",
-              "https://eth.blockscout.com/address/0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f"
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x6c8c6e68604e78b549c96907bfe9ebdaac04e3b3",
+              "https://ethereum-rpc.publicnode.com",
+              "https://etherscan.io/block/26114990"
             ],
             "responsibility": "integration-missing"
           }
@@ -47,11 +48,13 @@
             "claimAddress": "0x6b175474e89094c44da98b954eedeac495271d0f"
           },
           "assetId": "dai-makerdao",
-          "noCurrentReach": false,
+          "noCurrentReach": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "reviewedAt": "2026-10-03T23:08:20Z",
             "sources": [
-              "https://eth.blockscout.com/api/v2/smart-contracts/0x6b175474e89094c44da98b954eedeac495271d0f"
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x6b175474e89094c44da98b954eedeac495271d0f",
+              "https://ethereum-rpc.publicnode.com",
+              "https://etherscan.io/block/26114990"
             ],
             "responsibility": "integration-missing"
           }
@@ -314,6 +317,32 @@
             ],
             "responsibility": "measured-adverse"
           }
+        },
+        {
+          "authorityKey": "nexus-pool-owner-pause",
+          "nodeKey": "nexus-pool",
+          "actingDeployment": {
+            "chainId": "ethereum",
+            "claimAddress": "0x1116898dda4015ed8ddefb84b6e8bc24528af2d8"
+          },
+          "controllerKey": "ethereum:0x67f60b0891ebd842ebe55e4ccca1098d7aac1a55",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "chain",
+              "key": "ethereum"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-03T23:08:20Z",
+            "sources": [
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655",
+              "https://ethereum-rpc.publicnode.com",
+              "https://etherscan.io/block/26114990"
+            ],
+            "responsibility": "measured-adverse"
+          }
         }
       ],
       "partitions": [
@@ -381,19 +410,6 @@
             "sources": [
               "https://eth.blockscout.com/api/v2/smart-contracts/0x6b175474e89094c44da98b954eedeac495271d0f",
               "https://developers.skyeco.com/"
-            ],
-            "responsibility": "integration-missing"
-          }
-        },
-        {
-          "branchKey": "pool-local-controls",
-          "nodeKey": "nexus-pool",
-          "reason": "research-incomplete",
-          "responsibility": "integration-missing",
-          "review": {
-            "reviewedAt": "2026-10-01T23:23:18.811Z",
-            "sources": [
-              "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
             ],
             "responsibility": "integration-missing"
           }

@@ -11738,6 +11738,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "nusd-nexus",
+      "reviewedAt": "2026-10-03T23:08:56Z",
+      "expiresAt": "2027-10-03T23:08:56Z",
+      "reviewer": "W1R78 primary-source unknown resolver",
+      "notes": "Exact asset operating-history lower bound from 2021-08-16. No independently verified performance, redemption throughput, stress recovery, report continuity or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "exact-operating-history",
+          "label": "Exact Ethereum nUSD LPToken creation at block 13033711",
+          "publisher": "Synapse / Ethereum",
+          "publishedAt": "2021-08-16",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x959ebfcbfa968face535d712a5ab31d79f3aab53b3a66196ec496f08711d13fb",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 61,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-operating-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "honey-berachain",
+      "reviewedAt": "2026-10-03T23:08:56Z",
+      "expiresAt": "2027-10-03T23:08:56Z",
+      "reviewer": "W1R78 primary-source unknown resolver",
+      "notes": "Exact asset operating-history lower bound from 2025-09-26; not parent history. No independently verified performance, redemption throughput, stress recovery, report continuity or incident-free history is claimed. Honey uses the later dated live-operation article, not an inferred chain launch date.",
+      "sources": [
+        {
+          "sourceId": "exact-operating-history",
+          "label": "Dated official HONEY live mint and redemption description",
+          "publisher": "Berachain",
+          "publishedAt": "2025-09-26",
+          "url": "https://blog.berachain.com/blog/stablecoins-on-berachain",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 12,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-operating-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdm-moneta",
+      "reviewedAt": "2026-10-03T23:08:56Z",
+      "expiresAt": "2027-10-03T23:08:56Z",
+      "reviewer": "W1R78 primary-source unknown resolver",
+      "notes": "Exact asset operating-history lower bound from 2024-03-16. No independently verified performance, redemption throughput, stress recovery, report continuity or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "exact-operating-history",
+          "label": "Issuer dates exact USDM mainnet launch",
+          "publisher": "Moneta Digital",
+          "publishedAt": "2026-05-06",
+          "url": "https://moneta.global/learn/usdm-core-fundamentals/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 30,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-operating-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "jpyc-jpyc",
+      "reviewedAt": "2026-10-03T23:08:56Z",
+      "expiresAt": "2027-10-03T23:08:56Z",
+      "reviewer": "W1R78 primary-source unknown resolver",
+      "notes": "Exact asset operating-history lower bound from 2025-10-27. No independently verified performance, redemption throughput, stress recovery, report continuity or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "exact-operating-history",
+          "label": "Regulated JPYC EX issuance service launch",
+          "publisher": "JPYC Inc.",
+          "publishedAt": "2025-10-24",
+          "url": "https://corporate.jpyc.co.jp/news/posts/jpyc-ex-launch",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 11,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-operating-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

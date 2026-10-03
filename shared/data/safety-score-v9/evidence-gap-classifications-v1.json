@@ -25627,6 +25627,403 @@
         "https://docs.morpho.org/learn/resources/risks/"
       ],
       "rationale": "The exact protocol-position slice has no published bounded maximum cash liquidity horizon. Ordinary cash withdrawal depends on available USDC in the active Morpho market; borrower demand/repayment is open-ended and full source contains no contractual cash-settlement deadline. forceDeallocate can obtain an underlying position, not a cash-realization SLA. A current liquidity reading cannot be converted to a fixed maximum horizon."
+    },
+    {
+      "id": "uw-nusd-nexus-61d11e53cf6d122e",
+      "assetId": "nusd-nexus",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:52Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
+          "observedAt": "2026-10-03T23:15:30Z",
+          "datumAsOf": null,
+          "location": "Swap contract description",
+          "excerpt": "Users can burn pool tokens and withdraw their share of token(s).",
+          "assertion": "Native pool accounting explains deposit/share/burn mechanics, not a dated common-clock reconciliation of every satellite representation and escrow against backing."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://synapseprotocol.com/",
+        "https://docs.synapseprotocol.com/docs/Bridge/",
+        "https://docs.synapseprotocol.com/docs/Contracts/Liquidity-Pools",
+        "https://docs.synapseprotocol.com/docs/Contracts/Intermediate-Tokens",
+        "https://docs.synapseprotocol.com/docs/Contracts/SynapseBridge",
+        "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x6c8c6e68604e78b549c96907bfe9ebdaac04e3b3"
+      ],
+      "rationale": "No dated whole-NUSD liability/backing reconciliation procedure and cadence spanning native LP supply, bridge escrows and all satellite representations was disclosed. Native LP invariant/accounting and public deployment lists do not establish that common-clock whole-supply reconciliation."
+    },
+    {
+      "id": "uw-nusd-nexus-4e4ecfee88801915",
+      "assetId": "nusd-nexus",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:3c97cdfc8418680ef82108de",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:52Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
+          "observedAt": "2026-10-03T23:15:30Z",
+          "datumAsOf": null,
+          "location": "Swap contract emergency/withdrawal documentation",
+          "excerpt": "Users can always withdraw their tokens via multi-asset withdraws.",
+          "assertion": "Pro-rata asset withdrawal is disclosed, but no bound for realizing the entire DAI, USDC or USDT pool position at final USD value."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://synapseprotocol.com/",
+        "https://docs.synapseprotocol.com/docs/Contracts/Liquidity-Pools",
+        "https://docs.synapseprotocol.com/docs/Bridge/",
+        "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
+      ],
+      "rationale": "The exact DAI/USDC/USDT position-wide liquidityHorizon is not published. Pool pro-rata redemption and token transferability establish mechanics, not whole-position realizability at a known value; single-asset exits can be paused and satellite escrow scope is separate. No scalar horizon is inferred."
+    },
+    {
+      "id": "uw-nusd-nexus-bb16f599840ee130",
+      "assetId": "nusd-nexus",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:7c34054d5323f1adbc700d54",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:52Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
+          "observedAt": "2026-10-03T23:15:30Z",
+          "datumAsOf": null,
+          "location": "Swap contract emergency/withdrawal documentation",
+          "excerpt": "Users can always withdraw their tokens via multi-asset withdraws.",
+          "assertion": "Pro-rata asset withdrawal is disclosed, but no bound for realizing the entire DAI, USDC or USDT pool position at final USD value."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://synapseprotocol.com/",
+        "https://docs.synapseprotocol.com/docs/Contracts/Liquidity-Pools",
+        "https://docs.synapseprotocol.com/docs/Bridge/",
+        "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
+      ],
+      "rationale": "The exact DAI/USDC/USDT position-wide liquidityHorizon is not published. Pool pro-rata redemption and token transferability establish mechanics, not whole-position realizability at a known value; single-asset exits can be paused and satellite escrow scope is separate. No scalar horizon is inferred."
+    },
+    {
+      "id": "uw-nusd-nexus-853f24b15bf3e1c7",
+      "assetId": "nusd-nexus",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:81c957a7cb8150d40ea55f7a",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:52Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
+          "observedAt": "2026-10-03T23:15:30Z",
+          "datumAsOf": null,
+          "location": "Swap contract emergency/withdrawal documentation",
+          "excerpt": "Users can always withdraw their tokens via multi-asset withdraws.",
+          "assertion": "Pro-rata asset withdrawal is disclosed, but no bound for realizing the entire DAI, USDC or USDT pool position at final USD value."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://synapseprotocol.com/",
+        "https://docs.synapseprotocol.com/docs/Contracts/Liquidity-Pools",
+        "https://docs.synapseprotocol.com/docs/Bridge/",
+        "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
+      ],
+      "rationale": "The exact DAI/USDC/USDT position-wide liquidityHorizon is not published. Pool pro-rata redemption and token transferability establish mechanics, not whole-position realizability at a known value; single-asset exits can be paused and satellite escrow scope is separate. No scalar horizon is inferred."
+    },
+    {
+      "id": "uw-honey-berachain-a22e95431963923c",
+      "assetId": "honey-berachain",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:3f465e83e9281db09ed54264",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:52Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
+      "sources": [
+        {
+          "url": "https://docs.berachain.com/general/tokens/busd.md",
+          "observedAt": "2026-10-03T23:06:34Z",
+          "datumAsOf": null,
+          "location": "Using and minting BUSD",
+          "excerpt": "Minting and redemption rates are configurable per collateral asset by governance.",
+          "assertion": "Protocol discloses variable collateral redemption mechanics, not an unconditional position-wide liquidity horizon for held bridged BYUSD or USDt0."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/CollateralVault.sol",
+          "observedAt": "2026-10-03T23:14:00Z",
+          "datumAsOf": null,
+          "location": "CustodyInfo struct",
+          "excerpt": "bool isCustodyVault;",
+          "assertion": "Vaults support external custody and pausing; contract mechanics do not promise a final USD realization maximum for the entire bridged positions."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://busd.berachain.com/",
+        "https://docs.berachain.com/general/tokens/busd",
+        "https://docs.berachain.com/build/getting-started/deployed-contracts.md",
+        "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/CollateralVault.sol",
+        "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/HoneyFactory.sol",
+        "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/VaultAdmin.sol",
+        "https://docs.usdt0.to/",
+        "https://www.paypal.com/us/legalhub/paypal/cryptocurrencies-tnc"
+      ],
+      "rationale": "No scoped, guaranteed whole-position liquidityHorizon for Berachain-held BYUSD or USDt0 is disclosed. Collateral-vault withdrawal, basket redemption and bridge burn/unlock mechanics do not bound complete USD realization of these bridged positions; no parent-token SLA is copied to the bridge claim."
+    },
+    {
+      "id": "uw-honey-berachain-a0ae8e5d19f5f47b",
+      "assetId": "honey-berachain",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:892021ff82db5cf513acf3f1",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:52Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
+      "sources": [
+        {
+          "url": "https://docs.berachain.com/general/tokens/busd.md",
+          "observedAt": "2026-10-03T23:06:34Z",
+          "datumAsOf": null,
+          "location": "Using and minting BUSD",
+          "excerpt": "Minting and redemption rates are configurable per collateral asset by governance.",
+          "assertion": "Protocol discloses variable collateral redemption mechanics, not an unconditional position-wide liquidity horizon for held bridged BYUSD or USDt0."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/CollateralVault.sol",
+          "observedAt": "2026-10-03T23:14:00Z",
+          "datumAsOf": null,
+          "location": "CustodyInfo struct",
+          "excerpt": "bool isCustodyVault;",
+          "assertion": "Vaults support external custody and pausing; contract mechanics do not promise a final USD realization maximum for the entire bridged positions."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://busd.berachain.com/",
+        "https://docs.berachain.com/general/tokens/busd",
+        "https://docs.berachain.com/build/getting-started/deployed-contracts.md",
+        "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/CollateralVault.sol",
+        "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/HoneyFactory.sol",
+        "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/VaultAdmin.sol",
+        "https://docs.usdt0.to/",
+        "https://www.paypal.com/us/legalhub/paypal/cryptocurrencies-tnc"
+      ],
+      "rationale": "No scoped, guaranteed whole-position liquidityHorizon for Berachain-held BYUSD or USDt0 is disclosed. Collateral-vault withdrawal, basket redemption and bridge burn/unlock mechanics do not bound complete USD realization of these bridged positions; no parent-token SLA is copied to the bridge claim."
+    },
+    {
+      "id": "uw-usdm-moneta-6df9131af4f4dc9b",
+      "assetId": "usdm-moneta",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdm-moneta:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:17:21Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
+      "sources": [
+        {
+          "url": "https://moneta.global/terms-of-service.pdf",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-07-22",
+          "location": "Section 17 disclaimer of warranties",
+          "excerpt": "Moneta makes no representations or warranties regarding the amount of time needed to \ncomplete processing",
+          "assertion": "Governing terms expressly disclaim a completion-time warranty, so no final spendable-USD maximum is established."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://moneta.global/",
+        "https://moneta.global/resources/faq/",
+        "https://moneta.global/terms-of-service/",
+        "https://moneta.global/terms-of-service.pdf",
+        "https://moneta.global/USDM%20Lite%20Paper.pdf",
+        "https://nbx.com/en/usdm-terms"
+      ],
+      "rationale": "No end-to-end maximum for redemption to final spendable bank USD is disclosed. Moneta terms disclaim processing completion time; litepaper gives compliance/cutoffs rather than a maximum. NBX processing cannot substitute for Moneta-attributed claims, which require prior settled Moneta funds."
+    },
+    {
+      "id": "uw-usdm-moneta-102e99ff7fb6de96",
+      "assetId": "usdm-moneta",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:17:21Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
+      "sources": [
+        {
+          "url": "https://moneta.global/transparency/",
+          "observedAt": "2026-10-03T23:06:34Z",
+          "datumAsOf": null,
+          "location": "Reserve Composition",
+          "excerpt": "US Government Money Market Funds",
+          "assertion": "Current transparency shows reserve categories and aggregate balance, but not dated category weights or both separate issuer books and common liability denominator."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://moneta.global/",
+        "https://moneta.global/transparency/",
+        "https://moneta.global/learn/usdm-reserve-architecture/",
+        "https://moneta.global/USDM%20Lite%20Paper.pdf",
+        "https://moneta.global/terms-of-service.pdf",
+        "https://nbx.com/en/usdm",
+        "https://cdn.prod.website-files.com/6152dfaed2ce58d94ef37b88/6ab4e90ceb46558d48fc093a_USDM%20White%20Paper%20-%20Modified%20version%202026-09-24.pdf"
+      ],
+      "rationale": "No current whole-asset reserve composition with measured category/provider allocations across the separate Moneta and NBX books is disclosed. Aggregate daily reserve balances and historical 80/20 allocation do not establish a same-date combined-token composition; NBX explicitly excludes cross-backing."
+    },
+    {
+      "id": "uw-usdm-moneta-af3c32783e1c964b",
+      "assetId": "usdm-moneta",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdm-moneta:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:17:21Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
+      "sources": [
+        {
+          "url": "https://moneta.global/resources/faq/",
+          "observedAt": "2026-10-03T23:06:22Z",
+          "datumAsOf": null,
+          "location": "FAQ structured acceptedAnswer, Are there mint/burn fees?",
+          "excerpt": "Burning: 0.1% fee ($50 minimum, capped at $5,000). Includes Cardano network fees.",
+          "assertion": "Exact route fee formula is public but the cost schema lacks maxFeeUsd and current route does not evaluate this capped minimum formula at each notional; bank charges remain separate."
+        }
+      ]
+    },
+    {
+      "id": "uw-jpyc-jpyc-e8142c370add207d",
+      "assetId": "jpyc-jpyc",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:17:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
+      "sources": [
+        {
+          "url": "https://corporate.jpyc.co.jp/news/posts/jpyc-ex-launch",
+          "observedAt": "2026-10-03T23:15:15Z",
+          "datumAsOf": "2025-10-24",
+          "location": "JPYC features / reserve backing",
+          "excerpt": "\u767a\u884c\u4fa1\u5024\u306e\u88cf\u4ed8\u3051\u8cc7\u7523\u306f\u3001\u65e5\u672c\u5186\uff08\u9810\u8caf\u91d1\u304a\u3088\u3073\u56fd\u50b5\uff09\u306b\u3088\u3063\u3066\u767a\u884c\u6b8b\u9ad8\u306e100%\u4ee5\u4e0a\u3092\u4fdd\u5168",
+          "assertion": "Issuer discloses deposits/JGB basket and 100%+ backing, not current measured category weights or dated whole-reserve holdings."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://jpyc.co.jp/",
+        "https://corporate.jpyc.co.jp/news/posts/jpyc-ex-launch",
+        "https://jpyc.co.jp/legal/pre-contract-disclosure.pdf",
+        "https://jpyc.co.jp/legal/terms.pdf",
+        "https://corporate.jpyc.co.jp/terms/financialreporting",
+        "https://corporate.jpyc.co.jp/news",
+        "https://assets.jpyc.co.jp/ir/Financial-results/kessan-3.pdf"
+      ],
+      "rationale": "No dated current reserve composition with measured deposit/JGB weights and complete holdings is published. Launch discloses only a 100%+ deposit/JGB envelope; statutory safeguarding names trust/guarantee counterparties but not allocation. Historical 2022 corporate accounts are not the 2025 regulated token reserve book."
+    },
+    {
+      "id": "uw-jpyc-jpyc-b6759a3434a262b3",
+      "assetId": "jpyc-jpyc",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:17:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
+      "sources": [
+        {
+          "url": "https://jpyc.co.jp/legal/pre-contract-disclosure.pdf",
+          "observedAt": "2026-10-03T23:04:52Z",
+          "datumAsOf": null,
+          "location": "Section 2.2 statutory safeguarding",
+          "excerpt": "\u5229\u7528\u8005\u304b\u3089\u53d7\u3051\u5165\u308c\u305f\u8cc7\u91d1\u3092\u672a\u9054\u50b5\u52d9\u3068\u3057\u3066\u6bce\u9031\u91d1\u66dc\u65e5\n\u304b\u3089\u7fcc\u6728\u66dc\u65e5\u307e\u3067\u306e1\u9031\u9593\u306e\u671f\u9593\u306b\u304a\u3044\u3066\u7b97\u5b9a\u3057",
+          "assertion": "Weekly safeguarding debt calculation is disclosed; it does not provide a dated performed all-chain token-supply versus reserve reconciliation procedure/report."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://jpyc.co.jp/",
+        "https://corporate.jpyc.co.jp/news/posts/jpyc-ex-launch",
+        "https://jpyc.co.jp/legal/pre-contract-disclosure.pdf",
+        "https://jpyc.co.jp/legal/terms.pdf",
+        "https://corporate.jpyc.co.jp/terms/financialreporting",
+        "https://corporate.jpyc.co.jp/news",
+        "https://assets.jpyc.co.jp/ir/Financial-results/kessan-3.pdf"
+      ],
+      "rationale": "No dated performed whole-JPYC supply-to-reserve reconciliation procedure and cadence covering every native-chain liability, mint/burn and backing at one clock is disclosed. Weekly statutory maximum-undelivered-debt safeguarding and customer history are not a public common-clock token/reserve reconciliation; the homepage says reserve publication is planned."
     }
   ]
 }
