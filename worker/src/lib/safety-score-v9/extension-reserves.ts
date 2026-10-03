@@ -1,7 +1,6 @@
 import type { DependencyRejectionReason } from "@shared/lib/dependency-derivation";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { SCORE_EPSILON } from "@shared/lib/safety-score-v9/backing-primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { hasIndependentLiveCompositionDates, hasIndependentReserveObservationDates } from "@shared/lib/report-card-policy";
 import { admitV10ReserveReportScope, admitV10ReserveObservation, shouldApplyV10ReserveReportScope, resolveV10ReserveObservationDeploymentRefs } from "@shared/lib/safety-score-v9/reserve-scope";
@@ -383,20 +382,32 @@ function hasNamedReportFirm(meta: V9ExtensionRegistryMeta): boolean {
   const provider = proof?.provider?.trim();
   if (!provider || !report || !["attestation", "independent-audit"].includes(proof!.type) ||
     !["big4", "regional", "niche"].includes(proof!.attestorTier ?? "")) return false;
-  const normalizeName = (value: string) => value.normalize("NFKD").replace(/\p{M}/gu, "");
+  // Preserve /iu folding for sigma and historical Cyrillic letters.
+  const normalizeName = (value: string) => value.normalize("NFKD").replace(/\p{M}/gu, "")
+    .toLowerCase().replace(/[ς\u1C80-\u1C88]/g, letter => letter.toUpperCase().toLowerCase());
   // A provider may name the actual firm after an issuer-led assurance description.
   const describedFirmNames = Array.from(provider.matchAll(
     /(?:attestations?|audits?|assurance|examinations?)\s*\(([^)]+)\)/giu), match => match[1]!);
   const firmNames = describedFirmNames.length > 0 ? describedFirmNames : [provider];
-  const firmPatterns = firmNames.map(name => {
-    const token = normalizeName(name.trim().split(/\s/, 1)[0]!);
-    return new RegExp(`(?:^|[^\\p{L}\\p{N}])${token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:$|[^\\p{L}\\p{N}])`, "iu");
-  });
+  const firmTokens = firmNames.map(name => normalizeName(name.trim().split(/\s/, 1)[0]!));
+  const matchesFirm = (label: string) => {
+    const value = normalizeName(label);
+    return firmTokens.some(token => {
+      for (let index = value.indexOf(token); index >= 0; index = value.indexOf(token, index + 1)) {
+        const end = index + token.length;
+        // A literal search must not start or end inside an astral character.
+        if ((value.codePointAt(index - 1) ?? 0) > 0xffff || (value.codePointAt(end - 1) ?? 0) > 0xffff) continue;
+        if (!/[\p{L}\p{N}]$/u.test(value.slice(Math.max(0, index - 2), index)) &&
+          !/^[\p{L}\p{N}]/u.test(value.slice(end, end + 2))) return true;
+        if (index === value.length) break;
+      }
+      return false;
+    });
+  };
   return report.sources.some(source => {
     // A proof URL can itself be the signed report PDF, rather than an issuer index.
     const reportSource = source.url !== proof!.url || /\.pdf(?:[?#]|$)/i.test(source.url);
-    return reportSource && firmPatterns.some(pattern =>
-      pattern.test(normalizeName(source.label)) || pattern.test(normalizeName(report.reviewer ?? "")));
+    return reportSource && (matchesFirm(source.label) || matchesFirm(report.reviewer ?? ""));
   });
 }
 

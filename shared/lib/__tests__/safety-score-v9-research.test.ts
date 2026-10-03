@@ -3,7 +3,6 @@ import type { CompiledV9AssetInput } from "@shared/types/safety-score-v9";
 import {
   HistoricalV9FixtureSchema,
 } from "@shared/types/safety-score-v9-historical-fixtures";
-import historicalFixtures from "@shared/data/safety-score-v9/historical-fixtures-v1.json";
 import {
   V9_CANDIDATE_POLICY_V1,
   resolveV9StructuralCaps,

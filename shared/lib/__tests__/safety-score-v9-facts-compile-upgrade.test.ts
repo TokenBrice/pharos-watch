@@ -16,7 +16,6 @@ import {
   evaluateV9FactSet,
   fullAsset,
   coreFixture,
-  nativeWrapperLocalFactsForFixture,
   knownStatus,
   optionalExitV9Path,
   parseCompiledV9FactSetV2,
@@ -25,13 +24,12 @@ import {
   stableJsonStringifyV1,
   V9_CANDIDATE_POLICY_V1,
 } from "./safety-score-v9-facts.fixture-support";
-import type { V9AssetFactsV2, V9AssetFactsV3 } from "./safety-score-v9-facts.fixture-support";
+import type { V9AssetFactsV2 } from "./safety-score-v9-facts.fixture-support";
 import { unresolvedArchetype } from "./safety-score-v9-facts.test-support";
 import { safeParseV9AssetFactsV3 } from "../safety-score-v9/compile";
-import { notApplicableV9Fact, resolveV9EvidenceCause } from "../safety-score-v9/evidence";
-import { upgradeV9FactGapV2 } from "../safety-score-v9/facts";
+import { resolveV9EvidenceCause } from "../safety-score-v9/evidence";
 import type { V9EvidenceCauseScope, V9EvidenceGapClassification } from "../../types/safety-score-v9-causes";
-import type { CompiledV9FactSetV3, V9FactSetCoreV3, V9FactGapV3, V9EconomicControlReviewV2 } from "../../types/safety-score-v9-facts";
+import type { CompiledV9FactSetV3, V9FactSetCoreV3, V9EconomicControlReviewV2 } from "../../types/safety-score-v9-facts";
 
 
 function currentCore(): V9FactSetCoreV3 {

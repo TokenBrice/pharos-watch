@@ -23,7 +23,7 @@ import {
 import { buildSafetyScoreV9MechanismReview } from "../safety-score-v9/extension-mechanism";
 import { ReviewEvidenceBuilder } from "../safety-score-v9/extension-shared";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
-import { makeV9RoleExtension, makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
+import { makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
 import usdtCoin from "@shared/data/stablecoins/coins/usdt-tether.json";
 import usdtReserveEnvelope from "@shared/data/stablecoins/domains/reserves/usdt-tether.json";
 import usdyCoin from "@shared/data/stablecoins/coins/usdy-ondo-finance.json";

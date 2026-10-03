@@ -18,7 +18,6 @@ import {
   type V9BackingContribution,
   type V9BackingEvaluationPolicy,
   type V9BackingResult,
-  type V9BackingUnresolvedReason,
   type V9EffectiveBackingContribution,
 } from "../backing-primitives";
 import { resolveV9ReasonTreatment } from "../policy";
@@ -256,7 +255,7 @@ function evaluateV9ArchetypeBackingInternal(
   const contributions = [...reserve.contributions];
   const unresolved = [...reserve.unresolved];
   const structuralReasons = [...reserve.structuralReasons, ...(input.additionalStructuralReasons ?? [])];
-  let rateability = reserve.rateability;
+  const rateability = reserve.rateability;
 
   const applicableComponents = input.components.filter(
     (component) => component.fact.status.applicability.state !== "not-applicable",

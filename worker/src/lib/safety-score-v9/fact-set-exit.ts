@@ -10,7 +10,6 @@ import {
   createV9EvidenceReference,
   createV9FactStatus,
   requiredV9Applicability,
-  unresolvedV9Applicability,
 } from "@shared/lib/safety-score-v9/evidence";
 import {
   createV9FactGapV3,

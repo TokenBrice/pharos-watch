@@ -3,7 +3,6 @@ import { chainRpcs } from "./safety-score-v9-supply-observation.test-support";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import wmRiskReview from "@shared/data/stablecoins/domains/risk-review/wm-m0.json";
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
-import { buildReviewedDeploymentRouteInventory } from "../safety-score-v9/supply-attribution-contract";
 
 const rpcMocks = vi.hoisted(() => ({
   observeCentrifugeReviewedDeploymentUnitPartitionAttempt: vi.fn(),

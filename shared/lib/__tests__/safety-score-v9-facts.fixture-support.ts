@@ -28,7 +28,6 @@ import type {
   V9FactGapV2,
   V9FactGapV3,
 } from "../../types/safety-score-v9-facts";
-import type { DependencyType, V9DependencyEconomicRole } from "../../types/dependency-types";
 
 export {
   assertExactV9ActiveAssetSet,

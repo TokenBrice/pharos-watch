@@ -169,6 +169,43 @@ describe("Safety Score V9 publication assessment", () => {
     expect(expiredMeasuredExitAssetIds(fixedInput, publication, baseline)).toEqual(["alpha"]);
   });
 
+  it("holds a rated-to-pipeline-gap transition when its former measured route expires", () => {
+    const { fixedInput, publication, clockSec } = measuredHistoryFixture();
+    publication.sourceGenerations.dex = fixedInput.dexGenerationId;
+    const baseline = buildSafetyScoreV9AcceptedPublicationBaseline(publication);
+    fixedInput.clockSec = clockSec + 10_801;
+    fixedInput.dexGenerationId = "dex-liquidity-next";
+    publication.cards[0] = producerFailedCard({ id: "alpha", score: null, grade: null });
+    const expired = expiredMeasuredExitAssetIds(fixedInput, publication, baseline);
+    expect(expired).toEqual(["alpha"]);
+    expect(assessV9Publication({
+      inputHealth: currentInputHealth(), candidate: publication,
+      acceptedPublication: baseline, coverageFloors: [], expiredMeasuredExitAssetIds: expired,
+    })).toEqual({ decision: "hold", reasons: [{ code: "dex-stale" }], affectedAssetIds: ["alpha"] });
+  });
+
+  it("rejects expired measured-route witnesses outside the candidate census", () => {
+    const input = {
+      inputHealth: currentInputHealth(), candidate: candidate(),
+      acceptedPublication: null, coverageFloors: [],
+    };
+    expect(assessV9Publication(input).decision).toBe("publish");
+    expect(() => assessV9Publication({
+      ...input, expiredMeasuredExitAssetIds: ["missing-asset"],
+    })).toThrow();
+  });
+
+  it("deduplicates stale DEX health and expired-route holds without dropping affected assets", () => {
+    const { fixedInput, publication } = measuredHistoryFixture();
+    fixedInput.clockSec += 10_801;
+    const health = currentInputHealth();
+    health.dex.state = "stale";
+    expect(assessV9Publication({
+      inputHealth: health, candidate: publication, acceptedPublication: null, coverageFloors: [],
+      expiredMeasuredExitAssetIds: expiredMeasuredExitAssetIds(fixedInput, publication),
+    })).toEqual({ decision: "hold", reasons: [{ code: "dex-stale" }], affectedAssetIds: ["alpha"] });
+  });
+
   it.each([
     (observation: ExitRouteObservation) => { observation.observationHistory = undefined; },
     (observation: ExitRouteObservation) => { observation.observationHistory!.successfulObservationCount = 1; },
@@ -398,10 +435,63 @@ describe("Safety Score V9 publication assessment", () => {
           "asset-1",
         ],
       }),
-    ).toMatchObject({
+    ).toEqual({
       decision: "hold",
+      reasons: ["asset-0", "asset-1"].map(assetId => ({
+        code: "producer-failed-pipeline-gap", assetId, source: "reason",
+        reasonCode: "missing-pillar-evidence", path: "asset-compilation", effect: "pipeline-gap",
+      })),
       affectedAssetIds: ["asset-0", "asset-1"],
     });
+  });
+
+  it("rejects a direct quarantine that names no candidate asset", () => {
+    const input = {
+      inputHealth: currentInputHealth(), candidate: candidate(),
+      acceptedPublication: null, coverageFloors: [],
+    };
+    expect(assessV9Publication(input).decision).toBe("publish");
+    expect(() => assessV9Publication({
+      ...input, quarantinedAssetIds: ["missing-asset"],
+    })).toThrow();
+  });
+
+  it.each([
+    { ratingStatus: "rated", score: 80, grade: "A-" },
+    { ratingStatus: "not-rated", score: null, grade: "NR" },
+    { ratingStatus: "pipeline-gap", score: 0, grade: null },
+    { ratingStatus: "pipeline-gap", score: null, grade: "NR" },
+  ] satisfies Array<Partial<SafetyScoreV9CurrentResponse["cards"][number]>>)(
+    "rejects a quarantine that is not a null-score/null-grade technical gap: %j", patch => {
+      const card = producerFailedCard({ id: "alpha", score: null, grade: null });
+      const input = {
+        inputHealth: currentInputHealth(), candidate: candidate(card),
+        acceptedPublication: null, coverageFloors: [], quarantinedAssetIds: ["alpha"],
+      };
+      expect(assessV9Publication(input).decision).toBe("hold");
+      Object.assign(card, patch);
+      expect(() => assessV9Publication(input)).toThrow();
+    },
+  );
+
+  it.each([
+    { affected: ["alpha", "missing-asset"] },
+    { affected: [] },
+  ])("rejects an incomplete or foreign quarantine-impact census: %j", ({ affected }) => {
+    const cards = [
+      producerFailedCard({ id: "alpha", score: null, grade: null }),
+      ...Array.from({ length: 9 }, (_, index) => makeWorkerV9Card({ id: `healthy-${index}` })),
+    ];
+    const input = {
+      inputHealth: currentInputHealth(), candidate: candidate(cards),
+      acceptedPublication: null, coverageFloors: [], quarantinedAssetIds: ["alpha"],
+    };
+    expect(assessV9Publication(input)).toEqual({
+      decision: "publish", reasons: [], affectedAssetIds: ["alpha"],
+    });
+    expect(() => assessV9Publication({
+      ...input, quarantineAffectedAssetIds: affected,
+    })).toThrow();
   });
 
 });

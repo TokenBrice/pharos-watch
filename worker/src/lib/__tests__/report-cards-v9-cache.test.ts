@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeReportCardsV9Response, makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { ReportCardsV9ResponseSchema, ReportCardsV9DependencyGraphSchema, buildReportCardsV9DependencyGraph } from "@shared/types/report-cards-v9";
+import { ReportCardsV9DependencyGraphSchema, buildReportCardsV9DependencyGraph } from "@shared/types/report-cards-v9";
 
 const mockLoadPublication = vi.fn();
 const mockLoadPublicationHealth = vi.fn();

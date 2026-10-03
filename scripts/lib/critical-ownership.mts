@@ -104,7 +104,6 @@ export const CRITICAL_OWNERSHIP_WAIVERS: Readonly<Record<string, CriticalOwnersh
   "worker/src/lib/safety-score-v9/fact-set-boundary.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
   "worker/src/lib/safety-score-v9/fact-set-control.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
   "worker/src/lib/safety-score-v9/fact-set-exit.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/lib/safety-score-v9/fact-set-operational-resilience.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
   "worker/src/lib/safety-score-v9/fact-set-peg-supply.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
 };
 

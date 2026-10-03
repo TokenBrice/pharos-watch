@@ -20,7 +20,7 @@ import {
   resolveV9DistinctExitCapacity,
 } from "./safety-score-v9-facts.fixture-support";
 import type { V9AssetFactsV2, V9AssetFactsV3 } from "./safety-score-v9-facts.fixture-support";
-import { assuranceStatus, bridgeControl, bridgeSupplyRow, commonDomainFixture, staleBridgeStatus, unresolvedArchetype } from "./safety-score-v9-facts.test-support";
+import { bridgeControl, bridgeSupplyRow, commonDomainFixture, staleBridgeStatus, unresolvedArchetype } from "./safety-score-v9-facts.test-support";
 import { resolveV9EvidenceCause } from "../safety-score-v9/evidence";
 import { CompiledV9FactSetV3Schema } from "../../types/safety-score-v9-facts";
 

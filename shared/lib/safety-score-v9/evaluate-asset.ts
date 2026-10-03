@@ -1052,7 +1052,6 @@ function applyRoleDependencyProjection(
   pillar: V9PillarEvaluation,
   projection: V9RoleDependencyPillarProjection,
   envelope: V9ValidatedPolicyEnvelope,
-  evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
 ): V9PillarEvaluation {
   if (projection.events.length === 0) return pillar;
   const excludedEvents = projection.events.filter((event) => event.cause === "A" || event.cause === "B");
@@ -1081,13 +1080,12 @@ function applyRoleDependencyPillarLimits(
   pillars: V9ProductionScoreInput["pillars"],
   resolved: V9ResolvedDependencyInputs,
   envelope: V9ValidatedPolicyEnvelope,
-  evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
 ): V9ProductionScoreInput["pillars"] {
   const projections = resolved.rolePillarProjections;
   return {
     backing: pillars.backing,
-    exit: applyRoleDependencyProjection(pillars.exit, projections!.exit, envelope, evaluatedById),
-    control: applyRoleDependencyProjection(pillars.control, projections!.control, envelope, evaluatedById),
+    exit: applyRoleDependencyProjection(pillars.exit, projections!.exit, envelope),
+    control: applyRoleDependencyProjection(pillars.control, projections!.control, envelope),
   };
 }
 
@@ -1706,7 +1704,7 @@ export function evaluateV9Asset({
           (["backing", "exit", "control"] as const).filter((pillar) => basePillars[pillar].aggregationDisposition === "included"),
         );
   const creditedPillars = applyOperationalResilienceCredits(basePillars, operationalResilience);
-  const pillars = applyRoleDependencyPillarLimits(creditedPillars, resolved, envelope, evaluatedById);
+  const pillars = applyRoleDependencyPillarLimits(creditedPillars, resolved, envelope);
   const scoreInput: V9ProductionScoreInput = {
     assetId: asset.assetId,
     marketRank,

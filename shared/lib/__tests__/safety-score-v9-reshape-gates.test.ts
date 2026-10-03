@@ -13,10 +13,7 @@ import type {
 import { makeV9Pillar as pillar, makeV9ProductionScoreInput as assetInput } from "./safety-score-v9-score.test-support";
 import { evaluateV9EconomicControl } from "@shared/lib/safety-score-v9/control";
 import {
-  makeDeploymentControl,
   makeEconomicControlArgs,
-  makeEconomicControlFacts,
-  makeReviewedMintInput,
 } from "./safety-score-v9-fixtures.test-support";
 
 const POLICY = V9_CANDIDATE_POLICY_V1;

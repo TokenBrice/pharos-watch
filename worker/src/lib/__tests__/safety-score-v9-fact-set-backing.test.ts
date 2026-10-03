@@ -223,7 +223,7 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
     const exposure = asset.reserveExposures[0]!;
     expect(exposure.status.observationState).toBe("known");
     for (const [factorKey, requiredDatum] of [["liquidity", "liquidityHorizon"], ["maturity", "maturityDaysMax"]] as const) {
-      const status = exposure.factorStatuses?.[factorKey]!;
+      const status = exposure.factorStatuses![factorKey]!;
       const gap = asset.gaps.find((row) => row.gapId === status.gapIds[0])!;
       expect(gap.causeProof.cause).toBe("U");
       expect(gap.causeScope).toEqual({ pillar: "backing", componentKey: "reserve-exposure",

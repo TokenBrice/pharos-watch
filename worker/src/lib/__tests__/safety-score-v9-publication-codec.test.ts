@@ -6,8 +6,6 @@ import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import {
   makeWorkerSafetyScoreV9Publication,
-  makeWorkerV9Card,
-  makeWorkerV9Pillars,
 } from "../../test-helpers/report-cards-v9";
 import {
   parseSafetyScoreV9Publication,

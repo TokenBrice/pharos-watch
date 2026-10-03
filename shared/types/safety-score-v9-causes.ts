@@ -299,18 +299,16 @@ export const V9CauseContributionSchema = z.object({ ...V9CauseContributionShape,
   .superRefine(refineV9CauseContribution);
 export type V9CauseContribution = z.infer<typeof V9CauseContributionSchema>;
 
-const V9ConfidenceFactorSchema = z.object({
-  factor: z.number().finite().min(0).max(1), cause: V9EvidenceCauseSchema.nullable(), causeGapIds: canonicalTextArray(),
-}).strict().superRefine((value, ctx) => {
-  if (((value.cause === "A" || value.cause === "B") && value.factor !== 1) ||
-      (value.cause !== null && value.causeGapIds.length === 0)) {
-    ctx.addIssue({ code: "custom", message: "A/B confidence dimensions are neutral; causal dimensions require gap identities" });
-  }
-});
-const V9ConfidenceDimensionsSchema = z.object({
-  observation: V9ConfidenceFactorSchema, model: V9ConfidenceFactorSchema, capacityMethod: V9ConfidenceFactorSchema,
-}).strict();
-export type V9ConfidenceDimensions = z.infer<typeof V9ConfidenceDimensionsSchema>;
+type V9ConfidenceFactor = {
+  factor: number;
+  cause: V9EvidenceCause | null;
+  causeGapIds: string[];
+};
+export type V9ConfidenceDimensions = {
+  observation: V9ConfidenceFactor;
+  model: V9ConfidenceFactor;
+  capacityMethod: V9ConfidenceFactor;
+};
 
 export const V9RatingStatusSchema = z.enum(["rated", "not-rated", "pipeline-gap"]);
 export type V9RatingStatus = z.infer<typeof V9RatingStatusSchema>;
