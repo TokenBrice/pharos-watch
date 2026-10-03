@@ -7409,6 +7409,72 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "nopal-nest",
+      "reviewedAt": "2026-10-03T22:47:15Z",
+      "expiresAt": "2027-10-03T22:45:46Z",
+      "reviewer": "W1R62 primary-source unknown resolver",
+      "notes": "Exact vault live-operation lower bound from dated Plume announcement; not parent/fund age. No independent verification, throughput, stress recovery, financial reconciliation, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "plume-dated-live-vault",
+          "label": "Plume exact vault live announcement",
+          "publisher": "Plume",
+          "publishedAt": "2025-12-19",
+          "url": "https://www.plume.org/blog/building-solanas-real-world-yield-layer-with-plume",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 9,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "plume-dated-live-vault"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "nbasis-nest",
+      "reviewedAt": "2026-10-03T22:47:15Z",
+      "expiresAt": "2027-10-03T22:45:46Z",
+      "reviewer": "W1R62 primary-source unknown resolver",
+      "notes": "Exact vault live-operation lower bound from dated Plume announcement; not parent/fund age. No independent verification, throughput, stress recovery, financial reconciliation, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "plume-dated-live-vault",
+          "label": "Plume exact vault live announcement",
+          "publisher": "Plume",
+          "publishedAt": "2025-09-25",
+          "url": "https://www.plume.org/blog/now-live-nbasis-vault-on-plasma",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 12,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "plume-dated-live-vault"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

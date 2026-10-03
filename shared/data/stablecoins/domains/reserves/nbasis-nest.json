@@ -54,13 +54,33 @@
         "smart-contract",
         "concentration"
       ],
-      "liquidityHorizon": "unknown",
+      "liquidityHorizon": "immediate",
       "sourceKey": "nest-vault-positions:pusd"
+    },
+    {
+      "name": "Liquid USDC balances",
+      "pct": 0,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "liquidityHorizon": "immediate",
+      "sourceKey": "nest-vault-positions:usdc"
+    },
+    {
+      "name": "Liquid USDT balances",
+      "pct": 0,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "liquidityHorizon": "immediate",
+      "sourceKey": "nest-vault-positions:usdt"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-04",
-    "reviewer": "Safety Score V9 Agent 09",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Safety Score V9 Agent 09; W1R62 liquid-position metadata review",
     "confidence": "verified",
     "sources": [
       {
@@ -78,9 +98,13 @@
       {
         "label": "Bitwise USCC investment-management transition completed 1 June 2026",
         "url": "https://bitwiseinvestments.com/newsroom/bitwise-debuts-inaugural-tokenized-fund-the-bitwise-crypto-carry-fund"
+      },
+      {
+        "label": "Nest liquidity mechanics: on-chain stablecoin reserve availability",
+        "url": "https://docs.nest.credit/about/liquidity-and-redemptions"
       }
     ],
-    "rationale": "At the source timestamp 2026-09-04T02:11:29Z, the official positions API reported $115,236.19 of USCC, $15,337.03 of USTB, $766.18 of pUSD, and about $58.11 of other positive liquid stablecoin balances. The official vault directory publishes USCC 87.7%, USTB 11.7%, and about 0.63% liquid assets; the production adapter's one-decimal output is USCC 87.7%, USTB 11.7%, and pUSD liquid balance 0.6%.",
+    "rationale": "Historical composition remains the 2026-09-04 source snapshot: USCC 87.7%, USTB 11.7%, pUSD 0.6%. On 2026-10-03, the exact nBASIS positions API identified pUSD, USDC and USDT balances as liquidAssets with no pending transactions; Nest liquidity documentation identifies these on-chain reserves as available for instant conversion when sufficient. Immediate refers only to the scoped idle token balances, not bank USD settlement, underlying fund redemption, whole-vault withdrawal or stressed value. Zero-percent keyed USDC/USDT rows supply live metadata only and do not refresh historical weights. USCC and USTB liquidity remains unknown because business-day schedules and limited protocol liquidity do not establish an unconditional calendar maximum.",
     "compositionBasis": "Nest current nBASIS directory and positions/last-price-update APIs fetched 2026-09-04; settled positions normalized to reported vault NAV",
     "compositionAsOf": "2026-09-04",
     "scope": "full-composition",

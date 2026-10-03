@@ -15818,6 +15818,258 @@
           "assertion": "Exact basket imbalance withdrawal formula is public (R=V_n-V_(n+1), V=C*D/(1-D), maximum penalty 10%); current documented redemption producer does not evaluate basket-state-dependent same-notional cost. W15 disclosed-unquantified treatment, not zero fees."
         }
       ]
+    },
+    {
+      "id": "uw-nopal-nest-3dab9c6a4d8e0460",
+      "assetId": "nopal-nest",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nopal-nest:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:00Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
+      "sources": [
+        {
+          "url": "https://docs.nest.credit/about/liquidity-and-redemptions",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": null,
+          "location": "Queued (Asynchronous) Redemption",
+          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
+          "assertion": "Typical T+2 to T+5 ranges are qualified; no unconditional final settlement maximum for the modeled nOPAL/nBASIS queued exit is established."
+        },
+        {
+          "url": "https://docs.nest.credit/about/vault-operations-and-valuation",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": null,
+          "location": "Standard Redemption",
+          "excerpt": "A user submits a redemption request, and the vault processes that request as liquidity becomes available.",
+          "assertion": "Completion remains liquidity-dependent rather than a guaranteed SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.nest.credit/",
+        "https://docs.nest.credit/about/available-vaults",
+        "https://docs.nest.credit/about/liquidity-and-redemptions",
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions",
+        "https://docs.nest.credit/developers/integration-guides/nopal",
+        "https://docs.nest.credit/developers/actions-api/reference/vaults/slug/redeem/quote/post",
+        "https://api.nest.credit/v1/vaults/nest-basis-vault",
+        "https://api.nest.credit/v1/vaults/nest-opal-vault",
+        "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/README.md"
+      ],
+      "rationale": "The exact datum is final queued-redemption settlement maximum at the modeled notional. Reviewed legal terms, integration/API flow, vault directory, liquidity policy and permissioned fulfillment documentation publish estimates and liquidity-dependent processing, not a binding asset-specific completion maximum. Current nOPAL T+1 is explicitly an estimate; typical hour/T+2\u2013T+5 figures are not guaranteed. nBASIS remains in the exact registry but is absent from the current Arc-only directory."
+    },
+    {
+      "id": "uw-nbasis-nest-6f7a192f3a41646b",
+      "assetId": "nbasis-nest",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nbasis-nest:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:00Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
+      "sources": [
+        {
+          "url": "https://docs.nest.credit/about/liquidity-and-redemptions",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": null,
+          "location": "Queued (Asynchronous) Redemption",
+          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
+          "assertion": "Typical T+2 to T+5 ranges are qualified; no unconditional final settlement maximum for the modeled nOPAL/nBASIS queued exit is established."
+        },
+        {
+          "url": "https://docs.nest.credit/about/vault-operations-and-valuation",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": null,
+          "location": "Standard Redemption",
+          "excerpt": "A user submits a redemption request, and the vault processes that request as liquidity becomes available.",
+          "assertion": "Completion remains liquidity-dependent rather than a guaranteed SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.nest.credit/",
+        "https://docs.nest.credit/about/available-vaults",
+        "https://docs.nest.credit/about/liquidity-and-redemptions",
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions",
+        "https://docs.nest.credit/developers/integration-guides/nopal",
+        "https://docs.nest.credit/developers/actions-api/reference/vaults/slug/redeem/quote/post",
+        "https://api.nest.credit/v1/vaults/nest-basis-vault",
+        "https://api.nest.credit/v1/vaults/nest-opal-vault",
+        "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/README.md"
+      ],
+      "rationale": "The exact datum is final queued-redemption settlement maximum at the modeled notional. Reviewed legal terms, integration/API flow, vault directory, liquidity policy and permissioned fulfillment documentation publish estimates and liquidity-dependent processing, not a binding asset-specific completion maximum. Current nOPAL T+1 is explicitly an estimate; typical hour/T+2\u2013T+5 figures are not guaranteed. nBASIS remains in the exact registry but is absent from the current Arc-only directory."
+    },
+    {
+      "id": "uw-nbasis-nest-3ad3ab86cf507742",
+      "assetId": "nbasis-nest",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:215f3e73e97f6f3aa668dcb6",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:00Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
+      "sources": [
+        {
+          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": null,
+          "location": "Fund information and Documents",
+          "excerpt": "Fund documents and statements are available in the Investor Portal.",
+          "assertion": "Public USCC terms disclose NAV and daily dealing but no maturity maximum for the fund-share claim held by nBASIS."
+        },
+        {
+          "url": "https://superstate.com/assets/ustb",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": "2026-09-21",
+          "location": "About USTB and holdings",
+          "excerpt": "Ownership in the Fund is represented by USTB, held either as a token or in book-entry record keeping.",
+          "assertion": "Treasury holding maturity dates are not the maturity of the USTB fund-share claim."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://api.nest.credit/v1/vaults/nest-basis-vault/positions",
+        "https://superstate.com/assets/uscc",
+        "https://superstate.com/assets/ustb",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb",
+        "https://docs.superstate.com/investors/tokenized-funds/redeem",
+        "https://superstate.com/assets/uscc#disclaimers",
+        "https://superstate.com/assets/ustb#disclaimers"
+      ],
+      "rationale": "Exact missing datum: maximum maturity days of nBASIS's USCC and USTB fund-share claims, not futures/T-bills in their underlying portfolios. Public issuer fund pages, current holdings, legal risk disclosures and investor dealing docs identify rolling NAV shares with liquidity schedules, not a hard termination/maturity maximum. Definitive investor documents are supplied privately through the Investor Portal; no public claim-level maximum was located. Do not use a Treasury holding maturity or WAM as a share maturity."
+    },
+    {
+      "id": "uw-nbasis-nest-88f4423aa534e97a",
+      "assetId": "nbasis-nest",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e83e3d84c18208edc253be48",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:00Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
+      "sources": [
+        {
+          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": null,
+          "location": "Fund information and Documents",
+          "excerpt": "Fund documents and statements are available in the Investor Portal.",
+          "assertion": "Public USCC terms disclose NAV and daily dealing but no maturity maximum for the fund-share claim held by nBASIS."
+        },
+        {
+          "url": "https://superstate.com/assets/ustb",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": "2026-09-21",
+          "location": "About USTB and holdings",
+          "excerpt": "Ownership in the Fund is represented by USTB, held either as a token or in book-entry record keeping.",
+          "assertion": "Treasury holding maturity dates are not the maturity of the USTB fund-share claim."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://api.nest.credit/v1/vaults/nest-basis-vault/positions",
+        "https://superstate.com/assets/uscc",
+        "https://superstate.com/assets/ustb",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb",
+        "https://docs.superstate.com/investors/tokenized-funds/redeem",
+        "https://superstate.com/assets/uscc#disclaimers",
+        "https://superstate.com/assets/ustb#disclaimers"
+      ],
+      "rationale": "Exact missing datum: maximum maturity days of nBASIS's USCC and USTB fund-share claims, not futures/T-bills in their underlying portfolios. Public issuer fund pages, current holdings, legal risk disclosures and investor dealing docs identify rolling NAV shares with liquidity schedules, not a hard termination/maturity maximum. Definitive investor documents are supplied privately through the Investor Portal; no public claim-level maximum was located. Do not use a Treasury holding maturity or WAM as a share maturity."
+    },
+    {
+      "id": "uw-nopal-nest-6dd90e76d5279677",
+      "assetId": "nopal-nest",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nopal-nest:queue-redeem"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:56:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
+      "sources": [
+        {
+          "url": "https://api.nest.credit/v1/actions/vaults/nest-opal-vault/redeem/quote",
+          "observedAt": "2026-10-03T22:51:00Z",
+          "datumAsOf": null,
+          "location": "Read-only POST: chainId 98866, redemptionType nest, shareAmount 100000000000, redemptionAsset 0x222365ef19f7947e5484218551b56bb3965aa7af",
+          "excerpt": "\"feeAmount\":\"16532985\",\"fees\":{\"ratePpm\":150,\"flatAmount\":\"0\",\"maxRatePpm\":1500,\"maxFlatAmount\":\"0\"}",
+          "assertion": "Published dynamic queued-redemption fee: percentage plus flat amount, quoted for the exact nOPAL route. Current static issuer-API basket producer does not evaluate this per chain/output/notional; W15 disclosed-unquantified, not universal zero or known all-in fee."
+        },
+        {
+          "url": "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/libraries/NestVaultRedeemLogic.sol",
+          "observedAt": "2026-10-03T22:56:50Z",
+          "datumAsOf": null,
+          "location": "executeFulfillRedeem",
+          "excerpt": "_amountReceived.calculatePostFeeAmounts(_feeConfig.rate, _feeConfig.flat);",
+          "assertion": "The applicable asynchronous-redemption formula is public. Need live fee/rate parameters and a same-notional quote evaluation; a static asset-wide fixed-bps field cannot encode the multi-chain formula observation."
+        }
+      ]
+    },
+    {
+      "id": "uw-nbasis-nest-4249c0717ef50632",
+      "assetId": "nbasis-nest",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nbasis-nest:queue-redeem"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:56:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
+      "sources": [
+        {
+          "url": "https://api.nest.credit/v1/actions/vaults/nest-basis-vault/redeem/quote",
+          "observedAt": "2026-10-03T22:51:00Z",
+          "datumAsOf": null,
+          "location": "Read-only POST: chainId 98866, redemptionType nest, shareAmount 100000000000, redemptionAsset 0x222365ef19f7947e5484218551b56bb3965aa7af",
+          "excerpt": "\"feeAmount\":\"0\",\"fees\":{\"ratePpm\":0,\"flatAmount\":\"0\",\"maxRatePpm\":0,\"maxFlatAmount\":\"0\"}",
+          "assertion": "Exact live nBASIS queued-exit fee parameters are public under the documented rate-plus-flat formula. The fixed basket producer lacks chain/output/notional quote evaluation; W15 B does not claim zero all-in cost or future fixed fee."
+        },
+        {
+          "url": "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/README.md",
+          "observedAt": "2026-10-03T22:51:00Z",
+          "datumAsOf": null,
+          "location": "Async redemption and Fees",
+          "excerpt": "Vault fees then apply to individual deposits, async-redemption fulfillments, and instant redemptions.",
+          "assertion": "The public fee schedule is configuration-driven and route-specific. Static global fixedFee(0) would overstate the observed one-chain quote and omit gas or other output-chain parameters."
+        }
+      ]
     }
   ]
 }
