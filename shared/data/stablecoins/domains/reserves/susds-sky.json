@@ -16,7 +16,7 @@
         "liquidity",
         "market"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "immediate"
     },
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd:deployed",
@@ -29,12 +29,12 @@
         "counterparty",
         "smart-contract"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-29",
-    "reviewer": "GLM issue-sweep 2026-09-29 (ResvSkySpark)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W1R02 pinned liquidity classification review; GLM September composition review retained",
     "confidence": "verified",
     "sources": [
       {
@@ -56,9 +56,17 @@
       {
         "label": "Ethereum observation block 26079396",
         "url": "https://etherscan.io/block/26079396"
+      },
+      {
+        "label": "Sky savings withdrawal terms, accessed 2026-10-03",
+        "url": "https://sky.money/susds"
+      },
+      {
+        "label": "Ethereum liquidity classification observation block 26114891",
+        "url": "https://etherscan.io/block/26114891"
       }
     ],
-    "rationale": "At Ethereum block 26079396 (2026-09-28T23:59:59Z), asset() identifies USDS, totalAssets() is 4411049738164593904315517122 and USDS balanceOf(sUSDS) is 4411048966444342796076869286, both in 18-decimal units. The pinned SUsds implementation projects chi in convertToAssets before drip realizes the savings accrual through vat.suck and usdsJoin.exit. The adapter's deployed source key therefore identifies un-dripped SSR accrual. It does not establish an external strategy allocation. No hard maturity maximum is stated, so maturityDaysMax is omitted.",
+    "rationale": "Composition remains the September 28 observation: block 26079396 asset() identifies USDS, totalAssets() is 4411049738164593904315517122 and USDS balanceOf(sUSDS) is 4411048966444342796076869286. Liquidity classification independently reviewed at block 26114891 on October 3: getImplementation() still identifies 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0, asset() is USDS, and permissionless drip() eth_call succeeds. The source realizes all projected chi accrual by Vat.suck/UsdsJoin.exit before withdraw/redeem transfers USDS; no queue, maturity, lockup or external strategy exists. Both scoped reserve categories are immediately available in USDS under this mechanism, not a guarantee of final USD settlement, market price, or parent collateral liquidity. No composition weights or dates are refreshed, and structurally inapplicable maturity maxima remain omitted.",
     "compositionBasis": "Archive eth_call of asset(), totalAssets() and USDS balanceOf(sUSDS), pinned to Ethereum block 26079396, plus the pinned SUsds accrual implementation",
     "compositionAsOf": "2026-09-28",
     "scope": "full-composition",

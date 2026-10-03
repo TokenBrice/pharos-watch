@@ -4186,6 +4186,44 @@
           "url": "https://ethereum-rpc.publicnode.com"
         }
       ]
+    },
+    {
+      "assetId": "susds-sky",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2027-01-01",
+      "reviewer": "W1R02 pinned Ethereum allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "The exact sUSDS implementation holds deposited USDS and realizes projected SSR accrual by Vat.suck/UsdsJoin.exit. It has no strategy allocation, lending of held USDS, external borrower, or wrapper-local offchain custodian. The small totalAssets-minus-balance difference is unrealized SSR accrual, not deployed strategy assets. This is wrapper-local scope only; USDS parent collateral, governance and bridge controls retain their risks.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+          "function": "asset()/getImplementation()/totalAssets()/USDS.balanceOf(sUSDS)",
+          "value": "asset=0xdc035d45d973e3ec169d2276ddab16f1e407384f; implementation=0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0; totalAssets=4659153353426782025580729182; balance=4659152350194337155508102921; blockHash=0x7215bcdfd4a73605d2bafc27738791d6ec1174694cf33890a23fb81811fc7065",
+          "block": 26114891
+        }
+      ],
+      "sources": [
+        {
+          "label": "Pinned SUsds implementation",
+          "url": "https://raw.githubusercontent.com/sky-ecosystem/sdai/dfc7f41cb7599afcb0f0eb1ddaadbf9dd4015dce/src/SUsds.sol"
+        },
+        {
+          "label": "Exact implementation verified source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0"
+        },
+        {
+          "label": "Pinned Ethereum RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Sky savings mechanics",
+          "url": "https://developers.skyeco.com/protocol/tokens/susds/"
+        }
+      ]
     }
   ]
 }

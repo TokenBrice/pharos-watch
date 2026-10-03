@@ -7328,6 +7328,553 @@
         "https://solscan.io/account/D4AiKFxjZBrhd6MeRAAj6wNxFcZJuRMBrXW9UpqeS8Ax"
       ],
       "rationale": "No public exact all-in fee schedule or complete cost formula for the legacy USDv direct USDC redemption route was found. The legacy announcement describes qualified-holder mint/burn/redeem without a fee schedule; wind-down recommends market swaps without promising a direct-redemption price. Current docs and transaction fee UI concern the separate new token. Interface terms do not define the legacy API/direct-redemption schedule."
+    },
+    {
+      "id": "uw-a7a5-old-vector-3d3888e98ff54821",
+      "assetId": "a7a5-old-vector",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:a7a5-old-vector:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:15Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R16)",
+      "sources": [
+        {
+          "url": "https://www.a7a5.kg/User%20agreement%20en.pdf",
+          "observedAt": "2026-10-03T22:52:15Z",
+          "datumAsOf": null,
+          "location": "p.7, section 5.6",
+          "excerpt": "The Company, as well as the Payment Agent and/or the Virtual Asset Exchange Operator, may charge the User a fee (commission) when performing A7A5 purchase and sale operations.",
+          "assertion": "Section 5.6 leaves the fee amount to operation-specific disclosure; no public tariff or all-in same-notional bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.a7a5.kg/",
+        "https://www.a7a5.kg/User%20agreement%20en.pdf",
+        "https://docs.a7a5.io/help/faq.md",
+        "https://docs.a7a5.io/introduction-to-a7a5/ecosystem.md",
+        "https://docs.a7a5.io/legal/terms-of-use.md",
+        "https://docs.a7a5.io/llms.txt"
+      ],
+      "rationale": "The exact offchain A7A5-to-RUB redemption cost remains undisclosed: public issuer FAQ directs holders to accredited agents, and agent agreement sections 4.21-4.22 and 5.6 permit participant-specific fees disclosed in the account/operation. No public numeric tariff or evaluable formula for this rail was located."
+    },
+    {
+      "id": "uw-a7a5-old-vector-148c861a22e4f736",
+      "assetId": "a7a5-old-vector",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:15Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R16)",
+      "sources": [
+        {
+          "url": "https://docs.a7a5.io/introduction-to-a7a5/readme.md",
+          "observedAt": "2026-10-03T22:52:15Z",
+          "datumAsOf": null,
+          "location": "What is A7A5?, opening reserve description",
+          "excerpt": "Fiat deposits in Roubles are held in top-tier banks with a correspondent network connected to",
+          "assertion": "Issuer identifies deposit class but not banks, balances, or weights."
+        },
+        {
+          "url": "https://docs.a7a5.io/legal/transparency.md",
+          "observedAt": "2026-10-03T22:52:15Z",
+          "datumAsOf": null,
+          "location": "Transparency, full substantive page",
+          "excerpt": "All A7A5 issuances are distributed to the market through licensed brokers and licensed centralized exchanges.",
+          "assertion": "Transparency text is issuance-distribution information, not a reserve composition."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.a7a5.io/transparency",
+        "https://www.a7a5.kg/transparency?lang=en",
+        "https://docs.a7a5.io/legal/transparency.md",
+        "https://docs.a7a5.io/legal/terms-of-use.md",
+        "https://docs.a7a5.io/llms.txt",
+        "https://docs.a7a5.io/introduction-to-a7a5/readme.md",
+        "https://docs.a7a5.io/legal/legal-framework.md",
+        "https://www.a7a5.kg/User%20agreement%20en.pdf",
+        "https://a7a5.kg/A7A5%20Whitepaper.pdf"
+      ],
+      "rationale": "No current whole-book reserve composition, scoped asset denominator, constituent banks/instruments or allocation weights are published on issuer/agent transparency, legal terms or documentation corpus. Terms describe deposits plus short-term assets without weights; network token supply is not reserve composition. The former report endpoints serve HTML, which is recorded as unavailable rather than itself proving non-disclosure."
+    },
+    {
+      "id": "uw-eur0-usual-9ae13ddbe2d6f818",
+      "assetId": "eur0-usual",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c038a877ef5eef9f6f893919",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:15Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R16)",
+      "sources": [
+        {
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+          "observedAt": "2026-10-03T22:52:15Z",
+          "datumAsOf": "2026-09-01",
+          "location": "EUTBL investment policy table, prospectus p.26",
+          "excerpt": "Maximum residual life of securities and instruments",
+          "assertion": "Six-month limit governs underlying instruments, not a maturity of the held EUTBL fund-share claim."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/eur0.md",
+        "https://docs.usual.money/usual-products/usd0-stablecoin/eur0-stablecoin"
+      ],
+      "rationale": "The exact EUTBL fund-share maturityDaysMax is not disclosed. September 1 prospectus defines share ownership, open-ended subscriptions/redemptions, and six-month underlying instrument residual life; that underlying covenant and WAM/WAL are not the maturity of EUR0's fund-share holding. No share-level maximum term was found in the prospectus or issuer collateral terms."
+    },
+    {
+      "id": "uw-usdp-parallel-a0e6a0d6866da66e",
+      "assetId": "usdp-parallel",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdp-parallel:collateral-redeem"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:52:15Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R16)",
+      "sources": [
+        {
+          "url": "https://docs.parallel.best/products/parallel-v3/fees",
+          "observedAt": "2026-10-03T22:52:15Z",
+          "datumAsOf": null,
+          "location": "Redeeming, worked example",
+          "excerpt": "Redeeming 10 USDp returns assets worth about $9.65 (10 \u00d7 0.985 \u00d7 0.98) instead of the $9.85 a plain pro-rata share would give.",
+          "assertion": "Public proportional ratio/penalty formula is disclosed, but no captured same-notional stress-bound evaluation is available. Current reviewed-variable-cost schema does not encode this formula as a numerical fee bound; W15 permits B for disclosed unquantified fees."
+        }
+      ]
+    },
+    {
+      "id": "uw-wusd-worldwide-f3f059c5de612f83",
+      "assetId": "wusd-worldwide",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R02)",
+      "sources": [
+        {
+          "url": "https://developer.wspn.io/5768563m0",
+          "observedAt": "2026-10-03T22:56:30Z",
+          "datumAsOf": null,
+          "location": "Reserves Management",
+          "excerpt": "A possible allocation for the fiat-based stablecoin issuer could be 70-80% in cash",
+          "assertion": "Policy ranges are not a dated measured whole-reserve composition."
+        },
+        {
+          "url": "https://wspn.io/transparency/",
+          "observedAt": "2026-10-03T22:56:30Z",
+          "datumAsOf": null,
+          "location": "Reserve Transparency",
+          "excerpt": "we are committed to providing regular attestations from independent, reputable auditors",
+          "assertion": "Rendered public documents link only whitepaper, terms, risks and a contract-security audit; no dated reserve holdings report."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://wspn.io/transparency/",
+        "https://wspn.io/",
+        "https://developer.wspn.io/5768563m0",
+        "https://assets.wspn.io/docs/Whitepaper_Worldwide_Stablecoin_Payment_Network.pdf",
+        "https://assets.wspn.io/docs/WSPN_Term%20of%20Use.pdf",
+        "https://assets.wspn.io/docs/Certik_Smart_Contract_Audit_Report.pdf",
+        "https://assets.wspn.io/docs/WSPN_Risk_Disclosure_Statement_.pdf"
+      ],
+      "rationale": "Exact dated whole-reserve composition, current category weights and instruments are not disclosed. The policy publishes possible allocation ranges and planned attestation reporting, not a current measured book. The linked CertiK audit covers Solidity security, not reserves or liabilities. No percentages or fresh composition date are invented."
+    },
+    {
+      "id": "uw-wusd-worldwide-e7dfb3189dc6f936",
+      "assetId": "wusd-worldwide",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R02)",
+      "sources": [
+        {
+          "url": "https://assets.wspn.io/docs/Whitepaper_Worldwide_Stablecoin_Payment_Network.pdf",
+          "observedAt": "2026-10-03T22:56:30Z",
+          "datumAsOf": null,
+          "location": "Proof of Reserves Process, p18",
+          "excerpt": "The balance will be published on the WSPN website and audited by professional third-party and independent auditors.",
+          "assertion": "Prospective reserve/supply comparison, not an observed whole-supply reconciliation with actual cadence."
+        },
+        {
+          "url": "https://wspn.io/transparency/",
+          "observedAt": "2026-10-03T22:56:30Z",
+          "datumAsOf": null,
+          "location": "Reserve Transparency",
+          "excerpt": "we are committed to providing regular attestations from independent, reputable auditors",
+          "assertion": "No published dated reserve-liability attestation or cadence record accompanies this commitment."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://wspn.io/transparency/",
+        "https://assets.wspn.io/docs/Whitepaper_Worldwide_Stablecoin_Payment_Network.pdf",
+        "https://assets.wspn.io/docs/WSPN_Term%20of%20Use.pdf",
+        "https://developer.wspn.io/5768563m0",
+        "https://developer.wspn.io/5778215m0",
+        "https://assets.wspn.io/docs/Certik_Smart_Contract_Audit_Report.pdf"
+      ],
+      "rationale": "The exact performed whole-supply mint/burn-to-reserve reconciliation and cadence across all chain liabilities is undisclosed. Whitepaper describes future proof processes and transparency promises regular attestations, but no dated liability/backing report or actual cadence was found. Mint APIs and contract-security audits establish neither financial reconciliation nor its absence; explicit unknown is retained."
+    },
+    {
+      "id": "uw-wusd-worldwide-05a3960a6add7f70",
+      "assetId": "wusd-worldwide",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:wusd-worldwide:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R02)",
+      "sources": [
+        {
+          "url": "https://developer.wspn.io/5768563m0",
+          "observedAt": "2026-10-03T22:56:30Z",
+          "datumAsOf": null,
+          "location": "How to Access WUSD",
+          "excerpt": "to readily convert USD to and from WUSD at no additional cost.",
+          "assertion": "Issuer platform conversion fee is zero; this does not quantify network and external bank charges."
+        },
+        {
+          "url": "https://developer.wspn.io/5778215m0",
+          "observedAt": "2026-10-03T22:56:30Z",
+          "datumAsOf": null,
+          "location": "Quickly convert WUSD to USD",
+          "excerpt": "You need to pay the on-chain Gas fee in this process.",
+          "assertion": "Mandatory transaction costs remain variable; no all-in same-notional quotation or bank charge ceiling is published."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://developer.wspn.io/5768563m0",
+        "https://developer.wspn.io/5778215m0",
+        "https://developer.wspn.io/6223538m0",
+        "https://developer.wspn.io/248521347e0",
+        "https://assets.wspn.io/docs/WSPN_Term%20of%20Use.pdf",
+        "https://assets.wspn.io/docs/Whitepaper_Worldwide_Stablecoin_Payment_Network.pdf",
+        "https://wspn.io/transparency/"
+      ],
+      "rationale": "The exact all-in same-notional fiat-redemption cost, including bank payout charges or a usable maximum, is not disclosed. Zero platform conversion is already correctly documented in the existing config; gas is explicitly payable, and sandbox transactionFee=0 examples are not a live fee schedule. No formula or quote for the missing total cost was found; do not replace existing documented-variable terms with fictitious all-in zero."
+    },
+    {
+      "id": "uw-usds-sky-cbe26bf5314220d5",
+      "assetId": "usds-sky",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:16c5cf3193785f3eb47874d4",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R02)",
+      "sources": [
+        {
+          "url": "https://developers.skyeco.com/protocol/vaults/collateral-liquidation/",
+          "observedAt": "2026-10-03T22:56:30Z",
+          "datumAsOf": null,
+          "location": "Resetting an Auction",
+          "excerpt": "This process will repeat until all collateral has been sold or the whole debt has been collected",
+          "assertion": "Auction reset time is not a guaranteed whole-vault realization maximum."
+        },
+        {
+          "url": "https://developers.skyeco.com/protocol/rewards/staking-engine/",
+          "observedAt": "2026-10-03T22:56:30Z",
+          "datumAsOf": null,
+          "location": "Deployments",
+          "excerpt": "Users cannot transfer their SKY vault (urn) to another address.",
+          "assertion": "Staked collateral is not freely realizable by the protocol as a whole position."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://developers.skyeco.com/protocol/vaults/collateral-liquidation/",
+        "https://developers.skyeco.com/protocol/rewards/staking-engine/",
+        "https://info.skyeco.com/collateral/core",
+        "https://info.skyeco.com/collateral/staking-engine"
+      ],
+      "rationale": "Exact whole-position liquidityHorizon for Core and Staking Engine is not disclosed as a guaranteed realization bound. Published auctions depend on collateralization, debt limits, market bidders and repeated resets; staking vaults are nontransferable. Individual atomic auction fills or SKY transferability do not prove the entire scoped collateral position immediately realizable. No zero, immediate or guessed timing is authored."
+    },
+    {
+      "id": "uw-usds-sky-282884c3630996a3",
+      "assetId": "usds-sky",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:fe73e9b2f087ad25048db4f0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R02)",
+      "sources": [
+        {
+          "url": "https://developers.skyeco.com/protocol/vaults/collateral-liquidation/",
+          "observedAt": "2026-10-03T22:56:30Z",
+          "datumAsOf": null,
+          "location": "Resetting an Auction",
+          "excerpt": "This process will repeat until all collateral has been sold or the whole debt has been collected",
+          "assertion": "Auction reset time is not a guaranteed whole-vault realization maximum."
+        },
+        {
+          "url": "https://developers.skyeco.com/protocol/rewards/staking-engine/",
+          "observedAt": "2026-10-03T22:56:30Z",
+          "datumAsOf": null,
+          "location": "Deployments",
+          "excerpt": "Users cannot transfer their SKY vault (urn) to another address.",
+          "assertion": "Staked collateral is not freely realizable by the protocol as a whole position."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://developers.skyeco.com/protocol/vaults/collateral-liquidation/",
+        "https://developers.skyeco.com/protocol/rewards/staking-engine/",
+        "https://info.skyeco.com/collateral/core",
+        "https://info.skyeco.com/collateral/staking-engine"
+      ],
+      "rationale": "Exact whole-position liquidityHorizon for Core and Staking Engine is not disclosed as a guaranteed realization bound. Published auctions depend on collateralization, debt limits, market bidders and repeated resets; staking vaults are nontransferable. Individual atomic auction fills or SKY transferability do not prove the entire scoped collateral position immediately realizable. No zero, immediate or guessed timing is authored."
+    },
+    {
+      "id": "uw-usds-sky-73670c1a11e22586",
+      "assetId": "usds-sky",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2ac96ffab56545ea876874df",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R02)",
+      "sources": [
+        {
+          "url": "https://docs.spark.finance/products/spark-liquidity-layer",
+          "observedAt": "2026-10-03T22:56:30Z",
+          "datumAsOf": null,
+          "location": "Risk Architecture",
+          "excerpt": "The automation wallets can only move funds between these pre-approved venues at the defined rate limits.",
+          "assertion": "Venue rate limits and backstops do not disclose one whole-allocator realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.spark.finance/products/spark-liquidity-layer",
+        "https://docs.spark.finance/",
+        "https://spark.finance/terms-of-use",
+        "https://info.skyeco.com/collateral/spark",
+        "https://docs.spark.finance/dev/spark-liquidity-layer/spark-alm-controller"
+      ],
+      "rationale": "The exact liquidityHorizon of the whole Sky Spark allocator slice is not disclosed. Spark documents DeFi/CeFi/RWA allocations, rate limits, cooldowns, withdrawal queues and a bounded backstop, not a maximum time to realize every in-scope position. Savings-user exit marketing and an unlimited route withdrawal rate limit are not whole-allocator liquidity evidence."
+    },
+    {
+      "id": "uw-usds-sky-caf36df58a9b29f3",
+      "assetId": "usds-sky",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d0aadc60647b8aacd6456c7b",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R02)",
+      "sources": [
+        {
+          "url": "https://docs.grove.finance/faqs",
+          "observedAt": "2026-10-03T22:56:30Z",
+          "datumAsOf": null,
+          "location": "What is Grove?",
+          "excerpt": "including AAA-rated CLO tranches, private credit, and tokenized Treasury bills.",
+          "assertion": "Diverse credit claims are disclosed without one guaranteed whole-position liquidity bound."
+        },
+        {
+          "url": "https://docs.grove.finance/faqs",
+          "observedAt": "2026-10-03T22:56:30Z",
+          "datumAsOf": null,
+          "location": "What problem does Grove Basin solve?",
+          "excerpt": "Availability is governed by eligibility requirements, liquidity parameters, platform availability, fund documentation, and law.",
+          "assertion": "Selected Basin liquidity is conditional and not a guarantee for Grove whole allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.grove.finance/faqs",
+        "https://data.grove.finance/",
+        "https://grove.finance/terms",
+        "https://info.skyeco.com/collateral/grove"
+      ],
+      "rationale": "The exact whole-slice liquidityHorizon for Grove is not disclosed. Public portfolio/FAQ describe on/offchain credit holdings and conditional Basin liquidity. Individual underlying Treasury settlement, fund terms or eligible Basin sales cannot establish a common whole-allocator realization maximum; no immediate or guessed horizon is curated."
+    },
+    {
+      "id": "uw-usds-sky-199653fd74622eca",
+      "assetId": "usds-sky",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:fa2bea35037a93f29b8b7b6a",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R02)",
+      "sources": [
+        {
+          "url": "https://obex.xyz/",
+          "observedAt": "2026-10-03T22:56:30Z",
+          "datumAsOf": null,
+          "location": "Mandate",
+          "excerpt": "Obex has a $2.5B mandate to incubate institutional grade stablecoin projects",
+          "assertion": "An incubation mandate is disclosed, not a contractual whole-position redemption horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://obex.xyz/",
+        "https://obex.xyz/faq",
+        "https://obex.xyz/tos",
+        "https://obex.xyz/disclosures",
+        "https://info.skyeco.com/collateral/obex"
+      ],
+      "rationale": "Exact liquidityHorizon for the Sky Obex allocator position is not disclosed. Issuer mandate, FAQ, legal terms and disclosures describe incubation/investment exposure but publish no whole-position withdrawal or liquidation maximum. Public debt size and governance ceilings do not prove realizability timing."
+    },
+    {
+      "id": "uw-usds-sky-a009d9154d2ed32b",
+      "assetId": "usds-sky",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:aaecefd6d7d0cd29188c03fa",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R02)",
+      "sources": [
+        {
+          "url": "https://gov.centrifuge.io/t/update-on-new-silver-pool-fix-and-flip-loans-explained/5077",
+          "observedAt": "2026-10-03T22:56:30Z",
+          "datumAsOf": "2023-01-30",
+          "location": "New Silver issuer explanation",
+          "excerpt": "and reserve the right, in rare circumstance, to offer an additional extension",
+          "assertion": "Ordinary 12\u201324 month loan terms are not an all-in hard maturity maximum."
+        },
+        {
+          "url": "https://gov.centrifuge.io/t/understanding-liquidity-management-for-investors-and-issuers/4258",
+          "observedAt": "2026-10-03T22:56:30Z",
+          "datumAsOf": "2022-06-23",
+          "location": "Epoch liquidity",
+          "excerpt": "In times of no available liquidity in a pool, locked redemption requests remain locked until liquidity becomes available.",
+          "assertion": "Redemption depends on pool liquidity, not a guaranteed maximum settlement time."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://info.skyeco.com/collateral/legacy-rwa",
+        "https://info.skyeco.com/collateral/legacy-rwa/RWA009-A",
+        "https://info.skyeco.com/collateral/legacy-rwa/RWA002-A",
+        "https://gov.centrifuge.io/t/update-on-new-silver-pool-fix-and-flip-loans-explained/5077",
+        "https://gov.centrifuge.io/t/understanding-liquidity-management-for-investors-and-issuers/4258",
+        "https://forum.makerdao.com/t/huntingdon-valley-bank-transaction-documents-on-permaweb/16264"
+      ],
+      "rationale": "Exact maximum maturity and whole-position liquidityHorizon of the Legacy RWA bucket are not disclosed as hard all-in bounds. Current dashboard identifies HVB, New Silver, Fortunafi and Harbor claims. New Silver permits further extensions beyond ordinary terms; Tinlake redemptions depend on liquidity. Original facility/loan maturities and minimum epochs cannot serve as current exhaustive bucket maxima. No WAM, 30-month extrapolation, or instantaneous liquidation claim is used."
+    },
+    {
+      "id": "uw-usds-sky-2ea4f284a23a5e68",
+      "assetId": "usds-sky",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:aaecefd6d7d0cd29188c03fa",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R02)",
+      "sources": [
+        {
+          "url": "https://gov.centrifuge.io/t/update-on-new-silver-pool-fix-and-flip-loans-explained/5077",
+          "observedAt": "2026-10-03T22:56:30Z",
+          "datumAsOf": "2023-01-30",
+          "location": "New Silver issuer explanation",
+          "excerpt": "and reserve the right, in rare circumstance, to offer an additional extension",
+          "assertion": "Ordinary 12\u201324 month loan terms are not an all-in hard maturity maximum."
+        },
+        {
+          "url": "https://gov.centrifuge.io/t/understanding-liquidity-management-for-investors-and-issuers/4258",
+          "observedAt": "2026-10-03T22:56:30Z",
+          "datumAsOf": "2022-06-23",
+          "location": "Epoch liquidity",
+          "excerpt": "In times of no available liquidity in a pool, locked redemption requests remain locked until liquidity becomes available.",
+          "assertion": "Redemption depends on pool liquidity, not a guaranteed maximum settlement time."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://info.skyeco.com/collateral/legacy-rwa",
+        "https://info.skyeco.com/collateral/legacy-rwa/RWA009-A",
+        "https://info.skyeco.com/collateral/legacy-rwa/RWA002-A",
+        "https://gov.centrifuge.io/t/update-on-new-silver-pool-fix-and-flip-loans-explained/5077",
+        "https://gov.centrifuge.io/t/understanding-liquidity-management-for-investors-and-issuers/4258",
+        "https://forum.makerdao.com/t/huntingdon-valley-bank-transaction-documents-on-permaweb/16264"
+      ],
+      "rationale": "Exact maximum maturity and whole-position liquidityHorizon of the Legacy RWA bucket are not disclosed as hard all-in bounds. Current dashboard identifies HVB, New Silver, Fortunafi and Harbor claims. New Silver permits further extensions beyond ordinary terms; Tinlake redemptions depend on liquidity. Original facility/loan maturities and minimum epochs cannot serve as current exhaustive bucket maxima. No WAM, 30-month extrapolation, or instantaneous liquidation claim is used."
     }
   ]
 }

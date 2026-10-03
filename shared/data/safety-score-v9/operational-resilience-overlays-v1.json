@@ -3416,6 +3416,270 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "usd0-usual",
+      "reviewedAt": "2026-10-03T22:48:06Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "Unknown wave W1R16 primary-source research",
+      "notes": "Dated USD0 launch article; issuer retrospective confirms May 2024 live launch. No throughput, stress recovery, reserve continuity or incident-free history asserted.",
+      "sources": [
+        {
+          "sourceId": "usd0-usual-dated-operation",
+          "label": "Exact asset dated operating/deployment evidence",
+          "publisher": "Usual Labs",
+          "publishedAt": "2024-05-23",
+          "url": "https://usual.money/blog/breaking-the-circle-with-rwa-stablecoin",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 28,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "usd0-usual-dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "eur0-usual",
+      "reviewedAt": "2026-10-03T22:48:06Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "Unknown wave W1R16 primary-source research",
+      "notes": "Factsheet reports October 2025 EUR0 launch; full months conservatively measured from October 31. No throughput, stress recovery, reserve continuity or incident-free history asserted.",
+      "sources": [
+        {
+          "sourceId": "eur0-usual-dated-operation",
+          "label": "Exact asset dated operating/deployment evidence",
+          "publisher": "Usual DAO",
+          "publishedAt": "2026-02-16",
+          "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/eur0.md",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 11,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "eur0-usual-dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdp-parallel",
+      "reviewedAt": "2026-10-03T22:48:06Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "Unknown wave W1R16 primary-source research",
+      "notes": "Exact USDp creation at block 22639007, 2025-06-05T14:28:59Z; deployment is lower-bound implementation history, not proof of uninterrupted service. No throughput, stress recovery, reserve continuity or incident-free history asserted.",
+      "sources": [
+        {
+          "sourceId": "usdp-parallel-dated-operation",
+          "label": "Exact asset dated operating/deployment evidence",
+          "publisher": "Ethereum contract history",
+          "publishedAt": "2025-06-05",
+          "url": "https://eth.blockscout.com/tx/0xbaa7c9871e325411a256648d346d0324ca3b9871fe8e9bddb224e9b03b9d9072",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 15,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "usdp-parallel-dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "stusd-stoneyield",
+      "reviewedAt": "2026-10-03T22:48:06Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "Unknown wave W1R16 primary-source research",
+      "notes": "Sourcify exact creation match binds tracked STUSD to block 70594286, whose RPC timestamp is 2025-12-05T15:08:17Z; not parent USDC history. No throughput, stress recovery, reserve continuity or incident-free history asserted.",
+      "sources": [
+        {
+          "sourceId": "stusd-stoneyield-dated-operation",
+          "label": "Exact asset dated operating/deployment evidence",
+          "publisher": "BNB Chain contract history",
+          "publishedAt": "2025-12-05",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x806dd21af6de051fb811760a5768d04a99160eb9?fields=all",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 9,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "stusd-stoneyield-dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "a7a5-old-vector",
+      "reviewedAt": "2026-10-03T22:48:06Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "Unknown wave W1R16 primary-source research",
+      "notes": "Exact A7A5 Ethereum creation at block 22080045, 2025-03-19T09:32:35Z; conservative lower bound for this implementation, not issuer founding age. No throughput, stress recovery, reserve continuity or incident-free history asserted.",
+      "sources": [
+        {
+          "sourceId": "a7a5-old-vector-dated-operation",
+          "label": "Exact asset dated operating/deployment evidence",
+          "publisher": "Ethereum contract history",
+          "publishedAt": "2025-03-19",
+          "url": "https://eth.blockscout.com/tx/0x11f215e5262d600dc34e094d49ca4b10aaef06d0de4a62cff347bf646a6ff279",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 18,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "a7a5-old-vector-dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "susds-sky",
+      "reviewedAt": "2026-10-03T22:49:31Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "W1R02 primary-source unknown resolver",
+      "notes": "Exact Ethereum token deployment establishes an issuer-reported lower bound only, not predecessor history or independent assurance. No redemption throughput, stress recovery, reserve reconciliation or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-ethereum-deployment",
+          "label": "Exact token creation transaction",
+          "publisher": "Ethereum deployment / Blockscout",
+          "publishedAt": "2024-09-04",
+          "url": "https://etherscan.io/tx/0xe1be00c4ea3c21cf536b98ac082a5bba8485cf75d6b2b94f4d6e3edd06472c00",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 24,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-ethereum-deployment"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usds-sky",
+      "reviewedAt": "2026-10-03T22:49:31Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "W1R02 primary-source unknown resolver",
+      "notes": "Exact Ethereum token deployment establishes an issuer-reported lower bound only, not predecessor history or independent assurance. No redemption throughput, stress recovery, reserve reconciliation or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-ethereum-deployment",
+          "label": "Exact token creation transaction",
+          "publisher": "Ethereum deployment / Blockscout",
+          "publishedAt": "2024-09-02",
+          "url": "https://etherscan.io/tx/0xdf7d4ba4114f654a4ef64f74099be3fc91358610078febe5be68af6cf257b21c",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 25,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-ethereum-deployment"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "wusd-worldwide",
+      "reviewedAt": "2026-10-03T22:49:31Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "W1R02 primary-source unknown resolver",
+      "notes": "Exact Ethereum token deployment establishes an issuer-reported lower bound only, not predecessor history or independent assurance. No redemption throughput, stress recovery, reserve reconciliation or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-ethereum-deployment",
+          "label": "Exact token creation transaction",
+          "publisher": "Ethereum deployment / Blockscout",
+          "publishedAt": "2024-12-13",
+          "url": "https://etherscan.io/tx/0x44d46d852ff3fa544fd069f43e80f409264d62e1f6044b0a525d14fbca92492c",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 21,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-ethereum-deployment"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

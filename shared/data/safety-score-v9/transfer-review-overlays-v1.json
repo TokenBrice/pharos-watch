@@ -2665,27 +2665,23 @@
     },
     {
       "assetId": "susds-sky",
-      "reviewedAt": "2026-10-01",
-      "reviewer": "Sol curation pass 2026-10-01 (R2WSky)",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "W1R02 all-deployment transfer review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
           "scope": "canonical",
-          "posture": "restrictable",
-          "evidence": "At ethereum block 26098752, the EIP-1967 implementation slot remains 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0. The current verified SUsds source exposes ordinary holder transfers and auth-gated UUPS upgrades. Pause Proxy remains an active canonical token ward with a 172800-second Pause delay. A privileged replacement can restrict holder transfers; retain restrictable rather than infer permissionlessness from the current open transfer functions. Runtime materiality remains a separate prerequisite.",
+          "posture": "permissionless",
+          "evidence": "Pinned current implementation 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0 contains unrestricted holder transfer/transferFrom subject only to balance, allowance and invalid-address checks; no transfer blacklist, whitelist, pause or administrative hook. Upgrade/mint/burn authorities and parent reserve freezing remain separate risks.",
           "sources": [
             {
-              "label": "Sourcify verified ethereum SUsds implementation",
-              "url": "https://sourcify.dev/server/v2/contract/1/0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0?fields=sources,compilation"
-            },
-            {
-              "label": "susds-sky proxy on explorer",
-              "url": "https://etherscan.io/address/0xa3931d71877c0e7a3148cb7eb4463524fec27fbd#code"
-            },
-            {
-              "label": "Current Blockscout verified implementation, re-fetched 2026-10-01",
+              "label": "Exact verified current implementation",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0"
+            },
+            {
+              "label": "Pinned deployment RPC",
+              "url": "https://ethereum-rpc.publicnode.com"
             }
           ]
         },
@@ -2693,20 +2689,16 @@
           "chainId": "base",
           "contractOrTokenId": "0x5875eee11cf8398102fdad704c9e96607675467a",
           "scope": "material-bridge",
-          "posture": "restrictable",
-          "evidence": "At base block 52041934, the EIP-1967 implementation slot remains 0x982f2df63fe38ab8d55f4b1464e8cfdc8ea5dec8. The current verified SUsds source exposes ordinary holder transfers and auth-gated UUPS upgrades. Both the destination bridge/gateway and the chain-local governance relay remain active token wards. A privileged replacement can restrict holder transfers; retain restrictable rather than infer permissionlessness from the current open transfer functions. Runtime materiality remains a separate prerequisite.",
+          "posture": "permissionless",
+          "evidence": "Pinned current implementation 0x982f2df63fe38ab8d55f4b1464e8cfdc8ea5dec8 contains unrestricted holder transfer/transferFrom subject only to balance, allowance and invalid-address checks; no transfer blacklist, whitelist, pause or administrative hook. Upgrade/mint/burn authorities and parent reserve freezing remain separate risks.",
           "sources": [
             {
-              "label": "Sourcify verified base SUsds implementation",
-              "url": "https://sourcify.dev/server/v2/contract/8453/0x982f2df63fe38ab8d55f4b1464e8cfdc8ea5dec8?fields=sources,compilation"
-            },
-            {
-              "label": "susds-sky proxy on explorer",
-              "url": "https://basescan.org/address/0x5875eee11cf8398102fdad704c9e96607675467a#code"
-            },
-            {
-              "label": "Current Blockscout verified implementation, re-fetched 2026-10-01",
+              "label": "Exact verified current implementation",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0x982f2df63fe38ab8d55f4b1464e8cfdc8ea5dec8"
+            },
+            {
+              "label": "Pinned deployment RPC",
+              "url": "https://base-rpc.publicnode.com"
             }
           ]
         },
@@ -2714,20 +2706,16 @@
           "chainId": "optimism",
           "contractOrTokenId": "0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0",
           "scope": "material-bridge",
-          "posture": "restrictable",
-          "evidence": "At optimism block 157637219, the EIP-1967 implementation slot remains 0x6f0888dda6a5e35451d5be0fabb20171715788b3. The current verified SUsds source exposes ordinary holder transfers and auth-gated UUPS upgrades. Both the destination bridge/gateway and the chain-local governance relay remain active token wards. A privileged replacement can restrict holder transfers; retain restrictable rather than infer permissionlessness from the current open transfer functions. Runtime materiality remains a separate prerequisite.",
+          "posture": "permissionless",
+          "evidence": "Pinned current implementation 0x6f0888dda6a5e35451d5be0fabb20171715788b3 contains unrestricted holder transfer/transferFrom subject only to balance, allowance and invalid-address checks; no transfer blacklist, whitelist, pause or administrative hook. Upgrade/mint/burn authorities and parent reserve freezing remain separate risks.",
           "sources": [
             {
-              "label": "Sourcify verified optimism SUsds implementation",
-              "url": "https://sourcify.dev/server/v2/contract/10/0x6f0888dda6a5e35451d5be0fabb20171715788b3?fields=sources,compilation"
-            },
-            {
-              "label": "susds-sky proxy on explorer",
-              "url": "https://optimistic.etherscan.io/address/0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0#code"
-            },
-            {
-              "label": "Current Blockscout verified implementation, re-fetched 2026-10-01",
+              "label": "Exact verified current implementation",
               "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0x6f0888dda6a5e35451d5be0fabb20171715788b3"
+            },
+            {
+              "label": "Pinned deployment RPC",
+              "url": "https://optimism-rpc.publicnode.com"
             }
           ]
         },
@@ -2735,20 +2723,16 @@
           "chainId": "arbitrum",
           "contractOrTokenId": "0xddb46999f8891663a8f2828d25298f70416d7610",
           "scope": "material-bridge",
-          "posture": "restrictable",
-          "evidence": "At arbitrum block 510719484, the EIP-1967 implementation slot remains 0x5aee6b37d6e31860804575aee3e2f368a0a428e7. The current verified SUsds source exposes ordinary holder transfers and auth-gated UUPS upgrades. Both the destination bridge/gateway and the chain-local governance relay remain active token wards. A privileged replacement can restrict holder transfers; retain restrictable rather than infer permissionlessness from the current open transfer functions. Runtime materiality remains a separate prerequisite.",
+          "posture": "permissionless",
+          "evidence": "Pinned current implementation 0x5aee6b37d6e31860804575aee3e2f368a0a428e7 contains unrestricted holder transfer/transferFrom subject only to balance, allowance and invalid-address checks; no transfer blacklist, whitelist, pause or administrative hook. Upgrade/mint/burn authorities and parent reserve freezing remain separate risks.",
           "sources": [
             {
-              "label": "Sourcify verified arbitrum SUsds implementation",
-              "url": "https://sourcify.dev/server/v2/contract/42161/0x5aee6b37d6e31860804575aee3e2f368a0a428e7?fields=sources,compilation"
-            },
-            {
-              "label": "susds-sky proxy on explorer",
-              "url": "https://arbiscan.io/address/0xddb46999f8891663a8f2828d25298f70416d7610#code"
-            },
-            {
-              "label": "Current Blockscout verified implementation, re-fetched 2026-10-01",
+              "label": "Exact verified current implementation",
               "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x5aee6b37d6e31860804575aee3e2f368a0a428e7"
+            },
+            {
+              "label": "Pinned deployment RPC",
+              "url": "https://arbitrum-one-rpc.publicnode.com"
             }
           ]
         }
