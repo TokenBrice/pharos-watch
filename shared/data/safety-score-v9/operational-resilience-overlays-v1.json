@@ -5165,6 +5165,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "eurcv-societe-generale-forge",
+      "reviewedAt": "2026-10-03T22:52:02Z",
+      "expiresAt": "2027-10-03T22:52:02Z",
+      "reviewer": "W1R42 primary-source research",
+      "notes": "Only a conservative 27-full-calendar-month live operating lower bound is established from 2024-07-01. No redemption throughput, independently assured reconciliation, stress recovery or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "EURCV MiCA operating boundary",
+          "publisher": "SG-FORGE",
+          "publishedAt": "2024-07-01",
+          "url": "https://www.sgforge.com/stablecoin-elevation/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 27,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdcv-societe-generale-forge",
+      "reviewedAt": "2026-10-03T22:52:02Z",
+      "expiresAt": "2027-10-03T22:52:02Z",
+      "reviewer": "W1R42 primary-source research",
+      "notes": "Only a conservative 15-full-calendar-month live operating lower bound is established from 2025-06-25. No redemption throughput, independently assured reconciliation, stress recovery or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "SG-FORGE CoinVertible product page (modified September 30, 2026): explicit June 25, 2025 USDCV launch",
+          "publisher": "SG-FORGE",
+          "publishedAt": "2026-09-30",
+          "url": "https://www.sgforge.com/product/coinvertible/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 15,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "btcusd-btcfi",
+      "reviewedAt": "2026-10-03T22:52:02Z",
+      "expiresAt": "2027-10-03T22:52:02Z",
+      "reviewer": "W1R42 primary-source research",
+      "notes": "Only a conservative 29-full-calendar-month live operating lower bound is established from 2024-04-15. No redemption throughput, independently assured reconciliation, stress recovery or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Exact native Bitcoin USD token creation at block 13177429",
+          "publisher": "Bifrost explorer",
+          "publishedAt": "2024-04-15",
+          "url": "https://explorer-backend.mainnet.thebifrost.io/api/v2/transactions/0x13757612c830a50731791c4670b454b385ea5efb0d61c4ba8f1921db2657e5b6",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 29,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdrif-rif",
+      "reviewedAt": "2026-10-03T22:52:02Z",
+      "expiresAt": "2027-10-03T22:52:02Z",
+      "reviewer": "W1R42 primary-source research",
+      "notes": "Only a conservative 4-full-calendar-month live operating lower bound is established from 2026-05-21. No redemption throughput, independently assured reconciliation, stress recovery or incident-free history is asserted. USDRIF uses the current V3 execution boundary rather than its RDOC predecessor or 2023 token launch.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Exact current USDRIF V3 upgrade execution confirmation",
+          "publisher": "Money on Chain governance",
+          "publishedAt": "2026-05-21",
+          "url": "https://forum.moneyonchain.com/t/proposal-rif-on-chain-v2-v3-upgrade-multi-collateral-support/463",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 4,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdxl-last",
+      "reviewedAt": "2026-10-03T22:52:02Z",
+      "expiresAt": "2027-10-03T22:52:02Z",
+      "reviewer": "W1R42 primary-source research",
+      "notes": "Only a conservative 18-full-calendar-month live operating lower bound is established from 2025-03-22. No redemption throughput, independently assured reconciliation, stress recovery or incident-free history is asserted. USDXL uses tokenDetails(type=tokenDetails, tokenId=0xf448c3cad413cdf0feb1746d7b057967), deployTime 2025-03-22T21:32:35.326419191; no market-price or supply claim is made.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Exact USDXL tokenDetails deployment timestamp",
+          "publisher": "Hyperliquid",
+          "publishedAt": "2025-03-22",
+          "url": "https://api.hyperliquid.xyz/info",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 18,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

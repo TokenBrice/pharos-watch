@@ -86,7 +86,7 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "periodic",
     "supervision": "prudential",
     "review": {
       "sources": [
@@ -101,11 +101,15 @@
         {
           "label": "White & Case - SG-FORGE ACPR e-money institution licence for EURCV",
           "url": "https://www.whitecase.com/news/press-release/white-case-advises-sg-forge-transformative-updates-eur-coinvertible-stablecoin"
+        },
+        {
+          "label": "EURCV September 2026 whitepaper, D.10 daily whole-outstanding-supply Collateral Test",
+          "url": "https://www.sgforge.com/wp-content/uploads/2026/09/EURCV-WP-Ethereum_Solana_XRPL_Stellar_Canton_2026-09-30.pdf"
         }
       ],
-      "evidence": "At Ethereum block 25530438, getOperators() returned unchanged registrar, operations, and technical EOAs; version() returned V4, newImplementation() returned zero, and the EIP-1967 implementation slot returned 0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b. Verified source establishes registrar-only minting and the registrar-authorization plus technical-execution UUPS upgrade sequence. XRPL, Stellar, and Solana remain separate issuer-operated deployments outside this Ethereum control review. SG-FORGE is an ACPR-authorised Electronic Money Institution and EURCV is structured as a MiCA electronic-money token, so the issuer is prudentially supervised. However SG-FORGE publishes only a self-reported daily 100%-collateral figure on its own website; no named independent accounting/verification firm attests EURCV reserves (the Hacken work is smart-contract-only and RWA.xyz lists no auditor), so supply is not independently reconciled and reconciliation is unknown. Under the rubric an unreconciled mint stays critical regardless of prudential supervision. Economic-posture fields reviewed 2026-08-15: the registrar EOA can mint without a numeric cap, daily self-verification is not an independent whole-supply attestation, and ACPR supervises the authorized EMI issuer.",
-      "reviewer": "Codex Safety Score V9 CTRL curation; Claude SOL-V mint-tier mop-up; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Historical Ethereum control observations remain at block 25530438, with subsequent controller observations recorded separately above; XRPL, Stellar, Solana and Canton authorities are not certified by this Ethereum control inventory. Reconciliation research on 2026-10-03 re-opened the September 30, 2026 EURCV whitepaper and issuer daily dashboard. D.10 requires the issuer to obtain collateral-custodian information daily, calculate aggregate eligible collateral value on every Business Day, and compare it to the quantity of all EURCV outstanding multiplied by one euro. C.2 expressly aggregates Ethereum, Solana, XRPL, Stellar and Canton issuance. D.10 requires publication of collateral composition, value, required value and the test result on the following Business Day. The dashboard labels its matching outstanding EURCV and reserve amount 167,013,839.02 as Last update 3/10/2026. This establishes an issuer-operated periodic whole-supply-to-reserve procedure and a matching current observation, not independent assurance, continuous intraday reconciliation or audited mint-controller operation. SG-FORGE remains the ACPR-authorised EMI issuer; no new authority, cap or incident-free claim is made by this reconciliation-only research.",
+      "reviewer": "Codex Safety Score V9 CTRL curation; Claude SOL-V mint-tier mop-up; Sol economic-posture batch 2026-08-15; W1R42 reconciliation-only research",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable"
     }
   }
