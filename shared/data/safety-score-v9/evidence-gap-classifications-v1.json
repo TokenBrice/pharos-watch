@@ -23138,6 +23138,369 @@
         "https://unipayfi.github.io/POR/20260925_090008_HTD_PoR_for_Unitas.pdf"
       ],
       "rationale": "Maximum full-position liquidation/withdrawal horizons for the live Bnb_smartchain, Binance and Solana hedge slices are not disclosed. Hourly hedge rebalancing, onchain balances and whitelisted redemption descriptions do not establish realization deadlines for these scoped positions."
+    },
+    {
+      "id": "uw-emxn-telcoin-cea8163e46b1de54",
+      "assetId": "emxn-telcoin",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://www.telco.in/en/digital-cash",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": null,
+          "location": "Transparent and secure",
+          "excerpt": "Telcoin will also publish monthly attestations from an external auditor.",
+          "assertion": "Future publication commitment, not an actual eMXN holdings denominator or performed recurring whole-supply reconciliation."
+        },
+        {
+          "url": "https://www.telco.in/en/terms-of-use",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2026-06-30",
+          "location": "XXIX eXYZ Terms, reserves",
+          "excerpt": "Currency or Currency equivalents in its Segregated Accounts",
+          "assertion": "eXYZ reserve policy disclosed, without dated eMXN asset-class balances and token-liability reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.telco.in/en/terms-of-use",
+        "https://www.telco.in/en/digital-cash",
+        "https://trust.telco.in/",
+        "https://forum.telcoin.org/t/telxip-increasing-liquidity-for-digital-cash-emxn/626",
+        "https://polygonscan.com/token/0x68727e573D21a49c767c3c86A92D9F24bd933c99"
+      ],
+      "rationale": "No dated whole-denominator eMXN reserve composition or performed whole-supply reserves/liabilities reconciliation cadence is published on the searched issuer, legal, trust and exact-token surfaces. Generic segregation, onchain supply and promised future monthly attestations do not establish either datum. eUSD bank supervision is a separate issuer and is not borrowed."
+    },
+    {
+      "id": "uw-emxn-telcoin-7390667d8a35adea",
+      "assetId": "emxn-telcoin",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://www.telco.in/en/digital-cash",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": null,
+          "location": "Transparent and secure",
+          "excerpt": "Telcoin will also publish monthly attestations from an external auditor.",
+          "assertion": "Future publication commitment, not an actual eMXN holdings denominator or performed recurring whole-supply reconciliation."
+        },
+        {
+          "url": "https://www.telco.in/en/terms-of-use",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2026-06-30",
+          "location": "XXIX eXYZ Terms, reserves",
+          "excerpt": "Currency or Currency equivalents in its Segregated Accounts",
+          "assertion": "eXYZ reserve policy disclosed, without dated eMXN asset-class balances and token-liability reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.telco.in/en/terms-of-use",
+        "https://www.telco.in/en/digital-cash",
+        "https://trust.telco.in/",
+        "https://forum.telcoin.org/t/telxip-increasing-liquidity-for-digital-cash-emxn/626",
+        "https://polygonscan.com/token/0x68727e573D21a49c767c3c86A92D9F24bd933c99"
+      ],
+      "rationale": "No dated whole-denominator eMXN reserve composition or performed whole-supply reserves/liabilities reconciliation cadence is published on the searched issuer, legal, trust and exact-token surfaces. Generic segregation, onchain supply and promised future monthly attestations do not establish either datum. eUSD bank supervision is a separate issuer and is not borrowed."
+    },
+    {
+      "id": "uw-eusd-telcoin-376c69faf7c58300",
+      "assetId": "eusd-telcoin",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://bank.telco.in/eUSD",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": null,
+          "location": "Transparency",
+          "excerpt": "Telcoin Digital Asset Bank will publish regular disclosures regarding eUSD reserves and operations.",
+          "assertion": "Future disclosure promise supplies neither measured reserve composition nor performed whole-supply reconciliation."
+        },
+        {
+          "url": "https://bank.telco.in/terms-of-use",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2026-06-15",
+          "location": "20 finality",
+          "excerpt": "Minting is considered final after blockchain confirmation and internal ledger reconciliation",
+          "assertion": "Internal mint ledger finality is disclosed; it is not whole-supply reserve reconciliation."
+        },
+        {
+          "url": "https://ndbf.nebraska.gov/sites/default/files/industries/NFIA%20Statement%20of%20Policy%20%235%20-%20Liquidity%20Program_0.pdf",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2024-08-01",
+          "location": "Attestation, page 3",
+          "excerpt": "End of day quantity of outstanding stablecoin units; and",
+          "assertion": "Regulatory required reporting is not evidence that an actual scoped issuer report is available."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://bank.telco.in/terms-of-use",
+        "https://bank.telco.in/customer-agreement",
+        "https://bank.telco.in/eUSD",
+        "https://www.telco.in/en/digital-cash",
+        "https://trust.telco.in/",
+        "https://ndbf.nebraska.gov/sites/default/files/industries/NFIA%20Statement%20of%20Policy%20%235%20-%20Liquidity%20Program_0.pdf",
+        "https://ndbf.nebraska.gov/industries/digital-assets",
+        "https://etherscan.io/token/0x14913815bcfde78baead2111f463d038ac9c2949"
+      ],
+      "rationale": "No actual dated whole-book eUSD reserve composition or documented performed whole-supply reconciliation cadence was located. Terms disclose eligible reserve categories and internal ledger finality; regulator policy requires reports, but no actual reserve/liability report is published on searched surfaces. Do not treat charter, 1:1 policy or ledger finality as recurring financial reconciliation."
+    },
+    {
+      "id": "uw-eusd-telcoin-ca74d0bd68015d50",
+      "assetId": "eusd-telcoin",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://bank.telco.in/eUSD",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": null,
+          "location": "Transparency",
+          "excerpt": "Telcoin Digital Asset Bank will publish regular disclosures regarding eUSD reserves and operations.",
+          "assertion": "Future disclosure promise supplies neither measured reserve composition nor performed whole-supply reconciliation."
+        },
+        {
+          "url": "https://bank.telco.in/terms-of-use",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2026-06-15",
+          "location": "20 finality",
+          "excerpt": "Minting is considered final after blockchain confirmation and internal ledger reconciliation",
+          "assertion": "Internal mint ledger finality is disclosed; it is not whole-supply reserve reconciliation."
+        },
+        {
+          "url": "https://ndbf.nebraska.gov/sites/default/files/industries/NFIA%20Statement%20of%20Policy%20%235%20-%20Liquidity%20Program_0.pdf",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2024-08-01",
+          "location": "Attestation, page 3",
+          "excerpt": "End of day quantity of outstanding stablecoin units; and",
+          "assertion": "Regulatory required reporting is not evidence that an actual scoped issuer report is available."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://bank.telco.in/terms-of-use",
+        "https://bank.telco.in/customer-agreement",
+        "https://bank.telco.in/eUSD",
+        "https://www.telco.in/en/digital-cash",
+        "https://trust.telco.in/",
+        "https://ndbf.nebraska.gov/sites/default/files/industries/NFIA%20Statement%20of%20Policy%20%235%20-%20Liquidity%20Program_0.pdf",
+        "https://ndbf.nebraska.gov/industries/digital-assets",
+        "https://etherscan.io/token/0x14913815bcfde78baead2111f463d038ac9c2949"
+      ],
+      "rationale": "No actual dated whole-book eUSD reserve composition or documented performed whole-supply reconciliation cadence was located. Terms disclose eligible reserve categories and internal ledger finality; regulator policy requires reports, but no actual reserve/liability report is published on searched surfaces. Do not treat charter, 1:1 policy or ledger finality as recurring financial reconciliation."
+    },
+    {
+      "id": "uw-emxn-telcoin-4193ee916090369d",
+      "assetId": "emxn-telcoin",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:emxn-telcoin:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://www.telco.in/en/terms-of-use",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2026-06-30",
+          "location": "XXIX.24 eXYZ Redemption Fees",
+          "excerpt": "Wire transfer fees: Actual bank charges passed through to user",
+          "assertion": "15 bps issuer fee is published, but variable bank charges prevent an all-in same-notional cost bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.telco.in/en/terms-of-use",
+        "https://www.telco.in/en/digital-cash",
+        "https://www.telco.in/support"
+      ],
+      "rationale": "Exact all-in eMXN offchain redemption cost is undisclosed. The terms publish 0.15% issuer redemption fee but pass through actual bank charges and do not provide their numeric schedule/ceiling for the modeled holder/notional. A partial issuer fee is not an all-in bound."
+    },
+    {
+      "id": "uw-emxn-telcoin-cfc7995ebab3dfb4",
+      "assetId": "emxn-telcoin",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:emxn-telcoin:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://www.telco.in/en/terms-of-use",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2026-06-30",
+          "location": "XXIX.26 Processing times",
+          "excerpt": "business days or longer.",
+          "assertion": "Large redemptions expressly allow longer processing; there is no final delivered-fiat maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.telco.in/en/terms-of-use",
+        "https://www.telco.in/en/digital-cash",
+        "https://www.telco.in/support"
+      ],
+      "rationale": "No maximum end-to-end eMXN final spendable-fiat settlement SLA is disclosed. Standard 1-3 business-day processing is not final settlement; large transactions allow 3-5 business days or longer and extraordinary/compliance delays. Do not convert this target to calendar seconds."
+    },
+    {
+      "id": "uw-eusd-telcoin-20ccdf67f3c3e080",
+      "assetId": "eusd-telcoin",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:eusd-telcoin:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://bank.telco.in/terms-of-use",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2026-06-15",
+          "location": "7.1 Fee Schedule",
+          "excerpt": "Redeeming eUSD: No TDAB fee per redemption to third-party institutions (however the third-party institutions may impose fees)",
+          "assertion": "Zero issuer fee is disclosed but third-party bank charges are not quantified for same-notional all-in cost."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://bank.telco.in/terms-of-use",
+        "https://bank.telco.in/customer-agreement",
+        "https://bank.telco.in/eUSD",
+        "https://bank.telco.in/"
+      ],
+      "rationale": "Exact all-in eUSD issuer-redemption cost is not published. The Customer Agreement and Terms state no TDAB redemption fee but impose third-party bank fees without an applicable numeric bank-charge schedule or ceiling. A zero TDAB fee cannot be curated as zero total route cost."
+    },
+    {
+      "id": "uw-acrdx-anemoy-apollo-4f19f49dcda5ca62",
+      "assetId": "acrdx-anemoy-apollo",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:b2523b7dcb7224300edacdf7",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://www.apollo.com/content/dam/apolloaem/documents/fund-documents/adcf-prospectus.pdf",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2025-04-29",
+          "location": "Investment Strategy, page 7",
+          "excerpt": "there is no limit on the maturity or duration of any individual security in which the Fund may invest.",
+          "assertion": "Underlying credit holdings have no maximum maturity mandate; this is not a scalar maximum for feeder fund-share claim."
+        },
+        {
+          "url": "https://www.anemoy.io/news/acrdx-launched",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2025-09-16",
+          "location": "Feeder fund paragraph",
+          "excerpt": "ACRDX will serve as a feeder fund that provides tokenized access to Apollo Diversified Credit Fund",
+          "assertion": "The admitted slice is a fund-share claim, not any individual bond."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.anemoy.io/news/acrdx-launched",
+        "https://www.anemoy.io/",
+        "https://www.apollo.com/content/dam/apolloaem/documents/fund-documents/adcf-prospectus.pdf",
+        "https://centrifuge.io/blog/fission-centrifuge",
+        "https://docs.centrifuge.io/developer/protocol/deployments/"
+      ],
+      "rationale": "No finite contractual maximum maturity for the Apollo fund-share NAV claim is disclosed. The continuously offered interval fund discloses quarterly repurchases, not a fund-share final maturity, and expressly has no maximum maturity for individual underlying securities. Do not substitute average duration, quarterly liquidity or underlying security terms for the claim maximum."
+    },
+    {
+      "id": "uw-acrdx-anemoy-apollo-3a8998c5c16956b6",
+      "assetId": "acrdx-anemoy-apollo",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:acrdx-anemoy-apollo:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://centrifuge.io/blog/fission-centrifuge",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2026-08-25",
+          "location": "The redemption cycle",
+          "excerpt": "ACRDX goes further, providing tokenized access to the Apollo Diversified Credit Fund, with quarterly liquidity through its standard redemption path.",
+          "assertion": "Quarterly liquidity is a request/repurchase schedule, not full notional final settlement maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.anemoy.io/news/acrdx-launched",
+        "https://www.anemoy.io/",
+        "https://www.apollo.com/content/dam/apolloaem/documents/fund-documents/adcf-prospectus.pdf",
+        "https://centrifuge.io/blog/fission-centrifuge",
+        "https://docs.centrifuge.io/developer/protocol/deployments/"
+      ],
+      "rationale": "No full-notional final fiat settlement SLA for the Anemoy ACRDX issuer route is published. Standard quarterly liquidity and underlying limited repurchase offers are not a maximum completion bound. Fission immediate USDC liquidity is a different provider/route and cannot substitute for offchain issuer settlement."
     }
   ]
 }

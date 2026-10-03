@@ -10517,6 +10517,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "emxn-telcoin",
+      "reviewedAt": "2026-10-03T23:06:39Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "Unknown-wave W1R73 primary-source review",
+      "notes": "Exact-token live history lower bound from dated operating evidence, not parent or underlying-fund history. No redemption throughput, stress recovery, financial reconciliation continuity or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Dated eMXN liquidity proposal and exact Polygon token reference",
+          "publisher": "Telcoin Association",
+          "publishedAt": "2025-05-28",
+          "url": "https://forum.telcoin.org/t/telxip-increasing-liquidity-for-digital-cash-emxn/626",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 16,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "eusd-telcoin",
+      "reviewedAt": "2026-10-03T23:06:39Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "Unknown-wave W1R73 primary-source review",
+      "notes": "Exact-token live history lower bound from dated operating evidence, not parent or underlying-fund history. No redemption throughput, stress recovery, financial reconciliation continuity or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "eUSD linked live bank accounts announcement",
+          "publisher": "Telcoin",
+          "publishedAt": "2026-06-23",
+          "url": "https://www.telco.in/en/newsroom/2026-06-23/telcoin-launches-first-regulated-on-chain-bank-accounts-in-the-us",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 3,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "acrdx-anemoy-apollo",
+      "reviewedAt": "2026-10-03T23:06:39Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "Unknown-wave W1R73 primary-source review",
+      "notes": "Exact-token live history lower bound from dated operating evidence, not parent or underlying-fund history. No redemption throughput, stress recovery, financial reconciliation continuity or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "ACRDX live funded launch",
+          "publisher": "Anemoy",
+          "publishedAt": "2025-09-16",
+          "url": "https://www.anemoy.io/news/acrdx-launched",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 12,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "dllr-sovryn",
+      "reviewedAt": "2026-10-03T23:06:39Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "Unknown-wave W1R73 primary-source review",
+      "notes": "Exact-token live history lower bound from dated operating evidence, not parent or underlying-fund history. No redemption throughput, stress recovery, financial reconciliation continuity or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Mynt and DLLR live mainnet launch",
+          "publisher": "Sovryn",
+          "publishedAt": "2023-03-16",
+          "url": "https://sovryn.com/all-things-sovryn/launching-the-sovryn-dollar",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 42,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "jupusd-jupiter",
+      "reviewedAt": "2026-10-03T23:06:39Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "Unknown-wave W1R73 primary-source review",
+      "notes": "Exact-token live history lower bound from dated operating evidence, not parent or underlying-fund history. No redemption throughput, stress recovery, financial reconciliation continuity or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "JupUSD issuer launch release",
+          "publisher": "Jupiter via Impact3",
+          "publishedAt": "2026-01-05",
+          "url": "https://www.einpresswire.com/article/880412896/jupiter-introduces-jupusd-the-stablecoin-for-onchain-finance",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 8,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
