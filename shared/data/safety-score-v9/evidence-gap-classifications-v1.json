@@ -8503,77 +8503,6 @@
       "rationale": "No final maximum for the retained USDRIF queue-redeem route is published. V3 has minimum queue delay, dynamic throttles, coverage/oracle conditions and TasksRunner execution; none guarantees completion. Verified current MocQueue source also publishes maxOperWaitingBlk: it makes an operation executable even without a price update, but does not ensure that the privileged guard executes it or that bucket redemption succeeds. Legacy docs describe 90-day settlement intervals, not a V3 SLA. No eligibility delay, minimum or average is encoded as a final-settlement maximum."
     },
     {
-      "id": "uw-fpi-frax-118cc1b45dbc5ce3",
-      "assetId": "fpi-frax",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:57:06Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R48)",
-      "sources": [
-        {
-          "url": "https://docs.frax.finance/frax-price-index/fpi-controller-pool",
-          "observedAt": "2026-10-03T22:57:06Z",
-          "datumAsOf": null,
-          "location": "Mint/backing mechanism documentation",
-          "excerpt": "Users can mint FPI with FRAX or redeem FPI for FRAX.",
-          "assertion": "Discloses mint/backing mechanics, not a whole-supply liability-to-backing reconciliation procedure and cadence."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.frax.finance/frax-price-index/overview-cpi-peg-and-mechanics",
-        "https://docs.frax.finance/other/audits",
-        "https://api.frax.finance/v2/fpifpis/fpi-collateral",
-        "https://frax.com/transparency",
-        "https://eth.blockscout.com/address/0x5ca135b8527d76e932f34b5145575f9d8cbe08e?tab=contract",
-        "https://docs.frax.finance/frax-price-index/fpi-controller-pool"
-      ],
-      "rationale": "No published whole-supply reconciliation procedure/cadence covering all authorized mint paths and economic backing was located. Onchain balances, collateral/debt dashboards and code-security audits do not establish that exact datum. Existing explicit reconciliation unknown remains unchanged."
-    },
-    {
-      "id": "uw-usg-tangent-91596f2f7822e39b",
-      "assetId": "usg-tangent",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:57:06Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R48)",
-      "sources": [
-        {
-          "url": "https://docs.tangent.finance/docs/usg/Markets/hec_markets.md",
-          "observedAt": "2026-10-03T22:57:06Z",
-          "datumAsOf": null,
-          "location": "Mint/backing mechanism documentation",
-          "excerpt": "On these markets, it is possible to borrow interest-free in exchange for a portion of the collateral's rewards, while `USG` is above a predefined *price threshold*.",
-          "assertion": "Discloses mint/backing mechanics, not a whole-supply liability-to-backing reconciliation procedure and cadence."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.tangent.finance/",
-        "https://docs.tangent.finance/docs/usg/overview_usg",
-        "https://docs.tangent.finance/docs/faq/audits.md",
-        "https://docs.tangent.finance/docs/faq/contracts.md",
-        "https://docs.tangent.finance/docs/usg/financial_flows.md",
-        "https://docs.tangent.finance/docs/faq/history.md",
-        "https://docs.tangent.finance/docs/usg/Markets/hec_markets.md"
-      ],
-      "rationale": "No published whole-supply reconciliation procedure/cadence covering all authorized mint paths and economic backing was located. Onchain balances, collateral/debt dashboards and code-security audits do not establish that exact datum. Existing explicit reconciliation unknown remains unchanged."
-    },
-    {
       "id": "uw-pyusdx-moonpay-6416874446d0d55b",
       "assetId": "pyusdx-moonpay",
       "scope": {
@@ -16402,110 +16331,6 @@
       "rationale": "The exact same-notional queue-redemption settlement maximum for nWISDOM, nTBILL and inALPHA is undisclosed. Public policy provides estimates for most strategies and expressly allows larger/illiquid exits additional time. Current vault directory omits these legacy assets; legal terms and contract/config disclosures publish no completion deadline. Async fulfillment is permissioned and can be partial. No generic estimate is converted into a guaranteed SLA."
     },
     {
-      "id": "uw-sfrxusd-frax-a9becd93de387e60",
-      "assetId": "sfrxusd-frax",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:32d364f83aa9d4c0a4f3fb53",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R93)",
-      "sources": [
-        {
-          "url": "https://gov.frax.finance/t/fip-434-sfrxusd-amo-deployments-future-strategies/3786",
-          "observedAt": "2026-10-03T23:15:53Z",
-          "datumAsOf": "2025-09-05",
-          "location": "FIP-434, Discretionary Allocation",
-          "excerpt": "Actual allocations are at the discretion of the Frax core team and internal risk team, based on prevailing market conditions, liquidity needs, and risk assessments.",
-          "assertion": "Governance mandate gives dynamic strategy allocation, not a whole-position realization maximum or venue-specific insolvency safeguards."
-        },
-        {
-          "url": "https://api.frax.finance/v2/sfrxusd/balance-sheet/latest/export",
-          "observedAt": "2026-10-03T23:15:53Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Current sfrxUSD balance-sheet CSV, description column",
-          "excerpt": "Underlying frxUSD in KRK RWA Gearbox frxUSD Pool",
-          "assertion": "Current complete export identifies lending, LP and RWA strategy holdings; no realization-time bound or wrapper-holder legal custody/insolvency instrument is included."
-        },
-        {
-          "url": "https://frax.com/frxusd-terms",
-          "observedAt": "2026-10-03T23:15:53Z",
-          "datumAsOf": "2025-11-19",
-          "location": "Rendered terms, section 3.4 Additional Features and Programs",
-          "excerpt": "Participation in any such program may be subject to additional terms and conditions, and may not be available in all jurisdictions.",
-          "assertion": "frxUSD issuer terms describe possible separate yield-program terms; parent FBO reserve intent does not establish sfrxUSD local strategy-holder rights."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.frax.com/protocol/assets/frxusd/sfrxusd",
-        "https://gov.frax.finance/t/fip-434-sfrxusd-amo-deployments-future-strategies/3786",
-        "https://frax.com/frxusd-terms",
-        "https://facts.frax.finance/frxusd/sfrxusd-balance-sheet",
-        "https://api.frax.finance/v2/sfrxusd/balance-sheet/latest/export",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
-        "https://docs.frax.com/frxusd/stake-and-unstake-quickstart-ethereum"
-      ],
-      "rationale": "The exact whole strategy-position liquidityHorizon is not disclosed. Current holdings are published, including lent assets and LPs, but mandate, export, issuer terms and Hop withdrawal documentation supply no full-position realization maximum. Redemption without price impact is not a complete liquidity horizon."
-    },
-    {
-      "id": "uw-sfrxusd-frax-2bfb9dd234382e37",
-      "assetId": "sfrxusd-frax",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "custodyEscrow",
-        "pillar": "backing",
-        "requiredDatum": "custodyEscrow",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R93)",
-      "sources": [
-        {
-          "url": "https://gov.frax.finance/t/fip-434-sfrxusd-amo-deployments-future-strategies/3786",
-          "observedAt": "2026-10-03T23:15:53Z",
-          "datumAsOf": "2025-09-05",
-          "location": "FIP-434, Discretionary Allocation",
-          "excerpt": "Actual allocations are at the discretion of the Frax core team and internal risk team, based on prevailing market conditions, liquidity needs, and risk assessments.",
-          "assertion": "Governance mandate gives dynamic strategy allocation, not a whole-position realization maximum or venue-specific insolvency safeguards."
-        },
-        {
-          "url": "https://api.frax.finance/v2/sfrxusd/balance-sheet/latest/export",
-          "observedAt": "2026-10-03T23:15:53Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Current sfrxUSD balance-sheet CSV, description column",
-          "excerpt": "Underlying frxUSD in KRK RWA Gearbox frxUSD Pool",
-          "assertion": "Current complete export identifies lending, LP and RWA strategy holdings; no realization-time bound or wrapper-holder legal custody/insolvency instrument is included."
-        },
-        {
-          "url": "https://frax.com/frxusd-terms",
-          "observedAt": "2026-10-03T23:15:53Z",
-          "datumAsOf": "2025-11-19",
-          "location": "Rendered terms, section 3.4 Additional Features and Programs",
-          "excerpt": "Participation in any such program may be subject to additional terms and conditions, and may not be available in all jurisdictions.",
-          "assertion": "frxUSD issuer terms describe possible separate yield-program terms; parent FBO reserve intent does not establish sfrxUSD local strategy-holder rights."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.frax.com/protocol/assets/frxusd/sfrxusd",
-        "https://gov.frax.finance/t/fip-434-sfrxusd-amo-deployments-future-strategies/3786",
-        "https://frax.com/frxusd-terms",
-        "https://facts.frax.finance/frxusd/sfrxusd-balance-sheet",
-        "https://api.frax.finance/v2/sfrxusd/balance-sheet/latest/export",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
-        "https://docs.frax.com/frxusd/stake-and-unstake-quickstart-ethereum"
-      ],
-      "rationale": "Wrapper-local custodyEscrow segregation and bankruptcy-remoteness for the separate sfrxUSD strategy book are undisclosed. The complete current roster identifies venues, not enforceable custody or insolvency rights covering the book. Parent frxUSD FBO intentions cannot be transferred to sfrxUSD; the yield mandate and issuer terms provide no such complete instrument."
-    },
-    {
       "id": "uw-euro3-3a-dao-321c4878ade1384d",
       "assetId": "euro3-3a-dao",
       "scope": {
@@ -22389,334 +22214,6 @@
         "https://eth.blockscout.com/api/v2/addresses/0xc273986a91e4bfc543610a5cb5860b7cfefb6cc0"
       ],
       "rationale": "No binding maturityDaysMax for the entire EURSAFO/GBPSAFO fund-share claim is published. The KIDs give a 99-year product term and the Articles permit extension. The one-month rule limits only unhedged exposure; the mandate admits perpetual bonds/equities and hedged longer-duration instruments. Overnight yield and ordinary D+1 redemption are not instrument maturity. Public signed holdings do not supply a share-level maximum; no numeric maximum is extrapolated."
-    },
-    {
-      "id": "uw-usdq-quill-24c7e74e7b76b73c",
-      "assetId": "usdq-quill",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:47dcfb5b865be0ae3099be07",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:20Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
-      "sources": [
-        {
-          "url": "https://docs.quill.finance/faq/risks-and-disclosures.md",
-          "observedAt": "2026-10-03T22:50:52Z",
-          "datumAsOf": null,
-          "location": "Issuer/protocol published product terms",
-          "excerpt": "In DeFi, risks include **smart contract risk** (vulnerabilities in the code), **protocol risk** (potential for governance or operational issues), **market risk** (fluctuations in asset prices) and **liquidity risk** (availability of assets during high demand).",
-          "assertion": "Quill discloses collateral/liquidity risk and onchain redemption, but no whole-position USD realization horizon for SCR, WETH, wstETH or weETH."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.quill.finance/",
-        "https://app.quill.finance/",
-        "https://docs.quill.finance/llms.txt",
-        "https://docs.quill.finance/faq/borrowing.md",
-        "https://docs.quill.finance/faq/fee-model.md",
-        "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions.md",
-        "https://docs.quill.finance/faq/risks-and-disclosures.md",
-        "https://docs.quill.finance/documentation/contract-addresses.md",
-        "https://docs.quill.finance/documentation/audits.md",
-        "https://scrollscan.com/api/v2/smart-contracts/0x358d90036e70542ae24b3813c0efecc1f8811442"
-      ],
-      "rationale": "Docs, risk disclosure, branch address inventory and verified token/registry source distinguish pledged collateral from free assets. No published maximum for realizing the entire SCR, WETH, wstETH or weETH collateral slice into USD was located; collateral redemption speed alone does not establish that horizon."
-    },
-    {
-      "id": "uw-usdq-quill-0641a52c94f73cd3",
-      "assetId": "usdq-quill",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:68594bcc0742a1c26a1c9ca5",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:20Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
-      "sources": [
-        {
-          "url": "https://docs.quill.finance/faq/risks-and-disclosures.md",
-          "observedAt": "2026-10-03T22:50:52Z",
-          "datumAsOf": null,
-          "location": "Issuer/protocol published product terms",
-          "excerpt": "In DeFi, risks include **smart contract risk** (vulnerabilities in the code), **protocol risk** (potential for governance or operational issues), **market risk** (fluctuations in asset prices) and **liquidity risk** (availability of assets during high demand).",
-          "assertion": "Quill discloses collateral/liquidity risk and onchain redemption, but no whole-position USD realization horizon for SCR, WETH, wstETH or weETH."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.quill.finance/",
-        "https://app.quill.finance/",
-        "https://docs.quill.finance/llms.txt",
-        "https://docs.quill.finance/faq/borrowing.md",
-        "https://docs.quill.finance/faq/fee-model.md",
-        "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions.md",
-        "https://docs.quill.finance/faq/risks-and-disclosures.md",
-        "https://docs.quill.finance/documentation/contract-addresses.md",
-        "https://docs.quill.finance/documentation/audits.md",
-        "https://scrollscan.com/api/v2/smart-contracts/0x358d90036e70542ae24b3813c0efecc1f8811442"
-      ],
-      "rationale": "Docs, risk disclosure, branch address inventory and verified token/registry source distinguish pledged collateral from free assets. No published maximum for realizing the entire SCR, WETH, wstETH or weETH collateral slice into USD was located; collateral redemption speed alone does not establish that horizon."
-    },
-    {
-      "id": "uw-usdq-quill-e6890233f7778b44",
-      "assetId": "usdq-quill",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:a301b79207c96314b21d329d",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:20Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
-      "sources": [
-        {
-          "url": "https://docs.quill.finance/faq/risks-and-disclosures.md",
-          "observedAt": "2026-10-03T22:50:52Z",
-          "datumAsOf": null,
-          "location": "Issuer/protocol published product terms",
-          "excerpt": "In DeFi, risks include **smart contract risk** (vulnerabilities in the code), **protocol risk** (potential for governance or operational issues), **market risk** (fluctuations in asset prices) and **liquidity risk** (availability of assets during high demand).",
-          "assertion": "Quill discloses collateral/liquidity risk and onchain redemption, but no whole-position USD realization horizon for SCR, WETH, wstETH or weETH."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.quill.finance/",
-        "https://app.quill.finance/",
-        "https://docs.quill.finance/llms.txt",
-        "https://docs.quill.finance/faq/borrowing.md",
-        "https://docs.quill.finance/faq/fee-model.md",
-        "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions.md",
-        "https://docs.quill.finance/faq/risks-and-disclosures.md",
-        "https://docs.quill.finance/documentation/contract-addresses.md",
-        "https://docs.quill.finance/documentation/audits.md",
-        "https://scrollscan.com/api/v2/smart-contracts/0x358d90036e70542ae24b3813c0efecc1f8811442"
-      ],
-      "rationale": "Docs, risk disclosure, branch address inventory and verified token/registry source distinguish pledged collateral from free assets. No published maximum for realizing the entire SCR, WETH, wstETH or weETH collateral slice into USD was located; collateral redemption speed alone does not establish that horizon."
-    },
-    {
-      "id": "uw-usdq-quill-17ede80556fd01cc",
-      "assetId": "usdq-quill",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:cc80f6ed653591ecc51ccde0",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:20Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
-      "sources": [
-        {
-          "url": "https://docs.quill.finance/faq/risks-and-disclosures.md",
-          "observedAt": "2026-10-03T22:50:52Z",
-          "datumAsOf": null,
-          "location": "Issuer/protocol published product terms",
-          "excerpt": "In DeFi, risks include **smart contract risk** (vulnerabilities in the code), **protocol risk** (potential for governance or operational issues), **market risk** (fluctuations in asset prices) and **liquidity risk** (availability of assets during high demand).",
-          "assertion": "Quill discloses collateral/liquidity risk and onchain redemption, but no whole-position USD realization horizon for SCR, WETH, wstETH or weETH."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.quill.finance/",
-        "https://app.quill.finance/",
-        "https://docs.quill.finance/llms.txt",
-        "https://docs.quill.finance/faq/borrowing.md",
-        "https://docs.quill.finance/faq/fee-model.md",
-        "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions.md",
-        "https://docs.quill.finance/faq/risks-and-disclosures.md",
-        "https://docs.quill.finance/documentation/contract-addresses.md",
-        "https://docs.quill.finance/documentation/audits.md",
-        "https://scrollscan.com/api/v2/smart-contracts/0x358d90036e70542ae24b3813c0efecc1f8811442"
-      ],
-      "rationale": "Docs, risk disclosure, branch address inventory and verified token/registry source distinguish pledged collateral from free assets. No published maximum for realizing the entire SCR, WETH, wstETH or weETH collateral slice into USD was located; collateral redemption speed alone does not establish that horizon."
-    },
-    {
-      "id": "uw-onyc-onre-afec61e8de932ba9",
-      "assetId": "onyc-onre",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:16b7da85962152dcaf6eb9d5",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:50:52Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
-      "sources": [
-        {
-          "url": "https://kamino.com/docs/products/borrow/supplying.md",
-          "observedAt": "2026-10-03T22:50:52Z",
-          "datumAsOf": null,
-          "location": "Issuer/protocol published product terms",
-          "excerpt": "You can withdraw at any time as long as the pool has available liquidity \u2014 that is, not all deposited assets are currently borrowed.",
-          "assertion": "Withdrawal depends on liquidity; no guaranteed all-position realization time for OnRe Kamino lending slices."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.onre.finance/for-capital-providers/collateral-composition",
-        "https://docs.onre.finance/legal/platform-terms-of-use.md",
-        "https://docs.onre.finance/security-and-verification/independent-attestations.md",
-        "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-bLCCxKNCB2GHgFV5Jo6_fbv4t3CT60dwPMbUDfwhHglt5GBoLp47jp1wcCOY8Ob1ZgjA6KXNczdq/pub?output=csv&gid=1591707661&single=true",
-        "https://kamino.com/docs/llms.txt",
-        "https://kamino.com/docs/products/borrow/supplying.md"
-      ],
-      "rationale": "OnRe identifies USDC and USDG supplied to Kamino, but provides no slice-specific liquidity horizon. Kamino explicitly conditions withdrawal on available pool liquidity and gives no full-position realization deadline. Source-native conditional availability is not an immediate whole-slice bound."
-    },
-    {
-      "id": "uw-onyc-onre-67036e1fd616fe30",
-      "assetId": "onyc-onre",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:cc2850adad80c09884d1cbba",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:50:52Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
-      "sources": [
-        {
-          "url": "https://kamino.com/docs/products/borrow/supplying.md",
-          "observedAt": "2026-10-03T22:50:52Z",
-          "datumAsOf": null,
-          "location": "Issuer/protocol published product terms",
-          "excerpt": "You can withdraw at any time as long as the pool has available liquidity \u2014 that is, not all deposited assets are currently borrowed.",
-          "assertion": "Withdrawal depends on liquidity; no guaranteed all-position realization time for OnRe Kamino lending slices."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.onre.finance/for-capital-providers/collateral-composition",
-        "https://docs.onre.finance/legal/platform-terms-of-use.md",
-        "https://docs.onre.finance/security-and-verification/independent-attestations.md",
-        "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-bLCCxKNCB2GHgFV5Jo6_fbv4t3CT60dwPMbUDfwhHglt5GBoLp47jp1wcCOY8Ob1ZgjA6KXNczdq/pub?output=csv&gid=1591707661&single=true",
-        "https://kamino.com/docs/llms.txt",
-        "https://kamino.com/docs/products/borrow/supplying.md"
-      ],
-      "rationale": "OnRe identifies USDC and USDG supplied to Kamino, but provides no slice-specific liquidity horizon. Kamino explicitly conditions withdrawal on available pool liquidity and gives no full-position realization deadline. Source-native conditional availability is not an immediate whole-slice bound."
-    },
-    {
-      "id": "uw-onyc-onre-14b6843746f46e76",
-      "assetId": "onyc-onre",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:8c681fb5ffeb76135fa1384f",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:20Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
-      "sources": [
-        {
-          "url": "https://bitwiseinvestments.com/crypto-funds/uscc",
-          "observedAt": "2026-10-03T22:50:52Z",
-          "datumAsOf": null,
-          "location": "Issuer/protocol published product terms",
-          "excerpt": "Ownership in the Fund is via the USCC token or book-entry record keeping.",
-          "assertion": "Fund-share claims are disclosed, but no contractual maximum maturity of the fund share is published."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.onre.finance/for-capital-providers/collateral-composition/uscc-or-bitwise-crypto-carry-fund.md",
-        "https://bitwiseinvestments.com/crypto-funds/uscc",
-        "https://s3.us-east-1.amazonaws.com/static.bitwiseinvestments.com/uscc/bitwise-crypto-carry-fund-uscc-fact-sheet.pdf",
-        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
-      ],
-      "rationale": "The scoped USCC holding is a fund share, not the underlying Treasury or futures instruments. Public issuer holdings, structuring and redemption documents do not publish a maximum maturityDaysMax for that share claim. Short duration, dated underlying positions and daily redemption are not a share-maturity covenant."
-    },
-    {
-      "id": "uw-onyc-onre-f6eebc1b3555f3e9",
-      "assetId": "onyc-onre",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:2e3053db34e2d87f05122e2f",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:20Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
-      "sources": [
-        {
-          "url": "https://usyc.docs.hashnote.com/overview/product-structuring.md",
-          "observedAt": "2026-10-03T22:50:52Z",
-          "datumAsOf": null,
-          "location": "Issuer/protocol published product terms",
-          "excerpt": "Tokens represent shares in the fund, thus all token holders need to be onboarded and KYC/AML\u2019d to be able to own SDYF shares.",
-          "assertion": "Fund-share claims are disclosed, but no contractual maximum maturity of the fund share is published."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.onre.finance/for-capital-providers/collateral-composition/usyc-or-us-yield-coin.md",
-        "https://usyc.docs.hashnote.com/llms.txt",
-        "https://usyc.docs.hashnote.com/overview/introduction.md",
-        "https://usyc.docs.hashnote.com/overview/product-structuring.md",
-        "https://usyc.docs.hashnote.com/overview/subscription-and-redemption.md",
-        "https://www.hashnote.com/legal-disclosures"
-      ],
-      "rationale": "The scoped USYC holding is a fund share, not the underlying Treasury or futures instruments. Public issuer holdings, structuring and redemption documents do not publish a maximum maturityDaysMax for that share claim. Short duration, dated underlying positions and daily redemption are not a share-maturity covenant."
-    },
-    {
-      "id": "uw-onyc-onre-807403c731f0e76f",
-      "assetId": "onyc-onre",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:fbc58fbcf982e8298134e5b0",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:20Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
-      "sources": [
-        {
-          "url": "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming",
-          "observedAt": "2026-10-03T22:50:52Z",
-          "datumAsOf": null,
-          "location": "Issuer/protocol published product terms",
-          "excerpt": "Direct redemption is subject to onboarding, available liquidity, operational controls, program terms, and processing windows.",
-          "assertion": "USDv redemption is explicitly conditional; no full-position liquidity-horizon bound is provided."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.onre.finance/for-capital-providers/collateral-composition/usdv-or-usdv.md",
-        "https://docs.solomonlabs.org/",
-        "https://docs.solomonlabs.org/usdv/",
-        "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming",
-        "https://docs.solomonlabs.org/usdv/transparency-and-risk"
-      ],
-      "rationale": "Exact replacement mint is identified in the issuer docs. The acquisition/redemption terms describe venues and conditional institutional access but no guaranteed full-position realization horizon for OnRe\u2019s held USDv. Liquid/composable marketing is not a maximum time bound."
     },
     {
       "id": "uw-usdaf-asymmetry-e476196236f5ce5e",
@@ -32883,6 +32380,907 @@
         "https://raw.githubusercontent.com/circlefin/evm-xreserve-contracts/master/src/modules/x-reserve/Withdrawal.sol"
       ],
       "rationale": "Collateral is liquid USDC, but USDCx holders realize it through remote burn intents, independent attestations and release. Technical/API/code/legal/fee documents give the sequence, not a maximum end-to-end realization window. Underlying USDC immediacy cannot be copied onto the cross-chain escrow slice."
+    },
+    {
+      "id": "uw-fpi-frax-2e09ae5d3765972f",
+      "assetId": "fpi-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:3782c09772f39879ce7b409c",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:49:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R31)",
+      "sources": [
+        {
+          "url": "https://docs.frax.finance/frax-price-index/fpi-controller-pool",
+          "observedAt": "2026-10-03T23:49:19Z",
+          "datumAsOf": null,
+          "location": "Published product / governing terms",
+          "excerpt": "The contract can lend FRAX collateral to various AMOs that earn yield (among other things).",
+          "assertion": "FPI redemption and AMO lending disclose mechanisms, not an all-position final cash realization horizon for FXS, FRAX, Fraxswap FRAX/FPIS or staked Convex FPI/FRAX."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/frax-price-index/fpi-controller-pool",
+        "https://docs.frax.finance/frax-price-index/overview-cpi-peg-and-mechanics",
+        "https://docs.frax.finance/other/audits",
+        "https://api.frax.finance/v2/fpifpis/fpi-collateral",
+        "https://frax.com/transparency",
+        "https://docs.frax.finance/fraxswap/technical-specifications",
+        "https://docs.convexfinance.com/convexfinance/general-information/convex-for-frax-finance",
+        "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/FPI/FPIControllerPool.sol"
+      ],
+      "rationale": "Wave 2 rechecked the current collateral roster and protocol/LP mechanics against the prior audit and explorer search. No scoped whole-position cash realization horizon is published for any of the four holdings. Transferability, LP withdrawal or FPI-to-FRAX redemption is not a guarantee of final USD recovery; therefore this is issuer non-disclosure of liquidityHorizon, not a failed-access blocker."
+    },
+    {
+      "id": "uw-fpi-frax-293ffbc5f1003860",
+      "assetId": "fpi-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:494e80a1b39fac8b0a7d1cfc",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:49:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R31)",
+      "sources": [
+        {
+          "url": "https://docs.frax.finance/frax-price-index/fpi-controller-pool",
+          "observedAt": "2026-10-03T23:49:19Z",
+          "datumAsOf": null,
+          "location": "Published product / governing terms",
+          "excerpt": "The contract can lend FRAX collateral to various AMOs that earn yield (among other things).",
+          "assertion": "FPI redemption and AMO lending disclose mechanisms, not an all-position final cash realization horizon for FXS, FRAX, Fraxswap FRAX/FPIS or staked Convex FPI/FRAX."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/frax-price-index/fpi-controller-pool",
+        "https://docs.frax.finance/frax-price-index/overview-cpi-peg-and-mechanics",
+        "https://docs.frax.finance/other/audits",
+        "https://api.frax.finance/v2/fpifpis/fpi-collateral",
+        "https://frax.com/transparency",
+        "https://docs.frax.finance/fraxswap/technical-specifications",
+        "https://docs.convexfinance.com/convexfinance/general-information/convex-for-frax-finance",
+        "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/FPI/FPIControllerPool.sol"
+      ],
+      "rationale": "Wave 2 rechecked the current collateral roster and protocol/LP mechanics against the prior audit and explorer search. No scoped whole-position cash realization horizon is published for any of the four holdings. Transferability, LP withdrawal or FPI-to-FRAX redemption is not a guarantee of final USD recovery; therefore this is issuer non-disclosure of liquidityHorizon, not a failed-access blocker."
+    },
+    {
+      "id": "uw-fpi-frax-d6db7521961f1e72",
+      "assetId": "fpi-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:bfec46c03c0b3a838949e47b",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:49:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R31)",
+      "sources": [
+        {
+          "url": "https://docs.frax.finance/frax-price-index/fpi-controller-pool",
+          "observedAt": "2026-10-03T23:49:19Z",
+          "datumAsOf": null,
+          "location": "Published product / governing terms",
+          "excerpt": "The contract can lend FRAX collateral to various AMOs that earn yield (among other things).",
+          "assertion": "FPI redemption and AMO lending disclose mechanisms, not an all-position final cash realization horizon for FXS, FRAX, Fraxswap FRAX/FPIS or staked Convex FPI/FRAX."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/frax-price-index/fpi-controller-pool",
+        "https://docs.frax.finance/frax-price-index/overview-cpi-peg-and-mechanics",
+        "https://docs.frax.finance/other/audits",
+        "https://api.frax.finance/v2/fpifpis/fpi-collateral",
+        "https://frax.com/transparency",
+        "https://docs.frax.finance/fraxswap/technical-specifications",
+        "https://docs.convexfinance.com/convexfinance/general-information/convex-for-frax-finance",
+        "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/FPI/FPIControllerPool.sol"
+      ],
+      "rationale": "Wave 2 rechecked the current collateral roster and protocol/LP mechanics against the prior audit and explorer search. No scoped whole-position cash realization horizon is published for any of the four holdings. Transferability, LP withdrawal or FPI-to-FRAX redemption is not a guarantee of final USD recovery; therefore this is issuer non-disclosure of liquidityHorizon, not a failed-access blocker."
+    },
+    {
+      "id": "uw-fpi-frax-824a5ac55257c239",
+      "assetId": "fpi-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:dab4756326d48a0c7b339005",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:49:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R31)",
+      "sources": [
+        {
+          "url": "https://docs.frax.finance/frax-price-index/fpi-controller-pool",
+          "observedAt": "2026-10-03T23:49:19Z",
+          "datumAsOf": null,
+          "location": "Published product / governing terms",
+          "excerpt": "The contract can lend FRAX collateral to various AMOs that earn yield (among other things).",
+          "assertion": "FPI redemption and AMO lending disclose mechanisms, not an all-position final cash realization horizon for FXS, FRAX, Fraxswap FRAX/FPIS or staked Convex FPI/FRAX."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/frax-price-index/fpi-controller-pool",
+        "https://docs.frax.finance/frax-price-index/overview-cpi-peg-and-mechanics",
+        "https://docs.frax.finance/other/audits",
+        "https://api.frax.finance/v2/fpifpis/fpi-collateral",
+        "https://frax.com/transparency",
+        "https://docs.frax.finance/fraxswap/technical-specifications",
+        "https://docs.convexfinance.com/convexfinance/general-information/convex-for-frax-finance",
+        "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/FPI/FPIControllerPool.sol"
+      ],
+      "rationale": "Wave 2 rechecked the current collateral roster and protocol/LP mechanics against the prior audit and explorer search. No scoped whole-position cash realization horizon is published for any of the four holdings. Transferability, LP withdrawal or FPI-to-FRAX redemption is not a guarantee of final USD recovery; therefore this is issuer non-disclosure of liquidityHorizon, not a failed-access blocker."
+    },
+    {
+      "id": "uw-frxusd-frax-997afa7dc2dbbbc3",
+      "assetId": "frxusd-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1992dea5e9223023e2bf0bb7",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:49:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R31)",
+      "sources": [
+        {
+          "url": "https://static.agora.finance/termsofuse.pdf",
+          "observedAt": "2026-10-03T23:49:19Z",
+          "datumAsOf": "2026-09-01",
+          "location": "Terms of Use, Agora Bermuda, p.6, AUSD redemption",
+          "excerpt": "Agora aims to facilitate the redemption of AUSD within 48 business hours under the normal course of business or within 96 business hours under stress scenarios.",
+          "assertion": "Terms publish targets, but reserve-illiquidity delay and in-kind rights prevent a disclosed guaranteed whole-holding USD realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://static.agora.finance/termsofuse.pdf",
+        "https://docs.frax.com/protocol/assets/frxusd/frxusd",
+        "https://api.frax.finance/v2/frxusd/balance-sheet/latest/export",
+        "https://frax.com/frxusd-terms",
+        "https://docs.frax.com/frxusd/mint-and-redeem-overview",
+        "https://www.agora.finance/",
+        "https://docs.agora.finance/",
+        "https://static.agora.finance/riskdisclosures.pdf"
+      ],
+      "rationale": "The exact liquidityHorizon of the AUSD reserve position is not disclosed. The 48/96 business-hour aims are conditional, and the governing terms explicitly permit delay for unavailable reserves and in-kind redemption. Current Frax custodian terms establish neither Frax-specific eligibility nor an unconditional whole-position final-cash bound."
+    },
+    {
+      "id": "uw-frxusd-frax-8279aebd5eea50f4",
+      "assetId": "frxusd-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:409c3f9347236c830f07259f",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:49:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R31)",
+      "sources": [
+        {
+          "url": "https://www.circle.com/legal/usdc-terms",
+          "observedAt": "2026-10-03T23:49:19Z",
+          "datumAsOf": "2025-12-12",
+          "location": "USDC Terms, section 13, Software protocols and operational challenges",
+          "excerpt": "You understand that the USDC Services may experience operational issues that lead to delays, including delays in redeeming USDC.",
+          "assertion": "Circle discloses eligibility and delay powers, not a Frax-specific all-position final-cash realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.circle.com/legal/usdc-terms",
+        "https://docs.frax.com/protocol/assets/frxusd/frxusd",
+        "https://api.frax.finance/v2/frxusd/balance-sheet/latest/export",
+        "https://frax.com/frxusd-terms",
+        "https://docs.frax.com/frxusd/mint-and-redeem-overview",
+        "https://www.circle.com/legal/user-agreement",
+        "https://www.circle.com/legal/usdc-risk-factors"
+      ],
+      "rationale": "No exact whole-holding liquidityHorizon is published for the USDC held by the Frax redemption contract. Circle terms make redemption conditional on a good-standing Mint account and allow suspension/delay. The current reserve roster identifies the holding, but neither it nor custodian docs publishes a binding Frax-specific all-position realization deadline."
+    },
+    {
+      "id": "uw-frxusd-frax-7d1b6a301a18eb3a",
+      "assetId": "frxusd-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:7b9984ce7729a18c0e42bcfb",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:49:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R31)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest/export",
+          "observedAt": "2026-10-03T23:49:19Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Current CSV, EREBOR_USD reserve row",
+          "excerpt": "FBO frxUSD Stablecoin Reserve Account, a segregated FDIC-insured Erebor Bank account holding reserves for frxUSD.",
+          "assertion": "The account identity and cash balance are disclosed; no demand/term covenant or contractual maximum maturity is supplied."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://api.frax.finance/v2/frxusd/balance-sheet/latest/export",
+        "https://docs.frax.com/protocol/assets/frxusd/frxusd",
+        "https://frax.com/frxusd-terms",
+        "https://docs.frax.com/frxusd/mint-and-redeem-overview",
+        "https://facts.frax.finance/frxusd/balance-sheet"
+      ],
+      "rationale": "The EREBOR_USD slice maturityDaysMax is not publicly disclosed: the current reserve export identifies a segregated FBO reserve account, while bank-transfer/onramp marketing describes user payment accounts rather than the governing reserve deposit contract. The site/docs/terms and prior account-specific search produced no public demand-versus-term or maximum-maturity term. Do not infer zero from a USD label."
+    },
+    {
+      "id": "uw-frxusd-frax-003ff4bd1a21435b",
+      "assetId": "frxusd-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c18fa900f9c313b2be2eb36d",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:49:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R31)",
+      "sources": [
+        {
+          "url": "https://superstate.com/assets/ustb",
+          "observedAt": "2026-10-03T23:49:19Z",
+          "datumAsOf": null,
+          "location": "About USTB / Holdings / Disclaimers",
+          "excerpt": "Ownership in the Fund is represented by USTB, held either as a token or in book-entry record keeping.",
+          "assertion": "Current holdings show underlying bill maturities, not a maximum maturity of the fund-share claim held by Frax."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://superstate.com/assets/ustb",
+        "https://docs.frax.com/protocol/assets/frxusd/frxusd",
+        "https://api.frax.finance/v2/frxusd/balance-sheet/latest/export",
+        "https://frax.com/frxusd-terms",
+        "https://docs.frax.com/frxusd/mint-and-redeem-overview",
+        "https://www.invesco.com/us/en/institutional/strategies/money-market-and-liquidity/ustb.html",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb"
+      ],
+      "rationale": "No maximum maturity of the USTB fund-share reserve claim is publicly published. Wave 2 retrieved the current September 21 full underlying holding table and the current Invesco risk disclosures: those dates describe portfolio securities, not termination of shares. Definitive offering terms are supplied only to qualified offerees. No public fund-share maximum can be curated from average duration or the longest underlying Treasury."
+    },
+    {
+      "id": "uw-frxusd-frax-438628c3842066c6",
+      "assetId": "frxusd-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:4755b7b10c8efc321b15a5b6",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:49:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R31)",
+      "sources": [
+        {
+          "url": "https://forum.arbitrum.foundation/t/securitize-markets-buidl-step-application/23652",
+          "observedAt": "2026-10-03T23:49:19Z",
+          "datumAsOf": "2024-05-04",
+          "location": "Key Information, 2. Expected Maturity",
+          "excerpt": "The fund does not have a maturity date.",
+          "assertion": "Distributor explicitly distinguishes the perpetual fund from underlying Treasury maturity; no finite maximum for Frax-held BUIDL fund shares is published."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://forum.arbitrum.foundation/t/securitize-markets-buidl-step-application/23652",
+        "https://docs.frax.com/protocol/assets/frxusd/frxusd",
+        "https://api.frax.finance/v2/frxusd/balance-sheet/latest/export",
+        "https://frax.com/frxusd-terms",
+        "https://docs.frax.com/frxusd/mint-and-redeem-overview",
+        "https://securitize.io/learn/press/blackrock-launches-first-tokenized-fund-buidl-on-the-ethereum-network",
+        "https://investors.securitize.io/news/news-details/2026/Tempo-expands-onchain-yield-offering-with-BlackRocks-BUIDL-fund/default.aspx",
+        "https://id.securitize.io/primary-market"
+      ],
+      "rationale": "No finite maturityDaysMax of the BUIDL fund-share reserve claim is publicly disclosed. The distributor describes no fund maturity date and separately a three-month underlying Treasury mandate with underlying funds allowed. Wave 2 identified that exact claim-level distinction, rather than treating outdated underlying holdings as a bound; current product/issuer and offering-surface searches found no public contrary finite share maturity."
+    },
+    {
+      "id": "uw-onyc-onre-6df0a2ffbc90aaf8",
+      "assetId": "onyc-onre",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:8c681fb5ffeb76135fa1384f",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:49:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R31)",
+      "sources": [
+        {
+          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc.md",
+          "observedAt": "2026-10-03T23:49:19Z",
+          "datumAsOf": null,
+          "location": "Redeeming",
+          "excerpt": "Proceeds are delivered T+1 for requests received before 5pm ET, or T+2 after.",
+          "assertion": "Publishes ordinary market-day delivery but does not guarantee whole-position stress recovery under all fund restrictions."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc.md",
+        "https://docs.onre.finance/for-capital-providers/collateral-composition/uscc-or-bitwise-crypto-carry-fund.md",
+        "https://bitwiseinvestments.com/crypto-funds/uscc",
+        "https://superstate.com/assets/uscc",
+        "https://docs.superstate.com/investors/tokenized-funds/redeem.md"
+      ],
+      "rationale": "The whole USCC position liquidityHorizon is not publicly disclosed as an unconditional final-cash bound. Wave 2 reviewed current transfer-agent redemption instructions and product risk disclosures: T+1/T+2 refers to market-day processing, and USDC daily liquidity remains subject to fund-document risks/restrictions. No calendar-day whole-position maximum under those restrictions is published. Do not convert business days into a scalar bound."
+    },
+    {
+      "id": "uw-usdsc-startale-769a2ad00a23f393",
+      "assetId": "usdsc-startale",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:cd90caea07dec56c93f5e7e6",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:49:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R31)",
+      "sources": [
+        {
+          "url": "https://usd.startale.com/terms",
+          "observedAt": "2026-10-03T23:49:19Z",
+          "datumAsOf": "2025-12-03",
+          "location": "Features, Startale USD Swap",
+          "excerpt": "The Company is the counterparty to you at all times with respect to the Startale USD Swap.",
+          "assertion": "Principal swaps concern user USDSC; they do not disclose the whole Startale M reserve cash-realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://usd.startale.com/terms",
+        "https://usd.startale.com/",
+        "https://usd.startale.com/faq",
+        "https://dashboard.m0.org/",
+        "https://docs.m0.org/protocol/extensions",
+        "https://docs.m0.org/protocol/minting-burning",
+        "https://github.com/StartaleGroup/stablecoin-vault-contracts/tree/main/audits"
+      ],
+      "rationale": "No whole-position liquidityHorizon for Startale-held M to final USD is publicly disclosed. Wave 2 distinguished proprietary user swaps (discretionary rates/availability, no continuing obligation) and USDSC vault withdrawal from reserve M realization. M0 burning reduces minter debt and collateral retrieval requires validator approval; neither establishes a holder cash SLA or Startale-specific full reserve eligibility. Existing unadmitted immediate metadata is not promoted."
+    },
+    {
+      "id": "uw-usdq-quill-24c7e74e7b76b73c",
+      "assetId": "usdq-quill",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:47dcfb5b865be0ae3099be07",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://docs.quill.finance/faq/risks-and-disclosures.md",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "In DeFi, risks include **smart contract risk** (vulnerabilities in the code), **protocol risk** (potential for governance or operational issues), **market risk** (fluctuations in asset prices) and **liquidity risk** (availability of assets during high demand).",
+          "assertion": "Quill discloses collateral/liquidity risk and onchain redemption, but no whole-position USD realization horizon for SCR, WETH, wstETH or weETH."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quill.finance/",
+        "https://app.quill.finance/",
+        "https://docs.quill.finance/llms.txt",
+        "https://docs.quill.finance/faq/borrowing.md",
+        "https://docs.quill.finance/faq/fee-model.md",
+        "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions.md",
+        "https://docs.quill.finance/faq/risks-and-disclosures.md",
+        "https://docs.quill.finance/documentation/contract-addresses.md",
+        "https://docs.quill.finance/documentation/audits.md",
+        "https://scrollscan.com/api/v2/smart-contracts/0x358d90036e70542ae24b3813c0efecc1f8811442"
+      ],
+      "rationale": "Docs, risk disclosure, branch address inventory and verified token/registry source distinguish pledged collateral from free assets. No published maximum for realizing the entire SCR, WETH, wstETH or weETH collateral slice into USD was located; collateral redemption speed alone does not establish that horizon."
+    },
+    {
+      "id": "uw-usdq-quill-0641a52c94f73cd3",
+      "assetId": "usdq-quill",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:68594bcc0742a1c26a1c9ca5",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://docs.quill.finance/faq/risks-and-disclosures.md",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "In DeFi, risks include **smart contract risk** (vulnerabilities in the code), **protocol risk** (potential for governance or operational issues), **market risk** (fluctuations in asset prices) and **liquidity risk** (availability of assets during high demand).",
+          "assertion": "Quill discloses collateral/liquidity risk and onchain redemption, but no whole-position USD realization horizon for SCR, WETH, wstETH or weETH."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quill.finance/",
+        "https://app.quill.finance/",
+        "https://docs.quill.finance/llms.txt",
+        "https://docs.quill.finance/faq/borrowing.md",
+        "https://docs.quill.finance/faq/fee-model.md",
+        "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions.md",
+        "https://docs.quill.finance/faq/risks-and-disclosures.md",
+        "https://docs.quill.finance/documentation/contract-addresses.md",
+        "https://docs.quill.finance/documentation/audits.md",
+        "https://scrollscan.com/api/v2/smart-contracts/0x358d90036e70542ae24b3813c0efecc1f8811442"
+      ],
+      "rationale": "Docs, risk disclosure, branch address inventory and verified token/registry source distinguish pledged collateral from free assets. No published maximum for realizing the entire SCR, WETH, wstETH or weETH collateral slice into USD was located; collateral redemption speed alone does not establish that horizon."
+    },
+    {
+      "id": "uw-usdq-quill-e6890233f7778b44",
+      "assetId": "usdq-quill",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:a301b79207c96314b21d329d",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://docs.quill.finance/faq/risks-and-disclosures.md",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "In DeFi, risks include **smart contract risk** (vulnerabilities in the code), **protocol risk** (potential for governance or operational issues), **market risk** (fluctuations in asset prices) and **liquidity risk** (availability of assets during high demand).",
+          "assertion": "Quill discloses collateral/liquidity risk and onchain redemption, but no whole-position USD realization horizon for SCR, WETH, wstETH or weETH."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quill.finance/",
+        "https://app.quill.finance/",
+        "https://docs.quill.finance/llms.txt",
+        "https://docs.quill.finance/faq/borrowing.md",
+        "https://docs.quill.finance/faq/fee-model.md",
+        "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions.md",
+        "https://docs.quill.finance/faq/risks-and-disclosures.md",
+        "https://docs.quill.finance/documentation/contract-addresses.md",
+        "https://docs.quill.finance/documentation/audits.md",
+        "https://scrollscan.com/api/v2/smart-contracts/0x358d90036e70542ae24b3813c0efecc1f8811442"
+      ],
+      "rationale": "Docs, risk disclosure, branch address inventory and verified token/registry source distinguish pledged collateral from free assets. No published maximum for realizing the entire SCR, WETH, wstETH or weETH collateral slice into USD was located; collateral redemption speed alone does not establish that horizon."
+    },
+    {
+      "id": "uw-usdq-quill-17ede80556fd01cc",
+      "assetId": "usdq-quill",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:cc80f6ed653591ecc51ccde0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://docs.quill.finance/faq/risks-and-disclosures.md",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "In DeFi, risks include **smart contract risk** (vulnerabilities in the code), **protocol risk** (potential for governance or operational issues), **market risk** (fluctuations in asset prices) and **liquidity risk** (availability of assets during high demand).",
+          "assertion": "Quill discloses collateral/liquidity risk and onchain redemption, but no whole-position USD realization horizon for SCR, WETH, wstETH or weETH."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quill.finance/",
+        "https://app.quill.finance/",
+        "https://docs.quill.finance/llms.txt",
+        "https://docs.quill.finance/faq/borrowing.md",
+        "https://docs.quill.finance/faq/fee-model.md",
+        "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions.md",
+        "https://docs.quill.finance/faq/risks-and-disclosures.md",
+        "https://docs.quill.finance/documentation/contract-addresses.md",
+        "https://docs.quill.finance/documentation/audits.md",
+        "https://scrollscan.com/api/v2/smart-contracts/0x358d90036e70542ae24b3813c0efecc1f8811442"
+      ],
+      "rationale": "Docs, risk disclosure, branch address inventory and verified token/registry source distinguish pledged collateral from free assets. No published maximum for realizing the entire SCR, WETH, wstETH or weETH collateral slice into USD was located; collateral redemption speed alone does not establish that horizon."
+    },
+    {
+      "id": "uw-onyc-onre-afec61e8de932ba9",
+      "assetId": "onyc-onre",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:16b7da85962152dcaf6eb9d5",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:52Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://kamino.com/docs/products/borrow/supplying.md",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "You can withdraw at any time as long as the pool has available liquidity \u2014 that is, not all deposited assets are currently borrowed.",
+          "assertion": "Withdrawal depends on liquidity; no guaranteed all-position realization time for OnRe Kamino lending slices."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.onre.finance/for-capital-providers/collateral-composition",
+        "https://docs.onre.finance/legal/platform-terms-of-use.md",
+        "https://docs.onre.finance/security-and-verification/independent-attestations.md",
+        "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-bLCCxKNCB2GHgFV5Jo6_fbv4t3CT60dwPMbUDfwhHglt5GBoLp47jp1wcCOY8Ob1ZgjA6KXNczdq/pub?output=csv&gid=1591707661&single=true",
+        "https://kamino.com/docs/llms.txt",
+        "https://kamino.com/docs/products/borrow/supplying.md"
+      ],
+      "rationale": "OnRe identifies USDC and USDG supplied to Kamino, but provides no slice-specific liquidity horizon. Kamino explicitly conditions withdrawal on available pool liquidity and gives no full-position realization deadline. Source-native conditional availability is not an immediate whole-slice bound."
+    },
+    {
+      "id": "uw-onyc-onre-67036e1fd616fe30",
+      "assetId": "onyc-onre",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:cc2850adad80c09884d1cbba",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:52Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://kamino.com/docs/products/borrow/supplying.md",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "You can withdraw at any time as long as the pool has available liquidity \u2014 that is, not all deposited assets are currently borrowed.",
+          "assertion": "Withdrawal depends on liquidity; no guaranteed all-position realization time for OnRe Kamino lending slices."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.onre.finance/for-capital-providers/collateral-composition",
+        "https://docs.onre.finance/legal/platform-terms-of-use.md",
+        "https://docs.onre.finance/security-and-verification/independent-attestations.md",
+        "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-bLCCxKNCB2GHgFV5Jo6_fbv4t3CT60dwPMbUDfwhHglt5GBoLp47jp1wcCOY8Ob1ZgjA6KXNczdq/pub?output=csv&gid=1591707661&single=true",
+        "https://kamino.com/docs/llms.txt",
+        "https://kamino.com/docs/products/borrow/supplying.md"
+      ],
+      "rationale": "OnRe identifies USDC and USDG supplied to Kamino, but provides no slice-specific liquidity horizon. Kamino explicitly conditions withdrawal on available pool liquidity and gives no full-position realization deadline. Source-native conditional availability is not an immediate whole-slice bound."
+    },
+    {
+      "id": "uw-onyc-onre-14b6843746f46e76",
+      "assetId": "onyc-onre",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:8c681fb5ffeb76135fa1384f",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://bitwiseinvestments.com/crypto-funds/uscc",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "Ownership in the Fund is via the USCC token or book-entry record keeping.",
+          "assertion": "Fund-share claims are disclosed, but no contractual maximum maturity of the fund share is published."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.onre.finance/for-capital-providers/collateral-composition/uscc-or-bitwise-crypto-carry-fund.md",
+        "https://bitwiseinvestments.com/crypto-funds/uscc",
+        "https://s3.us-east-1.amazonaws.com/static.bitwiseinvestments.com/uscc/bitwise-crypto-carry-fund-uscc-fact-sheet.pdf",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
+      ],
+      "rationale": "The scoped USCC holding is a fund share, not the underlying Treasury or futures instruments. Public issuer holdings, structuring and redemption documents do not publish a maximum maturityDaysMax for that share claim. Short duration, dated underlying positions and daily redemption are not a share-maturity covenant."
+    },
+    {
+      "id": "uw-onyc-onre-f6eebc1b3555f3e9",
+      "assetId": "onyc-onre",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2e3053db34e2d87f05122e2f",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://usyc.docs.hashnote.com/overview/product-structuring.md",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "Tokens represent shares in the fund, thus all token holders need to be onboarded and KYC/AML\u2019d to be able to own SDYF shares.",
+          "assertion": "Fund-share claims are disclosed, but no contractual maximum maturity of the fund share is published."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.onre.finance/for-capital-providers/collateral-composition/usyc-or-us-yield-coin.md",
+        "https://usyc.docs.hashnote.com/llms.txt",
+        "https://usyc.docs.hashnote.com/overview/introduction.md",
+        "https://usyc.docs.hashnote.com/overview/product-structuring.md",
+        "https://usyc.docs.hashnote.com/overview/subscription-and-redemption.md",
+        "https://www.hashnote.com/legal-disclosures"
+      ],
+      "rationale": "The scoped USYC holding is a fund share, not the underlying Treasury or futures instruments. Public issuer holdings, structuring and redemption documents do not publish a maximum maturityDaysMax for that share claim. Short duration, dated underlying positions and daily redemption are not a share-maturity covenant."
+    },
+    {
+      "id": "uw-onyc-onre-807403c731f0e76f",
+      "assetId": "onyc-onre",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:fbc58fbcf982e8298134e5b0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "Direct redemption is subject to onboarding, available liquidity, operational controls, program terms, and processing windows.",
+          "assertion": "USDv redemption is explicitly conditional; no full-position liquidity-horizon bound is provided."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.onre.finance/for-capital-providers/collateral-composition/usdv-or-usdv.md",
+        "https://docs.solomonlabs.org/",
+        "https://docs.solomonlabs.org/usdv/",
+        "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming",
+        "https://docs.solomonlabs.org/usdv/transparency-and-risk"
+      ],
+      "rationale": "Exact replacement mint is identified in the issuer docs. The acquisition/redemption terms describe venues and conditional institutional access but no guaranteed full-position realization horizon for OnRe\u2019s held USDv. Liquid/composable marketing is not a maximum time bound."
+    },
+    {
+      "id": "uw-fpi-frax-118cc1b45dbc5ce3",
+      "assetId": "fpi-frax",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R48)",
+      "sources": [
+        {
+          "url": "https://docs.frax.finance/frax-price-index/fpi-controller-pool",
+          "observedAt": "2026-10-03T22:57:06Z",
+          "datumAsOf": null,
+          "location": "Mint/backing mechanism documentation",
+          "excerpt": "Users can mint FPI with FRAX or redeem FPI for FRAX.",
+          "assertion": "Discloses mint/backing mechanics, not a whole-supply liability-to-backing reconciliation procedure and cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/frax-price-index/overview-cpi-peg-and-mechanics",
+        "https://docs.frax.finance/other/audits",
+        "https://api.frax.finance/v2/fpifpis/fpi-collateral",
+        "https://frax.com/transparency",
+        "https://eth.blockscout.com/address/0x5ca135b8527d76e932f34b5145575f9d8cbe08e?tab=contract",
+        "https://docs.frax.finance/frax-price-index/fpi-controller-pool"
+      ],
+      "rationale": "No published whole-supply reconciliation procedure/cadence covering all authorized mint paths and economic backing was located. Onchain balances, collateral/debt dashboards and code-security audits do not establish that exact datum. Existing explicit reconciliation unknown remains unchanged."
+    },
+    {
+      "id": "uw-usg-tangent-91596f2f7822e39b",
+      "assetId": "usg-tangent",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R48)",
+      "sources": [
+        {
+          "url": "https://docs.tangent.finance/docs/usg/Markets/hec_markets.md",
+          "observedAt": "2026-10-03T22:57:06Z",
+          "datumAsOf": null,
+          "location": "Mint/backing mechanism documentation",
+          "excerpt": "On these markets, it is possible to borrow interest-free in exchange for a portion of the collateral's rewards, while `USG` is above a predefined *price threshold*.",
+          "assertion": "Discloses mint/backing mechanics, not a whole-supply liability-to-backing reconciliation procedure and cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tangent.finance/",
+        "https://docs.tangent.finance/docs/usg/overview_usg",
+        "https://docs.tangent.finance/docs/faq/audits.md",
+        "https://docs.tangent.finance/docs/faq/contracts.md",
+        "https://docs.tangent.finance/docs/usg/financial_flows.md",
+        "https://docs.tangent.finance/docs/faq/history.md",
+        "https://docs.tangent.finance/docs/usg/Markets/hec_markets.md"
+      ],
+      "rationale": "No published whole-supply reconciliation procedure/cadence covering all authorized mint paths and economic backing was located. Onchain balances, collateral/debt dashboards and code-security audits do not establish that exact datum. Existing explicit reconciliation unknown remains unchanged."
+    },
+    {
+      "id": "uw-sfrxusd-frax-a9becd93de387e60",
+      "assetId": "sfrxusd-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:32d364f83aa9d4c0a4f3fb53",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R93)",
+      "sources": [
+        {
+          "url": "https://gov.frax.finance/t/fip-434-sfrxusd-amo-deployments-future-strategies/3786",
+          "observedAt": "2026-10-03T23:15:53Z",
+          "datumAsOf": "2025-09-05",
+          "location": "FIP-434, Discretionary Allocation",
+          "excerpt": "Actual allocations are at the discretion of the Frax core team and internal risk team, based on prevailing market conditions, liquidity needs, and risk assessments.",
+          "assertion": "Governance mandate gives dynamic strategy allocation, not a whole-position realization maximum or venue-specific insolvency safeguards."
+        },
+        {
+          "url": "https://api.frax.finance/v2/sfrxusd/balance-sheet/latest/export",
+          "observedAt": "2026-10-03T23:15:53Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Current sfrxUSD balance-sheet CSV, description column",
+          "excerpt": "Underlying frxUSD in KRK RWA Gearbox frxUSD Pool",
+          "assertion": "Current complete export identifies lending, LP and RWA strategy holdings; no realization-time bound or wrapper-holder legal custody/insolvency instrument is included."
+        },
+        {
+          "url": "https://frax.com/frxusd-terms",
+          "observedAt": "2026-10-03T23:15:53Z",
+          "datumAsOf": "2025-11-19",
+          "location": "Rendered terms, section 3.4 Additional Features and Programs",
+          "excerpt": "Participation in any such program may be subject to additional terms and conditions, and may not be available in all jurisdictions.",
+          "assertion": "frxUSD issuer terms describe possible separate yield-program terms; parent FBO reserve intent does not establish sfrxUSD local strategy-holder rights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.com/protocol/assets/frxusd/sfrxusd",
+        "https://gov.frax.finance/t/fip-434-sfrxusd-amo-deployments-future-strategies/3786",
+        "https://frax.com/frxusd-terms",
+        "https://facts.frax.finance/frxusd/sfrxusd-balance-sheet",
+        "https://api.frax.finance/v2/sfrxusd/balance-sheet/latest/export",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+        "https://docs.frax.com/frxusd/stake-and-unstake-quickstart-ethereum"
+      ],
+      "rationale": "The exact whole strategy-position liquidityHorizon is not disclosed. Current holdings are published, including lent assets and LPs, but mandate, export, issuer terms and Hop withdrawal documentation supply no full-position realization maximum. Redemption without price impact is not a complete liquidity horizon."
+    },
+    {
+      "id": "uw-sfrxusd-frax-2bfb9dd234382e37",
+      "assetId": "sfrxusd-frax",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R93)",
+      "sources": [
+        {
+          "url": "https://gov.frax.finance/t/fip-434-sfrxusd-amo-deployments-future-strategies/3786",
+          "observedAt": "2026-10-03T23:15:53Z",
+          "datumAsOf": "2025-09-05",
+          "location": "FIP-434, Discretionary Allocation",
+          "excerpt": "Actual allocations are at the discretion of the Frax core team and internal risk team, based on prevailing market conditions, liquidity needs, and risk assessments.",
+          "assertion": "Governance mandate gives dynamic strategy allocation, not a whole-position realization maximum or venue-specific insolvency safeguards."
+        },
+        {
+          "url": "https://api.frax.finance/v2/sfrxusd/balance-sheet/latest/export",
+          "observedAt": "2026-10-03T23:15:53Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Current sfrxUSD balance-sheet CSV, description column",
+          "excerpt": "Underlying frxUSD in KRK RWA Gearbox frxUSD Pool",
+          "assertion": "Current complete export identifies lending, LP and RWA strategy holdings; no realization-time bound or wrapper-holder legal custody/insolvency instrument is included."
+        },
+        {
+          "url": "https://frax.com/frxusd-terms",
+          "observedAt": "2026-10-03T23:15:53Z",
+          "datumAsOf": "2025-11-19",
+          "location": "Rendered terms, section 3.4 Additional Features and Programs",
+          "excerpt": "Participation in any such program may be subject to additional terms and conditions, and may not be available in all jurisdictions.",
+          "assertion": "frxUSD issuer terms describe possible separate yield-program terms; parent FBO reserve intent does not establish sfrxUSD local strategy-holder rights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.com/protocol/assets/frxusd/sfrxusd",
+        "https://gov.frax.finance/t/fip-434-sfrxusd-amo-deployments-future-strategies/3786",
+        "https://frax.com/frxusd-terms",
+        "https://facts.frax.finance/frxusd/sfrxusd-balance-sheet",
+        "https://api.frax.finance/v2/sfrxusd/balance-sheet/latest/export",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+        "https://docs.frax.com/frxusd/stake-and-unstake-quickstart-ethereum"
+      ],
+      "rationale": "Wrapper-local custodyEscrow segregation and bankruptcy-remoteness for the separate sfrxUSD strategy book are undisclosed. The complete current roster identifies venues, not enforceable custody or insolvency rights covering the book. Parent frxUSD FBO intentions cannot be transferred to sfrxUSD; the yield mandate and issuer terms provide no such complete instrument."
     }
   ]
 }
