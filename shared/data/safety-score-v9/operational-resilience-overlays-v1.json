@@ -2162,6 +2162,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "sdai-sky",
+      "reviewedAt": "2026-10-03T22:45:30Z",
+      "expiresAt": "2027-10-03T22:45:00Z",
+      "reviewer": "W1R28 primary-source review",
+      "notes": "Exact token deployment inception is a conservative operating-history anchor only. No redemption throughput, stress recovery, assurance continuity or incident-free history is asserted. Parent history is not substituted.",
+      "sources": [
+        {
+          "sourceId": "exact-deployment-inception",
+          "label": "Exact token contract creation transaction",
+          "publisher": "Ethereum / Blockscout",
+          "publishedAt": "2023-01-17",
+          "url": "https://eth.blockscout.com/tx/0xa2f51048265f2fe9ffaf69b94cb5a2a4113be49bdecd2040d530dd6f68facc42",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 44,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-deployment-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "stusds-sky",
+      "reviewedAt": "2026-10-03T22:45:30Z",
+      "expiresAt": "2027-10-03T22:45:00Z",
+      "reviewer": "W1R28 primary-source review",
+      "notes": "Exact token deployment inception is a conservative operating-history anchor only. No redemption throughput, stress recovery, assurance continuity or incident-free history is asserted. Parent history is not substituted.",
+      "sources": [
+        {
+          "sourceId": "exact-deployment-inception",
+          "label": "Exact token contract creation transaction",
+          "publisher": "Ethereum / Blockscout",
+          "publishedAt": "2025-08-25",
+          "url": "https://eth.blockscout.com/tx/0x719ef7cf10e4497963bd2c0a7d4123240331d94991c5ee5010ba1beee9effcfd",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 13,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-deployment-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "skymoneyusdsflagship-sky",
+      "reviewedAt": "2026-10-03T22:45:30Z",
+      "expiresAt": "2027-10-03T22:45:00Z",
+      "reviewer": "W1R28 primary-source review",
+      "notes": "Exact token deployment inception is a conservative operating-history anchor only. No redemption throughput, stress recovery, assurance continuity or incident-free history is asserted. Parent history is not substituted.",
+      "sources": [
+        {
+          "sourceId": "exact-deployment-inception",
+          "label": "Exact token contract creation transaction",
+          "publisher": "Ethereum / Blockscout",
+          "publishedAt": "2026-02-12",
+          "url": "https://eth.blockscout.com/tx/0xbecea2aa97133574b2e3251bc794e0d827b473d2ac78311ba788e22d2c651b3e",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 7,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-deployment-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "skymoneyusdtsavings-sky",
+      "reviewedAt": "2026-10-03T22:45:30Z",
+      "expiresAt": "2027-10-03T22:45:00Z",
+      "reviewer": "W1R28 primary-source review",
+      "notes": "Exact token deployment inception is a conservative operating-history anchor only. No redemption throughput, stress recovery, assurance continuity or incident-free history is asserted. Parent history is not substituted.",
+      "sources": [
+        {
+          "sourceId": "exact-deployment-inception",
+          "label": "Exact token contract creation transaction",
+          "publisher": "Ethereum / Blockscout",
+          "publishedAt": "2026-03-02",
+          "url": "https://eth.blockscout.com/tx/0x96ad4f7253a603dced0009beb518702260d31a4dc75dfa9216deaef6173b0a40",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 7,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-deployment-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

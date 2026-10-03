@@ -805,41 +805,45 @@
     {
       "assetId": "stusds-sky",
       "scopeKind": "whole-allocation",
-      "reviewedAt": "2026-08-23",
-      "expiresAt": "2026-09-23",
-      "reviewer": "Safety Score V9 tranche 2 wrapper allocation review",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R28 pinned full-allocation review",
       "custody": "fully-onchain-no-offchain-custodian",
       "localLeverage": "no-borrowing-surface",
-      "capitalReuse": "single-borrower-risk-capital",
-      "rationale": "stUSDS does not borrow, but its capital backs one SKY-collateralized Lockstake debt branch and absorbs auction shortfall through cut(). The single correlated borrower branch is high reuse risk; its emergency-control integration remains a separate unresolved fact.",
+      "capitalReuse": "liquidation-loss-absorption",
+      "rationale": "Pinned UUPS implementation slot and deployed runtime match verified StUsds. Whole local book is USDS plus accrued surplus-funded savings yield; _drip realizes accrual through Vat.suck and USDSJoin.exit. StUsds exposes no strategy borrower/leverage or arbitrary call surface in the observed implementation. It supplies risk capital for LSEV2-SKY-A: borrower debt and Clip.Due encumber withdrawals and wards-gated cut transfers assets to Vow while reducing chi. This is liquidation-loss absorption, not no-reuse. Upgrade/governance risk remains charged independently.",
       "observations": [
         {
           "chain": "ethereum",
           "address": "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
-          "function": "line()/cap()/ilk()/vat()/clip()",
-          "value": "line=189000000000000000000000000000000000000000000000000000; cap=213000000000000000000000000; ilk=LSEV2-SKY-A; vat=0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b; clip=0x836f56750517b1528b5078cba4ac4b94fbe4a399",
-          "block": 25819547
+          "function": "asset()/totalAssets()/totalSupply()",
+          "value": "asset=0xdc035d45d973e3ec169d2276ddab16f1e407384f; totalAssets()=189549725188352126297158725; totalSupply()=176002698945266351655427664",
+          "block": 26114886
         },
         {
           "chain": "ethereum",
-          "address": "0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b",
-          "function": "ilks(bytes32 LSEV2-SKY-A)",
-          "value": "Art=135215821179892010625922545; rate=1165747510585314018304438768; line=189000000000000000000000000000000000000000000000000000; clip.stopped()=3",
-          "block": 25819547
+          "address": "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
+          "function": "USDS.balanceOf(wrapper)/Vat.ilks(ilk)/Clip.Due()",
+          "value": "USDS balance=189548191317376532566284006; ilk=0x4c534556322d534b592d41000000000000000000000000000000000000000000; Vat tuple=0x00000000000000000000000000000000000000000070c1b21dc2448498f099fd000000000000000000000000000000000000000003cafc93fa6c766bba95f63e000000000000000000000000000000000000000000113ba14354580144d5555500000000000000000001fa9e22ad1323b3ab3a9b919e272dec5fcff8d603c71000000000000000000000001486de8697abeb8f25a134c318e99e000000000000; Clip.Due=0; implementation=0x7A61B7adCFD493f7CF0F86dFCECB94b72c227F22",
+          "block": 26114886
         }
       ],
       "sources": [
         {
-          "label": "Sky stUSDS implementation",
-          "url": "https://github.com/sky-ecosystem/stusds/blob/master/src/StUsds.sol"
+          "label": "Exact verified wrapper source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9"
         },
         {
-          "label": "Sky stUSDS documentation",
-          "url": "https://developers.skyeco.com/protocol/tokens/stusds/"
+          "label": "Pinned Ethereum research block",
+          "url": "https://etherscan.io/block/26114886"
         },
         {
-          "label": "Ethereum PublicNode RPC",
+          "label": "Ethereum PublicNode pinned RPC",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Pinned verified current StUsds implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7A61B7adCFD493f7CF0F86dFCECB94b72c227F22"
         }
       ]
     },
@@ -3972,6 +3976,180 @@
         {
           "label": "Issuer allocation model",
           "url": "https://docs.strata.markets/technical-documentation/protocol-overview.md"
+        }
+      ]
+    },
+    {
+      "assetId": "sdai-sky",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R28 pinned full-allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "Verified nonproxy SavingsDai bytecode matches pinned deployed code. Its sole balance sleeve is Pot.pie(wrapper), exactly equal to totalSupply; shares unwind through Pot.exit and DaiJoin.exit. No local lender, borrower, arbitrary call/delegatecall or offchain custodian exists. Parent DAI risk and peripheral canonical bridge controls remain separate; this proof covers the Ethereum savings module allocation, not legal protection of parent reserves.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0x83f20f44975d03b1b09e64809b757c47f942beea",
+          "function": "asset()/totalAssets()/totalSupply()",
+          "value": "asset=0x6b175474e89094c44da98b954eedeac495271d0f; totalAssets()=164357824486734461038312451; totalSupply()=139133179488910975653182654",
+          "block": 26114886
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x197e90f9fad81970ba7976f33cbd77088e5d7cf7",
+          "function": "pie(address)",
+          "value": "pie(sDAI)=139133179488910975653182654 equals sDAI totalSupply",
+          "block": 26114886
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact verified wrapper source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x83f20f44975d03b1b09e64809b757c47f942beea"
+        },
+        {
+          "label": "Pinned Ethereum research block",
+          "url": "https://etherscan.io/block/26114886"
+        },
+        {
+          "label": "Ethereum PublicNode pinned RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    {
+      "assetId": "skymoneyusdsflagship-sky",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R28 pinned full-allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "mixed-overcollateralized-lending",
+      "rationale": "Pinned verified VaultV2 and the entire one-adapter roster match deployed bytecode. Idle underlying plus adapter realAssets equals totalAssets exactly. Complete marketIds census and expectedSupplyAssets reconcile exactly to adapter realAssets; every position has zero borrow shares and collateral. Exact adapter code can only supply/withdraw the fixed Morpho loan asset and has no borrow/arbitrary execution function. Current local book has no borrowing surface; assets are reused as overcollateralized lender claims, not idle-only passthrough. Mutable adapter additions, gates, fees, oracle/default risks and parent risks are not waived.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xe15fcc81118895b67b6647bbd393182df44e11e0",
+          "function": "asset()/totalAssets()/totalSupply()",
+          "value": "asset=0xdc035d45d973e3ec169d2276ddab16f1e407384f; totalAssets()=38213599026573218178783248; totalSupply()=38091361478750457653753995",
+          "block": 26114886
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xe15fcc81118895b67b6647bbd393182df44e11e0",
+          "function": "adaptersLength()/adapters(0)/underlying.balanceOf(vault)/adapter.realAssets()",
+          "value": "adaptersLength=1; adapter=0xf94be39e8863183ff41194b5923627c90a34039d; idle=30571285843373344486080079; adapter realAssets=7642313183199873692703169; sum=totalAssets",
+          "block": 26114886
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xf94be39e8863183ff41194b5923627c90a34039d",
+          "function": "marketIds(i)/expectedSupplyAssets(bytes32)/Morpho.position(bytes32,address)/idToMarketParams(bytes32)",
+          "value": "id=0x9a8dab6de1059e6dc66c34b358764b70effb289e514e237f3161ffb09eaaf24f; expectedSupplyAssets=2779541448017231497872407; position=0x0000000000000000000000000000000000000022d6e3a48a2a87489847de2d3100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000; marketParams=0x000000000000000000000000dc035d45d973e3ec169d2276ddab16f1e407384f000000000000000000000000dc169abe56461a2e0c034da431ac2a3ebf596094000000000000000000000000da5901ef31ecafa6561b2e56b4997fadd3db4646000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000cb2bba6f17b8000",
+          "block": 26114886
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xf94be39e8863183ff41194b5923627c90a34039d",
+          "function": "marketIds(i)/expectedSupplyAssets(bytes32)/Morpho.position(bytes32,address)/idToMarketParams(bytes32)",
+          "value": "id=0xb374528d44b6ab6e0cecc87e0481f45d892f38baec90c1d318851969ec14ea5f; expectedSupplyAssets=1323609490246916865092700; position=0x000000000000000000000000000000000000001070b1da539e4ce9a2bb3ba2c500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000; marketParams=0x000000000000000000000000dc035d45d973e3ec169d2276ddab16f1e407384f0000000000000000000000007f39c581f595b53c5cb19bd0b3f8da6c935e2ca0000000000000000000000000c9a9440d1545047b2ce3624db425410cf2eae292000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000bef55718ad60000",
+          "block": 26114886
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xf94be39e8863183ff41194b5923627c90a34039d",
+          "function": "marketIds(i)/expectedSupplyAssets(bytes32)/Morpho.position(bytes32,address)/idToMarketParams(bytes32)",
+          "value": "id=0x2f4ea313fb7df23a82c19d95e8b90acc8179bd053e0d9ef745cdf28d6a49499c; expectedSupplyAssets=3539162244935725329738062; position=0x000000000000000000000000000000000000002c148e94d57e1a354f3fd7a0c400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000; marketParams=0x000000000000000000000000dc035d45d973e3ec169d2276ddab16f1e407384f000000000000000000000000cbb7c0000ab88b473b1f5afd9ef808440eed33bf000000000000000000000000a5aeb90f9f122989fe69ae6224ed923a0caf33b4000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000bef55718ad60000",
+          "block": 26114886
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact verified wrapper source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0"
+        },
+        {
+          "label": "Pinned Ethereum research block",
+          "url": "https://etherscan.io/block/26114886"
+        },
+        {
+          "label": "Ethereum PublicNode pinned RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Exact entire adapter verified source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf94be39e8863183ff41194b5923627c90a34039d"
+        },
+        {
+          "label": "Sky curated vault disclosure",
+          "url": "https://sky.money/vaults"
+        }
+      ]
+    },
+    {
+      "assetId": "skymoneyusdtsavings-sky",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R28 pinned full-allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "bluechip-overcollateralized-lending",
+      "rationale": "Pinned verified VaultV2 and the entire one-adapter roster match deployed bytecode. Idle underlying plus adapter realAssets equals totalAssets exactly. Complete marketIds census and expectedSupplyAssets reconcile exactly to adapter realAssets; every position has zero borrow shares and collateral. Exact adapter code can only supply/withdraw the fixed Morpho loan asset and has no borrow/arbitrary execution function. Current local book has no borrowing surface; assets are reused as overcollateralized lender claims, not idle-only passthrough. Mutable adapter additions, gates, fees, oracle/default risks and parent risks are not waived.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11",
+          "function": "asset()/totalAssets()/totalSupply()",
+          "value": "asset=0xdac17f958d2ee523a2206206994597c13d831ec7; totalAssets()=60889457006333; totalSupply()=59869901743422803862964856",
+          "block": 26114886
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11",
+          "function": "adaptersLength()/adapters(0)/underlying.balanceOf(vault)/adapter.realAssets()",
+          "value": "adaptersLength=1; adapter=0x6c5d5d47a39fe9f8ca14731a9a42bd31d64fb40d; idle=0; adapter realAssets=60889457006333; sum=totalAssets",
+          "block": 26114886
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x6c5d5d47a39fe9f8ca14731a9a42bd31d64fb40d",
+          "function": "marketIds(i)/expectedSupplyAssets(bytes32)/Morpho.position(bytes32,address)/idToMarketParams(bytes32)",
+          "value": "id=0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b; expectedSupplyAssets=20554; position=0x0000000000000000000000000000000000000000000000000000000475e65e0200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000; marketParams=0x000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7000000000000000000000000a3931d71877c0e7a3148cb7eb4463524fec27fbd0000000000000000000000000c426d174fc88b7a25d59945ab2f7274bf7b4c79000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000d645e6320408000",
+          "block": 26114886
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x6c5d5d47a39fe9f8ca14731a9a42bd31d64fb40d",
+          "function": "marketIds(i)/expectedSupplyAssets(bytes32)/Morpho.position(bytes32,address)/idToMarketParams(bytes32)",
+          "value": "id=0x26b178d49895f80ca3c39b2745efc4cd9adcddfcc73dae93e531e86977ec4d96; expectedSupplyAssets=60889456985779; position=0x00000000000000000000000000000000000000000000000348a34773b2730e7500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000; marketParams=0x000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7000000000000000000000000a3931d71877c0e7a3148cb7eb4463524fec27fbd0000000000000000000000001c7dbd66df93594ba08af8e72c75ba2004d92f9c000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000d645e6320408000",
+          "block": 26114886
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact verified wrapper source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11"
+        },
+        {
+          "label": "Pinned Ethereum research block",
+          "url": "https://etherscan.io/block/26114886"
+        },
+        {
+          "label": "Ethereum PublicNode pinned RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Exact entire adapter verified source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6c5d5d47a39fe9f8ca14731a9a42bd31d64fb40d"
+        },
+        {
+          "label": "Sky curated vault disclosure",
+          "url": "https://sky.money/vaults"
         }
       ]
     }

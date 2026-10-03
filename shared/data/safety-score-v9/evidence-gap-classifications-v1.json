@@ -4618,6 +4618,184 @@
         "https://eth.blockscout.com/api/v2/smart-contracts/0x50bd66d59911f5e086ec87ae43c811e0d059dd11"
       ],
       "rationale": "Exact whole-slice liquidityHorizon for the BOLD-in-Stability-Pools position has no published guaranteed realization bound. Official product/technical/interaction docs, source and both audit disclosures show conditional collateral/pausing/oracle and market-liquidity gates, not a deadline. Atomic successful withdraw calls do not imply the entire scoped position is immediately available; no scalar immediate or fabricated seven-day bound is authored."
+    },
+    {
+      "id": "uw-stusds-sky-37188c3258dc5f2b",
+      "assetId": "stusds-sky",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:cb82bdf1b9b31cab9e1c9fc2",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R28)",
+      "sources": [
+        {
+          "url": "https://github.com/sky-ecosystem/stusds",
+          "observedAt": "2026-10-03T22:52:26Z",
+          "datumAsOf": null,
+          "location": "README Overview / withdrawal limitations",
+          "excerpt": "Although, from that total value, users can only redeem USDS limited by the withdrawable amount, which is determined by the current total value minus:",
+          "assertion": "Discloses encumbered risk-capital withdrawals; no per-slice realization-time maximum is supplied."
+        },
+        {
+          "url": "https://docs.sky.money/legal/skybase-international/user-risks",
+          "observedAt": "2026-10-03T22:52:26Z",
+          "datumAsOf": "2026-09-01",
+          "location": "Section 4: Liquidity and withdrawal",
+          "excerpt": "In stressed markets or where a product runs at high utilisation, withdrawals can be delayed, only partly available, or costly to execute.",
+          "assertion": "Discloses contingent liquidity, not per-slice completion maxima."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sky.money/stusds",
+        "https://developers.skyeco.com/protocol/tokens/stusds/",
+        "https://github.com/sky-ecosystem/stusds",
+        "https://docs.sky.money/legal/skybase-international/terms-of-use",
+        "https://docs.sky.money/legal/skybase-international/user-risks",
+        "https://financial.skyeco.com/usds/savings",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x7A61B7adCFD493f7CF0F86dFCECB94b72c227F22"
+      ],
+      "rationale": "No unconditional per-slice liquidityHorizon is published for either idle USDS or deployed risk-capital accounting. The exact implementation encumbers withdrawals by SKY engine debt and Clip.Due even while USDS physically remains in the wrapper. Pinned idle USDS is 189.548M but debt is 160.013M. Docs disclose this contingent formula and withdrawal griefing, not a one-day/seven-day/longer completion maximum. Reviewed site, legal/risk terms, developer docs, code/audit archive and transparency surface; cannot label all physical idle holdings immediately redeemable."
+    },
+    {
+      "id": "uw-stusds-sky-5aebbf7e1a281e7b",
+      "assetId": "stusds-sky",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e02400f8462a114871222ddb",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R28)",
+      "sources": [
+        {
+          "url": "https://github.com/sky-ecosystem/stusds",
+          "observedAt": "2026-10-03T22:52:26Z",
+          "datumAsOf": null,
+          "location": "README Overview / withdrawal limitations",
+          "excerpt": "Although, from that total value, users can only redeem USDS limited by the withdrawable amount, which is determined by the current total value minus:",
+          "assertion": "Discloses encumbered risk-capital withdrawals; no per-slice realization-time maximum is supplied."
+        },
+        {
+          "url": "https://docs.sky.money/legal/skybase-international/user-risks",
+          "observedAt": "2026-10-03T22:52:26Z",
+          "datumAsOf": "2026-09-01",
+          "location": "Section 4: Liquidity and withdrawal",
+          "excerpt": "In stressed markets or where a product runs at high utilisation, withdrawals can be delayed, only partly available, or costly to execute.",
+          "assertion": "Discloses contingent liquidity, not per-slice completion maxima."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sky.money/stusds",
+        "https://developers.skyeco.com/protocol/tokens/stusds/",
+        "https://github.com/sky-ecosystem/stusds",
+        "https://docs.sky.money/legal/skybase-international/terms-of-use",
+        "https://docs.sky.money/legal/skybase-international/user-risks",
+        "https://financial.skyeco.com/usds/savings",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x7A61B7adCFD493f7CF0F86dFCECB94b72c227F22"
+      ],
+      "rationale": "No unconditional per-slice liquidityHorizon is published for either idle USDS or deployed risk-capital accounting. The exact implementation encumbers withdrawals by SKY engine debt and Clip.Due even while USDS physically remains in the wrapper. Pinned idle USDS is 189.548M but debt is 160.013M. Docs disclose this contingent formula and withdrawal griefing, not a one-day/seven-day/longer completion maximum. Reviewed site, legal/risk terms, developer docs, code/audit archive and transparency surface; cannot label all physical idle holdings immediately redeemable."
+    },
+    {
+      "id": "uw-skymoneyusdsflagship-sky-83246f8846758da6",
+      "assetId": "skymoneyusdsflagship-sky",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e02400f8462a114871222ddb",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R28)",
+      "sources": [
+        {
+          "url": "https://sky.money/vaults",
+          "observedAt": "2026-10-03T22:52:26Z",
+          "datumAsOf": null,
+          "location": "Vault FAQ: Can I withdraw from a vault at any time?",
+          "excerpt": "Withdrawals depend on vault liquidity. If the underlying market is heavily used, you may have to wait.",
+          "assertion": "The issuer explicitly warns of waiting on market liquidity without publishing a maximum full-slice realization horizon."
+        },
+        {
+          "url": "https://docs.sky.money/legal/skybase-international/user-risks",
+          "observedAt": "2026-10-03T22:52:26Z",
+          "datumAsOf": "2026-09-01",
+          "location": "Section 4: Liquidity and withdrawal",
+          "excerpt": "In stressed markets or where a product runs at high utilisation, withdrawals can be delayed, only partly available, or costly to execute.",
+          "assertion": "Discloses contingent liquidity, not per-slice completion maxima."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sky.money/vaults",
+        "https://docs.sky.money/legal/skybase-international/terms-of-use",
+        "https://docs.sky.money/legal/skybase-international/user-risks",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xf94be39e8863183ff41194b5923627c90a34039d",
+        "https://financial.skyeco.com/usds/savings"
+      ],
+      "rationale": "The whole admitted slice combines idle underlying and Morpho lender claims. Issuer FAQs, governing terms section 1.9, product risks, Morpho withdrawal/audit documentation and exact vault/adapter source disclose liquidity-dependent ordinary withdrawal and separate force-deallocation, but publish no full-slice realization horizon or maximum repayment/withdrawal completion time. Complete pinned adapter census shows live lending exposure; idle balance cannot establish immediate liquidity for the entire mixed slice. Conditional current balances are not a time guarantee."
+    },
+    {
+      "id": "uw-skymoneyusdtsavings-sky-7f41ccaf9160f56e",
+      "assetId": "skymoneyusdtsavings-sky",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:59709ff6bcf4a35db16b90ec",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R28)",
+      "sources": [
+        {
+          "url": "https://sky.money/vaults",
+          "observedAt": "2026-10-03T22:52:26Z",
+          "datumAsOf": null,
+          "location": "Vault FAQ: Can I withdraw from a vault at any time?",
+          "excerpt": "Withdrawals depend on vault liquidity. If the underlying market is heavily used, you may have to wait.",
+          "assertion": "The issuer explicitly warns of waiting on market liquidity without publishing a maximum full-slice realization horizon."
+        },
+        {
+          "url": "https://docs.sky.money/legal/skybase-international/user-risks",
+          "observedAt": "2026-10-03T22:52:26Z",
+          "datumAsOf": "2026-09-01",
+          "location": "Section 4: Liquidity and withdrawal",
+          "excerpt": "In stressed markets or where a product runs at high utilisation, withdrawals can be delayed, only partly available, or costly to execute.",
+          "assertion": "Discloses contingent liquidity, not per-slice completion maxima."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sky.money/vaults",
+        "https://docs.sky.money/legal/skybase-international/terms-of-use",
+        "https://docs.sky.money/legal/skybase-international/user-risks",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x6c5d5d47a39fe9f8ca14731a9a42bd31d64fb40d",
+        "https://financial.skyeco.com/usds/savings"
+      ],
+      "rationale": "The whole admitted slice combines idle underlying and Morpho lender claims. Issuer FAQs, governing terms section 1.9, product risks, Morpho withdrawal/audit documentation and exact vault/adapter source disclose liquidity-dependent ordinary withdrawal and separate force-deallocation, but publish no full-slice realization horizon or maximum repayment/withdrawal completion time. Complete pinned adapter census shows live lending exposure; idle balance cannot establish immediate liquidity for the entire mixed slice. Conditional current balances are not a time guarantee."
     }
   ]
 }
