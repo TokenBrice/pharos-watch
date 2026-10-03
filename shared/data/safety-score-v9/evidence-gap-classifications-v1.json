@@ -2231,6 +2231,147 @@
         "https://research.m0.org/research/expanding-available-collateral-structures-for-minters"
       ],
       "rationale": "No current whole-slice maximum liquidity horizon for the aggregate M0 eligible-collateral position is published on the searched surfaces. Historical T+1 minter redemption is not an all-minter/full-position guarantee. Wrapper code adds facility, pause and freeze conditions; atomic unwrap to M is not unrestricted realization at known USD value. No immediate/one-day bound is inferred."
+    },
+    {
+      "id": "uw-steakusdt-steakhouse-6187aeb6a5416e50",
+      "assetId": "steakusdt-steakhouse",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c8c3cd5df8c3183bb863eb3e",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:04Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R38)",
+      "sources": [
+        {
+          "url": "https://www.steakhouse.financial/docs/risk-management/monitoring/allocation-process",
+          "observedAt": "2026-10-03T22:48:21Z",
+          "datumAsOf": null,
+          "location": "Liquidity trap risk (market)",
+          "excerpt": "Insufficient market utilization, leading to artificially low \u201cborrow rates\u201d that do not sufficiently disincentivize borrowers to pay withdrawing lenders back",
+          "assertion": "Lending liquidity-trap risk is disclosed, but no maximum realization horizon for the complete deployed strategy slice is promised."
+        },
+        {
+          "url": "https://docs.morpho.org/developers/earn/tutorials/assets-flow.md",
+          "observedAt": "2026-10-03T22:44:29Z",
+          "datumAsOf": null,
+          "location": "Step 3 withdrawal; limits",
+          "excerpt": "If borrowed liquidity prevents a normal exit, follow [Exit an illiquid vault in kind](/developers/earn/tutorials/in-kind-redemption/) to preview and transfer the vault's positions.",
+          "assertion": "Normal underlying exit depends on borrowed liquidity; in-kind positions are not guaranteed whole-slice underlying realization."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.steakhouse.financial/docs",
+        "https://www.steakhouse.financial/docs/documents",
+        "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+        "https://www.steakhouse.financial/docs/products/vault-products/current/prime-instant",
+        "https://www.steakhouse.financial/docs/products/vault-products/current/high-yield-instant",
+        "https://www.steakhouse.financial/docs/products/vault-products/legacy-vaults",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/allocation-process",
+        "https://docs.morpho.org/developers/earn/tutorials/assets-flow.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9",
+        "https://app.morpho.org/ethereum/vault/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9/steakhouse-prime-instant"
+      ],
+      "rationale": "The exact deployed lending-position slice has no published whole-slice maximum realization horizon. Reviewed issuer product/risk documents, legal terms and document archive, protocol withdrawal docs and exact verified source disclose liquidity dependence, not a bounded repayment SLA. Instant branding, atomic execution when liquid, and current idle balances do not prove immediate realizability of the complete position. This is a noncustodial protocol vault, not an attested fund with a regulator-mandated redemption term."
+    },
+    {
+      "id": "uw-bbqusdc-steakhouse-45aeb98e41e9e03f",
+      "assetId": "bbqusdc-steakhouse",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:0abb8181a363e5767453797e",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:04Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R38)",
+      "sources": [
+        {
+          "url": "https://www.steakhouse.financial/docs/risk-management/monitoring/allocation-process",
+          "observedAt": "2026-10-03T22:48:21Z",
+          "datumAsOf": null,
+          "location": "Liquidity trap risk (market)",
+          "excerpt": "Insufficient market utilization, leading to artificially low \u201cborrow rates\u201d that do not sufficiently disincentivize borrowers to pay withdrawing lenders back",
+          "assertion": "Lending liquidity-trap risk is disclosed, but no maximum realization horizon for the complete deployed strategy slice is promised."
+        },
+        {
+          "url": "https://docs.morpho.org/developers/earn/tutorials/assets-flow.md",
+          "observedAt": "2026-10-03T22:44:29Z",
+          "datumAsOf": null,
+          "location": "Step 3 withdrawal; limits",
+          "excerpt": "If borrowed liquidity prevents a normal exit, follow [Exit an illiquid vault in kind](/developers/earn/tutorials/in-kind-redemption/) to preview and transfer the vault's positions.",
+          "assertion": "Normal underlying exit depends on borrowed liquidity; in-kind positions are not guaranteed whole-slice underlying realization."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.steakhouse.financial/docs",
+        "https://www.steakhouse.financial/docs/documents",
+        "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+        "https://www.steakhouse.financial/docs/products/vault-products/current/prime-instant",
+        "https://www.steakhouse.financial/docs/products/vault-products/current/high-yield-instant",
+        "https://www.steakhouse.financial/docs/products/vault-products/legacy-vaults",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/allocation-process",
+        "https://docs.morpho.org/developers/earn/tutorials/assets-flow.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xbeefff209270748ddd194831b3fa287a5386f5bc",
+        "https://app.morpho.org/ethereum/vault/0xbeefff209270748ddd194831b3fa287a5386f5bc/smokehouse-usdc"
+      ],
+      "rationale": "The exact deployed lending-position slice has no published whole-slice maximum realization horizon. Reviewed issuer product/risk documents, legal terms and document archive, protocol withdrawal docs and exact verified source disclose liquidity dependence, not a bounded repayment SLA. Instant branding, atomic execution when liquid, and current idle balances do not prove immediate realizability of the complete position. This is a noncustodial protocol vault, not an attested fund with a regulator-mandated redemption term."
+    },
+    {
+      "id": "uw-steakusdc-steakhouse-5a770313670adebc",
+      "assetId": "steakusdc-steakhouse",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:02438e82bd7c3721c0a41fc3",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:04Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R38)",
+      "sources": [
+        {
+          "url": "https://www.steakhouse.financial/docs/risk-management/monitoring/allocation-process",
+          "observedAt": "2026-10-03T22:48:21Z",
+          "datumAsOf": null,
+          "location": "Liquidity trap risk (market)",
+          "excerpt": "Insufficient market utilization, leading to artificially low \u201cborrow rates\u201d that do not sufficiently disincentivize borrowers to pay withdrawing lenders back",
+          "assertion": "Lending liquidity-trap risk is disclosed, but no maximum realization horizon for the complete deployed strategy slice is promised."
+        },
+        {
+          "url": "https://docs.morpho.org/developers/earn/tutorials/assets-flow.md",
+          "observedAt": "2026-10-03T22:44:29Z",
+          "datumAsOf": null,
+          "location": "Step 3 withdrawal; limits",
+          "excerpt": "If borrowed liquidity prevents a normal exit, follow [Exit an illiquid vault in kind](/developers/earn/tutorials/in-kind-redemption/) to preview and transfer the vault's positions.",
+          "assertion": "Normal underlying exit depends on borrowed liquidity; in-kind positions are not guaranteed whole-slice underlying realization."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.steakhouse.financial/docs",
+        "https://www.steakhouse.financial/docs/documents",
+        "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+        "https://www.steakhouse.financial/docs/products/vault-products/current/prime-instant",
+        "https://www.steakhouse.financial/docs/products/vault-products/current/high-yield-instant",
+        "https://www.steakhouse.financial/docs/products/vault-products/legacy-vaults",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/allocation-process",
+        "https://docs.morpho.org/developers/earn/tutorials/assets-flow.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef088055857739c12cd3765f20b7679def0f51",
+        "https://app.morpho.org/ethereum/vault/0xbeef088055857739c12cd3765f20b7679def0f51/steakhouse-prime-instant"
+      ],
+      "rationale": "The exact deployed lending-position slice has no published whole-slice maximum realization horizon. Reviewed issuer product/risk documents, legal terms and document archive, protocol withdrawal docs and exact verified source disclose liquidity dependence, not a bounded repayment SLA. Instant branding, atomic execution when liquid, and current idle balances do not prove immediate realizability of the complete position. This is a noncustodial protocol vault, not an attested fund with a regulator-mandated redemption term."
     }
   ]
 }

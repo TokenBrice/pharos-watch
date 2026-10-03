@@ -998,6 +998,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "steakusdt-steakhouse",
+      "reviewedAt": "2026-10-03T22:45:37Z",
+      "expiresAt": "2027-10-03T22:45:37Z",
+      "reviewer": "W1R38 primary-source review",
+      "notes": "Exact wrapper contract creation establishes a conservative live-history lower bound only. No independently verified performance, redeemed supply, stress recovery, financial reconciliation or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "exact-contract-creation",
+          "label": "Exact vault deployment transaction",
+          "publisher": "Blockscout chain explorer",
+          "publishedAt": "2025-11-29",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0xd6a88c8a8ccda05518680baaf6ed67738a56a69ed79b632f2f5af570a97041c0",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 10,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-contract-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "bbqusdc-steakhouse",
+      "reviewedAt": "2026-10-03T22:45:37Z",
+      "expiresAt": "2027-10-03T22:45:37Z",
+      "reviewer": "W1R38 primary-source review",
+      "notes": "Exact wrapper contract creation establishes a conservative live-history lower bound only. No independently verified performance, redeemed supply, stress recovery, financial reconciliation or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "exact-contract-creation",
+          "label": "Exact vault deployment transaction",
+          "publisher": "Blockscout chain explorer",
+          "publishedAt": "2024-12-05",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x0dde7ee342df098f10ad1c69410c32bd73047ec2b28907a51908e9145f7137f7",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 21,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-contract-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "steakusdc-steakhouse",
+      "reviewedAt": "2026-10-03T22:45:37Z",
+      "expiresAt": "2027-10-03T22:45:37Z",
+      "reviewer": "W1R38 primary-source review",
+      "notes": "Exact wrapper contract creation establishes a conservative live-history lower bound only. No independently verified performance, redeemed supply, stress recovery, financial reconciliation or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "exact-contract-creation",
+          "label": "Exact vault deployment transaction",
+          "publisher": "Blockscout chain explorer",
+          "publishedAt": "2025-10-27",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x2ef63f2d9490f3c264cf5c4b0f0040a6a4c56866e026ac45f9fef835298a70cf",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 11,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-contract-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "steakcusdc-steakhouse",
+      "reviewedAt": "2026-10-03T22:45:37Z",
+      "expiresAt": "2027-10-03T22:45:37Z",
+      "reviewer": "W1R38 primary-source review",
+      "notes": "Exact wrapper contract creation establishes a conservative live-history lower bound only. No independently verified performance, redeemed supply, stress recovery, financial reconciliation or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "exact-contract-creation",
+          "label": "Exact vault deployment transaction",
+          "publisher": "Blockscout chain explorer",
+          "publishedAt": "2026-06-19",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x84f91692704e4faf16be0c276cdb71059f7e03ed363805b8fd06117119232288",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 3,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-contract-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "ethenausdc-steakhouse",
+      "reviewedAt": "2026-10-03T22:45:37Z",
+      "expiresAt": "2027-10-03T22:45:37Z",
+      "reviewer": "W1R38 primary-source review",
+      "notes": "Exact wrapper contract creation establishes a conservative live-history lower bound only. No independently verified performance, redeemed supply, stress recovery, financial reconciliation or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "exact-contract-creation",
+          "label": "Exact vault deployment transaction",
+          "publisher": "Blockscout chain explorer",
+          "publishedAt": "2026-06-12",
+          "url": "https://base.blockscout.com/api/v2/transactions/0x45ec2d6550b99e15c820b19169a1af462e97d24051634fdfc4467ba4cefe177e",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 3,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-contract-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

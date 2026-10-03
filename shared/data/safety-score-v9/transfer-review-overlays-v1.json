@@ -9550,6 +9550,49 @@
           ]
         }
       ]
+    },
+    {
+      "assetId": "steakusdc-steakhouse",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "W1R38 exact deployment access review",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0xbeef088055857739c12cd3765f20b7679def0f51",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "Exact matched VaultV2 bytecode at block 26114886 checks canSendShares/canReceiveShares in transfer and transferFrom. Current share gates are zero; curator can configure gates through the timelocked setters. Zero present gates do not establish permanently permissionless shares. Catalog and reviewed Morpho exact-vault scope contain this single canonical liability deployment. Exact shares are a contract-local ERC-4626 residual claim with local balanceOf/totalSupply mint and burn accounting; the Base Prime product is a separate vault address and liability, not another deployment of these Ethereum shares. Issuer directory identifies the exact Ethereum vault independently.",
+          "sources": [
+            {
+              "label": "Exact verified VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef088055857739c12cd3765f20b7679def0f51"
+            },
+            {
+              "label": "Morpho gate mechanics",
+              "url": "https://docs.morpho.org/curate/concepts/gates.md"
+            }
+          ]
+        }
+      ],
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-10-03",
+        "expiresAt": "2027-10-02",
+        "reviewer": "W1R38 exact ERC-4626 liability scope review",
+        "deploymentKey": "ethereum:0xbeef088055857739c12cd3765f20b7679def0f51",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Issuer product directory separates Ethereum and Base vault contracts",
+            "url": "https://www.steakhouse.financial/docs/products/vault-products/current/prime-instant"
+          },
+          {
+            "label": "Exact ERC-4626 mint/burn and local totalSupply accounting",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef088055857739c12cd3765f20b7679def0f51"
+          }
+        ]
+      }
     }
   ]
 }
