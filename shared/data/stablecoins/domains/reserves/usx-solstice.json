@@ -6,7 +6,6 @@
       "pct": 100,
       "risk": "high",
       "assetClass": "other",
-      "issuerOrObligor": "Solstice Finance and undisclosed cash, Treasury, custody, and hedge counterparties",
       "riskFactors": [
         "counterparty",
         "liquidity",

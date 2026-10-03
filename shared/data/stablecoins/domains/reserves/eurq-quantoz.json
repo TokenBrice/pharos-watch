@@ -21,7 +21,6 @@
       "pct": 33,
       "risk": "very-low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "Undisclosed Tier 1 European banking partners",
       "riskFactors": [
         "counterparty",
         "custody",
@@ -34,7 +33,6 @@
       "pct": 1,
       "risk": "high",
       "assetClass": "other",
-      "issuerOrObligor": "Undisclosed",
       "liquidityHorizon": "unknown"
     }
   ],

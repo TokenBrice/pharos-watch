@@ -58,7 +58,6 @@
       "pct": 13.4,
       "risk": "high",
       "assetClass": "hedged-crypto",
-      "issuerOrObligor": "Noon cash-and-carry strategy collateralized inside the ForDefi custody bucket, with HYPE spot and perpetual venues and tri-party settlement counterparties undisclosed",
       "riskFactors": [
         "basis",
         "market",
