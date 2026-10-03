@@ -1879,6 +1879,262 @@
         "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20August%2026.pdf"
       ],
       "rationale": "The exact missing datum is maturityDaysMax for Cash at Regulated Financial Institutions (net settlement adjustments). The current signed report and transparency archive identify bank cash and settlement adjustments, and the legal terms explain segregated USD-denominated reserves. None supplies account contracts or a maximum term applying to every claim in this scoped bank-deposit slice. Published Treasury maturity dates and overnight repo maturities cannot be transferred to bank claims; holder redemption at par is not deposit maturity."
+    },
+    {
+      "id": "uw-usx-solstice-383bc9e49ac4e5f2",
+      "assetId": "usx-solstice",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:6891e5f888e2c90b50ff4948",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:48:13Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R41)",
+      "sources": [
+        {
+          "url": "https://docs.solstice.finance/legal-documents/attestations-and-proof-of-solvency.md",
+          "observedAt": "2026-10-03T22:46:39Z",
+          "datumAsOf": null,
+          "location": "Eligible Collateral",
+          "excerpt": "USX may be issued against any asset or financial claim held by USX Ltd or a Solstice-managed entity that is verifiable by Accountable.",
+          "assertion": "Entity-level collateral scope is disclosed, but not the asset-by-asset maximum maturity, realization horizon or underlying obligor roster."
+        },
+        {
+          "url": "https://docs.solstice.finance/legal-documents/risk-disclosures.md",
+          "observedAt": "2026-10-03T22:46:39Z",
+          "datumAsOf": null,
+          "location": "Strategy Risks / Liquidity",
+          "excerpt": "Liquidity constraints during market stress may prevent optimal position management. Mass redemptions could delay withdrawals.",
+          "assertion": "Liquidity risk is explicit; no whole-basket maximum realization bound is provided."
+        },
+        {
+          "url": "https://docs.solstice.finance/solstice-for-users/usx.md",
+          "observedAt": "2026-10-03T22:46:39Z",
+          "datumAsOf": null,
+          "location": "Collateral Flow & Custody / Token Design",
+          "excerpt": "A portion moves to the custodians Copper and Ceffu for off-exchange settlement",
+          "assertion": "Named custody providers do not identify the banks, security issuers or hedge counterparties obligating the complete aggregate reserve."
+        },
+        {
+          "url": "https://attestation-api.solstice.finance/dashboard",
+          "observedAt": "2026-10-03T22:46:39Z",
+          "datumAsOf": "2026-09-30",
+          "location": "data.reserves.timeline",
+          "excerpt": "\"delta_neutral\": true",
+          "assertion": "Public attestation reports aggregate reserves, supply and strategy flags, not per-instrument terms or obligor concentrations."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://solstice.finance/usx",
+        "https://docs.solstice.finance/llms.txt",
+        "https://docs.solstice.finance/solstice-for-users/usx.md",
+        "https://docs.solstice.finance/legal-documents/attestations-and-proof-of-solvency.md",
+        "https://docs.solstice.finance/legal-documents/risk-disclosures.md",
+        "https://docs.solstice.finance/legal-documents/terms-and-conditions.md",
+        "https://docs.solstice.finance/legal-documents/audits.md",
+        "https://docs.solstice.finance/solstice-for-builders/smart-contracts.md",
+        "https://docs.solstice.finance/solstice-for-builders/integration-guide.md",
+        "https://attestation.solstice.finance/",
+        "https://attestation-api.solstice.finance/dashboard",
+        "https://109607783-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F44900wRUr08Ym1oXIDzr%2Fuploads%2FOqk5A8l99vA7cE70MSNT%2FWhitepaper%20May%202026.pdf?alt=media&token=b41923ad-1f3b-42af-9ef3-625a1a029e21"
+      ],
+      "rationale": "USX's aggregate basket lacks a published all-in-scope maximum maturity, liquidityHorizon and issuer/obligor roster. Product/docs, full May whitepaper, legal terms/risk disclosures, attestation/dashboard API and contract/integration disclosures identify broad cash/Treasury/hedged categories and custodians but no constituent weights, maturity mandates or realization maximum. Arbitrary verifiable entity-level claims are eligible; custodian/manager names cannot substitute for underlying obligors. No zero-day or immediate realization assumption is made."
+    },
+    {
+      "id": "uw-usx-solstice-1b999258c671d535",
+      "assetId": "usx-solstice",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:6891e5f888e2c90b50ff4948",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:48:13Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R41)",
+      "sources": [
+        {
+          "url": "https://docs.solstice.finance/legal-documents/attestations-and-proof-of-solvency.md",
+          "observedAt": "2026-10-03T22:46:39Z",
+          "datumAsOf": null,
+          "location": "Eligible Collateral",
+          "excerpt": "USX may be issued against any asset or financial claim held by USX Ltd or a Solstice-managed entity that is verifiable by Accountable.",
+          "assertion": "Entity-level collateral scope is disclosed, but not the asset-by-asset maximum maturity, realization horizon or underlying obligor roster."
+        },
+        {
+          "url": "https://docs.solstice.finance/legal-documents/risk-disclosures.md",
+          "observedAt": "2026-10-03T22:46:39Z",
+          "datumAsOf": null,
+          "location": "Strategy Risks / Liquidity",
+          "excerpt": "Liquidity constraints during market stress may prevent optimal position management. Mass redemptions could delay withdrawals.",
+          "assertion": "Liquidity risk is explicit; no whole-basket maximum realization bound is provided."
+        },
+        {
+          "url": "https://docs.solstice.finance/solstice-for-users/usx.md",
+          "observedAt": "2026-10-03T22:46:39Z",
+          "datumAsOf": null,
+          "location": "Collateral Flow & Custody / Token Design",
+          "excerpt": "A portion moves to the custodians Copper and Ceffu for off-exchange settlement",
+          "assertion": "Named custody providers do not identify the banks, security issuers or hedge counterparties obligating the complete aggregate reserve."
+        },
+        {
+          "url": "https://attestation-api.solstice.finance/dashboard",
+          "observedAt": "2026-10-03T22:46:39Z",
+          "datumAsOf": "2026-09-30",
+          "location": "data.reserves.timeline",
+          "excerpt": "\"delta_neutral\": true",
+          "assertion": "Public attestation reports aggregate reserves, supply and strategy flags, not per-instrument terms or obligor concentrations."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://solstice.finance/usx",
+        "https://docs.solstice.finance/llms.txt",
+        "https://docs.solstice.finance/solstice-for-users/usx.md",
+        "https://docs.solstice.finance/legal-documents/attestations-and-proof-of-solvency.md",
+        "https://docs.solstice.finance/legal-documents/risk-disclosures.md",
+        "https://docs.solstice.finance/legal-documents/terms-and-conditions.md",
+        "https://docs.solstice.finance/legal-documents/audits.md",
+        "https://docs.solstice.finance/solstice-for-builders/smart-contracts.md",
+        "https://docs.solstice.finance/solstice-for-builders/integration-guide.md",
+        "https://attestation.solstice.finance/",
+        "https://attestation-api.solstice.finance/dashboard",
+        "https://109607783-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F44900wRUr08Ym1oXIDzr%2Fuploads%2FOqk5A8l99vA7cE70MSNT%2FWhitepaper%20May%202026.pdf?alt=media&token=b41923ad-1f3b-42af-9ef3-625a1a029e21"
+      ],
+      "rationale": "USX's aggregate basket lacks a published all-in-scope maximum maturity, liquidityHorizon and issuer/obligor roster. Product/docs, full May whitepaper, legal terms/risk disclosures, attestation/dashboard API and contract/integration disclosures identify broad cash/Treasury/hedged categories and custodians but no constituent weights, maturity mandates or realization maximum. Arbitrary verifiable entity-level claims are eligible; custodian/manager names cannot substitute for underlying obligors. No zero-day or immediate realization assumption is made."
+    },
+    {
+      "id": "uw-usx-solstice-fb7404f54f835131",
+      "assetId": "usx-solstice",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:6891e5f888e2c90b50ff4948",
+        "factorKey": "obligorConcentration",
+        "pillar": "backing",
+        "requiredDatum": "issuerOrObligorKey",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:48:13Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R41)",
+      "sources": [
+        {
+          "url": "https://docs.solstice.finance/legal-documents/attestations-and-proof-of-solvency.md",
+          "observedAt": "2026-10-03T22:46:39Z",
+          "datumAsOf": null,
+          "location": "Eligible Collateral",
+          "excerpt": "USX may be issued against any asset or financial claim held by USX Ltd or a Solstice-managed entity that is verifiable by Accountable.",
+          "assertion": "Entity-level collateral scope is disclosed, but not the asset-by-asset maximum maturity, realization horizon or underlying obligor roster."
+        },
+        {
+          "url": "https://docs.solstice.finance/legal-documents/risk-disclosures.md",
+          "observedAt": "2026-10-03T22:46:39Z",
+          "datumAsOf": null,
+          "location": "Strategy Risks / Liquidity",
+          "excerpt": "Liquidity constraints during market stress may prevent optimal position management. Mass redemptions could delay withdrawals.",
+          "assertion": "Liquidity risk is explicit; no whole-basket maximum realization bound is provided."
+        },
+        {
+          "url": "https://docs.solstice.finance/solstice-for-users/usx.md",
+          "observedAt": "2026-10-03T22:46:39Z",
+          "datumAsOf": null,
+          "location": "Collateral Flow & Custody / Token Design",
+          "excerpt": "A portion moves to the custodians Copper and Ceffu for off-exchange settlement",
+          "assertion": "Named custody providers do not identify the banks, security issuers or hedge counterparties obligating the complete aggregate reserve."
+        },
+        {
+          "url": "https://attestation-api.solstice.finance/dashboard",
+          "observedAt": "2026-10-03T22:46:39Z",
+          "datumAsOf": "2026-09-30",
+          "location": "data.reserves.timeline",
+          "excerpt": "\"delta_neutral\": true",
+          "assertion": "Public attestation reports aggregate reserves, supply and strategy flags, not per-instrument terms or obligor concentrations."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://solstice.finance/usx",
+        "https://docs.solstice.finance/llms.txt",
+        "https://docs.solstice.finance/solstice-for-users/usx.md",
+        "https://docs.solstice.finance/legal-documents/attestations-and-proof-of-solvency.md",
+        "https://docs.solstice.finance/legal-documents/risk-disclosures.md",
+        "https://docs.solstice.finance/legal-documents/terms-and-conditions.md",
+        "https://docs.solstice.finance/legal-documents/audits.md",
+        "https://docs.solstice.finance/solstice-for-builders/smart-contracts.md",
+        "https://docs.solstice.finance/solstice-for-builders/integration-guide.md",
+        "https://attestation.solstice.finance/",
+        "https://attestation-api.solstice.finance/dashboard",
+        "https://109607783-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F44900wRUr08Ym1oXIDzr%2Fuploads%2FOqk5A8l99vA7cE70MSNT%2FWhitepaper%20May%202026.pdf?alt=media&token=b41923ad-1f3b-42af-9ef3-625a1a029e21"
+      ],
+      "rationale": "USX's aggregate basket lacks a published all-in-scope maximum maturity, liquidityHorizon and issuer/obligor roster. Product/docs, full May whitepaper, legal terms/risk disclosures, attestation/dashboard API and contract/integration disclosures identify broad cash/Treasury/hedged categories and custodians but no constituent weights, maturity mandates or realization maximum. Arbitrary verifiable entity-level claims are eligible; custodian/manager names cannot substitute for underlying obligors. No zero-day or immediate realization assumption is made."
+    },
+    {
+      "id": "uw-usx-solstice-a812ca5f9aa929cf",
+      "assetId": "usx-solstice",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usx-solstice:stablecoin-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:48:13Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R41)",
+      "sources": [
+        {
+          "url": "https://docs.solstice.finance/solstice-for-users/usx.md",
+          "observedAt": "2026-10-03T22:46:39Z",
+          "datumAsOf": null,
+          "location": "Minting & Redemption",
+          "excerpt": "Minting and redemption carry no spread; Solstice doesn't profit from issuance or redemption.",
+          "assertion": "Zero spread is disclosed, not an all-in same-notional fee bound including contractual service, pass-through and transactional fees."
+        },
+        {
+          "url": "https://docs.solstice.finance/legal-documents/terms-and-conditions.md",
+          "observedAt": "2026-10-03T22:46:39Z",
+          "datumAsOf": null,
+          "location": "Section 4 Fees and Charges",
+          "excerpt": "We reserve the right to charge you fees in connection with the use of your Account and/or Services, and your maintenance, termination or cancellation of your Account.",
+          "assertion": "Governing terms retain discretionary fees without a numeric fee schedule or evaluable same-notional formula."
+        },
+        {
+          "url": "https://docs.solstice.finance/legal-documents/terms-and-conditions.md",
+          "observedAt": "2026-10-03T22:46:39Z",
+          "datumAsOf": null,
+          "location": "Section 4 Fees and Charges",
+          "excerpt": "We pass-through transactional fees to Users. This can include transfer fees related to blockchain transactions.",
+          "assertion": "User-borne pass-through charges have no published amount, cap or applicable institutional redemption schedule."
+        },
+        {
+          "url": "https://docs.solstice.finance/solstice-for-builders/integration-guide.md",
+          "observedAt": "2026-10-03T22:46:39Z",
+          "datumAsOf": null,
+          "location": "Cross-Program Invocation",
+          "excerpt": "Access to program IDL (shared with trusted partners only)",
+          "assertion": "Public builder interface describes request/confirm redemption but exposes no public fee interface or schedule; private partner IDL is not public fee evidence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://solstice.finance/usx",
+        "https://docs.solstice.finance/llms.txt",
+        "https://docs.solstice.finance/solstice-for-users/usx.md",
+        "https://docs.solstice.finance/legal-documents/terms-and-conditions.md",
+        "https://docs.solstice.finance/solstice-for-builders/smart-contracts.md",
+        "https://docs.solstice.finance/solstice-for-builders/integration-guide.md",
+        "https://docs.solstice.finance/legal-documents/audits.md",
+        "https://109607783-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F44900wRUr08Ym1oXIDzr%2Fuploads%2FOqk5A8l99vA7cE70MSNT%2FWhitepaper%20May%202026.pdf?alt=media&token=b41923ad-1f3b-42af-9ef3-625a1a029e21"
+      ],
+      "rationale": "For the allowlisted USX-to-USDG institutional route, the current public docs disclose no spread, but legal section 4 reserves discretionary service fees and passes through blockchain/third-party charges without amounts, maxima or a schedule. Product, documentation index, governing redemption/account terms, whitepaper, contract and integration disclosures were searched. No evaluable applicable all-in cost formula was located; therefore not B and not zero-cost KNOWN. YieldVault unlock fees belong to another route."
     }
   ]
 }

@@ -800,6 +800,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "copm-mento",
+      "reviewedAt": "2026-10-03T22:46:39Z",
+      "expiresAt": "2027-10-03T22:46:39Z",
+      "reviewer": "W1R41 unknown resolver",
+      "notes": "Issuer confirms cCOP live on May 5, 2025; 16 full months is a lower bound, not the inception date. No parent-token history, throughput, reconciliation, recovery or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "mento-live-currencies-20250505",
+          "label": "Mento live local currency announcement",
+          "publisher": "Mento Labs",
+          "publishedAt": "2025-05-05",
+          "url": "https://www.mento.org/blog/mento-expands-global-onchain-fx-access-with-five-new-decentralized-stablecoins",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 16,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "mento-live-currencies-20250505"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "ghsm-mento",
+      "reviewedAt": "2026-10-03T22:46:39Z",
+      "expiresAt": "2027-10-03T22:46:39Z",
+      "reviewer": "W1R41 unknown resolver",
+      "notes": "Issuer confirms cGHS live on May 5, 2025; 16 full months is a lower bound, not the inception date. No parent-token history, throughput, reconciliation, recovery or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "mento-live-currencies-20250505",
+          "label": "Mento live local currency announcement",
+          "publisher": "Mento Labs",
+          "publishedAt": "2025-05-05",
+          "url": "https://www.mento.org/blog/mento-expands-global-onchain-fx-access-with-five-new-decentralized-stablecoins",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 16,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "mento-live-currencies-20250505"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usx-solstice",
+      "reviewedAt": "2026-10-03T22:46:39Z",
+      "expiresAt": "2027-10-03T22:46:39Z",
+      "reviewer": "W1R41 unknown resolver",
+      "notes": "Issuer-distributed release establishes exact USX live launch September 30, 2025, giving 12 full months. Underlying fund strategy history is not USX history. No throughput, reconciliation continuity, recovery or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "solstice-usx-launch-20250930",
+          "label": "Solstice Finance USX public launch release",
+          "publisher": "Solstice Finance via Chainwire",
+          "publishedAt": "2025-09-30",
+          "url": "https://chainwire.org/2025/09/30/solstice-finance-officially-launches-usx-a-solana-native-stablecoin-with-160m-deposited-tvl/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 12,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "solstice-usx-launch-20250930"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "cadd-cad-digital",
+      "reviewedAt": "2026-10-03T22:46:39Z",
+      "expiresAt": "2027-10-03T22:46:39Z",
+      "reviewer": "W1R41 unknown resolver",
+      "notes": "Tetra's May 4, 2026 release confirms CADD live on Base, Ethereum and Tempo, giving four full months. December 2025 testnet and Tetra parent custody history are excluded. No throughput, reconciliation continuity, recovery or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "tetra-cadd-launch-20260504",
+          "label": "Tetra Digital Group announces CADD live issuance",
+          "publisher": "Tetra Digital Group",
+          "publishedAt": "2026-05-04",
+          "url": "https://tetradg.com/1579-2/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 4,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "tetra-cadd-launch-20260504"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
