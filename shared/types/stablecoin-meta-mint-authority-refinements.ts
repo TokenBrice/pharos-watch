@@ -197,9 +197,13 @@ function validateAuthoredControls({ profile, ctx, controls, profileHasSourceLink
 }
 
 function validateAuthorityPosture({ profile, ctx, controls }: MintAuthorityRefinementState): void {
-  // Both none-resolved scopes require a non-privileged mint path.
+  // Whole-chain resolution requires a non-privileged path; mint-scoped resolution also admits reviewed no-local issuance.
   if (profile.authorityPosture === "none-resolved" || profile.authorityPosture === "none-resolved-mint") {
-    if (profile.mintPath !== "immutable-user-collateralized" && profile.mintPath !== "wrapped-or-variant-inherited") {
+    if (
+      profile.mintPath !== "immutable-user-collateralized" &&
+      profile.mintPath !== "wrapped-or-variant-inherited" &&
+      !(profile.authorityPosture === "none-resolved-mint" && profile.review.noLocalIssuance != null)
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: `authorityPosture ${profile.authorityPosture} requires a non-privileged mintPath`,
@@ -386,12 +390,13 @@ function validateMintPathPostureConsistency({ profile, ctx }: MintAuthorityRefin
   if (
     profile.mintPath === "unknown" &&
     profile.authorityPosture !== "unknown" &&
-    profile.authorityPosture !== "unbounded-unreconciled"
+    profile.authorityPosture !== "unbounded-unreconciled" &&
+    !(profile.authorityPosture === "none-resolved-mint" && profile.review.noLocalIssuance != null)
   ) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message:
-        "mintPath unknown should use authorityPosture unknown unless evidence supports unbounded-unreconciled",
+        "mintPath unknown should use authorityPosture unknown unless evidence supports unbounded-unreconciled or reviewed noLocalIssuance supports none-resolved-mint",
       path: ["authorityPosture"],
     });
   }

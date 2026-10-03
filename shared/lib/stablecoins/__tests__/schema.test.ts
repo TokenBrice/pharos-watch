@@ -951,6 +951,70 @@ describe("StablecoinMeta schema — mint authority", () => {
     ], "fixture")).toThrow(/none-resolved-mint requires a non-privileged mintPath/);
   });
 
+  function externalOnlyMintAuthority(overrides: Record<string, unknown> = {}) {
+    return makeMintAuthority({
+      mintPath: "unknown",
+      authorityPosture: "none-resolved-mint",
+      controls: [],
+      review: {
+        sources: [mintAuthoritySource],
+        evidence: "The reviewed representation has no local issuance authority.",
+        reviewer: "Fixture Reviewer",
+        reviewedAt: "2026-05-24",
+        noLocalIssuance: {
+          kind: "external-only-representation",
+          reviewedAt: "2026-05-24",
+          reviewer: "Fixture Reviewer",
+          rationale: "The reviewed routes represent external issuance and have no local native mint path.",
+        },
+      },
+      ...overrides,
+    });
+  }
+
+  it("accepts mint-scoped resolution on an unknown path with reviewed no-local issuance", () => {
+    const profile = MintAuthorityProfileSchema.parse(externalOnlyMintAuthority());
+    expect(profile.authorityPosture).toBe("none-resolved-mint");
+    expect(profile.mintPath).toBe("unknown");
+  });
+
+  it("rejects mint-scoped resolution on an unknown path without reviewed no-local issuance", () => {
+    const result = MintAuthorityProfileSchema.safeParse(makeMintAuthority({
+      mintPath: "unknown",
+      authorityPosture: "none-resolved-mint",
+      controls: [],
+    }));
+    expect(result.error?.issues).toContainEqual(expect.objectContaining({
+      path: ["authorityPosture"],
+      message: "authorityPosture none-resolved-mint requires a non-privileged mintPath",
+    }));
+  });
+
+  it("rejects mint authorization despite reviewed no-local issuance", () => {
+    const result = MintAuthorityProfileSchema.safeParse(externalOnlyMintAuthority({
+      controls: [{
+        label: "Mint authorizer",
+        role: "direct-minter",
+        authorityType: "contract",
+        directMintAbility: "can-authorize",
+      }],
+    }));
+    expect(result.error?.issues).toContainEqual(expect.objectContaining({
+      path: ["controls", 0, "directMintAbility"],
+      message: "authorityPosture none-resolved-mint cannot include a control that can mint or authorize minting",
+    }));
+  });
+
+  it("rejects whole-chain resolution on an unknown path despite reviewed no-local issuance", () => {
+    const result = MintAuthorityProfileSchema.safeParse(externalOnlyMintAuthority({
+      authorityPosture: "none-resolved",
+    }));
+    expect(result.error?.issues).toContainEqual(expect.objectContaining({
+      path: ["authorityPosture"],
+      message: "authorityPosture none-resolved requires a non-privileged mintPath",
+    }));
+  });
+
   it("binds scored economic-control claims to review evidence", () => {
     const withoutEvidence = (overrides: Record<string, unknown>) =>
       makeMintAuthority({

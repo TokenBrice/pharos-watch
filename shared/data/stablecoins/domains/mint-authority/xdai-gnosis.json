@@ -2,7 +2,7 @@
   "id": "xdai-gnosis",
   "mintAuthority": {
     "mintPath": "unknown",
-    "authorityPosture": "unknown",
+    "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
     "summary": "xDAI is the Gnosis-native gas balance, not an ERC-20 liability. There is no addressable native token contract and no local issuer. New xDAI is credited only when the canonical xDAI bridge escrows USDS on Ethereum and a 4-of-7 validator quorum affirms the Home Bridge, which then calls BlockReward.addExtraReceiver; the reverse path burns native xDAI before USDS (or DAI) is released. WXDAI 0xe91d153e0b41518a2ce8dd3d7944fa863463a97d is a same-chain WETH9-style wrapper and is not an issuer. Bridge validators, limits, 8-of-15 Safes, and proxy upgrades stay in Bridge Risk. This is an external-only representation, not inherited USDS mint authority.",
     "economicCapSemantics": "unknown",
@@ -27,9 +27,9 @@
           "url": "https://repo.sourcify.dev/contracts/full_match/100/0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d/"
         }
       ],
-      "evidence": "Reviewed 2026-08-18 (W06): official token docs state xDAI is the native gas token and is not ERC-20; WXDAI 0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d is the wrap. Sourcify-verified WXDAI.sol is a WETH9 fork (comment cites mainnet WETH9 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2) exposing only deposit/withdraw of msg.value, no mint, no admin, no minter. Bridge docs and HomeBridgeErcToNative.sol credit native xDAI only via blockReward.addExtraReceiver after validator-affirmed executeAffirmation; reverse nativeTransfer burns to address(0) against mintedTotallyByBridge minus totalBurntCoins. USDS minters do not appear on this path. The sole authored contract gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d is covered by the single reviewed wrapped-representation route of the same id. 4-of-7 validators, daily/per-tx limits, 8-of-15 Safes, and proxy upgrades remain in bridgeRouteRisk.",
-      "reviewer": "W06",
-      "reviewedAt": "2026-08-18",
+      "evidence": "Reviewed 2026-08-18 (W06): official token docs state xDAI is the native gas token and is not ERC-20; WXDAI 0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d is the wrap. Sourcify-verified WXDAI.sol is a WETH9 fork (comment cites mainnet WETH9 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2) exposing only deposit/withdraw of msg.value, no mint, no admin, no minter. Bridge docs and HomeBridgeErcToNative.sol credit native xDAI only via blockReward.addExtraReceiver after validator-affirmed executeAffirmation; reverse nativeTransfer burns to address(0) against mintedTotallyByBridge minus totalBurntCoins. USDS minters do not appear on this path. The sole authored contract gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d is covered by the single reviewed wrapped-representation route of the same id. 4-of-7 validators, daily/per-tx limits, 8-of-15 Safes, and proxy upgrades remain in bridgeRouteRisk. Queue convergence review 2026-10-03 re-read the official xDAI bridge documentation: USDS escrow on Ethereum leads to 4-of-7 affirmed Home Bridge instructions and consensus-engine BlockReward credits; reverse bridging burns xDAI. This corroborates the existing scoped no-local-issuance exception rather than a privileged native token-contract minter. With no authored local mint controls and reviewed representation coverage, adaptMintReview emits a known not-applicable mint review with null controlKey and no mint controls, deriving none-resolved. Annotate none-resolved-mint for that mint-only scope, retaining mintPath unknown and all validator, governance, and upgrade exposure in Bridge Risk. This does not claim inherited Sky issuance, absence of bridge powers, or a new on-chain observation.",
+      "reviewer": "Sol v10.02 posture-queue convergence (QueueResolve)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
       "noLocalIssuance": {
         "kind": "external-only-representation",
