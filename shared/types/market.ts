@@ -677,18 +677,22 @@ export type DepegEventCloseReason = z.infer<typeof DepegEventCloseReasonSchema>;
 
 const DepegTimestampSchema = z.number().int().nonnegative();
 
-/** Trusted off-peg intervals; their complement inside the event is unknown coverage. */
+/** Trusted off-peg/at-par intervals; the remaining event span is unknown. */
 export const DepegPriceCoverageSchema = z.object({
   intervals: z.array(z.tuple([DepegTimestampSchema, DepegTimestampSchema])),
+  atParIntervals: z.array(z.tuple([DepegTimestampSchema, DepegTimestampSchema])).optional(),
+  lastObservationKind: z.enum(["trusted-off-peg", "trusted-at-par", "blind"]).optional(),
   lastTrustedObservationAt: DepegTimestampSchema.nullable(),
   gapStartedAt: DepegTimestampSchema.nullable(),
 }).strict().superRefine((coverage, ctx) => {
-  let previousEnd = -1;
-  for (const [start, end] of coverage.intervals) {
-    if (end < start || start < previousEnd || coverage.lastTrustedObservationAt == null || end > coverage.lastTrustedObservationAt) {
-      ctx.addIssue({ code: "custom", message: "Trusted price intervals must be ordered and bounded by the last observation" });
+  for (const intervals of [coverage.intervals, coverage.atParIntervals ?? []]) {
+    let previousEnd = -1;
+    for (const [start, end] of intervals) {
+      if (end < start || start < previousEnd || coverage.lastTrustedObservationAt == null || end > coverage.lastTrustedObservationAt) {
+        ctx.addIssue({ code: "custom", message: "Trusted price intervals must be ordered and bounded by the last observation" });
+      }
+      previousEnd = end;
     }
-    previousEnd = end;
   }
 });
 export type DepegPriceCoverage = z.infer<typeof DepegPriceCoverageSchema>;

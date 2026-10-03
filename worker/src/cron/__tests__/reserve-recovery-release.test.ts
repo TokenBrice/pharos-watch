@@ -13,28 +13,31 @@ describe("live reserve release recovery coverage", () => {
   it("lists a changed semantic configuration as a recovery target", () => {
     const updated = computeLiveReserveConfigFingerprint({ ...config, params: { reviewedScope: "updated" } });
     expect(selectConfigRecoveryTargets(new Map([["changed", initial]]), new Map([["changed", updated]]), () => true))
-      .toEqual(["changed"]);
+      .toEqual({ targets: ["changed"], missingFetcherIds: [] });
   });
 
   it("does not select unchanged semantic inputs or display-only edits", () => {
     const displayed = computeLiveReserveConfigFingerprint({ ...config, display: { label: "New display", url: "https://example.com" } });
     expect(selectConfigRecoveryTargets(new Map([["unchanged", initial]]), new Map([["unchanged", displayed]]), () => true))
-      .toEqual([]);
+      .toEqual({ targets: [], missingFetcherIds: [] });
   });
 
   it("excludes removed coins and new bindings without retained evidence", () => {
     expect(selectConfigRecoveryTargets(new Map([["removed", initial]]), new Map([["new", initial]]), () => true))
-      .toEqual([]);
+      .toEqual({ targets: [], missingFetcherIds: [] });
   });
 
   it("does not turn legacy unbound evidence into a proven semantic mismatch", () => {
     expect(selectConfigRecoveryTargets(new Map([["legacy", null]]), new Map([["legacy", initial]]), () => true))
-      .toEqual([]);
+      .toEqual({ targets: [], missingFetcherIds: [] });
   });
 
-  it("fails when a changed existing coin has no registered fetcher", () => {
+  it("quarantines a changed coin without a registered fetcher while keeping covered peers", () => {
     const updated = computeLiveReserveConfigFingerprint({ ...config, version: 2 });
-    expect(() => selectConfigRecoveryTargets(new Map([["uncovered", initial]]), new Map([["uncovered", updated]]), () => false))
-      .toThrow("Live reserve config recovery has no registered fetcher for uncovered");
+    expect(selectConfigRecoveryTargets(
+      new Map([["uncovered", initial], ["covered", initial]]),
+      new Map([["uncovered", updated], ["covered", updated]]),
+      (id) => id === "covered",
+    )).toEqual({ targets: ["covered"], missingFetcherIds: ["uncovered"] });
   });
 });

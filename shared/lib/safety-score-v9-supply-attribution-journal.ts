@@ -41,6 +41,7 @@ export const SupplyAttributionRejectionCodeSchema = z.enum([
   "deployment-state-invalid",
   "deployment-identity-mismatch",
   "deployment-observation-skew",
+  "deployment-observation-window-insufficient",
   "packet-reconciliation-failed",
   "transparency-source-config-unavailable",
   "transparency-source-unavailable",
@@ -73,6 +74,8 @@ const SUPPLY_ATTRIBUTION_ADMISSION_BY_REJECTION_CODE = {
   "deployment-identity-mismatch":
     "supply-attribution.admission.rejected-identity-drift",
   "deployment-observation-skew":
+    "supply-attribution.admission.rejected-skew",
+  "deployment-observation-window-insufficient":
     "supply-attribution.admission.rejected-skew",
   "packet-reconciliation-failed":
     "supply-attribution.admission.rejected-reconciliation",
@@ -114,6 +117,7 @@ const REVIEWED_DEPLOYMENT_REJECTION_CODES =
     "deployment-state-invalid",
     "deployment-identity-mismatch",
     "deployment-observation-skew",
+    "deployment-observation-window-insufficient",
     "packet-reconciliation-failed",
   ]);
 

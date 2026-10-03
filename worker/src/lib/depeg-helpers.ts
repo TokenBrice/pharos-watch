@@ -394,7 +394,7 @@ export function buildInsertDepegEventStmt(
       event.pegReference,
       event.confirmationSources ?? null,
       event.pendingReason ?? null,
-      event.priceCoverage ? JSON.stringify(event.priceCoverage.intervals) : null,
+      event.priceCoverage ? serializeDepegPriceCoverage(event.priceCoverage) : null,
       event.priceCoverage?.lastTrustedObservationAt ?? null,
       event.priceCoverage?.gapStartedAt ?? null,
     );
@@ -418,13 +418,43 @@ function parseDepegCloseReason(row: DepegRow): DepegEventCloseReason | null {
 }
 
 
+export function serializeDepegPriceCoverage(coverage: NonNullable<DepegEvent["priceCoverage"]>): string {
+  const parsed = DepegPriceCoverageSchema.parse(coverage);
+  return JSON.stringify({
+    intervals: parsed.intervals,
+    atParIntervals: parsed.atParIntervals,
+    lastObservationKind: parsed.lastObservationKind,
+  });
+}
+
+function invalidRowPriceCoverage(row: DepegRow, reason: string): null {
+  logWorkerEvent({
+    scope: "handler",
+    level: "warn",
+    event: "depeg_price_coverage_invalid",
+    message: `Discarded invalid price coverage for depeg event ${row.id}`,
+    metadata: { eventId: row.id, reason },
+  });
+  return null;
+}
+
 export function rowPriceCoverage(row: DepegRow): DepegEvent["priceCoverage"] {
   if (row.price_coverage_json == null) return null;
-  return DepegPriceCoverageSchema.parse({
-    intervals: JSON.parse(row.price_coverage_json),
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(row.price_coverage_json);
+  } catch {
+    return invalidRowPriceCoverage(row, "invalid-json");
+  }
+  if (decoded == null || typeof decoded !== "object") {
+    return invalidRowPriceCoverage(row, "invalid-schema");
+  }
+  const parsed = DepegPriceCoverageSchema.safeParse({
+    ...decoded,
     lastTrustedObservationAt: row.last_trusted_price_at ?? null,
     gapStartedAt: row.price_coverage_gap_started_at ?? null,
   });
+  return parsed.success ? parsed.data : invalidRowPriceCoverage(row, "invalid-schema");
 }
 /** Convert a snake_case D1 row to a camelCase DepegEvent */
 export function rowToDepegEvent(row: DepegRow): DepegEvent {

@@ -1,5 +1,5 @@
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
-import { rowPriceCoverage, type DepegRow } from "../../lib/depeg-helpers";
+import { rowPriceCoverage, serializeDepegPriceCoverage, type DepegRow } from "../../lib/depeg-helpers";
 import { mergeDepegIntervals } from "@shared/lib/peg-utils";
 import type { DepegDiagnostic, DepegPersistenceCommand } from "./types";
 
@@ -65,15 +65,24 @@ export function buildDuplicateOpenEventRepair(openRows: DepegRow[]): DuplicateRe
         const latest = coverages.reduce((a, b) =>
           (b.lastTrustedObservationAt ?? -1) > (a.lastTrustedObservationAt ?? -1) ? b : a);
         const intervals = mergeDepegIntervals(coverages.flatMap((coverage) => coverage.intervals));
-        keeper.price_coverage_json = JSON.stringify(intervals);
+        const atParIntervals = mergeDepegIntervals(coverages.flatMap((coverage) => coverage.atParIntervals ?? []));
         keeper.last_trusted_price_at = latest.lastTrustedObservationAt;
-        // An unresolved gap in either duplicate must not be bridged on merge.
+        // Preserve unresolved blind gaps, but do not discard known at-par intervals.
         keeper.price_coverage_gap_started_at = coverages.reduce<number | null>((gap, coverage) =>
           coverage.gapStartedAt == null ? gap : Math.min(gap ?? Infinity, coverage.gapStartedAt), null);
+        const coverage = {
+          intervals,
+          atParIntervals,
+          lastTrustedObservationAt: keeper.last_trusted_price_at,
+          gapStartedAt: keeper.price_coverage_gap_started_at,
+          lastObservationKind: coverages.some((value) => value.gapStartedAt != null && value.lastObservationKind !== "trusted-at-par")
+            ? "blind" as const : latest.lastObservationKind,
+        };
+        keeper.price_coverage_json = serializeDepegPriceCoverage(coverage);
         commands.push({
           type: "record-price-coverage",
           id: keeper.id,
-          coverage: { intervals, lastTrustedObservationAt: keeper.last_trusted_price_at, gapStartedAt: keeper.price_coverage_gap_started_at },
+          coverage,
         });
       }
       for (let i = 1; i < rows.length; i++) {

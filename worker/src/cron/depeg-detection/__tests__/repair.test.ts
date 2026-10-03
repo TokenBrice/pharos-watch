@@ -40,10 +40,10 @@ function makeOpenRow(overrides: Parameters<typeof makeDepegRow>[0] = {}): DepegR
 describe("buildDuplicateOpenEventRepair", () => {
   it("unions duplicate trusted intervals without bridging gaps and preserves the earliest unresolved gap", async () => {
     const repaired = await repairPersistedRows([
-      { ...makeOpenRow({ id: 3, started_at: 180 }), price_coverage_json: "[[650,650]]", last_trusted_price_at: 650, price_coverage_gap_started_at: null },
-      { ...makeOpenRow({ id: 1, started_at: 100 }), price_coverage_json: "[[100,200],[300,400]]", last_trusted_price_at: 400, price_coverage_gap_started_at: 450 },
-      { ...makeOpenRow({ id: 4, started_at: 200 }), price_coverage_json: "[]", last_trusted_price_at: null, price_coverage_gap_started_at: 430 },
-      { ...makeOpenRow({ id: 2, started_at: 150 }), price_coverage_json: "[[150,250],[500,600]]", last_trusted_price_at: 600, price_coverage_gap_started_at: 480 },
+      { ...makeOpenRow({ id: 3, started_at: 180 }), price_coverage_json: '{"intervals":[[650,650]]}', last_trusted_price_at: 650, price_coverage_gap_started_at: null },
+      { ...makeOpenRow({ id: 1, started_at: 100 }), price_coverage_json: '{"intervals":[[100,200],[300,400]]}', last_trusted_price_at: 400, price_coverage_gap_started_at: 450 },
+      { ...makeOpenRow({ id: 4, started_at: 200 }), price_coverage_json: '{"intervals":[]}', last_trusted_price_at: null, price_coverage_gap_started_at: 430 },
+      { ...makeOpenRow({ id: 2, started_at: 150 }), price_coverage_json: '{"intervals":[[150,250],[500,600]]}', last_trusted_price_at: 600, price_coverage_gap_started_at: 480 },
     ]);
     expect(repaired.map((event) => event.id)).toEqual([1]);
     expect(mergeDepegSeconds(repaired, 0, 900)).toBe(350);
@@ -52,15 +52,35 @@ describe("buildDuplicateOpenEventRepair", () => {
       lastTrustedObservationAt: 650,
       gapStartedAt: 430,
     });
-    const resumed = { ...repaired[0]!, priceCoverage: advanceDepegPriceCoverage(repaired[0]!.priceCoverage, 900, true) };
+    const resumed = { ...repaired[0]!, priceCoverage: advanceDepegPriceCoverage(repaired[0]!.priceCoverage, 900, "trusted-off-peg") };
     expect(mergeDepegSeconds([resumed], 0, 900)).toBe(350);
     expect(mergeUnknownDepegSeconds([resumed], 0, 900)).toBe(450);
+  });
+
+  it("retains known at-par intervals and their continuity across duplicate repair", async () => {
+    const repaired = await repairPersistedRows([
+      {
+        ...makeOpenRow({ id: 1, started_at: 100 }),
+        price_coverage_json: JSON.stringify({ intervals: [[100, 200]], atParIntervals: [[300, 400]], lastObservationKind: "trusted-at-par" }),
+        last_trusted_price_at: 400, price_coverage_gap_started_at: 300,
+      },
+      {
+        ...makeOpenRow({ id: 2, started_at: 150 }),
+        price_coverage_json: JSON.stringify({ intervals: [[150, 250]], atParIntervals: [[350, 500]], lastObservationKind: "trusted-at-par" }),
+        last_trusted_price_at: 500, price_coverage_gap_started_at: 350,
+      },
+    ]);
+    expect(mergeDepegSeconds(repaired, 0, 600)).toBe(150);
+    expect(mergeUnknownDepegSeconds(repaired, 0, 600)).toBe(150);
+    const resumed = { ...repaired[0]!, priceCoverage: advanceDepegPriceCoverage(repaired[0]!.priceCoverage, 600, "trusted-at-par") };
+    expect(mergeDepegSeconds([resumed], 0, 600)).toBe(150);
+    expect(mergeUnknownDepegSeconds([resumed], 0, 600)).toBe(50);
   });
 
   it.each([false, true])("keeps legacy duplicate spans unknown when later duplicate instrumentation is %s", async (instrumented) => {
     const later = makeOpenRow({ id: 2, started_at: 200 });
     if (instrumented) {
-      later.price_coverage_json = "[[200,300]]";
+      later.price_coverage_json = '{"intervals":[[200,300]]}';
       later.last_trusted_price_at = 300;
     }
     const repaired = await repairPersistedRows([later, makeOpenRow({ id: 1, started_at: 50 })]);

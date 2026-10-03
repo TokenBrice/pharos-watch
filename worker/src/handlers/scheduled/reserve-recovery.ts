@@ -48,6 +48,9 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
     m0ApiKey: runtime.env.M0_API_KEY,
     chainRpcs: runtime.chainRpcs,
   });
+  const configRecoveryDegraded = configRecovery.failed.length > 0
+    || ("deferredCount" in configRecovery && configRecovery.deferredCount > 0)
+    || ("missingFetcherCount" in configRecovery && configRecovery.missingFetcherCount > 0);
 
 
   const sweep = await sweepStaleScheduledSlotExecutions(runtime.db, {
@@ -72,7 +75,7 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
       && preparation.inspection.eligibleCheckpointCount === 0
       && preparation.inspection.readyCheckpointCount === 0;
     return {
-      status: recoveryBlocked || configRecovery.failed.length > 0 || ("deferredCount" in configRecovery && configRecovery.deferredCount > 0)
+      status: recoveryBlocked || configRecoveryDegraded
         ? "degraded" as const : "ok" as const,
       itemCount: configRecovery.healed.length,
       metadata: JSON.stringify({
@@ -105,7 +108,7 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
   return {
     status: summary.jobsErrored > 0
       ? "error" as const
-      : summary.jobsDegraded > 0 || recoveryDeferred || configRecovery.failed.length > 0 || ("deferredCount" in configRecovery && configRecovery.deferredCount > 0)
+      : summary.jobsDegraded > 0 || recoveryDeferred || configRecoveryDegraded
         ? "degraded" as const
         : "ok" as const,
     itemCount: 1 + configRecovery.healed.length,

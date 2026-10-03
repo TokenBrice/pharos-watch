@@ -37,6 +37,11 @@ export interface V9SlotWindowOptions {
   currentSlotKey: string;
 }
 
+export interface V9ExecutionWindow {
+  deadlineMs: number;
+  minimumRemainingMs: number;
+}
+
 interface V9MemoryLaneRow {
   lease_until: number;
 }
@@ -169,7 +174,7 @@ export async function waitForV9MemoryLaneRelease(
  */
 export async function runV9AfterCoreWithinWindow(
   options: V9SlotWindowOptions,
-  run: (signal: AbortSignal) => Promise<CronResult>,
+  run: (signal: AbortSignal, window: V9ExecutionWindow) => Promise<CronResult>,
 ): Promise<CronResult> {
   const scheduledTimeMs =
     options.scheduledTimeMs ?? options.slotStartedAt * 1_000;
@@ -308,7 +313,7 @@ export async function runV9AfterCoreWithinWindow(
           });
         }
 
-        return run(signal);
+        return run(signal, { deadlineMs, minimumRemainingMs: options.minimumRemainingMs });
       },
       {
         abortSignal: timeout.signal,

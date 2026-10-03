@@ -38,6 +38,9 @@ runDirectCli(import.meta.url, () => {
       previous.set(id, computeLiveReserveConfigFingerprint(oldCoin.liveReservesConfig));
     }
   }
-  const targets = selectConfigRecoveryTargets(previous, current, (id) => getReserveAdapter(configs.get(id)!.adapter) != null);
+  const { targets, missingFetcherIds } = selectConfigRecoveryTargets(previous, current, (id) => getReserveAdapter(configs.get(id)!.adapter) != null);
+  if (missingFetcherIds.length > 0) {
+    throw new Error(`Live reserve config recovery has no registered fetcher for ${missingFetcherIds.join(", ")}`);
+  }
   process.stdout.write(`${JSON.stringify({ base, recoveryCovered: true, changedCoins: targets.map((id) => ({ id, previousFingerprint: previous.get(id), currentFingerprint: current.get(id) })) }, null, 2)}\n`);
 });

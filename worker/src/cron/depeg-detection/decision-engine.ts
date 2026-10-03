@@ -818,7 +818,17 @@ function withPriceCoverage(
     (native || ctx.primarySupportsRecovery || ctx.dexSupportsExistingDirection) &&
     // A native quote that contradicts the USD reading cannot sustain that reading.
     (ctx.nativeSignal == null || !signalIsWithinThreshold(ctx.nativeSignal, ctx.recoveryThreshold));
-  decision.priceCoverage = advanceDepegPriceCoverage(rowPriceCoverage(input.existing), input.now, trustedOffPeg);
+  const trustedAtPar = ctx != null && signal != null &&
+    signalIsWithinThreshold(signal, ctx.recoveryThreshold) &&
+    (native || (
+      (ctx.primarySupportsRecovery || (ctx.dexSupportsRecovery && isDexFresh(ctx.dexRow, ctx.dexAbsBps, input.now))) &&
+      !ctx.poolRecoveryVeto && !(ctx.dexSupportsExistingDirection && isDexFresh(ctx.dexRow, ctx.dexAbsBps, input.now))
+    )) &&
+    (native || ctx.nativeSignal == null || signalIsWithinThreshold(ctx.nativeSignal, ctx.recoveryThreshold));
+  decision.priceCoverage = advanceDepegPriceCoverage(
+    rowPriceCoverage(input.existing), input.now,
+    trustedOffPeg ? "trusted-off-peg" : trustedAtPar ? "trusted-at-par" : "blind",
+  );
   return decision;
 }
 

@@ -89,10 +89,13 @@ export async function detectDepegEvents(
   const presentAssetIds = new Set(assets.map((asset) => asset.id));
   for (const row of duplicateRepair.openEvents.values()) {
     if (presentAssetIds.has(row.stablecoin_id)) continue;
+    const previous = rowPriceCoverage(row);
+    const coverage = advanceDepegPriceCoverage(previous, hydrated.now, "blind");
+    if (coverage === previous) continue;
     commands.push({
       type: "record-price-coverage",
       id: row.id,
-      coverage: advanceDepegPriceCoverage(rowPriceCoverage(row), hydrated.now, false),
+      coverage,
     });
   }
 

@@ -1,6 +1,8 @@
 import { sha256HexFromBytes } from "@shared/lib/sha256";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { sleepWithSignal } from "../abort";
+import { sleepWithSignal, throwIfAborted } from "../abort";
+import type { SupplyAttributionRejectionCode } from "@shared/lib/safety-score-v9-supply-attribution-journal";
+import type { V9ExecutionWindow } from "../v9-slot-window";
 import type { ChainRpcConfig } from "../chain-registry";
 import {
   fetchEvmBlockHeader,
@@ -55,13 +57,15 @@ export const WM_EVM_SAFE_BLOCK_LAG_BY_CHAIN: Readonly<Record<string, number>> = 
   monad: 10,
 };
 
-// Reserve sixty seconds of the isolated three-minute slot for admission, RPC
-// and publication. The outer signal enforces its absolute deadline; this idle
-// wait adds no fanout and never changes the capture clock.
+// Only one maturity wait; the scheduler's absolute window must still retain its
+// minimum RPC/publication reserve after this wait. No extra connection fanout.
 const WM_SKEW_REPAIR_MAX_WAIT_MS = 120_000;
+const WM_SKEW_REPAIR_MARGIN_MS = 15_000;
 
-export type WmReviewedDeploymentRejectionCode = ReviewedDeploymentObservationRejectionCode;
-export type WmReviewedDeploymentObservationAttempt = ReviewedDeploymentObservationAttempt;
+export type WmReviewedDeploymentRejectionCode = ReviewedDeploymentObservationRejectionCode |
+  Extract<SupplyAttributionRejectionCode, "deployment-observation-window-insufficient">;
+export type WmReviewedDeploymentObservationAttempt = Extract<ReviewedDeploymentObservationAttempt, { status: "accepted" }> |
+  { status: "rejected"; rejectionCode: WmReviewedDeploymentRejectionCode; failedRouteId: string | null };
 
 interface WmObserverDependencies extends ReviewedDeploymentEvmObserverDependencies {
   fetchSolanaObservation: (
@@ -172,6 +176,7 @@ export async function observeWmReviewedDeploymentUnitPartitionAttempt(
     scoringClockSec: number;
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
+    executionWindow?: V9ExecutionWindow;
   },
   dependencyOverrides: Partial<WmObserverDependencies> = {},
 ): Promise<WmReviewedDeploymentObservationAttempt> {
@@ -224,10 +229,17 @@ export async function observeWmReviewedDeploymentUnitPartitionAttempt(
     result.status === "accepted" && result.observation.blockTimeSec < minimumTime,
   ).map(([routeId]) => routeId);
   const requiredWaitMs = (minimumTime - earliest) * 1_000;
-  if (laggingRouteIds.length === 0 || requiredWaitMs > WM_SKEW_REPAIR_MAX_WAIT_MS) return attempt;
-  // Coarse/variable block production makes a guessed per-block margin unsafe;
-  // spend the bounded maturity allowance once, rather than adding retry fanout.
-  await sleepWithSignal(WM_SKEW_REPAIR_MAX_WAIT_MS, input.signal);
+  throwIfAborted(input.signal);
+  if (laggingRouteIds.length === 0) return attempt;
+  const waitMs = Math.min(requiredWaitMs + WM_SKEW_REPAIR_MARGIN_MS, WM_SKEW_REPAIR_MAX_WAIT_MS);
+  const window = input.executionWindow;
+  if (requiredWaitMs > WM_SKEW_REPAIR_MAX_WAIT_MS || !window ||
+    !Number.isFinite(window.deadlineMs) || !Number.isFinite(window.minimumRemainingMs) ||
+    window.minimumRemainingMs < 0 || window.deadlineMs - Date.now() - waitMs < window.minimumRemainingMs) {
+    return { status: "rejected", rejectionCode: "deployment-observation-window-insufficient",
+      failedRouteId: attempt.failedRouteId };
+  }
+  await sleepWithSignal(waitMs, input.signal);
   for (const routeId of laggingRouteIds) evmObservations.delete(routeId);
   // Exactly one repair pass. Every reread revalidates the original inventory,
   // hash-pinned state and identity; unchanged siblings keep their true clocks.
@@ -241,6 +253,7 @@ export async function observeWmReviewedDeploymentUnitPartition(
     scoringClockSec: number;
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
+    executionWindow?: V9ExecutionWindow;
   },
   dependencyOverrides: Partial<WmObserverDependencies> = {},
 ): Promise<ReviewedDeploymentUnitPartitionV1 | null> {

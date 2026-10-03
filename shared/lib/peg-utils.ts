@@ -25,14 +25,17 @@ export function mergeUnknownDepegSeconds(events: DepegEvent[], windowStart: numb
   for (const event of events) {
     const end = Math.min(event.endedAt ?? now, now);
     let cursor = Math.max(event.startedAt, windowStart);
-    for (const [start, observedEnd] of depegObservedIntervals(event)) {
+    const known = mergeDepegIntervals([...depegObservedIntervals(event), ...(event.priceCoverage?.atParIntervals ?? [])]);
+    for (const [start, observedEnd] of known) {
       if (start > cursor) intervals.push([cursor, Math.min(start, end)]);
       cursor = Math.max(cursor, Math.min(observedEnd, end));
     }
     if (end > cursor) intervals.push([cursor, end]);
   }
   const unknown = mergeDepegIntervals(intervals);
-  const trusted = mergeDepegIntervals(events.flatMap((event) => depegObservedIntervals(event).map(
+  const trusted = mergeDepegIntervals(events.flatMap((event) => [
+    ...depegObservedIntervals(event), ...(event.priceCoverage?.atParIntervals ?? []),
+  ].map(
     ([start, end]) => [Math.max(start, windowStart), Math.min(end, now)] as [number, number],
   )));
   let coveredUnknown = 0;

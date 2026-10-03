@@ -204,4 +204,24 @@ describe("reserve recovery mode", () => {
       configRecovery: { disposition: "config-recovery-skipped", reason: "sync-live-reserves-lease-held" },
     });
   });
+
+  it.each([false, true])("surfaces a missing-fetcher warning without suppressing available checkpoint replay (%s)", async (hasCheckpoint) => {
+    const warnings = [{ stablecoinId: "uncovered", code: "config-recovery-missing-fetcher", severity: "warning" }];
+    mocks.configRecovery.mockResolvedValue({
+      disposition: "config-recovery-partial", missingFetcherCount: 1,
+      attempted: ["covered"], healed: ["covered"], failed: [], deferredCount: 0, warnings,
+    });
+    if (hasCheckpoint) {
+      mocks.claim.mockResolvedValue({
+        scheduleKey: "fourHourlyReserveSync", slotStartedAt: 800,
+        attemptNo: 2, executionGeneration: 2, sourceAttemptNo: 1, childDispositions: {},
+      });
+    }
+    expect((await runFiveMinuteReserveRecoverySlot(runtime("recover"))).jobsDegraded).toBe(1);
+    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+      checkpointsClaimed: hasCheckpoint ? 1 : 0,
+      configRecovery: { disposition: "config-recovery-partial", healed: ["covered"], warnings },
+    });
+    expect(mocks.runReserveSlot).toHaveBeenCalledTimes(hasCheckpoint ? 1 : 0);
+  });
 });

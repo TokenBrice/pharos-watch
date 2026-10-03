@@ -35,12 +35,12 @@ function eventWithCoverage(coverage: DepegPriceCoverage | null, startedAt = NOW 
 
 describe("trusted depeg price coverage", () => {
   it("does not accrue off-peg seconds across explicit or missed-run gaps", () => {
-    let coverage = advanceDepegPriceCoverage(null, NOW, true);
-    coverage = advanceDepegPriceCoverage(coverage, NOW + 900, true);
-    coverage = advanceDepegPriceCoverage(coverage, NOW + 1800, false);
-    coverage = advanceDepegPriceCoverage(coverage, NOW + 2700, true);
-    coverage = advanceDepegPriceCoverage(coverage, NOW + 3600, true);
-    coverage = advanceDepegPriceCoverage(coverage, NOW + 6300, true);
+    let coverage = advanceDepegPriceCoverage(null, NOW, "trusted-off-peg");
+    coverage = advanceDepegPriceCoverage(coverage, NOW + 900, "trusted-off-peg");
+    coverage = advanceDepegPriceCoverage(coverage, NOW + 1800, "blind");
+    coverage = advanceDepegPriceCoverage(coverage, NOW + 2700, "trusted-off-peg");
+    coverage = advanceDepegPriceCoverage(coverage, NOW + 3600, "trusted-off-peg");
+    coverage = advanceDepegPriceCoverage(coverage, NOW + 6300, "trusted-off-peg");
     expect(coverage.intervals).toEqual([[NOW, NOW + 900], [NOW + 2700, NOW + 3600], [NOW + 6300, NOW + 6300]]);
     const event = eventWithCoverage(coverage, NOW);
     expect(mergeDepegSeconds([event], NOW, NOW + 7200)).toBe(1800);
@@ -54,7 +54,7 @@ describe("trusted depeg price coverage", () => {
     expect(score.unknownCoverageSeconds).toBe(30 * DAY);
     expect(score.pegPct).toBeNull();
     expect(mergeDepegSeconds([legacy], legacy.startedAt, NOW)).toBe(0);
-    const resumed = eventWithCoverage(advanceDepegPriceCoverage(null, NOW, true), legacy.startedAt);
+    const resumed = eventWithCoverage(advanceDepegPriceCoverage(null, NOW, "trusted-off-peg"), legacy.startedAt);
     expect(mergeDepegSeconds([resumed], legacy.startedAt, NOW)).toBe(0);
     expect(computeRecentPegStats([legacy], legacy.startedAt, NOW)).toMatchObject({ observedDays: 0, coverageLimited: true });
     const closedLegacy = { ...legacy, endedAt: NOW - DAY };
@@ -77,8 +77,8 @@ describe("trusted depeg price coverage", () => {
 
   it("preserves the known-time percentage and duration severity when a gap grows", () => {
     const startedAt = NOW - DAY;
-    const coverage = advanceDepegPriceCoverage(advanceDepegPriceCoverage(null, startedAt, true), startedAt + 900, true);
-    const gap = advanceDepegPriceCoverage(coverage, startedAt + 1800, false);
+    const coverage = advanceDepegPriceCoverage(advanceDepegPriceCoverage(null, startedAt, "trusted-off-peg"), startedAt + 900, "trusted-off-peg");
+    const gap = advanceDepegPriceCoverage(coverage, startedAt + 1800, "blind");
     const event = eventWithCoverage(gap, startedAt);
     const atGap = computePegScore([event], NOW - 30 * DAY, NOW);
     const later = computePegScore([event], NOW - 30 * DAY, NOW + DAY);
@@ -139,6 +139,14 @@ describe("trusted depeg price coverage", () => {
       expect(row.price_coverage_gap_started_at).toBe(NOW + 1800);
       const event = rowToDepegEvent(row);
       expect(mergeDepegSeconds([event], NOW - DAY, NOW + 3600)).toBe(900);
+      await observe(NOW + 2700, 1);
+      await observe(NOW + 3300, 1);
+      const recovering = rowToDepegEvent(readRow(sqlite));
+      expect(recovering.endedAt).toBeNull();
+      expect(recovering.priceCoverage?.lastTrustedObservationAt).toBe(NOW + 3300);
+      expect(mergeDepegSeconds([recovering], NOW, NOW + 3300)).toBe(900);
+      expect(mergeUnknownDepegSeconds([recovering], NOW, NOW + 3300)).toBe(1800);
+      expect(computePegScore([recovering], NOW, NOW + 3300).pegPct).toBe(40);
       const belowFloor = decideDepegAsset({
         now: NOW, meta,
         asset: { id: meta.id, symbol: meta.symbol, price: 0.5, priceSource: "pyth", priceConfidence: "single-source", priceUpdatedAt: NOW, pegType: "peggedUSD", circulating: { peggedUSD: DEPEG_EVENT_MIN_SUPPLY_USD - 1 } },

@@ -162,4 +162,58 @@ describe("deploy config reserve recovery", () => {
     clock.mockReturnValue(started + 300_000);
     expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ healed: ["coin-1"] });
   });
+
+  it("quarantines a missing fetcher, warns, and admits the remaining mismatch", async () => {
+    const { db, sqlite, fetch } = await seed(2);
+    const coin = CONFIGURED_COINS[0]!;
+    const original = coin.liveReservesConfig!;
+    const getter = getReserveAdapterMock.getMockImplementation()!;
+    getReserveAdapterMock.mockImplementation((key: LiveReserveConfig["adapter"]) => key === "single-asset" ? null : getter(key));
+    coin.liveReservesConfig = { ...original, adapter: "single-asset" };
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({
+        disposition: "config-recovery-partial", mismatchCount: 2, suspendedCount: 0,
+        missingFetcherCount: 1, backoffCount: 0, dueCount: 1, attemptedCount: 1,
+        attempted: ["coin-1"], healed: ["coin-1"], failed: [],
+        warnings: [{ stablecoinId: "coin-0", code: "config-recovery-missing-fetcher", severity: "warning" }],
+      });
+      expect(fetch.mock.calls.map(([fetched]) => fetched.id)).toEqual(["coin-1"]);
+      expect((await loadFreshIndependentLiveReserveMap(db)).get("coin-1")).toEqual(slices);
+      expect((await loadFreshIndependentLiveReserveMap(db)).has("coin-0")).toBe(false);
+      expect(sqlite.prepare("SELECT config_fingerprint FROM reserve_composition WHERE stablecoin_id = 'coin-0'").get())
+        .toEqual({ config_fingerprint: "previous-config" });
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('"event":"config-recovery-missing-fetcher"'));
+    } finally {
+      coin.liveReservesConfig = original;
+    }
+  });
+
+  it("counts suspended, missing-fetcher, backoff, due and attempted coins as one disjoint partition", async () => {
+    const { db, sqlite, fetch } = await seed(5);
+    const suspendedCoin = CONFIGURED_COINS[0]!;
+    const missingCoin = CONFIGURED_COINS[2]!;
+    const originalSuspended = suspendedCoin.liveReservesConfig!;
+    const originalMissing = missingCoin.liveReservesConfig!;
+    const getter = getReserveAdapterMock.getMockImplementation()!;
+    getReserveAdapterMock.mockImplementation((key: LiveReserveConfig["adapter"]) => key === "single-asset" ? null : getter(key));
+    suspendedCoin.liveReservesConfig = { ...originalSuspended, suspended: { reason: "Feed parked", since: "2026-10-03" } };
+    missingCoin.liveReservesConfig = { ...originalMissing, adapter: "single-asset" };
+    const backedOff = CONFIGURED_COINS[1]!;
+    sqlite.prepare("UPDATE reserve_sync_state SET config_fingerprint = ?, last_attempted_at = ? WHERE stablecoin_id = ?")
+      .run(computeLiveReserveConfigFingerprint(backedOff.liveReservesConfig!), Math.floor(Date.now() / 1000), backedOff.id);
+    try {
+      const result = await recoverLiveReserveConfigChanges(db, signal(), {});
+      expect(result).toMatchObject({
+        mismatchCount: 5, suspendedCount: 1, missingFetcherCount: 1,
+        backoffCount: 1, dueCount: 2, attemptedCount: 2, deferredCount: 0,
+        attempted: ["coin-3", "coin-4"], healed: ["coin-3", "coin-4"],
+        warnings: [{ stablecoinId: "coin-2", code: "config-recovery-missing-fetcher", severity: "warning" }],
+      });
+      expect(fetch.mock.calls.map(([coin]) => coin.id)).toEqual(["coin-3", "coin-4"]);
+    } finally {
+      suspendedCoin.liveReservesConfig = originalSuspended;
+      missingCoin.liveReservesConfig = originalMissing;
+    }
+  });
 });

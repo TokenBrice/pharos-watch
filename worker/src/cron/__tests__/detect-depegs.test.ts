@@ -59,6 +59,8 @@ vi.mock("../../lib/native-peg-quotes", () => ({
 
 import { detectDepegEvents } from "../detect-depegs";
 import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
+import { rowToDepegEvent, type DepegRow } from "../../lib/depeg-helpers";
+import { mergeDepegSeconds, mergeUnknownDepegSeconds } from "@shared/lib/peg-utils";
 
 function isCloseEventUpdate(sql: string): boolean {
   return sql.includes(
@@ -111,7 +113,7 @@ describe("detectDepegEvents", () => {
   it("records a sticky coverage gap for an omitted asset without closing its incident", async () => {
     const { sqlite, db } = sqliteFixtures.open();
     const now = Math.floor(Date.now() / 1000);
-    const intervals = JSON.stringify([[now - 900, now]]);
+    const intervals = JSON.stringify({ intervals: [[now - 900, now]] });
     seedOpenEvent(sqlite, {
       price_coverage_json: intervals,
       last_trusted_price_at: now,
@@ -120,12 +122,51 @@ describe("detectDepegEvents", () => {
     await detectDepegEvents(db, []);
     vi.setSystemTime((now + 3600) * 1000);
     await detectDepegEvents(db, []);
-    expect(sqlite.prepare("SELECT ended_at, price_coverage_json, last_trusted_price_at, price_coverage_gap_started_at FROM depeg_events WHERE id = 1").get()).toEqual({
-      ended_at: null,
-      price_coverage_json: intervals,
-      last_trusted_price_at: now,
-      price_coverage_gap_started_at: now + 900,
+    const event = rowToDepegEvent(sqlite.prepare("SELECT * FROM depeg_events WHERE id = 1").get() as unknown as DepegRow);
+    expect(event.endedAt).toBeNull();
+    expect(event.priceCoverage?.lastTrustedObservationAt).toBe(now);
+    expect(event.priceCoverage?.gapStartedAt).toBe(now + 900);
+    expect(mergeDepegSeconds([event], now - 3600, now + 3600)).toBe(900);
+    expect(mergeUnknownDepegSeconds([event], now - 3600, now + 3600)).toBe(6300);
+  });
+
+  it("does not enqueue an unchanged omitted-asset coverage update", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    seedOpenEvent(sqlite, {
+      price_coverage_json: JSON.stringify({ intervals: [], atParIntervals: [], lastObservationKind: "blind" }),
+      price_coverage_gap_started_at: now - 900,
     });
+    sqlite.exec("CREATE TRIGGER reject_redundant_coverage BEFORE UPDATE OF price_coverage_json ON depeg_events BEGIN SELECT RAISE(ABORT, 'redundant coverage update'); END");
+    await detectDepegEvents(db, []);
+    expect(sqlite.prepare("SELECT ended_at, price_coverage_gap_started_at FROM depeg_events WHERE id = 1").get()).toEqual({
+      ended_at: null,
+      price_coverage_gap_started_at: now - 900,
+    });
+  });
+
+  it.each(["invalid-json", '{"intervals":[[200,100]]}'])("continues processing healthy events when another row has malformed coverage: %s", async (malformed) => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    seedOpenEvent(sqlite, { price_coverage_json: malformed });
+    seedOpenEvent(sqlite, {
+      id: 2, stablecoin_id: "usdc-circle", symbol: "USDC",
+      price_coverage_json: JSON.stringify({ intervals: [[now - 900, now - 900]], lastObservationKind: "trusted-off-peg" }),
+      last_trusted_price_at: now - 900,
+    });
+    await detectDepegEvents(db, [
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: null }),
+      makeAsset({ id: "usdc-circle", symbol: "USDC", price: 0.96 }),
+    ]);
+    const events = (sqlite.prepare("SELECT * FROM depeg_events ORDER BY id").all() as unknown as DepegRow[]).map(rowToDepegEvent);
+    expect(events[0]!.endedAt).toBeNull();
+    expect(mergeDepegSeconds([events[0]!], now - 3600, now)).toBe(0);
+    expect(events[1]!.peakDeviationBps).toBe(-400);
+    expect(mergeDepegSeconds([events[1]!], now - 3600, now)).toBe(900);
+    expect(warn.mock.calls.map(([line]) => JSON.parse(String(line))).some((record) =>
+      record.level === "warn" && record.metadata?.eventId === 1,
+    )).toBe(true);
   });
 
   it("rejects pre-aborted detection before hydration or writes", async () => {

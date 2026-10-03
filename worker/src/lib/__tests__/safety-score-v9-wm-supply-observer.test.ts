@@ -359,16 +359,18 @@ describe("wM reviewed deployment observer", () => {
     });
   });
 
-  it("matures Linea's lagged safe head once while keeping the original clock and sibling snapshots", async () => {
+  it("waits only for the short maturity deficit while keeping the original clock and sibling snapshots", async () => {
     vi.useFakeTimers();
-    const f = lineaSkewFixture(CLOCK_SEC - 90);
+    const f = lineaSkewFixture(CLOCK_SEC - 90), startedAtMs = Date.now();
     try {
       const pending = observeWmReviewedDeploymentUnitPartitionAttempt({
         aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
         scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
+        executionWindow: { deadlineMs: startedAtMs + 180_000, minimumRemainingMs: 60_000 },
       }, f.deps);
-      await vi.advanceTimersByTimeAsync(120_000);
+      await vi.advanceTimersByTimeAsync(46_000);
       const attempt = await pending;
+      expect(Date.now() - startedAtMs).toBe(46_000);
       expect(attempt.status).toBe("accepted");
       if (attempt.status !== "accepted") throw new Error("Expected repaired wM attribution");
       expect(attempt.attribution.deployments.find(row => row.chainId === "linea")).toMatchObject({
@@ -392,8 +394,9 @@ describe("wM reviewed deployment observer", () => {
       const pending = observeWmReviewedDeploymentUnitPartitionAttempt({
         aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
         scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
+        executionWindow: { deadlineMs: Date.now() + 180_000, minimumRemainingMs: 60_000 },
       }, f.deps);
-      await vi.advanceTimersByTimeAsync(120_000);
+      await vi.advanceTimersByTimeAsync(46_000);
       expect(await pending).toEqual({ status: "rejected", rejectionCode: "deployment-observation-skew",
         failedRouteId: "monad:0x437cc33344a0b27a429f795ff6b469c72698b291" });
     } finally {
@@ -404,11 +407,12 @@ describe("wM reviewed deployment observer", () => {
 
   it("reserves sixty seconds of the slot by bounding the wait at 120s and refusing larger maturity deficits", async () => {
     vi.useFakeTimers();
-    const f = lineaSkewFixture(CLOCK_SEC - 90, CLOCK_SEC - 206);
+    const f = lineaSkewFixture(CLOCK_SEC - 90, CLOCK_SEC - 236);
     try {
       const pending = observeWmReviewedDeploymentUnitPartitionAttempt({
         aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
         scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
+        executionWindow: { deadlineMs: Date.now() + 180_000, minimumRemainingMs: 60_000 },
       }, f.deps);
       await vi.advanceTimersByTimeAsync(120_000);
       expect(await pending).toMatchObject({ status: "accepted" });
@@ -420,8 +424,9 @@ describe("wM reviewed deployment observer", () => {
       expect(await observeWmReviewedDeploymentUnitPartitionAttempt({
         aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
         scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
+        executionWindow: { deadlineMs: Date.now() + 180_000, minimumRemainingMs: 60_000 },
       }, { ...f.deps, fetchSolanaObservation: async () => ({ ...solanaObservation(), blockTimeSec: CLOCK_SEC - 9 }) }))
-        .toEqual({ status: "rejected", rejectionCode: "deployment-observation-skew",
+        .toEqual({ status: "rejected", rejectionCode: "deployment-observation-window-insufficient",
           failedRouteId: "monad:0x437cc33344a0b27a429f795ff6b469c72698b291" });
     } finally {
       f.metaById.set("wm-m0", f.reviewed);
@@ -429,30 +434,42 @@ describe("wM reviewed deployment observer", () => {
     }
   });
 
-  it("allows coarse Linea block cadence to mature rather than guessing a short block margin", async () => {
+
+  it.each([105_999, undefined])("refuses a repair without sleeping when the remaining budget is %s", async remainingMs => {
     vi.useFakeTimers();
-    const f = lineaSkewFixture(CLOCK_SEC - 90, CLOCK_SEC - 141), startedAtMs = Date.now();
-    const header = f.deps.fetchEvmBlockHeader.getMockImplementation()!;
-    f.deps.fetchEvmBlockHeader.mockImplementation(async (chain, number, options) =>
-      chain === "linea" && typeof number === "number"
-        ? { number, timestamp: CLOCK_SEC - 141 + Math.floor((Date.now() - startedAtMs) / 20_000) * 20,
-            hash: `0x${"a".repeat(64)}` as const }
-        : header(chain, number, options));
+    const f = lineaSkewFixture(CLOCK_SEC - 90), startedAtMs = Date.now();
     try {
-      const pending = observeWmReviewedDeploymentUnitPartitionAttempt({
+      const attempt = await observeWmReviewedDeploymentUnitPartitionAttempt({
         aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
         scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
+        executionWindow: remainingMs === undefined ? undefined :
+          { deadlineMs: startedAtMs + remainingMs, minimumRemainingMs: 60_000 },
       }, f.deps);
-      await vi.advanceTimersByTimeAsync(120_000);
-      const attempt = await pending;
-      expect(attempt.status).toBe("accepted");
-      if (attempt.status !== "accepted") throw new Error("Expected coarse-cadence repair");
-      expect(attempt.attribution.deployments.find(row => row.chainId === "linea")).toMatchObject({
-        blockTimeSec: CLOCK_SEC - 21,
-      });
-      expect(attempt.attribution.deployments.find(row => row.chainId === "monad")).toMatchObject({
-        blockTimeSec: CLOCK_SEC - 3,
-      });
+      expect(attempt).toEqual({ status: "rejected", rejectionCode: "deployment-observation-window-insufficient",
+        failedRouteId: "monad:0x437cc33344a0b27a429f795ff6b469c72698b291" });
+      expect(Date.now()).toBe(startedAtMs);
+    } finally {
+      f.metaById.set("wm-m0", f.reviewed);
+      vi.useRealTimers();
+    }
+  });
+
+  it("charges elapsed initial RPC work against the remaining repair budget", async () => {
+    vi.useFakeTimers();
+    const f = lineaSkewFixture(CLOCK_SEC - 90), startedAtMs = Date.now();
+    const head = f.deps.fetchEvmBlockNumber.getMockImplementation()!;
+    f.deps.fetchEvmBlockNumber.mockImplementation(async chain => {
+      if (chain === "linea") vi.setSystemTime(startedAtMs + 20_000);
+      return head(chain);
+    });
+    try {
+      const attempt = await observeWmReviewedDeploymentUnitPartitionAttempt({
+        aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
+        scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
+        executionWindow: { deadlineMs: startedAtMs + 125_999, minimumRemainingMs: 60_000 },
+      }, f.deps);
+      expect(attempt).toMatchObject({ status: "rejected", rejectionCode: "deployment-observation-window-insufficient" });
+      expect(Date.now() - startedAtMs).toBe(20_000);
     } finally {
       f.metaById.set("wm-m0", f.reviewed);
       vi.useRealTimers();
@@ -466,6 +483,7 @@ describe("wM reviewed deployment observer", () => {
       const pending = observeWmReviewedDeploymentUnitPartitionAttempt({
         aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
         scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)), signal: controller.signal,
+        executionWindow: { deadlineMs: Date.now() + 180_000, minimumRemainingMs: 60_000 },
       }, f.deps);
       const cancelled = expect(pending).rejects.toMatchObject({ name: "AbortError" });
       await vi.advanceTimersByTimeAsync(1);

@@ -5,25 +5,41 @@ import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "./depeg-closure";
 export function advanceDepegPriceCoverage(
   previous: DepegPriceCoverage | null | undefined,
   now: number,
-  trustedOffPeg: boolean,
+  observation: NonNullable<DepegPriceCoverage["lastObservationKind"]>,
 ): DepegPriceCoverage {
-  const intervals = previous?.intervals.map(([start, end]) => [start, end] as [number, number]) ?? [];
   const lastTrustedObservationAt = previous?.lastTrustedObservationAt ?? null;
-  if (!trustedOffPeg) {
+  // Repeated/older runs cannot rewind trusted clocks or overwrite a newer observation.
+  if (lastTrustedObservationAt != null && now <= lastTrustedObservationAt) return previous!;
+  if (observation === "blind") {
+    if (previous?.lastObservationKind === "blind" && previous.gapStartedAt != null) return previous;
     return {
-      intervals,
+      intervals: previous?.intervals ?? [],
+      atParIntervals: previous?.atParIntervals ?? [],
       lastTrustedObservationAt,
       gapStartedAt: previous?.gapStartedAt ?? now,
+      lastObservationKind: observation,
     };
   }
-  // Repeated/older runs cannot rewind coverage clocks or extend an interval twice.
-  if (lastTrustedObservationAt != null && now <= lastTrustedObservationAt) return previous!;
+  const atPar = observation === "trusted-at-par";
+  const previousKind = previous?.lastObservationKind ??
+    (previous?.gapStartedAt == null ? "trusted-off-peg" : "blind");
+  const intervals = (atPar ? previous?.atParIntervals : previous?.intervals)?.map(
+    ([start, end]) => [start, end] as [number, number],
+  ) ?? [];
   const last = intervals[intervals.length - 1];
-  if (last && previous?.gapStartedAt == null && lastTrustedObservationAt != null &&
+  if (last && previousKind === observation && lastTrustedObservationAt != null &&
+      last[1] === lastTrustedObservationAt &&
+      (atPar || previous?.gapStartedAt == null) &&
       now - lastTrustedObservationAt <= DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC) {
     last[1] = now;
   } else {
     intervals.push([now, now]);
   }
-  return { intervals, lastTrustedObservationAt: now, gapStartedAt: null };
+  return {
+    intervals: atPar ? previous?.intervals ?? [] : intervals,
+    atParIntervals: atPar ? intervals : previous?.atParIntervals ?? [],
+    lastTrustedObservationAt: now,
+    gapStartedAt: atPar ? previous?.gapStartedAt ?? now : null,
+    lastObservationKind: observation,
+  };
 }
