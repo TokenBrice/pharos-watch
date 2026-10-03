@@ -1635,6 +1635,131 @@
         "exposureId": null,
         "requiredDatum": "rehypothecationCorrelation"
       }
+    },
+    {
+      "id": "uw-rlusd-ripple-bd0b8d90aa367daa",
+      "assetId": "rlusd-ripple",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:rlusd-ripple:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:37:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (PilotFiat)",
+      "sources": [
+        {
+          "url": "https://ripple.com/legal/stablecoin/",
+          "observedAt": "2026-10-03T22:35:16Z",
+          "datumAsOf": "2024-10-03",
+          "location": "Section 11.10",
+          "excerpt": "Although a Customer can always redeem one (1) RLUSD for 1 U.S. dollar ($1) with Ripple, less Fees, Ripple cannot control how third parties quote or value RLUSD",
+          "assertion": "Public terms reserve Fees but do not publish an applicable numeric issuer redemption tariff."
+        },
+        {
+          "url": "https://docs.ripple.com/products/stablecoin/user-interface/tutorials/redeem-rlusd",
+          "observedAt": "2026-10-03T22:35:16Z",
+          "datumAsOf": null,
+          "location": "Prerequisites",
+          "excerpt": "Ensure you have sufficient XRP or ETH in your wallet(s) to cover the network fees required for redemptions.",
+          "assertion": "Network fees are acknowledged; this is not an issuer-fee schedule or complete same-notional cost bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ripple.com/legal/stablecoin/",
+        "https://ripple.com/reports/rlusd-whitepaper.pdf",
+        "https://docs.ripple.com/products/stablecoin/user-interface/tutorials/redeem-rlusd",
+        "https://ripple.com/products/stablecoin/transparency/",
+        "https://cdn.sanity.io/files/ior4a5y3/production/4981331c98a2bb203c0c9ab2584e8b2a0da80938.pdf/RLUSD%20Attestation%20Report%20(Aug)_Final%20Signed.pdf",
+        "https://www.dfs.ny.gov/industry_guidance/industry_letters/il20220608_issuance_stablecoins"
+      ],
+      "rationale": "The exact offchain-issuer RLUSD cost remains unquantified: public User Terms expressly reserve Fees and direct customers to a separate Customer Agreement, while issuer redemption docs, whitepaper, report archive and NYDFS guidance disclose no applicable numeric issuer tariff or complete all-in same-notional fee formula. Public network gas mechanics do not disclose that missing issuer charge."
+    },
+    {
+      "id": "uw-paxg-paxos-f19a39ffcbde37e9",
+      "assetId": "paxg-paxos",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:paxg-paxos:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:37:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (PilotFiat)",
+      "sources": [
+        {
+          "url": "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions",
+          "observedAt": "2026-10-03T22:35:20Z",
+          "datumAsOf": "2025-12-12",
+          "location": "Sections 11.4.3 and 11.5",
+          "excerpt": "You are responsible for delivery and once your bars are in the possession of the delivery service you choose, then Paxos will have been deemed to have fulfilled its obligation for delivery.",
+          "assertion": "Physical gold redemption defines handoff to the customer-selected carrier, but no maximum for issuer bar release or completed delivery is stated."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.paxos.com/pax-gold",
+        "https://www.paxos.com/paxg-whitepaper.pdf",
+        "https://www.paxos.com/paxg-transparency",
+        "https://framerusercontent.com/assets/9bk8TbTXouqOrpoxLSn5XIf7Ufo.pdf",
+        "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions",
+        "https://docs.paxos.com/guides/dashboard/paxg",
+        "https://support.paxos.com/articles/2330993057-daily-deposits-withdrawal-schedule",
+        "https://support.paxos.com/articles/7442970352-how-to-submit-a-usd-fiat-withdrawal-to-a-bank-account"
+      ],
+      "rationale": "The exact captured offchain-issuer route outputs physical commodity:xau, not bank USD. Public terms section 11.4 require at least 430 PAXG per bar and customer-arranged delivery, with issuer delivery obligation fulfilled at carrier handoff; section 11.5 offers commercially reasonable efforts and several business days without a binding maximum. Product, whitepaper, dashboard guide, reserve archive and support surfaces publish no end-to-end maximum for this physical-gold channel. Fiat wire guidelines cannot answer it."
+    },
+    {
+      "id": "uw-paxg-paxos-f1accd2694a0102a",
+      "assetId": "paxg-paxos",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:bb342ba2193c0fceb94f272f",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:37:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (PilotFiat)",
+      "sources": [
+        {
+          "url": "https://framerusercontent.com/assets/9bk8TbTXouqOrpoxLSn5XIf7Ufo.pdf",
+          "observedAt": "2026-10-03T22:35:22Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Exhibit B, page 6",
+          "excerpt": "The Company purchases their gold from StoneX Group Inc., a company registered in England and Wales (StoneX).",
+          "assertion": "Full allocated-gold quantity and sourcing/vault institutions are disclosed, not a whole-position USD realization horizon."
+        },
+        {
+          "url": "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions",
+          "observedAt": "2026-10-03T22:35:20Z",
+          "datumAsOf": "2025-12-12",
+          "location": "Section 11.5",
+          "excerpt": "Paxos will make commercially reasonable efforts to convert and/or redeem your PAXG quickly.",
+          "assertion": "Customer conversion effort is not a guaranteed realization horizon for the entire reserve gold position."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.paxos.com/pax-gold",
+        "https://www.paxos.com/paxg-whitepaper.pdf",
+        "https://www.paxos.com/paxg-transparency",
+        "https://framerusercontent.com/assets/9bk8TbTXouqOrpoxLSn5XIf7Ufo.pdf",
+        "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions",
+        "https://docs.paxos.com/guides/dashboard/paxg",
+        "https://support.paxos.com/articles/2330993057-daily-deposits-withdrawal-schedule",
+        "https://support.paxos.com/articles/7442970352-how-to-submit-a-usd-fiat-withdrawal-to-a-bank-account"
+      ],
+      "rationale": "The exact whole-slice liquidityHorizon for allocated reserve gold is undisclosed. The full August gold inventory, vault/source identities, whitepaper, terms, dashboard docs, product FAQ and redemption/wire help disclose ownership and customer conversion mechanisms but no funded or enforceable time bound to realize the entire scoped gold position into USD. Instant token transfer, indicative quotes and market-wide gold volume cannot establish immediate whole-book liquidity."
     }
   ]
 }

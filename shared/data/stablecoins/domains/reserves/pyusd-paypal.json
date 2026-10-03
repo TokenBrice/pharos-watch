@@ -19,7 +19,8 @@
       "assetClass": "repo",
       "issuerOrObligor": "Selected commercial banks and broker-dealers; Treasury obligations as collateral",
       "riskFactors": ["counterparty", "liquidity", "custody"],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 1
     },
     {
       "sourceKey": "paxos-independent-assurance:pyusd:treasury-bills",
@@ -29,12 +30,13 @@
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
       "riskFactors": ["duration", "market", "custody"],
-      "liquidityHorizon": "over-seven-days"
+      "liquidityHorizon": "over-seven-days",
+      "maturityDaysMax": 93
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (RuleC14)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Unknown-resolver PilotFiat primary-source review",
     "confidence": "verified",
     "sources": [
       {
@@ -46,7 +48,7 @@
         "url": "https://www.paypal.com/us/legalhub/paypal/cryptocurrencies-tnc?locale.x=en_US%5C"
       }
     ],
-    "rationale": "Exhibit B records $111,173,415 cash, $2,408,763,000 Treasury-collateralized reverse repos and $373,999,462 Treasury bills, totaling $2,893,935,877 at August 31, 2026, 5:00 PM Eastern Time. Independently reproduced amount / total * 100 yields 3.841599113635%, 83.234843561808% and 12.923557324556%; ordinary two-decimal rounding gives 3.84%, 83.23% and 12.92% (99.99%, with no residual assigned). D01 admits this complete dated report arithmetic at high confidence. No government money-market funds were held. All repos mature September 1, one day after the observation; the latest Treasury bill maturity is October 1, 31 days after period end. Individual counterparties remain anonymized; existing risk categories and liquidity horizons are unchanged.",
+    "rationale": "Exhibit B records $111,173,415 cash, $2,408,763,000 Treasury-collateralized reverse repos and $373,999,462 Treasury bills, totaling $2,893,935,877 at August 31, 2026, 5:00 PM Eastern Time. Independently reproduced amount / total * 100 yields 3.841599113635%, 83.234843561808% and 12.923557324556%; ordinary two-decimal rounding gives 3.84%, 83.23% and 12.92% (99.99%, with no residual assigned). D01 admits this complete dated report arithmetic at high confidence. No government money-market funds were held. All repos mature September 1, one day after the observation; the latest Treasury bill maturity is October 1, 31 days after period end. The October 3 metadata review admits maximum maturity of one day for the explicitly overnight repo category, and a conservative 93-day ceiling for the report's statement that Paxos only holds Treasury bills three months or less from maturity; the latter is a category restriction, not the observed portfolio maximum or WAM. Composition weights and as-of date are unchanged. Individual counterparties remain anonymized; existing risk categories and liquidity horizons are unchanged.",
     "compositionBasis": "KPMG examination of PYUSD Redemption Assets Report, Exhibit B as of August 31, 2026 at 5:00 PM Eastern Time; disclosed USD amounts independently divided by disclosed total redemption assets",
     "compositionAsOf": "2026-08-31",
     "scope": "full-composition",

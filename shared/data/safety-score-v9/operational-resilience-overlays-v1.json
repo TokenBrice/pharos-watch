@@ -482,6 +482,216 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "rlusd-ripple",
+      "reviewedAt": "2026-10-03T22:31:22Z",
+      "expiresAt": "2027-10-03T22:31:22Z",
+      "reviewer": "Unknown-resolver PilotFiat",
+      "notes": "Issuer-reported exact-asset launch on 2024-12-17 and outstanding tokens in the August 31, 2026 report establish a conservative 20 completed-month operating-history lower bound. This is eligibility-only, not independent continuity verification or a claim that newer chain deployments share this history. No lifetime redemption throughput, stress recovery, reconciliation continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "asset-launch",
+          "label": "Exact asset launch announcement",
+          "publisher": "Ripple",
+          "publishedAt": "2024-12-16",
+          "url": "https://ripple.com/ripple-press/raising-the-standard-for-stablecoins-ripple-usd-launches-globally/",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "august-2026-report",
+          "label": "August 2026 exact-asset outstanding-token report",
+          "publisher": "Deloitte and Standard Custody",
+          "publishedAt": "2026-09-29",
+          "url": "https://cdn.sanity.io/files/ior4a5y3/production/4981331c98a2bb203c0c9ab2584e8b2a0da80938.pdf/RLUSD%20Attestation%20Report%20(Aug)_Final%20Signed.pdf",
+          "confidence": "independent-assurance"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 20,
+          "observedAt": "2026-08-31",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "asset-launch",
+            "august-2026-report"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "pyusd-paypal",
+      "reviewedAt": "2026-10-03T22:31:22Z",
+      "expiresAt": "2027-10-03T22:31:22Z",
+      "reviewer": "Unknown-resolver PilotFiat",
+      "notes": "Issuer-reported exact-asset launch on 2023-08-07 and outstanding tokens in the August 31, 2026 report establish a conservative 36 completed-month operating-history lower bound. This is eligibility-only, not independent continuity verification or a claim that newer chain deployments share this history. No lifetime redemption throughput, stress recovery, reconciliation continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "asset-launch",
+          "label": "Exact asset launch announcement",
+          "publisher": "PayPal",
+          "publishedAt": "2023-08-07",
+          "url": "https://newsroom.paypal-corp.com/2023-08-07-PayPal-Launches-U-S-Dollar-Stablecoin?printable=1",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "august-2026-report",
+          "label": "August 2026 exact-asset outstanding-token report",
+          "publisher": "KPMG and Paxos",
+          "publishedAt": "2026-09-24",
+          "url": "https://framerusercontent.com/assets/VdMoM8qevL5j7tgTTmLhkemRdY.pdf",
+          "confidence": "independent-assurance"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 36,
+          "observedAt": "2026-08-31",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "asset-launch",
+            "august-2026-report"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "paxg-paxos",
+      "reviewedAt": "2026-10-03T22:31:22Z",
+      "expiresAt": "2027-10-03T22:31:22Z",
+      "reviewer": "Unknown-resolver PilotFiat",
+      "notes": "Issuer-reported exact-asset launch on 2019-09-05 and outstanding tokens in the August 31, 2026 report establish a conservative 83 completed-month operating-history lower bound. This is eligibility-only, not independent continuity verification or a claim that newer chain deployments share this history. No lifetime redemption throughput, stress recovery, reconciliation continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "asset-launch",
+          "label": "Exact asset launch announcement",
+          "publisher": "Paxos",
+          "publishedAt": "2019-09-05",
+          "url": "https://www.paxos.com/newsroom/paxos-launches-pax-gold-physical-gold-on-the-blockchain",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "august-2026-report",
+          "label": "August 2026 exact-asset outstanding-token report",
+          "publisher": "KPMG and Paxos",
+          "publishedAt": "2026-09-24",
+          "url": "https://framerusercontent.com/assets/9bk8TbTXouqOrpoxLSn5XIf7Ufo.pdf",
+          "confidence": "independent-assurance"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 83,
+          "observedAt": "2026-08-31",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "asset-launch",
+            "august-2026-report"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdg-paxos",
+      "reviewedAt": "2026-10-03T22:31:22Z",
+      "expiresAt": "2027-10-03T22:31:22Z",
+      "reviewer": "Unknown-resolver PilotFiat",
+      "notes": "Issuer-reported exact-asset launch on 2024-11-01 and outstanding tokens in the August 31, 2026 report establish a conservative 21 completed-month operating-history lower bound. This is eligibility-only, not independent continuity verification or a claim that newer chain deployments share this history. No lifetime redemption throughput, stress recovery, reconciliation continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "asset-launch",
+          "label": "Exact asset launch announcement",
+          "publisher": "Paxos",
+          "publishedAt": "2024-11-01",
+          "url": "https://www.paxos.com/newsroom/paxos-introduces-global-dollar-usdg",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "august-2026-report",
+          "label": "August 2026 exact-asset outstanding-token report",
+          "publisher": "KPMG and Paxos",
+          "publishedAt": "2026-09-25",
+          "url": "https://framerusercontent.com/assets/Xn1UQwAte85FnsDveIMX0n1qtVM.pdf",
+          "confidence": "independent-assurance"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 21,
+          "observedAt": "2026-08-31",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "asset-launch",
+            "august-2026-report"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdp-paxos",
+      "reviewedAt": "2026-10-03T22:31:22Z",
+      "expiresAt": "2027-10-03T22:31:22Z",
+      "reviewer": "Unknown-resolver PilotFiat",
+      "notes": "Issuer-reported exact-asset launch on 2018-09-10 and outstanding tokens in the August 31, 2026 report establish a conservative 95 completed-month operating-history lower bound. This is eligibility-only, not independent continuity verification or a claim that newer chain deployments share this history. No lifetime redemption throughput, stress recovery, reconciliation continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "asset-launch",
+          "label": "Exact asset launch announcement",
+          "publisher": "Paxos",
+          "publishedAt": "2018-09-10",
+          "url": "https://www.paxos.com/newsroom/paxos-launches-new-stablecoin-paxos-standard-pax",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "august-2026-report",
+          "label": "August 2026 exact-asset outstanding-token report",
+          "publisher": "KPMG and Paxos",
+          "publishedAt": "2026-09-24",
+          "url": "https://framerusercontent.com/assets/YXrlcnHgVxcHy66TMLVHn2fM71U.pdf",
+          "confidence": "independent-assurance"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 95,
+          "observedAt": "2026-08-31",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "asset-launch",
+            "august-2026-report"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
