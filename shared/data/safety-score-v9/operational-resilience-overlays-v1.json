@@ -1658,6 +1658,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "apyusd-apyx",
+      "reviewedAt": "2026-10-03T22:45:38Z",
+      "expiresAt": "2027-10-03T22:45:38Z",
+      "reviewer": "W1R18 primary-source research",
+      "notes": "Exact-token dated public operation establishes an issuer-reported lower bound only. No throughput, stress recovery, reconciliation continuity, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Dated operating statement naming live apyUSD yield",
+          "publisher": "Apyx Foundation",
+          "publishedAt": "2026-06-02",
+          "url": "https://blog.apyx.fi/our-apyx-strategic-vision/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 4,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "apxusd-apyx",
+      "reviewedAt": "2026-10-03T22:45:38Z",
+      "expiresAt": "2027-10-03T22:45:38Z",
+      "reviewer": "W1R18 primary-source research",
+      "notes": "Exact-token dated public operation establishes an issuer-reported lower bound only. No throughput, stress recovery, reconciliation continuity, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Dated operating statement naming live apxUSD",
+          "publisher": "Apyx Foundation",
+          "publishedAt": "2026-06-02",
+          "url": "https://blog.apyx.fi/our-apyx-strategic-vision/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 4,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "tusd-trueusd",
+      "reviewedAt": "2026-10-03T22:45:38Z",
+      "expiresAt": "2027-10-03T22:45:38Z",
+      "reviewer": "W1R18 primary-source research",
+      "notes": "Exact-token dated public operation establishes an issuer-reported lower bound only. No throughput, stress recovery, reconciliation continuity, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Issuer TrueUSD trading launch release",
+          "publisher": "TrustToken / Arrow PR",
+          "publishedAt": "2018-03-06",
+          "url": "https://www.prweb.com/releases/world_s_first_legally_backed_stablecoin_trueusd_from_trusttoken_launches_on_bittrex_exchange/prweb15279977.htm",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 102,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "srusde-strata",
+      "reviewedAt": "2026-10-03T22:48:02Z",
+      "expiresAt": "2027-10-03T22:48:02Z",
+      "reviewer": "W1R18 primary-source research",
+      "notes": "Exact srUSDe proxy creation is the earliest dated implementation evidence under the P2 creation-source rule, not Ethena parent history. No throughput, incident-free history, financial reconciliation or stress-performance credit asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-wrapper-deployment",
+          "label": "srUSDe proxy creation at Ethereum block 23492392",
+          "publisher": "Ethereum deployment via Etherscan",
+          "publishedAt": "2025-10-02",
+          "url": "https://etherscan.io/tx/0x857c511cb166160e9b9acdb8ef47d9306ad5bcef1a311e845b4a2d4b90ea1f6b",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 12,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-wrapper-deployment"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

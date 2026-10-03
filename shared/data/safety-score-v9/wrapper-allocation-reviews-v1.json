@@ -3884,6 +3884,96 @@
           "url": "https://ethereum-rpc.publicnode.com"
         }
       ]
+    },
+    {
+      "assetId": "apyusd-apyx",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2027-01-01",
+      "reviewer": "W1R18 pinned local allocation research",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "Canonical apyUSD local accounting is exclusively direct apxUSD plus vested apxUSD in LinearVestV0. At block 26114892 the sum reconciles exactly to totalAssets; vesting asset and beneficiary match. Verified ApyUSD and LinearVestV0 implementations contain no lending or borrowing execution surface: deposits hold apxUSD, vested yield pulls to the beneficiary, and exits move apxUSD to the onchain receipt escrow. Offchain preferred equity custody and lending are serial apxUSD-parent risks, not local reuse. Mutable receipt/vesting/upgrader controls remain separately scored and no perpetual immutability or measured unwind is asserted.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+          "function": "asset()/totalAssets()/vesting()/EIP1967 implementation",
+          "value": "asset=0x98a878b1cd98131b271883b390f68d2c90674665; totalAssets=167068592127186067869968066; balance=167060053044003315602394370; vestedAmount=8539083182752267573696; implementation=0xfd616567ecc1607f61073951a1e822f7315bb112; blockHash=0x3c4cb16d268cdacd17ca9573141f2bfef51b85d50d2c8ea2daa6b140bbff6d91",
+          "block": 26114892
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x0d62b4cc02b4b51ed19ddf41d7a7979cf394c99f",
+          "function": "asset()/beneficiary()/vestedAmount()/apxUSD.balanceOf",
+          "value": "asset=apxUSD; beneficiary=0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a; vestedAmount=8539083182752267573696; balance=544100234959608843538031",
+          "block": 26114892
+        }
+      ],
+      "sources": [
+        {
+          "label": "Verified ApyUSD implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfd616567ecc1607f61073951a1e822f7315bb112"
+        },
+        {
+          "label": "Verified LinearVestV0 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d62b4cc02b4b51ed19ddf41d7a7979cf394c99f"
+        },
+        {
+          "label": "Apyx local accounting and escrow explanation",
+          "url": "https://docs.apyx.fi/technical-overview/unlocking.md"
+        },
+        {
+          "label": "Pinned Ethereum RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    {
+      "assetId": "srusde-strata",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2027-01-01",
+      "reviewer": "W1R18 pinned exact-wrapper allocation research",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "The deployed sUSDeStrategy owns only sUSDe/USDe collateral and configured onchain cooldown escrows. At block 26114892 its sUSDe balance previewRedeem equals totalAssets exactly: 25463524261946908442735214 USDe base units; accounting allocates disjoint junior, senior and reserve claims over this pool. srtVault matches srUSDe and accounting's senior output matches srUSDe.totalAssets. Verified MetaVault, CDO, strategy and inherited AccessControlled code contain no local borrowing or lending/repledge surface. Junior-first-loss redistribution is tranche accounting, not duplicate lending of senior collateral. Ethena's custody/hedging remain serial parent risks; no liquidation guarantee or measured unwind is asserted. Current upgradability and governance remain separately scored.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xdbf4fb6c310c1c85d0b41b5dbca06096f2e7099f",
+          "function": "totalAssets()/sUSDe()/USDe()/EIP1967 implementation",
+          "value": "totalAssets=25463524261946908442735214; sUSDe.balanceOf strategy previewRedeem equals totalAssets; implementation=0x2b9796606c8480312a572742c00f606ef4adb107",
+          "block": 26114892
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x908b3921aae4fc17191d382bb61020f2ee6c0e20",
+          "function": "srtVault()/strategy()/accounting()",
+          "value": "srtVault=0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003; strategy=0xdbf4fb6c310c1c85d0b41b5dbca06096f2e7099f; accounting=0xa436c5dd1ba62c55d112c10cd10e988bb3355102; blockHash=0x3c4cb16d268cdacd17ca9573141f2bfef51b85d50d2c8ea2daa6b140bbff6d91",
+          "block": 26114892
+        }
+      ],
+      "sources": [
+        {
+          "label": "Verified deployed sUSDeStrategy",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b9796606c8480312a572742c00f606ef4adb107"
+        },
+        {
+          "label": "Verified StrataCDO",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb3d4f2c2123f8c3ca85ae7a6d48aa2ef049c79ba"
+        },
+        {
+          "label": "Verified srUSDe MetaVault",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe894055ca1c73648927e225f3ca38ed48e30210b"
+        },
+        {
+          "label": "Issuer allocation model",
+          "url": "https://docs.strata.markets/technical-documentation/protocol-overview.md"
+        }
+      ]
     }
   ]
 }

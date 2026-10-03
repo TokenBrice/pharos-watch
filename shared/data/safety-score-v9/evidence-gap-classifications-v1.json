@@ -3704,6 +3704,417 @@
         "https://www.audxtoken.com/about-us"
       ],
       "rationale": "No final maximum redemption settlement SLA is published. Terms offer commercially reasonable prompt processing, say several business days, and reserve discretionary delays for illiquid, unavailable or lost reserves. Homepage redeemable-anytime is availability marketing, not a bounded bank-receipt deadline."
+    },
+    {
+      "id": "uw-apxusd-apyx-290836adf4ac21c5",
+      "assetId": "apxusd-apyx",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1ae4141d8ddcfe4093c38bd0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:01Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R18)",
+      "sources": [
+        {
+          "url": "https://docs.apyx.fi/collateral-and-custody/accountable-dashboard.md",
+          "observedAt": "2026-10-03T22:51:01Z",
+          "datumAsOf": null,
+          "location": "Reserve Asset Categorization",
+          "excerpt": "It also includes stablecoins deployed in liquidity positions, open orders, or to lending platforms.",
+          "assertion": "Cash & Equivalents is a mixed deployed category, not uniformly cash or an identified ladder with a maximum maturity."
+        },
+        {
+          "url": "https://docs.apyx.fi/solution-overview/example-collateral-allocation/strc.md",
+          "observedAt": "2026-10-03T22:51:01Z",
+          "datumAsOf": null,
+          "location": "STRC / General Terms",
+          "excerpt": "Strategy Inc Variable Rate Series A Perpetual Stretch Preferred Stock",
+          "assertion": "Perpetual STRC has no finite maturity maximum; the combined STRC/STRCx slice also lacks a published whole-slice realization bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://apyx.fi",
+        "https://docs.apyx.fi/llms.txt",
+        "https://docs.apyx.fi/collateral-and-custody/third-party-attestation.md",
+        "https://docs.apyx.fi/collateral-and-custody/accountable-dashboard.md",
+        "https://docs.apyx.fi/solution-overview/example-collateral-allocation/strc.md",
+        "https://docs.apyx.fi/product-overview/apxusd-overview.md",
+        "https://docs.apyx.fi/resources/terms-of-service.md",
+        "https://www.strategy.com/stretch",
+        "https://etherscan.io/token/0x98A878b1Cd98131B271883B390f68D2c90674665"
+      ],
+      "rationale": "Neither liquidityHorizon nor finite maturityDaysMax is published for either complete admitted other-class slice. STRC is explicitly perpetual, not a finite-maturity debt security; optional issuer repurchase is not a maturity maximum, and STRCx operational unwind is not bounded. Cash & Equivalents mixes cash, bills, lending and open orders without a ladder, allocations, largest maturity or entire-slice realization SLA. Monthly securities balance attestations do not supply these maxima."
+    },
+    {
+      "id": "uw-apxusd-apyx-17c209b2e4df6764",
+      "assetId": "apxusd-apyx",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d08b34ea7f837c3ccceeff0b",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:01Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R18)",
+      "sources": [
+        {
+          "url": "https://docs.apyx.fi/collateral-and-custody/accountable-dashboard.md",
+          "observedAt": "2026-10-03T22:51:01Z",
+          "datumAsOf": null,
+          "location": "Reserve Asset Categorization",
+          "excerpt": "It also includes stablecoins deployed in liquidity positions, open orders, or to lending platforms.",
+          "assertion": "Cash & Equivalents is a mixed deployed category, not uniformly cash or an identified ladder with a maximum maturity."
+        },
+        {
+          "url": "https://docs.apyx.fi/solution-overview/example-collateral-allocation/strc.md",
+          "observedAt": "2026-10-03T22:51:01Z",
+          "datumAsOf": null,
+          "location": "STRC / General Terms",
+          "excerpt": "Strategy Inc Variable Rate Series A Perpetual Stretch Preferred Stock",
+          "assertion": "Perpetual STRC has no finite maturity maximum; the combined STRC/STRCx slice also lacks a published whole-slice realization bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://apyx.fi",
+        "https://docs.apyx.fi/llms.txt",
+        "https://docs.apyx.fi/collateral-and-custody/third-party-attestation.md",
+        "https://docs.apyx.fi/collateral-and-custody/accountable-dashboard.md",
+        "https://docs.apyx.fi/solution-overview/example-collateral-allocation/strc.md",
+        "https://docs.apyx.fi/product-overview/apxusd-overview.md",
+        "https://docs.apyx.fi/resources/terms-of-service.md",
+        "https://www.strategy.com/stretch",
+        "https://etherscan.io/token/0x98A878b1Cd98131B271883B390f68D2c90674665"
+      ],
+      "rationale": "Neither liquidityHorizon nor finite maturityDaysMax is published for either complete admitted other-class slice. STRC is explicitly perpetual, not a finite-maturity debt security; optional issuer repurchase is not a maturity maximum, and STRCx operational unwind is not bounded. Cash & Equivalents mixes cash, bills, lending and open orders without a ladder, allocations, largest maturity or entire-slice realization SLA. Monthly securities balance attestations do not supply these maxima."
+    },
+    {
+      "id": "uw-apxusd-apyx-6769170868f6290a",
+      "assetId": "apxusd-apyx",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d08b34ea7f837c3ccceeff0b",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:01Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R18)",
+      "sources": [
+        {
+          "url": "https://docs.apyx.fi/collateral-and-custody/accountable-dashboard.md",
+          "observedAt": "2026-10-03T22:51:01Z",
+          "datumAsOf": null,
+          "location": "Reserve Asset Categorization",
+          "excerpt": "It also includes stablecoins deployed in liquidity positions, open orders, or to lending platforms.",
+          "assertion": "Cash & Equivalents is a mixed deployed category, not uniformly cash or an identified ladder with a maximum maturity."
+        },
+        {
+          "url": "https://docs.apyx.fi/solution-overview/example-collateral-allocation/strc.md",
+          "observedAt": "2026-10-03T22:51:01Z",
+          "datumAsOf": null,
+          "location": "STRC / General Terms",
+          "excerpt": "Strategy Inc Variable Rate Series A Perpetual Stretch Preferred Stock",
+          "assertion": "Perpetual STRC has no finite maturity maximum; the combined STRC/STRCx slice also lacks a published whole-slice realization bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://apyx.fi",
+        "https://docs.apyx.fi/llms.txt",
+        "https://docs.apyx.fi/collateral-and-custody/third-party-attestation.md",
+        "https://docs.apyx.fi/collateral-and-custody/accountable-dashboard.md",
+        "https://docs.apyx.fi/solution-overview/example-collateral-allocation/strc.md",
+        "https://docs.apyx.fi/product-overview/apxusd-overview.md",
+        "https://docs.apyx.fi/resources/terms-of-service.md",
+        "https://www.strategy.com/stretch",
+        "https://etherscan.io/token/0x98A878b1Cd98131B271883B390f68D2c90674665"
+      ],
+      "rationale": "Neither liquidityHorizon nor finite maturityDaysMax is published for either complete admitted other-class slice. STRC is explicitly perpetual, not a finite-maturity debt security; optional issuer repurchase is not a maturity maximum, and STRCx operational unwind is not bounded. Cash & Equivalents mixes cash, bills, lending and open orders without a ladder, allocations, largest maturity or entire-slice realization SLA. Monthly securities balance attestations do not supply these maxima."
+    },
+    {
+      "id": "uw-apyusd-apyx-673b3de63c804c18",
+      "assetId": "apyusd-apyx",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:01Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R18)",
+      "sources": [
+        {
+          "url": "https://docs.apyx.fi/collateral-and-custody/accountable-dashboard.md",
+          "observedAt": "2026-10-03T22:51:01Z",
+          "datumAsOf": null,
+          "location": "Dashboard introduction",
+          "excerpt": "The dashboard also provides a breakdown of the total supply of apxUSD.",
+          "assertion": "The issuer distinguishes parent apxUSD supply visibility, not independently examined apyUSD liability reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://apyx.fi",
+        "https://docs.apyx.fi/product-overview/apyusd-overview.md",
+        "https://docs.apyx.fi/collateral-and-custody/third-party-attestation.md",
+        "https://docs.apyx.fi/collateral-and-custody/accountable-dashboard.md",
+        "https://docs.apyx.fi/resources/terms-of-service.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xfd616567ecc1607f61073951a1e822f7315bb112"
+      ],
+      "rationale": "apyUSD-specific financial reserve-to-liability reconciliation is not published. Wolf's monthly examinations cover specified Foundation securities assets, not wrapper liabilities. Accountable explicitly describes apxUSD supply. Pinned local vault accounting proves the apxUSD balance and vested-yield identity but does not establish independently verified financial reconciliation or bridge-wide wrapper liabilities."
+    },
+    {
+      "id": "uw-apxusd-apyx-6835a481166c9b25",
+      "assetId": "apxusd-apyx",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:apxusd-apyx:stablecoin-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:01Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R18)",
+      "sources": [
+        {
+          "url": "https://docs.apyx.fi/product-overview/apxusd-overview.md",
+          "observedAt": "2026-10-03T22:51:01Z",
+          "datumAsOf": null,
+          "location": "Minting and Redeeming",
+          "excerpt": "There is also an RFQ (Request for Quote) redemption system that connects redemption requests with approved counterparties for competitive execution.",
+          "assertion": "A route and quote process are disclosed, but no complete direct-redemption fee schedule is published."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://apyx.fi",
+        "https://docs.apyx.fi/llms.txt",
+        "https://docs.apyx.fi/product-overview/apxusd-overview.md",
+        "https://docs.apyx.fi/technical-overview/unlocking.md",
+        "https://docs.apyx.fi/resources/terms-of-service.md",
+        "https://apyx-labs.github.io/evm-contracts/"
+      ],
+      "rationale": "The cost for whitelisted primary apxUSD redemption into USDC is not published as an exact all-in schedule. Redemption Value and competitive RFQ quotes are not a fee scalar, and apyUSD's unlock fee is a different route. Legal terms and contract documentation do not establish the complete direct issuer redemption fee."
+    },
+    {
+      "id": "uw-tusd-trueusd-36283e7616c50cca",
+      "assetId": "tusd-trueusd",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2c93128ac557f3ca84751b14",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:01Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R18)",
+      "sources": [
+        {
+          "url": "https://tusd.io/transparency",
+          "observedAt": "2026-10-03T22:45:17Z",
+          "datumAsOf": null,
+          "location": "Trust & Transparency",
+          "excerpt": "TrueUSD is the first USD-pegged stablecoin to deploy daily attestations for its underlying reserves by independent third-party institutions.",
+          "assertion": "The linked assurance archive publishes aggregate reserve balances, not a largest maturity, whole-fund realization bound or complete user fee schedule."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tusd.io",
+        "https://tusd.io/transparency",
+        "https://widget.verinumus.io/api/v1/tusd/report",
+        "https://tusd.io/docs/trueusd-white-paper-202602.pdf",
+        "https://app.tusd.io/terms-of-use",
+        "https://tusd.io/about"
+      ],
+      "rationale": "Exact maturityDaysMax and liquidityHorizon for the full opaque First Digital Trust fund reserve are undisclosed: aggregate at-cost balances and management's stated illiquidity/litigation are not a dated maturity ladder or maximum realization duration. No complete public issuer-redemption cost schedule is disclosed in the current whitepaper, transparency archive or governing terms; 1:1 convertibility does not mean fee-free."
+    },
+    {
+      "id": "uw-tusd-trueusd-34d53144b6c8d183",
+      "assetId": "tusd-trueusd",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2c93128ac557f3ca84751b14",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:01Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R18)",
+      "sources": [
+        {
+          "url": "https://tusd.io/transparency",
+          "observedAt": "2026-10-03T22:45:17Z",
+          "datumAsOf": null,
+          "location": "Trust & Transparency",
+          "excerpt": "TrueUSD is the first USD-pegged stablecoin to deploy daily attestations for its underlying reserves by independent third-party institutions.",
+          "assertion": "The linked assurance archive publishes aggregate reserve balances, not a largest maturity, whole-fund realization bound or complete user fee schedule."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tusd.io",
+        "https://tusd.io/transparency",
+        "https://widget.verinumus.io/api/v1/tusd/report",
+        "https://tusd.io/docs/trueusd-white-paper-202602.pdf",
+        "https://app.tusd.io/terms-of-use",
+        "https://tusd.io/about"
+      ],
+      "rationale": "Exact maturityDaysMax and liquidityHorizon for the full opaque First Digital Trust fund reserve are undisclosed: aggregate at-cost balances and management's stated illiquidity/litigation are not a dated maturity ladder or maximum realization duration. No complete public issuer-redemption cost schedule is disclosed in the current whitepaper, transparency archive or governing terms; 1:1 convertibility does not mean fee-free."
+    },
+    {
+      "id": "uw-tusd-trueusd-53ea019bc809b968",
+      "assetId": "tusd-trueusd",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:tusd-trueusd:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:01Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R18)",
+      "sources": [
+        {
+          "url": "https://tusd.io/transparency",
+          "observedAt": "2026-10-03T22:45:17Z",
+          "datumAsOf": null,
+          "location": "Trust & Transparency",
+          "excerpt": "TrueUSD is the first USD-pegged stablecoin to deploy daily attestations for its underlying reserves by independent third-party institutions.",
+          "assertion": "The linked assurance archive publishes aggregate reserve balances, not a largest maturity, whole-fund realization bound or complete user fee schedule."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tusd.io",
+        "https://tusd.io/transparency",
+        "https://widget.verinumus.io/api/v1/tusd/report",
+        "https://tusd.io/docs/trueusd-white-paper-202602.pdf",
+        "https://app.tusd.io/terms-of-use",
+        "https://tusd.io/about"
+      ],
+      "rationale": "Exact maturityDaysMax and liquidityHorizon for the full opaque First Digital Trust fund reserve are undisclosed: aggregate at-cost balances and management's stated illiquidity/litigation are not a dated maturity ladder or maximum realization duration. No complete public issuer-redemption cost schedule is disclosed in the current whitepaper, transparency archive or governing terms; 1:1 convertibility does not mean fee-free."
+    },
+    {
+      "id": "uw-apyusd-apyx-6578c437c845b04a",
+      "assetId": "apyusd-apyx",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:6f760342e01912d491204d4d",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R18)",
+      "sources": [
+        {
+          "url": "https://docs.apyx.fi/product-overview/apxusd-overview.md",
+          "observedAt": "2026-10-03T22:51:01Z",
+          "datumAsOf": null,
+          "location": "Minting and Redeeming",
+          "excerpt": "Mint and redemption requests are processed quickly.",
+          "assertion": "An exact whole-amount realization duration for the immediate apxUSD reserve asset is not disclosed."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://apyx.fi",
+        "https://docs.apyx.fi/product-overview/apxusd-overview.md",
+        "https://docs.apyx.fi/product-overview/apyusd-overview.md",
+        "https://docs.apyx.fi/technical-overview/unlocking.md",
+        "https://docs.apyx.fi/collateral-and-custody/third-party-attestation.md",
+        "https://docs.apyx.fi/resources/terms-of-service.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xfd616567ecc1607f61073951a1e822f7315bb112"
+      ],
+      "rationale": "The liquidityHorizon of each full local apxUSD holding is not disclosed as a maximum economic realization time. Direct wallet transfer and pulling already-vested apxUSD are immediate bookkeeping operations, but neither guarantees realization of the full stablecoin claim into USDC; primary apxUSD redemption is whitelisted, cash-buffer-dependent and may sell preferred shares, without a published maximum. The apyUSD receipt cooldown is a different wrapper-holder exit."
+    },
+    {
+      "id": "uw-apyusd-apyx-e986be5a11992da1",
+      "assetId": "apyusd-apyx",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:db02e6a2c4c00833650a1a6c",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R18)",
+      "sources": [
+        {
+          "url": "https://docs.apyx.fi/product-overview/apxusd-overview.md",
+          "observedAt": "2026-10-03T22:51:01Z",
+          "datumAsOf": null,
+          "location": "Minting and Redeeming",
+          "excerpt": "Mint and redemption requests are processed quickly.",
+          "assertion": "An exact whole-amount realization duration for the immediate apxUSD reserve asset is not disclosed."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://apyx.fi",
+        "https://docs.apyx.fi/product-overview/apxusd-overview.md",
+        "https://docs.apyx.fi/product-overview/apyusd-overview.md",
+        "https://docs.apyx.fi/technical-overview/unlocking.md",
+        "https://docs.apyx.fi/collateral-and-custody/third-party-attestation.md",
+        "https://docs.apyx.fi/resources/terms-of-service.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xfd616567ecc1607f61073951a1e822f7315bb112"
+      ],
+      "rationale": "The liquidityHorizon of each full local apxUSD holding is not disclosed as a maximum economic realization time. Direct wallet transfer and pulling already-vested apxUSD are immediate bookkeeping operations, but neither guarantees realization of the full stablecoin claim into USDC; primary apxUSD redemption is whitelisted, cash-buffer-dependent and may sell preferred shares, without a published maximum. The apyUSD receipt cooldown is a different wrapper-holder exit."
+    },
+    {
+      "id": "uw-apyusd-apyx-a14cda07fc6d429a",
+      "assetId": "apyusd-apyx",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:apyusd-apyx:queue-redeem"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:53:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R18)",
+      "sources": [
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x54f1c7ffe10bc392f08ae9432a7e21a6e86bb982",
+          "observedAt": "2026-10-03T22:49:00Z",
+          "datumAsOf": "2026-10-03",
+          "location": "FeeCurveLib.fee / feeOnAssets; pinned receipt feeCurve() at Ethereum block 26114892",
+          "excerpt": "if (elapsed >= c.maxDuration) return c.minFee;",
+          "assertion": "Published receipt-age fee formula cannot be evaluated by the current route-level fee model. Pinned curve minFee=0,maxFee=34000000000000000,minDuration=259200,maxDuration=1728000,curvature=1e18; exact receipt curve snapshot and age are necessary."
+        }
+      ]
     }
   ]
 }
