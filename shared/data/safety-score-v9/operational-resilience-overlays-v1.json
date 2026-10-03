@@ -8828,6 +8828,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "usdd-tron-dao-reserve",
+      "reviewedAt": "2026-10-03T22:46:46Z",
+      "expiresAt": "2027-10-03T22:46:46Z",
+      "reviewer": "Unknown resolver W1R08 primary-source review",
+      "notes": "Exact asset dated deployment/operation establishes only a conservative live-history lower bound. No independent financial assurance, redemption throughput, stress recovery or incident-free history is asserted. Parent/predecessor history is not borrowed.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "Exact current Ethereum USDD deployment",
+          "publisher": "Blockscout chain explorer",
+          "publishedAt": "2025-09-02",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0xc7fa94234207d4ed6f4a0f2574931c95c8f94a6aaf1e08e8ba78eaeeff67c17b",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 13,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "susdd-tron-dao-reserve",
+      "reviewedAt": "2026-10-03T22:46:46Z",
+      "expiresAt": "2027-10-03T22:46:46Z",
+      "reviewer": "Unknown resolver W1R08 primary-source review",
+      "notes": "Exact asset dated deployment/operation establishes only a conservative live-history lower bound. No independent financial assurance, redemption throughput, stress recovery or incident-free history is asserted. Parent/predecessor history is not borrowed.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "Exact Ethereum SavingsUsdd deployment",
+          "publisher": "Blockscout chain explorer",
+          "publishedAt": "2025-09-02",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x0467e33dbe344d7f68f13a545a1c4a6c99504d2c7b64876d872238d668fd7991",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 13,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdfc-secured-finance",
+      "reviewedAt": "2026-10-03T22:46:46Z",
+      "expiresAt": "2027-10-03T22:46:46Z",
+      "reviewer": "Unknown resolver W1R08 primary-source review",
+      "notes": "Exact asset dated deployment/operation establishes only a conservative live-history lower bound. No independent financial assurance, redemption throughput, stress recovery or incident-free history is asserted. Parent/predecessor history is not borrowed.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "Exact Filecoin USDFC proxy deployment",
+          "publisher": "Blockscout chain explorer",
+          "publishedAt": "2025-03-21",
+          "url": "https://filecoin.blockscout.com/api/v2/transactions/0x33a9a6b95bbcaae7da70ec4a0161d98acaf0898f09fc548533156597c22cb81d",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 18,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "meusd-mezo",
+      "reviewedAt": "2026-10-03T22:46:46Z",
+      "expiresAt": "2027-10-03T22:46:46Z",
+      "reviewer": "Unknown resolver W1R08 primary-source review",
+      "notes": "Exact asset dated deployment/operation establishes only a conservative live-history lower bound. No independent financial assurance, redemption throughput, stress recovery or incident-free history is asserted. Parent/predecessor history is not borrowed.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "Mezo mainnet and MUSD live launch",
+          "publisher": "Mezo",
+          "publishedAt": "2025-05-28",
+          "url": "https://mezo.org/blog/mezo-mainnet-is-here",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 16,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "brz-transfero",
+      "reviewedAt": "2026-10-03T22:46:46Z",
+      "expiresAt": "2027-10-03T22:46:46Z",
+      "reviewer": "Unknown resolver W1R08 primary-source review",
+      "notes": "Exact asset dated deployment/operation establishes only a conservative live-history lower bound. No independent financial assurance, redemption throughput, stress recovery or incident-free history is asserted. Parent/predecessor history is not borrowed.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "Transfero dated report of live BRZ circulation",
+          "publisher": "Transfero",
+          "publishedAt": "2020-11-10",
+          "url": "https://panoramacrypto.transfero.com/auditoria-independente-confirma-lastro-do-brz-superior-aos-tokens-emitidos/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 70,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

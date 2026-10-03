@@ -3899,40 +3899,40 @@
     },
     {
       "assetId": "susdd-tron-dao-reserve",
-      "reviewedAt": "2026-08-08",
-      "reviewer": "OpenAI Codex C02 control review",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Unknown resolver W1R08 exact deployed-source transfer review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0xc5d6a7b61d18afa11435a889557b068bb9f29930",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "Sourcify exact-matches this direct deployment as SavingsUsdd, and at Ethereum block 25712115 its EIP-1967 implementation slot remained zero. transfer rejects only the zero address and the contract itself, transferFrom enforces holder allowance, and share burns occur only in allowance-checked withdraw/redeem. The verified source has no owner, ward, pause, blacklist, freeze, seizure, or arbitrary-holder burn path.",
+          "evidence": "Official USDD collateral-contract census identifies this savings share deployment. Sourcify verifies exact creation and runtime matches for direct, non-proxy SavingsUsdd. transfer() and transferFrom() only check nonzero/non-self destination, balance and allowance, then move share balances; they invoke no authorization hook, blacklist, pause, role or external contract. Deposit/withdraw strategy authority does not restrict ordinary share transfers.",
           "sources": [
             {
-              "label": "Sourcify verified SavingsUsdd source (chain 1)",
-              "url": "https://sourcify.dev/server/v2/contract/1/0xc5d6a7b61d18afa11435a889557b068bb9f29930"
+              "label": "Official savings-share deployment census",
+              "url": "https://docs.usdd.io/introduction/collateral-asset-contract-addresses.md"
             },
             {
-              "label": "Ethereum PublicNode RPC used for the block 25712115 reads",
-              "url": "https://ethereum-rpc.publicnode.com"
+              "label": "Exact deployed SavingsUsdd source and direct-contract verification",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xc5d6a7b61d18afa11435a889557b068bb9f29930?fields=compilation,sources,proxyResolution"
             }
           ]
         },
         {
           "chainId": "bsc",
           "contractOrTokenId": "0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d",
-          "scope": "material-bridge",
+          "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "Sourcify exact-matches the BSC deployment to the same SavingsUsdd source as Ethereum, and at BSC block 114787010 its EIP-1967 implementation slot remained zero. Holder transfer and allowance-gated transferFrom carry no pause, blacklist, freeze, seizure, or privileged burn path.",
+          "evidence": "Official USDD collateral-contract census identifies this savings share deployment. Sourcify verifies exact creation and runtime matches for direct, non-proxy SavingsUsdd. transfer() and transferFrom() only check nonzero/non-self destination, balance and allowance, then move share balances; they invoke no authorization hook, blacklist, pause, role or external contract. Deposit/withdraw strategy authority does not restrict ordinary share transfers.",
           "sources": [
             {
-              "label": "Sourcify verified SavingsUsdd source (chain 56)",
-              "url": "https://sourcify.dev/server/v2/contract/56/0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d"
+              "label": "Official savings-share deployment census",
+              "url": "https://docs.usdd.io/introduction/collateral-asset-contract-addresses.md"
             },
             {
-              "label": "BSC public RPC used for the block 114787010 reads",
-              "url": "https://bsc-dataseed.binance.org"
+              "label": "Exact deployed SavingsUsdd source and direct-contract verification",
+              "url": "https://sourcify.dev/server/v2/contract/56/0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d?fields=compilation,sources,proxyResolution"
             }
           ]
         }

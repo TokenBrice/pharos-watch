@@ -202,16 +202,18 @@
         "chain": "mezo",
         "address": "0x2c5e9afbb670c4a61ac2dcad62c258ee2391389a",
         "deploymentRefs": ["mezo:0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"],
-        "label": "Mezo third authorized minter (economic linkage unresolved)",
+        "label": "Mezo EnclaveDebtManager authorized minter",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "unknown",
-        "observedAt": "2026-10-01",
-        "observedBlock": 12220336,
+        "directMintAbility": "direct",
+        "observedAt": "2026-10-03",
+        "observedBlock": 12270639,
         "sources": [
-          {"label": "Pinned Mezo mint-list and runtime observations", "url": "https://jsonrpc-mezo.boar.network"}
+          {"label": "Pinned Mezo mint-list, implementation and authority observations", "url": "https://jsonrpc-mezo.boar.network"},
+          {"label": "Fully verified third-minter transparent proxy", "url": "https://api.explorer.mezo.org/api/v2/smart-contracts/0x2c5e9afbb670c4a61ac2dcad62c258ee2391389a"},
+          {"label": "Fully verified current EnclaveDebtManager implementation", "url": "https://api.explorer.mezo.org/api/v2/smart-contracts/0x3ea98a11d349b515e628c1cc74ca999230744c43"}
         ],
-        "evidence": "Verifier-confirmed complete mint-list history records addition at block 8550826 and no removal; mintList(address)=true at block 12220336. A fresh eth_getCode read at block 12224021 returns nonempty 1159-byte runtime. This confirms contract identity and token-level authorization only, not native-versus-transfer-rail linkage, callable mint constraints, or any two-day delay."
+        "evidence": "At canonical Mezo block 12270639 on 2026-10-03, MUSD mintList(this address)=true, this proxy's musd() returns the exact canonical MUSD token, and its EIP-1967 implementation is 0x3ea98a11d349b515e628c1cc74ca999230744c43. Both proxy and current EnclaveDebtManager implementation are fully verified in the official explorer backend. The implementation's openPosition() is ENCLAVE_ROLE-gated and directly calls musd.mint(); increaseDebt() also issues MUSD for an active Enclave position. GOVERNANCE_ROLE can change mintCap, so the observed local ceiling is not an immutable end-to-end economic bound. The proxy's embedded ProxyAdmin 0x752f66f1d513e8681cdeffdc16e7f2e1f31ae015 owner() returns the protocol Safe at the same pin. This resolves the third minter's native debt-manager identity, not a complete Safe execution/permission or collateral-reconciliation census; no two-day delay or favorable collateral-gated semantics is inferred."
       }
     ],
     "economicCapSemantics": "unbounded",

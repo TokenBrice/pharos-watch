@@ -19421,6 +19421,350 @@
         "https://cdn.sanity.io/files/8k2tqa6n/production/f22c30e6d14a8000abc4e1ad6f62d6cb41dc3da0.pdf"
       ],
       "rationale": "Exact USDon platform conversion/redemption fee schedule and same-notional all-in cost bound remain unpublished. Current docs disclose liquidity-conditioned USDC swaps and user-paid gas, but no standalone USDon fee/minimum/maximum. ETF-token Final Terms' 0.1% underlying-market-price fee limit does not establish a USDon settlement-cash fee."
+    },
+    {
+      "id": "uw-usdd-tron-dao-reserve-138c319fe3470eb2",
+      "assetId": "usdd-tron-dao-reserve",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:87935c7af5eb97539e6ff53f",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
+      "sources": [
+        {
+          "url": "https://docs.usdd.io/system-architecture/smart-allocator.md",
+          "observedAt": "2026-10-03T22:55:04Z",
+          "datumAsOf": null,
+          "location": "Smart Allocator introduction",
+          "excerpt": "Smart Allocator is a yield-sharing initiative where capital from USDD\u2019s cash reserve is deployed into investment opportunities to earn returns in the form of interest and platform rewards.",
+          "assertion": "Describes investment deployment, not a guaranteed maximum time to realize the entire Smart Allocator reserve slice."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.usdd.io/llms.txt",
+        "https://docs.usdd.io/system-architecture/smart-allocator.md",
+        "https://docs.usdd.io/introduction/collateral-asset-contract-addresses.md",
+        "https://openapi.usdd.io/api/v1/smart-allocator/detail-overview",
+        "https://docs.usdd.io/legals/terms-of-use.md",
+        "https://www.chainsecurity.com/security-audit/usdd-rwa-smart-contracts"
+      ],
+      "rationale": "No maximum liquidityHorizon for realization of the entire Smart Allocator slice is published. Official docs describe team-selected investments; the current API identifies Aave/JustLend/Spark/Plasma holdings, earnings and rates, not a whole-slice realization guarantee. Interface terms and the access-control audit add no bound. Liquid investment marketing or one protocol withdrawal path cannot establish the slice-wide horizon."
+    },
+    {
+      "id": "uw-meusd-mezo-881509c484b0c573",
+      "assetId": "meusd-mezo",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:26756f39072e8bc2e09da2d2",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
+      "sources": [
+        {
+          "url": "https://mezo.org/docs/developers/musd/musd-redemptions/",
+          "observedAt": "2026-10-03T22:56:02Z",
+          "datumAsOf": null,
+          "location": "Common Issues: TCR condition",
+          "excerpt": "System TCR is below 110%. Wait until it recovers.",
+          "assertion": "Redemption is conditional on system collateralization and eligible Troves; no maximum realization horizon for the entire ActivePool BTC slice is specified."
+        },
+        {
+          "url": "https://mezo.org/legal/terms",
+          "observedAt": "2026-10-03T22:56:03Z",
+          "datumAsOf": "2026-03-16",
+          "location": "Section 3.1.1 MUSD Protocol",
+          "excerpt": "We are not responsible for minting nor redemption of MUSD, which instead occurs through smart contract interactions.",
+          "assertion": "Terms describe automated mint/redemption; they do not add a financial assurance or whole-supply reconciliation report/cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://mezo.org/docs/developers/musd/",
+        "https://mezo.org/docs/developers/musd/musd-redemptions/",
+        "https://mezo.org/docs/users/borrow/",
+        "https://mezo.org/docs/users/resources/audits/",
+        "https://mezo.org/legal/terms",
+        "https://mezo.org/docs/users/resources/contracts-reference"
+      ],
+      "rationale": "No maximum liquidityHorizon for the entire BTC-in-ActivePool reserve slice is specified. Redemptions require TCR >=110%, eligible Troves and feasible iteration/gas limits; some MUSD can remain unredeemed. Terms disclaim availability/reliability. Native BTC being transferable and an individual successful redemption do not bound realization of the whole protocol collateral slice."
+    },
+    {
+      "id": "uw-meusd-mezo-0a03c0b848509961",
+      "assetId": "meusd-mezo",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
+      "sources": [
+        {
+          "url": "https://mezo.org/docs/developers/musd/",
+          "observedAt": "2026-10-03T22:56:02Z",
+          "datumAsOf": null,
+          "location": "Architectural Overview",
+          "excerpt": "The BTC is routed to the `ActivePool`, where it stays until a user either:",
+          "assertion": "Documents per-Trove collateral/debt mechanisms, not a dated whole-supply reconciliation cadence covering owner-authorized mint paths and bridged liabilities."
+        },
+        {
+          "url": "https://mezo.org/legal/terms",
+          "observedAt": "2026-10-03T22:56:03Z",
+          "datumAsOf": "2026-03-16",
+          "location": "Section 3.1.1 MUSD Protocol",
+          "excerpt": "We are not responsible for minting nor redemption of MUSD, which instead occurs through smart contract interactions.",
+          "assertion": "Terms describe automated mint/redemption; they do not add a financial assurance or whole-supply reconciliation report/cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://mezo.org/docs/developers/musd/",
+        "https://mezo.org/docs/users/resources/contracts-reference",
+        "https://mezo.org/docs/users/resources/audits/",
+        "https://mezo.org/legal/terms",
+        "https://raw.githubusercontent.com/mezo-org/ntt-bridge-musd-mainnet/main/deployment.json",
+        "https://api.explorer.mezo.org/api/v2/smart-contracts/0x3ea98a11d349b515e628c1cc74ca999230744c43"
+      ],
+      "rationale": "No whole-supply reconciliation procedure and actual recurring cadence is published for all MUSD mint paths and cross-chain liabilities on a common backing observation clock. Docs disclose Trove accounting; security audits are not financial reconciliation. The owner-controlled mint list additionally authorizes InterestRateManager and EnclaveDebtManager. Per-position debt/fees and NTT lock/burn mechanics do not establish full supply-to-backing assurance or justify not-applicable."
+    },
+    {
+      "id": "uw-brz-transfero-3eac793dc2bddbe7",
+      "assetId": "brz-transfero",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
+      "sources": [
+        {
+          "url": "https://transfero.com/brz-stablecoin",
+          "observedAt": "2026-10-03T22:56:03Z",
+          "datumAsOf": null,
+          "location": "Transparency section",
+          "excerpt": "On-chain activity is publicly verifiable, with independent audits conducted by Parsiq.",
+          "assertion": "Nearby audit claim has no current whole-supply reconciliation date/cadence; the linked report is a 31 March 2024 snapshot."
+        },
+        {
+          "url": "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf",
+          "observedAt": "2026-10-03T22:56:03Z",
+          "datumAsOf": "2024-03-31",
+          "location": "Page 2, reserves composition",
+          "excerpt": "The BRZ reserve is held in custody at a financial institution authorized by the Central Bank of Brazil.",
+          "assertion": "The current issuer-linked reserve report discloses a bank-held aggregate at 31 March 2024, not a fresh reserve composition or current whole-supply assurance procedure."
+        },
+        {
+          "url": "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf",
+          "observedAt": "2026-10-03T23:02:26Z",
+          "datumAsOf": null,
+          "location": "Section 6.2.2 Reserve Managers",
+          "excerpt": "A periodical proof of funds shall be disclosed for checking the existence of enough funds to back the tokens.",
+          "assertion": "Promises periodic proof of funds without stating a verified recurring cadence, whole-liability reconciliation procedure, or a current dated report."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://transfero.com/brz-stablecoin",
+        "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf",
+        "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf",
+        "https://transfero.com/policy-and-terms/privacy",
+        "https://transfero.com/policy-and-terms/licenses",
+        "https://panoramacrypto.transfero.com/auditoria-independente-confirma-lastro-do-brz-superior-aos-tokens-emitidos/"
+      ],
+      "rationale": "The current issuer page links only a 31 March 2024 bank-held aggregate reserve snapshot; no fresh dated reserve composition is disclosed. Its audit claim and historical independent backing checks do not provide current whole-supply financial assurance. The whitepaper describes mint orders after BRL deposits and promises periodical proof of funds, but states no verified recurring reconciliation cadence covering all issued/treasury tokens and Reserve Manager accounts. No report dates are advanced."
+    },
+    {
+      "id": "uw-brz-transfero-f14034b375f0f2e8",
+      "assetId": "brz-transfero",
+      "scope": {
+        "componentKey": "mechanism-review:assuranceAndReconciliation",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "mechanism-review:assuranceAndReconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
+      "sources": [
+        {
+          "url": "https://transfero.com/brz-stablecoin",
+          "observedAt": "2026-10-03T22:56:03Z",
+          "datumAsOf": null,
+          "location": "Transparency section",
+          "excerpt": "On-chain activity is publicly verifiable, with independent audits conducted by Parsiq.",
+          "assertion": "Nearby audit claim has no current whole-supply reconciliation date/cadence; the linked report is a 31 March 2024 snapshot."
+        },
+        {
+          "url": "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf",
+          "observedAt": "2026-10-03T22:56:03Z",
+          "datumAsOf": "2024-03-31",
+          "location": "Page 2, reserves composition",
+          "excerpt": "The BRZ reserve is held in custody at a financial institution authorized by the Central Bank of Brazil.",
+          "assertion": "The current issuer-linked reserve report discloses a bank-held aggregate at 31 March 2024, not a fresh reserve composition or current whole-supply assurance procedure."
+        },
+        {
+          "url": "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf",
+          "observedAt": "2026-10-03T23:02:26Z",
+          "datumAsOf": null,
+          "location": "Section 6.2.2 Reserve Managers",
+          "excerpt": "A periodical proof of funds shall be disclosed for checking the existence of enough funds to back the tokens.",
+          "assertion": "Promises periodic proof of funds without stating a verified recurring cadence, whole-liability reconciliation procedure, or a current dated report."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://transfero.com/brz-stablecoin",
+        "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf",
+        "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf",
+        "https://transfero.com/policy-and-terms/privacy",
+        "https://transfero.com/policy-and-terms/licenses",
+        "https://panoramacrypto.transfero.com/auditoria-independente-confirma-lastro-do-brz-superior-aos-tokens-emitidos/"
+      ],
+      "rationale": "The current issuer page links only a 31 March 2024 bank-held aggregate reserve snapshot; no fresh dated reserve composition is disclosed. Its audit claim and historical independent backing checks do not provide current whole-supply financial assurance. The whitepaper describes mint orders after BRL deposits and promises periodical proof of funds, but states no verified recurring reconciliation cadence covering all issued/treasury tokens and Reserve Manager accounts. No report dates are advanced."
+    },
+    {
+      "id": "uw-brz-transfero-21c1a9e164ae43e4",
+      "assetId": "brz-transfero",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
+      "sources": [
+        {
+          "url": "https://transfero.com/brz-stablecoin",
+          "observedAt": "2026-10-03T22:56:03Z",
+          "datumAsOf": null,
+          "location": "Transparency section",
+          "excerpt": "On-chain activity is publicly verifiable, with independent audits conducted by Parsiq.",
+          "assertion": "Nearby audit claim has no current whole-supply reconciliation date/cadence; the linked report is a 31 March 2024 snapshot."
+        },
+        {
+          "url": "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf",
+          "observedAt": "2026-10-03T22:56:03Z",
+          "datumAsOf": "2024-03-31",
+          "location": "Page 2, reserves composition",
+          "excerpt": "The BRZ reserve is held in custody at a financial institution authorized by the Central Bank of Brazil.",
+          "assertion": "The current issuer-linked reserve report discloses a bank-held aggregate at 31 March 2024, not a fresh reserve composition or current whole-supply assurance procedure."
+        },
+        {
+          "url": "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf",
+          "observedAt": "2026-10-03T23:02:26Z",
+          "datumAsOf": null,
+          "location": "Section 6.2.2 Reserve Managers",
+          "excerpt": "A periodical proof of funds shall be disclosed for checking the existence of enough funds to back the tokens.",
+          "assertion": "Promises periodic proof of funds without stating a verified recurring cadence, whole-liability reconciliation procedure, or a current dated report."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://transfero.com/brz-stablecoin",
+        "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf",
+        "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf",
+        "https://transfero.com/policy-and-terms/privacy",
+        "https://transfero.com/policy-and-terms/licenses",
+        "https://panoramacrypto.transfero.com/auditoria-independente-confirma-lastro-do-brz-superior-aos-tokens-emitidos/"
+      ],
+      "rationale": "The current issuer page links only a 31 March 2024 bank-held aggregate reserve snapshot; no fresh dated reserve composition is disclosed. Its audit claim and historical independent backing checks do not provide current whole-supply financial assurance. The whitepaper describes mint orders after BRL deposits and promises periodical proof of funds, but states no verified recurring reconciliation cadence covering all issued/treasury tokens and Reserve Manager accounts. No report dates are advanced."
+    },
+    {
+      "id": "uw-usdfc-secured-finance-4699791c1a8172a5",
+      "assetId": "usdfc-secured-finance",
+      "scope": {
+        "componentKey": "control:mint-meta:usdfc-secured-finance:64f231a10265f0186544",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:usdfc-secured-finance:64f231a10265f0186544",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
+      "sources": [
+        {
+          "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts/contract-upgrade-history.md",
+          "observedAt": "2026-10-03T22:56:04Z",
+          "datumAsOf": "2026-09-25",
+          "location": "Execution status",
+          "excerpt": "Both transactions were successfully executed through the Safe multisig wallet on Filecoin.",
+          "assertion": "Discloses exercised Safe upgrade authority, not beneficial signer identities, independence, key custody or a signing policy for the identified 2-of-3 controller."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts.md",
+        "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts/contract-upgrade-history.md",
+        "https://docs.secured.finance/llms.txt",
+        "https://docs.secured.finance/resources/legal/risk-disclaimer.md",
+        "https://secured.finance",
+        "https://api.node.glif.io/rpc/v1",
+        "https://sourcify.dev/server/v2/contract/314/0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b?fields=compilation,sources,proxyResolution"
+      ],
+      "rationale": "The identified owner/ProxyAdmin-owner Safe has an on-chain 2-of-3 quorum and exercised upgrade authority, but beneficial signer identities, independence, key-custody safeguards and signing policy are not disclosed. Thus the reviewer-scoped signer-safeguard question is researched non-disclosure, not missing controller identity. Addresses/quorum and published upgrade transactions cannot establish independent human control or off-chain safeguards; no favorable timelock is inferred."
+    },
+    {
+      "id": "uw-susdd-tron-dao-reserve-c122c31bff8b344e",
+      "assetId": "susdd-tron-dao-reserve",
+      "scope": {
+        "componentKey": "access:transfer",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "access:transfer",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:05:28Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
+      "sources": [
+        {
+          "url": "https://sourcify.dev/server/v2/contract/1/0xc5d6a7b61d18afa11435a889557b068bb9f29930?fields=compilation,sources,proxyResolution",
+          "observedAt": "2026-10-03T23:05:28Z",
+          "datumAsOf": null,
+          "location": "Chain 1, exact-match direct SavingsUsdd, src/dsr/SavingsUsdd.sol transferFrom()",
+          "excerpt": "emit Transfer(from, to, value);",
+          "assertion": "Exact-match direct shares transfer by local balance/allowance logic with no holder restriction. The producer has only aggregate supply and lacks measured material deployment scope; its gate rejects even both reviewed native deployments. The multi-deployment asset cannot use singleton attribution."
+        },
+        {
+          "url": "https://sourcify.dev/server/v2/contract/56/0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d?fields=compilation,sources,proxyResolution",
+          "observedAt": "2026-10-03T23:05:28Z",
+          "datumAsOf": null,
+          "location": "Chain 56, exact-match direct SavingsUsdd, src/dsr/SavingsUsdd.sol transferFrom()",
+          "excerpt": "emit Transfer(from, to, value);",
+          "assertion": "Exact-match direct shares transfer by local balance/allowance logic with no holder restriction. The producer has only aggregate supply and lacks measured material deployment scope; its gate rejects even both reviewed native deployments. The multi-deployment asset cannot use singleton attribution."
+        }
+      ]
     }
   ]
 }
