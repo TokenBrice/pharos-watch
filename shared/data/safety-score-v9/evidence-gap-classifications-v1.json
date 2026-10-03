@@ -5269,322 +5269,6 @@
       "rationale": "The exact Stakestone ETH scoped collateral liquidityHorizon remains undisclosed as an end-to-end whole-position realization bound. Registry, collateral descriptions, risk-parameter methodology, in-kind NECT redemption terms and native withdrawal/implementation documentation explain mechanics but publish no complete per-slice realization maximum or funded instant guarantee. In-kind receipt withdrawability and typical settlement are not proof of immediate whole-slice USD liquidity."
     },
     {
-      "id": "uw-suiusde-sui-3db7f74f6276d7be",
-      "assetId": "suiusde-sui",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:307254215894779e1640e7d8",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
-      "sources": [
-        {
-          "url": "https://www.esuidollar.io/legal/mint-user-agreement",
-          "observedAt": "2026-10-03T22:52:53Z",
-          "datumAsOf": null,
-          "location": "Sections 1 and 3, reserves and service availability; last updated April 2026",
-          "excerpt": "The Issuer does not guarantee that minting or redemption will always be available.",
-          "assertion": "Issuer describes primarily USDe reserves, institutional custody and discretionary redemption, but no complete slice-specific realization horizon."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.esuidollar.io/",
-        "https://www.esuidollar.io/legal/mint-user-agreement",
-        "https://www.esuidollar.io/legal/terms-of-service",
-        "https://whitelabel.ethena.fi/",
-        "https://whitelabel.ethena.fi/transparency",
-        "https://whitelabel.ethena.fi/api/transparency"
-      ],
-      "rationale": "No complete liquidityHorizon is published for the Coinbase Prime off-chain USDC, USDe, or other USDC reserve slices. The live transparency endpoint gives amounts and custodian locations, not whole-slice withdrawal or liquidation maxima. Unified USDe liquidity and issuer pro-rata redemption do not establish each custody slice's liquidity horizon; legal terms permit suspension and supply no timing bound."
-    },
-    {
-      "id": "uw-suiusde-sui-9feca9a1ada5eba0",
-      "assetId": "suiusde-sui",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:3932ebed0fe9d1fb275fdca0",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
-      "sources": [
-        {
-          "url": "https://www.esuidollar.io/legal/mint-user-agreement",
-          "observedAt": "2026-10-03T22:52:53Z",
-          "datumAsOf": null,
-          "location": "Sections 1 and 3, reserves and service availability; last updated April 2026",
-          "excerpt": "The Issuer does not guarantee that minting or redemption will always be available.",
-          "assertion": "Issuer describes primarily USDe reserves, institutional custody and discretionary redemption, but no complete slice-specific realization horizon."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.esuidollar.io/",
-        "https://www.esuidollar.io/legal/mint-user-agreement",
-        "https://www.esuidollar.io/legal/terms-of-service",
-        "https://whitelabel.ethena.fi/",
-        "https://whitelabel.ethena.fi/transparency",
-        "https://whitelabel.ethena.fi/api/transparency"
-      ],
-      "rationale": "No complete liquidityHorizon is published for the Coinbase Prime off-chain USDC, USDe, or other USDC reserve slices. The live transparency endpoint gives amounts and custodian locations, not whole-slice withdrawal or liquidation maxima. Unified USDe liquidity and issuer pro-rata redemption do not establish each custody slice's liquidity horizon; legal terms permit suspension and supply no timing bound."
-    },
-    {
-      "id": "uw-suiusde-sui-87abe6688d6d92b7",
-      "assetId": "suiusde-sui",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:8278fc97cbe0fe9c83e2aee2",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
-      "sources": [
-        {
-          "url": "https://www.esuidollar.io/legal/mint-user-agreement",
-          "observedAt": "2026-10-03T22:52:53Z",
-          "datumAsOf": null,
-          "location": "Sections 1 and 3, reserves and service availability; last updated April 2026",
-          "excerpt": "The Issuer does not guarantee that minting or redemption will always be available.",
-          "assertion": "Issuer describes primarily USDe reserves, institutional custody and discretionary redemption, but no complete slice-specific realization horizon."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.esuidollar.io/",
-        "https://www.esuidollar.io/legal/mint-user-agreement",
-        "https://www.esuidollar.io/legal/terms-of-service",
-        "https://whitelabel.ethena.fi/",
-        "https://whitelabel.ethena.fi/transparency",
-        "https://whitelabel.ethena.fi/api/transparency"
-      ],
-      "rationale": "No complete liquidityHorizon is published for the Coinbase Prime off-chain USDC, USDe, or other USDC reserve slices. The live transparency endpoint gives amounts and custodian locations, not whole-slice withdrawal or liquidation maxima. Unified USDe liquidity and issuer pro-rata redemption do not establish each custody slice's liquidity horizon; legal terms permit suspension and supply no timing bound."
-    },
-    {
-      "id": "uw-usdsui-sui-0887556cd31999f8",
-      "assetId": "usdsui-sui",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdsui-sui:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
-      "sources": [
-        {
-          "url": "https://www.bridge.xyz/legal/fee-disclosure-statement/overview",
-          "observedAt": "2026-10-03T22:52:53Z",
-          "datumAsOf": null,
-          "location": "Fee Disclosure Statement, section 1",
-          "excerpt": "The decision to impose such a charge, including its amount, is determined solely by the Partner.",
-          "assertion": "The partner charge is not quantified; gas pass-through and currency-conversion spreads do not specify the complete USDsui-to-USD redemption charge."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://blog.sui.io/sui-dollar-launch-bridge/",
-        "https://apidocs.bridge.xyz/platform/issuance/minting-and-burning",
-        "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency",
-        "https://transparency.bridge.xyz/v0/stablecoins/usd_sui",
-        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
-        "https://www.bridge.xyz/legal/fee-disclosure-statement/overview"
-      ],
-      "rationale": "No public numeric all-in cost or complete evaluable fee formula for USDsui direct fiat redemption was found. Bridge leaves a partner's applicable charge and amount to that partner and discloses variable gas, not an exact USDsui schedule. The up-to-1% currency-conversion spread is not a USD-to-USD redemption fee. This is missing cost disclosure, not an unrepresentable complete formula."
-    },
-    {
-      "id": "uw-usdsui-sui-524c959d309062ba",
-      "assetId": "usdsui-sui",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdsui-sui:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
-      "sources": [
-        {
-          "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
-          "observedAt": "2026-10-03T22:52:53Z",
-          "datumAsOf": null,
-          "location": "Section 3, Bridge Stablecoin Redemption Rights",
-          "excerpt": "we will process your sale/redemption Order within two (2) Business Days following our determination that your Order complies with the applicable User Terms",
-          "assertion": "This bounds processing after Bridge determines compliance, not final USD delivery after submission; the sentence additionally excepts factors outside reasonable control."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
-        "https://www.bridge.xyz/legal/overview",
-        "https://apidocs.bridge.xyz/platform/issuance/minting-and-burning",
-        "https://apidocs.bridge.xyz/platform/issuance/reserve-management",
-        "https://transparency.bridge.xyz/v0/stablecoins/usd_sui"
-      ],
-      "rationale": "A maximum final-settlement SLA for USDsui redemption into USD is not disclosed. The two-business-day legal commitment is order processing starting only after compliance determination, and expressly permits external delays. Treasury realization within one business day is a different reserve-side datum. Neither bounds final fiat receipt for the modeled redemption route."
-    },
-    {
-      "id": "uw-usdsui-sui-44a3944854d7c15a",
-      "assetId": "usdsui-sui",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:1c4dd3588a3d275a0d87b130",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
-      "sources": [
-        {
-          "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
-          "observedAt": "2026-10-03T22:52:53Z",
-          "datumAsOf": null,
-          "location": "Section 2, permitted reserve asset classes",
-          "excerpt": "(c) U.S. government money-market funds; (d) deposit accounts; (e) tokenized versions of the assets set forth herein",
-          "assertion": "The three-month Treasury-bill limit does not bound every claim in the aggregate Treasury basket; permitted fund shares and tokenized claims are distinct."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://transparency.bridge.xyz/v0/stablecoins/usd_sui",
-        "https://apidocs.bridge.xyz/platform/issuance/reserve-management",
-        "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency",
-        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc"
-      ],
-      "rationale": "No maturityDaysMax for the entire current USDsui aggregate Treasury slice is publicly disclosed. Bridge permits bills, overnight repo, government MMFs and tokenized versions; its reserve docs list BlackRock, Fidelity, USTB and BUIDL, while the exact USDsui API supplies only aggregate cash/Treasury amounts. Applying the three-month bill restriction across this opaque mixed basket would invent a whole-slice maximum."
-    },
-    {
-      "id": "uw-usdv-solomon-eafa6333f01f1224",
-      "assetId": "usdv-solomon",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
-      "sources": [
-        {
-          "url": "https://blog.solomonlabs.org/p/custodian-attestation-of-assets-backing",
-          "observedAt": "2026-10-03T22:52:53Z",
-          "datumAsOf": "2026-03-01",
-          "location": "Scope of a custodial attestation",
-          "excerpt": "It is not a full reserve report, financial statement audit, or comprehensive reconciliation of all system assets, liabilities, income, or exposures.",
-          "assertion": "Monthly Ceffu reporting is expressly a limited custody snapshot, not comprehensive recurring legacy mint-supply/backing reconciliation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://blog.solomonlabs.org/p/introducing-solomon",
-        "https://blog.solomonlabs.org/p/winding-down-the-original-usdv",
-        "https://blog.solomonlabs.org/p/custodian-attestation-of-assets-backing",
-        "https://api.github.com/repos/SolomonLabs/attestations/git/trees/main?recursive=1",
-        "https://docs.solomonlabs.org/usdv/transparency-and-risk",
-        "https://data.solomonlabs.io/api/solomon-protocol/protocol-data",
-        "https://solomonlabs.org/terms-of-use",
-        "https://solscan.io/account/D4AiKFxjZBrhd6MeRAAj6wNxFcZJuRMBrXW9UpqeS8Ax"
-      ],
-      "rationale": "No public complete recurring reconciliation process/cadence covering legacy USDv minted liabilities against all custody, exchange and on-chain backing was found. The archive ends with an April 2026 Ceffu-only snapshot; March's issuer explanation expressly excludes full reconciliation. Wind-down says positions had to remain reconciled without disclosing control cadence or independent whole-book reconciliation. Successor USDv evidence cannot establish legacy reconciliation."
-    },
-    {
-      "id": "uw-usdv-solomon-116dff134f42785d",
-      "assetId": "usdv-solomon",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
-      "sources": [
-        {
-          "url": "https://blog.solomonlabs.org/p/custodian-attestation-of-assets-backing",
-          "observedAt": "2026-10-03T22:52:53Z",
-          "datumAsOf": "2026-03-01",
-          "location": "Attestation introduction and scope",
-          "excerpt": "Those components are not fully captured by this custodial attestation alone.",
-          "assertion": "The legacy attestation acknowledges omitted exchange and on-chain balances and does not supply a current whole-legacy-denominator composition."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://blog.solomonlabs.org/p/winding-down-the-original-usdv",
-        "https://blog.solomonlabs.org/p/custodian-attestation-of-assets-backing",
-        "https://api.github.com/repos/SolomonLabs/attestations/git/trees/main?recursive=1",
-        "https://app.solomonlabs.org/stats",
-        "https://data.solomonlabs.io/api/solomon-protocol/protocol-data",
-        "https://docs.solomonlabs.org/usdv/transparency-and-risk",
-        "https://solomonlabs.org/terms-of-use"
-      ],
-      "rationale": "A current complete reserve composition and denominator for the exact legacy Ex5DaKY USDv mint remain undisclosed. The original delta-neutral system is explicitly separate from replacement USDv. Archived attestations cover only Ceffu custody; current stats/API and docs describe the replacement model and cannot be joined to legacy liabilities. Neither public surface gives fresh whole-legacy custody/exchange/hedge/on-chain weights."
-    },
-    {
-      "id": "uw-usdv-solomon-800cd0e64a265940",
-      "assetId": "usdv-solomon",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdv-solomon:stablecoin-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
-      "sources": [
-        {
-          "url": "https://blog.solomonlabs.org/p/winding-down-the-original-usdv",
-          "observedAt": "2026-10-03T22:52:53Z",
-          "datumAsOf": "2026-08-28",
-          "location": "Legacy/new token distinction",
-          "excerpt": "There will be no automatic conversion.",
-          "assertion": "Legacy holders must exit separately; successor mint/redeem pricing and venue swap quotes cannot stand in for the legacy direct-redemption fee."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://blog.solomonlabs.org/p/introducing-solomon",
-        "https://blog.solomonlabs.org/p/winding-down-the-original-usdv",
-        "https://docs.solomonlabs.org/usdv/usdv-and-susdv/minting-usdv",
-        "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming",
-        "https://solomonlabs.org/terms-of-use",
-        "https://app.solomonlabs.org/stats",
-        "https://solscan.io/account/D4AiKFxjZBrhd6MeRAAj6wNxFcZJuRMBrXW9UpqeS8Ax"
-      ],
-      "rationale": "No public exact all-in fee schedule or complete cost formula for the legacy USDv direct USDC redemption route was found. The legacy announcement describes qualified-holder mint/burn/redeem without a fee schedule; wind-down recommends market swaps without promising a direct-redemption price. Current docs and transaction fee UI concern the separate new token. Interface terms do not define the legacy API/direct-redemption schedule."
-    },
-    {
       "id": "uw-wusd-worldwide-f3f059c5de612f83",
       "assetId": "wusd-worldwide",
       "scope": {
@@ -6624,375 +6308,6 @@
           "assertion": "Public proportional ratio/penalty formula is disclosed, but no captured same-notional stress-bound evaluation is available. Current reviewed-variable-cost schema does not encode this formula as a numerical fee bound; W15 permits B for disclosed unquantified fees."
         }
       ]
-    },
-    {
-      "id": "uw-reusd-resupply-9e42f91c4cab374d",
-      "assetId": "reusd-resupply",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:8cea120bb135ceadd42d289b",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:55:17Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
-      "sources": [
-        {
-          "url": "https://docs.resupply.finance/how-to-guides/using-resupply/repaying-withdrawing-collateral.md",
-          "observedAt": "2026-10-03T22:55:17Z",
-          "datumAsOf": null,
-          "location": "Public issuer disclosure",
-          "excerpt": "After repaying above your LTV, you may withdraw the freed collateral.",
-          "assertion": "Repayment releases collateral but does not time-bound full Curve/Fraxlend lending-position unwind."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.resupply.finance/how-to-guides/using-resupply/repaying-withdrawing-collateral.md",
-        "https://docs.resupply.finance/resupply-protocol/collateralized-debt-positions.md",
-        "https://docs.resupply.finance/faq/risks.md",
-        "https://docs.resupply.finance/how-to-guides/using-resupply/selecting-a-lending-market.md",
-        "https://docs.curve.finance/developer/lending/contracts/vault/",
-        "https://docs.frax.finance/fraxlend/key-concepts",
-        "https://raw.githubusercontent.com/resupplyfi/resupply/main/deployment/contracts.json"
-      ],
-      "rationale": "Exact liquidityHorizon of the two aggregate Curve Lend and Fraxlend collateral-position slices is not published. Withdrawal depends on collateral/LTV and available liquidity in each underlying market. Docs disclose redeemability and utilization, not a fixed whole-slice horizon or complete liquid-fraction packet. Do not infer immediate from ERC4626 or guess a delay."
-    },
-    {
-      "id": "uw-reusd-resupply-208e3227bc19411f",
-      "assetId": "reusd-resupply",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:a7c7ee296c1d6b7922c8f1b2",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:55:17Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
-      "sources": [
-        {
-          "url": "https://docs.resupply.finance/how-to-guides/using-resupply/repaying-withdrawing-collateral.md",
-          "observedAt": "2026-10-03T22:55:17Z",
-          "datumAsOf": null,
-          "location": "Public issuer disclosure",
-          "excerpt": "After repaying above your LTV, you may withdraw the freed collateral.",
-          "assertion": "Repayment releases collateral but does not time-bound full Curve/Fraxlend lending-position unwind."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.resupply.finance/how-to-guides/using-resupply/repaying-withdrawing-collateral.md",
-        "https://docs.resupply.finance/resupply-protocol/collateralized-debt-positions.md",
-        "https://docs.resupply.finance/faq/risks.md",
-        "https://docs.resupply.finance/how-to-guides/using-resupply/selecting-a-lending-market.md",
-        "https://docs.curve.finance/developer/lending/contracts/vault/",
-        "https://docs.frax.finance/fraxlend/key-concepts",
-        "https://raw.githubusercontent.com/resupplyfi/resupply/main/deployment/contracts.json"
-      ],
-      "rationale": "Exact liquidityHorizon of the two aggregate Curve Lend and Fraxlend collateral-position slices is not published. Withdrawal depends on collateral/LTV and available liquidity in each underlying market. Docs disclose redeemability and utilization, not a fixed whole-slice horizon or complete liquid-fraction packet. Do not infer immediate from ERC4626 or guess a delay."
-    },
-    {
-      "id": "uw-jaaa-janus-henderson-anemoy-6b0116947477a4c3",
-      "assetId": "jaaa-janus-henderson-anemoy",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:4a82d397df2ecd3c6575e829",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:55:17Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
-      "sources": [
-        {
-          "url": "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le",
-          "observedAt": "2026-10-03T22:55:17Z",
-          "datumAsOf": "2026-06-30",
-          "location": "June 2026 factsheet, Overview and Key Facts",
-          "excerpt": "Open ended BVI licensed fund for non-US Professional Investors",
-          "assertion": "Exact JAAA is an open-ended fund share, not the similarly named US ETF or each underlying CLO."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le",
-        "https://www.anemoy.io/funds/jaaa",
-        "https://www.anemoy.io/news/janus-henderson-anemoy-aaa-clo-onchain",
-        "https://docs.centrifuge.io/user/investor/",
-        "https://docs.centrifuge.io/developer/protocol/architecture/vaults/",
-        "https://www.bvifsc.vg/regulated-entities/anemoy-capital-spc-limited",
-        "https://data.chain.link/feeds/ethereum/mainnet/jaaa-nav-v2"
-      ],
-      "rationale": "Maximum maturityDaysMax of the exact JAAA tokenized fund-share exposure is not disclosed. June factsheet provides open-ended structure, daily liquidity and CLO credit risks but no all-in-scope maximum share termination date or complete underlying legal-final maturity ladder. Inception, averages and redemption dates are not maxima."
-    },
-    {
-      "id": "uw-jaaa-janus-henderson-anemoy-5eb9ebd6fb0d3a03",
-      "assetId": "jaaa-janus-henderson-anemoy",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:jaaa-janus-henderson-anemoy:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:55:17Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
-      "sources": [
-        {
-          "url": "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le",
-          "observedAt": "2026-10-03T22:55:17Z",
-          "datumAsOf": "2026-06-30",
-          "location": "June 2026 factsheet, description and Key Facts",
-          "excerpt": "Investments and redemptions are processed in stablecoins.",
-          "assertion": "Disclosure publishes entry fee and annual management/provider fees, not a fixed redemption fee."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le",
-        "https://www.anemoy.io/funds/jaaa",
-        "https://www.anemoy.io/news/janus-henderson-anemoy-aaa-clo-onchain",
-        "https://docs.centrifuge.io/user/investor/",
-        "https://docs.centrifuge.io/developer/protocol/architecture/vaults/",
-        "https://www.bvifsc.vg/regulated-entities/anemoy-capital-spc-limited",
-        "https://data.chain.link/feeds/ethereum/mainnet/jaaa-nav-v2"
-      ],
-      "rationale": "Exact JAAA same-notional redemption cost is not published on accessible fund, factsheet, investor and legal/regulatory surfaces. Entry fee $0 is not an exit-fee guarantee, and annual 50bp management or provider expenses cannot substitute for a per-redemption fee. No public exact exit tariff was found."
-    },
-    {
-      "id": "uw-jaaa-janus-henderson-anemoy-57a8e97cc5a413f3",
-      "assetId": "jaaa-janus-henderson-anemoy",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:55:17Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
-      "sources": [
-        {
-          "url": "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le",
-          "observedAt": "2026-10-03T22:55:17Z",
-          "datumAsOf": "2026-06-30",
-          "location": "June 2026 factsheet, fund description",
-          "excerpt": "CLOs are held directly by the Fund and Asset Under Management (AUM) can be checked onchain.",
-          "assertion": "NAV/AUM, provider identities and issuance mechanics are not matched liability/backing cadence."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le",
-        "https://www.anemoy.io/funds/jaaa",
-        "https://www.anemoy.io/news/janus-henderson-anemoy-aaa-clo-onchain",
-        "https://docs.centrifuge.io/user/investor/",
-        "https://docs.centrifuge.io/developer/protocol/architecture/vaults/",
-        "https://www.bvifsc.vg/regulated-entities/anemoy-capital-spc-limited",
-        "https://data.chain.link/feeds/ethereum/mainnet/jaaa-nav-v2"
-      ],
-      "rationale": "Exact whole-supply mint/backing reconciliation process and cadence are not public for JAAA. Fund page, June factsheet, NAV feed, protocol accounting and FSC register disclose NAV, custody, administrator and investments, but no dated cross-chain share-liability/mint-burn/register-to-assets procedure on a common clock."
-    },
-    {
-      "id": "uw-brla-brla-digital-11987ddf1dbfb820",
-      "assetId": "brla-brla-digital",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:brla-brla-digital:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:55:17Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
-      "sources": [
-        {
-          "url": "https://app.avenia.io/Avenia-TC.pdf",
-          "observedAt": "2026-10-03T22:55:17Z",
-          "datumAsOf": "2025-06-23",
-          "location": "Avenia terms, page 33, section 12.1",
-          "excerpt": "Any applicable fee will be displayed at the time of the Transaction or in a manner convenient to the User.",
-          "assertion": "Terms allow a changeable intermediation fee disclosed at transaction time, not a fixed redemption tariff."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://app.avenia.io/Avenia-TC.pdf",
-        "https://avenia.io/brla",
-        "https://integration-guide.avenia.io/docs/Operations/quotesAndTickets",
-        "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a"
-      ],
-      "rationale": "Exact BRLA same-notional redemption cost is not publicly fixed. Avenia terms section 12.1 and quote/ticket docs make fees transaction-specific and discretionary. Product/transparency surfaces describe collateral and 1:1 design, not a redemption tariff. Parity or a quote endpoint cannot establish zero fee."
-    },
-    {
-      "id": "uw-pgold-pleasing-7e3f9e5a140e30b3",
-      "assetId": "pgold-pleasing",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:55:17Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
-      "sources": [
-        {
-          "url": "https://217962626-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FtBZ74QEzHbSbwx0W0nBo%2Fuploads%2FfLypB8MTfIw1Jrd2LT65%2FPleaseing%20Gold%20Assurance%20Report%2025%20June%202026.pdf?alt=media&token=df75631f-9b3c-4524-81e4-f69b6baaf1e5",
-          "observedAt": "2026-10-03T22:55:17Z",
-          "datumAsOf": "2026-06-25",
-          "location": "Visto CPA assurance report, page 2, procedure 8",
-          "excerpt": "Checking on-chain total supply of PGOLD tokens as of 25 June 2026.",
-          "assertion": "Visto checks supply at a single report date, not a documented recurring whole-supply cross-chain reconciliation cadence."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://217962626-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FtBZ74QEzHbSbwx0W0nBo%2Fuploads%2FfLypB8MTfIw1Jrd2LT65%2FPleaseing%20Gold%20Assurance%20Report%2025%20June%202026.pdf?alt=media&token=df75631f-9b3c-4524-81e4-f69b6baaf1e5",
-        "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
-        "https://pleasing.gitbook.io/docs/llms.txt",
-        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/reserve-report.md",
-        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features.md",
-        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/how-pgold-works.md",
-        "https://pleasing.gitbook.io/docs/user-guide/redeem-physical-gold.md",
-        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/licenses-and-certificates.md",
-        "https://pleasing.gitbook.io/docs/legal/terms-of-use.md",
-        "https://arbiscan.io/address/0x3e76bb02286bfeaa89dd35f11253f2cbce634f91"
-      ],
-      "rationale": "Exact recurring whole-supply mint/backing reconciliation cadence is not disclosed. The Visto report observes physical stock and Arbitrum PGOLD supply on June 25, but states point-in-time scope and excludes other dates. Terms say periodic reports may be provided; no actual recurring procedure covering all minted/bridged liabilities and backing on a common clock was found. A single report cannot establish periodic reconciliation."
-    },
-    {
-      "id": "uw-pgold-pleasing-31428003f5bb0850",
-      "assetId": "pgold-pleasing",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:pgold-pleasing:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:55:17Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
-      "sources": [
-        {
-          "url": "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
-          "observedAt": "2026-10-03T22:55:17Z",
-          "datumAsOf": null,
-          "location": "Terms of Sale, section 4, Fees",
-          "excerpt": "Redemption, handling, insurance, and delivery fees per the **Fee Schedule**.",
-          "assertion": "Fees are referenced but the complete numerical schedule is not linked or reproduced."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
-        "https://pleasing.gitbook.io/docs/llms.txt",
-        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/reserve-report.md",
-        "https://217962626-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FtBZ74QEzHbSbwx0W0nBo%2Fuploads%2FfLypB8MTfIw1Jrd2LT65%2FPleaseing%20Gold%20Assurance%20Report%2025%20June%202026.pdf?alt=media&token=df75631f-9b3c-4524-81e4-f69b6baaf1e5",
-        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features.md",
-        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/how-pgold-works.md",
-        "https://pleasing.gitbook.io/docs/user-guide/redeem-physical-gold.md",
-        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/licenses-and-certificates.md",
-        "https://pleasing.gitbook.io/docs/legal/terms-of-use.md",
-        "https://arbiscan.io/address/0x3e76bb02286bfeaa89dd35f11253f2cbce634f91"
-      ],
-      "rationale": "Exact PGOLD physical-redemption cost is not published. Terms refer to a Fee Schedule for redemption/handling/insurance/delivery, but the complete documentation index, terms, product and redemption pages do not publish that numerical schedule. The 0.5% app/conversion charge does not establish all physical delivery fees."
-    },
-    {
-      "id": "uw-pgold-pleasing-b992a4d26cb423c8",
-      "assetId": "pgold-pleasing",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:pgold-pleasing"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:55:17Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
-      "sources": [
-        {
-          "url": "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
-          "observedAt": "2026-10-03T22:55:17Z",
-          "datumAsOf": null,
-          "location": "Terms of Sale, section 4, Timing",
-          "excerpt": "We use commercially reasonable efforts; delays may occur due to market/liquidity, logistics, regulatory, or force-majeure events.",
-          "assertion": "Terms disclose nonbounded effort-based physical timing, not maximum settlement for either physical delivery or issuer cash-sale leg."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
-        "https://pleasing.gitbook.io/docs/llms.txt",
-        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/reserve-report.md",
-        "https://217962626-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FtBZ74QEzHbSbwx0W0nBo%2Fuploads%2FfLypB8MTfIw1Jrd2LT65%2FPleaseing%20Gold%20Assurance%20Report%2025%20June%202026.pdf?alt=media&token=df75631f-9b3c-4524-81e4-f69b6baaf1e5",
-        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features.md",
-        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/how-pgold-works.md",
-        "https://pleasing.gitbook.io/docs/user-guide/redeem-physical-gold.md",
-        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/licenses-and-certificates.md",
-        "https://pleasing.gitbook.io/docs/legal/terms-of-use.md",
-        "https://arbiscan.io/address/0x3e76bb02286bfeaa89dd35f11253f2cbce634f91"
-      ],
-      "rationale": "Exact maximum settlement SLA for PGOLD physical issuer redemption and the distinct physical-to-USD issuer cash-sale route is not published. Terms list effort-based delivery with delays and the guide requires waiting for customer support. Instant onchain PUSD/USDT spot settlement is a different route and is not a fiat issuer cash-out maximum."
-    },
-    {
-      "id": "uw-pgold-pleasing-a372f31a4f0747be",
-      "assetId": "pgold-pleasing",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:pgold-pleasing:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:55:17Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
-      "sources": [
-        {
-          "url": "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
-          "observedAt": "2026-10-03T22:55:17Z",
-          "datumAsOf": null,
-          "location": "Terms of Sale, section 4, Timing",
-          "excerpt": "We use commercially reasonable efforts; delays may occur due to market/liquidity, logistics, regulatory, or force-majeure events.",
-          "assertion": "Terms disclose nonbounded effort-based physical timing, not maximum settlement for either physical delivery or issuer cash-sale leg."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
-        "https://pleasing.gitbook.io/docs/llms.txt",
-        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/reserve-report.md",
-        "https://217962626-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FtBZ74QEzHbSbwx0W0nBo%2Fuploads%2FfLypB8MTfIw1Jrd2LT65%2FPleaseing%20Gold%20Assurance%20Report%2025%20June%202026.pdf?alt=media&token=df75631f-9b3c-4524-81e4-f69b6baaf1e5",
-        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features.md",
-        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/how-pgold-works.md",
-        "https://pleasing.gitbook.io/docs/user-guide/redeem-physical-gold.md",
-        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/licenses-and-certificates.md",
-        "https://pleasing.gitbook.io/docs/legal/terms-of-use.md",
-        "https://arbiscan.io/address/0x3e76bb02286bfeaa89dd35f11253f2cbce634f91"
-      ],
-      "rationale": "Exact maximum settlement SLA for PGOLD physical issuer redemption and the distinct physical-to-USD issuer cash-sale route is not published. Terms list effort-based delivery with delays and the guide requires waiting for customer support. Instant onchain PUSD/USDT spot settlement is a different route and is not a fiat issuer cash-out maximum."
     },
     {
       "id": "uw-witry-brix-4c257c87c5c1bfcb",
@@ -31460,6 +30775,1832 @@
         "https://docs.alchemix.fi/user/concepts/fees"
       ],
       "rationale": "The captured legacy alUSD-to-DAI queue route has no published final maximum: governance flow rate is a maximum on funds entering the Transmuter, conditional on actual buffered funds, harvest and repayment. It is not a guaranteed completion minimum/SLA. Current V3 fixed-term MYT payout is a different route and cannot establish a maximum for the retained DAI route."
+    },
+    {
+      "id": "uw-frax-frax-e53e4d7588ed775b",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:14831ae9e2fa3bc6c9646e28",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "Quantity of stkAAVE in UniV3 LP #241298 stkAAVE/FRAX",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://aave.com/help/umbrella/unstake"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for stkAAVE was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. UniV3-held stkAAVE requires LP withdrawal plus exact Safety Module cooldown state; generic 20-day cooldown and 2-day window do not describe the entire held position."
+    },
+    {
+      "id": "uw-frax-frax-e124e65c75ac5168",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1992dea5e9223023e2bf0bb7",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "Agora USD (AUSD) held directly",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://docs.agora.finance/developer/contract-deployments"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for AUSD (Agora Dollar) was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. Exact Agora deployment is verified; Frax balances include redeem-contract positions and direct holdings. Approved-holder cash realization and live redeem balance are unverified."
+    },
+    {
+      "id": "uw-frax-frax-cd20d99c1a49b128",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2417b93c27823b739a6c7dc0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "ZKsync (ZK) held directly",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://docs.frax.finance/amo/uniswap-v3.md",
+        "https://docs.frax.finance/amo/curve.md",
+        "https://docs.frax.finance/fraxswap/technical-specifications.md"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for ZK was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. Exact token and held position are identified in the primary API; transferability or LP reserves alone are not a guaranteed cash realization horizon."
+    },
+    {
+      "id": "uw-frax-frax-e9faffb7f5786bb2",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2848a16cbbee5bebd320be4a",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "WPOL quantity in Fraxswap V2 WPOL/FRAX LP",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://docs.frax.finance/amo/uniswap-v3.md",
+        "https://docs.frax.finance/amo/curve.md",
+        "https://docs.frax.finance/fraxswap/technical-specifications.md"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for WPOL was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. Exact token and held position are identified in the primary API; transferability or LP reserves alone are not a guaranteed cash realization horizon."
+    },
+    {
+      "id": "uw-frax-frax-f1b979dbf61bc346",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:28f8cc7b06326bcd85a114dc",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "PayPal USD (PYUSD) held directly",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for PYUSD was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. Paxos legal terms restrict redemption to verified customers, round down to US cent and allow longer large withdrawals. API PYUSD position is only about0.00451USD: generic issuer redemption cannot establish this exact dust position liquid."
+    },
+    {
+      "id": "uw-frax-frax-3dff7253f101fdc4",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2d1923d569c970d51335ccd0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "Quantity of axlfrxETH in RA LP #38 axlfrxETH/frxETH",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://docs.frax.finance/amo/uniswap-v3.md",
+        "https://docs.frax.finance/amo/curve.md",
+        "https://docs.frax.finance/fraxswap/technical-specifications.md"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for axlfrxETH was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. API held Fraxtal RA LP38. Verified Fraxscan token creator is Axelar Gateway; LP withdrawal, bridge and frxETH realization are separate unpinned legs."
+    },
+    {
+      "id": "uw-frax-frax-9b357a9d7f19c6df",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2f9a5dc3bffacaace69b8555",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "Underlying THE locked in Thena veNFT #20521",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://docs.thena.fi/thena/the-tokenomics/tokens-the-vethe-thenft"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for THE was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. Exact Thena veNFT20521; primary tokenomics establishes lock mechanism but current NFT end and holder transferability are not pinned."
+    },
+    {
+      "id": "uw-frax-frax-b48b22e0d74605dd",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:3590984148c3bc2af6a9da01",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "WAVAX quantity in Fraxswap V2 WAVAX/FRAX LP",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://docs.frax.finance/amo/uniswap-v3.md",
+        "https://docs.frax.finance/amo/curve.md",
+        "https://docs.frax.finance/fraxswap/technical-specifications.md"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for WAVAX was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. Exact token and held position are identified in the primary API; transferability or LP reserves alone are not a guaranteed cash realization horizon."
+    },
+    {
+      "id": "uw-frax-frax-64497df6d77bb068",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:430b0a0153546e63f66585de",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "USDT directly held in unstaked, pure Curve frxUSD/USDT LP",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://tether.to/en/legal/"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for USDT was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. Tether legal section4.1 requires verified customer, minimums and eligible chain. Section6 permits service suspension. Exact AMO-held LP and cash route not validated."
+    },
+    {
+      "id": "uw-frax-frax-46ff4ade3fbe22b8",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:487bc1687d042e2e306f4ae2",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "Underlying CHR locked in Chronos veNFT #5397",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://docs.frax.finance/amo/uniswap-v3.md",
+        "https://docs.frax.finance/amo/curve.md",
+        "https://docs.frax.finance/fraxswap/technical-specifications.md"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for CHR was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. Chronos veNFT5397 and10765 are explicit in API."
+    },
+    {
+      "id": "uw-frax-frax-7b25bac28fc26db7",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:48f301e1dcef61d20ad4f91e",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "Quantity of axlUSDC in RA LP #36 axlUSDC/frxUSD",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://docs.frax.finance/amo/uniswap-v3.md",
+        "https://docs.frax.finance/amo/curve.md",
+        "https://docs.frax.finance/fraxswap/technical-specifications.md"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for axlUSDC was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. Bridged USDC/LP exposure needs bridge plus LP realization, not inherited native Circle liquidity."
+    },
+    {
+      "id": "uw-frax-frax-f7c0b582ee3a1ae7",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:49c689aedb528261a357df6c",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "Staked DAI (sDAI) held directly",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://docs.spark.finance/dev/savings/sdai-token"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for sDAI was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. API direct token0x09eAdcBAa812A4C076c3a6cDe765DC4a22E0d775 differs from Spark official Ethereum0x83f20f44975d03b1b09e64809b757c47f942beea; cannot apply native ERC4626 instant redemption across contracts."
+    },
+    {
+      "id": "uw-frax-frax-1a79cdf6f75c788e",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:511eba854c9b73666b44f2e0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "Polygon Matic (MATIC) held directly",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://docs.frax.finance/amo/uniswap-v3.md",
+        "https://docs.frax.finance/amo/curve.md",
+        "https://docs.frax.finance/fraxswap/technical-specifications.md"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for MATIC was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. Exact token and held position are identified in the primary API; transferability or LP reserves alone are not a guaranteed cash realization horizon."
+    },
+    {
+      "id": "uw-frax-frax-bc2b07202d0fbd29",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:5e6a636e57bebe175bc04d92",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "Underlying RAM locked in Ramses veNFT #14",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://www.ramses.xyz/docs/xram"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for RAM was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. API states legacy Arbitrum veNFT14/1906. Current official xRAM docs concern HyperEVM and cannot establish instant realization for these legacy positions."
+    },
+    {
+      "id": "uw-frax-frax-f1dfd2151979c85d",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:86462927788fa968dc20eafb",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "Avalanche (AVAX) held directly",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://docs.frax.finance/amo/uniswap-v3.md",
+        "https://docs.frax.finance/amo/curve.md",
+        "https://docs.frax.finance/fraxswap/technical-specifications.md"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for AVAX was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. Exact token and held position are identified in the primary API; transferability or LP reserves alone are not a guaranteed cash realization horizon."
+    },
+    {
+      "id": "uw-frax-frax-ee5570f246585c8d",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:a2bc8edfdc7fa498e105037b",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "BNB Coin (BNB) held directly",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://docs.frax.finance/amo/uniswap-v3.md",
+        "https://docs.frax.finance/amo/curve.md",
+        "https://docs.frax.finance/fraxswap/technical-specifications.md"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for BNB was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. Exact token and held position are identified in the primary API; transferability or LP reserves alone are not a guaranteed cash realization horizon."
+    },
+    {
+      "id": "uw-frax-frax-f6ef889f9332413e",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:a3c4c3dcdb68f2cd8816422a",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "Underlying VELO locked in Velodrome veNFT V2 #4976",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://velodrome.finance/docs"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for VELO (locked veNFT #4976) was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. API explicitly identifies veNFT4976. Current expiry/permanent/managed/vote state and secondary-market route are not pinned."
+    },
+    {
+      "id": "uw-frax-frax-170f7e58d85ffdf6",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:a855fb9fe11095d920770a91",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "crvUSD directly held in unstaked, pure Curve sfrxUSD/scrvUSD LP",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://docs.frax.finance/amo/uniswap-v3.md",
+        "https://docs.frax.finance/amo/curve.md",
+        "https://docs.frax.finance/fraxswap/technical-specifications.md"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for sfrxUSD/scrvUSD Curve LP was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. API crvUSD values represent this specific Curve LP, not direct crvUSD. Need exact LP withdrawal composition and both vault cash-realization routes."
+    },
+    {
+      "id": "uw-frax-frax-031d7c66b456d46b",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:acb7c1e5873d821cc71e793e",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "DAI directly held in unstaked, pure Curve FRAX/sDAI LP (Converted sDAI -> DAI with rate of 1.1813)",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://docs.frax.finance/amo/uniswap-v3.md",
+        "https://docs.frax.finance/amo/curve.md",
+        "https://docs.frax.finance/fraxswap/technical-specifications.md"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for DAI was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. API represents DAI partly as sDAI-converted underlying of Curve/Convex and Balancer LP. Underlying Dai transferability is not a whole-position execution horizon."
+    },
+    {
+      "id": "uw-frax-frax-767b9e93a600f5a7",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:b1eef73f5106407b85ea541c",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "Underlying SDT locked in Vote Escrow SDT (veSDT)",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://docs.stakedao.org/guides/migrate-vesdt"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for SDT was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. API states veSDT. Official migration guide retains original lock duration and vlSDT migration queue; exact current lock expiry is not pinned."
+    },
+    {
+      "id": "uw-frax-frax-0d5b272b43263295",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:ba2d55db01dc1c170595b601",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "Underlying MULTI locked in Multichain veNFT #125",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://docs.frax.finance/amo/uniswap-v3.md",
+        "https://docs.frax.finance/amo/curve.md",
+        "https://docs.frax.finance/fraxswap/technical-specifications.md"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for MULTI was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. API explicitly attributes MULTI to locked Multichain veNFT125; generic token tradability does not establish escrow withdrawability."
+    },
+    {
+      "id": "uw-frax-frax-b85283fe22c69908",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c9a0bb8a009ba2a3defb89e6",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "Optimism (OP) held directly",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://docs.frax.finance/amo/uniswap-v3.md",
+        "https://docs.frax.finance/amo/curve.md",
+        "https://docs.frax.finance/fraxswap/technical-specifications.md"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for OP was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. Exact token and held position are identified in the primary API; transferability or LP reserves alone are not a guaranteed cash realization horizon."
+    },
+    {
+      "id": "uw-frax-frax-c7b1628ee85940d6",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e402c1c9f6665a42094d9028",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "USDB held in primary multisig account balance on Solana",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://withbridge.com/legal/bridge-stablecoin-terms/bridge-building-inc"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for USDB (Bridge) was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. Bridge terms give two business days after compliance determination, with delays outside control. This is conditional approved-holder schedule, not a whole-position hard calendar maximum."
+    },
+    {
+      "id": "uw-frax-frax-3c2b601409358fed",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e48b396e49d60e76efac31c2",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "ZZ quantity in Fraxswap V2 FRAX/ZZ LP",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://docs.frax.finance/amo/uniswap-v3.md",
+        "https://docs.frax.finance/amo/curve.md",
+        "https://docs.frax.finance/fraxswap/technical-specifications.md"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for ZZ was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. Exact token and held position are identified in the primary API; transferability or LP reserves alone are not a guaranteed cash realization horizon."
+    },
+    {
+      "id": "uw-frax-frax-9fd5978853501997",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e68c57d1c1780aede70b20a7",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] description; exact token and chain in W1R53 research.json",
+          "excerpt": "Superstate Crypto Carry Fund (USCC) held directly",
+          "assertion": "Discloses exact held position, not its entire realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://docs.superstate.com/investors/tokenized-funds/redeem.md",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc.md",
+        "https://superstate.com/assets/uscc"
+      ],
+      "rationale": "No published whole-slice liquidityHorizon for USCC (Superstate crypto arbitrage) was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. Official USCC schedule is T+1/T+2 with5pmET cutoff and market holidays; investor destination/compliance and whole-position conservative calendar tier not established."
+    },
+    {
+      "id": "uw-frax-frax-6a1e894191a324fd",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2641ff3ab7b972607cc51b82",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://tsr-db-bucket-1.s3.us-west-2.amazonaws.com/multiple_uploaded/1786984979_5IaeGU7K6R.pdf",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-08-14",
+          "location": "WTGXX principal investment strategies, prospectus p108",
+          "excerpt": "overnight repurchase agreements fully collateralized by U.S. Treasury securities, and registered government money market funds.",
+          "assertion": "The 93-day direct-Treasury restriction does not state a complete look-through maximum across permitted fund holdings."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://tsr-db-bucket-1.s3.us-west-2.amazonaws.com/multiple_uploaded/1786984979_5IaeGU7K6R.pdf",
+        "https://www.wisdomtreeprime.com/digital-funds/wtgxx/",
+        "https://www.wisdomtreeprime.com/prospectus-and-regulatory-information/",
+        "https://prospectusconnect.com/digital_funds",
+        "https://tsr-db-bucket-1.s3.us-west-2.amazonaws.com/multiple_uploaded/1786985110_CQh9WNPM2f.pdf"
+      ],
+      "rationale": "No finite maturityDaysMax covering the whole WTGXX claim/look-through basket is publicly specified. The prospectus limits direct Treasury instruments to 93 days but separately admits registered government MMFs without a whole-basket maximum. Product, regulatory archive, prospectus and SAI do not convert WAM, liquidity or the direct-bill cap into a maximum for every permissible holding; no subset bound is extrapolated."
+    },
+    {
+      "id": "uw-frax-frax-be81f7a592a3af8f",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:7b9984ce7729a18c0e42bcfb",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assets[] EREBOR_USD description",
+          "excerpt": "FBO frxUSD Stablecoin Reserve Account, a segregated FDIC-insured Erebor Bank account holding reserves for frxUSD.",
+          "assertion": "Names the institutional FBO account but not a contractual maturity."
+        },
+        {
+          "url": "https://www.brookwell.com/disclosures/erebor/consumer-deposit-account-agreement",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": "2026-08-07",
+          "location": "Section 4.2",
+          "excerpt": "You may not use the Account for business purposes.",
+          "assertion": "The public consumer agreement cannot bind the institutional FBO reserve deposit."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://www.brookwell.com/disclosures/erebor/consumer-deposit-account-agreement",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/rwas.md"
+      ],
+      "rationale": "The exact institutional Erebor FBO reserve-account maturityDaysMax is not publicly disclosed. The Frax API names the account and value, not demand/term contractual conditions; RWA policy supplies categories rather than this account agreement. The accessible consumer agreement expressly excludes business use, so neither its withdrawal terms nor a zero maturity can be borrowed. No public institutional FBO maturity instrument was found."
+    },
+    {
+      "id": "uw-frax-frax-417bd166c387e39a",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c18fa900f9c313b2be2eb36d",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://superstate.com/assets/ustb",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": null,
+          "location": "Published disclosure",
+          "excerpt": "Ownership in the Fund is represented by USTB, held either as a token or in book-entry record keeping.",
+          "assertion": "Identifies a fund-share claim, not a fixed-term Treasury claim with a complete published scalar maturity maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://superstate.com/assets/ustb",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb.md",
+        "https://docs.superstate.com/investors/tokenized-funds/redeem.md",
+        "https://docs.superstate.com/investors/smart-contracts.md"
+      ],
+      "rationale": "No maturityDaysMax for the entire USTB fund-share claim is disclosed in public fund descriptions, holdings, investor terms or redemption documentation. Holdings show dated Treasury/derivative instruments, not a hard governing maximum of the share claim. The public pages direct investors to private offering materials and describe discretionary changing portfolios. A holdings maximum or T+ settlement is not this required contractual whole-slice maturity bound."
+    },
+    {
+      "id": "uw-frax-frax-fbb8db60db40d2b9",
+      "assetId": "frax-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e68c57d1c1780aede70b20a7",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://superstate.com/assets/uscc",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": null,
+          "location": "Published disclosure",
+          "excerpt": "Ownership in the Fund is via the USCC token or book-entry record keeping.",
+          "assertion": "Identifies a fund-share claim, not a fixed-term Treasury claim with a complete published scalar maturity maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/llms.txt",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "https://facts.frax.finance/frax/balance-sheet",
+        "https://docs.frax.finance/other/audits.md",
+        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
+        "https://superstate.com/assets/uscc",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc.md",
+        "https://docs.superstate.com/investors/tokenized-funds/redeem.md",
+        "https://docs.superstate.com/investors/smart-contracts.md"
+      ],
+      "rationale": "No maturityDaysMax for the entire USCC fund-share claim is disclosed in public fund descriptions, holdings, investor terms or redemption documentation. Holdings show dated Treasury/derivative instruments, not a hard governing maximum of the share claim. The public pages direct investors to private offering materials and describe discretionary changing portfolios. A holdings maximum or T+ settlement is not this required contractual whole-slice maturity bound."
+    },
+    {
+      "id": "uw-pgold-pleasing-797999c0d9c785d5",
+      "assetId": "pgold-pleasing",
+      "scope": {
+        "componentKey": "mechanism-review:assuranceAndReconciliation",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "mechanism-review:assuranceAndReconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:50:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
+      "sources": [
+        {
+          "url": "https://217962626-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FtBZ74QEzHbSbwx0W0nBo%2Fuploads%2FfLypB8MTfIw1Jrd2LT65%2FPleaseing%20Gold%20Assurance%20Report%2025%20June%202026.pdf?alt=media&token=df75631f-9b3c-4524-81e4-f69b6baaf1e5",
+          "observedAt": "2026-10-03T22:55:17Z",
+          "datumAsOf": "2026-06-25",
+          "location": "Visto CPA assurance report, page 2, procedure 8",
+          "excerpt": "Checking on-chain total supply of PGOLD tokens as of 25 June 2026.",
+          "assertion": "Visto checks supply at a single report date, not a documented recurring whole-supply cross-chain reconciliation cadence."
+        },
+        {
+          "url": "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
+          "observedAt": "2026-10-03T23:50:11Z",
+          "datumAsOf": null,
+          "location": "Section 2",
+          "excerpt": "We may provide **Chainlink Price Feeds**, **Proof-of-Reserve (PoR)** attestations, and periodic reports.",
+          "assertion": "Conditional reporting marketing is not a current dated whole-supply assurance/reconciliation engagement."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://217962626-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FtBZ74QEzHbSbwx0W0nBo%2Fuploads%2FfLypB8MTfIw1Jrd2LT65%2FPleaseing%20Gold%20Assurance%20Report%2025%20June%202026.pdf?alt=media&token=df75631f-9b3c-4524-81e4-f69b6baaf1e5",
+        "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
+        "https://pleasing.gitbook.io/docs/llms.txt",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/reserve-report.md",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features.md",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/how-pgold-works.md",
+        "https://pleasing.gitbook.io/docs/user-guide/redeem-physical-gold.md",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/licenses-and-certificates.md",
+        "https://pleasing.gitbook.io/docs/legal/terms-of-use.md",
+        "https://arbiscan.io/address/0x3e76bb02286bfeaa89dd35f11253f2cbce634f91",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/audit-report.md"
+      ],
+      "rationale": "No current dated whole-PGOLD assurance and liability reconciliation is publicly supplied. The current archive attachment still resolves to the June 25, 2026 Visto snapshot previously inspected, not a renewed report; its historic disclosure is retained. Docs/index, reserve archive, audit page and legal terms publish no later financial engagement or cross-chain denominator reconciliation. This C concerns the missing current scoped datum, not denial of the existing historic report or a date-only clock wait."
+    },
+    {
+      "id": "uw-reusd-resupply-9e42f91c4cab374d",
+      "assetId": "reusd-resupply",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:8cea120bb135ceadd42d289b",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
+      "sources": [
+        {
+          "url": "https://docs.resupply.finance/how-to-guides/using-resupply/repaying-withdrawing-collateral.md",
+          "observedAt": "2026-10-03T22:55:17Z",
+          "datumAsOf": null,
+          "location": "Public issuer disclosure",
+          "excerpt": "After repaying above your LTV, you may withdraw the freed collateral.",
+          "assertion": "Repayment releases collateral but does not time-bound full Curve/Fraxlend lending-position unwind."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.resupply.finance/how-to-guides/using-resupply/repaying-withdrawing-collateral.md",
+        "https://docs.resupply.finance/resupply-protocol/collateralized-debt-positions.md",
+        "https://docs.resupply.finance/faq/risks.md",
+        "https://docs.resupply.finance/how-to-guides/using-resupply/selecting-a-lending-market.md",
+        "https://docs.curve.finance/developer/lending/contracts/vault/",
+        "https://docs.frax.finance/fraxlend/key-concepts",
+        "https://raw.githubusercontent.com/resupplyfi/resupply/main/deployment/contracts.json"
+      ],
+      "rationale": "Exact liquidityHorizon of the two aggregate Curve Lend and Fraxlend collateral-position slices is not published. Withdrawal depends on collateral/LTV and available liquidity in each underlying market. Docs disclose redeemability and utilization, not a fixed whole-slice horizon or complete liquid-fraction packet. Do not infer immediate from ERC4626 or guess a delay."
+    },
+    {
+      "id": "uw-reusd-resupply-208e3227bc19411f",
+      "assetId": "reusd-resupply",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:a7c7ee296c1d6b7922c8f1b2",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
+      "sources": [
+        {
+          "url": "https://docs.resupply.finance/how-to-guides/using-resupply/repaying-withdrawing-collateral.md",
+          "observedAt": "2026-10-03T22:55:17Z",
+          "datumAsOf": null,
+          "location": "Public issuer disclosure",
+          "excerpt": "After repaying above your LTV, you may withdraw the freed collateral.",
+          "assertion": "Repayment releases collateral but does not time-bound full Curve/Fraxlend lending-position unwind."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.resupply.finance/how-to-guides/using-resupply/repaying-withdrawing-collateral.md",
+        "https://docs.resupply.finance/resupply-protocol/collateralized-debt-positions.md",
+        "https://docs.resupply.finance/faq/risks.md",
+        "https://docs.resupply.finance/how-to-guides/using-resupply/selecting-a-lending-market.md",
+        "https://docs.curve.finance/developer/lending/contracts/vault/",
+        "https://docs.frax.finance/fraxlend/key-concepts",
+        "https://raw.githubusercontent.com/resupplyfi/resupply/main/deployment/contracts.json"
+      ],
+      "rationale": "Exact liquidityHorizon of the two aggregate Curve Lend and Fraxlend collateral-position slices is not published. Withdrawal depends on collateral/LTV and available liquidity in each underlying market. Docs disclose redeemability and utilization, not a fixed whole-slice horizon or complete liquid-fraction packet. Do not infer immediate from ERC4626 or guess a delay."
+    },
+    {
+      "id": "uw-jaaa-janus-henderson-anemoy-6b0116947477a4c3",
+      "assetId": "jaaa-janus-henderson-anemoy",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:4a82d397df2ecd3c6575e829",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
+      "sources": [
+        {
+          "url": "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le",
+          "observedAt": "2026-10-03T22:55:17Z",
+          "datumAsOf": "2026-06-30",
+          "location": "June 2026 factsheet, Overview and Key Facts",
+          "excerpt": "Open ended BVI licensed fund for non-US Professional Investors",
+          "assertion": "Exact JAAA is an open-ended fund share, not the similarly named US ETF or each underlying CLO."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le",
+        "https://www.anemoy.io/funds/jaaa",
+        "https://www.anemoy.io/news/janus-henderson-anemoy-aaa-clo-onchain",
+        "https://docs.centrifuge.io/user/investor/",
+        "https://docs.centrifuge.io/developer/protocol/architecture/vaults/",
+        "https://www.bvifsc.vg/regulated-entities/anemoy-capital-spc-limited",
+        "https://data.chain.link/feeds/ethereum/mainnet/jaaa-nav-v2"
+      ],
+      "rationale": "Maximum maturityDaysMax of the exact JAAA tokenized fund-share exposure is not disclosed. June factsheet provides open-ended structure, daily liquidity and CLO credit risks but no all-in-scope maximum share termination date or complete underlying legal-final maturity ladder. Inception, averages and redemption dates are not maxima."
+    },
+    {
+      "id": "uw-jaaa-janus-henderson-anemoy-5eb9ebd6fb0d3a03",
+      "assetId": "jaaa-janus-henderson-anemoy",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:jaaa-janus-henderson-anemoy:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
+      "sources": [
+        {
+          "url": "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le",
+          "observedAt": "2026-10-03T22:55:17Z",
+          "datumAsOf": "2026-06-30",
+          "location": "June 2026 factsheet, description and Key Facts",
+          "excerpt": "Investments and redemptions are processed in stablecoins.",
+          "assertion": "Disclosure publishes entry fee and annual management/provider fees, not a fixed redemption fee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le",
+        "https://www.anemoy.io/funds/jaaa",
+        "https://www.anemoy.io/news/janus-henderson-anemoy-aaa-clo-onchain",
+        "https://docs.centrifuge.io/user/investor/",
+        "https://docs.centrifuge.io/developer/protocol/architecture/vaults/",
+        "https://www.bvifsc.vg/regulated-entities/anemoy-capital-spc-limited",
+        "https://data.chain.link/feeds/ethereum/mainnet/jaaa-nav-v2"
+      ],
+      "rationale": "Exact JAAA same-notional redemption cost is not published on accessible fund, factsheet, investor and legal/regulatory surfaces. Entry fee $0 is not an exit-fee guarantee, and annual 50bp management or provider expenses cannot substitute for a per-redemption fee. No public exact exit tariff was found."
+    },
+    {
+      "id": "uw-jaaa-janus-henderson-anemoy-57a8e97cc5a413f3",
+      "assetId": "jaaa-janus-henderson-anemoy",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
+      "sources": [
+        {
+          "url": "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le",
+          "observedAt": "2026-10-03T22:55:17Z",
+          "datumAsOf": "2026-06-30",
+          "location": "June 2026 factsheet, fund description",
+          "excerpt": "CLOs are held directly by the Fund and Asset Under Management (AUM) can be checked onchain.",
+          "assertion": "NAV/AUM, provider identities and issuance mechanics are not matched liability/backing cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le",
+        "https://www.anemoy.io/funds/jaaa",
+        "https://www.anemoy.io/news/janus-henderson-anemoy-aaa-clo-onchain",
+        "https://docs.centrifuge.io/user/investor/",
+        "https://docs.centrifuge.io/developer/protocol/architecture/vaults/",
+        "https://www.bvifsc.vg/regulated-entities/anemoy-capital-spc-limited",
+        "https://data.chain.link/feeds/ethereum/mainnet/jaaa-nav-v2"
+      ],
+      "rationale": "Exact whole-supply mint/backing reconciliation process and cadence are not public for JAAA. Fund page, June factsheet, NAV feed, protocol accounting and FSC register disclose NAV, custody, administrator and investments, but no dated cross-chain share-liability/mint-burn/register-to-assets procedure on a common clock."
+    },
+    {
+      "id": "uw-brla-brla-digital-11987ddf1dbfb820",
+      "assetId": "brla-brla-digital",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:brla-brla-digital:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
+      "sources": [
+        {
+          "url": "https://app.avenia.io/Avenia-TC.pdf",
+          "observedAt": "2026-10-03T22:55:17Z",
+          "datumAsOf": "2025-06-23",
+          "location": "Avenia terms, page 33, section 12.1",
+          "excerpt": "Any applicable fee will be displayed at the time of the Transaction or in a manner convenient to the User.",
+          "assertion": "Terms allow a changeable intermediation fee disclosed at transaction time, not a fixed redemption tariff."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://app.avenia.io/Avenia-TC.pdf",
+        "https://avenia.io/brla",
+        "https://integration-guide.avenia.io/docs/Operations/quotesAndTickets",
+        "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a"
+      ],
+      "rationale": "Exact BRLA same-notional redemption cost is not publicly fixed. Avenia terms section 12.1 and quote/ticket docs make fees transaction-specific and discretionary. Product/transparency surfaces describe collateral and 1:1 design, not a redemption tariff. Parity or a quote endpoint cannot establish zero fee."
+    },
+    {
+      "id": "uw-pgold-pleasing-7e3f9e5a140e30b3",
+      "assetId": "pgold-pleasing",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
+      "sources": [
+        {
+          "url": "https://217962626-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FtBZ74QEzHbSbwx0W0nBo%2Fuploads%2FfLypB8MTfIw1Jrd2LT65%2FPleaseing%20Gold%20Assurance%20Report%2025%20June%202026.pdf?alt=media&token=df75631f-9b3c-4524-81e4-f69b6baaf1e5",
+          "observedAt": "2026-10-03T22:55:17Z",
+          "datumAsOf": "2026-06-25",
+          "location": "Visto CPA assurance report, page 2, procedure 8",
+          "excerpt": "Checking on-chain total supply of PGOLD tokens as of 25 June 2026.",
+          "assertion": "Visto checks supply at a single report date, not a documented recurring whole-supply cross-chain reconciliation cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://217962626-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FtBZ74QEzHbSbwx0W0nBo%2Fuploads%2FfLypB8MTfIw1Jrd2LT65%2FPleaseing%20Gold%20Assurance%20Report%2025%20June%202026.pdf?alt=media&token=df75631f-9b3c-4524-81e4-f69b6baaf1e5",
+        "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
+        "https://pleasing.gitbook.io/docs/llms.txt",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/reserve-report.md",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features.md",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/how-pgold-works.md",
+        "https://pleasing.gitbook.io/docs/user-guide/redeem-physical-gold.md",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/licenses-and-certificates.md",
+        "https://pleasing.gitbook.io/docs/legal/terms-of-use.md",
+        "https://arbiscan.io/address/0x3e76bb02286bfeaa89dd35f11253f2cbce634f91"
+      ],
+      "rationale": "Exact recurring whole-supply mint/backing reconciliation cadence is not disclosed. The Visto report observes physical stock and Arbitrum PGOLD supply on June 25, but states point-in-time scope and excludes other dates. Terms say periodic reports may be provided; no actual recurring procedure covering all minted/bridged liabilities and backing on a common clock was found. A single report cannot establish periodic reconciliation."
+    },
+    {
+      "id": "uw-pgold-pleasing-31428003f5bb0850",
+      "assetId": "pgold-pleasing",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:pgold-pleasing:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
+      "sources": [
+        {
+          "url": "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
+          "observedAt": "2026-10-03T22:55:17Z",
+          "datumAsOf": null,
+          "location": "Terms of Sale, section 4, Fees",
+          "excerpt": "Redemption, handling, insurance, and delivery fees per the **Fee Schedule**.",
+          "assertion": "Fees are referenced but the complete numerical schedule is not linked or reproduced."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
+        "https://pleasing.gitbook.io/docs/llms.txt",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/reserve-report.md",
+        "https://217962626-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FtBZ74QEzHbSbwx0W0nBo%2Fuploads%2FfLypB8MTfIw1Jrd2LT65%2FPleaseing%20Gold%20Assurance%20Report%2025%20June%202026.pdf?alt=media&token=df75631f-9b3c-4524-81e4-f69b6baaf1e5",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features.md",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/how-pgold-works.md",
+        "https://pleasing.gitbook.io/docs/user-guide/redeem-physical-gold.md",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/licenses-and-certificates.md",
+        "https://pleasing.gitbook.io/docs/legal/terms-of-use.md",
+        "https://arbiscan.io/address/0x3e76bb02286bfeaa89dd35f11253f2cbce634f91"
+      ],
+      "rationale": "Exact PGOLD physical-redemption cost is not published. Terms refer to a Fee Schedule for redemption/handling/insurance/delivery, but the complete documentation index, terms, product and redemption pages do not publish that numerical schedule. The 0.5% app/conversion charge does not establish all physical delivery fees."
+    },
+    {
+      "id": "uw-pgold-pleasing-b992a4d26cb423c8",
+      "assetId": "pgold-pleasing",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:pgold-pleasing"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
+      "sources": [
+        {
+          "url": "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
+          "observedAt": "2026-10-03T22:55:17Z",
+          "datumAsOf": null,
+          "location": "Terms of Sale, section 4, Timing",
+          "excerpt": "We use commercially reasonable efforts; delays may occur due to market/liquidity, logistics, regulatory, or force-majeure events.",
+          "assertion": "Terms disclose nonbounded effort-based physical timing, not maximum settlement for either physical delivery or issuer cash-sale leg."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
+        "https://pleasing.gitbook.io/docs/llms.txt",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/reserve-report.md",
+        "https://217962626-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FtBZ74QEzHbSbwx0W0nBo%2Fuploads%2FfLypB8MTfIw1Jrd2LT65%2FPleaseing%20Gold%20Assurance%20Report%2025%20June%202026.pdf?alt=media&token=df75631f-9b3c-4524-81e4-f69b6baaf1e5",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features.md",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/how-pgold-works.md",
+        "https://pleasing.gitbook.io/docs/user-guide/redeem-physical-gold.md",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/licenses-and-certificates.md",
+        "https://pleasing.gitbook.io/docs/legal/terms-of-use.md",
+        "https://arbiscan.io/address/0x3e76bb02286bfeaa89dd35f11253f2cbce634f91"
+      ],
+      "rationale": "Exact maximum settlement SLA for PGOLD physical issuer redemption and the distinct physical-to-USD issuer cash-sale route is not published. Terms list effort-based delivery with delays and the guide requires waiting for customer support. Instant onchain PUSD/USDT spot settlement is a different route and is not a fiat issuer cash-out maximum."
+    },
+    {
+      "id": "uw-pgold-pleasing-a372f31a4f0747be",
+      "assetId": "pgold-pleasing",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:pgold-pleasing:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:17Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
+      "sources": [
+        {
+          "url": "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
+          "observedAt": "2026-10-03T22:55:17Z",
+          "datumAsOf": null,
+          "location": "Terms of Sale, section 4, Timing",
+          "excerpt": "We use commercially reasonable efforts; delays may occur due to market/liquidity, logistics, regulatory, or force-majeure events.",
+          "assertion": "Terms disclose nonbounded effort-based physical timing, not maximum settlement for either physical delivery or issuer cash-sale leg."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md",
+        "https://pleasing.gitbook.io/docs/llms.txt",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/reserve-report.md",
+        "https://217962626-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FtBZ74QEzHbSbwx0W0nBo%2Fuploads%2FfLypB8MTfIw1Jrd2LT65%2FPleaseing%20Gold%20Assurance%20Report%2025%20June%202026.pdf?alt=media&token=df75631f-9b3c-4524-81e4-f69b6baaf1e5",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features.md",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/how-pgold-works.md",
+        "https://pleasing.gitbook.io/docs/user-guide/redeem-physical-gold.md",
+        "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/licenses-and-certificates.md",
+        "https://pleasing.gitbook.io/docs/legal/terms-of-use.md",
+        "https://arbiscan.io/address/0x3e76bb02286bfeaa89dd35f11253f2cbce634f91"
+      ],
+      "rationale": "Exact maximum settlement SLA for PGOLD physical issuer redemption and the distinct physical-to-USD issuer cash-sale route is not published. Terms list effort-based delivery with delays and the guide requires waiting for customer support. Instant onchain PUSD/USDT spot settlement is a different route and is not a fiat issuer cash-out maximum."
+    },
+    {
+      "id": "uw-suiusde-sui-3db7f74f6276d7be",
+      "assetId": "suiusde-sui",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:307254215894779e1640e7d8",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://www.esuidollar.io/legal/mint-user-agreement",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": null,
+          "location": "Sections 1 and 3, reserves and service availability; last updated April 2026",
+          "excerpt": "The Issuer does not guarantee that minting or redemption will always be available.",
+          "assertion": "Issuer describes primarily USDe reserves, institutional custody and discretionary redemption, but no complete slice-specific realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.esuidollar.io/",
+        "https://www.esuidollar.io/legal/mint-user-agreement",
+        "https://www.esuidollar.io/legal/terms-of-service",
+        "https://whitelabel.ethena.fi/",
+        "https://whitelabel.ethena.fi/transparency",
+        "https://whitelabel.ethena.fi/api/transparency"
+      ],
+      "rationale": "No complete liquidityHorizon is published for the Coinbase Prime off-chain USDC, USDe, or other USDC reserve slices. The live transparency endpoint gives amounts and custodian locations, not whole-slice withdrawal or liquidation maxima. Unified USDe liquidity and issuer pro-rata redemption do not establish each custody slice's liquidity horizon; legal terms permit suspension and supply no timing bound."
+    },
+    {
+      "id": "uw-suiusde-sui-9feca9a1ada5eba0",
+      "assetId": "suiusde-sui",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:3932ebed0fe9d1fb275fdca0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://www.esuidollar.io/legal/mint-user-agreement",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": null,
+          "location": "Sections 1 and 3, reserves and service availability; last updated April 2026",
+          "excerpt": "The Issuer does not guarantee that minting or redemption will always be available.",
+          "assertion": "Issuer describes primarily USDe reserves, institutional custody and discretionary redemption, but no complete slice-specific realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.esuidollar.io/",
+        "https://www.esuidollar.io/legal/mint-user-agreement",
+        "https://www.esuidollar.io/legal/terms-of-service",
+        "https://whitelabel.ethena.fi/",
+        "https://whitelabel.ethena.fi/transparency",
+        "https://whitelabel.ethena.fi/api/transparency"
+      ],
+      "rationale": "No complete liquidityHorizon is published for the Coinbase Prime off-chain USDC, USDe, or other USDC reserve slices. The live transparency endpoint gives amounts and custodian locations, not whole-slice withdrawal or liquidation maxima. Unified USDe liquidity and issuer pro-rata redemption do not establish each custody slice's liquidity horizon; legal terms permit suspension and supply no timing bound."
+    },
+    {
+      "id": "uw-suiusde-sui-87abe6688d6d92b7",
+      "assetId": "suiusde-sui",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:8278fc97cbe0fe9c83e2aee2",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://www.esuidollar.io/legal/mint-user-agreement",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": null,
+          "location": "Sections 1 and 3, reserves and service availability; last updated April 2026",
+          "excerpt": "The Issuer does not guarantee that minting or redemption will always be available.",
+          "assertion": "Issuer describes primarily USDe reserves, institutional custody and discretionary redemption, but no complete slice-specific realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.esuidollar.io/",
+        "https://www.esuidollar.io/legal/mint-user-agreement",
+        "https://www.esuidollar.io/legal/terms-of-service",
+        "https://whitelabel.ethena.fi/",
+        "https://whitelabel.ethena.fi/transparency",
+        "https://whitelabel.ethena.fi/api/transparency"
+      ],
+      "rationale": "No complete liquidityHorizon is published for the Coinbase Prime off-chain USDC, USDe, or other USDC reserve slices. The live transparency endpoint gives amounts and custodian locations, not whole-slice withdrawal or liquidation maxima. Unified USDe liquidity and issuer pro-rata redemption do not establish each custody slice's liquidity horizon; legal terms permit suspension and supply no timing bound."
+    },
+    {
+      "id": "uw-usdsui-sui-0887556cd31999f8",
+      "assetId": "usdsui-sui",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdsui-sui:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://www.bridge.xyz/legal/fee-disclosure-statement/overview",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": null,
+          "location": "Fee Disclosure Statement, section 1",
+          "excerpt": "The decision to impose such a charge, including its amount, is determined solely by the Partner.",
+          "assertion": "The partner charge is not quantified; gas pass-through and currency-conversion spreads do not specify the complete USDsui-to-USD redemption charge."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.sui.io/sui-dollar-launch-bridge/",
+        "https://apidocs.bridge.xyz/platform/issuance/minting-and-burning",
+        "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency",
+        "https://transparency.bridge.xyz/v0/stablecoins/usd_sui",
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "https://www.bridge.xyz/legal/fee-disclosure-statement/overview"
+      ],
+      "rationale": "No public numeric all-in cost or complete evaluable fee formula for USDsui direct fiat redemption was found. Bridge leaves a partner's applicable charge and amount to that partner and discloses variable gas, not an exact USDsui schedule. The up-to-1% currency-conversion spread is not a USD-to-USD redemption fee. This is missing cost disclosure, not an unrepresentable complete formula."
+    },
+    {
+      "id": "uw-usdsui-sui-524c959d309062ba",
+      "assetId": "usdsui-sui",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdsui-sui:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": null,
+          "location": "Section 3, Bridge Stablecoin Redemption Rights",
+          "excerpt": "we will process your sale/redemption Order within two (2) Business Days following our determination that your Order complies with the applicable User Terms",
+          "assertion": "This bounds processing after Bridge determines compliance, not final USD delivery after submission; the sentence additionally excepts factors outside reasonable control."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "https://www.bridge.xyz/legal/overview",
+        "https://apidocs.bridge.xyz/platform/issuance/minting-and-burning",
+        "https://apidocs.bridge.xyz/platform/issuance/reserve-management",
+        "https://transparency.bridge.xyz/v0/stablecoins/usd_sui"
+      ],
+      "rationale": "A maximum final-settlement SLA for USDsui redemption into USD is not disclosed. The two-business-day legal commitment is order processing starting only after compliance determination, and expressly permits external delays. Treasury realization within one business day is a different reserve-side datum. Neither bounds final fiat receipt for the modeled redemption route."
+    },
+    {
+      "id": "uw-usdsui-sui-44a3944854d7c15a",
+      "assetId": "usdsui-sui",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1c4dd3588a3d275a0d87b130",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": null,
+          "location": "Section 2, permitted reserve asset classes",
+          "excerpt": "(c) U.S. government money-market funds; (d) deposit accounts; (e) tokenized versions of the assets set forth herein",
+          "assertion": "The three-month Treasury-bill limit does not bound every claim in the aggregate Treasury basket; permitted fund shares and tokenized claims are distinct."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://transparency.bridge.xyz/v0/stablecoins/usd_sui",
+        "https://apidocs.bridge.xyz/platform/issuance/reserve-management",
+        "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency",
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc"
+      ],
+      "rationale": "No maturityDaysMax for the entire current USDsui aggregate Treasury slice is publicly disclosed. Bridge permits bills, overnight repo, government MMFs and tokenized versions; its reserve docs list BlackRock, Fidelity, USTB and BUIDL, while the exact USDsui API supplies only aggregate cash/Treasury amounts. Applying the three-month bill restriction across this opaque mixed basket would invent a whole-slice maximum."
+    },
+    {
+      "id": "uw-usdv-solomon-eafa6333f01f1224",
+      "assetId": "usdv-solomon",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://blog.solomonlabs.org/p/custodian-attestation-of-assets-backing",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": "2026-03-01",
+          "location": "Scope of a custodial attestation",
+          "excerpt": "It is not a full reserve report, financial statement audit, or comprehensive reconciliation of all system assets, liabilities, income, or exposures.",
+          "assertion": "Monthly Ceffu reporting is expressly a limited custody snapshot, not comprehensive recurring legacy mint-supply/backing reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.solomonlabs.org/p/introducing-solomon",
+        "https://blog.solomonlabs.org/p/winding-down-the-original-usdv",
+        "https://blog.solomonlabs.org/p/custodian-attestation-of-assets-backing",
+        "https://api.github.com/repos/SolomonLabs/attestations/git/trees/main?recursive=1",
+        "https://docs.solomonlabs.org/usdv/transparency-and-risk",
+        "https://data.solomonlabs.io/api/solomon-protocol/protocol-data",
+        "https://solomonlabs.org/terms-of-use",
+        "https://solscan.io/account/D4AiKFxjZBrhd6MeRAAj6wNxFcZJuRMBrXW9UpqeS8Ax"
+      ],
+      "rationale": "No public complete recurring reconciliation process/cadence covering legacy USDv minted liabilities against all custody, exchange and on-chain backing was found. The archive ends with an April 2026 Ceffu-only snapshot; March's issuer explanation expressly excludes full reconciliation. Wind-down says positions had to remain reconciled without disclosing control cadence or independent whole-book reconciliation. Successor USDv evidence cannot establish legacy reconciliation."
+    },
+    {
+      "id": "uw-usdv-solomon-116dff134f42785d",
+      "assetId": "usdv-solomon",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://blog.solomonlabs.org/p/custodian-attestation-of-assets-backing",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": "2026-03-01",
+          "location": "Attestation introduction and scope",
+          "excerpt": "Those components are not fully captured by this custodial attestation alone.",
+          "assertion": "The legacy attestation acknowledges omitted exchange and on-chain balances and does not supply a current whole-legacy-denominator composition."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.solomonlabs.org/p/winding-down-the-original-usdv",
+        "https://blog.solomonlabs.org/p/custodian-attestation-of-assets-backing",
+        "https://api.github.com/repos/SolomonLabs/attestations/git/trees/main?recursive=1",
+        "https://app.solomonlabs.org/stats",
+        "https://data.solomonlabs.io/api/solomon-protocol/protocol-data",
+        "https://docs.solomonlabs.org/usdv/transparency-and-risk",
+        "https://solomonlabs.org/terms-of-use"
+      ],
+      "rationale": "A current complete reserve composition and denominator for the exact legacy Ex5DaKY USDv mint remain undisclosed. Successor documentation describes a separate replacement token. The API still reports inverse perpetuals, Ceffu balances and staking, but publishes no mint identifier: its asset scope is unproven. Archived attestations cover only Ceffu custody. API amounts are neither mint-bound nor reconciled into a complete legacy liability denominator."
+    },
+    {
+      "id": "uw-usdv-solomon-800cd0e64a265940",
+      "assetId": "usdv-solomon",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdv-solomon:stablecoin-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://blog.solomonlabs.org/p/winding-down-the-original-usdv",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": "2026-08-28",
+          "location": "Legacy/new token distinction",
+          "excerpt": "There will be no automatic conversion.",
+          "assertion": "Legacy holders must exit separately; successor mint/redeem pricing and venue swap quotes cannot stand in for the legacy direct-redemption fee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.solomonlabs.org/p/introducing-solomon",
+        "https://blog.solomonlabs.org/p/winding-down-the-original-usdv",
+        "https://docs.solomonlabs.org/usdv/usdv-and-susdv/minting-usdv",
+        "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming",
+        "https://solomonlabs.org/terms-of-use",
+        "https://app.solomonlabs.org/stats",
+        "https://solscan.io/account/D4AiKFxjZBrhd6MeRAAj6wNxFcZJuRMBrXW9UpqeS8Ax"
+      ],
+      "rationale": "No public exact all-in fee schedule or complete cost formula for the legacy USDv direct USDC redemption route was found. The legacy announcement describes qualified-holder mint/burn/redeem without a fee schedule; wind-down recommends market swaps without promising a direct-redemption price. Current docs and transaction fee UI concern the separate new token. Interface terms do not define the legacy API/direct-redemption schedule."
     }
   ]
 }

@@ -448,7 +448,8 @@
       "name": "axlfrxETH",
       "pct": 0,
       "risk": "medium",
-      "assetClass": "protocol-position"
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Axelar Gateway frxETH representation and Frax Protocol"
     },
     {
       "sourceKey": "frax-balance-sheet:wpol",
@@ -519,7 +520,8 @@
       "name": "ZZ",
       "pct": 0,
       "risk": "very-high",
-      "assetClass": "cryptoasset"
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "ZigZagToken (Ethereum 0xc91a71a1ffa3d8b22ba615ba1b9c01b2bbbf55ad)"
     },
     {
       "sourceKey": "frax-balance-sheet:multi",
@@ -556,7 +558,7 @@
   ],
   "reserveReview": {
     "reviewedAt": "2026-10-03",
-    "reviewer": "Unknown-wave W1R53 primary-source classification review",
+    "reviewer": "Unknown-wave W1R53 classification review; W2R28 exact axlfrxETH and ZZ issuer-identity review",
     "confidence": "verified",
     "sources": [
       {
@@ -594,9 +596,17 @@
       {
         "label": "Agora AUSD exact deployments",
         "url": "https://docs.agora.finance/developer/contract-deployments"
+      },
+      {
+        "label": "Exact Fraxtal axlfrxETH contract, Axelar Gateway contract creation and BurnableMintableCappedERC20 identity; observed 2026-10-03",
+        "url": "https://fraxscan.com/address/0xecc68d0451e20292406967fe7c04280e5238ac7d#code"
+      },
+      {
+        "label": "Exact Ethereum ZZ contract, verified ZigZagToken and decoded ZigZag/ZZ constructor; observed 2026-10-03",
+        "url": "https://etherscan.io/address/0xc91a71a1ffa3d8b22ba615ba1b9c01b2bbbf55ad#code"
       }
     ],
-    "rationale": "The 2026-08-12 full-composition scaffold and its percentages are preserved as history, not refreshed holdings. On 2026-10-03 the official balance-sheet API identified additional exact token/position rows: native and wrapped volatile cryptoassets, Agora AUSD, USCC fund shares, Curve LP, staked AAVE, bridged frxETH and vote-escrow positions for Chronos, Multichain, Ramses, Stake DAO and Thena. Added zero-percent source-keyed metadata rows join those live categories without asserting any new composition weight. USCC contract identity and current Bitwise fund-share issuer are independently confirmed by Superstate documentation. Contract locks and LP placement do not prove a whole-position liquidation horizon; no zero maturity, immediate liquidity or unverified bridge obligor is inferred.",
+    "rationale": "The 2026-08-12 full-composition scaffold and its percentages are preserved as history, not refreshed holdings. On 2026-10-03 the official balance-sheet API identified additional exact token/position rows: native and wrapped volatile cryptoassets, Agora AUSD, USCC fund shares, Curve LP, staked AAVE, bridged frxETH and vote-escrow positions for Chronos, Multichain, Ramses, Stake DAO and Thena. Added zero-percent source-keyed metadata rows join those live categories without asserting any new composition weight. USCC contract identity and current Bitwise fund-share issuer are independently confirmed by Superstate documentation. W2R28 binds axlfrxETH to the exact Fraxtal BurnableMintableCappedERC20 created by Axelar Gateway and ZZ to the exact Ethereum ZigZagToken with decoded ZigZag/ZZ constructor. These are technical issuing-system identities, not invented legal redemption promises. Contract locks and LP placement do not prove a whole-position liquidation horizon; no zero maturity or immediate liquidity is inferred.",
     "compositionBasis": "Official Frax balance-sheet asset rows aggregated by symbol at the response's pinned multi-chain observation blocks",
     "compositionAsOf": "2026-08-12",
     "scope": "full-composition",
