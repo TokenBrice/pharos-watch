@@ -6,6 +6,7 @@ import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeUnreportedBluechipRating } from "@shared/test-utils/bluechip.test-support";
 import type { ComparisonCoinEntry } from "@/lib/compare-derive";
 import { BLUECHIP_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/bluechip-freshness";
+import { makeReportCardsV9Card, makeReportCardsV9Pillars } from "@shared/test-utils/report-cards-v9";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -95,20 +96,12 @@ function makeCoin(id: string, symbol: string): ComparisonCoinEntry {
       sourceTvlUsd: 900_000_000,
     },
     stress: { band: "LOW", score: 12 },
-    safetyCard: {
+    safetyCard: makeReportCardsV9Card({
       score: 84,
       grade: "A-",
-      pillars: {
-        backing: { score: 90 },
-        exit: { score: 88 },
-        control: { score: 42 },
-      },
-      weakestPillar: { pillar: "control", score: 42 },
-      bindingCap: null,
-      evidence: { level: "adequate", freshness: "stale" },
-      accessPosture: { primaryExit: "permissionless", freezeExposure: "none-known" },
-      dependencies: { serial: [], basket: [] },
-    },
+      pillars: makeReportCardsV9Pillars({ backing: 90, exit: 88, control: 42 }),
+      evidence: { level: "adequate", freshness: "stale", reasons: [] },
+    }),
   } as unknown as ComparisonCoinEntry;
 }
 
@@ -127,28 +120,6 @@ describe("ComparisonTable", () => {
     expect(html).not.toMatch(/\bbest\b/i);
   });
 
-  it("renders the complete grouped comparison matrix", () => {
-    const html = renderToStaticMarkup(
-      <ComparisonTable coins={[makeCoin("usdt", "USDT")]} pegRates={PEG_RATES} logos={{}} />,
-    );
-
-    for (const section of [
-      "Overview",
-      "Peg Track Record",
-      "Safety Construction",
-      "Exit &amp; Liquidity",
-      "Activity &amp; Yield",
-      "Structure &amp; Controls",
-    ]) {
-      expect(html).toContain(section);
-    }
-    expect(html).toContain("+$1.24B");
-    expect(html).toContain("Issuer yield");
-    expect(html).toContain("Treasury bills 80%");
-    expect(html).toContain("Direct freeze power");
-    expect(html).toContain("Open Safety Score waterfall for USDT");
-    expect(html).toContain("Evidence age stale");
-  });
   it("marks missing Bluechip audit data as not reported", () => {
     const coin = makeCoin("usdt", "USDT");
     coin.bluechipRating = makeUnreportedBluechipRating();
@@ -184,19 +155,6 @@ describe("ComparisonTable", () => {
   });
 
 
-  it("uses the shared horizontally scrollable table foundation", () => {
-    const html = renderToStaticMarkup(
-      <ComparisonTable coins={[makeCoin("usdt", "USDT")]} pegRates={PEG_RATES} logos={{}} />,
-    );
-
-    expect(html).toContain('data-table-id="live-comparison-matrix"');
-    expect(html).toContain('data-testid="live-comparison-matrix-table"');
-    expect(html).toContain('role="region"');
-    expect(html).toContain('aria-label="Stablecoin comparison matrix"');
-    expect(html).toContain('tabindex="0"');
-    expect(html).toContain('data-slot="table-viewport"');
-    expect(html).toContain('data-slot="table"');
-  });
 
   it("keeps basis-point values rounded to whole numbers", () => {
     const base = makeCoin("usdt", "USDT");

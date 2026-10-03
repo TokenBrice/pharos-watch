@@ -26,11 +26,12 @@ function capitalize(value: string): string {
 }
 
 function compareGradeOrScore(
-  previousGrade: string,
-  currentGrade: string,
+  previousGrade: string | null,
+  currentGrade: string | null,
   previousScore: number | null,
   currentScore: number | null,
 ): Direction {
+  if (previousGrade === null || currentGrade === null) return "flat";
   // One grade-rank ladder. The local list this replaced also carried phantom
   // `D-`/`D+` grades the V9 vocabulary has never produced; unknown grades still
   // rank strictly below NR, so every comparison below is unchanged.
@@ -153,7 +154,7 @@ export function buildV9SafetyReason(
       current.v9Explain.weakestPillar.pillar
     } (${Math.round(current.v9Explain.weakestPillar.score)}).`;
   }
-  return `Reason: Safety Score is ${current.grade}${
+  return `Reason: Safety Score is ${current.grade ?? "Unavailable — pipeline gap"}${
     current.score === null ? "." : ` (${Math.round(current.score)}).`
   }`;
 }

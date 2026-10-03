@@ -60,7 +60,15 @@ export function ScoreConstructionPanel({
 }) {
   const steps = buildScoreWaterfall(card);
   const { adverseMessages, boundedGroups } = buildSafetyScoreV9Attribution(card);
-  if (steps.length === 0 && adverseMessages.length === 0 && boundedGroups.length === 0) return null;
+  const coverageNotice = card.partialEvidence === null ? null : (
+    <p role="status" className="text-xs text-muted-foreground">
+      {card.ratingStatus === "pipeline-gap" ? "Pipeline gap — no Safety Score published. " : ""}
+      Partial evidence: pipeline gap · {card.partialEvidence.causes.map((cause) =>
+        cause === "A" ? "A — pipeline unavailable" : "B — public data awaiting curation").join(" · ")}
+      {card.partialEvidence.excludedPillars.length > 0 ? ` · Excluded pillars: ${card.partialEvidence.excludedPillars.join(", ")} (0% effective weight)` : ""}
+    </p>
+  );
+  if (steps.length === 0 && adverseMessages.length === 0 && boundedGroups.length === 0 && coverageNotice === null) return null;
 
   const waterfall = steps.length > 0
     ? (
@@ -110,6 +118,7 @@ export function ScoreConstructionPanel({
         ariaLabel="How this score is built"
         trailing={<Sigma className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />}
       >
+        {coverageNotice ? <div className="px-4 pb-4">{coverageNotice}</div> : null}
         {waterfall ? <div className="px-4 pb-4">{waterfall}</div> : null}
         {whyNotHigher ? (
           <div className={cn("px-4 pb-4", waterfall && "border-t border-border/50 pt-4")}>{whyNotHigher}</div>
@@ -124,6 +133,7 @@ export function ScoreConstructionPanel({
   return (
     <section className="border-b border-border/40 pb-3 xl:hidden" aria-label="How this score is built">
       <ModuleDisclosure label="How this score is built">
+        {coverageNotice}
         {waterfall ? <div className="mt-2">{waterfall}</div> : null}
         {whyNotHigher ? <div className="mt-3 border-t border-border/40 pt-3">{whyNotHigher}</div> : null}
       </ModuleDisclosure>

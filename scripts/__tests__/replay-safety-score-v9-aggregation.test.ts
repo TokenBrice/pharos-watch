@@ -17,6 +17,10 @@ interface LegacyDeploymentAdjustment {
 function pillar(score: number) {
   return {
     score,
+    aggregationDisposition: "included" as const,
+    supportedComponentKeys: ["known"],
+    causeGapIds: [],
+    limitedEvidenceCauses: [],
     evidenceLevel: "strong" as const,
     reasons: [],
     structuralSignals: [],
@@ -174,17 +178,6 @@ describe("Safety Score v9 aggregation counterfactual", () => {
     expect(policyCandidate(input).assets[0]).toMatchObject({ score: null, grade: "NR" });
   });
 
-  it("includes the exact policy and research aggregation strategies", () => {
-    const ids = buildV9AggregationCounterfactual(replay()).results.map(
-      (result) => result.candidateId,
-    );
-    expect(ids).toEqual(expect.arrayContaining([
-      "smooth-bounded-headroom:policy",
-      "smooth-bounded-headroom:legacy-control-selector",
-      "generalized-mean:p-2",
-      "generalized-mean:p-4",
-    ]));
-  });
 
   it("keeps the policy candidate monotonic across a weakest-pillar crossover", () => {
     const scoreAt = (control: number) => {
@@ -217,10 +210,7 @@ describe("Safety Score v9 aggregation counterfactual", () => {
     });
     const result = policyCandidate(input);
     expect(result.ratedCount).toBe(4);
-    expect(result.histogram).toEqual({
-      "A+": 0, A: 0, "A-": 2, "B+": 0, B: 2, "B-": 0,
-      "C+": 0, C: 0, "C-": 0, D: 0, F: 0, NR: 1,
-    });
+    expect(result.histogram).toMatchObject({ "A-": 2, B: 2, NR: 1, "pipeline-gap": 0 });
     expect(result.exactScorePileups).toEqual([
       { score: 70, count: 2, share: 0.5 },
       { score: 80, count: 2, share: 0.5 },

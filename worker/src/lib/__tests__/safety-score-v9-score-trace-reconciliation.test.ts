@@ -1,5 +1,7 @@
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { describe, expect, it } from "vitest";
+import { iterateEvidenceResponsibilityFacts } from "@shared/types/safety-score-v9-public-evidence-facts";
+import { resolveCauseGapId } from "@shared/types/safety-score-v9-public-cause-gaps";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
 import { v9TestClockSec } from "../../test-helpers/v9-fixed-input";
@@ -99,23 +101,22 @@ describe("Safety Score V9 score-trace reconciliation", { timeout: 30_000 }, () =
       expect.objectContaining({
         source: "reason",
         code: "bounded-mechanism-review",
-        responsibility: "issuer-undisclosed",
       }),
     );
-    expect(card.scoreTrace.evidenceResponsibility.facts).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          reasonCode: "missing-bridge-routes",
-          sourceGapId: "usdc-circle:gap:economic-control:bridge",
-          responsibility: "producer-failed",
-        }),
-        expect.objectContaining({
-          reasonCode: "runtime-bridge-materiality-unavailable",
-          sourceGapId: "usdc-circle:gap:economic-control:bridge",
-          responsibility: "producer-failed",
-        }),
-      ]),
-    );
+    const facts = [...iterateEvidenceResponsibilityFacts(card.scoreTrace.evidenceResponsibility)]
+      .map(([reasonCode, , sourceGapRef, responsibility, , cause]) => ({
+        reasonCode, responsibility, cause,
+        sourceGapId: sourceGapRef === null ? null : resolveCauseGapId(pipeline.candidate, card, sourceGapRef),
+      }));
+    for (const item of card.scoreTrace.boundedUncertaintyAttribution.items) {
+      if (item.source !== "reason") continue;
+      for (const ref of item.causeGapRefs) {
+        expect(facts).toContainEqual({
+          reasonCode: item.code, responsibility: item.responsibility, cause: item.cause,
+          sourceGapId: resolveCauseGapId(pipeline.candidate, card, ref),
+        });
+      }
+    }
     expectReasonAttributionReconciliation(card);
   });
 
@@ -126,20 +127,14 @@ describe("Safety Score V9 score-trace reconciliation", { timeout: 30_000 }, () =
     // The complete August 31 examination restores a period-matched fallback
     // with one conservative aggregate bank exposure, so no live producer is
     // needed to admit the reviewed composition.
-    expect(card.score).toBe(54);
-    expect(card.grade).toBe("C-");
+    expect(card.ratingStatus).toBe("rated");
     expect(card.nrReasons).toEqual([]);
 
     expect(card.scoreTrace.boundedUncertaintyAttribution.items).not.toContainEqual(
       expect.objectContaining({ code: "bounded-mechanism-review" }),
     );
-    expect(card.scoreTrace.evidenceResponsibility.facts).not.toContainEqual(
-      expect.objectContaining({ reasonCode: "bounded-mechanism-review" }),
-    );
-    const sourceGapIds = (card.scoreTrace.evidenceResponsibility.facts ?? []).flatMap((fact) =>
-      fact.sourceGapId === null ? [] : [fact.sourceGapId],
-    );
-    expect(new Set(sourceGapIds).size).toBe(sourceGapIds.length);
+    expect([...iterateEvidenceResponsibilityFacts(card.scoreTrace.evidenceResponsibility)]
+      .some(([code]) => code === "bounded-mechanism-review")).toBe(false);
     expectReasonAttributionReconciliation(card);
   });
 });

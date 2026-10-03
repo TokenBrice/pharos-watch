@@ -2,10 +2,10 @@ import { DatabaseSync } from "node:sqlite";
 import { vi } from "vitest";
 import { mockCircuitBreaker } from "../../test-helpers/cron";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
-import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
+import { makeWorkerReportCardsV9Response, makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { scoreToGrade } from "@shared/lib/report-card-core";
-import { getAlertSafetyV9SourceGeneration } from "../../lib/alert-safety-source-cache";
+import { buildActiveAlertSafetyV9SourceEnvelope, getAlertSafetyV9SourceGeneration } from "../../lib/alert-safety-source-cache";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
 import {
   insertPendingSqlite,
@@ -168,7 +168,7 @@ function makeCanonicalSafetySourceCaches(
       ),
   });
   const publicationHealth = {
-    schemaVersion: 1 as const,
+    schemaVersion: 2 as const,
     status: "current" as const,
     acceptedPublicationGenerationId: publicationGenerationId,
     acceptedAtSec: publishedAt,
@@ -176,7 +176,19 @@ function makeCanonicalSafetySourceCaches(
     heldSinceSec: null,
     reasons: [],
   };
+  const sourceEnvelope = buildActiveAlertSafetyV9SourceEnvelope(makeWorkerReportCardsV9Response({
+    cards: publication.cards,
+    updatedAt: publishedAt,
+    asOfSec: publishedAt,
+    safetyScoreIdentity: safetyScoreIdentity(publicationGenerationId),
+    publicationHealth,
+  }));
+  if (sourceEnvelope === null) throw new Error("Current dispatch fixture did not produce a thin alert source");
   return {
+    alertSafetySource: {
+      value: stableJsonStringifyV1(sourceEnvelope),
+      updatedAt: publishedAt,
+    },
     publication: {
       value: stableJsonStringifyV1(publication),
       updatedAt: publishedAt,
@@ -204,6 +216,7 @@ function seedActiveSafetySource(
     caches.publicationHealth.value,
     caches.publicationHealth.updatedAt,
   );
+  harness.cache("alert-safety-v9-source", caches.alertSafetySource.value, caches.alertSafetySource.updatedAt);
 }
 
 function makeSafetySnapshotCache(
@@ -220,6 +233,8 @@ function makeSafetySnapshotCache(
           {
             ...row,
             methodologyVersion: "9.0",
+            ratingStatus: row.grade === "NR" ? "not-rated" : "rated",
+            partialEvidence: null,
             v9Explain: {
               reasons: [],
               bindingCap: null,
@@ -784,6 +799,7 @@ function defaultDispatchCaches(overrides: Record<string, unknown> = {}): Record<
     "alert:safety-snapshot": makeSafetySnapshotCache({}, getAlertSafetyV9SourceGeneration()).value,
     "report-cards:v9": safety.publication.value,
     "report-cards:v9:publication-health": safety.publicationHealth.value,
+    "alert-safety-v9-source": safety.alertSafetySource.value,
     ...overrides,
   };
 }

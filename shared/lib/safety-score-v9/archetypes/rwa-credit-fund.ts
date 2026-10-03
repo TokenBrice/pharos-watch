@@ -23,9 +23,7 @@ export function resolveV9MetricApplicability(
   return {
     state,
     unavailable,
-    responsibility: unavailable
-      ? "issuer-undisclosed" as const
-      : v9StructuralResponsibilityForStatus(status),
+    responsibility: v9StructuralResponsibilityForStatus(status),
     evidenceRefIds: unavailable ? applicability.evidenceRefIds : status.evidenceRefIds,
   };
 }
@@ -37,19 +35,17 @@ export function evaluateV9RwaCreditFundBacking(
 ): V9BackingResult {
   const backing = policy.policy.semantic.backing;
   const structuralReasons: V9BackingStructuralReason[] = [];
-  // Owner ruling 2026-07-27 (wave-7 D2): an `unavailable` maturity metric
-  // keeps the mismatch signal firing — an unmeasured book is never presumed
-  // short-dated — while an evidenced `not-applicable` metric skips it. Absent
-  // applicability means the metric is measured (legacy full-metric reviews).
+  // Only a measured metric supports a structural mismatch; absence is bounded.
   const maturityApplicability = resolveV9MetricApplicability(
     review.metricApplicability?.weightedAverageMaturityDays,
     review.maturityAndLiquidity.status,
   );
   if (
-    maturityApplicability.unavailable ||
-    (maturityApplicability.state === "measured" &&
-      review.weightedAverageMaturityDays !== null &&
-      review.weightedAverageMaturityDays > backing.structural.rwaCreditFund.maturityMismatchDays)
+    maturityApplicability.state === "measured" &&
+    review.maturityAndLiquidity.status.observationState === "known" &&
+    review.maturityAndLiquidity.status.evidenceRefIds.length > 0 &&
+    review.weightedAverageMaturityDays !== null &&
+    review.weightedAverageMaturityDays > backing.structural.rwaCreditFund.maturityMismatchDays
   ) {
     structuralReasons.push(
       createV9BackingStructuralReason(policy, backing.structural.rwaCreditFund.signal, {

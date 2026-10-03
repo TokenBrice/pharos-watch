@@ -9,12 +9,18 @@ import { V9GradeSchema } from "./safety-score-v9";
 import { SafetyScoreV9CommonModeGroupsSchema } from "./safety-score-v9-public";
 import { SafetyScoreV9CapSchema, isUniqueSorted } from "./safety-score-v9-public-facts";
 import { SafetyScoreV9ScoreTraceSchema } from "./safety-score-v9-public-trace";
+import {
+  V9RatingStatusSchema, V9CompactPartialEvidenceSchema, refineV9RatingStatusFields,
+  projectV9CompactPartialEvidence,
+} from "./safety-score-v9-causes";
 
-export const DEPENDENCY_GRAPH_RESPONSE_SCHEMA_VERSION = 1;
+export const DEPENDENCY_GRAPH_RESPONSE_SCHEMA_VERSION = 2;
 
 export const DependencyGraphNodeSchema = z.object({
   id: z.string().min(1),
-  grade: V9GradeSchema,
+  grade: V9GradeSchema.nullable(),
+  ratingStatus: V9RatingStatusSchema,
+  partialEvidence: V9CompactPartialEvidenceSchema.nullable(),
   score: z.number().finite().min(0).max(100).nullable(),
   circulatingUsdAtEvaluation: z.number().finite().nonnegative().nullable(),
   supplyAsOfSec: z.number().int().nonnegative().nullable(),
@@ -25,7 +31,7 @@ export const DependencyGraphNodeSchema = z.object({
     weight: z.number().finite().min(0).max(1),
   }).strict()),
   dependencyCoverageCount: z.number().int().nonnegative().nullable(),
-}).strict();
+}).strict().superRefine(refineV9RatingStatusFields);
 export type DependencyGraphNode = z.infer<typeof DependencyGraphNodeSchema>;
 
 export const DependencyGraphResolvedCapSchema = SafetyScoreV9CapSchema.pick({
@@ -133,6 +139,8 @@ export function projectDependencyGraph(snapshot: ReportCardsV9CurrentResponse): 
       id: card.id,
       grade: card.grade,
       score: card.score,
+      ratingStatus: card.ratingStatus,
+      partialEvidence: projectV9CompactPartialEvidence(card.partialEvidence),
       circulatingUsdAtEvaluation: card.supply?.circulatingUsdAtEvaluation ?? null,
       supplyAsOfSec: card.supply?.asOfSec ?? null,
       sharedBookId: card.sharedBookId ?? null,

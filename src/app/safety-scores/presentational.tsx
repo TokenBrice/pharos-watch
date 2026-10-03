@@ -141,7 +141,7 @@ export function SafetyResultsSummary({
     <p className="text-sm text-muted-foreground">
       Showing <span className="font-medium text-foreground">{count}</span>{" "}
       {count === 1 ? "coin" : "coins"}
-      {gradeFilter !== "all" && ` with grade ${gradeFilter}`}
+      {gradeFilter === "pipeline-gap" ? " with Pipeline gap" : gradeFilter !== "all" && ` with grade ${gradeFilter}`}
       {pegFilter !== "all" && ` · ${pegFilter === "usd" ? "USD peg" : pegFilter === "fiat-non-usd" ? "fiat non-USD peg" : "commodity peg"}`}
     </p>
   );

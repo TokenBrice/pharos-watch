@@ -5,12 +5,14 @@ import {
 } from "../../types/dependency-types";
 import { compareText } from "./primitives";
 import type { V9FailureDomainRef, V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
+import type { V9EvidenceCause, V9PartialEvidence, V9RatingStatus } from "../../types/safety-score-v9-causes";
 import { resolveChainId } from "../../types/chain-identity";
 import { orderDependencyGraphNodes, type DependencyGraphEdge } from "../dependency-graph";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { isV9MaterialShare } from "./backing-primitives";
 import { deepFreeze } from "./primitives";
+import { V9_CANDIDATE_POLICY_V1 } from "./policy";
 
 const V9_DEPENDENCY_PLAN_DIGEST_DOMAIN = "safety-score-v9.dependency-plan.v2";
 
@@ -138,6 +140,12 @@ export interface V9UpstreamResult {
   assetId: string;
   /** Whole-asset final score. Serial claims inherit this exact result. */
   score: number | null;
+  ratingStatus?: V9RatingStatus;
+  cause?: V9EvidenceCause | null;
+  causeGapIds?: readonly string[];
+  limitedEvidenceCauses?: readonly V9EvidenceCause[];
+  partialEvidence?: V9PartialEvidence | null;
+  dimensionCauses?: Partial<Readonly<Record<V9DependencyScoreDimension, V9EvidenceCause | null>>>;
   /** Raw backing-pillar score. Reserve and collateral baskets inherit this dimension only. */
   backingScore: number | null;
   /** Raw exit-pillar score. Exit dependencies require this and an access score. */
@@ -169,6 +177,11 @@ export interface V9ResolvedRoleDependencyInput {
   inheritedDimensions: readonly V9DependencyScoreDimension[];
   unavailableDimensions: readonly V9DependencyScoreDimension[];
   score: number | null;
+  ratingStatus?: V9RatingStatus;
+  cause?: V9EvidenceCause | null;
+  causeGapIds?: readonly string[];
+  limitedEvidenceCauses?: readonly V9EvidenceCause[];
+  partialEvidence?: V9PartialEvidence | null;
   boundedUnknown: boolean;
   cycleBlocked: boolean;
   evidenceRefIds: readonly string[];
@@ -181,12 +194,22 @@ export interface V9ResolvedDependencyInputs {
     upstreamAssetId: string;
     score: number | null;
     blocked: boolean;
+    ratingStatus?: V9RatingStatus;
+    cause?: V9EvidenceCause | null;
+    causeGapIds?: readonly string[];
+    limitedEvidenceCauses?: readonly V9EvidenceCause[];
+    partialEvidence?: V9PartialEvidence | null;
   }[];
   basket: readonly {
     upstreamAssetId: string;
     weight: number;
     score: number | null;
     boundedUnknown: boolean;
+    ratingStatus?: V9RatingStatus;
+    cause?: V9EvidenceCause | null;
+    causeGapIds?: readonly string[];
+    limitedEvidenceCauses?: readonly V9EvidenceCause[];
+    partialEvidence?: V9PartialEvidence | null;
   }[];
   /**
    * Versioned role trace. Optional only so retained hand-authored V1 fixtures
@@ -213,6 +236,8 @@ export interface V9RoleDependencyPropagationEvent {
   nominalExposureShare: number;
   exposureShare: number;
   inheritedScore: number | null;
+  cause?: V9EvidenceCause | null;
+  causeGapIds?: readonly string[];
   modeledLossPoints: number | null;
   boundedUnknown: boolean;
   cycleBlocked: boolean;
@@ -686,6 +711,15 @@ export function resolveV9DependencyInput(
       ? [...dimensions]
       : dimensions.filter((dimension) => scoreForDimension(result, dimension) === null);
     const scores = dimensions.map((dimension) => scoreForDimension(result, dimension));
+    const knownScore = unavailableDimensions.length > 0 ? null : Math.min(...(scores as number[]));
+    const controllingDimensions = unavailableDimensions.length > 0 ? unavailableDimensions
+      : dimensions.filter((dimension) => scoreForDimension(result, dimension) === knownScore);
+    // A blocked cycle has no admitted upstream dimension to inherit. In
+    // particular, an already visited member's D must not label model uncertainty.
+    const cause = cycleBlocked ? "U" : (["D", "C", "U", "A", "B"] as const).find((candidate) =>
+      controllingDimensions.some((dimension) => (result?.dimensionCauses?.[dimension] ??
+        (unavailableDimensions.length > 0 ? result?.cause ?? "U" : null)) === candidate),
+    ) ?? null;
     return {
       assetId: path.assetId,
       upstreamAssetId: path.upstreamAssetId,
@@ -697,8 +731,13 @@ export function resolveV9DependencyInput(
       weight: path.weight,
       inheritedDimensions: dimensions,
       unavailableDimensions,
-      score: cycleBlocked || unavailableDimensions.length > 0 ? null : Math.min(...(scores as number[])),
-      boundedUnknown: cycleBlocked || unavailableDimensions.length > 0,
+      score: cycleBlocked || unavailableDimensions.length > 0 ? null : knownScore,
+      ratingStatus: !cycleBlocked && unavailableDimensions.length === 0 ? "rated" : result?.ratingStatus ?? "not-rated",
+      cause,
+      causeGapIds: cycleBlocked ? [] : result?.causeGapIds ?? [],
+      limitedEvidenceCauses: cycleBlocked ? ["U"] : result?.limitedEvidenceCauses ?? (unavailableDimensions.length > 0 ? ["U"] : []),
+      partialEvidence: result?.partialEvidence ?? null,
+      boundedUnknown: cycleBlocked || unavailableDimensions.length > 0 || cause === "C" || cause === "U",
       cycleBlocked,
       evidenceRefIds: path.evidenceRefIds,
       failureDomains: path.failureDomains,
@@ -711,7 +750,12 @@ export function resolveV9DependencyInput(
       .map((input) => ({
         upstreamAssetId: input.upstreamAssetId,
         score: input.score,
-        blocked: input.boundedUnknown,
+        blocked: input.score === null && input.ratingStatus !== "pipeline-gap",
+        ratingStatus: input.ratingStatus,
+        cause: input.cause,
+        causeGapIds: input.causeGapIds,
+        limitedEvidenceCauses: input.limitedEvidenceCauses,
+        partialEvidence: input.partialEvidence,
       })),
     basket: roleInputs
       .filter((input) => input.role === "basket-exposure")
@@ -720,6 +764,11 @@ export function resolveV9DependencyInput(
         weight: input.weight,
         score: input.score,
         boundedUnknown: input.boundedUnknown,
+        ratingStatus: input.ratingStatus,
+        cause: input.cause,
+        causeGapIds: input.causeGapIds,
+        limitedEvidenceCauses: input.limitedEvidenceCauses,
+        partialEvidence: input.partialEvidence,
       })),
     roleInputs,
     cycleBlocked: context.serialCycleMembers.has(assetId) || context.serialBlocked.has(assetId),
@@ -737,14 +786,18 @@ function roleTargetPillar(role: V9DependencyEconomicRole): V9RoleDependencyTarge
  * limits. Edge identity defines the holder slice; a shared operator, oracle, or
  * rail does not prove that separate edges cover the same holders. Multiple
  * events on one explicit slice contribute only their worst modeled loss.
- * Unknown dimensions leave the affected pillar limit null and expose their
- * conservative materiality.
+ * C/U dimensions retain bounded scores at every exposure size; A/B events are
+ * excluded diagnostics and cannot displace a known adverse event.
  */
 export function projectV9RoleDependencyPillarLimits(
   resolved: V9ResolvedDependencyInputs,
-  options: { unresolvedMaterialityThreshold?: number } = {},
+  options: { unresolvedMaterialityThreshold?: number; boundedUnknownQuality?: Readonly<Record<V9RoleDependencyTargetPillar, number>> } = {},
 ): Readonly<Record<V9RoleDependencyTargetPillar, V9RoleDependencyPillarProjection>> {
   const unresolvedMaterialityThreshold = options.unresolvedMaterialityThreshold ?? 0;
+  const boundedUnknownQuality = options.boundedUnknownQuality ?? {
+    exit: V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore,
+    control: V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality,
+  };
   if (
     !Number.isFinite(unresolvedMaterialityThreshold) ||
     unresolvedMaterialityThreshold < 0 ||
@@ -794,15 +847,17 @@ export function projectV9RoleDependencyPillarLimits(
       const groupInputs = [...group.inputs].sort(
         (left, right) => compareText(left.edgeKey, right.edgeKey) || compareText(left.upstreamAssetId, right.upstreamAssetId),
       );
-      const boundedUnknown = groupInputs.some((input) => input.boundedUnknown || input.score === null);
+      const scoreBearingInputs = groupInputs.filter((input) => input.cause !== "A" && input.cause !== "B");
+      const eligibleInputs = scoreBearingInputs.length > 0 ? scoreBearingInputs : groupInputs;
+      const boundedUnknown = eligibleInputs.some((input) => input.boundedUnknown || input.score === null);
       const selected = boundedUnknown
-        ? [...groupInputs].sort(
+        ? [...eligibleInputs].sort(
             (left, right) =>
               right.weight - left.weight ||
               compareText(left.edgeKey, right.edgeKey) ||
               compareText(left.upstreamAssetId, right.upstreamAssetId),
           )[0]!
-        : [...groupInputs].sort(
+        : [...eligibleInputs].sort(
             (left, right) =>
               right.weight * (100 - (right.score as number)) -
                 left.weight * (100 - (left.score as number)) ||
@@ -827,6 +882,8 @@ export function projectV9RoleDependencyPillarLimits(
         upstreamAssetIds: [...new Set(groupInputs.map((input) => input.upstreamAssetId))].sort(),
         nominalExposureShare,
         inheritedScore,
+        cause: selected.cause ?? (boundedUnknown ? "U" : null),
+        causeGapIds: selected.causeGapIds ?? [],
         modeledLossPoints: inheritedScore === null ? null : nominalExposureShare * (100 - inheritedScore),
         boundedUnknown,
         cycleBlocked: groupInputs.some((input) => input.cycleBlocked),
@@ -852,6 +909,7 @@ export function projectV9RoleDependencyPillarLimits(
       return [...byExposure.entries()].map(([exposureKey, candidates]) => {
         const selected = [...candidates].sort(
           (left, right) =>
+            Number(left.cause === "A" || left.cause === "B") - Number(right.cause === "A" || right.cause === "B") ||
             (right.boundedUnknown ? right.nominalExposureShare * 100 : right.modeledLossPoints ?? 0) -
               (left.boundedUnknown ? left.nominalExposureShare * 100 : left.modeledLossPoints ?? 0) ||
             Number(right.boundedUnknown) - Number(left.boundedUnknown) ||
@@ -901,17 +959,15 @@ export function projectV9RoleDependencyPillarLimits(
     );
     const unresolvedExposureShare = Math.min(
       1,
-      pillarEvents.reduce((sum, event) => sum + (event.boundedUnknown ? event.exposureShare : 0), 0),
+      pillarEvents.reduce((sum, event) => sum + (event.boundedUnknown && event.cause !== "A" && event.cause !== "B" ? event.exposureShare : 0), 0),
     );
     const materialUnresolvedExposure =
       unresolvedExposureShare > 0 &&
       isV9MaterialShare(unresolvedExposureShare, unresolvedMaterialityThreshold);
-    const boundedUnknownLossPoints = unresolvedExposureShare * 100;
+    const boundedUnknownLossPoints = unresolvedExposureShare * (100 - boundedUnknownQuality[targetPillar]);
     return {
       targetPillar,
-      limit: materialUnresolvedExposure
-        ? null
-        : Math.max(0, 100 - knownLossPoints - boundedUnknownLossPoints),
+      limit: Math.max(0, 100 - knownLossPoints - boundedUnknownLossPoints),
       knownLossPoints,
       boundedUnknownLossPoints,
       unresolvedExposureShare,

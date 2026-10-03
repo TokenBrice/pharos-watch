@@ -25,20 +25,20 @@ import type { V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { readCompiledV9FactSetForEvaluation } from "./facts";
-import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
+import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonTreatment } from "./policy";
 import { evaluateV9SubthresholdUnresolvedBridgeJoins } from "./control-bridge-join";
 import { compareText, deepFreeze } from "./primitives";
 import { v9AccessClaimGraphStatuses } from "../../types/safety-score-v9-access-lookthrough";
 
 const V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V1 = "safety-score-v9.evidence-gap-queue.v1";
-const V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V2 = "safety-score-v9.evidence-gap-queue.v2";
-const V9_EVIDENCE_GAP_QUEUE_KEY_DOMAIN_V2 = "safety-score-v9.evidence-gap-key.v2";
+const V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V3 = "safety-score-v9.evidence-gap-queue.v3";
+const V9_EVIDENCE_GAP_QUEUE_KEY_DOMAIN_V3 = "safety-score-v9.evidence-gap-key.v3";
 
 function statusesForAsset(asset: V9AssetFactsV3): V9FactStatusV2[] {
   const mechanismStatuses = asset.mechanismRiskReview.review
     ? Object.values(asset.mechanismRiskReview.review).flatMap((value) =>
         value !== null && typeof value === "object" && "status" in value
-          ? [(value as { status: V9FactStatusV2 }).status]
+          ? [value.status as V9FactStatusV2, ...("scopedAssessments" in value && Array.isArray(value.scopedAssessments) ? value.scopedAssessments.map((fragment: { status: V9FactStatusV2 }) => fragment.status) : [])]
           : [],
       )
     : [];
@@ -48,15 +48,27 @@ function statusesForAsset(asset: V9AssetFactsV3): V9FactStatusV2[] {
     ...mechanismStatuses,
     asset.dependencies.status,
     asset.reserveStatus,
-    ...asset.reserveExposures.map((exposure) => exposure.status),
+    ...asset.reserveExposures.flatMap((exposure) => [exposure.status, ...Object.values(exposure.factorStatuses ?? {})]),
+    ...asset.reserveResiduals.map((residual) => residual.status),
+    ...(asset.reserveBoundFacts ?? []).map(row => row.status),
     asset.exitStatus,
-    ...asset.exitRoutes.flatMap((route) => [route.status, route.output.status]),
+    ...asset.exitRoutes.flatMap((route) => [route.status, route.output.status, ...Object.values(route.factorStatuses ?? {})]),
     asset.controlStatus,
-    ...asset.controls.map((control) => control.status),
+    ...asset.controls.flatMap((control) => [control.status, ...Object.values(control.factorStatuses ?? {})]),
+    ...(asset.operationalResilienceStatus ? [asset.operationalResilienceStatus] : []),
+    ...(asset.wrapperLocalFacts.applicability === "wrapper" ? [
+      ...(asset.wrapperLocalFacts.formStatus ? [asset.wrapperLocalFacts.formStatus] : []),
+      ...Object.values(asset.wrapperLocalFacts.facts).flatMap(fact => fact.status ? [fact.status] : []),
+      ...(asset.wrapperLocalFacts.riskTransfer.status ? [asset.wrapperLocalFacts.riskTransfer.status] : []),
+    ] : []),
     asset.economicControlReview.mint.status,
+    ...Object.values(asset.economicControlReview.mint.factorStatuses ?? {}),
     asset.economicControlReview.oracle.status,
+    ...Object.values(asset.economicControlReview.oracle.factorStatuses ?? {}),
     ...asset.economicControlReview.oracle.branches.map((branch) => branch.status),
     asset.economicControlReview.bridge.status,
+    ...Object.values(asset.economicControlReview.bridge.factorStatuses ?? {}),
+    ...asset.economicControlReview.bridge.routes.flatMap(route => Object.values(route.factorStatuses ?? {})),
     asset.accessReview.transfer.status,
     asset.accessReview.freeze.status,
     ...asset.accessReview.freeze.reviews.map((review) => review.status),
@@ -143,6 +155,8 @@ function actionForGap(
   if (policyBindingIssues.length > 0) return "reconcile-policy-binding";
   if (gap.path.kind === "methodology" || gap.ownerDomain === "methodology") return "resolve-methodology-decision";
   if (applicability === "unresolved") return "resolve-applicability";
+  if (gap.causeProof.cause === "A") return "implement-producer-capability";
+  if (gap.causeProof.cause === "B" || gap.causeProof.cause === "U") return "collect-evidence";
   if (gap.observationState === "missing") return "collect-evidence";
   if (gap.observationState === "stale") return "refresh-evidence";
   if (gap.observationState === "unsupported") return "implement-producer-capability";
@@ -205,7 +219,7 @@ function bridgeJoinForAsset(
 function queueKey(asset: V9AssetFactsV3, gap: V9FactGapV3): string {
   return sha256Hex(
     stableJsonStringifyV1({
-      domain: V9_EVIDENCE_GAP_QUEUE_KEY_DOMAIN_V2,
+      domain: V9_EVIDENCE_GAP_QUEUE_KEY_DOMAIN_V3,
       gap: {
         assetId: asset.assetId,
         gapId: gap.gapId,
@@ -213,6 +227,8 @@ function queueKey(asset: V9AssetFactsV3, gap: V9FactGapV3): string {
         ownerDomain: gap.ownerDomain,
         policyRuleId: gap.policyRuleId,
         responsibility: gap.responsibility,
+        cause: gap.causeProof.cause,
+        causeScope: gap.causeScope ?? null,
         path: gap.path,
       },
     }),
@@ -255,7 +271,7 @@ function computeV9EvidenceGapQueueV1Digest(core: V9EvidenceGapQueueCoreV1): stri
 
 function computeV9EvidenceGapQueueV2Digest(core: V9EvidenceGapQueueCoreV2): string {
   const parsed = V9EvidenceGapQueueCoreV2Schema.parse(core);
-  return sha256Hex(stableJsonStringifyV1({ domain: V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V2, queue: parsed }));
+  return sha256Hex(stableJsonStringifyV1({ domain: V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V3, queue: parsed }));
 }
 
 function assertQueueDigest(queueDigest: string, expected: string): void {
@@ -273,7 +289,7 @@ export function parseV9EvidenceGapQueue(input: unknown): V9EvidenceGapQueue {
     assertQueueDigest(queueDigest, computeV9EvidenceGapQueueV1Digest(core));
     return parsed;
   }
-  if (schemaVersion === 2) {
+  if (schemaVersion === 3) {
     const parsed = V9EvidenceGapQueueV2Schema.parse(input);
     const { queueDigest, ...core } = parsed;
     assertQueueDigest(queueDigest, computeV9EvidenceGapQueueV2Digest(core));
@@ -282,7 +298,7 @@ export function parseV9EvidenceGapQueue(input: unknown): V9EvidenceGapQueue {
   throw new Error(`Unsupported Safety Score v9 evidence-gap queue schema version: ${String(schemaVersion)}`);
 }
 
-/** Build a policy-backed work queue from native V3 facts. */
+/** Build a proof-aware policy-backed work queue from schema-4 facts. */
 export function buildV9EvidenceGapQueue(args: {
   factSet: unknown;
   policy: V9ValidatedPolicyEnvelope;
@@ -301,7 +317,7 @@ export function buildV9EvidenceGapQueue(args: {
         materiality.unresolvedDeploymentFullCeilingSharePct / 100,
       ));
     return asset.gaps.map((gap) => {
-      const reasonPolicy = resolveV9ReasonPolicy(args.policy, gap.reasonCode);
+      const reasonPolicy = resolveV9ReasonTreatment(args.policy, gap.reasonCode, gap.causeProof.cause);
       const policyBindingIssues: V9EvidenceGapPolicyBindingIssue[] = [];
       if (reasonPolicy.reason.ownerDomain !== gap.ownerDomain) {
         policyBindingIssues.push("fact-owner-domain-mismatch");
@@ -340,12 +356,16 @@ export function buildV9EvidenceGapQueue(args: {
         action: actionForGap(gap, applicability, policyBindingIssues),
         releaseSeverity: reasonPolicy.reason.releaseSeverity,
         auditClassification: reasonPolicy.reason.auditClassification,
-        treatment: reasonPolicy.reason.defaultTreatment,
+        treatment: reasonPolicy.treatment,
         critical: reasonPolicy.critical,
         publicLabel: reasonPolicy.reason.publicLabel,
         message: gap.message,
         evidenceRefIds: gap.evidenceRefIds,
         responsibility: gap.responsibility,
+        cause: gap.causeProof.cause,
+        causeProof: gap.causeProof,
+        causeScope: gap.causeScope ?? null,
+        causeGapIds: [gap.gapId],
         bridgeJoin: gapIsBridgeScoped(asset, gap) ? bridgeJoin() : null,
       } satisfies Omit<V9EvidenceGapQueueEntryV2, "priority">;
       return entry;
@@ -367,11 +387,11 @@ export function buildV9EvidenceGapQueue(args: {
       count: entries.filter((entry) => entry.responsibility === responsibility).length,
     }));
   const core = V9EvidenceGapQueueCoreV2Schema.parse({
-    schemaVersion: 2,
+    schemaVersion: 3,
     purpose: "evidence-work-queue-not-release-gate",
     status: entries.length === 0 ? "clear" : "work-required",
     facts: {
-      sourceSchemaVersion: 3,
+      sourceSchemaVersion: 4,
       sourceFactSetDigest: factSetRead.sourceFactSetDigest,
       evaluationFactSetDigest: factSet.v9FactSetDigest,
       baseInputGenerationId: factSet.baseInputGenerationId,

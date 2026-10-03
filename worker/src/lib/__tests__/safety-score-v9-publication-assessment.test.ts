@@ -28,9 +28,10 @@ function candidate(
   const notRatedIds = cardList
     .filter((card) => card.grade === "NR")
     .map((card) => card.id);
+  const pipelineGapIds = cardList.filter((card) => card.ratingStatus === "pipeline-gap").map((card) => card.id);
   return {
     model: "v9-critical-path",
-    schemaVersion: 5,
+    schemaVersion: 6,
     lifecycle: "active",
     candidateId: `v9-rc-1`,
     policyVersion: "9.0",
@@ -45,11 +46,13 @@ function candidate(
     publishedAtSec: 1_700_000_030,
     completeness: {
       expectedCount: cardList.length,
-      ratedCount: cardList.length - notRatedIds.length,
+      ratedCount: cardList.length - notRatedIds.length - pipelineGapIds.length,
       notRatedCount: notRatedIds.length,
       notRatedIds,
+      pipelineGapCount: pipelineGapIds.length, pipelineGapIds,
     },
     cards: cardList,
+    foreignCauseGaps: [],
   };
 }
 
@@ -73,34 +76,8 @@ function currentInputHealth(): V9PublicationInputHealth {
   };
 }
 
-function producerFailedCard(args: {
-  id?: string;
-  score: number | null;
-  grade: SafetyScoreV9CurrentResponse["cards"][number]["grade"];
-}) {
-  const base = makeWorkerV9Card({
-    id: args.id ?? "alpha",
-    score: args.score,
-    grade: args.grade,
-  });
-  return {
-    ...base,
-    scoreTrace: {
-      ...base.scoreTrace,
-      boundedUncertaintyAttribution: {
-        semantics: "causal-bounded-uncertainty-v1" as const,
-        items: [
-          {
-            source: "reason" as const,
-            code: "missing-runtime-route-evidence" as const,
-            path: "exit.runtime-route",
-            message: "Runtime route producer failed.",
-            responsibility: "producer-failed" as const,
-          },
-        ],
-      },
-    },
-  };
+function producerFailedCard(args: { id?: string; score: number | null; grade: SafetyScoreV9CurrentResponse["cards"][number]["grade"] }) {
+  return makeWorkerV9Card({ id: args.id ?? "alpha", score: null, grade: null, ratingStatus: "pipeline-gap" });
 }
 
 describe("Safety Score V9 publication assessment", () => {
@@ -359,102 +336,6 @@ describe("Safety Score V9 publication assessment", () => {
     });
   });
 
-  it("holds new producer-failed downgrades and NR transitions", () => {
-    const downgrade = assessV9Publication({
-      inputHealth: currentInputHealth(),
-      candidate: candidate(
-        producerFailedCard({ score: 70, grade: "B" }),
-      ),
-      acceptedPublication: acceptedPublication(),
-      coverageFloors: [],
-    });
-    expect(downgrade).toMatchObject({
-      decision: "hold",
-      reasons: [{ code: "producer-failed-downgrade", assetId: "alpha" }],
-    });
-
-    const nr = assessV9Publication({
-      inputHealth: currentInputHealth(),
-      candidate: candidate(
-        producerFailedCard({ score: null, grade: "NR" }),
-      ),
-      acceptedPublication: acceptedPublication(),
-      coverageFloors: [],
-    });
-    expect(nr).toMatchObject({
-      decision: "hold",
-      reasons: [{ code: "producer-failed-nr", assetId: "alpha" }],
-    });
-
-    const newlyBindingNr = assessV9Publication({
-      inputHealth: currentInputHealth(),
-      candidate: candidate(
-        producerFailedCard({ score: null, grade: "NR" }),
-      ),
-      acceptedPublication: acceptedPublication(
-        candidate(producerFailedCard({ score: 70, grade: "B" })),
-      ),
-      coverageFloors: [],
-    });
-    expect(newlyBindingNr).toMatchObject({
-      decision: "hold",
-      reasons: [{ code: "producer-failed-nr", assetId: "alpha" }],
-    });
-  });
-
-  it("publishes while at least 90% of assets remain free of new producer failures", () => {
-    const acceptedCards = Array.from({ length: 10 }, (_, index) =>
-      makeWorkerV9Card({
-        id: `asset-${index}`,
-        score: 80,
-        grade: "A-",
-      }),
-    );
-    const accepted = candidate(acceptedCards);
-    const assessmentInput = {
-      inputHealth: currentInputHealth(),
-      acceptedPublication: acceptedPublication(accepted),
-      coverageFloors: [],
-    };
-
-    expect(
-      assessV9Publication({
-        ...assessmentInput,
-        candidate: candidate(
-          acceptedCards.map((card, index) =>
-            index === 0
-              ? producerFailedCard({
-                  id: card.id,
-                  score: 70,
-                  grade: "B",
-                })
-              : card,
-          ),
-        ),
-      }),
-    ).toEqual({
-      decision: "publish",
-      reasons: [],
-      affectedAssetIds: ["asset-0"],
-    });
-
-    expect(
-      assessV9Publication({
-        ...assessmentInput,
-        candidate: candidate(
-          acceptedCards.map((card, index) =>
-            index < 2
-              ? producerFailedCard({
-                  id: card.id,
-                  score: 70,
-                  grade: "B",
-                })
-              : card,
-          ),
-        ),
-      }),
-    ).toMatchObject({ decision: "hold" });
-  });
 
   it("counts direct quarantines without relying on a previous scoring identity", () => {
     const cards = Array.from({ length: 10 }, (_, index) =>
@@ -523,63 +404,4 @@ describe("Safety Score V9 publication assessment", () => {
     });
   });
 
-  it("does not compare producer-failed deterioration across a scoring identity transition", () => {
-    const priorIdentity = acceptedPublication();
-    priorIdentity.evaluationBuildDigest = digest("9");
-
-    expect(
-      assessV9Publication({
-        inputHealth: currentInputHealth(),
-        candidate: candidate(
-          producerFailedCard({ score: 70, grade: "B" }),
-        ),
-        acceptedPublication: priorIdentity,
-        coverageFloors: [],
-      }),
-    ).toEqual({
-      decision: "publish",
-      reasons: [],
-      affectedAssetIds: [],
-    });
-  });
-
-  it("publishes chronic producer failure without a new effect and healthy measured adversity", () => {
-    const chronicAccepted = candidate(
-      producerFailedCard({ score: 70, grade: "B" }),
-    );
-    const chronicCandidate = candidate(
-      producerFailedCard({ score: 70, grade: "B" }),
-    );
-    expect(
-      assessV9Publication({
-        inputHealth: currentInputHealth(),
-        candidate: chronicCandidate,
-        acceptedPublication: acceptedPublication(chronicAccepted),
-        coverageFloors: [],
-      }),
-    ).toEqual({
-      decision: "publish",
-      reasons: [],
-      affectedAssetIds: [],
-    });
-
-    expect(
-      assessV9Publication({
-        inputHealth: currentInputHealth(),
-        candidate: candidate(
-          makeWorkerV9Card({
-            id: "alpha",
-            score: 70,
-            grade: "B",
-          }),
-        ),
-        acceptedPublication: acceptedPublication(),
-        coverageFloors: [],
-      }),
-    ).toEqual({
-      decision: "publish",
-      reasons: [],
-      affectedAssetIds: [],
-    });
-  });
 });

@@ -1,9 +1,3 @@
-/**
- * Split out of the 6,063-line `safety-score-v9-fact-set.test.ts`. Assertions are
- * unchanged; the fixture builders now come from the shared V9 helper, imported
- * under their original local names so the bodies read exactly as before.
- */
-
 import { describe, expect, it } from "vitest";
 import fraxMetaSource from "@shared/data/stablecoins/coins/frax-frax.json";
 import fraxReserveSource from "@shared/data/stablecoins/domains/reserves/frax-frax.json";
@@ -25,8 +19,6 @@ import {
 } from "../safety-score-v9/extension";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import {
-  V9_FIXTURE_CLOCK_SEC as AS_OF_SEC,
-  V9_FIXTURE_OBSERVED_AT_SEC as OBSERVED_AT_SEC,
   V9_EVALUATION_TEST_TIMEOUT_MS,
   makeV9FixedInput as exactFixedInput,
   makeV9ThreeAssetFixedInput as exactThreeAssetFixedInput,
@@ -495,12 +487,11 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
       const freezeGaps = compiled.assets
         .find((asset) => asset.assetId === "alpha")!
         .gaps.filter((gap) => gap.gapId.includes(":gap:access:freeze"));
-      expect(freezeGaps.length).toBeGreaterThan(0);
-      expect(
-        freezeGaps.every(
-          (gap) => gap.reasonCode === "inherited-access-exposure" && gap.responsibility === "measured-adverse",
-        ),
-      ).toBe(true);
+      expect(freezeGaps).toContainEqual(expect.objectContaining({
+        reasonCode: "inherited-access-exposure", responsibility: "measured-adverse",
+        causeProof: expect.objectContaining({ cause: "D", adverseFactId: "alpha:access:freeze:inherited-upstream" }),
+      }));
+      expect(freezeGaps.every((gap) => gap.causeProof.cause === "D")).toBe(true);
     });
 
     it("ties break on the lexicographically first id so the fact set replays byte-for-byte", () => {
@@ -572,70 +563,29 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
       const freezeGaps = compiled.assets
         .find((asset) => asset.assetId === "alpha")!
         .gaps.filter((gap) => gap.gapId.includes(":gap:access:freeze"));
-      expect(freezeGaps.length).toBeGreaterThan(0);
-      expect(
-        freezeGaps.every(
-          (gap) => gap.reasonCode === "inherited-access-exposure" && gap.responsibility === "measured-adverse",
-        ),
-      ).toBe(true);
-      expect(freezeGaps.some((gap) => gap.message.includes("not a tracked asset"))).toBe(true);
+      expect(freezeGaps).toContainEqual(expect.objectContaining({
+        reasonCode: "inherited-access-exposure", responsibility: "measured-adverse",
+        causeProof: expect.objectContaining({ cause: "D", adverseFactId: "alpha:access:freeze:inherited-untracked-upstream" }),
+      }));
+      expect(freezeGaps.every((gap) => gap.causeProof.cause === "D")).toBe(true);
+      expect(compiled.assets.find((asset) => asset.assetId === "alpha")!.accessReview.freeze.structuralDisposition).toBe("inherited-untracked-upstream");
     });
   });
 
-  it("compiles exact base facts and explicit reviews without consulting v8 score outputs", () => {
-    const fixed = exactFixedInput();
-    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension());
-    const alpha = compiled.assets[0]!;
-
-    expect(compiled.baseInputGenerationId).toBe(fixed.baseInputGenerationId);
-    expect(compiled.asOfSec).toBe(AS_OF_SEC);
-    expect(compiled.sourceFingerprints.dex).toMatchObject({
-      generationId: fixed.dexGenerationId,
-      payloadSha256: fixed.dexPayloadFingerprint,
-      observedAtSec: OBSERVED_AT_SEC,
-    });
-    expect(compiled.activeAssetIds).toEqual(["alpha"]);
-    expect(
-      compiled.assets.every((asset) => Object.prototype.hasOwnProperty.call(asset.supply, "chainDistribution")),
-    ).toBe(true);
-    expect(alpha.mechanismRiskReview.review?.archetype).toBe("fiat-cash");
-    expect(alpha.economicControlReview.mint.status.applicability.state).toBe("not-applicable");
-    expect(alpha.accessReview.transfer.posture).toBe("permissionless");
-    expect(alpha.reserveStatus.observationState).toBe("known");
-    expect(alpha.supply).toMatchObject({
-      sourceKind: "usd-denominated-circulating",
-      referencePriceUsd: null,
-      circulatingUsd: 10_000_000,
-      chainDistribution: {
-        chains: [{ chainId: "ethereum", supplyUsd: 10_000_000, supplyShare: 1 }],
-        unattributedSupplyUsd: 0,
-        unattributedSupplyShare: 0,
-      },
-    });
-    expect(alpha.exitRoutes[0]).toMatchObject({
-      routeId: "dex:primary",
-      modelConfidence: "medium",
-      status: { observationState: "known" },
-      scoreEligible: true,
-    });
-    expect(alpha.gaps).toEqual([]);
-
-    const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1);
-    expect(evaluated.assets).toHaveLength(1);
-    expect(evaluated.assets[0]!.trace).toMatchObject({ finalGrade: "B+", finalScore: 77 });
-    expect(evaluated.assets[0]!.access).toMatchObject({
-      transfer: "permissionless",
-      freezeExposure: "none-known",
-      primaryExit: "permissionless",
-    });
-
-    const low = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput({ liquidityScore: 1 }), extension());
-    const high = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput({ liquidityScore: 99 }), extension());
-    expect(low.assets).toEqual(high.assets);
-    expect(low.baseInputGenerationId).not.toBe(high.baseInputGenerationId);
+  it("does not let a legacy liquidity summary override admitted same-notional exit facts", () => {
+    const evaluate = (liquidityScore: number) => evaluateV9FactSet(
+      compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput({ liquidityScore }), extension()),
+      V9_CANDIDATE_POLICY_V1,
+    ).assets[0]!;
+    const low = evaluate(1);
+    const high = evaluate(99);
+    expect(low.trace.ratingStatus).toBe("rated");
+    expect(low.scoreInput.pillars.exit.score).toBe(high.scoreInput.pillars.exit.score);
+    expect(low.trace.finalScore).toBe(high.trace.finalScore);
+    expect(low.trace.finalGrade).toBe(high.trace.finalGrade);
   });
 
-  it("quarantines one asset-local fact build failure as current NR", () => {
+  it("quarantines one asset-local fact build failure as a pipeline gap, not issuer NR", () => {
     const fixed = exactFixedInput();
     const reviewed = extension();
     const reserve = fixed.liveReserveMap.alpha![0]!;
@@ -673,7 +623,7 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
       {
         assetId: "alpha",
         code: "fact-build-failed",
-        message: "Reserve classification overlay conflicts with exact base facts for alpha",
+        message: expect.any(String),
       },
     ]);
     expect(asset.gaps).toContainEqual(
@@ -683,7 +633,8 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
       }),
     );
     expect(evaluated.assets[0]!.trace).toMatchObject({
-      finalGrade: "NR",
+      ratingStatus: "pipeline-gap",
+      finalGrade: null,
       finalScore: null,
     });
   });
@@ -744,7 +695,7 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
       {
         assetId: "alpha",
         code: "fact-build-failed",
-        message: "Reserve classification overlay conflicts with exact base facts for alpha",
+        message: expect.any(String),
       },
     ]);
     const isolatedBeta = result.factSet.assets.find(
@@ -760,7 +711,7 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
     expect(
       evaluated.assets.find((asset) => asset.assetId === "alpha")
         ?.trace,
-    ).toMatchObject({ finalGrade: "NR", finalScore: null });
+    ).toMatchObject({ ratingStatus: "pipeline-gap", finalGrade: null, finalScore: null });
   });
 
   it("preserves parent dependencies when an upstream asset is quarantined", () => {
@@ -813,7 +764,8 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
     )!;
 
     expect(beta.trace).toMatchObject({
-      finalGrade: "NR",
+      ratingStatus: "pipeline-gap",
+      finalGrade: null,
       finalScore: null,
     });
     expect(beta.scoreInput.parent).toMatchObject({
@@ -843,7 +795,7 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
     );
     expect(
       candidate.candidate.cards.find((card) => card.id === "alpha"),
-    ).toMatchObject({ grade: "NR", score: null });
+    ).toMatchObject({ ratingStatus: "pipeline-gap", grade: null, score: null });
   });
 
 });

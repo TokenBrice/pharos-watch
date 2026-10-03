@@ -55,7 +55,7 @@ export function makeWorkerSafetyScoreV9Publication(
   );
   return {
     model: "v9-critical-path",
-    schemaVersion: 5,
+    schemaVersion: 6,
     lifecycle: "active",
     candidateId: projected.source.candidateId,
     policyVersion: projected.methodology.version,
@@ -73,6 +73,7 @@ export function makeWorkerSafetyScoreV9Publication(
     publishedAtSec: projected.updatedAt,
     completeness: projected.completeness,
     cards: projected.cards,
+    foreignCauseGaps: projected.foreignCauseGaps,
     ...overrides,
   };
 }

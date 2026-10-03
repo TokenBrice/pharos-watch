@@ -515,7 +515,7 @@ export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
     ? `DEWS: ${s.dews.band} (score ${s.dews.score}, ${formatAge(s.dews.computedAt, nowSec)})`
     : "DEWS: no recent signal";
   const safetyLine = s.safety
-    ? `Safety: ${s.safety.grade}${s.safety.score != null ? ` (${s.safety.score})` : ""} [${s.safety.model.toUpperCase()} ${s.safety.methodologyVersion}], ${formatAge(s.safety.publishedAt, nowSec)}`
+    ? `Safety: ${s.safety.ratingStatus === "pipeline-gap" ? "Pipeline gap — Unavailable" : s.safety.grade ?? "Unavailable"}${s.safety.score != null ? ` (${s.safety.score})` : ""}${s.safety.ratingStatus !== "pipeline-gap" && s.safety.partialEvidence ? " — Partial evidence: pipeline gap" : ""} [${s.safety.model.toUpperCase()} ${s.safety.methodologyVersion}], ${formatAge(s.safety.publishedAt, nowSec)}`
     : s.safetyUnavailableReason
       ? "Safety: temporarily unavailable"
       : "Safety: UNKNOWN";

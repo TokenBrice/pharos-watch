@@ -34,7 +34,6 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-
 import type { ScreenerRow, ScreenerSortKey } from "@/lib/screener-filters";
 import type { DataTableSortControls } from "@/components/data-table-shell";
 import type { QueryKey } from "@tanstack/react-query";
-import type { ReportCardGrade } from "@shared/types";
 import type { SafetyScoreV9TopDriver } from "@shared/lib/safety-score-v9/public";
 
 // M1: keys feeding the screener table's visible data (supply, peg, DEWS,
@@ -344,9 +343,9 @@ function ScreenerMobileCard({ row, logo }: { row: ScreenerRow; logo?: string }) 
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        {row.safetyGrade ? (
+        {row.safetyGrade !== null || row.ratingStatus === "pipeline-gap" ? (
           <SafetyGradeBadge
-            grade={row.safetyGrade as ReportCardGrade}
+            grade={row.safetyGrade}
             score={row.safetyScore}
             size="sm"
           />
@@ -435,9 +434,9 @@ function ScreenerTableRow({
       <DesktopScoreCell value={row.dewsScore} />
       <DesktopScoreCell value={row.liquidityScore} />
       <TableCell className="text-center">
-        {row.safetyGrade ? (
+        {row.safetyGrade !== null || row.ratingStatus === "pipeline-gap" ? (
           <SafetyGradeBadge
-            grade={row.safetyGrade as ReportCardGrade}
+            grade={row.safetyGrade}
             score={row.safetyScore}
             size="sm"
           />
@@ -495,6 +494,7 @@ function ScreenerTableRow({
 // rather than fetching or reconstructing the V9 card.
 function projectScreenerTopDriver(row: ScreenerRow): SafetyScoreV9TopDriver | null {
   const evidenceFreshness = "unknown" as const;
+  if (row.ratingStatus === "pipeline-gap" || row.ratingStatus === null) return null;
   if (row.safetyGrade === null || row.safetyGrade === "NR") {
     return {
       kind: "withheld",
@@ -526,9 +526,14 @@ function projectScreenerTopDriver(row: ScreenerRow): SafetyScoreV9TopDriver | nu
 }
 
 function V9Profile({ row, compact = false }: { row: ScreenerRow; compact?: boolean }) {
+  const unavailableEvidence = row.safetyEvidence === null || row.safetyEvidence === "pipeline-gap";
+  const evidenceLabel = row.safetyEvidence === null ? "Unavailable"
+    : row.safetyEvidence === "pipeline-gap" ? "Pipeline gap" : SAFETY_EVIDENCE_LABELS[row.safetyEvidence];
+  const evidenceClass = unavailableEvidence ? "border-border text-muted-foreground"
+    : SAFETY_EVIDENCE_BADGE_CLASSES[row.safetyEvidence as keyof typeof SAFETY_EVIDENCE_BADGE_CLASSES];
   const title = row.safetyBindingCapReason
     ? `Binding V10 cap: ${row.safetyBindingCapReason}`
-    : `V10 evidence: ${SAFETY_EVIDENCE_LABELS[row.safetyEvidence]}`;
+    : `V10 evidence: ${evidenceLabel}`;
   return (
     <span className={`inline-flex ${compact ? "items-center" : "flex-col"} gap-1`} title={title}>
       <span className="inline-flex items-center gap-1 pharos-numeric text-xs">
@@ -538,9 +543,12 @@ function V9Profile({ row, compact = false }: { row: ScreenerRow; compact?: boole
         <span className="text-border">/</span>
         <PillarReading label="C" value={row.safetyControlScore} weakest={row.safetyWeakestPillar === "control"} />
       </span>
-      <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-semibold leading-none ${SAFETY_EVIDENCE_BADGE_CLASSES[row.safetyEvidence]}`}>
-        {SAFETY_EVIDENCE_LABELS[row.safetyEvidence]}
+      <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-semibold leading-none ${evidenceClass}`}>
+        {evidenceLabel}
       </span>
+      {row.partialEvidence !== null ? <span className="text-[10px] text-muted-foreground">
+        Partial evidence: pipeline gap · {row.partialEvidence.causes.join("/")}
+      </span> : null}
     </span>
   );
 }

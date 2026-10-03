@@ -16,10 +16,26 @@ const { getRouteMatch } = await import("../../routes/registry");
 describe("handleSafetyGrades", () => {
   beforeEach(() => mockLoadActiveSafetyScoreSource.mockReset());
 
+  it("keeps pipeline-gap null grades separate from NR and preserves partial rated evidence", async () => {
+    const base = makeReportCardsV9Response();
+    const partial = { reasonCode: "partial-evidence-pipeline-gap" as const, excludedPillars: ["exit" as const], causes: ["A" as const] };
+    const grades = [
+      { id: "partial", score: 90, grade: "A" as const, ratingStatus: "rated" as const, partialEvidence: partial },
+      { id: "gap", score: null, grade: null, ratingStatus: "pipeline-gap" as const,
+        partialEvidence: { ...partial, excludedPillars: ["backing" as const, "exit" as const] } },
+      { id: "nr", score: null, grade: "NR" as const, ratingStatus: "not-rated" as const, partialEvidence: null },
+    ];
+    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot: { ...base, cards: grades } });
+    const response = await handleSafetyGrades(mockD1([], { requireMatch: true }));
+    const body = SafetyGradesResponseSchema.parse(await response.json());
+    expect(body.schemaVersion).toBe(1);
+    expect(body.grades).toEqual(grades);
+  });
+
   it("serves a grade-only projection of the current V9 publication without a key", async () => {
     const snapshot = makeReportCardsV9Response();
     mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot: {
-      ...snapshot, cards: snapshot.cards.map(({ id, score, grade }) => ({ id, score, grade })),
+      ...snapshot, cards: snapshot.cards.map(({ id, score, grade, ratingStatus, partialEvidence }) => ({ id, score, grade, ratingStatus, partialEvidence })),
     } });
 
     const response = await handleSafetyGrades(mockD1([], { requireMatch: true }));
@@ -29,7 +45,7 @@ describe("handleSafetyGrades", () => {
     const body = SafetyGradesResponseSchema.parse(await response.json());
     expect(body.methodologyVersion).toBe(snapshot.methodology.version);
     expect(body.grades).toEqual(
-      snapshot.cards.map((card) => ({ id: card.id, score: card.score, grade: card.grade })),
+      snapshot.cards.map(({ id, score, grade, ratingStatus, partialEvidence }) => ({ id, score, grade, ratingStatus, partialEvidence })),
     );
     expect(getRouteMatch("/api/safety-grades")?.endpoint?.key).toBe("safety-grades");
     expect(getPublicApiAccess("/api/safety-grades")).toBe("exempt");

@@ -1,14 +1,17 @@
 import { describe, expect, it } from "vitest";
-import type {
-  V9ApplicableWrapperLocalFacts,
-  V9WrapperLocalFactKey,
-  V9WrapperRiskAssessment,
+import {
+  V9WrapperFactDispositionSchema,
+  type V9ApplicableWrapperLocalFacts,
+  type V9WrapperLocalFactKey,
+  type V9WrapperRiskAssessment,
 } from "../../types/safety-score-v9-wrapper";
 import {
   resolveV9WrapperParentLimit,
   type V9WrapperParentLimitInput,
 } from "../safety-score-v9/wrapper-risk";
 
+import { createV9FactGapV3 } from "../safety-score-v9/reasons";
+import type { V9EvidenceCauseProof } from "../../types/safety-score-v9-causes";
 const FACT_KEYS = [
   "contractMutability",
   "custodyEscrow",
@@ -85,30 +88,12 @@ describe("Safety Score v9 wrapper-local risk", () => {
     expect(result.fallbackDiscount).toBe(10);
     expect(result.appliedDiscount).toBe(10);
     expect(result.limit).toBe(74);
-    expect(result.missingFacts).toEqual([
+    expect(result.missingFacts).toMatchObject([
       { factClass: "withdrawalTerms", disposition: "issuer-undisclosed" },
     ]);
   });
 
-  it.each(["measuredUnwind", "withdrawalTerms"] as const)(
-    "does not lower the parent limit for bounded %s integration uncertainty",
-    (factKey) => {
-      const localFacts = facts({ lossAbsorptionEmergencyControls: "high" }, "strategy-vault");
-      const measured = resolveV9WrapperParentLimit(input({ localFacts }));
-      localFacts.facts[factKey] = {
-        disposition: "integration-missing", assessment: null,
-        signals: ["same-notional-execution-not-proven"], evidenceRefIds: [],
-      };
-      const bounded = resolveV9WrapperParentLimit(input({ localFacts }));
-      expect(bounded.limit).toBe(measured.limit);
-      expect(bounded.localRiskDiscount).toBe(2.8);
-      expect(bounded.fallbackDiscount).toBe(0);
-      expect(bounded.factsComplete).toBe(false);
-      expect(bounded.missingFacts).toContainEqual({ factClass: factKey, disposition: "integration-missing" });
-    },
-  );
-
-  it.each(["method-unsupported", "producer-failed", "issuer-undisclosed"] as const)(
+  it.each(["method-unsupported", "producer-failed", "issuer-undisclosed", "integration-missing", "unresearched", "public-data-uncurated"] as const)(
     "does not convert %s unwind uncertainty into a form haircut",
     (disposition) => {
       const localFacts = facts({ lossAbsorptionEmergencyControls: "high" }, "strategy-vault");
@@ -263,4 +248,62 @@ describe("Safety Score v9 wrapper-local risk", () => {
     expect(higherParent - lowerParent).toBe(14);
   });
 
+});
+
+describe("cause-aware wrapper fallback", () => {
+  it.each(["pure", "native-staked", "strategy-vault"] as const)(
+    "retains the %s form charge for C/U custody and withdrawal gaps but excludes proven A/B", (form) => {
+      for (const factKey of ["custodyEscrow", "withdrawalTerms"] as const) {
+        for (const cause of ["A", "B", "C", "U"] as const) {
+          const localFacts = facts({ contractMutability: "high" }, form);
+          localFacts.riskTransfer = {
+            disposition: "reviewed", mechanism: "first-loss-capital",
+            maximumParentLossAbsorptionPoints: 4, signals: ["documented-first-loss-capital"],
+            evidenceRefIds: ["first-loss-review"],
+          };
+          const id = `${form}:${factKey}:${cause}`;
+          const proof: V9EvidenceCauseProof = cause === "A"
+            ? { cause, producerState: "integration-missing", sourceId: "wrapper-reader", sourceGenerationId: "captured",
+              observedAtSec: 1, rejectionCode: "reader-gap", evidenceRefIds: ["attempt"] }
+            : cause === "U" ? { cause, reason: "not-yet-researched", evidenceRefIds: [] }
+              : cause === "B" ? { cause, proofOrigin: "typed-review", classificationId: id, reviewedAt: "2026-10-01",
+                sources: [{ url: "https://wrapper.example/terms", assertion: "Exact local terms are public." }],
+                evidenceRefIds: ["review"], assertion: "required-data-public" }
+                : { cause, proofOrigin: "typed-review", classificationId: id, reviewedAt: "2026-10-01",
+                  sources: [{ url: "https://wrapper.example/terms", assertion: "Exact local terms were researched." }],
+                  evidenceRefIds: ["review"], assertion: "researched-nondisclosure", rationale: "Required local datum absent." };
+          const gap = createV9FactGapV3({ gapId: id, responsibility: "unresearched", causeProof: proof,
+            reasonCode: "unresolved-control-identity", ownerDomain: "control", policyRuleId: "wrapper-local",
+            observationState: "bounded-unknown", path: { kind: "local-component", componentKey: `wrapper-local:${factKey}` },
+            message: "Scoped wrapper local uncertainty." });
+          localFacts.facts[factKey] = { disposition: V9WrapperFactDispositionSchema.parse(gap.responsibility), assessment: null, signals: [], evidenceRefIds: [],
+            status: { applicability: { state: "required", policyRuleId: "wrapper-local", rationale: null, gapId: null },
+              observationState: "bounded-unknown", gapIds: [id], evidenceRefIds: [] } };
+          const result = resolveV9WrapperParentLimit(input({ parentScore: 58, localFacts, gaps: [gap] }));
+          const expectedDiscount = cause === "A" || cause === "B" ? 1.4 : DISCOUNTS[form];
+          expect(result.localRiskDiscount).toBe(1.4);
+          expect(result.fallbackDiscount).toBe(cause === "A" || cause === "B" ? 0 : DISCOUNTS[form]);
+          expect(result.appliedDiscount).toBe(expectedDiscount);
+          expect(result.limit).toBe(58 - expectedDiscount);
+          expect(result.riskTransfer.appliedCredit).toBe(0);
+          expect(result.factsComplete).toBe(false);
+          expect(result.missingFacts[0]!.cause).toBe(cause);
+          expect(result.adjustments.find((adjustment) => adjustment.factKey === "contractMutability")!.cause).toBeNull();
+        }
+      }
+    },
+  );
+
+  it.each(["unresearched", "integration-missing", "producer-failed", "method-unsupported", "public-data-uncurated"] as const)(
+    "does not grant withdrawal relief from an unproven %s label", (disposition) => {
+      const localFacts = facts({ contractMutability: "high" });
+      localFacts.facts.withdrawalTerms = {
+        disposition, assessment: null, signals: ["withdrawal-fees-undisclosed"], evidenceRefIds: [],
+      };
+      expect(resolveV9WrapperParentLimit(input({ parentScore: 58, localFacts }))).toMatchObject({
+        fallbackDiscount: 3, localRiskDiscount: 1.4, appliedDiscount: 3, limit: 55,
+        missingFacts: [{ factClass: "withdrawalTerms", cause: "U" }],
+      });
+    },
+  );
 });

@@ -1,3 +1,4 @@
+import { makeReportCardsV9PipelineGapCard, makeReportCardsV9PartialCard } from "@shared/test-utils/report-cards-v9";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -337,7 +338,7 @@ describe("stablecoin OG card data", () => {
       const calls = vi.mocked(satoriStandalone).mock.calls;
       const element = calls[calls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
       expect(element.props.data).toMatchObject({
-        grade: "NR",
+        grade: "Unavailable",
         lastUpdated: "DEGRADED: V9 safety score unavailable",
       });
     });
@@ -362,6 +363,23 @@ describe("stablecoin OG card data", () => {
       expect(renderToStaticMarkup(element)).toContain("V9 GRADE");
     });
 
+    it("renders pipeline gaps without a fabricated NR and visibly labels partial ratings", async () => {
+      const source = activeV9();
+      source.snapshot.cards = [makeReportCardsV9PipelineGapCard("control", "A", { id: "usdt-tether" })];
+      vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(source);
+      const db = makeOgDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
+      await handleOg(db, "/api/og/stablecoin/usdt-tether");
+      let calls = vi.mocked(satoriStandalone).mock.calls;
+      let element = calls[calls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
+      expect(element.props.data.grade).toBe("Pipeline gap");
+      expect(renderToStaticMarkup(element)).not.toContain(">NR<");
+      source.snapshot.cards = [makeReportCardsV9PartialCard("exit", "B", { id: "usdt-tether" })];
+      await handleOg(db, "/api/og/stablecoin/usdt-tether");
+      calls = vi.mocked(satoriStandalone).mock.calls;
+      element = calls[calls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
+      expect(renderToStaticMarkup(element)).toContain("Partial evidence: pipeline gap");
+    });
+
     it("degrades a structurally valid active V9 publication after two producer cadences", async () => {
       vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex")
         .mockResolvedValue(activeV9(nowSec - SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC - 1));
@@ -377,7 +395,7 @@ describe("stablecoin OG card data", () => {
         data: StablecoinCardData;
       }>;
       expect(element.props.data).toMatchObject({
-        grade: "NR",
+        grade: "Unavailable",
         safetyModel: null,
       });
     });

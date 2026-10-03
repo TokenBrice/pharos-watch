@@ -25,6 +25,7 @@ import {
   ExitRouteObservationHistorySchema,
   PhysicalToUsdTraceSchema,
   ExitExecutionCertificateSchema,
+  ExitRouteCapacityEvidenceTierSchema,
 } from "./exit-route";
 import { RedemptionCapacityScoringHorizonSchema } from "./redemption";
 import { ReserveAssetClassSchema } from "./reserves";
@@ -42,6 +43,15 @@ import {
 } from "./safety-score-v9-fact-primitives";
 import { BRIDGE_ROUTE_RISK_TIER_VALUES, ORACLE_RISK_TIER_VALUES, VARIANT_KIND_VALUES } from "./core";
 import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
+import {
+  V9EvidenceCauseProofSchema, V9EvidenceCauseScopeSchema, V9EvidenceCauseBindingSchema,
+  findV9EvidenceCauseProofIssues, v9EvidenceResponsibilityForCauseProof,
+  V9CauseResolutionDiagnosticSchema,
+} from "./safety-score-v9-causes";
+import {
+  V9ReserveFactorStatusesSchema, V9ExitFactorStatusesSchema, V9ControlFactorStatusesSchema,
+  V9ReserveResidualFactSchema,
+} from "./safety-score-v9-fact-primitives";
 import {
   BaseInputGenerationIdSchema,
   CanonicalChainIdSchema,
@@ -128,6 +138,7 @@ export const V9EvidenceReferenceV2Schema = z
       })
       .strict()
       .nullable(),
+    causeBinding: V9EvidenceCauseBindingSchema.optional(),
   })
   .strict()
   .superRefine((reference, ctx) => {
@@ -206,9 +217,23 @@ export const V9FactGapV3Schema = z
   .object({
     ...V9FactGapV2Fields,
     responsibility: V9EvidenceResponsibilitySchema,
+    causeProof: V9EvidenceCauseProofSchema,
+    causeScope: V9EvidenceCauseScopeSchema.optional(),
+    evidenceHistory: z.object({
+      publishedBy: z.enum(["issuer", "parent", "other", "unknown"]),
+      evidenceRefIds: CanonicalStringArraySchema,
+    }).strict().optional(),
   })
   .strict()
-  .superRefine(validateFactGapPath);
+  .superRefine((gap, ctx) => {
+    validateFactGapPath(gap, ctx);
+    if (gap.responsibility !== v9EvidenceResponsibilityForCauseProof(gap.causeProof)) {
+      ctx.addIssue({ code: "custom", path: ["responsibility"], message: "Responsibility must derive from the cause proof" });
+    }
+    if (gap.causeProof.evidenceRefIds.some((id) => !gap.evidenceRefIds.includes(id))) {
+      ctx.addIssue({ code: "custom", path: ["evidenceRefIds"], message: "Gap must retain every proof evidence reference" });
+    }
+  });
 export type V9FactGapV3 = z.infer<typeof V9FactGapV3Schema>;
 
 
@@ -378,16 +403,20 @@ export type V9EffectiveDependenciesV3 = z.infer<typeof V9EffectiveDependenciesV3
 
 export const V9ReserveAssetClassSchema = ReserveAssetClassSchema;
 
+const V9ReserveCompositionEvidenceClassSchema = z.enum(["independent", "issuer-attested", "static-validated"]);
+const V9ReserveCompositionProvenanceSchema = z.enum(["live", "curated", "curated-fallback", "audited-fallback"]);
+
 const V9ReserveExposureFactV2Schema = z
   .object({
     exposureKey: CanonicalTextSchema,
     classificationKey: CanonicalTextSchema,
     sourceGenerationId: CanonicalTextSchema,
-    provenance: z.enum(["live", "curated", "curated-fallback", "audited-fallback"]),
-    evidenceClass: z.enum(["independent", "issuer-attested", "static-validated"]).optional(),
+    provenance: V9ReserveCompositionProvenanceSchema,
+    evidenceClass: V9ReserveCompositionEvidenceClassSchema.optional(),
     sourceKind: z.enum(["standing-structure", "portfolio-observation", "financial-report", "onchain-observation"]).optional(),
     scopeId: CanonicalTextSchema.optional(),
     status: V9FactStatusV2Schema,
+    factorStatuses: V9ReserveFactorStatusesSchema.optional(),
     name: CanonicalTextSchema,
     weight: PositiveFractionSchema,
     trackedAssetId: CanonicalTextSchema.nullable(),
@@ -415,10 +444,16 @@ const V9ReserveExposureFactV2Schema = z
       });
     }
     if (exposure.status.observationState === "known" && exposure.status.applicability.state === "required") {
-      if (exposure.assetClass === null) {
-        ctx.addIssue({ code: "custom", path: ["assetClass"], message: "Known reserve exposure requires asset class" });
+      if (exposure.assetClass === null && exposure.factorStatuses?.assetClass?.observationState === "known") {
+        ctx.addIssue({ code: "custom", path: ["assetClass"], message: "Known asset-class factor requires asset class" });
       }
-      if (exposure.failureDomains.length === 0) {
+      const obligorStatus = exposure.factorStatuses?.obligorConcentration;
+      const scopedUnknownObligor = exposure.assetClass !== null &&
+        exposure.factorStatuses?.assetClass?.observationState === "known" &&
+        exposure.issuerOrObligorKey === null && obligorStatus !== undefined &&
+        obligorStatus.applicability.state === "required" &&
+        obligorStatus.observationState !== "known" && obligorStatus.gapIds.length > 0;
+      if (exposure.failureDomains.length === 0 && !scopedUnknownObligor) {
         ctx.addIssue({
           code: "custom",
           path: ["failureDomains"],
@@ -443,7 +478,7 @@ const V9RouteCapacityPointV2Schema = z
     maxCostBps: z.number().finite().nonnegative(),
     executableUsd: NonNegativeUsdSchema,
     completionRatio: FractionSchema,
-    executionCostBps: z.number().finite().nonnegative(),
+    executionCostBps: z.number().finite().nonnegative().nullable(),
   })
   .strict()
   .superRefine((point, ctx) => {
@@ -453,7 +488,7 @@ const V9RouteCapacityPointV2Schema = z
     if (Math.abs(point.completionRatio - point.executableUsd / point.requestedNotionalUsd) > 0.00001) {
       ctx.addIssue({ code: "custom", path: ["completionRatio"], message: "Completion ratio is inconsistent" });
     }
-    if (point.executableUsd > 0 && point.executionCostBps > point.maxCostBps) {
+    if (point.executableUsd > 0 && point.executionCostBps !== null && point.executionCostBps > point.maxCostBps) {
       ctx.addIssue({ code: "custom", path: ["executionCostBps"], message: "Execution cost exceeds the request limit" });
     }
   });
@@ -567,7 +602,7 @@ export const V9ExitRouteFactBaseSchema = z
     // Retained schema-v2 facts and route reviews predate this field. Parse them
     // conservatively; current compilers still materialize the normalized value
     // in their output.
-    modelConfidence: z.enum(["high", "medium", "low"]).default("low"),
+    modelConfidence: z.enum(["high", "medium", "low", "unknown"]).default("low"),
     /** Reviewed fee disclosure without a same-notional execution cost bound. */
     feeEvidence: z.enum(["undisclosed-reviewed", "disclosed-unquantified"]).optional(),
     coverageClass: V9RouteCoverageClassSchema,
@@ -601,6 +636,8 @@ const V9ExitRouteFactV2Schema = V9ExitRouteFactBaseSchema
     settlementBoundUnproven: z.boolean().optional(),
     settlementEvidenceRefIds: CanonicalStringArraySchema,
     status: V9FactStatusV2Schema,
+    factorStatuses: V9ExitFactorStatusesSchema.optional(),
+    capacityEvidenceTier: ExitRouteCapacityEvidenceTierSchema.optional(),
     scoreEligible: z.boolean(),
     request: V9RouteRequestV2Schema.nullable(),
     capacityCurve: CanonicalCapacityCurveSchema,
@@ -667,18 +704,6 @@ const V9ExitRouteFactV2Schema = V9ExitRouteFactBaseSchema
       ctx.addIssue({ code: "custom", path: ["failureDomains"], message: "Known route requires failure domains" });
     }
     if (route.status.observationState === "known" && route.scoreEligible) {
-      if (
-        route.holderAccess === "unknown" ||
-        route.executionModel === "unknown" ||
-        route.executionCertainty === "unknown" ||
-        route.observationConfidence === "unknown" ||
-        route.settlementModel === "unknown"
-      ) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Score-eligible route requires explicit access, execution, confidence, and settlement facts",
-        });
-      }
       if (
         route.physicalResourceKeys.length === 0 ||
         route.settlementEvidenceRefIds.length === 0 ||
@@ -787,6 +812,7 @@ const V9DeploymentControlFactV2Schema = V9DeploymentControlFactBaseSchema
   .extend({
     sourceGenerationId: CanonicalTextSchema,
     status: V9FactStatusV2Schema,
+    factorStatuses: V9ControlFactorStatusesSchema.optional(),
   })
   .strict()
   .superRefine((control, ctx) => {
@@ -806,9 +832,9 @@ const V9DeploymentControlFactV2Schema = V9DeploymentControlFactBaseSchema
         ctx.addIssue({ code: "custom", message: "Known required controls need authority and failure-domain identity" });
       }
       if (
-        control.capSemantics.kind === "unknown" ||
-        control.claimImpairment === "unknown" ||
-        control.economicLossScope === "unknown"
+        (control.capSemantics.kind === "unknown" && (control.factorStatuses?.capAuthority?.observationState ?? "known") === "known") ||
+        (control.claimImpairment === "unknown" && (control.factorStatuses?.claimImpairment?.observationState ?? "known") === "known") ||
+        (control.economicLossScope === "unknown" && (control.factorStatuses?.economicLossScope?.observationState ?? "known") === "known")
       ) {
         ctx.addIssue({
           code: "custom",
@@ -865,6 +891,7 @@ const V9UpgradeControlReviewV2Schema = z
 const V9MintMechanismReviewV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
+    factorStatuses: V9ControlFactorStatusesSchema.optional(),
     controlKey: CanonicalTextSchema.nullable(),
     // MINT-LADDER 9.32 (2026-08-21): `none` records a reviewer-confirmed
     // absence of any reconciliation regime, distinct from unverified `unknown`.
@@ -890,12 +917,6 @@ const V9MintMechanismReviewV2Schema = z
         ctx.addIssue({ code: "custom", message: "Not-applicable mint review cannot claim mint facts" });
       }
     }
-    // MINT-LADDER 9.32 (2026-08-21): a known, required mint review MAY carry
-    // reconciliation "unknown" — a reviewer's explicit could-not-establish
-    // finding on a direct mint control is a priceable measured state (the
-    // unbounded-reconciliation-unknown rung), no longer a compiler bug the
-    // schema needs to reject. Issuer-backend unknowns still compile as
-    // bounded-unknown reviews, so they never reach this shape.
   });
 
 const V9OracleBranchKindV2Schema = z.enum([
@@ -919,6 +940,7 @@ const V9OracleBranchReviewV2Schema = z
 const V9OracleControlReviewV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
+    factorStatuses: V9ControlFactorStatusesSchema.optional(),
     tier: z.enum(ORACLE_RISK_TIER_VALUES).nullable(),
     // Current verified topology of positively applicable paths, independent of
     // unresolved sibling inventory. It cannot describe an unreviewed sibling.
@@ -959,7 +981,8 @@ const V9OracleControlReviewV2Schema = z
     if (
       review.status.observationState === "known" &&
       review.status.applicability.state === "required" &&
-      review.tier === null
+      review.tier === null &&
+      (review.factorStatuses?.tier?.observationState ?? "known") === "known"
     ) {
       ctx.addIssue({ code: "custom", path: ["tier"], message: "Known required oracle review needs a tier" });
     }
@@ -969,6 +992,7 @@ const V9BridgeRouteControlReviewV2Schema = z
   .object({
     controlKey: CanonicalTextSchema,
     tier: z.enum(BRIDGE_ROUTE_RISK_TIER_VALUES),
+    factorStatuses: V9ControlFactorStatusesSchema.optional(),
   })
   .strict();
 
@@ -1022,6 +1046,7 @@ export type V9BridgeJoinDiagnosticsV1 = z.infer<typeof V9BridgeJoinDiagnosticsV1
 const V9BridgeControlReviewV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
+    factorStatuses: V9ControlFactorStatusesSchema.optional(),
     routes: canonicalArrayBy(V9BridgeRouteControlReviewV2Schema, (route) => route.controlKey),
     // Optional so retained V2 facts remain parseable. Current bridge review
     // producers emit this when a profile-backed applicability decision runs.
@@ -1449,6 +1474,8 @@ const V9AssetFactsBaseFields = {
   peg: V9PegFactV2Schema,
   supply: V9SupplyFactV2Schema,
   operationalResilience: V9OperationalResilienceFactSchema.nullable().optional(),
+  operationalResilienceStatus: V9FactStatusV2Schema.optional(),
+  causeResolutionDiagnostics: z.array(V9CauseResolutionDiagnosticSchema).optional(),
   // Optional only for retained V2 compatibility. V3 requires the complete,
   // policy-independent wrapper-local contract for every asset.
   wrapperLocalFacts: V9WrapperLocalFactsSchema.optional(),
@@ -1582,12 +1609,153 @@ const V9AssetFactsV3ObjectSchema = z
     ...V9AssetFactsBaseFields,
     dependencies: V9EffectiveDependenciesV3Schema,
     wrapperLocalFacts: V9WrapperLocalFactsSchema,
+    reserveResiduals: canonicalArrayBy(V9ReserveResidualFactSchema, (residual) => residual.residualId),
+    reserveCompositionEvidenceClass: V9ReserveCompositionEvidenceClassSchema.optional(),
+    reserveCompositionProvenance: V9ReserveCompositionProvenanceSchema.optional(),
+    exitRoutes: canonicalArrayBy(V9ExitRouteFactV2Schema.safeExtend({
+      capacityEvidenceTier: ExitRouteCapacityEvidenceTierSchema,
+      factorStatuses: V9ExitFactorStatusesSchema,
+      modelConfidence: z.enum(["high", "medium", "low", "unknown"]),
+    }), (route) => route.routeKey),
     gaps: canonicalArrayBy(V9FactGapV3Schema, (gap) => gap.gapId),
   })
   .strict();
-export const V9AssetFactsV3Schema = V9AssetFactsV3ObjectSchema.superRefine((asset, ctx) =>
-  validateAssetFacts(asset, ctx),
-);
+export const V9AssetFactsV3Schema = V9AssetFactsV3ObjectSchema.superRefine((asset, ctx) => {
+  validateAssetFacts(asset, ctx);
+  if (asset.wrapperLocalFacts.applicability === "wrapper") {
+    const wrapper = asset.wrapperLocalFacts;
+    if (!["reviewed", "not-applicable"].includes(wrapper.formDisposition) && (!wrapper.formStatus || wrapper.formStatus.gapIds.length === 0)) {
+      ctx.addIssue({ code: "custom", path: ["wrapperLocalFacts", "formStatus"], message: "Unavailable wrapper form requires its own causal status" });
+    }
+    for (const [key, fact] of Object.entries(wrapper.facts)) {
+      if (!["reviewed", "not-applicable"].includes(fact.disposition) && (!fact.status || fact.status.gapIds.length === 0)) {
+        ctx.addIssue({ code: "custom", path: ["wrapperLocalFacts", "facts", key, "status"], message: "Unavailable wrapper facts require resolving causal gaps" });
+      }
+    }
+    if (!["reviewed", "not-applicable"].includes(wrapper.riskTransfer.disposition) && (!wrapper.riskTransfer.status || wrapper.riskTransfer.status.gapIds.length === 0)) {
+      ctx.addIssue({ code: "custom", path: ["wrapperLocalFacts", "riskTransfer"], message: "Unavailable risk transfer requires cause status without positive credit" });
+    }
+  }
+  const gapsById = new Map(asset.gaps.map((gap) => [gap.gapId, gap]));
+  for (const { label, status } of factStatuses(asset)) {
+    for (const id of status.gapIds) {
+      if (!gapsById.has(id)) ctx.addIssue({ code: "custom", path: [label, "gapIds"], message: `Unknown cause-bearing gap ${id}` });
+    }
+  }
+  for (const [index, exposure] of asset.reserveExposures.entries()) {
+    for (const [key, missing] of [
+      ["assetClass", exposure.assetClass === null],
+      ["liquidity", exposure.liquidityHorizon === null || exposure.liquidityHorizon === "unknown"],
+      ["maturity", exposure.maturityDaysMax === null],
+      ["obligorConcentration", exposure.issuerOrObligorKey === null],
+    ] as const) {
+      const status = exposure.factorStatuses?.[key];
+      if (missing && (!status || (status.observationState === "known" && status.applicability.state !== "not-applicable"))) {
+        ctx.addIssue({ code: "custom", path: ["reserveExposures", index, "factorStatuses", key], message: "Unknown reserve subfield requires its own cause-bearing status" });
+      }
+    }
+  }
+  for (const [index, route] of asset.exitRoutes.entries()) {
+    if (route.status.observationState === "known" && route.scoreEligible) {
+      for (const [unknown, factor] of [
+        [route.holderAccess === "unknown", "access"],
+        [route.executionModel === "unknown" || route.executionCertainty === "unknown" || route.modelConfidence === "unknown", "executionConfidence"],
+        [route.observationConfidence === "unknown", "observationConfidence"],
+        [route.settlementModel === "unknown", "settlement"],
+        [route.capacityCurve.some((point) => point.executionCostBps === null), "cost"],
+      ] as const) {
+        const status = route.factorStatuses[factor];
+        if (unknown && (!status || status.observationState === "known")) {
+          ctx.addIssue({ code: "custom", path: ["exitRoutes", index, "factorStatuses", factor], message: "Unknown route subfields require their own cause-bearing status" });
+        }
+      }
+    }
+    if (route.capacityEvidenceTier === "unknown" && route.status.observationState === "known" &&
+        (!route.factorStatuses.capacityEvidenceTier || route.factorStatuses.capacityEvidenceTier.observationState === "known")) {
+      ctx.addIssue({ code: "custom", path: ["exitRoutes", index, "factorStatuses", "capacityEvidenceTier"], message: "Unknown capacity method requires a causal status" });
+    }
+  }
+  for (const [index, control] of asset.controls.entries()) {
+    if (control.status.observationState !== "known") continue;
+    for (const [key, unknown] of [
+      ["authority", control.authority === null || control.authority.model === "unknown"],
+      ["capAuthority", control.capSemantics.kind === "unknown"],
+      ["claimImpairment", control.claimImpairment === "unknown"],
+      ["economicLossScope", control.economicLossScope === "unknown"],
+      ["materialSupplyShare", control.scope === "deployment" && control.materialSupplyShare === null],
+    ] as const) {
+      const status = control.factorStatuses?.[key];
+      if (unknown && (!status || status.observationState === "known")) {
+        ctx.addIssue({ code: "custom", path: ["controls", index, "factorStatuses", key], message: "Unknown control subfields require their own cause-bearing status" });
+      }
+    }
+  }
+  const { mint, oracle, bridge } = asset.economicControlReview;
+  if (asset.operationalResilience == null && asset.operationalResilienceStatus?.observationState === "known") {
+    ctx.addIssue({ code: "custom", path: ["operationalResilienceStatus"], message: "Known operational resilience requires an admitted operational fact" });
+  }
+  if (mint.status.applicability.state === "required") {
+    for (const [key, unknown] of [
+      ["reconciliation", mint.reconciliation === "unknown"],
+      ["supervision", mint.supervision === "unknown"],
+      ["upgrade", mint.upgrade.state === "unknown"],
+    ] as const) {
+      const status = mint.factorStatuses?.[key];
+      if (unknown && (!status || status.observationState === "known")) {
+        ctx.addIssue({ code: "custom", path: ["economicControlReview", "mint", "factorStatuses", key], message: "Unknown mint factors require their own cause-bearing status" });
+      }
+    }
+  }
+  if (oracle.status.applicability.state === "required" && (oracle.tier === null || oracle.tier === "opaque-or-unknown") &&
+      (!oracle.factorStatuses?.tier || oracle.factorStatuses.tier.observationState === "known")) {
+    ctx.addIssue({ code: "custom", path: ["economicControlReview", "oracle", "factorStatuses", "tier"], message: "Unknown oracle tier requires its own cause-bearing status" });
+  }
+  if (bridge.status.applicability.state === "required" && bridge.routes.length === 0 &&
+      (!bridge.factorStatuses?.tier || bridge.factorStatuses.tier.observationState === "known")) {
+    ctx.addIssue({ code: "custom", path: ["economicControlReview", "bridge", "factorStatuses", "tier"], message: "Unresolved bridge tier requires its own cause-bearing status" });
+  }
+  for (const [index, route] of bridge.routes.entries()) {
+    if (route.tier === "opaque-or-unknown" && (!route.factorStatuses?.tier || route.factorStatuses.tier.observationState === "known")) {
+      ctx.addIssue({ code: "custom", path: ["economicControlReview", "bridge", "routes", index, "factorStatuses", "tier"], message: "Unknown bridge route tier requires its own cause-bearing status" });
+    }
+  }
+  for (const [index, residual] of asset.reserveResiduals.entries()) {
+    const gap = gapsById.get(residual.status.gapIds[0]!);
+    if (!gap) ctx.addIssue({ code: "custom", path: ["reserveResiduals", index, "status", "gapIds"], message: "Remainder cause must resolve" });
+    else if (gap.causeProof.cause === "D") {
+      ctx.addIssue({ code: "custom", path: ["reserveResiduals", index, "status", "gapIds"], message: "Unidentified reserve remainders cannot represent measured adverse holdings" });
+    }
+  }
+  const compositionClass = asset.reserveCompositionEvidenceClass;
+  const compositionProvenance = asset.reserveCompositionProvenance;
+  if (compositionClass !== undefined || compositionProvenance !== undefined) {
+    if (compositionProvenance === "live" && compositionClass !== undefined) {
+      ctx.addIssue({ code: "custom", path: ["reserveCompositionEvidenceClass"], message: "Live composition must not carry a static evidence class" });
+    } else if (compositionProvenance !== undefined && compositionProvenance !== "live" && compositionClass === undefined) {
+      ctx.addIssue({ code: "custom", path: ["reserveCompositionEvidenceClass"], message: "Curated composition requires its admitted evidence class" });
+    }
+    // Both lists are canonical: link the envelope without allocating another evidence index.
+    let evidenceIndex = 0;
+    let capturedComposition = false;
+    for (const id of asset.reserveStatus.evidenceRefIds) {
+      while (evidenceIndex < asset.evidence.length && asset.evidence[evidenceIndex]!.evidenceId < id) evidenceIndex++;
+      const reference = asset.evidence[evidenceIndex];
+      if (reference?.evidenceId === id && reference.disposition !== "rejected" &&
+          reference.rejection === null && reference.freshness.state !== "stale") {
+        capturedComposition = true;
+        break;
+      }
+    }
+    if (asset.reserveStatus.applicability.state !== "required" ||
+        asset.reserveExposures.length + asset.reserveResiduals.length === 0 || !capturedComposition) {
+      ctx.addIssue({ code: "custom", path: [compositionProvenance === undefined ? "reserveCompositionEvidenceClass" : "reserveCompositionProvenance"], message: "Composition strength metadata requires an admitted captured composition" });
+    }
+  }
+  const total = asset.reserveExposures.reduce((sum, row) => sum + row.weight, 0) + asset.reserveResiduals.reduce((sum, row) => sum + row.weight, 0);
+  if (total > 1 + 1e-9 || ((asset.reserveExposures.length > 0 || asset.reserveResiduals.length > 0) && Math.abs(total - 1) > 1e-9)) {
+    ctx.addIssue({ code: "custom", path: ["reserveResiduals"], message: "Identified holdings and disjoint remainders must conserve the whole-asset denominator" });
+  }
+});
 export type V9AssetFactsV3 = z.infer<typeof V9AssetFactsV3Schema>;
 
 const V9FactSourceIdentityV2Schema = z
@@ -1629,7 +1797,7 @@ const V9FactSetCoreV2ObjectSchema = z.object(V9FactSetCoreV2Fields).strict();
 export type V9FactSetCoreV2 = z.infer<typeof V9FactSetCoreV2ObjectSchema>;
 
 const V9FactSetCoreV3Fields = {
-  schemaVersion: z.literal(3),
+  schemaVersion: z.literal(4),
   ...V9FactSetCoreBaseFields,
   assets: canonicalArrayBy(V9AssetFactsV3Schema, (asset) => asset.assetId),
 };
@@ -1659,21 +1827,36 @@ function factStatuses(asset: V9AssetFactsBase): Array<{ label: string; status: V
     { label: "dependencies", status: asset.dependencies.status },
     { label: "reserve-envelope", status: asset.reserveStatus },
     ...asset.reserveExposures.map((fact) => ({ label: `reserve:${fact.exposureKey}`, status: fact.status })),
+    ...asset.reserveExposures.flatMap((fact) => Object.entries(fact.factorStatuses ?? {}).map(([key, status]) => ({ label: `reserve:${fact.exposureKey}:${key}`, status }))),
+    ...("reserveResiduals" in asset ? (asset.reserveResiduals as z.infer<typeof V9ReserveResidualFactSchema>[]).map((fact) => ({ label: `residual:${fact.residualId}`, status: fact.status })) : []),
     ...(asset.reserveBoundFacts ?? []).map((row) => ({ label: `reserve-bound:${row.fact.factKey}`, status: row.status })),
     { label: "exit-envelope", status: asset.exitStatus },
     ...asset.exitRoutes.flatMap((fact) => [
       { label: `route:${fact.routeKey}`, status: fact.status },
       { label: `route-output:${fact.routeKey}`, status: fact.output.status },
+      ...Object.entries(fact.factorStatuses ?? {}).map(([key, status]) => ({ label: `route:${fact.routeKey}:${key}`, status })),
     ]),
     { label: "control-envelope", status: asset.controlStatus },
+    ...(asset.operationalResilienceStatus ? [{ label: "operational-resilience", status: asset.operationalResilienceStatus }] : []),
     ...asset.controls.map((fact) => ({ label: `control:${fact.controlKey}`, status: fact.status })),
+    ...asset.controls.flatMap((fact) => Object.entries(fact.factorStatuses ?? {}).map(([key, status]) => ({ label: `control:${fact.controlKey}:${key}`, status }))),
+    ...(asset.wrapperLocalFacts?.applicability === "wrapper" ? [
+      ...(asset.wrapperLocalFacts.formStatus ? [{ label: "wrapper:form", status: asset.wrapperLocalFacts.formStatus }] : []),
+      ...Object.entries(asset.wrapperLocalFacts.facts).flatMap(([key, fact]) => fact.status ? [{ label: `wrapper:${key}`, status: fact.status }] : []),
+      ...(asset.wrapperLocalFacts.riskTransfer.status ? [{ label: "wrapper:risk-transfer", status: asset.wrapperLocalFacts.riskTransfer.status }] : []),
+    ] : []),
     { label: "economic-control:mint", status: asset.economicControlReview.mint.status },
+    ...Object.entries(asset.economicControlReview.mint.factorStatuses ?? {}).map(([key, status]) => ({ label: `economic-control:mint:${key}`, status })),
     { label: "economic-control:oracle", status: asset.economicControlReview.oracle.status },
+    ...Object.entries(asset.economicControlReview.oracle.factorStatuses ?? {}).map(([key, status]) => ({ label: `economic-control:oracle:${key}`, status })),
     ...asset.economicControlReview.oracle.branches.map((branch) => ({
       label: `economic-control:oracle:${branch.branch}`,
       status: branch.status,
     })),
     { label: "economic-control:bridge", status: asset.economicControlReview.bridge.status },
+    ...Object.entries(asset.economicControlReview.bridge.factorStatuses ?? {}).map(([key, status]) => ({ label: `economic-control:bridge:${key}`, status })),
+    ...asset.economicControlReview.bridge.routes.flatMap((route) =>
+      Object.entries(route.factorStatuses ?? {}).map(([key, status]) => ({ label: `economic-control:bridge:${route.controlKey}:${key}`, status }))),
     { label: "access:transfer", status: asset.accessReview.transfer.status },
     { label: "access:freeze", status: asset.accessReview.freeze.status },
     ...asset.accessReview.freeze.reviews.map((review) => ({
@@ -1692,7 +1875,7 @@ function validateAssetReferences(
   asset: V9AssetFactsV2 | V9AssetFactsV3,
   activeAssetIds: ReadonlySet<string>,
   assetIndex: number,
-  schemaVersion: 2 | 3,
+  schemaVersion: 2 | 4,
   ctx: z.RefinementCtx,
 ): void {
   const evidenceById = new Map(asset.evidence.map((reference) => [reference.evidenceId, reference]));
@@ -1895,7 +2078,12 @@ function validateAssetReferences(
       }
     }
   }
-  for (const gap of asset.gaps) captureRefs(`gap:${gap.gapId}`, gap.evidenceRefIds, []);
+  for (const gap of asset.gaps) {
+    captureRefs(`gap:${gap.gapId}`, gap.evidenceRefIds, []);
+    if ("causeProof" in gap && gap.evidenceHistory) {
+      captureRefs(`gap-history:${gap.gapId}`, gap.evidenceHistory.evidenceRefIds, []);
+    }
+  }
 
   for (const evidenceId of evidenceIds) {
     if (!referencedEvidenceIds.has(evidenceId)) {
@@ -1934,18 +2122,30 @@ function validateAssetReferences(
   const exposures = new Set(asset.reserveExposures.map((exposure) => exposure.exposureKey));
   const routes = new Set(asset.exitRoutes.map((route) => route.routeKey));
   const controls = new Map(asset.controls.map((control) => [control.controlKey, control]));
-  const resourceOwners = new Map<string, string>();
-  for (const route of asset.exitRoutes.filter((candidate) => candidate.scoreEligible)) {
-    for (const resourceKey of route.physicalResourceKeys) {
-      const existingRoute = resourceOwners.get(resourceKey);
-      if (existingRoute && existingRoute !== route.routeKey) {
-        addIssue(
-          ctx,
-          ["assets", assetIndex, "exitRoutes"],
-          `Physical resource ${resourceKey} is reused by score-bearing routes`,
-        );
+  // Historic V2 treated all selected routes as one allocation. Current facts
+  // retain overlapping alternatives; the portfolio solver enforces joint budgets.
+  if (schemaVersion === 2) {
+    const resourceOwners = new Map<string, string>();
+    for (const route of asset.exitRoutes) {
+      if (!route.scoreEligible) continue;
+      if (route.status.observationState === "known" &&
+          (route.holderAccess === "unknown" || route.executionModel === "unknown" ||
+           route.executionCertainty === "unknown" || route.observationConfidence === "unknown" ||
+           route.modelConfidence === "unknown" || route.settlementModel === "unknown" ||
+           route.capacityCurve.some((point) => point.executionCostBps === null))) {
+        addIssue(ctx, ["assets", assetIndex, "exitRoutes"], "Historic score-eligible routes require explicit access, execution, observation, settlement and cost facts");
       }
-      resourceOwners.set(resourceKey, route.routeKey);
+      for (const resourceKey of route.physicalResourceKeys) {
+        const existingRoute = resourceOwners.get(resourceKey);
+        if (existingRoute && existingRoute !== route.routeKey) {
+          addIssue(
+            ctx,
+            ["assets", assetIndex, "exitRoutes"],
+            `Physical resource ${resourceKey} is reused by score-bearing routes`,
+          );
+        }
+        resourceOwners.set(resourceKey, route.routeKey);
+      }
     }
   }
   for (const [gapIndex, gap] of asset.gaps.entries()) {
@@ -2001,6 +2201,20 @@ function validateFactSetCore(value: V9FactSetCoreV2 | V9FactSetCoreV3, ctx: z.Re
     const claimGraph = asset.accessReview.freeze.claimGraph;
     if (claimGraph && (claimGraph.clockSec !== value.asOfSec || claimGraph.generationId !== value.baseInputGenerationId)) {
       addIssue(ctx, ["assets", assetIndex, "accessReview", "freeze", "claimGraph"], "Access graph must match the admitted clock and input generation");
+    }
+    if (value.schemaVersion === 4 && "reserveResiduals" in asset) {
+      const evidenceById = new Map<string, V9EvidenceReferenceV2>();
+      for (const reference of asset.evidence) evidenceById.set(reference.evidenceId, reference);
+      for (const [gapIndex, gap] of asset.gaps.entries()) {
+        if (!("causeProof" in gap)) continue;
+        for (const message of findV9EvidenceCauseProofIssues({
+          proof: gap.causeProof, assetId: asset.assetId, scope: gap.causeScope ?? null,
+          asOfSec: value.asOfSec, evidence: asset.evidence, researchMaxAgeSec: 365 * 86400,
+          evidenceById,
+        })) {
+          addIssue(ctx, ["assets", assetIndex, "gaps", gapIndex, "causeProof"], message);
+        }
+      }
     }
     for (const [evidenceIndex, evidence] of asset.evidence.entries()) {
       if (evidence.observedAtSec > value.asOfSec) {

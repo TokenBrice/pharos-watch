@@ -438,7 +438,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "report-cards-v9",
     summary: "Safety Score V9 report cards",
-    description: "Canonical V9 Safety Score report-card contract sourced from the accepted V9 publication.",
+    description: "Canonical API schema-7 Safety Score report cards from the accepted internal schema-6 publication. Rated partial cards retain excluded-pillar diagnostics; pipeline-gap is a null score and null grade, distinct from NR.",
     tags: ["Risk"],
     responseSchema: "ReportCardsV9Response",
   },
@@ -446,7 +446,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     key: "safety-grades",
     summary: "Safety Score grades (no key)",
     description:
-      "Free, no-key projection of the accepted V9 publication: one score and grade per tracked stablecoin, plus methodology version and publication status.",
+      "Free schema-1, no-key projection of the accepted V9 publication: nullable score/grade, ratingStatus and compact partialEvidence per tracked stablecoin, plus methodology version and publication status. Pipeline-gap never means NR.",
     tags: ["Risk"],
     responseSchema: "SafetyGradesResponse",
     postman: {
@@ -457,7 +457,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     key: "dependency-graph-v1",
     summary: "Dependency graph (no key)",
     description:
-      "Free projection of the accepted V9 publication: publication-bound node supply, grades, role summaries and coverage counts, with the published dependency edges unchanged. Held snapshots return no-store and X-Safety-Score-Status: held.",
+      "Free schema-2 projection of the accepted V9 publication: publication-bound node supply, nullable grades, ratingStatus, compact partialEvidence, role summaries and coverage counts, with the published dependency edges unchanged. Held snapshots return no-store and X-Safety-Score-Status: held.",
     tags: ["Risk"],
     responseSchema: "DependencyGraphResponse",
     postman: { noAuth: true },
@@ -466,7 +466,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     key: "dependency-scenarios",
     summary: "Modeled dependency scenarios (no key)",
     description:
-      "Offline production-evaluator scenarios from a V9 publication. Returns a nullable artifact and generation-bound freshness: current, earlier-generation within two hours, stale beyond budget, or unavailable. Hypothetical results never alter canonical scores.",
+      "Offline schema-2 production-evaluator scenarios from a V9 publication. Published and modeled rows preserve ratingStatus, compact partialEvidence, nullable grades and null deltas for unavailable scores. Returns a nullable artifact and generation-bound freshness: current, earlier-generation within two hours, stale beyond budget, or unavailable. Hypothetical results never alter canonical scores.",
     tags: ["Risk"],
     responseSchema: "DependencyScenariosResponse",
     postman: { noAuth: true },

@@ -35,6 +35,7 @@ import { buildSafetyScoreV9PublicationIdentity } from "../report-cards-v9-cache"
 import { logWorkerEvent } from "../structured-log";
 import type { SafetyScoreV9TransferMaterialityGeneration } from "./transfer-materiality";
 import { buildSafetyScoreV9PublicationReplayCapture, SafetyScoreV9ReplayCaptureIdentityError } from "./publication-replay-capture";
+import { SafetyScoreV9SchemaCutoverPendingError } from "./publication-codec";
 
 export const SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS = 2 * 60_000;
 export const SAFETY_SCORE_V9_PUBLICATION_ATTEMPT_PREFIX =
@@ -85,6 +86,7 @@ export type SafetyScoreV9PublicationRunResult =
       quarantines: readonly V9AssetQuarantine[];
       affectedAssetIds: readonly string[];
       bridgeJoinDiagnostics: readonly SafetyScoreV9BridgeJoinDiagnostic[];
+      schemaCutoverReason?: "schema-cutover-5-to-6";
     }
   | {
       status: "held";
@@ -199,7 +201,7 @@ function heldPublicationHealth(args: {
   previousHealth: V9PublicationHealth | null;
 }): V9PublicationHealth {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     status: "held",
     acceptedPublicationGenerationId:
       args.acceptedPublication?.publicationGenerationId ??
@@ -224,16 +226,24 @@ async function loadAcceptedPublicationState(
 ): Promise<{
   acceptedPublication: SafetyScoreV9AcceptedPublicationBaseline | null;
   previousHealth: V9PublicationHealth | null;
+  schemaCutoverReason?: "schema-cutover-5-to-6";
 }> {
+  let schemaCutoverReason: "schema-cutover-5-to-6" | undefined;
   const [publication, previousHealth] = await Promise.all([
-    loadSafetyScoreV9Publication(db, signal),
-    loadSafetyScoreV9PublicationHealth(db, signal),
+    loadSafetyScoreV9Publication(db, signal).catch((error: unknown) => {
+      if (!(error instanceof SafetyScoreV9SchemaCutoverPendingError)) throw error;
+      schemaCutoverReason = "schema-cutover-5-to-6";
+      return null;
+    }),
+    loadSafetyScoreV9PublicationHealth(db, signal).catch((error: unknown) => {
+      if (!(error instanceof SafetyScoreV9SchemaCutoverPendingError)) throw error;
+      return null;
+    }),
   ]);
   return {
-    acceptedPublication: publication === null
-      ? null
-      : buildSafetyScoreV9AcceptedPublicationBaseline(publication),
+    acceptedPublication: publication === null ? null : buildSafetyScoreV9AcceptedPublicationBaseline(publication),
     previousHealth,
+    ...(schemaCutoverReason === undefined ? {} : { schemaCutoverReason }),
   };
 }
 
@@ -326,8 +336,8 @@ function logPublicationGenerationDeltas(
         acceptedPrimary,
         candidatePrimary,
         exitScoreDelta:
-          card.breakdowns.exit.publishedScore -
-          prior.pillarScores.exit,
+          card.breakdowns.exit.publishedScore === null || prior.pillarScores.exit === null
+            ? null : card.breakdowns.exit.publishedScore - prior.pillarScores.exit,
       });
     }
     if (
@@ -345,10 +355,10 @@ function logPublicationGenerationDeltas(
       });
     }
     for (const pillar of ["backing", "exit", "control"] as const) {
-      const delta =
-        card.breakdowns[pillar].publishedScore -
-        prior.pillarScores[pillar];
-      if (Math.abs(delta) >= 1 && pillarChanges.length < 20) {
+      const currentScore = card.breakdowns[pillar].publishedScore;
+      const priorScore = prior.pillarScores[pillar];
+      const delta = currentScore === null || priorScore === null ? null : currentScore - priorScore;
+      if (delta !== null && Math.abs(delta) >= 1 && pillarChanges.length < 20) {
         pillarChanges.push({ assetId: card.id, pillar, delta });
       }
     }
@@ -434,6 +444,7 @@ export async function runSafetyScoreV9Publication(
     const {
       acceptedPublication,
       previousHealth,
+      schemaCutoverReason,
     } = await loadAcceptedPublicationState(
       input.db,
       publicationSignal,
@@ -548,7 +559,7 @@ export async function runSafetyScoreV9Publication(
       publicationReplayCaptureValue: replayCaptureValue,
       publicationReplayBaseValue: replayCaptureValue === undefined ? undefined : input.fixedInputCacheValue,
       publicationHealth: {
-        schemaVersion: 1,
+        schemaVersion: 2,
         status: "current",
         acceptedPublicationGenerationId:
           publication.publicationGenerationId,
@@ -574,7 +585,7 @@ export async function runSafetyScoreV9Publication(
       // Thin alert-lane projection of the publication just accepted. The
       // response is already in memory here, so this is the one place the
       // envelope can be written without a publication decode. Non-fatal:
-      // alert lanes fall back to the full decode when it is absent.
+      // alert lanes fail closed until a matching thin envelope is available.
       await persistAlertSafetyV9SourceEnvelope(
         input.db,
         {
@@ -600,6 +611,7 @@ export async function runSafetyScoreV9Publication(
       attemptId,
       publicationGenerationId: publication.publicationGenerationId,
       candidateId: publication.candidateId,
+      ...(schemaCutoverReason === undefined ? {} : { schemaCutoverReason }),
       outcome: partial ? "partial" : "clean",
       quarantines: pipeline.quarantines,
       affectedAssetIds: assessment.affectedAssetIds,

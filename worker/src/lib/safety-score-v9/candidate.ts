@@ -32,6 +32,7 @@ import {
   compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension,
   materializeSafetyScoreV9FactSetExtension,
   type SafetyScoreV9FactSetExtensionV2,
+  type SafetyScoreV9FactCompilationResult,
   type V9AssetQuarantine,
 } from "./fact-set";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "./extension";
@@ -63,19 +64,19 @@ const SafetyScoreV9CompilerFactSchemaIdentityV1Schema = z
     // capture. The digest is unchanged for a v3 input, so historical replays
     // keep their candidate identity byte-for-byte.
     fixedInputSchemaVersion: z.union([z.literal(3), z.literal(4)]),
-    factExtensionSchemaVersion: z.literal(2),
-    compiledFactSchemaVersion: z.literal(3),
+    factExtensionSchemaVersion: z.literal(3),
+    compiledFactSchemaVersion: z.literal(4),
     compiledFactSchemaCapabilities: z.tuple([
       z.literal("canonical-chain-supply-distribution.v1"),
       z.literal("canonical-lock-mint-supply-attribution.v1"),
       z.literal("exit-route-modeled-confidence.v1"),
-      z.literal("fact-gap-responsibility.v1"),
+      z.literal("fact-gap-cause-proofs.v1"),
       z.literal("journaled-cdp-shock-coverage.v1"),
       z.literal("reviewed-deployment-unit-supply-attribution.v1"),
       z.literal("reviewed-transfer-deployments.v1"),
       z.literal("wrapper-local-facts.v1"),
     ]),
-    compilerAdapter: z.literal("exact-fixed-input-to-v9-facts.v2"),
+    compilerAdapter: z.literal("exact-fixed-input-to-v9-facts.v3"),
     evaluationBuildDigest: Sha256Schema,
   })
   .strict();
@@ -87,7 +88,7 @@ const SafetyScoreV9ProducerCapabilityIdentityV1Schema = z
     inputContractVersions: z
       .object({
         fixedInput: z.union([z.literal(3), z.literal(4)]),
-        factExtension: z.literal(2),
+        factExtension: z.literal(3),
       })
       .strict(),
     sourceAdapters: z
@@ -98,7 +99,7 @@ const SafetyScoreV9ProducerCapabilityIdentityV1Schema = z
         liveReserves: z.literal("fixed-input.live-reserves.v1"),
         chainSupply: z.literal("fixed-input.usd-circulating-supply.v4"),
         peg: z.literal("fixed-input.peg-summary.v1"),
-        researchOverlays: z.literal("v9-fact-extension.review-overlays.v3"),
+        researchOverlays: z.literal("v9-fact-extension.review-overlays.v4"),
         shockCoverage: z.literal("journal-registry.cdp-shock-coverage.v1"),
       })
       .strict(),
@@ -390,13 +391,13 @@ function compilerFactSchemaIdentity(
       "canonical-chain-supply-distribution.v1",
       "canonical-lock-mint-supply-attribution.v1",
       "exit-route-modeled-confidence.v1",
-      "fact-gap-responsibility.v1",
+      "fact-gap-cause-proofs.v1",
       "journaled-cdp-shock-coverage.v1",
       "reviewed-deployment-unit-supply-attribution.v1",
       "reviewed-transfer-deployments.v1",
       "wrapper-local-facts.v1",
     ],
-    compilerAdapter: "exact-fixed-input-to-v9-facts.v2",
+    compilerAdapter: "exact-fixed-input-to-v9-facts.v3",
     evaluationBuildDigest: SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST,
   });
 }
@@ -418,7 +419,7 @@ function producerCapabilityIdentity(
       liveReserves: "fixed-input.live-reserves.v1",
       chainSupply: "fixed-input.usd-circulating-supply.v4",
       peg: "fixed-input.peg-summary.v1",
-      researchOverlays: "v9-fact-extension.review-overlays.v3",
+      researchOverlays: "v9-fact-extension.review-overlays.v4",
       shockCoverage: "journal-registry.cdp-shock-coverage.v1",
     },
     scoreBearingMethodologyVersions: {
@@ -585,6 +586,34 @@ export function buildSafetyScoreV9Candidate(
   });
 }
 
+function materializeCandidateExtension(input: BuildSafetyScoreV9CandidateFromNormalizedInput): SafetyScoreV9FactSetExtensionV2 {
+  return materializeSafetyScoreV9FactSetExtension(input.fixedInput, input.extension ??
+    buildSafetyScoreV9BaselineExtensionFromNormalizedInput(input.fixedInput, {
+      ...input.registry,
+      ...(input.allowRegistryMismatch === true ? { allowRegistryMismatch: true } : {}),
+      transferMaterialityGeneration: input.transferMaterialityGeneration ?? null,
+    }));
+}
+
+function projectCandidatePublicationFacts(
+  factSet: CompiledV9FactSetV3,
+  quarantines: readonly V9AssetQuarantine[],
+  input: BuildSafetyScoreV9CandidateFromNormalizedInput,
+) {
+  return {
+    affectedAssetIds: quarantineAffectedAssetIds(factSet, quarantines),
+    displayByAssetId: new Map(factSet.assets.map((asset) => [asset.assetId, publicDisplayMetadata(asset)])),
+    scoreGradeLiveReserveIds: new Set(factSet.assets
+      .filter((asset) => asset.reserveExposures.some((exposure) => exposure.provenance === "live"))
+      .map((asset) => asset.assetId)),
+    dependencyMetadataByAssetId: new Map(factSet.assets.map((asset) => [
+      asset.assetId,
+      publicDependencyMetadata(asset, factSet, input.fixedInput,
+        (input.registry?.metaById ?? ACTIVE_META_BY_ID).get(asset.assetId)),
+    ])),
+  };
+}
+
 /** Trusted runtime entrypoint for an already normalized exact input. */
 function buildSafetyScoreV9CandidateFromNormalizedInput(
   input: BuildSafetyScoreV9CandidateFromNormalizedInput,
@@ -632,55 +661,17 @@ function buildSafetyScoreV9CandidatePipeline(
   const policy = input.policy ?? loadV9CandidateMethodologyPolicy(fixedInput.clockSec);
   assertV9ValidatedPolicyEnvelope(policy);
   const policyVersion = v9PolicyVersion(policy);
-  let extension: SafetyScoreV9FactSetExtensionV2 | null = materializeSafetyScoreV9FactSetExtension(
-    fixedInput,
-    input.extension ??
-      buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
-        fixedInput,
-        {
-          ...input.registry,
-          ...(input.allowRegistryMismatch === true ? { allowRegistryMismatch: true } : {}),
-          transferMaterialityGeneration: input.transferMaterialityGeneration ?? null,
-        },
-      ),
-  );
+  let extension: SafetyScoreV9FactSetExtensionV2 | null = materializeCandidateExtension(input);
   // Read the DEX lane bound off the materialized extension so the card can
   // never drift from the bound the exit evidence itself was judged against;
   // the extension graph is released below.
   const dexExitRouteMaxAgeSec = extension.routeFreshness.dexMaxAgeSec;
-  let compilation =
+  let compilation: SafetyScoreV9FactCompilationResult | null =
     compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
       fixedInput,
       extension,
     );
   let compiledFacts: CompiledV9FactSetV3 | null = compilation.factSet;
-  const evaluationFailures = new Map<string, string>();
-  let evaluatedSet: Readonly<V9EvaluatedSet>;
-  while (true) {
-    try {
-      evaluatedSet = evaluateValidatedV9FactSet(compiledFacts, policy);
-      break;
-    } catch (error) {
-      if (
-        !(error instanceof V9AssetEvaluationError) ||
-        evaluationFailures.has(error.assetId)
-      ) {
-        throw error;
-      }
-      evaluationFailures.set(error.assetId, error.message);
-      compilation =
-        compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
-          fixedInput,
-          extension,
-          evaluationFailures,
-        );
-      compiledFacts = compilation.factSet;
-    }
-  }
-  const affectedAssetIds = quarantineAffectedAssetIds(
-    compiledFacts,
-    compilation.quarantines,
-  );
   const bridgeJoinDiagnostics = extension.assets
     .flatMap((asset) => {
       const diagnostics = asset.economicControlReview?.bridge.diagnostics;
@@ -693,23 +684,48 @@ function buildSafetyScoreV9CandidatePipeline(
   const compilerFactSchemaDigest = computeSafetyScoreV9CompilerFactSchemaDigest(compilerIdentity);
   const capabilityIdentity = producerCapabilityIdentity(fixedInput, extension);
   const producerCapabilityDigest = computeSafetyScoreV9ProducerCapabilityDigest(capabilityIdentity);
-  const displayByAssetId = new Map(
-    compiledFacts.assets.map((asset) => [asset.assetId, publicDisplayMetadata(asset)]),
-  );
-  const scoreGradeLiveReserveIds = new Set(
-    compiledFacts.assets
-      .filter((asset) => asset.reserveExposures.some((exposure) => exposure.provenance === "live"))
-      .map((asset) => asset.assetId),
-  );
-  const dependencyMetadataByAssetId = new Map(compiledFacts.assets.map((asset) => [
-    asset.assetId,
-    publicDependencyMetadata(asset, compiledFacts!, fixedInput, (input.registry?.metaById ?? ACTIVE_META_BY_ID).get(asset.assetId)),
-  ]));
+  if (!retainIntermediates) extension = null;
+  const evaluationFailures = new Map<string, string>();
+  let quarantines = compilation.quarantines;
+  let publicationFacts = projectCandidatePublicationFacts(compiledFacts, quarantines, input);
+  compilation = null;
+  const takeEvaluationFacts = () => {
+    const facts = compiledFacts!;
+    if (!retainIntermediates) compiledFacts = null;
+    return facts;
+  };
+  let evaluatedSet: Readonly<V9EvaluatedSet>;
+  while (true) {
+    try {
+      evaluatedSet = evaluateValidatedV9FactSet(takeEvaluationFacts(), policy);
+      break;
+    } catch (error) {
+      if (
+        !(error instanceof V9AssetEvaluationError) ||
+        evaluationFailures.has(error.assetId)
+      ) {
+        throw error;
+      }
+      evaluationFailures.set(error.assetId, error.message);
+      const retryExtension = extension ?? materializeCandidateExtension(input);
+      compilation =
+        compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
+          fixedInput,
+          retryExtension,
+          evaluationFailures,
+        );
+      compiledFacts = compilation.factSet;
+      quarantines = compilation.quarantines;
+      publicationFacts = projectCandidatePublicationFacts(compiledFacts, quarantines, input);
+      compilation = null;
+    }
+  }
+  const { affectedAssetIds, displayByAssetId, scoreGradeLiveReserveIds, dependencyMetadataByAssetId } = publicationFacts;
 
   // The published response does not expose replay intermediates. Release each
   // large graph as soon as its compact projection has been captured; replay and
   // verification callers keep the same graphs through `retained`.
-  const retained = retainIntermediates ? { extension, compiledFacts } : null;
+  const retained = retainIntermediates ? { extension: extension!, compiledFacts: compiledFacts! } : null;
   extension = null;
   compiledFacts = null;
   const candidateIdentity = SafetyScoreV9CandidateIdentityV1Schema.parse({
@@ -762,7 +778,7 @@ function buildSafetyScoreV9CandidatePipeline(
       candidate,
       compilerFactSchemaDigest,
       producerCapabilityDigest,
-      quarantines: compilation.quarantines,
+      quarantines,
       quarantineAffectedAssetIds: affectedAssetIds,
       bridgeJoinDiagnostics,
     };
@@ -779,7 +795,7 @@ function buildSafetyScoreV9CandidatePipeline(
     producerCapabilityIdentity: capabilityIdentity,
     producerCapabilityDigest,
     candidateIdentity,
-    quarantines: compilation.quarantines,
+    quarantines,
     quarantineAffectedAssetIds: affectedAssetIds,
     bridgeJoinDiagnostics,
   };

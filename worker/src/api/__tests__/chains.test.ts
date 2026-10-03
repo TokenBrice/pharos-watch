@@ -1,3 +1,4 @@
+import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockRegistry } from "../../test-helpers/cron";
@@ -115,6 +116,15 @@ function activeV9(options: {
 }
 
 describe("handleChains", () => {
+  it("keeps chain quality unavailable when every asset has a technical pipeline gap", async () => {
+    const source = activeV9();
+    source.snapshot.cards = [makeReportCardsV9PipelineGapCard("control", "A", { id: "usdc-circle" })];
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(source);
+    const response = await handleChains(mockD1([stablecoinsCache([asset("usdc-circle", { Ethereum: { current: 100 } })])]));
+    const body = await response.json() as { chains: Array<{ totalUsd: number; healthFactors: { quality: number | null } }> };
+    expect(body.chains[0]?.totalUsd).toBe(100);
+    expect(body.chains[0]?.healthFactors.quality).toBeNull();
+  });
   it("returns 503 when the stablecoins cache is missing", async () => {
     const response = await handleChains(mockD1([
       { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [] },

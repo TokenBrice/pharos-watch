@@ -54,6 +54,8 @@ const statusFixture: StatusForCoin = {
   dews: { band: "CALM", score: 15, computedAt: 1_700_000_000 },
   safety: {
     grade: "A",
+    ratingStatus: "rated",
+    partialEvidence: null,
     score: 82,
     model: "v9",
     methodologyVersion: "9.0",

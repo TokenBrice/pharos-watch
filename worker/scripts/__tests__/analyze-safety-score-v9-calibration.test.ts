@@ -51,13 +51,20 @@ function resealResult(replay: MutableReplay): void {
 
 function resealScoreTamper(replay: MutableReplay): void {
   const card = replay.pipeline.candidate.cards[0];
-  const evaluated = replay.pipeline.evaluatedSet.assets[0];
-  card.score += 1;
+  const evaluated = replay.pipeline.evaluatedSet.assets.find((row: { assetId: string }) => row.assetId === card.id);
+  if (card.score !== null) card.score += 1;
   for (const pillar of Object.values(card.pillars) as Array<{ score: number | null }>) {
     if (pillar.score !== null) pillar.score += 1;
   }
-  evaluated.trace.finalScore += 1;
-  for (const contribution of evaluated.trace.pillarContributions) contribution.score += 1;
+  if (evaluated.trace.finalScore !== null) evaluated.trace.finalScore += 1;
+  for (const contribution of evaluated.trace.pillarContributions) {
+    if (contribution.score !== null) contribution.score += 1;
+  }
+  for (const pillar of Object.keys(evaluated.trace.diagnosticPillarScores)) {
+    if (evaluated.trace.diagnosticPillarScores[pillar] !== null) {
+      evaluated.trace.diagnosticPillarScores[pillar] += 1;
+    }
+  }
   for (const pillar of Object.values(evaluated.scoreInput.pillars) as Array<{ score: number | null }>) {
     if (pillar.score !== null) pillar.score += 1;
   }

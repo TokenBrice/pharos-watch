@@ -18,6 +18,7 @@ import {
 } from "@shared/types/dependency-types";
 import type {
   V9AssetFactsV2,
+  V9AssetFactsV3,
   V9EffectiveDependenciesV3,
   V9FactStatusV2,
   V9MechanismExitFactV1,
@@ -29,7 +30,7 @@ import type {
   V9MechanismRiskReview,
   V9MechanismFactV1,
 } from "@shared/types/safety-score-v9-backing";
-import type { ReserveSlice } from "@shared/types/reserves";
+import { RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT, type ReserveSlice } from "@shared/types/reserves";
 import { computeSafetyScoreV9ReserveExposureKey } from "./fact-set-schema";
 import { compileSafetyScoreV9ReserveBoundFacts } from "./extension-reserve-bounds";
 import {
@@ -73,10 +74,9 @@ export function buildImplementation(context: AssetBuildContext): V9AssetFactsV2[
 }
 
 /**
- * The gap message for a mechanism component whose review is complete and whose
- * finding is that the issuer does not publish the input. The gap, its owner and
- * its bounded-unknown treatment are unchanged — only the sentence differs, so a
- * reader can tell an adjudicated non-disclosure from an outstanding review.
+ * Historical rationale from a typed unavailable-component review. Current cause
+ * admission is independent: source/date/scope proofs, never this message, decide
+ * whether researched nondisclosure still qualifies as C.
  */
 function reviewedUnavailableMessage(
   context: AssetBuildContext,
@@ -250,6 +250,8 @@ export function buildMechanismReview(context: AssetBuildContext): V9MechanismRis
         review: null,
       };
     }
+    const historyIds = context.asset.componentEvidence.some((binding) => binding.componentKey === "mechanism-risk-review-history")
+      ? componentResearchEvidence(context, "mechanism-risk-review-history") : [];
     return {
       status: missingLocalFact(context, {
         componentKey: "mechanism-risk-review",
@@ -261,6 +263,9 @@ export function buildMechanismReview(context: AssetBuildContext): V9MechanismRis
         responsibility:
           context.asset.mechanismReviewGapDisposition?.responsibility ?? "integration-missing",
         policyRuleId: "v9.backing.mechanism-review",
+        evidenceRefIds: historyIds,
+        ...(historyIds.some((id) => context.evidence.get(id)?.freshness.state === "stale")
+          ? { observationState: "stale" as const } : {}),
         message:
           context.asset.mechanismReviewGapDisposition?.rationale ??
           "No policy-independent archetype mechanism review is present in the v9 overlay.",
@@ -461,6 +466,9 @@ function assertCompatibleReserveClassification(
 export function buildReserves(context: AssetBuildContext): {
   reserveStatus: V9FactStatusV2;
   reserveExposures: V9ReserveExposureFactV2[];
+  reserveResiduals: V9AssetFactsV3["reserveResiduals"];
+  reserveCompositionEvidenceClass?: V9AssetFactsV3["reserveCompositionEvidenceClass"];
+  reserveCompositionProvenance?: V9AssetFactsV3["reserveCompositionProvenance"];
   reserveBoundFacts?: V9AssetFactsV2["reserveBoundFacts"];
 } {
   if (context.asset.reserveApplicability.state === "not-applicable") {
@@ -482,6 +490,7 @@ export function buildReserves(context: AssetBuildContext): {
         evidenceRefIds: evidenceIds,
       }),
       reserveExposures: [],
+      reserveResiduals: [],
       reserveBoundFacts: compileSafetyScoreV9ReserveBoundFacts(context),
     };
   }
@@ -489,6 +498,7 @@ export function buildReserves(context: AssetBuildContext): {
   const liveSlices = context.fixedInput.liveReserveMap[context.asset.assetId] ?? [];
   const reviewedStatic = liveSlices.length === 0 ? (context.asset.reviewedStaticReserveRows ?? null) : null;
   const slices = reviewedStatic?.rows ?? liveSlices;
+  const reserveResiduals: V9AssetFactsV3["reserveResiduals"] = [];
   if (slices.length === 0) {
     const hasReserveHistory = context.asset.componentEvidence.some(
       (binding) => binding.componentKey === "reserve-composition-history",
@@ -499,16 +509,11 @@ export function buildReserves(context: AssetBuildContext): {
     const expiredPublishedHistory = reserveHistoryEvidenceIds.some(
       (evidenceId) => context.evidence.get(evidenceId)?.freshness.state === "stale",
     );
-    return {
-      reserveStatus: missingLocalFact(context, {
+    const reserveStatus = missingLocalFact(context, {
         componentKey: "reserve-composition",
         reasonCode: "missing-reserve-composition",
         ownerDomain: "backing",
-        // Fallback only: `resolveV9EvidenceResponsibility` upgrades this to
-        // `published-evidence-expired` when the stale evidence carries an
-        // attributable publisher. Deciding it here would mislabel a document
-        // whose publisher is unknown as something the issuer published.
-        responsibility: "issuer-undisclosed",
+        responsibility: "unresearched",
         policyRuleId: "v9.backing.reserve-composition",
         message: expiredPublishedHistory
           ? "The last published reserve composition is older than the v9 freshness bound."
@@ -516,8 +521,11 @@ export function buildReserves(context: AssetBuildContext): {
         ...(expiredPublishedHistory
           ? { observationState: "stale" as const, evidenceRefIds: reserveHistoryEvidenceIds }
           : {}),
-      }).status,
+    }).status;
+    return {
+      reserveStatus,
       reserveExposures: [],
+      reserveResiduals: [{ residualId: "unidentified", weight: 1, status: reserveStatus }],
       reserveBoundFacts: compileSafetyScoreV9ReserveBoundFacts(context),
     };
   }
@@ -535,7 +543,7 @@ export function buildReserves(context: AssetBuildContext): {
   const exposures: V9ReserveExposureFactV2[] = [];
   const envelopeGapIds: string[] = [];
   const envelopeEvidenceIds: string[] = [];
-  let unclassifiedResidualWeight = 0;
+  const residuals: V9AssetFactsV3["reserveResiduals"] = reserveResiduals;
   if (
     reviewedStatic &&
     !context.asset.componentEvidence.some((binding) => binding.componentKey === "reviewed-static-reserves")
@@ -568,12 +576,17 @@ export function buildReserves(context: AssetBuildContext): {
     const evidenceIds = reviewedStatic
       ? reviewedStaticEvidenceIds
       : [reserveSourceEvidence(context, exposureKey, groupedSlices)];
-    if (classification?.unclassifiedResidual) {
-      // Keep the original notional denominator: omitting only this exposure
-      // makes appendReserveResidual charge its exact share once, as unknown.
-      // Source evidence stays attached; no favourable class/domain is invented.
+    if (classification?.unclassifiedResidual || (reviewedStatic !== null && raw.unclassifiedResidual)) {
+      const tail = missingLocalFact(context, {
+        componentKey: `reserve-residual:${exposureKey}`, reasonCode: "partial-reserve-review", ownerDomain: "backing",
+        responsibility: "unresearched", policyRuleId: "v9.backing.reserve-composition",
+        message: `The measured ${raw.name.trim()} reserve remainder is unclassified.`,
+        evidenceRefIds: evidenceIds, causeScope: { pillar: "backing", componentKey: "reserve-residual",
+          factorKey: null, routeKey: null, exposureId: exposureKey, requiredDatum: "reserveClassification" },
+      });
+      residuals.push({ residualId: exposureKey, weight, status: tail.status });
+      envelopeGapIds.push(tail.gapId);
       envelopeEvidenceIds.push(...evidenceIds);
-      unclassifiedResidualWeight += weight;
       continue;
     }
     const reviewedNonLink = classification?.trackedAssetDisposition === "reviewed-non-link";
@@ -587,7 +600,9 @@ export function buildReserves(context: AssetBuildContext): {
       ...(issuerOrObligorKey ? [{ kind: "reserve-issuer" as const, key: issuerOrObligorKey }] : []),
       ...(trackedAssetId ? [{ kind: "reserve-issuer" as const, key: `asset:${trackedAssetId}` }] : []),
     ]);
-    const classificationKnown = assetClass !== null && failureDomains.length > 0;
+    // Obligor identity is an independent concentration factor, not a gate on
+    // the admitted asset class or the holding's known liquidity and maturity.
+    const classificationKnown = assetClass !== null;
     let status: V9FactStatusV2;
     if (!classificationKnown) {
       const gapId = addGap(
@@ -600,7 +615,7 @@ export function buildReserves(context: AssetBuildContext): {
           observationState: "bounded-unknown",
           responsibility: "integration-missing",
           path: collateralExposureV9Path(exposureKey),
-          message: "The captured reserve slice lacks a complete v9 classification or failure-domain identity.",
+          message: "The captured reserve slice lacks an admitted asset-class classification.",
           evidenceRefIds: evidenceIds,
           evidenceHistory: evidenceHistoryFor(context, evidenceIds),
         }),
@@ -618,10 +633,7 @@ export function buildReserves(context: AssetBuildContext): {
         context,
         createV9FactGapV3({
           gapId: `${context.asset.assetId}:gap:reserve:${exposureKey}:stale`,
-          // A composition that an independent attestor signed and reconciled is
-          // stronger evidence than a partial review, even once it is no longer
-          // current. It keeps a ceiling, but at the `adequate` rung the policy
-          // declares for it rather than the generic `limited` floor.
+          // Keep the original report's provenance distinct from the current-datum cause.
           reasonCode: auditedFallback ? "stale-audited-reserve-composition" : "partial-reserve-review",
           ownerDomain: "backing",
           policyRuleId: "v9.backing.reserve-freshness",
@@ -651,6 +663,28 @@ export function buildReserves(context: AssetBuildContext): {
       });
     }
     envelopeEvidenceIds.push(...evidenceIds);
+    const liquidityHorizon = classification?.liquidityHorizon ?? raw.liquidityHorizon ?? null;
+    const maturityDaysMax = classification?.maturityDaysMax ?? raw.maturityDaysMax ?? null;
+    const factorStatuses: NonNullable<V9ReserveExposureFactV2["factorStatuses"]> = {};
+    for (const [factorKey, requiredDatum, missing] of [
+      ["assetClass", "assetClass", assetClass === null],
+      ["liquidity", "liquidityHorizon", liquidityHorizon === null || liquidityHorizon === "unknown"],
+      ["maturity", "maturityDaysMax", maturityDaysMax === null],
+      ["obligorConcentration", "issuerOrObligorKey", issuerOrObligorKey === null],
+    ] as const) {
+      factorStatuses[factorKey] = missing || status.observationState === "stale"
+        ? missingLocalFact(context, {
+            componentKey: `reserve:${exposureKey}:${factorKey}`, reasonCode: "material-reserve-slice-unstructured",
+            ownerDomain: "backing", responsibility: "unresearched", policyRuleId: "v9.backing.reserve-classification",
+            path: collateralExposureV9Path(exposureKey),
+            observationState: status.observationState === "stale" ? "stale" : "missing",
+            evidenceRefIds: evidenceIds, message: `The ${requiredDatum} factor for ${raw.name.trim()} is not current and known.`,
+            causeScope: { pillar: "backing", componentKey: "reserve-exposure", factorKey, routeKey: null,
+              exposureId: exposureKey, requiredDatum },
+          }).status
+        : createV9FactStatus({ applicability: requiredV9Applicability("v9.backing.reserve-classification"),
+            observationState: "known", evidenceRefIds: evidenceIds });
+    }
     exposures.push({
       exposureKey,
       classificationKey: classification?.classificationKey ?? `base:${exposureKey}`,
@@ -665,14 +699,15 @@ export function buildReserves(context: AssetBuildContext): {
           }
         : {}),
       status,
+      factorStatuses,
       name: raw.name.trim(),
       weight,
       trackedAssetId,
       assetClass,
       issuerOrObligorKey,
       riskFactors: classification?.riskFactors ?? raw.riskFactors ?? [],
-      liquidityHorizon: classification?.liquidityHorizon ?? raw.liquidityHorizon ?? null,
-      maturityDaysMax: classification?.maturityDaysMax ?? raw.maturityDaysMax ?? null,
+      liquidityHorizon,
+      maturityDaysMax,
       failureDomains,
     });
   }
@@ -683,24 +718,50 @@ export function buildReserves(context: AssetBuildContext): {
     );
   }
   const envelopeEvidenceRefIds = [...new Set(envelopeEvidenceIds)];
-  if (exposures.length === 0 && unclassifiedResidualWeight > 0) {
-    return {
-      reserveStatus: missingLocalFact(context, {
-        componentKey: "reserve-composition",
-        reasonCode: "partial-reserve-review",
-        ownerDomain: "backing",
-        policyRuleId: "v9.backing.reserve-composition",
-        responsibility: "issuer-undisclosed",
-        observationState: "bounded-unknown",
-        message: "The measured reserve quantities are wholly unclassified under the exact reviewed source identities.",
-        evidenceRefIds: envelopeEvidenceRefIds,
-      }).status,
-      reserveExposures: [],
-      reserveBoundFacts: compileSafetyScoreV9ReserveBoundFacts(context),
-    };
+  let admittedWeight = exposures.reduce((sum, row) => sum + row.weight, 0) + residuals.reduce((sum, row) => sum + row.weight, 0);
+  if (admittedWeight > 1 + RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT / 100) {
+    throw new Error(`Reserve rows and remainders exceed the whole-asset denominator for ${context.asset.assetId}`);
+  }
+  if (admittedWeight > 1) {
+    const excess = admittedWeight - 1;
+    // Match approved static composition rounding: correct one positive financial
+    // row, never a known-only denominator, and never erase an identified dust row.
+    let reconciliationRow: { weight: number } | undefined;
+    for (let index = exposures.length - 1; index >= 0; index--) {
+      if (exposures[index]!.weight > excess) { reconciliationRow = exposures[index]; break; }
+    }
+    if (reconciliationRow === undefined) {
+      for (let index = residuals.length - 1; index >= 0; index--) {
+        if (residuals[index]!.weight > excess) { reconciliationRow = residuals[index]; break; }
+      }
+    }
+    if (reconciliationRow === undefined) throw new Error(`Reserve rounding has no positive reconciliation row for ${context.asset.assetId}`);
+    reconciliationRow.weight -= excess;
+    admittedWeight = 1;
+  }
+  if (admittedWeight < 1) {
+    const tail = missingLocalFact(context, {
+      componentKey: "reserve-residual:unidentified", reasonCode: "partial-reserve-review", ownerDomain: "backing",
+      responsibility: "unresearched", policyRuleId: "v9.backing.reserve-composition",
+      message: "The remaining whole-asset reserve share has no identified holding.",
+      evidenceRefIds: envelopeEvidenceRefIds,
+      causeScope: { pillar: "backing", componentKey: "reserve-residual", factorKey: null, routeKey: null,
+        exposureId: "unidentified", requiredDatum: "reserveCompositionRemainder" },
+    });
+    residuals.push({ residualId: "unidentified", weight: 1 - admittedWeight, status: tail.status });
+    envelopeGapIds.push(tail.gapId);
   }
   if (envelopeGapIds.length === 0) {
     assertKnownComponentEvidenceCurrent(context, "reserve-composition", envelopeEvidenceRefIds);
+  }
+  let compositionStrength: Pick<V9AssetFactsV3, "reserveCompositionEvidenceClass" | "reserveCompositionProvenance"> | undefined;
+  for (const id of envelopeEvidenceRefIds) {
+    const reference = context.evidence.get(id);
+    if (reference && reference.disposition !== "rejected" && reference.rejection === null && reference.freshness.state !== "stale") {
+      compositionStrength = { reserveCompositionProvenance: reviewedStatic?.provenance ?? "live" };
+      if (reviewedStatic) compositionStrength.reserveCompositionEvidenceClass = reviewedStatic.evidenceClass;
+      break;
+    }
   }
   return {
     reserveStatus: createV9FactStatus({
@@ -710,6 +771,8 @@ export function buildReserves(context: AssetBuildContext): {
       gapIds: envelopeGapIds,
     }),
     reserveExposures: exposures,
+    reserveResiduals: residuals,
+    ...compositionStrength,
     reserveBoundFacts: compileSafetyScoreV9ReserveBoundFacts(context),
   };
 }

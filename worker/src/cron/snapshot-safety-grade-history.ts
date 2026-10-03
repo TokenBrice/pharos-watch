@@ -107,14 +107,14 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
     );
     liveCards = active.snapshot.cards
       .filter((card) => !FROZEN_IDS.has(card.id))
-      .map((card) => ({
+      .flatMap((card) => card.ratingStatus === "pipeline-gap" || card.grade === null ? [] : [{
         id: card.id,
         grade: card.grade,
         score: card.score,
         operationallyAffected:
           currentAffectedAssetIds.has(card.id) ||
           previouslyAffectedAssetIds.has(card.id),
-      }));
+      }]);
     degradedReportCardInputs = liveCards.some(
       (card) => card.operationallyAffected,
     );

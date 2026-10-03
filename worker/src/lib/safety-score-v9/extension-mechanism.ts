@@ -544,29 +544,25 @@ export interface V9MechanismReviewedUnavailableComponent {
   rationale: string;
   sourceUrl: string;
   reviewedAt: string;
+  searchedSurfaces: string[];
 }
 
 /**
- * Components a CURRENT overlay adjudicated as reviewed-but-unpublished
- * (`applicability: "unavailable"` with a written rationale and a cited source).
- *
- * The fact itself is bounded-unknown and scores identically to an unreviewed
- * component — `V9FactApplicability` admits a rationale only for the
- * not-applicable and unresolved states, so a required bounded fact has nowhere
- * to carry one. The adjudication therefore travels beside the review and lands
- * on the emitted gap's message, which is where a reader meets it.
- *
- * Mutually exclusive with `getSafetyScoreV9MechanismReviewGapDisposition`: that
- * one fires only inside the reviewed UTC day, before the overlay is current at
- * all, and reports the clock guard rather than a curated adjudication.
+ * Dated typed-overlay findings of scoped nondisclosure, with original sources
+ * and rationale. These are historical research inputs, not current-cause
+ * assertions; the fact compiler resolves each exact component separately.
+ * Dated unavailable findings survive research expiry as history. Cause admission
+ * independently enforces the captured day and 365-day research window; expired
+ * research never refreshes a positive mechanism review or proves current C.
  */
 export function getSafetyScoreV9MechanismReviewedUnavailableComponents(
   assetId: string,
   archetype: string,
   clockSec: number,
 ): V9MechanismReviewedUnavailableComponent[] {
-  const overlay = currentMechanismOverlay(assetId, archetype, clockSec);
-  if (overlay === null) return [];
+  const overlay = MECHANISM_REVIEW_OVERLAYS.get(assetId);
+  if (!overlay || overlay.archetype !== archetype ||
+      Date.parse(overlay.reviewedAt) / 1000 > clockSec) return [];
   // Mirrors `expandOverlayReview`: a projected profile component wins over the
   // curated row, so its adjudication never reaches a fact.
   const projectedComponents =
@@ -580,6 +576,7 @@ export function getSafetyScoreV9MechanismReviewedUnavailableComponents(
       rationale: curated.rationale,
       sourceUrl: curated.sourceUrl,
       reviewedAt: overlay.reviewedAt,
+      searchedSurfaces: overlay.sources.map((source) => source.url),
     });
   }
   return rows.sort((left, right) => compareText(left.componentKey, right.componentKey));
@@ -589,13 +586,18 @@ export function getSafetyScoreV9MechanismOverlayEvidence(
   assetId: string,
   archetype: string,
   clockSec: number,
+  options: { history?: boolean } = {},
 ): {
   reviewedAt: string;
   sources: MechanismReviewOverlay["sources"];
   payload: MechanismReviewOverlay;
   maxAgeSec: number;
 } | null {
-  const overlay = currentMechanismOverlay(assetId, archetype, clockSec);
+  const historical = options.history ? MECHANISM_REVIEW_OVERLAYS.get(assetId) : null;
+  const overlay = options.history
+    ? historical && historical.archetype === archetype &&
+      Date.parse(historical.reviewedAt) / 1000 + DAY_SEC <= clockSec ? historical : null
+    : currentMechanismOverlay(assetId, archetype, clockSec);
   return overlay
     ? {
         reviewedAt: overlay.reviewedAt,

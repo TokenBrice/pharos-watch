@@ -44,8 +44,8 @@ export function isWalletAddress(value: string): boolean {
 export function donorKeyGradesFromResponse(
   response: SafetyGradesResponse | undefined,
 ): ReadonlyMap<string, ReportCardGrade> | null {
-  if (!response || response.publicationStatus !== "current") return null;
-  return new Map(response.grades.map((entry) => [entry.id, entry.grade]));
+  if (!response || response.schemaVersion !== 1 || response.publicationStatus !== "current") return null;
+  return new Map(response.grades.flatMap((entry) => entry.grade === null ? [] : [[entry.id, entry.grade] as const]));
 }
 
 /** What the checker can say about grades right now. */

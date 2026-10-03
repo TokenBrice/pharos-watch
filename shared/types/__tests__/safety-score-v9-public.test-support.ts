@@ -2,7 +2,7 @@ import type { z } from "zod";
 import type { SafetyScoreV9CurrentResponseSchema } from "../safety-score-v9-public";
 import type { SafetyScoreV9BreakdownsSchema } from "../safety-score-v9-public-breakdowns";
 
-type CurrentResponse = z.input<typeof SafetyScoreV9CurrentResponseSchema>;
+type CurrentResponse = z.output<typeof SafetyScoreV9CurrentResponseSchema>;
 
 const DIGEST = "a".repeat(64);
 
@@ -12,7 +12,9 @@ const EVIDENCE_RESPONSIBILITIES = [
   "measured-adverse",
   "method-unsupported",
   "producer-failed",
+  "public-data-uncurated",
   "published-evidence-expired",
+  "unresearched",
 ] as const;
 
 function emptyAttribution<S extends string>(semantics: S) {
@@ -23,9 +25,22 @@ function emptyEvidenceSummary<R extends string>(responsibility: R) {
   return { responsibility, factCount: 0, criticalFactCount: 0, reasonCodes: [] as never[] };
 }
 
+function includedPillar() {
+  return { aggregationDisposition: "included" as const, supportedComponentKeys: ["fixture-known"], causeGapRefs: [], limitedEvidenceCauses: [] };
+}
+function includedBreakdown() {
+  const { supportedComponentKeys: _supported, ...fields } = includedPillar();
+  return fields;
+}
+
+function includedContribution(effectiveScoringWeight: number) {
+  return { cause: null, causeGapRefs: [], scoringDisposition: "included" as const, effectiveScoringWeight };
+}
+
 function pillar(score: number): CurrentResponse["cards"][number]["pillars"]["backing"] {
   return {
     score,
+    ...includedPillar(),
     evidenceLevel: "strong",
     freshness: "current",
     components: [],
@@ -33,7 +48,7 @@ function pillar(score: number): CurrentResponse["cards"][number]["pillars"]["bac
   };
 }
 
-export function breakdowns(backingScore = 90, exitScore = 92, controlScore = 94): z.input<typeof SafetyScoreV9BreakdownsSchema> {
+export function breakdowns(backingScore = 90, exitScore = 92, controlScore = 95.2): z.output<typeof SafetyScoreV9BreakdownsSchema> {
   const exitComponents = [
     ["access", "Access", 0.2],
     ["settlement", "Settlement", 0.15],
@@ -44,22 +59,25 @@ export function breakdowns(backingScore = 90, exitScore = 92, controlScore = 94)
   ] as const;
   return {
     backing: {
+      ...includedBreakdown(),
       evaluatedScore: backingScore,
       publishedScore: backingScore,
       aggregationWeight: 0.4,
-      groups: [{ key: "reserves", label: "Reserves", score: backingScore, effectiveWeight: 1 }],
+      groups: [{ key: "reserves", label: "Reserves", score: backingScore, ...includedContribution(1) }],
       components: [{
         key: "reserve:cash",
         label: "Cash",
         source: "reserve-exposure",
         score: backingScore,
-        effectiveWeight: 1,
+        ...includedContribution(1),
+        wholeAssetWeight: 1,
         weightedContribution: backingScore,
         observationState: "known",
       }],
       adjustments: [],
     },
     exit: {
+      ...includedBreakdown(),
       evaluatedScore: exitScore,
       publishedScore: exitScore,
       aggregationWeight: 0.35,
@@ -78,9 +96,18 @@ export function breakdowns(backingScore = 90, exitScore = 92, controlScore = 94)
           label,
           score: exitScore,
           weight,
+          ...includedContribution(weight),
           weightedContribution: exitScore * weight,
         })),
         confidenceFactor: 1,
+        confidenceDimensions: {
+          observation: { factor: 1, cause: null, causeGapRefs: [] },
+          model: { factor: 1, cause: null, causeGapRefs: [] },
+          capacityMethod: { factor: 1, cause: null, causeGapRefs: [] },
+        },
+        capacityEvidenceTier: "live-direct",
+        rawSameNotionalCostBps: 0,
+        supportedComponentCeiling: exitScore,
         eligibilityMultiplier: 1,
         capsApplied: [],
       },
@@ -89,6 +116,7 @@ export function breakdowns(backingScore = 90, exitScore = 92, controlScore = 94)
       adjustments: [],
     },
     control: {
+      ...includedBreakdown(),
       evaluatedScore: controlScore,
       publishedScore: controlScore,
       aggregationWeight: 0.25,
@@ -98,6 +126,7 @@ export function breakdowns(backingScore = 90, exitScore = 92, controlScore = 94)
         label: "Mint control",
         kind: "mint",
         score: controlScore,
+        ...includedContribution(1),
         binding: true,
         posture: "distributed",
       }],
@@ -122,16 +151,20 @@ function response() {
     sourceGenerations: { dex: "dex:g1", registry: "registry:g1" },
     asOfSec: 100,
     publishedAtSec: 101,
-    completeness: { expectedCount: 1, ratedCount: 1, notRatedCount: 0, notRatedIds: [] },
+    completeness: { expectedCount: 1, ratedCount: 1, notRatedCount: 0, notRatedIds: [], pipelineGapCount: 0, pipelineGapIds: [] },
+    foreignCauseGaps: [],
     cards: [
       {
         id: "asset",
+        localCauseGaps: [], foreignCauseGapRefs: [],
         score: 90,
         grade: "A+",
+        ratingStatus: "rated",
+        partialEvidence: null,
         qualityScore: 92,
         pegMultiplier: 1,
         pegAdjustedScore: 92,
-        pillars: { backing: pillar(90), exit: pillar(92), control: pillar(94) },
+        pillars: { backing: pillar(90), exit: pillar(92), control: pillar(95.2) },
         weakestPillar: { pillar: "backing", score: 90 },
         caps: [
           {
@@ -175,12 +208,12 @@ function response() {
 
 export function currentResponse() {
   const current = response() as unknown as CurrentResponse;
-  current.schemaVersion = 5;
+  current.schemaVersion = 6;
   current.lifecycle = "active";
   current.policyVersion = "9.0";
   current.policy = { id: "safety-score-v9", semanticDigest: "d".repeat(64) };
   current.cards[0]!.scoreTrace = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     legacyAliases: {
       qualityScore: "weighted-pillar-mean",
       pegAdjustedScore: "post-deployment-pre-cap-score",
@@ -188,6 +221,10 @@ export function currentResponse() {
     },
     aggregation: {
       method: "smooth-bounded-headroom",
+      includedPillars: ["backing", "control", "exit"],
+      excludedPillars: [],
+      effectiveScoringWeights: { backing: 0.4, exit: 0.35, control: 0.25 },
+      supportCeiling: 92,
       score: 92,
       weightedPillarMean: 92,
       weakestPillar: "backing",
@@ -213,7 +250,7 @@ export function currentResponse() {
     adverseAttribution: emptyAttribution("causal-measured-adverse-v1"),
     boundedUncertaintyAttribution: emptyAttribution("causal-bounded-uncertainty-v1"),
     evidenceResponsibility: {
-      semantics: "limiting-fact-owner-v1",
+      semantics: "limiting-fact-cause-v2",
       totalFactCount: 0,
       facts: [],
       summaries: EVIDENCE_RESPONSIBILITIES.map(emptyEvidenceSummary),
@@ -267,12 +304,16 @@ export function adjustedResponse() {
 
 export function boundedResponse() {
   const bounded = currentResponse();
+  bounded.cards[0]!.localCauseGaps = ["mechanism"];
   bounded.cards[0]!.score = 45;
   bounded.cards[0]!.grade = "D";
   bounded.cards[0]!.qualityScore = 45;
   bounded.cards[0]!.pegAdjustedScore = 45;
   bounded.cards[0]!.pillars = {
     backing: {
+      ...includedPillar(),
+      causeGapRefs: [0],
+      limitedEvidenceCauses: ["U"],
       score: 45,
       evidenceLevel: "limited",
       freshness: "current",
@@ -293,6 +334,8 @@ export function boundedResponse() {
   bounded.cards[0]!.reasonCodes = ["bounded-mechanism-review"];
   bounded.cards[0]!.scoreTrace.aggregation = {
     method: "smooth-bounded-headroom",
+    includedPillars: ["backing", "control", "exit"], excludedPillars: [],
+    effectiveScoringWeights: { backing: 0.4, exit: 0.35, control: 0.25 }, supportCeiling: 45,
     score: 45,
     weightedPillarMean: 45,
     weakestPillar: "backing",
@@ -312,11 +355,16 @@ export function boundedResponse() {
     code: "bounded-mechanism-review",
     path: "backing:mechanism",
     message: "A bounded backing review remains unresolved.",
-    responsibility: "integration-missing",
+    responsibility: "unresearched",
+    cause: "U",
+    causeGapRefs: [0],
   }];
   bounded.cards[0]!.scoreTrace.evidenceResponsibility.totalFactCount = 1;
-  bounded.cards[0]!.scoreTrace.evidenceResponsibility.summaries[0] = {
-    responsibility: "integration-missing",
+  bounded.cards[0]!.scoreTrace.evidenceResponsibility.facts = [[
+    "bounded-mechanism-review", "backing:mechanism", 0, "unresearched", false, "U", [0],
+  ]];
+  bounded.cards[0]!.scoreTrace.evidenceResponsibility.summaries[7] = {
+    responsibility: "unresearched",
     factCount: 1,
     criticalFactCount: 0,
     reasonCodes: ["bounded-mechanism-review"],
@@ -349,5 +397,77 @@ export function deploymentResponse() {
     modeledLossPoints: 1,
     reason: "Measured deployment exposure.",
   }));
+  return result;
+}
+
+export function partialResponse(excluded: readonly ("backing" | "exit" | "control")[]) {
+  const result = currentResponse();
+  const card = result.cards[0]!;
+  const pillars = ["backing", "control", "exit"] as const;
+  const excludedPillars = [...excluded].sort();
+  card.localCauseGaps = excludedPillars;
+  const included = pillars.filter((key) => !excluded.includes(key));
+  const pipeline = included.length < 2;
+  const weights = { backing: 0.4, exit: 0.35, control: 0.25 };
+  const totalWeight = included.reduce((sum, key) => sum + weights[key], 0);
+  for (const key of pillars) {
+    card.breakdowns![key].aggregationWeight = pipeline || excluded.includes(key) ? 0 : weights[key] / totalWeight;
+    if (!excluded.includes(key)) continue;
+    const cause = key === "exit" ? "B" as const : "A" as const;
+    const gapRef = excludedPillars.indexOf(key);
+    const disposition = cause === "A" ? "excluded-pipeline" as const : "excluded-uncurated" as const;
+    const diagnostic = { cause, causeGapRefs: [gapRef], scoringDisposition: disposition, effectiveScoringWeight: 0, score: null };
+    Object.assign(card.pillars[key], {
+      score: null, aggregationDisposition: "excluded-a-b", supportedComponentKeys: [],
+      causeGapRefs: [gapRef], limitedEvidenceCauses: [],
+    });
+    Object.assign(card.breakdowns![key], {
+      evaluatedScore: null, publishedScore: null, aggregationDisposition: "excluded-a-b",
+      causeGapRefs: [gapRef], limitedEvidenceCauses: [], adjustments: [],
+    });
+    if (key === "backing") {
+      for (const row of card.breakdowns!.backing.groups) Object.assign(row, diagnostic);
+      for (const row of card.breakdowns!.backing.components) Object.assign(row, diagnostic, { weightedContribution: 0, observationState: "missing" });
+    } else if (key === "exit") {
+      const route = card.breakdowns!.exit.primaryRoute!;
+      route.score = null; route.supportedComponentCeiling = null; route.rawSameNotionalCostBps = null;
+      for (const row of route.components) Object.assign(row, diagnostic, { weightedContribution: 0 });
+      for (const dimension of Object.values(route.confidenceDimensions)) Object.assign(dimension, { factor: 1, cause, causeGapRefs: [gapRef] });
+    } else {
+      for (const row of card.breakdowns!.control.components) Object.assign(row, diagnostic, { binding: false });
+    }
+  }
+  if (excluded.length > 0) {
+    card.partialEvidence = {
+      reasonCode: "partial-evidence-pipeline-gap", excludedPillars,
+      excludedComponentKeys: excludedPillars.map((key) => `${key}:fixture-known`),
+      causeGapRefs: excludedPillars.map((_, index) => index),
+      causes: excluded.includes("exit") && excluded.length > 1 ? ["A", "B"] : excluded.includes("exit") ? ["B"] : ["A"],
+    };
+    card.reasonCodes = ["partial-evidence-pipeline-gap"];
+  }
+  if (pipeline) {
+    Object.assign(card, { ratingStatus: "pipeline-gap", score: null, grade: null, qualityScore: null,
+      pegMultiplier: null, pegAdjustedScore: null, weakestPillar: null, bindingCap: null });
+    for (const cap of card.caps) cap.binding = false;
+    card.reasonCodes = [excluded.length === 3 ? "all-pillars-pipeline-gap" : "single-pillar-pipeline-gap", "partial-evidence-pipeline-gap"].sort() as typeof card.reasonCodes;
+    card.scoreTrace.aggregation = null;
+    for (const field of Object.keys(card.scoreTrace.stages) as (keyof typeof card.scoreTrace.stages)[]) card.scoreTrace.stages[field] = null;
+    card.scoreTrace.deploymentRisk.totalAdjustmentPoints = null;
+    Object.assign(result.completeness, { ratedCount: 0, pipelineGapCount: 1, pipelineGapIds: [card.id] });
+  } else if (excluded.length > 0) {
+    const effectiveScoringWeights = { backing: 0, exit: 0, control: 0 };
+    for (const key of included) effectiveScoringWeights[key] = weights[key] / totalWeight;
+    const mean = included.reduce((sum, key) => sum + card.pillars[key].score! * effectiveScoringWeights[key], 0);
+    const weakest = included.reduce((left, right) => card.pillars[left].score! <= card.pillars[right].score! ? left : right);
+    card.qualityScore = mean; card.pegAdjustedScore = mean;
+    card.weakestPillar = { pillar: weakest, score: card.pillars[weakest].score! };
+    Object.assign(card.scoreTrace.aggregation!, {
+      score: mean, weightedPillarMean: mean, supportCeiling: mean, includedPillars: included,
+      excludedPillars, effectiveScoringWeights, weakestPillar: weakest, weakestScore: card.pillars[weakest].score,
+    });
+    Object.assign(card.scoreTrace.stages, { weightedPillarMean: mean, aggregatedQualityScore: mean,
+      baseAssetScore: mean, deploymentAdjustedScore: mean, preCapScore: mean });
+  }
   return result;
 }

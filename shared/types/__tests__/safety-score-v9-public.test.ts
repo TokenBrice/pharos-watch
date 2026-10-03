@@ -4,15 +4,316 @@ import {
   SafetyScoreV9CurrentCardBaseSchema,
   SafetyScoreV9CurrentResponseSchema,
   SafetyScoreV9ResponseSchema,
+  type SafetyScoreV9CurrentCard,
 } from "../safety-score-v9-public";
 import { SafetyScoreV9BreakdownsSchema } from "../safety-score-v9-public-breakdowns";
 import { SafetyScoreV9AccessPostureSchema } from "../safety-score-v9-public-facts";
 import { evaluateV9AccessLookthrough } from "../../lib/safety-score-v9/access-lookthrough";
 import { makeAccessGraph } from "../../lib/__tests__/safety-score-v9-access-lookthrough.test-support";
 
-import { adjustedResponse, boundedResponse, breakdowns, currentResponse, deploymentResponse } from "./safety-score-v9-public.test-support";
+import { adjustedResponse, boundedResponse, breakdowns, currentResponse, deploymentResponse, partialResponse } from "./safety-score-v9-public.test-support";
+import { SafetyGradesResponseSchema } from "../report-cards-v9";
+import { projectV9CompactPartialEvidence } from "../safety-score-v9-causes";
+import { resolveCauseGapId } from "../safety-score-v9-public-cause-gaps";
+import { iterateEvidenceResponsibilityFacts } from "../safety-score-v9-public-evidence-facts";
+import { resolveV9EffectiveScoringWeight } from "../safety-score-v9-public-causes";
+
+describe("Compact public cause contracts", () => {
+  it.each([-1, 0.5, 1])("rejects out-of-range/noninteger cause references %s before resolution", (ref) => {
+    const response = boundedResponse();
+    const card = response.cards[0]!;
+    card.scoreTrace.evidenceResponsibility.facts[0]![2] = ref;
+    card.scoreTrace.evidenceResponsibility.facts[0]![6] = [ref];
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(false);
+    expect(() => resolveCauseGapId(response, card, ref)).toThrow(/outside/u);
+
+    const foreign = boundedResponse();
+    foreign.foreignCauseGaps = ["external:gap:mechanism"];
+    foreign.cards[0]!.localCauseGaps = [];
+    foreign.cards[0]!.foreignCauseGapRefs = [ref];
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(foreign).success).toBe(false);
+    expect(() => resolveCauseGapId(foreign, foreign.cards[0]!, 0)).toThrow(/outside/u);
+
+    const prefix = boundedResponse();
+    prefix.cards[0]!.scoreTrace.evidenceResponsibility.factPathPrefixes = ["backing:mechanism"];
+    prefix.cards[0]!.scoreTrace.evidenceResponsibility.facts[0]![1] = [ref];
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(prefix).success).toBe(false);
+  });
+
+  it("rejects an unreferenced publication root entry without confusing local and foreign gaps", () => {
+    const response = boundedResponse();
+    const card = response.cards[0]!;
+    response.foreignCauseGaps = ["external:gap:mechanism"];
+    card.localCauseGaps = [];
+    card.foreignCauseGapRefs = [0];
+    expect(SafetyScoreV9CurrentResponseSchema.parse(response).cards[0]!.ratingStatus).toBe("rated");
+    response.foreignCauseGaps.push("zz:gap:unused");
+    const result = SafetyScoreV9CurrentResponseSchema.safeParse(response);
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues.map((issue) => issue.path[0])).toContain("foreignCauseGaps");
+  });
+
+  it("rejects foreign gaps selected by a card but unused by its actual causal contributions", () => {
+    const response = boundedResponse();
+    response.foreignCauseGaps = ["external:gap:unused"];
+    response.cards[0]!.foreignCauseGapRefs = [0];
+    const result = SafetyScoreV9CurrentResponseSchema.safeParse(response);
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues.map(issue => issue.message))
+      .toContain("Every card gap table entry must be referenced");
+  });
+
+  it.each(["no-viable-exit-path", "bounded-mechanism-review"] as const)(
+    "uses the exact D fact rather than policy code classification for %s",
+    code => {
+      const response = boundedResponse();
+      const card = response.cards[0]!;
+      const reason = { code, path: "backing:mechanism", message: "A measured local failure is observed." };
+      card.localCauseGaps = [];
+      card.pillars.backing.causeGapRefs = [];
+      card.pillars.backing.limitedEvidenceCauses = ["D"];
+      card.pillars.backing.reasons = [reason];
+      card.reasonCodes = [code];
+      const evidence = card.scoreTrace.evidenceResponsibility;
+      evidence.facts = [[code, reason.path, null, "measured-adverse", false, "D", []]];
+      evidence.summaries = evidence.summaries.map(summary => ({
+        responsibility: summary.responsibility,
+        ...(summary.responsibility === "measured-adverse" ? {
+          factCount: 1, criticalFactCount: 0, reasonCodes: [code],
+        } : {}),
+      }));
+      card.scoreTrace.boundedUncertaintyAttribution.items = [];
+      card.scoreTrace.adverseAttribution.items = [{
+        source: "reason", path: reason.path, message: reason.message, responsibility: "measured-adverse",
+      }];
+      expect(SafetyScoreV9CurrentResponseSchema.parse(response).cards[0]!.grade).toBe("D");
+
+      const wrongPath = structuredClone(response);
+      wrongPath.cards[0]!.scoreTrace.evidenceResponsibility.facts[0]![1] = "backing:different-observation";
+      expect(SafetyScoreV9CurrentResponseSchema.safeParse(wrongPath).success).toBe(false);
+      const unproved = structuredClone(response);
+      unproved.cards[0]!.scoreTrace.evidenceResponsibility.facts[0]![3] = "unresearched";
+      unproved.cards[0]!.scoreTrace.evidenceResponsibility.facts[0]![5] = "U";
+      expect(SafetyScoreV9CurrentResponseSchema.safeParse(unproved).success).toBe(false);
+    },
+  );
+
+  function componentBoundedResponse(cause: "C" | "U", factor: boolean) {
+    const response = boundedResponse();
+    const card = response.cards[0]!;
+    const componentKey = factor ? "reserve:bounded:assetClass" : "reserve:bounded";
+    const item = card.scoreTrace.boundedUncertaintyAttribution.items[0]!;
+    item.path = `backing:${componentKey}:bounded-component:cause:0`;
+    item.cause = cause;
+    item.responsibility = cause === "C" ? "issuer-undisclosed" : "unresearched";
+    card.pillars.backing.score = 60;
+    card.pillars.backing.limitedEvidenceCauses = [cause];
+    card.pillars.backing.reasons = [{
+      code: item.code, path: item.path, message: item.message, cause, causeGapRefs: [0],
+    }];
+    card.pillars.exit.score = 30;
+    card.pillars.control.score = 42;
+    card.breakdowns = breakdowns(60, 30, 42);
+    const backing = card.breakdowns.backing;
+    backing.components = [{
+      key: "reserve:bounded", label: "Bounded reserve", source: "reserve-exposure",
+      score: 35, cause, causeGapRefs: [0], scoringDisposition: "bounded-uncertainty",
+      effectiveScoringWeight: 0.5, wholeAssetWeight: 0.5, weightedContribution: 17.5,
+      observationState: "bounded-unknown",
+      ...(factor ? { factors: [{
+        componentKey, score: 35, cause, causeGapRefs: [0],
+        scoringDisposition: "bounded-uncertainty" as const, effectiveScoringWeight: 1,
+      }] } : {}),
+    }, {
+      key: "reserve:known", label: "Known reserve", source: "reserve-exposure",
+      score: 85, effectiveScoringWeight: 0.5, wholeAssetWeight: 0.5,
+      weightedContribution: 42.5, observationState: "known",
+    }];
+    card.weakestPillar = { pillar: "exit", score: 30 };
+    card.scoreTrace.aggregation!.weakestPillar = "exit";
+    card.scoreTrace.aggregation!.weakestScore = 30;
+    const evidence = card.scoreTrace.evidenceResponsibility;
+    evidence.factPathPrefixes = [`backing:${componentKey}:bounded-component`];
+    evidence.facts = [[item.code, [0], 0, item.responsibility, false, cause, [0]]];
+    evidence.summaries = evidence.summaries.map(summary => ({
+      responsibility: summary.responsibility,
+      ...(summary.responsibility === item.responsibility ? {
+        factCount: 1, criticalFactCount: 0, reasonCodes: [item.code],
+      } : {}),
+    }));
+    return response;
+  }
+
+  it.each([
+    ["C", false], ["U", false], ["C", true], ["U", true],
+  ] as const)("accepts charged %s bounded backing attribution at component/factor scope (%s)", (cause, factor) => {
+    const card = SafetyScoreV9CurrentResponseSchema.parse(componentBoundedResponse(cause, factor)).cards[0]!;
+    expect(card.grade).toBe("D");
+    expect(card.pillars.backing.score).toBe(60);
+    expect([...iterateEvidenceResponsibilityFacts(card.scoreTrace.evidenceResponsibility)][0]![1])
+      .toBe(card.scoreTrace.boundedUncertaintyAttribution.items[0]!.path);
+  });
+
+  it.each([false, true])("accepts a U gap within a C-dominant charged component (%s)", factor => {
+    const response = componentBoundedResponse("U", factor);
+    const card = response.cards[0]!;
+    card.localCauseGaps.push("other");
+    const row = card.breakdowns!.backing.components[0]!;
+    const contribution = factor ? row.factors![0]! : row;
+    contribution.cause = "C";
+    contribution.causeGapRefs = [0, 1];
+    const evidence = card.scoreTrace.evidenceResponsibility;
+    evidence.totalFactCount = 2;
+    evidence.facts.push(["bounded-mechanism-review", [0], 1, "issuer-undisclosed", false, "C", [1]]);
+    evidence.summaries = evidence.summaries.map(summary => summary.responsibility === "issuer-undisclosed"
+      ? { responsibility: summary.responsibility, factCount: 1, criticalFactCount: 0, reasonCodes: ["bounded-mechanism-review"] }
+      : summary);
+    expect(SafetyScoreV9CurrentResponseSchema.parse(response).cards[0]!.grade).toBe("D");
+  });
+
+  it.each([false, true])("rejects forged or uncharged bounded component attribution (%s)", factor => {
+    const original = componentBoundedResponse("U", factor);
+    const mutations: Array<(card: SafetyScoreV9CurrentCard) => void> = [
+      card => {
+        const item = card.scoreTrace.boundedUncertaintyAttribution.items[0]!;
+        item.path = "backing:reserve:other:bounded-component:cause:0";
+        card.pillars.backing.reasons[0]!.path = item.path;
+      },
+      card => {
+        const row = card.breakdowns!.backing.components[0]!;
+        if (factor) row.factors![0]!.effectiveScoringWeight = 0;
+        else {
+          row.effectiveScoringWeight = 0;
+          row.weightedContribution = 0;
+          Object.assign(card.breakdowns!.backing.components[1]!, {
+            score: 60, effectiveScoringWeight: 1, weightedContribution: 60,
+          });
+        }
+      },
+      ...(factor ? [(card: SafetyScoreV9CurrentCard) => {
+        const row = card.breakdowns!.backing.components[0]!;
+        row.effectiveScoringWeight = 0;
+        row.weightedContribution = 0;
+        Object.assign(card.breakdowns!.backing.components[1]!, {
+          score: 60, effectiveScoringWeight: 1, weightedContribution: 60,
+        });
+      }] : []),
+      card => {
+        card.localCauseGaps.push("other");
+        const row = card.breakdowns!.backing.components[0]!;
+        (factor ? row.factors![0]! : row).causeGapRefs = [1];
+      },
+      card => {
+        card.scoreTrace.boundedUncertaintyAttribution.items[0]!.message = "Unpublished attribution.";
+      },
+      card => {
+        card.scoreTrace.evidenceResponsibility.facts[0]![5] = "C";
+        card.scoreTrace.evidenceResponsibility.facts[0]![3] = "issuer-undisclosed";
+      },
+      card => {
+        const row = card.breakdowns!.backing.components[0]!;
+        (factor ? row.factors![0]! : row).score = 50;
+        if (!factor) {
+          row.weightedContribution = 25;
+          Object.assign(card.breakdowns!.backing.components[1]!, { score: 70, weightedContribution: 35 });
+        }
+      },
+      ...(["A", "B"] as const).map(cause => (card: SafetyScoreV9CurrentCard) => {
+        const row = card.breakdowns!.backing.components[0]!;
+        Object.assign(factor ? row.factors![0]! : row, {
+          cause, score: null, effectiveScoringWeight: 0,
+          scoringDisposition: cause === "A" ? "excluded-pipeline" : "excluded-uncurated",
+        });
+        if (!factor) {
+          row.weightedContribution = 0;
+          Object.assign(card.breakdowns!.backing.components[1]!, {
+            score: 60, effectiveScoringWeight: 1, weightedContribution: 60,
+          });
+        }
+      }),
+    ];
+    for (const mutate of mutations) {
+      const invalid = structuredClone(original);
+      mutate(invalid.cards[0]!);
+      const parsed = SafetyScoreV9CurrentResponseSchema.safeParse(invalid);
+      expect(parsed.success).toBe(false);
+      if (!parsed.success) expect(parsed.error.issues.map(issue => issue.path))
+        .toContainEqual(["cards", 0, "scoreTrace", "boundedUncertaintyAttribution", "items"]);
+    }
+  });
+
+  it("resolves one parent identity across independent card and root renumbering", () => {
+    const response = { foreignCauseGaps: ["parent:gap:mechanism"] };
+    const parent = { id: "parent", localCauseGaps: ["mechanism"], foreignCauseGapRefs: [] };
+    const child = { id: "child", localCauseGaps: ["before", "self"], foreignCauseGapRefs: [0] };
+    expect(resolveCauseGapId(response, parent, 0)).toBe("parent:gap:mechanism");
+    expect(resolveCauseGapId(response, child, 2)).toBe("parent:gap:mechanism");
+    const renumbered = { foreignCauseGaps: ["a:gap:other", "parent:gap:mechanism"] };
+    const remapped = { ...child, localCauseGaps: ["before", "new", "self"], foreignCauseGapRefs: [1] };
+    expect(resolveCauseGapId(renumbered, remapped, 3)).toBe("parent:gap:mechanism");
+    expect(resolveCauseGapId(renumbered, remapped, 2)).toBe("child:gap:self");
+  });
+
+  it("round-trips readable tuples and derived causal paths without turning null source identity into zero", () => {
+    const response = boundedResponse();
+    const evidence = response.cards[0]!.scoreTrace.evidenceResponsibility;
+    evidence.factPathPrefixes = ["backing:mechanism"];
+    evidence.facts[0]![1] = [0];
+    evidence.facts[0]![2] = null;
+    const decoded = SafetyScoreV9CurrentResponseSchema.parse(JSON.parse(JSON.stringify(response)));
+    expect([...iterateEvidenceResponsibilityFacts(decoded.cards[0]!.scoreTrace.evidenceResponsibility)]).toEqual([[
+      "bounded-mechanism-review", "backing:mechanism:cause:0", null, "unresearched", false, "U", [0],
+    ]]);
+    expect(resolveCauseGapId(decoded, decoded.cards[0]!, 0)).toBe("asset:gap:mechanism");
+  });
+
+  it("round-trips disposition defaults while preserving null scores, null shares and pipeline-gap grade", () => {
+    const response = partialResponse(["backing", "exit"]);
+    const card = response.cards[0]!;
+    delete card.pillars.control.aggregationDisposition;
+    delete card.breakdowns!.control.aggregationDisposition;
+    const control = card.breakdowns!.control.components[0]!;
+    delete control.effectiveScoringWeight;
+    for (const component of card.breakdowns!.backing.components) delete component.effectiveScoringWeight;
+    for (const group of card.breakdowns!.backing.groups) delete group.effectiveScoringWeight;
+    for (const component of card.breakdowns!.exit.primaryRoute!.components) delete component.effectiveScoringWeight;
+    card.breakdowns!.backing.components[0]!.wholeAssetWeight = null;
+    const decoded = SafetyScoreV9CurrentResponseSchema.parse(JSON.parse(JSON.stringify(response))).cards[0]!;
+    expect(decoded.ratingStatus).toBe("pipeline-gap");
+    expect(decoded.score).toBeNull();
+    expect(decoded.grade).toBeNull();
+    expect(decoded.breakdowns!.backing.components[0]!.score).toBeNull();
+    expect(decoded.breakdowns!.backing.components[0]!.wholeAssetWeight).toBeNull();
+    expect(resolveV9EffectiveScoringWeight(decoded.breakdowns!.backing.components[0]!)).toBe(0);
+    expect(resolveV9EffectiveScoringWeight(decoded.breakdowns!.control.components[0]!)).toBe(1);
+    expect(decoded.breakdowns!.control.components[0]!.score).toBe(95.2);
+  });
+});
 
 describe("SafetyScoreV9ResponseSchema", () => {
+  it("admits independent feasible backup credit above the primary route-local component ceiling", () => {
+    const response = currentResponse();
+    const exit = response.cards[0]!.breakdowns!.exit;
+    const primary = exit.primaryRoute!;
+    primary.score = 90;
+    primary.supportedComponentCeiling = 90;
+    for (const component of primary.components) {
+      component.score = 90;
+      component.weightedContribution = 90 * resolveV9EffectiveScoringWeight(component);
+    }
+    exit.diversification = { routeKey: "dex:backup", routeLabel: "Independent backup", bonus: 2 };
+    exit.alternatives = [{
+      key: "dex:backup", label: "Independent backup", routeFamily: "dex-amm", score: 80,
+      included: true, exclusionReason: null, confidenceFactor: 1,
+      confidenceDimensions: structuredClone(primary.confidenceDimensions), capacityEvidenceTier: "live-direct",
+      rawSameNotionalCostBps: 0,
+      capacity: { executableUsd: 1_000_000, requestedNotionalUsd: 1_000_000, completionRatio: 1 },
+    }];
+    const parsed = SafetyScoreV9CurrentResponseSchema.parse(response).cards[0]!.breakdowns!.exit;
+    expect(parsed.primaryRoute!.confidenceFactor).toBe(1);
+    expect(parsed.primaryRoute!.supportedComponentCeiling).toBe(90);
+    expect(parsed.evaluatedScore).toBe(92);
+  });
   it("accepts reconciled nonzero loss across two holder exposures", () => {
     const parsed = SafetyScoreV9CurrentResponseSchema.parse(deploymentResponse()).cards[0]!;
     expect(parsed.pegAdjustedScore).toBe(90);
@@ -83,41 +384,18 @@ describe("SafetyScoreV9ResponseSchema", () => {
     }
   });
 
-  it("accepts stored snapshots that predate the sixth responsibility owner", () => {
-    const legacy = currentResponse();
-    const trace = legacy.cards[0]!.scoreTrace!;
-    delete trace.evidenceResponsibility.facts;
-    trace.evidenceResponsibility.summaries.pop();
-    const parsed = SafetyScoreV9CurrentResponseSchema.parse(legacy);
-    expect(parsed.cards[0]?.scoreTrace.evidenceResponsibility.facts).toBeUndefined();
-    expect(parsed.cards[0]?.scoreTrace.evidenceResponsibility.summaries).toHaveLength(5);
-
-    // Per-fact paths (9.19) and the sixth owner (9.4) arrived separately, so a
-    // stored publication can carry `facts` and still predate the owner. Reading
-    // that shape is what the 9.4 release initially got wrong.
-    const factsWithLegacyOwners = currentResponse();
-    factsWithLegacyOwners.cards[0]!.scoreTrace!.evidenceResponsibility.summaries.pop();
-    const parsedWithFacts = SafetyScoreV9CurrentResponseSchema.parse(factsWithLegacyOwners);
-    expect(parsedWithFacts.cards[0]?.scoreTrace.evidenceResponsibility.facts).toBeDefined();
-    expect(parsedWithFacts.cards[0]?.scoreTrace.evidenceResponsibility.summaries).toHaveLength(5);
-
-    // A non-canonical owner set is still refused: dropping an interior owner is
-    // corruption, not an older writer.
-    const nonCanonical = currentResponse();
-    nonCanonical.cards[0]!.scoreTrace!.evidenceResponsibility.summaries.splice(1, 1);
-    expect(() => SafetyScoreV9CurrentResponseSchema.parse(nonCanonical)).toThrow(
-      /must preserve a supported canonical owner order/,
-    );
+  it("rejects old envelopes and proofless legacy trace bytes on the current publication reader", () => {
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse({ ...currentResponse(), schemaVersion: 5 }).success).toBe(false);
+    const current = currentResponse();
+    const legacy = { ...current, cards: [{ ...current.cards[0], scoreTrace: { ...current.cards[0]!.scoreTrace, schemaVersion: 3 } }] };
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(legacy).success).toBe(false);
+    const { ratingStatus: _status, ...withoutStatus } = currentResponse().cards[0]!;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse({ ...currentResponse(), cards: [withoutStatus] }).success).toBe(false);
+    const { partialEvidence: _partial, ...withoutPartial } = currentResponse().cards[0]!;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse({ ...currentResponse(), cards: [withoutPartial] }).success).toBe(false);
   });
 
   it("requires the self-describing score trace on every current V9 card", () => {
-    const parsed = SafetyScoreV9CurrentResponseSchema.parse(currentResponse());
-    expect(parsed.schemaVersion).toBe(5);
-    expect(parsed.cards[0]?.scoreTrace.aggregation?.method).toBe("smooth-bounded-headroom");
-    expect(parsed.cards[0]?.scoreTrace.legacyAliases.pegAdjustedScore).toBe(
-      "post-deployment-pre-cap-score",
-    );
-    expect(SafetyScoreV9ResponseSchema.parse(parsed).schemaVersion).toBe(5);
 
     const { scoreTrace: _scoreTrace, ...cardWithoutTrace } = currentResponse().cards[0]!;
     const missingTrace = { ...currentResponse(), cards: [cardWithoutTrace] };
@@ -161,29 +439,11 @@ describe("SafetyScoreV9ResponseSchema", () => {
     });
   });
 
-  it("accepts bounded D attribution and expired-publication ownership", () => {
-    const bounded = boundedResponse();
-    expect(SafetyScoreV9CurrentResponseSchema.parse(bounded).cards[0]?.grade).toBe("D");
-
-    const expiredPublication = structuredClone(bounded);
-    expiredPublication.cards[0]!.scoreTrace.boundedUncertaintyAttribution.items[0]!.responsibility =
-      "published-evidence-expired";
-    expiredPublication.cards[0]!.scoreTrace.evidenceResponsibility.summaries[0] = {
-      responsibility: "integration-missing",
-      factCount: 0,
-      criticalFactCount: 0,
-      reasonCodes: [],
-    };
-    expiredPublication.cards[0]!.scoreTrace.evidenceResponsibility.summaries[5] = {
-      responsibility: "published-evidence-expired",
-      factCount: 1,
-      criticalFactCount: 0,
-      reasonCodes: ["bounded-mechanism-review"],
-    };
-    const parsedExpiredPublication = SafetyScoreV9CurrentResponseSchema.parse(expiredPublication);
-    expect(parsedExpiredPublication.cards[0]?.scoreTrace.boundedUncertaintyAttribution.items[0]?.responsibility)
-      .toBe("published-evidence-expired");
-
+  it("preserves bounded C/U D-grade attribution without claiming measured adversity", () => {
+    const card = SafetyScoreV9CurrentResponseSchema.parse(boundedResponse()).cards[0]!;
+    expect(card.grade).toBe("D");
+    expect(card.scoreTrace.boundedUncertaintyAttribution.items[0]!.cause).toBe("U");
+    expect(card.scoreTrace.adverseAttribution.items).toEqual([]);
   });
 
   it.each([
@@ -207,6 +467,8 @@ describe("SafetyScoreV9ResponseSchema", () => {
         path: "parent:ghost:backing:mechanism",
         message: "Required parent ghost: A bounded backing review remains unresolved.",
         responsibility: "integration-missing",
+        cause: "U",
+        causeGapRefs: [0],
       }];
     } },
     { name: "forgedPeg", error: /match the measured danger multiplier/, mutate: (card: ReturnType<typeof boundedResponse>["cards"][number]) => {
@@ -242,7 +504,7 @@ describe("SafetyScoreV9ResponseSchema", () => {
       }];
       card.scoreTrace.boundedUncertaintyAttribution.items = [];
     } },
-    { name: "reclassifiedBoundedReason", error: /requires a non-bounded policy reason code/, mutate: (card: ReturnType<typeof boundedResponse>["cards"][number]) => {
+    { name: "forgedMeasuredSummary", mutate: (card: SafetyScoreV9CurrentCard) => {
       card.scoreTrace.adverseAttribution.items = [{
         source: "reason",
         path: "backing:mechanism",
@@ -277,14 +539,15 @@ describe("SafetyScoreV9ResponseSchema", () => {
     { name: "ratedCritical", error: /cannot retain critical unresolved facts/, mutate: (card: ReturnType<typeof boundedResponse>["cards"][number]) => {
       card.scoreTrace.evidenceResponsibility.summaries[0]!.criticalFactCount = 1;
     } },
-  ])("rejects $name attribution", ({ mutate, error }) => {
+  ])("rejects $name attribution", ({ mutate }) => {
     const invalid = boundedResponse();
     mutate(invalid.cards[0]!);
-    expect(() => SafetyScoreV9CurrentResponseSchema.parse(invalid)).toThrow(error);
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(invalid).success).toBe(false);
   });
 
   it("requires attribution to a binding minimum serial parent, including ties and cycles", () => {
     const higherParent = boundedResponse().cards[0]!;
+    higherParent.foreignCauseGapRefs = [0, 1];
     higherParent.score = 40;
     higherParent.grade = "D";
     higherParent.caps = [{
@@ -296,8 +559,8 @@ describe("SafetyScoreV9ResponseSchema", () => {
     }];
     higherParent.bindingCap = higherParent.caps[0]!;
     higherParent.dependencies.serial = [
-      { upstreamAssetId: "higher", score: 45, blocked: false },
-      { upstreamAssetId: "lower", score: 40, blocked: false },
+      { upstreamAssetId: "higher", score: 45, blocked: false, ratingStatus: "rated", partialEvidence: null, causeGapRefs: [1], limitedEvidenceCauses: ["D"] },
+      { upstreamAssetId: "lower", score: 40, blocked: false, ratingStatus: "rated", partialEvidence: null, causeGapRefs: [2], limitedEvidenceCauses: ["D"] },
     ];
     higherParent.scoreTrace.stages.publishedScore = 40;
     higherParent.scoreTrace.adverseAttribution.items = [{
@@ -362,10 +625,48 @@ describe("SafetyScoreV9ResponseSchema", () => {
     }
   });
 
-  it("requires null scores to agree with NR membership and reasons", () => {
-    const invalid = currentResponse();
-    Object.assign(invalid.cards[0], { score: null });
-    expect(() => SafetyScoreV9ResponseSchema.parse(invalid)).toThrow(/NR grade and null score must agree/);
+  it("covers all eight included/excluded pillar masks with disjoint technical availability", () => {
+    const pillars = ["backing", "control", "exit"] as const;
+    for (let mask = 0; mask < 8; mask++) {
+      const excluded = pillars.filter((_pillar, index) => (mask & (1 << index)) !== 0);
+      const parsed = SafetyScoreV9CurrentResponseSchema.parse(partialResponse(excluded));
+      const card = parsed.cards[0]!;
+      const pipeline = excluded.length >= 2;
+      expect(card.ratingStatus).toBe(pipeline ? "pipeline-gap" : "rated");
+      expect(card.grade === null).toBe(pipeline);
+      expect(card.grade).not.toBe("NR");
+      expect(parsed.completeness.notRatedCount).toBe(0);
+      expect(parsed.completeness.pipelineGapCount).toBe(pipeline ? 1 : 0);
+      for (const pillar of excluded) {
+        expect(card.pillars[pillar].score).toBeNull();
+        expect(card.breakdowns![pillar].aggregationWeight).toBe(0);
+      }
+      if (pipeline) {
+        expect(card.scoreTrace.aggregation).toBeNull();
+        expect(card.bindingCap).toBeNull();
+        expect(card.nrReasons).toEqual([]);
+        expect(Object.values(card.scoreTrace.stages)).toEqual(Array(8).fill(null));
+        const falseNR = { ...parsed, cards: [{ ...card, grade: "NR", ratingStatus: "not-rated" }] };
+        expect(SafetyScoreV9CurrentResponseSchema.safeParse(falseNR).success).toBe(false);
+      } else {
+        const aggregate = card.scoreTrace.aggregation!;
+        const included = pillars.filter((pillar) => !excluded.includes(pillar));
+        const originalWeights = { backing: 0.4, exit: 0.35, control: 0.25 };
+        const denominator = included.reduce((sum, pillar) => sum + originalWeights[pillar], 0);
+        for (const pillar of included) expect(aggregate.effectiveScoringWeights[pillar]).toBeCloseTo(originalWeights[pillar] / denominator);
+        expect(aggregate.supportCeiling).toBeCloseTo(included.reduce((sum, pillar) => sum + card.pillars[pillar].score! * aggregate.effectiveScoringWeights[pillar], 0));
+      }
+    }
+  });
+
+  it("keeps pipeline-gap distinct from NR on the current free grades surface", () => {
+    const card = SafetyScoreV9CurrentResponseSchema.parse(partialResponse(["backing", "control"])).cards[0]!;
+    const response = { schemaVersion: 1, model: "v9", methodologyVersion: "10.01", asOfSec: 100, updatedAt: 101,
+      publicationStatus: "current", grades: [{ id: card.id, score: card.score, grade: card.grade,
+        ratingStatus: card.ratingStatus, partialEvidence: projectV9CompactPartialEvidence(card.partialEvidence) }] };
+    expect(SafetyGradesResponseSchema.parse(response).grades[0]!.grade).toBeNull();
+    expect(SafetyGradesResponseSchema.safeParse({ ...response, grades: [{ ...response.grades[0], grade: "NR" }] }).success).toBe(false);
+    expect(SafetyGradesResponseSchema.safeParse({ ...response, grades: [{ ...response.grades[0], score: 0 }] }).success).toBe(false);
   });
 
   it("requires binding-cap and access-unknown summaries to be exact", () => {

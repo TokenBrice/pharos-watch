@@ -14,6 +14,8 @@ export interface CanonicalSafetyGradeRow {
   symbol: string;
   grade: string;
   score: number | null;
+  ratingStatus?: DigestV9SafetyCoin["ratingStatus"];
+  partialEvidence?: DigestV9SafetyCoin["partialEvidence"];
   pillars: DigestV9SafetyCoin["pillars"];
   reasonCodes: string[];
   caps: DigestV9SafetyCap[];

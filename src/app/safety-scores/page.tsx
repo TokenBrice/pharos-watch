@@ -23,7 +23,7 @@ const FAQ_ITEMS = [
   {
     question: "How are stablecoin safety grades calculated?",
     answer:
-      "Safety Score V10 combines three pillars: Backing, Exit, and Economic Control. Evidence quality, dependencies, access posture, binding caps, and peg behavior can limit the published score. The resulting 0–100 score maps to a letter grade from A+ to F, while insufficient evidence is shown as NR.",
+      "Safety Score V10 combines three pillars: Backing, Exit, and Economic Control. Proven pipeline or public-curation gaps do not score: partial ratings use available evidence, while fewer than two available pillars shows Pipeline gap with no score or grade. Genuine rating withholds are shown as NR. Rated 0–100 scores map to A+ through F.",
   },
   {
     question: "What do the three V10 pillars measure?",

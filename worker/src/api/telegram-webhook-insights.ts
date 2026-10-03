@@ -319,9 +319,12 @@ export async function buildWhyMessage(db: D1Database, stablecoinId: string): Pro
 
   const lines = [
     `<b>${escapeHtml(symbol)} Safety Score</b>`,
-    `Overall: ${card.grade}${card.score != null ? ` (${card.score})` : ""}`,
+    card.ratingStatus === "pipeline-gap"
+      ? "Overall: Unavailable — pipeline gap"
+      : `Overall: ${card.grade}${card.score != null ? ` (${card.score})` : ""}`,
     `Model: V9 · ${escapeHtml(source.snapshot.safetyScoreIdentity.methodologyVersion)} · ${escapeHtml(source.snapshot.safetyScoreIdentity.publicationGenerationId)}`,
   ];
+  if (card.partialEvidence) lines.push("Partial evidence: pipeline gap");
   const weaknesses = Object.entries(card.pillars)
     .sort(([, a], [, b]) =>
       (a.score ?? Number.POSITIVE_INFINITY) -
@@ -333,7 +336,7 @@ export async function buildWhyMessage(db: D1Database, stablecoinId: string): Pro
     lines.push("<b>Weakest pillars</b>");
     for (const [pillar, detail] of weaknesses) {
       lines.push(
-        `- ${escapeHtml(formatPillarName(pillar))}: ${detail.score ?? "NR"}`,
+        `- ${escapeHtml(formatPillarName(pillar))}: ${detail.score ?? "Unavailable"}`,
       );
     }
   }

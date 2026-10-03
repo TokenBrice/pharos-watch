@@ -12,11 +12,12 @@ import {
   buildSourceRiskGoldenFixture,
   getSourceRiskGoldenRow,
 } from "@shared/test-utils/yield-source-risk-golden-fixtures";
+import type { ActiveSafetyScoreIndex, SafetyScoreGradeSnapshot } from "../../lib/safety-score-index";
 
-const computeSafetyScoresSnapshotMock = vi.hoisted(() => vi.fn());
+const loadActiveSafetyScoreIndexMock = vi.hoisted(() => vi.fn());
 
-vi.mock("../../lib/safety-scores", () => ({
-  computeSafetyScoresSnapshot: computeSafetyScoresSnapshotMock,
+vi.mock("../../lib/safety-score-index", () => ({
+  loadActiveSafetyScoreIndex: loadActiveSafetyScoreIndexMock,
 }));
 
 import { handleYieldRankings } from "../cache-handlers";
@@ -35,6 +36,44 @@ function v9Identity(publicationGenerationId: string): SafetyScoreV9PublicationId
     evaluationBuildDigest: "a".repeat(64),
     baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
     publicationGenerationId,
+  };
+}
+
+function makeIndexSource(
+  scores: ReadonlyMap<string, { score: number; grade: string }>,
+  identity: SafetyScoreV9PublicationIdentity | null,
+  publishedAt: number,
+): ActiveSafetyScoreIndex {
+  if (identity === null) {
+    return { kind: "error", reason: "safety-identity-missing", detail: "Missing safety identity", snapshot: null };
+  }
+  const cards: SafetyScoreGradeSnapshot["cards"] = Array.from(scores, ([id, entry]) => ({
+    id,
+    score: entry.grade === "NR" ? null : entry.score,
+    grade: entry.grade as SafetyScoreGradeSnapshot["cards"][number]["grade"],
+    ratingStatus: entry.grade === "NR" ? "not-rated" : "rated",
+    partialEvidence: null,
+  }));
+  return {
+    kind: "v9",
+    snapshot: {
+      lifecycle: "active",
+      safetyScoreIdentity: identity,
+      methodology: { version: identity.methodologyVersion },
+      asOfSec: publishedAt,
+      updatedAt: publishedAt,
+      publicationHealth: {
+        schemaVersion: 2,
+        status: "current",
+        acceptedPublicationGenerationId: identity.publicationGenerationId,
+        acceptedAtSec: publishedAt,
+        attemptedAtSec: publishedAt,
+        heldSinceSec: null,
+        reasons: [],
+      },
+      completeness: { expectedCount: cards.length },
+      cards,
+    },
   };
 }
 
@@ -229,20 +268,8 @@ describe("handleYieldRankings", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-13T16:00:00Z"));
-    computeSafetyScoresSnapshotMock.mockReset();
-    computeSafetyScoresSnapshotMock.mockImplementation(async () => ({
-      kind: "ok",
-      mode: "map",
-      coveredCount: 1,
-      trackedCount: 1,
-      coverageRatio: 1,
-      scores: new Map(["rated-coin", "usdgo-osl", "ustbl-spiko", "eutbl-spiko"].map((id) => [id, { score: 66, grade: "B-" }])),
-      source: "safety-score-v9-publication",
-      safetyScoreIdentity: currentSafetyIdentity,
-      publicationGenerationId: currentSafetyIdentity?.publicationGenerationId ?? null,
-      methodologyVersion: V9_METHODOLOGY_VERSION,
-      publishedAt: Math.floor(Date.now() / 1000),
-    }));
+    loadActiveSafetyScoreIndexMock.mockReset();
+    loadActiveSafetyScoreIndexMock.mockImplementation(async () => (makeIndexSource(new Map(["rated-coin", "usdgo-osl", "ustbl-spiko", "eutbl-spiko"].map((id) => [id, { score: 66, grade: "B-" }])), currentSafetyIdentity, Math.floor(Date.now() / 1000))));
   });
 
   afterEach(() => {
@@ -465,22 +492,10 @@ describe("handleYieldRankings", () => {
   it("serves the coherent publish-time safety snapshot instead of blanking on a compact identity mismatch", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
     const db = makeCacheDb(v748RankingsPayload, updatedAt);
-    computeSafetyScoresSnapshotMock.mockResolvedValueOnce({
-      kind: "ok",
-      mode: "map",
-      coveredCount: 1,
-      trackedCount: 1,
-      coverageRatio: 1,
-      scores: new Map([["usdc-circle", { score: 88, grade: "A" }]]),
-      source: "safety-score-v9-publication",
-      safetyScoreIdentity: {
-        ...v9Identity("report-cards:v9:other"),
-        evaluationBuildDigest: "c".repeat(64),
-      },
-      publicationGenerationId: "report-cards:v9:other",
-      methodologyVersion: V9_METHODOLOGY_VERSION,
-      publishedAt: updatedAt,
-    });
+    loadActiveSafetyScoreIndexMock.mockResolvedValueOnce(makeIndexSource(new Map([["usdc-circle", { score: 88, grade: "A" }]]), {
+      ...v9Identity("report-cards:v9:other"),
+      evaluationBuildDigest: "c".repeat(64),
+    }, updatedAt));
 
     const res = await handleYieldRankings(db);
     const body = await readJsonResponse(res, 200) as YieldRankingsResponse;
@@ -507,32 +522,20 @@ describe("handleYieldRankings", () => {
     expect(res.headers.get("Warning")).toBeNull();
   })
 
-  it("degrades to explicit NR when the mismatched cached payload is older than the stale-coherent window", async () => {
+  it("keeps unavailable safety null once an incompatible publish-time snapshot expires", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - (24 * 3600 + 60);
     const db = makeCacheDb(v748RankingsPayload, updatedAt);
-    computeSafetyScoresSnapshotMock.mockResolvedValueOnce({
-      kind: "ok",
-      mode: "map",
-      coveredCount: 1,
-      trackedCount: 1,
-      coverageRatio: 1,
-      scores: new Map([["usdc-circle", { score: 88, grade: "A" }]]),
-      source: "safety-score-v9-publication",
-      safetyScoreIdentity: {
-        ...v9Identity("report-cards:v9:other"),
-        evaluationBuildDigest: "c".repeat(64),
-      },
-      publicationGenerationId: "report-cards:v9:other",
-      methodologyVersion: V9_METHODOLOGY_VERSION,
-      publishedAt: updatedAt,
-    });
+    loadActiveSafetyScoreIndexMock.mockResolvedValueOnce(makeIndexSource(new Map([["usdc-circle", { score: 88, grade: "A" }]]), {
+      ...v9Identity("report-cards:v9:other"),
+      evaluationBuildDigest: "c".repeat(64),
+    }, updatedAt));
 
     const res = await handleYieldRankings(db);
     const body = await readJsonResponse(res, 200) as YieldRankingsResponse;
 
     expect(body.rankings[0]).toMatchObject({
       safetyScore: null,
-      safetyGrade: "NR",
+      safetyGrade: null,
       safetyReason: "safety-identity-mismatch",
       pharosYieldScore: null,
       pysNullReason: "opportunity-evidence-missing",
@@ -549,7 +552,7 @@ describe("handleYieldRankings", () => {
   it("serves the publish-time snapshot when live safety hydration throws", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
     const db = makeCacheDb(v748RankingsPayload, updatedAt);
-    computeSafetyScoresSnapshotMock.mockRejectedValueOnce(new Error("D1 unavailable"));
+    loadActiveSafetyScoreIndexMock.mockRejectedValueOnce(new Error("D1 unavailable"));
 
     const res = await handleYieldRankings(db);
     const body = await readJsonResponse(res, 200) as YieldRankingsResponse;
@@ -579,7 +582,7 @@ describe("handleYieldRankings", () => {
     await expect(res.json()).resolves.toEqual({
       error: "Cached yield-rankings payload is malformed",
     });
-    expect(computeSafetyScoresSnapshotMock).not.toHaveBeenCalled();
+    expect(loadActiveSafetyScoreIndexMock).not.toHaveBeenCalled();
   });
 
   it("uses nested sourceRiskPenalty when live safety hydration recomputes PYS", async () => {
@@ -1139,27 +1142,26 @@ describe("handleYieldRankings", () => {
     expect(res.status).toBe(503);
   });
 
-  it.each([
-    ["active V9 marker", "active-safety-score:v9"],
-    ["malformed V9 marker", "active-safety-score:activation-marker-invalid"],
-    ["mismatched V9 identity", "active-safety-score:v9-identity-mismatch"],
-  ])("serves the publish-time snapshot without an HTTP Warning for %s", async (_label, snapshotReason) => {
-    computeSafetyScoresSnapshotMock.mockResolvedValueOnce({
-      kind: "degraded",
-      mode: "map",
-      coveredCount: 0,
-      trackedCount: 1,
-      coverageRatio: 0,
-      reason: snapshotReason,
-      scores: new Map(),
-      source: "safety-score-v9-publication",
-      safetyScoreIdentity: null,
-      publicationGenerationId: null,
-      methodologyVersion: null,
-      publishedAt: null,
-    });
+  it("keeps the coherent publish-time snapshot when the accepted compact index is held", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
     const db = makeCacheDb(v748RankingsPayload, updatedAt);
+    const accepted = makeIndexSource(new Map([["usdc-circle", { score: 88, grade: "A" }]]), currentSafetyIdentity, updatedAt);
+    if (accepted.kind !== "v9") throw new Error("Missing accepted test identity");
+    const snapshotReason = "v9-publication-held";
+    loadActiveSafetyScoreIndexMock.mockResolvedValueOnce({
+      kind: "held",
+      reason: snapshotReason,
+      detail: "The accepted publication is held",
+      snapshot: {
+        ...accepted.snapshot,
+        publicationHealth: {
+          ...accepted.snapshot.publicationHealth,
+          status: "held",
+          heldSinceSec: updatedAt,
+          reasons: [{ code: "dex-stale" }],
+        },
+      },
+    });
 
     const res = await handleYieldRankings(db);
     const body = await readJsonResponse(res, 200) as YieldRankingsResponse & {
@@ -1204,7 +1206,7 @@ describe("handleYieldRankings", () => {
     await expect(res.json()).resolves.toEqual({
       error: "Cached yield-rankings payload is malformed",
     });
-    expect(computeSafetyScoresSnapshotMock).not.toHaveBeenCalled();
+    expect(loadActiveSafetyScoreIndexMock).not.toHaveBeenCalled();
   });
 
   it("returns 503 when cached rankings JSON fails schema validation", async () => {
@@ -1220,7 +1222,7 @@ describe("handleYieldRankings", () => {
     await expect(res.json()).resolves.toEqual({
       error: "Cached yield-rankings payload is malformed",
     });
-    expect(computeSafetyScoresSnapshotMock).not.toHaveBeenCalled();
+    expect(loadActiveSafetyScoreIndexMock).not.toHaveBeenCalled();
   });
 
   it("keeps post-V9 rankings fresh for snapshots that are under one hour old", async () => {
@@ -1319,22 +1321,10 @@ describe("handleYieldRankings", () => {
       updatedAt,
     } satisfies YieldRankingsResponse;
     const db = makeCacheDb(payload, updatedAt);
-    computeSafetyScoresSnapshotMock.mockResolvedValueOnce({
-      kind: "ok",
-      mode: "map",
-      coveredCount: 2,
-      trackedCount: 2,
-      coverageRatio: 1,
-      scores: new Map([
-        ["mover-coin", { score: 88, grade: "A" }],
-        ["stable-coin", { score: 40, grade: "NR" }],
-      ]),
-      source: "safety-score-v9-publication",
-      safetyScoreIdentity: currentSafetyIdentity,
-      publicationGenerationId: currentSafetyIdentity?.publicationGenerationId ?? null,
-      methodologyVersion: V9_METHODOLOGY_VERSION,
-      publishedAt: updatedAt,
-    });
+    loadActiveSafetyScoreIndexMock.mockResolvedValueOnce(makeIndexSource(new Map([
+      ["mover-coin", { score: 88, grade: "A" }],
+      ["stable-coin", { score: 40, grade: "NR" }],
+    ]), currentSafetyIdentity, updatedAt));
 
     const res = await handleYieldRankings(db);
     const body = await res.json() as YieldRankingsResponse;
@@ -1381,22 +1371,10 @@ describe("handleYieldRankings", () => {
       updatedAt,
     } satisfies YieldRankingsResponse;
     const db = makeCacheDb(payload, updatedAt);
-    computeSafetyScoresSnapshotMock.mockResolvedValueOnce({
-      kind: "ok",
-      mode: "map",
-      coveredCount: 2,
-      trackedCount: 2,
-      coverageRatio: 1,
-      scores: new Map([
-        ["mover-coin", { score: 88, grade: "A" }],
-        ["stable-coin", { score: 40, grade: "NR" }],
-      ]),
-      source: "safety-score-v9-publication",
-      safetyScoreIdentity: currentSafetyIdentity,
-      publicationGenerationId: currentSafetyIdentity?.publicationGenerationId ?? null,
-      methodologyVersion: V9_METHODOLOGY_VERSION,
-      publishedAt: updatedAt,
-    });
+    loadActiveSafetyScoreIndexMock.mockResolvedValueOnce(makeIndexSource(new Map([
+      ["mover-coin", { score: 88, grade: "A" }],
+      ["stable-coin", { score: 40, grade: "NR" }],
+    ]), currentSafetyIdentity, updatedAt));
 
     const res = await handleYieldRankings(db);
     const body = await res.json() as YieldRankingsResponse;
@@ -1432,22 +1410,10 @@ describe("handleYieldRankings", () => {
       updatedAt,
     } satisfies YieldRankingsResponse;
     const db = makeCacheDb(payload, updatedAt);
-    computeSafetyScoresSnapshotMock.mockResolvedValueOnce({
-      kind: "ok",
-      mode: "map",
-      coveredCount: 1,
-      trackedCount: 1,
-      coverageRatio: 1,
-      scores: new Map([["stale-coin", { score: 88, grade: "A" }]]),
-      source: "safety-score-v9-publication",
-      safetyScoreIdentity: {
-        ...v9Identity("report-cards:v9:other"),
-        evaluationBuildDigest: "c".repeat(64),
-      },
-      publicationGenerationId: "report-cards:v9:other",
-      methodologyVersion: V9_METHODOLOGY_VERSION,
-      publishedAt: updatedAt,
-    });
+    loadActiveSafetyScoreIndexMock.mockResolvedValueOnce(makeIndexSource(new Map([["stale-coin", { score: 88, grade: "A" }]]), {
+      ...v9Identity("report-cards:v9:other"),
+      evaluationBuildDigest: "c".repeat(64),
+    }, updatedAt));
 
     const res = await handleYieldRankings(db);
     const body = await readJsonResponse(res, 200) as YieldRankingsResponse;
@@ -1555,7 +1521,7 @@ describe("handleYieldRankings", () => {
       })],
     };
     const db = makeCacheDb(payload, publishedAt);
-    if (branch === "publish-time") computeSafetyScoresSnapshotMock.mockRejectedValue(new Error("D1 unavailable"));
+    if (branch === "publish-time") loadActiveSafetyScoreIndexMock.mockRejectedValue(new Error("D1 unavailable"));
     const fresh = await readJsonResponse(await handleYieldRankings(db), 200) as YieldRankingsResponse;
     expect(fresh.rankings[0].provenance?.sourceFreshness).toBe("fresh");
     expect(fresh.rankings[0].pharosYieldScore).not.toBeNull();
@@ -1596,7 +1562,7 @@ describe("handleYieldRankings", () => {
 
   it.each(["live", "publish-time"] as const)("keeps rate product evidence independent of healthy EFFR with %s safety", async (branch) => {
     const publishedAt = Math.floor(Date.now() / 1000);
-    if (branch === "publish-time") computeSafetyScoresSnapshotMock.mockRejectedValue(new Error("D1 unavailable"));
+    if (branch === "publish-time") loadActiveSafetyScoreIndexMock.mockRejectedValue(new Error("D1 unavailable"));
     for (const state of ["healthy", "retained", "stale", "hardcoded"] as const) {
       const product = {
         ...v748RankingsPayload.benchmarks.USD,
@@ -1642,7 +1608,7 @@ describe("handleYieldRankings", () => {
 
   it.each(["live", "publish-time"] as const)("keeps configured dependencies separate with %s safety", async (branch) => {
     const publishedAt = Math.floor(Date.now() / 1000);
-    if (branch === "publish-time") computeSafetyScoresSnapshotMock.mockRejectedValue(new Error("D1 unavailable"));
+    if (branch === "publish-time") loadActiveSafetyScoreIndexMock.mockRejectedValue(new Error("D1 unavailable"));
     for (const id of ["usdgo-osl", "ustbl-spiko", "eutbl-spiko"]) {
       for (const expired of [null, "USD", "USD_EFFR", "EUR"] as const) {
         const benchmarks = {
@@ -1702,7 +1668,7 @@ describe("handleYieldRankings", () => {
     };
     // Five-day record budget expires during this publication's lifetime.
     const db = makeCacheDb(payload, Math.floor(Date.now() / 1000));
-    if (branch === "publish-time") computeSafetyScoresSnapshotMock.mockRejectedValue(new Error("D1 unavailable"));
+    if (branch === "publish-time") loadActiveSafetyScoreIndexMock.mockRejectedValue(new Error("D1 unavailable"));
     const fresh = await readJsonResponse(await handleYieldRankings(db), 200) as YieldRankingsResponse;
     expect(fresh.rankings[0].provenance?.benchmarkFreshness).toBe("healthy");
     vi.setSystemTime(new Date("2026-03-13T01:00:01Z"));
@@ -1725,7 +1691,7 @@ describe("handleYieldRankings", () => {
       },
     };
     const db = makeCacheDb(payload, publishedAt);
-    computeSafetyScoresSnapshotMock.mockRejectedValue(new Error("D1 unavailable"));
+    loadActiveSafetyScoreIndexMock.mockRejectedValue(new Error("D1 unavailable"));
     if (safetyAge != null) {
       const held = await readJsonResponse(await handleYieldRankings(db), 200) as YieldRankingsResponse;
       expect(held.provenance?.liveSafetyHydration).toMatchObject({
@@ -1916,19 +1882,7 @@ describe("handleYieldRankings", () => {
       const res = await handleYieldRankings(db);
       return ((await res.json()) as YieldRankingsResponse).rankings[0];
     };
-    computeSafetyScoresSnapshotMock.mockImplementation(async () => ({
-      kind: "ok",
-      mode: "map",
-      coveredCount: 1,
-      trackedCount: 1,
-      coverageRatio: 1,
-      scores: new Map([["eurc-circle", { score: 80, grade: "B+" }]]),
-      source: "safety-score-v9-publication",
-      safetyScoreIdentity: currentSafetyIdentity,
-      publicationGenerationId: currentSafetyIdentity?.publicationGenerationId ?? null,
-      methodologyVersion: V9_METHODOLOGY_VERSION,
-      publishedAt: updatedAt,
-    }));
+    loadActiveSafetyScoreIndexMock.mockImplementation(async () => (makeIndexSource(new Map([["eurc-circle", { score: 80, grade: "B+" }]]), currentSafetyIdentity, updatedAt)));
 
     const degraded = await serve({
       USD: { ...v748RankingsPayload.benchmarks.USD, isFallback: true, fallbackMode: "retained" },
@@ -2025,24 +1979,12 @@ describe("handleYieldRankings", () => {
         benchmarkRate: 2.17,
       }),
     });
-    computeSafetyScoresSnapshotMock.mockImplementation(async () => ({
-      kind: "ok",
-      mode: "map",
-      coveredCount: 3,
-      trackedCount: 3,
-      coverageRatio: 1,
-      scores: new Map([
-        // The mover's card was graded NR at publication and is rated now.
-        ["mover-coin", { score: 88, grade: "A" }],
-        ["rated-coin", { score: 80, grade: "A" }],
-        ["rebased-coin", { score: 80, grade: "A" }],
-      ]),
-      source: "safety-score-v9-publication",
-      safetyScoreIdentity: currentSafetyIdentity,
-      publicationGenerationId: currentSafetyIdentity?.publicationGenerationId ?? null,
-      methodologyVersion: V9_METHODOLOGY_VERSION,
-      publishedAt: updatedAt,
-    }));
+    loadActiveSafetyScoreIndexMock.mockImplementation(async () => (makeIndexSource(new Map([
+      // The mover's card was graded NR at publication and is rated now.
+      ["mover-coin", { score: 88, grade: "A" }],
+      ["rated-coin", { score: 80, grade: "A" }],
+      ["rebased-coin", { score: 80, grade: "A" }],
+    ]), currentSafetyIdentity, updatedAt)));
     const run = async (row: YieldRanking) => {
       const db = makeCacheDb({
         ...v748RankingsPayload,

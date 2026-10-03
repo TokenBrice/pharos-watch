@@ -15,7 +15,7 @@ import { scoreV9Input } from "../safety-score-v9/formula";
 import {
   V9_CANDIDATE_POLICY_V1,
   loadV9MethodologyPolicy,
-  resolveV9ReasonPolicy,
+  resolveV9ReasonTreatment,
 } from "../safety-score-v9/policy";
 
 function scoringInput(
@@ -160,7 +160,7 @@ function scoringInput(
   }
 
   describe("VERITAS bounded-state invariants", () => {
-    it("keeps evidence ceilings binding and evidence-strengthening monotone across pillar combinations", () => {
+    it("does not price raw evidence levels a second time across pillar combinations", () => {
       for (let backing = 0; backing <= 100; backing += 5) {
         for (let exit = 0; exit <= 100; exit += 5) {
           for (let control = 0; control <= 100; control += 5) {
@@ -172,54 +172,24 @@ function scoringInput(
             expect(limited.finalScore).not.toBeNull();
             expect(adequate.finalScore).not.toBeNull();
             expect(strong.finalScore).not.toBeNull();
-            expect(limited.finalScore!).toBeLessThanOrEqual(69);
-            expect(adequate.finalScore!).toBeLessThanOrEqual(84);
-            expect(adequate.finalScore!).toBeGreaterThanOrEqual(limited.finalScore!);
-            expect(strong.finalScore!).toBeGreaterThanOrEqual(adequate.finalScore!);
+            expect(limited.finalScore).toBe(strong.finalScore);
+            expect(adequate.finalScore).toBe(strong.finalScore);
           }
         }
       }
     });
 
-    it("executes every reason-registry treatment and keeps bounded missing or stale facts rateable", () => {
-      for (const entry of V9_CANDIDATE_POLICY_V1.policy.reasonRegistry) {
-        const resolved = resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, entry.code);
+    it("never converts C/U missing facts into direct critical NR or legacy global ceilings", () => {
+      for (const entry of V9_CANDIDATE_POLICY_V1.policy.reasonRegistry) for (const cause of ["C", "U"] as const) {
+        const resolved = resolveV9ReasonTreatment(V9_CANDIDATE_POLICY_V1, entry.code, cause);
         const input = boundedInput({ backing: 95, exit: 95, control: 95 });
-        const responsibility = V9_LEGACY_RESPONSIBILITY_BY_REASON[entry.code];
         input.unresolved = [{
-          code: entry.code,
-          reason: "VERITAS treatment sweep.",
-          critical: resolved.critical,
-          responsibility,
+          code: entry.code, reason: "Uncertainty treatment sweep.", critical: resolved.critical,
+          responsibility: cause === "C" ? "issuer-undisclosed" : "unresearched", cause,
         }];
         const trace = scoreV9Input(input, V9_CANDIDATE_POLICY_V1);
-
-        const availabilityCannotBoundFact =
-          entry.boundedness === "unbounded" &&
-          responsibility !== "measured-adverse";
-        if (entry.defaultTreatment === "NR" || availabilityCannotBoundFact) {
-          expect(trace.finalGrade, entry.code).toBe("NR");
-          expect(trace.nrReasons, entry.code).toContainEqual(expect.objectContaining({ code: entry.code }));
-          continue;
-        }
-
-        expect(trace.finalGrade, entry.code).not.toBe("NR");
-        if (entry.defaultTreatment === "ceiling") {
-          expect(resolved.ceiling, entry.code).not.toBeNull();
-          expect(trace.finalScore!, entry.code).toBeLessThanOrEqual(resolved.ceiling!.limit);
-          expect(trace.caps, entry.code).toContainEqual(
-            expect.objectContaining({ kind: resolved.ceiling!.kind, limit: resolved.ceiling!.limit }),
-          );
-        } else {
-          expect(
-            trace.caps.some((cap) => cap.kind === `reason:${entry.code}`),
-            entry.code,
-          ).toBe(false);
-        }
-
-        if (entry.defaultFactClass === "missing-global-bounded" || entry.defaultFactClass === "stale-bounded") {
-          expect(resolved.disposition.rateability, entry.code).toBe("rateable");
-        }
+        expect(trace.finalGrade, `${entry.code}/${cause}`).not.toBe("NR");
+        expect(trace.caps.filter((cap) => cap.source === "evidence" && cap.kind !== "reason:missing-implementation-date" && cap.kind !== "reason:minimum-track-record"), `${entry.code}/${cause}`).toEqual([]);
       }
     });
 
@@ -238,7 +208,7 @@ function scoringInput(
       });
 
       for (const entry of ceilingReasons) {
-        const resolved = resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, entry.code);
+        const resolved = resolveV9ReasonTreatment(V9_CANDIDATE_POLICY_V1, entry.code, "D");
         for (let score = 0; score <= 100; score += 1) {
           const { input: completeInput, trace: complete } = baselines[score];
           const input: V9ScoringInput = { ...completeInput, unresolved: [
@@ -248,6 +218,7 @@ function scoringInput(
               reason: "VERITAS bounded evidence.",
               critical: resolved.critical,
               responsibility: V9_LEGACY_RESPONSIBILITY_BY_REASON[entry.code],
+              cause: "D",
             },
           ] };
 

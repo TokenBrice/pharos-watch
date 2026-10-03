@@ -7,6 +7,11 @@ import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
 
 
 describe("SafetyGradeBadge", () => {
+  it("never turns a technical gap into a grade or a numeric score", () => {
+    const { container } = render(<SafetyGradeBadge grade={null} score={null} />);
+    expect(container.textContent).toContain("Pipeline gap");
+    expect(container.textContent).not.toMatch(/\b(?:NR|F|0|100)\b/);
+  });
   it("renders a labelled grade badge with optional score", () => {
     render(<SafetyGradeBadge grade="B+" score={78} />);
 

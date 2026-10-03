@@ -1,5 +1,5 @@
 import {
-  errorResponse,
+  jsonResponse,
   jsonSafetyScoreSnapshotResponse,
 } from "../lib/api-response";
 import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
@@ -11,7 +11,10 @@ import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
 export const handleReportCardsV9 = async (db: D1Database): Promise<Response> => {
   const active = await loadActiveSafetyScoreSource(db);
   if (active.kind === "error") {
-    return errorResponse(503, active.detail);
+    return jsonResponse(
+      { error: active.detail, reason: active.reason },
+      { status: 503, noStore: true },
+    );
   }
   return jsonSafetyScoreSnapshotResponse(active.snapshot);
 };

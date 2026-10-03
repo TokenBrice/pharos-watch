@@ -36,7 +36,7 @@ import { addFreshnessHeaders, buildFreshnessMeta } from "../lib/api-freshness";
 import { createCacheHandler } from "../lib/api-cache-read";
 import { errorResponse, jsonResponseWithHeaders } from "../lib/api-response";
 
-import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
+import { loadActiveSafetyScoreIndex, type SafetyScoreGradeSnapshot } from "../lib/safety-score-index";
 import { resolveYieldBenchmarkDependencies } from "../lib/yield-config/yield-benchmark-dependencies";
 
 const YIELD_RANKINGS_MAX_AGE_SEC = CRON_INTERVALS["sync-yield-data"];
@@ -313,7 +313,7 @@ function resolvePublishedReferenceBenchmark(payload: YieldRankingsResponse): {
 
 function hydrateYieldRankingsWithLiveSafety(
   payload: YieldRankingsResponse,
-  scores: Map<string, { score: number; grade: string }>,
+  scores: ReadonlyMap<string, SafetyScoreGradeSnapshot["cards"][number]>,
   source: LiveSafetyHydrationSource,
   preservePublishedSafety = false,
 ): { payload: YieldRankingsResponse; degradationReasons: string[] } {
@@ -321,11 +321,48 @@ function hydrateYieldRankingsWithLiveSafety(
   const { usdBenchmarkRate } = resolvePublishedReferenceBenchmark(payload);
   const hydratedRows = payload.rankings
     .map((row) => {
+      const currentSafety = preservePublishedSafety ? undefined : scores.get(row.id);
+      if (currentSafety?.ratingStatus === "pipeline-gap") {
+        const reason = "safety-snapshot-unavailable" as const;
+        return {
+          originalRow: row,
+          safetyChanged: false,
+          row: {
+            ...row,
+            safetyScore: null,
+            safetyGrade: null,
+            safetyReason: reason,
+            pharosYieldScore: null,
+            pysNullReason: row.pysNullReason ?? "safety-unrated" as const,
+            yieldToRisk: null,
+            warningSignals: [...new Set([...row.warningSignals, "safety-unrated"])],
+            rankChangeAttribution: removeSafetyDerivedRankChangeAttribution(row.rankChangeAttribution),
+            sourceRisk: row.sourceRisk ? { ...row.sourceRisk, underlyingSafetyScore: null, underlyingSafetyGrade: null } : null,
+            altSources: row.altSources.map((alternate) => ({
+              ...alternate,
+              sourceRisk: alternate.sourceRisk
+                ? { ...alternate.sourceRisk, underlyingSafetyScore: null, underlyingSafetyGrade: null }
+                : alternate.sourceRisk,
+            })),
+            provenance: row.provenance ? {
+              ...row.provenance,
+              safetyProvenance: reason,
+              safetyReason: reason,
+              safetyScoreIdentity: source.safetyScoreIdentity,
+              usedDefaultSafety: false,
+              scoreQualification: "NR" as const,
+              scoreQualified: false,
+            } : null,
+          },
+        };
+      }
       const safety = preservePublishedSafety
         ? row.provenance?.usedDefaultSafety || row.safetyScore == null || row.safetyGrade == null
           ? undefined
           : { score: row.sourceRisk?.underlyingSafetyScore ?? row.safetyScore, grade: row.safetyGrade }
-        : scores.get(row.id);
+        : currentSafety?.score != null && currentSafety.grade != null
+          ? { score: currentSafety.score, grade: currentSafety.grade }
+          : undefined;
       const resolvedSafety = resolveHydratedSafety({ row, safety });
       const hydratedSafety = preservePublishedSafety ? {
         ...resolvedSafety,
@@ -649,7 +686,7 @@ function degradeYieldRankingsSafety(
   const rankings = payload.rankings.map((row) => ({
     ...row,
     safetyScore: null,
-    safetyGrade: "NR" as const,
+    safetyGrade: null,
     safetyReason,
     pharosYieldScore: null,
     // B37: the row's own reason survived the safety loss (source-stale,
@@ -794,17 +831,18 @@ function createYieldRankingsCacheHandler(
       }
       const validatedPayload = ageYieldRankings(payload as YieldRankingsResponse, cached.updatedAt);
       try {
-        const snapshot = await computeSafetyScoresSnapshot(db);
+        const active = await loadActiveSafetyScoreIndex(db);
+        const snapshot = active.kind === "error" ? null : active.snapshot;
         const hydrationSource: LiveSafetyHydrationSource = {
           source: "safety-score-v9-publication",
-          safetyScoreIdentity: snapshot.safetyScoreIdentity,
-          publicationGenerationId: snapshot.publicationGenerationId,
-          methodologyVersion: snapshot.methodologyVersion,
-          publishedAt: snapshot.publishedAt,
-          degradationReasons: snapshot.kind === "ok" ? [] : [snapshot.reason ?? "safety-snapshot-unavailable"],
+          safetyScoreIdentity: snapshot?.safetyScoreIdentity ?? null,
+          publicationGenerationId: snapshot?.safetyScoreIdentity.publicationGenerationId ?? null,
+          methodologyVersion: snapshot?.methodology.version ?? null,
+          publishedAt: snapshot?.updatedAt ?? null,
+          degradationReasons: active.kind === "v9" ? [] : [active.reason],
         };
-        if (snapshot.kind !== "ok" || snapshot.safetyScoreIdentity == null) {
-          const reason = snapshot.safetyScoreIdentity == null && snapshot.kind === "ok"
+        if (active.kind !== "v9" || snapshot == null) {
+          const reason = snapshot?.safetyScoreIdentity == null && active.kind === "v9"
             ? "safety-identity-missing"
             : "safety-snapshot-unavailable";
           return buildDegradedYieldRankingsResponse(validatedPayload, cached, reason, hydrationSource, project);
@@ -814,7 +852,7 @@ function createYieldRankingsCacheHandler(
           const reason = publishedIdentity == null ? "safety-identity-missing" : "safety-identity-mismatch";
           return buildDegradedYieldRankingsResponse(validatedPayload, cached, reason, hydrationSource, project);
         }
-        const hydrated = hydrateYieldRankingsWithLiveSafety(validatedPayload, snapshot.scores, hydrationSource);
+        const hydrated = hydrateYieldRankingsWithLiveSafety(validatedPayload, new Map(snapshot.cards.map((card) => [card.id, card])), hydrationSource);
         return buildYieldRankingsResponse(project(hydrated.payload), cached, hydrated.degradationReasons);
       } catch (err) {
         logWorkerEventArgs("api", "warn", "[yield-rankings] Live safety hydration failed:", err instanceof Error ? err.message : err);

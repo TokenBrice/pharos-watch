@@ -49,6 +49,8 @@ describe("buildTelegramDispatchEvents", () => {
           "coin-safe": {
             grade: "C+",
             score: 61,
+            ratingStatus: "rated",
+            partialEvidence: null,
             methodologyVersion: "9.0",
             v9Explain: {
               reasons: [],
@@ -66,6 +68,8 @@ describe("buildTelegramDispatchEvents", () => {
           "coin-safe": {
             grade: "B",
             score: 72,
+            ratingStatus: "rated",
+            partialEvidence: null,
             methodologyVersion: "9.0",
             v9Explain: {
               reasons: [],

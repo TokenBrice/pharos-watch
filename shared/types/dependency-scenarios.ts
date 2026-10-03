@@ -2,12 +2,13 @@ import { z } from "zod";
 import { ContagionScenarioSchema } from "./contagion";
 import { V9GradeSchema } from "./safety-score-v9";
 import { BaseInputGenerationIdSchema, Sha256Schema, ScoreSchema, UnixSecondsSchema } from "./safety-schema-primitives";
+import { V9RatingStatusSchema, V9CompactPartialEvidenceSchema, refineV9RatingStatusFields } from "./safety-score-v9-causes";
 
 export const DEPENDENCY_SCENARIOS_INTERVAL_MS = 3_600_000;
 export const DEPENDENCY_SCENARIOS_FRESHNESS_BUDGET_SEC = 7_200;
-export const DEPENDENCY_SCENARIOS_CACHE_PREFIX = "dependency-scenarios:v1:";
+export const DEPENDENCY_SCENARIOS_CACHE_PREFIX = "dependency-scenarios:v2:";
 export const DependencyScenarioArtifactSchema = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
   sourcePublicationGenerationId: z.string().min(1),
   sourceBaseInputGenerationId: BaseInputGenerationIdSchema,
   methodologyVersion: z.string().min(1),
@@ -20,8 +21,10 @@ export const DependencyScenarioArtifactSchema = z.object({
     assumptions: z.array(z.string().min(1)),
     results: z.array(z.object({
       assetId: z.string().min(1),
-      publishedScore: ScoreSchema.nullable(), publishedGrade: V9GradeSchema,
-      modeledScore: ScoreSchema.nullable(), modeledGrade: V9GradeSchema,
+      publishedScore: ScoreSchema.nullable(), publishedGrade: V9GradeSchema.nullable(),
+      publishedRatingStatus: V9RatingStatusSchema, publishedPartialEvidence: V9CompactPartialEvidenceSchema.nullable(),
+      modeledScore: ScoreSchema.nullable(), modeledGrade: V9GradeSchema.nullable(),
+      modeledRatingStatus: V9RatingStatusSchema, modeledPartialEvidence: V9CompactPartialEvidenceSchema.nullable(),
       deltaScore: z.number().finite().min(-100).max(100).nullable(),
       minHop: z.number().int().nonnegative().nullable(), roles: z.array(z.string().min(1)),
     }).strict()),
@@ -41,9 +44,10 @@ export const DependencyScenarioArtifactSchema = z.object({
       if (assets.has(row.assetId)) ctx.addIssue({ code: "custom", message: "Duplicate result asset" });
       assets.add(row.assetId);
       const delta = row.publishedScore === null || row.modeledScore === null ? null : row.modeledScore - row.publishedScore;
-      if (delta !== row.deltaScore || (row.modeledGrade === "NR") !== (row.modeledScore === null) ||
-          (row.publishedGrade === "NR") !== (row.publishedScore === null)) {
-        ctx.addIssue({ code: "custom", message: "Result score, grade and delta disagree" });
+      refineV9RatingStatusFields({ score: row.publishedScore, grade: row.publishedGrade, ratingStatus: row.publishedRatingStatus, partialEvidence: row.publishedPartialEvidence }, ctx);
+      refineV9RatingStatusFields({ score: row.modeledScore, grade: row.modeledGrade, ratingStatus: row.modeledRatingStatus, partialEvidence: row.modeledPartialEvidence }, ctx);
+      if (delta !== row.deltaScore) {
+        ctx.addIssue({ code: "custom", message: "Result delta must retain null unavailable scores" });
       }
     }
     if (!assets.has(scenario.rootId)) ctx.addIssue({ code: "custom", message: "Scenario root row is required" });

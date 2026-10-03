@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
+import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import type { ScreenerRow } from "@/lib/screener-filters";
 import type { CsvColumn } from "@/lib/exports/csv";
 
@@ -238,6 +239,28 @@ describe("ScreenerClient freshness notices", () => {
       safetyWeakestScore: 86,
       safetyBindingCapReason: "Mint control evidence caps the published score.",
     }));
+  });
+  it("preserves technical null grades, excluded pillars and causes in rows and exports", () => {
+    const response = makeReportCardsV9Response({ cards: [
+      makeReportCardsV9PipelineGapCard("control", "A", { id: "usdc-circle" }),
+      makeReportCardsV9PartialCard("exit", "B", { id: "usdt-tether", score: 75 }),
+    ] });
+    mocks.useReportCardsV9.mockReturnValue({ data: response, isLoading: false, error: null, dataUpdatedAt: 1_700_000_000, meta: null, refetch });
+    mocks.useStablecoins.mockReturnValue({ data: { peggedAssets: [makeStablecoin()] }, isLoading: false, error: null, dataUpdatedAt: 1_700_000_000, meta: null, refetch });
+    render(<ScreenerClient />);
+    const props = mocks.TableExportMenu.mock.calls.at(-1)?.[0] as { data: ScreenerRow[]; columns: CsvColumn<ScreenerRow>[] };
+    const gap = props.data.find(row => row.id === "usdc-circle")!;
+    const partial = props.data.find(row => row.id === "usdt-tether")!;
+    expect(gap).toMatchObject({ safetyGrade: null, safetyScore: null, ratingStatus: "pipeline-gap", safetyEvidence: "pipeline-gap" });
+    expect(partial).toMatchObject({ safetyGrade: "B+", safetyScore: 75, safetyExitScore: null, ratingStatus: "rated" });
+    const cell = (header: string, row: ScreenerRow) => props.columns.find(column => column.header === header)!.accessor(row, 0);
+    expect(cell("safety_grade", gap)).toBe("");
+    expect(cell("safety_score", gap)).toBe("");
+    expect(cell("safety_exit", partial)).toBe("");
+    expect(cell("safety_rating_status", gap)).toBe("pipeline-gap");
+    expect(cell("safety_gap_causes", gap)).toBe("pipeline unavailable (A)");
+    expect(cell("safety_gap_causes", partial)).toBe("public data awaiting curation (B)");
+    expect(props.data.find(row => row.id === "dai-makerdao")?.safetyEvidence).toBeNull();
   });
 
   it("keeps missing, empty and invalid supply unavailable through rows, filters and exports while keeping explicit zero", () => {

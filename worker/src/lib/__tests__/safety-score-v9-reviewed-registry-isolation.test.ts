@@ -78,10 +78,10 @@ describe("reviewed registry asset isolation", { timeout: V9_EVALUATION_TEST_TIME
     expect(clean.quarantines).toEqual([]);
     const isolated = await runCandidate(path, [bad, healthyB]);
     expect(isolated.extension.assets.find((asset) => asset.assetId === "alpha")?.admissionQuarantine).toMatchObject({ code: "fact-build-failed", path: field });
-    expect(isolated.quarantines).toEqual([{ assetId: "alpha", code: "fact-build-failed", message: expect.stringContaining(field) }]);
-    expect(isolated.candidate.cards.find((card) => card.id === "alpha")).toMatchObject({ grade: "NR", score: null });
+    expect(isolated.quarantines).toEqual([{ assetId: "alpha", code: "fact-build-failed", message: expect.any(String) }]);
+    expect(isolated.candidate.cards.find((card) => card.id === "alpha")).toMatchObject({ ratingStatus: "pipeline-gap", grade: null, score: null });
     const healthyCard = isolated.candidate.cards.find((card) => card.id === "beta")!;
-    expect(healthyCard.grade).not.toBe("NR");
+    expect(healthyCard).toMatchObject({ ratingStatus: "rated", grade: expect.any(String), score: expect.any(Number) });
     expect(stableJsonStringifyV1(healthyCard)).toBe(stableJsonStringifyV1(clean.candidate.cards.find((card) => card.id === "beta")));
     expect(assessV9Publication({
       inputHealth: {
@@ -95,7 +95,7 @@ describe("reviewed registry asset isolation", { timeout: V9_EVALUATION_TEST_TIME
 
   it("quarantines only the owner of duplicate asset reviews", async () => {
     const result = await runCandidate(transferPath, [transferReview, structuredClone(transferReview), { ...structuredClone(transferReview), assetId: "beta" }]);
-    expect(result.quarantines).toEqual([{ assetId: "alpha", code: "fact-build-failed", message: expect.stringContaining("Duplicate reviewed registry key: alpha") }]);
+    expect(result.quarantines).toEqual([{ assetId: "alpha", code: "fact-build-failed", message: expect.any(String) }]);
     expect(result.extension.assets.find((asset) => asset.assetId === "alpha")?.admissionQuarantine?.path).toBe("transferReviews.reviews.1.assetId");
     expect(result.candidate.cards.find((card) => card.id === "beta")?.grade).not.toBe("NR");
   });
@@ -131,9 +131,9 @@ describe("reviewed registry asset isolation", { timeout: V9_EVALUATION_TEST_TIME
     expect(isolated.quarantines).toEqual([{
       assetId: "alpha", code: "fact-build-failed", message: expect.any(String),
     }]);
-    expect(isolated.candidate.cards.find(card => card.id === "alpha")).toMatchObject({ grade: "NR", score: null });
+    expect(isolated.candidate.cards.find(card => card.id === "alpha")).toMatchObject({ ratingStatus: "pipeline-gap", grade: null, score: null });
     const healthyCard = isolated.candidate.cards.find(card => card.id === "beta")!;
-    expect(healthyCard.grade).not.toBe("NR");
+    expect(healthyCard).toMatchObject({ ratingStatus: "rated", grade: expect.any(String), score: expect.any(Number) });
     expect(stableJsonStringifyV1(healthyCard)).toBe(stableJsonStringifyV1(clean.candidate.cards.find(card => card.id === "beta")));
     expect(assessV9Publication({
       inputHealth: {

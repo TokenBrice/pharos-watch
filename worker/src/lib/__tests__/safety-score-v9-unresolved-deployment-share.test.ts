@@ -16,9 +16,9 @@ const evaluate = (
   mutate?: (asset: V9AssetFactsV3) => void,
 ) => {
   const fixture = materialityFixture(share);
-  const facts = structuredClone(compileSafetyScoreV9FactSetFromFixedInput(fixture.fixed, fixture.extension));
+  const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixture.fixed, fixture.extension);
+  const facts = JSON.parse(JSON.stringify(compiled)) as typeof compiled;
   const mint = facts.assets[0]!.economicControlReview.mint;
-  facts.assets[0]!.gaps = facts.assets[0]!.gaps.filter((gap) => !mint.status.gapIds.includes(gap.gapId));
   mint.status = {
     ...mint.status,
     applicability: { state: "not-applicable", policyRuleId: "v9.control.mint-review", gapId: null, rationale: "Reviewed immutable issuance fixture." },
@@ -28,7 +28,21 @@ const evaluate = (
   };
   mint.reconciliation = "not-applicable";
   mint.upgrade = { state: "immutable", controlKey: null };
+  mint.factorStatuses = {};
   mutate?.(facts.assets[0]!);
+  const referencedGapIds = new Set<string>();
+  const collectGapIds = (value: unknown): void => {
+    if (value === null || typeof value !== "object") return;
+    for (const [key, child] of Object.entries(value)) {
+      if (key === "gaps") continue;
+      if (key === "gapIds" && Array.isArray(child)) {
+        for (const id of child) if (typeof id === "string") referencedGapIds.add(id);
+      } else if (key === "gapId" && typeof child === "string") referencedGapIds.add(child);
+      else collectGapIds(child);
+    }
+  };
+  collectGapIds(facts.assets[0]);
+  facts.assets[0]!.gaps = facts.assets[0]!.gaps.filter((gap) => referencedGapIds.has(gap.gapId));
   const digested = { ...facts, v9FactSetDigest: computeV9FactSetDigest(facts) };
   return { facts: digested.assets[0]!, result: evaluateV9FactSet(digested, V9_CANDIDATE_POLICY_V1).assets[0]! };
 };
@@ -38,16 +52,15 @@ const evaluate = (
 const evaluateCapturedInventory = (share: number | null, mutate?: (asset: V9AssetFactsV3) => void) =>
   evaluate(share, (asset) => {
     const reviewedBridge = asset.controls.find((control) => control.deploymentKey.startsWith("base:"))!;
-    const oldGapIds = new Set(reviewedBridge.status.gapIds);
-    asset.gaps = asset.gaps.filter((gap) => !oldGapIds.has(gap.gapId));
     reviewedBridge.authority = { authorityKey: "base:reviewed-bridge", model: "contract", threshold: null };
     reviewedBridge.status = { ...reviewedBridge.status, observationState: "known", gapIds: [] };
+    if (reviewedBridge.factorStatuses) delete reviewedBridge.factorStatuses.authority;
     mutate?.(asset);
   });
 
 describe("unresolved deployment share pricing", () => {
   it.each([0, 0.04, 0.1, 0.16, null])(
-    "prices the compiled unresolved inventory by its captured share %s",
+    "prices the compiled unresolved inventory by its captured share %s without a missing-data ceiling",
     (share) => {
       const { facts, result } = evaluateCapturedInventory(share);
       const unresolved = facts.controls.find((control) => control.deploymentKey.startsWith("polygon:"))!;
@@ -59,9 +72,8 @@ describe("unresolved deployment share pricing", () => {
       }));
       if (share === null || share >= fullCeiling) {
         expect(result.scoreInput.pillars.control.evidenceLevel).toBe("limited");
-        expect(result.trace.caps).toContainEqual(expect.objectContaining({
-          kind: "reason:unresolved-control-identity", limit: 55,
-        }));
+        expect(result.trace.caps.map((cap) => cap.kind)).not.toContain("reason:unresolved-control-identity");
+        expect(result.trace.caps.map((cap) => cap.kind)).not.toContain("unresolved-deployment-share-band");
         return;
       }
       expect(result.scoreInput.pillars.control.evidenceLevel).toBe("strong");
@@ -71,16 +83,6 @@ describe("unresolved deployment share pricing", () => {
       );
       expect(result.trace.caps.map((cap) => cap.kind)).not.toContain("reason:unresolved-control-identity");
       if (share === 0) expect(result.control.unresolvedDeploymentAdjustment).toBeUndefined();
-      if (share === 0.1) {
-        const scale = 10 ** V9_CANDIDATE_POLICY_V1.policy.semantic.formula.scoreDecimals;
-        const blend = (share - blendStart) / (fullCeiling - blendStart);
-        const limit = Math.floor(
-          (result.trace.preCapScore! - Math.max(0, result.trace.preCapScore! - 55) * blend) * scale,
-        ) / scale;
-        expect(result.trace.caps).toContainEqual(expect.objectContaining({
-          kind: "unresolved-deployment-share-band", limit,
-        }));
-      }
     },
   );
 
@@ -90,15 +92,14 @@ describe("unresolved deployment share pricing", () => {
       asset.controls.push({
         ...template, controlKey: "unknown:root", scope: "global", economicLossScope: "unknown",
         materialSupplyShare: null,
+        factorStatuses: { ...template.factorStatuses, economicLossScope: template.status },
       });
     });
     expect(result.scoreInput.pillars.control.evidenceLevel).toBe("limited");
     expect(result.control.reasons).toContainEqual(expect.objectContaining({
       code: "unresolved-control-identity", controlKey: null, path: "controls",
     }));
-    expect(result.trace.caps).toContainEqual(expect.objectContaining({
-      kind: "reason:unresolved-control-identity", limit: 55,
-    }));
+    expect(result.trace.caps.map((cap) => cap.kind)).not.toContain("reason:unresolved-control-identity");
   });
 
   it("retains a verified adverse minter on the same unresolved deployment", () => {
@@ -141,7 +142,7 @@ describe("unresolved deployment share pricing", () => {
       ...result,
       policy: V9_CANDIDATE_POLICY_V1,
       display: { exitHolderEligibility: Object.fromEntries(result.exit.routes.map((route) => [route.routeKey, "any-holder" as const])) },
-    });
+    }).card;
     expect(card.breakdowns?.control.adjustments).toContainEqual({
       kind: "unresolved-deployment-share",
       scoreBefore: result.control.score,
@@ -156,16 +157,10 @@ describe("unresolved deployment share pricing", () => {
     [4, threshold * 0.3, false],
     [1, threshold + 0.02, false],
     [3, fullCeiling / 3, true],
-  ] as const)("prices or caps the aggregate of %s unresolved deployments at share %s", (count, share, material) => {
+  ] as const)("prices an aggregate of %s unresolved deployments at share %s without a missing-data cap", (count, share, material) => {
     const { result } = evaluate(share, (asset) => {
       const template = asset.controls.find((control) => control.deploymentKey.startsWith("polygon:"))!;
       const templateGap = asset.gaps.find((gap) => gap.gapId === template.status.gapIds[0])!;
-      const oldGapIds = [
-        ...asset.controlStatus.gapIds,
-        ...asset.controls.flatMap((control) => control.status.gapIds),
-        ...asset.economicControlReview.bridge.status.gapIds,
-      ];
-      asset.gaps = asset.gaps.filter((gap) => !oldGapIds.includes(gap.gapId));
       const chains = ["base", "polygon", "optimism", "arbitrum"].slice(0, count);
       asset.controls = chains.map((chain) => {
         const controlKey = `cohort:${chain}`;
@@ -213,30 +208,19 @@ describe("unresolved deployment share pricing", () => {
         tier: "canonical-rollup-bridge",
       }));
     });
+    expect(result.trace.caps.map((cap) => cap.kind)).not.toContain("reason:unresolved-control-identity");
+    expect(result.trace.caps.map((cap) => cap.kind)).not.toContain("unresolved-deployment-share-band");
     if (material) {
-      expect(result.trace.caps).toContainEqual(expect.objectContaining({ limit: 55, source: "evidence" }));
-      expect(result.trace.finalScore).toBeLessThanOrEqual(55);
-      expect(result.control.unresolvedDeploymentAdjustment).toBeUndefined();
+      expect(result.scoreInput.pillars.control.evidenceLevel).toBe("limited");
     } else {
       expect(result.scoreInput.pillars.control.score).toBeCloseTo(
         result.control.score! - Math.max(0, result.control.score! - V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality) * count * share,
       );
-      const cohortShare = count * share;
-      const blend = (cohortShare - blendStart) / (fullCeiling - blendStart);
-      const scale = 10 ** V9_CANDIDATE_POLICY_V1.policy.semantic.formula.scoreDecimals;
-      const interpolatedLimit = Math.floor(
-        (result.trace.preCapScore! - Math.max(0, result.trace.preCapScore! - 55) * blend) * scale,
-      ) / scale;
-      expect(result.trace.caps).toContainEqual(expect.objectContaining({
-        kind: "unresolved-deployment-share-band", limit: interpolatedLimit, source: "evidence",
-      }));
-      expect(result.trace.caps.map((cap) => cap.kind)).not.toContain("reason:runtime-bridge-materiality-unavailable");
-      expect(result.trace.caps.map((cap) => cap.kind)).not.toContain("reason:unresolved-control-identity");
     }
   });
 
   it.each(["unknown-share", "unadmitted-partition", "missing-row", "stale-control"] as const)(
-    "does not waive the ceiling for %s even when other chain supply is known",
+    "retains bounded uncertainty without a whole-coin ceiling for %s when other chain supply is known",
     (failure) => {
       const { result } = evaluate(threshold / 2, (asset) => {
         const control = asset.controls.find((row) => row.deploymentKey.startsWith("polygon:"))!;
@@ -263,20 +247,17 @@ describe("unresolved deployment share pricing", () => {
         }
       });
       expect(result.scoreInput.pillars.control.reasons.map((reason) => reason.code)).toContain("unresolved-control-identity");
-      expect(result.trace.caps).toContainEqual(expect.objectContaining({ kind: "reason:unresolved-control-identity", limit: 55 }));
+      expect(result.trace.caps.map((cap) => cap.kind)).not.toContain("reason:unresolved-control-identity");
     },
   );
 
-  it.each([fullCeiling, fullCeiling + 0.01, null])("keeps the whole-coin ceiling for material or unknown share %s", (share) => {
+  it.each([fullCeiling, fullCeiling + 0.01, null])("keeps material or unknown share %s bounded at component level, not as a named cap", (share) => {
     const { result } = evaluate(share);
     expect(result.scoreInput.pillars.control.reasons.map((reason) => reason.code)).toContain("unresolved-control-identity");
-    expect(result.trace.caps).toContainEqual(expect.objectContaining({ kind: "reason:unresolved-control-identity", limit: 55 }));
-    if (result.trace.finalScore === null) {
-      expect(result.trace.finalGrade).toBe("NR");
-      expect(result.trace.bindingCap).toBeNull();
-    } else {
-      expect(result.trace.finalScore).toBeLessThanOrEqual(55);
-    }
+    expect(result.trace.caps.map((cap) => cap.kind)).not.toContain("reason:unresolved-control-identity");
+    expect(result.control.components).toContainEqual(expect.objectContaining({
+      cause: "U", scoringDisposition: "bounded-uncertainty",
+    }));
   });
 
   it("charges unknown and unreviewed residue as well as the joined unresolved deployment", () => {
@@ -321,8 +302,6 @@ describe("unresolved deployment share pricing", () => {
   it("publishes and proportionally prices a compromised minority minter without penalizing a healthy one", () => {
     const scenario = (incident: "active" | "none", global = false) => evaluate(0.09, (asset) => {
       const template = asset.controls.find((row) => row.deploymentKey.startsWith("polygon:"))!;
-      const gapIds = new Set(asset.controls.flatMap((row) => row.status.gapIds));
-      asset.gaps = asset.gaps.filter((gap) => !gapIds.has(gap.gapId));
       const status = { ...template.status, observationState: "known" as const, gapIds: [] };
       const root = {
         ...template, controlKey: "mint:root", deploymentKey: asset.supply.selectedBridgeRoutes.find((row) => row.reviewedRouteKind === "native")!.deploymentRouteKey,
@@ -333,6 +312,7 @@ describe("unresolved deployment share pricing", () => {
         authority: { authorityKey: "mint:root", model: "multisig" as const, threshold: { required: 2, total: 3 } },
         delaySec: 86_400, failureDomains: [{ kind: "mint-control" as const, key: "mint:root" }],
       };
+      root.factorStatuses = {};
       const satellite = {
         ...root, controlKey: "mint:satellite", deploymentKey: template.deploymentKey,
         scope: global ? "global" as const : "deployment" as const,
@@ -343,13 +323,15 @@ describe("unresolved deployment share pricing", () => {
       asset.controls = [root, satellite];
       asset.economicControlReview.mint = {
         ...asset.economicControlReview.mint, status, controlKey: root.controlKey,
-        reconciliation: "not-applicable", supervision: "unknown", upgrade: { state: "immutable", controlKey: null },
+        reconciliation: "not-applicable", supervision: "none", upgrade: { state: "immutable", controlKey: null },
       };
+      asset.economicControlReview.mint.factorStatuses = {};
       asset.economicControlReview.bridge = {
         ...asset.economicControlReview.bridge, status: { ...asset.economicControlReview.bridge.status,
           applicability: { state: "not-applicable", policyRuleId: "v9.control.bridge-review", gapId: null, rationale: "Native mint deployments." },
           observationState: "known", gapIds: [] }, routes: [],
       };
+      asset.economicControlReview.bridge.factorStatuses = {};
       asset.supply.selectedBridgeRoutes = asset.supply.selectedBridgeRoutes.map((row) => ({
         ...row, reviewState: "selected-reviewed", reviewedRouteKind: "native",
       }));

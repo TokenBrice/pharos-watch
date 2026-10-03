@@ -1,3 +1,4 @@
+import { projectV9CompactPartialEvidence } from "@shared/types/safety-score-v9-causes";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
 import { getCirculatingRaw } from "@shared/lib/supply";
@@ -80,11 +81,13 @@ export async function collectSafetyScores(
 
     const allGrades: CanonicalSafetyGradeRow[] = source.snapshot.cards
       .filter((card) => ctx.trackedStablecoinIds.has(card.id))
-      .map((card) => ({
+      .flatMap((card) => card.ratingStatus === "pipeline-gap" || card.grade === null ? [] : [{
         id: card.id,
         symbol: ctx.stablecoinAssetById.get(card.id)?.symbol ?? card.id,
         grade: card.grade,
         score: card.score,
+        ratingStatus: card.ratingStatus,
+        partialEvidence: projectV9CompactPartialEvidence(card.partialEvidence),
         pillars: {
           backing: projectV9Pillar(card.pillars.backing),
           exit: projectV9Pillar(card.pillars.exit),
@@ -93,7 +96,7 @@ export async function collectSafetyScores(
         reasonCodes: [...card.reasonCodes],
         caps: card.caps.map(projectV9Cap),
         bindingCap: card.bindingCap ? projectV9Cap(card.bindingCap) : null,
-      }));
+      }]);
 
     const mentionedCoinGrades = allGrades.filter((grade) => mentionedSymbols.has(grade.symbol));
     const reportCoins = [...mentionedCoinGrades];
@@ -128,6 +131,8 @@ export async function collectSafetyScores(
           symbol: grade.symbol,
           grade: grade.grade,
           score: grade.score,
+          ratingStatus: grade.ratingStatus,
+          partialEvidence: grade.partialEvidence,
           pillars: grade.pillars,
           reasonCodes: grade.reasonCodes,
           caps: grade.caps,
@@ -373,6 +378,7 @@ export async function collectGradeTransitions(
       .all<SafetyScoreHistoryV2Row>();
 
     const candidates = (transitionRows.results ?? [])
+      .filter((row) => safetyGrades.some((grade) => grade.id === row.stablecoin_id))
       .filter((row) => !bumpTimestamps.has(row.recorded_at))
       .filter((row) => row.prev_grade !== null)
       .filter((row) =>

@@ -18,6 +18,7 @@ import {
   Sha256Schema,
   UnixSecondsSchema,
 } from "./safety-schema-primitives";
+import { V9EvidenceCauseProofSchema, V9EvidenceCauseSchema, V9EvidenceCauseScopeSchema, v9EvidenceResponsibilityForCauseProof } from "./safety-score-v9-causes";
 
 const NonNegativeUsdSchema = z.number().finite().nonnegative();
 
@@ -246,11 +247,26 @@ const V9EvidenceGapQueueEntryV2Schema = z
   .object({
     ...V9EvidenceGapQueueEntryV1Fields,
     responsibility: V9EvidenceResponsibilitySchema,
+    cause: V9EvidenceCauseSchema,
+    causeProof: V9EvidenceCauseProofSchema,
+    causeScope: V9EvidenceCauseScopeSchema.nullable(),
+    causeGapIds: CanonicalStringArraySchema.min(1),
     /** Present only on bridge-scoped gaps; null everywhere else. */
     bridgeJoin: V9EvidenceGapBridgeJoinV1Schema.nullable(),
   })
   .strict()
-  .superRefine(addEntryConsistencyIssues);
+  .superRefine((entry, ctx) => {
+    addEntryConsistencyIssues(entry, ctx);
+    if (entry.cause !== entry.causeProof.cause ||
+        entry.responsibility !== v9EvidenceResponsibilityForCauseProof(entry.causeProof) ||
+        !entry.causeGapIds.includes(entry.gapId) ||
+        entry.causeProof.evidenceRefIds.some((id) => !entry.evidenceRefIds.includes(id)) ||
+        ((entry.cause === "A" || entry.cause === "B") && (entry.critical || entry.treatment !== "diagnostic")) ||
+        ((entry.cause === "C" || entry.cause === "U") && entry.treatment === "NR") ||
+        ((entry.cause === "A" || entry.cause === "B" || entry.cause === "C") && entry.causeScope === null)) {
+      ctx.addIssue({ code: "custom", message: "Queue responsibility, critical treatment and exact causal identity must match the proof" });
+    }
+  });
 export type V9EvidenceGapQueueEntryV2 = z.infer<typeof V9EvidenceGapQueueEntryV2Schema>;
 
 const V9EvidenceGapDomainCountSchema = z
@@ -382,7 +398,7 @@ const V9EvidenceResponsibilityCountSchema = z
 
 const V9EvidenceGapQueueFactsV2Schema = z
   .object({
-    sourceSchemaVersion: z.literal(3),
+    sourceSchemaVersion: z.literal(4),
     sourceFactSetDigest: Sha256Schema,
     evaluationFactSetDigest: Sha256Schema,
     baseInputGenerationId: BaseInputGenerationIdSchema,
@@ -396,13 +412,13 @@ const V9EvidenceGapQueueFactsV2Schema = z
       ctx.addIssue({
         code: "custom",
         path: ["evaluationFactSetDigest"],
-        message: "Native V3 source and evaluation fact-set digests must match",
+        message: "Current proof-bearing source and evaluation fact-set digests must match",
       });
     }
   });
 
 const V9EvidenceGapQueueCoreV2Fields = {
-  schemaVersion: z.literal(2),
+  schemaVersion: z.literal(3),
   purpose: z.literal("evidence-work-queue-not-release-gate"),
   status: z.enum(["clear", "work-required"]),
   facts: V9EvidenceGapQueueFactsV2Schema,

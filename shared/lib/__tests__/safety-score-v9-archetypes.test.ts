@@ -1,12 +1,126 @@
 import { describe, expect, it } from "vitest";
-import type { V9FactGapV2 } from "../../types/safety-score-v9-facts";
+import type { V9FactGapV2, V9FactGapV3 } from "../../types/safety-score-v9-facts";
 import type { V9BackingAssetInput, V9MechanismFactV1 } from "../safety-score-v9/backing-primitives";
 import { V9MechanismRiskReviewSchema } from "../../types/safety-score-v9-backing";
-import { MECHANISM_ARCHETYPE_VALUES } from "../../types/stablecoin-taxonomy";
 import { evaluateV9Backing, type V9MechanismRiskReview } from "../safety-score-v9/archetypes";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
+import { evaluateV9ReserveExposures } from "../safety-score-v9/backing";
 import { asset as backingAsset, exposure, knownStatus, missingMechanism } from "./safety-score-v9-backing.test-support";
+import { createUnavailableV9BackingResult } from "../safety-score-v9/archetypes/evaluation";
+
+function exclusionGap(cause: "A" | "B"): V9FactGapV3 {
+  const gap = missingMechanism("mechanism-risk-review", `gap:${cause}`, "mechanism.required", "Missing exact mechanism factor").gap;
+  return {
+    ...gap,
+    responsibility: cause === "A" ? "producer-failed" : "public-data-uncurated",
+    causeProof: cause === "A" ? {
+      cause, producerState: "producer-failed", sourceId: "mechanism-reader",
+      sourceGenerationId: "fixture:g1", observedAtSec: 1, rejectionCode: "read-failed", evidenceRefIds: ["attempt:g1"],
+    } : {
+      cause, classificationId: "research:mechanism", reviewedAt: "2026-10-01T00:00:00Z", reviewer: "fixture",
+      assertion: "required-data-public", evidenceRefIds: ["research:mechanism"],
+      sources: [{ url: "https://example.com/report", observedAt: "2026-10-01T00:00:00Z",
+        datumAsOf: "2026-10-01", location: "Mechanism factors", excerpt: "Current mechanism facts are public.",
+        assertion: "The exact mechanism factors are public but uncurated." }],
+    },
+  };
+}
+
+describe("v10.01 mechanism factor admission", () => {
+  it.each(["A", "B"] as const)("returns no numeric backing when every factor is %s, without inventing NR or 95", cause => {
+    const gap = exclusionGap(cause);
+    const status = { ...knownStatus("review"), observationState: "missing" as const, gapIds: [gap.gapId] };
+    const result = createUnavailableV9BackingResult({
+      ...backingAsset([], [gap]), reserveStatus: status, reserveResiduals: [{ residualId: "whole-book", weight: 1, status }],
+    }, { archetype: "fiat-cash", mechanismRiskReview: { status, review: null } }, V9_CANDIDATE_POLICY_V1);
+    expect(result).toMatchObject({ rateability: "rateable", score: null, aggregationDisposition: "excluded-a-b", limitedEvidenceCauses: [] });
+    expect(result.contributions.every(row => row.score === null && row.effectiveScoringWeight === 0)).toBe(true);
+  });
+
+  it.each(["A", "B"] as const)("renormalizes %s assurance shares without borrowing covered identity or moving whole-book shares", cause => {
+    const excluded = exclusionGap(cause);
+    const unknown = missingMechanism("assurance-and-reconciliation", "gap:unknown", "mechanism.required", "Unresearched financial-report remainder");
+    const result = evaluateV9Backing(asset([excluded, unknown.gap]), {
+      ...reviews["fiat-cash"],
+      assuranceAndReconciliation: {
+        ...strongFact("assurance"),
+        scopedAssessments: [
+          { scopeId: "covered", share: 0.6, quality: "strong", status: knownStatus("covered") },
+          { scopeId: "public-or-failed", share: 0.25, quality: null,
+            status: { ...unknown.fact.status, gapIds: [excluded.gapId] } },
+          { scopeId: "unknown", share: 0.15, quality: null, status: unknown.fact.status },
+        ],
+      },
+    }, V9_CANDIDATE_POLICY_V1);
+    const included = result.contributions.find(row => row.componentKey === "mechanism:assurance-and-reconciliation:scope:covered")!;
+    const omitted = result.contributions.find(row => row.componentKey === "mechanism:assurance-and-reconciliation:scope:public-or-failed")!;
+    const bounded = result.contributions.find(row => row.componentKey === "mechanism:assurance-and-reconciliation:scope:unknown")!;
+    expect(included).toMatchObject({ score: 95, wholeAssetWeight: 0.6 });
+    expect(omitted).toMatchObject({ score: null, wholeAssetWeight: 0.25, effectiveScoringWeight: 0, cause });
+    expect(bounded).toMatchObject({ score: 35, wholeAssetWeight: 0.15, cause: "U" });
+    expect(included.effectiveScoringWeight / bounded.effectiveScoringWeight).toBeCloseTo(4, 12);
+    expect(result.contributions.reduce((sum, row) => sum + row.effectiveScoringWeight, 0)).toBeCloseTo(1, 12);
+    expect(result.contributions.reduce((sum, row) => sum + (row.score ?? 0) * row.effectiveScoringWeight, 0)).toBeCloseTo(result.score!, 12);
+    expect(result.limitedEvidenceCauses).toEqual(["U"]);
+    expect(result.structuralReasons).toEqual([]);
+  });
+
+  it("keeps researched C and unresearched U at ordinary minima while attributing a separately proved failure only to D", () => {
+    const claim = missingMechanism("claim-and-segregation", "gap:researched-claim", "fiat.claim.required", "Exact claim is undisclosed");
+    const gap: V9FactGapV3 = {
+      ...claim.gap, responsibility: "issuer-undisclosed",
+      causeProof: {
+        cause: "C", classificationId: "research:claim", proofOrigin: "typed-review", reviewedAt: "2026-10-01",
+        assertion: "researched-nondisclosure", evidenceRefIds: ["research:claim"],
+        rationale: "Current primary disclosure does not publish the exact holder claim.",
+        sources: [{ url: "https://example.com/claim", location: "Holder rights",
+          excerpt: "The report lists portfolio assets, not holder-level claim terms.",
+          assertion: "The exact current required holder claim is undisclosed." }],
+      },
+    };
+    const assurance = missingMechanism("assurance-and-reconciliation", "gap:assurance-u", "mechanism.required", "Unresearched assurance");
+    const result = evaluateV9Backing(asset([gap, assurance.gap]), {
+      ...reviews["fiat-cash"], claimAndSegregation: claim.fact,
+      custodyContinuity: { ...strongFact("known-bad-custody"), quality: "failed" },
+      assuranceAndReconciliation: assurance.fact,
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(result.rateability).toBe("rateable");
+    expect(result.contributions.find(row => row.componentKey === "mechanism:claim-and-segregation"))
+      .toMatchObject({ score: 35, cause: "C", scoringDisposition: "bounded-uncertainty", causeGapIds: [gap.gapId] });
+    expect(result.contributions.find(row => row.componentKey === "mechanism:assurance-and-reconciliation"))
+      .toMatchObject({ score: 35, cause: "U", scoringDisposition: "bounded-uncertainty" });
+    expect(result.contributions.find(row => row.componentKey === "mechanism:custody-continuity"))
+      .toMatchObject({ score: 10, cause: "D", scoringDisposition: "measured-adverse" });
+    expect(result.contributions.reduce((sum, row) => sum + (row.score ?? 0) * row.effectiveScoringWeight, 0)).toBeCloseTo(result.score!, 12);
+    expect(result.limitedEvidenceCauses).toEqual(["C", "D", "U"]);
+    expect(result.structuralReasons).toEqual([expect.objectContaining({
+      pathKey: "mechanism:custody-continuity", responsibility: "measured-adverse",
+      evidenceRefIds: ["evidence:known-bad-custody"],
+    })]);
+  });
+});
+
+describe("v10.01 independently measured structural evidence", () => {
+  it("retains pinned CDP liquidation adversity even when the qualitative mechanism remains unknown", () => {
+    const unknown = missingMechanism("liquidation-mechanics", "gap:liquidation", "mechanism.required", "Mechanism quality is unresearched");
+    const review = { ...reviews.cdp, liquidationMechanics: unknown.fact, liquidationCapacityRatio: 0 };
+    const legacy = evaluateV9Backing(asset([unknown.gap]), review, V9_CANDIDATE_POLICY_V1);
+    expect(legacy.structuralReasons.some(reason => reason.pathKey.startsWith("mechanism:liquidation-mechanics"))).toBe(false);
+    const pinned = evaluateV9Backing({
+      ...asset([unknown.gap]),
+      cdpLiquidationCapacitySelection: {
+        selectedPath: "stress-measurement", coverageRatio: 0, reason: "Current captured stress measurement",
+        fallbackReason: null, measurementAgeSec: 5,
+        selectedEvidenceRefIds: ["evidence:stress"], stressEvidenceRefIds: ["evidence:stress"],
+      },
+    }, review, V9_CANDIDATE_POLICY_V1);
+    expect(pinned.structuralReasons).toContainEqual(expect.objectContaining({
+      pathKey: "mechanism:liquidation-mechanics:stress-measurement",
+      responsibility: "measured-adverse", evidenceRefIds: ["evidence:stress"],
+    }));
+  });
+});
 
 const strongFact = (id: string): V9MechanismFactV1 => ({
   status: knownStatus(`evidence:${id}`, "mechanism.required"),
@@ -166,22 +280,27 @@ describe("Safety Score v9 archetype backing adapters", () => {
   );
 
   it.each(["shared-reserve", "protocol-position"] as const)(
-    "withholds %s when the exact holder claim is missing rather than borrowing a reserve total",
+    "bounds %s's missing exact holder claim without borrowing a reserve total",
     (archetype) => {
       const missing = missingMechanism("holder-claim", "missing-holder", "mechanism.required", "Unknown exact-token claim");
       const result = evaluateV9Backing(asset([missing.gap]), { ...reviews[archetype], holderClaim: missing.fact }, V9_CANDIDATE_POLICY_V1);
-      expect(result.rateability).toBe("NR");
-      expect(result.score).toBeNull();
+      expect(result.rateability).toBe("rateable");
+      expect(result.contributions.find(row => row.componentKey === "mechanism:holder-claim")).toMatchObject({
+        score: 35, cause: "U", scoringDisposition: "bounded-uncertainty",
+      });
+      expect(result.structuralReasons).toEqual([]);
     },
   );
 
-  it("withholds an unidentified UCITS share claim and caps a proved failed position claim rather than calling it unknown", () => {
+  it("bounds an unidentified UCITS share claim but caps a proved failed position claim", () => {
     const missing = missingMechanism("fund-claim-and-segregation", "missing-share", "mechanism.required", "Exact share class unverified");
     const unidentified = evaluateV9Backing(asset([missing.gap]), {
       ...reviews["ucits-trs-fund"], fundClaimAndSegregation: missing.fact,
     }, V9_CANDIDATE_POLICY_V1);
-    expect(unidentified.rateability).toBe("NR");
-    expect(unidentified.score).toBeNull();
+    expect(unidentified.rateability).toBe("rateable");
+    expect(unidentified.contributions.find(row => row.componentKey === "mechanism:fund-claim-and-segregation")).toMatchObject({
+      score: 35, cause: "U", scoringDisposition: "bounded-uncertainty",
+    });
     const failed = evaluateV9Backing(asset(), {
       ...reviews["protocol-position"],
       holderClaim: { ...strongFact("failed-position-claim"), quality: "failed" },
@@ -282,7 +401,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
         ceiling: baseline.score! * 0.64,
         evidenceRefIds: ["evidence:vault-census"],
       }));
-      expect(result.contributions.reduce((sum, row) => sum + row.score * row.effectiveWeight, 0))
+      expect(result.contributions.reduce((sum, row) => sum + (row.score ?? 0) * row.effectiveWeight, 0))
         .toBeCloseTo(result.score!, 8);
     },
   );
@@ -468,9 +587,11 @@ describe("Safety Score v9 archetype backing adapters", () => {
     expect(result.rateability).toBe("rateable");
     expect(result.score).toBe(0);
     expect(result.pillarCeiling).toBe(0);
+    expect(result.limitedEvidenceCauses).toEqual(["D"]);
+    expect(result.supportedComponentKeys).toEqual(["mechanism:uncovered-liability"]);
   });
 
-  it("does not replace an unrated required mechanism with a measured solvency result", () => {
+  it("preserves a bounded unknown mechanism while applying a separately measured solvency haircut", () => {
     const missing = missingMechanism("contraction-capacity", "missing-contraction", "mechanism.required", "Unbounded contraction");
     const result = evaluateV9Backing(asset([missing.gap]), {
       ...reviews.algorithmic,
@@ -481,9 +602,14 @@ describe("Safety Score v9 archetype backing adapters", () => {
         status: knownStatus("evidence:vault-census", "mechanism.required"),
       },
     }, V9_CANDIDATE_POLICY_V1);
-    expect(result.rateability).toBe("NR");
-    expect(result.score).toBeNull();
-    expect(result.structuralReasons.some((reason) => reason.pathKey === "mechanism:collateralization-ratio")).toBe(false);
+    const baseline = evaluateV9Backing(asset([missing.gap]), {
+      ...reviews.algorithmic, contractionCapacity: missing.fact,
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(result.rateability).toBe("rateable");
+    expect(result.score).toBeCloseTo(baseline.score! * 0.64, 10);
+    expect(result.structuralReasons).toContainEqual(expect.objectContaining({
+      pathKey: "mechanism:collateralization-ratio", responsibility: "measured-adverse",
+    }));
   });
 
   it.each(["bounded-unknown", "stale", "missing"] as const)(
@@ -515,10 +641,9 @@ describe("Safety Score v9 archetype backing adapters", () => {
         assuranceAndReconciliation: weakObservedFact("assurance"),
         physicalRedemption: { ...strongFact("delivery"), quality: "failed" },
       }, V9_CANDIDATE_POLICY_V1);
-      // Four equal cash slices yield 97.355 reserve quality. Component grades
-      // 87 / 60 / 35 / 10 carry weights .15 / .10 / .13 / .07.
+      const reserves = evaluateV9ReserveExposures(asset(), V9_CANDIDATE_POLICY_V1).score!;
       expect(result.rateability).toBe("rateable");
-      expect(result.score).toBeCloseTo(77.84525, 8);
+      expect(result.score).toBeCloseTo(reserves * 0.55 + 87 * 0.15 + 60 * 0.1 + 35 * 0.13 + 10 * 0.07, 8);
     });
 
     it("publishes one mechanism contribution per component under the commodity archetype", () => {
@@ -537,7 +662,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
       ]);
     });
 
-    it("fails closed on a missing title claim but stays rateable without redemption evidence", () => {
+    it("bounds a missing title claim and missing redemption without asserting either is measured", () => {
       const { gap, fact: missing } = missingMechanism(
         "title-and-allocation", "gap:title", "commodity.title.required", "Title to allocated metal is unresolved",
       );
@@ -545,7 +670,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
       expect(
         evaluateV9Backing(asset([gap]), { ...commodityReview, titleAndAllocation: missing }, V9_CANDIDATE_POLICY_V1)
           .rateability,
-      ).toBe("NR");
+      ).toBe("rateable");
       const withoutRedemption = evaluateV9Backing(
         asset([{ ...gap, gapId: "gap:redemption", path: { kind: "local-component", componentKey: "physical-redemption" } }]),
         {
@@ -580,22 +705,14 @@ describe("Safety Score v9 archetype backing adapters", () => {
     });
   });
 
-  it("dispatches on exactly the archetypes the mechanism-review union declares", () => {
-    // evaluateV9Backing tests membership against MECHANISM_ARCHETYPE_VALUES
-    // instead of walking Zod's internal `options`; this is the coincidence that
-    // makes that substitution safe.
-    expect([...MECHANISM_ARCHETYPE_VALUES].sort()).toEqual(
-      V9MechanismRiskReviewSchema.options.map((schema) => schema.shape.archetype.value).sort(),
-    );
-  });
 
-  it("returns a reason-coded NR for an unknown archetype", () => {
+  it("bounds an unknown archetype without inventing a successful methodology or direct NR", () => {
     const result = evaluateV9Backing(asset(), { archetype: "new-design" }, V9_CANDIDATE_POLICY_V1);
-    expect(result).toMatchObject({ rateability: "NR", score: null });
-    expect(result.unresolved).toEqual([expect.objectContaining({ code: "missing-archetype", treatment: "NR" })]);
+    expect(result).toMatchObject({ rateability: "rateable", score: 35, limitedEvidenceCauses: ["U"] });
+    expect(result.unresolved).toEqual([expect.objectContaining({ code: "missing-archetype", treatment: "pillar", cause: "U" })]);
   });
 
-  it("makes a missing non-substitutable claim NR", () => {
+  it("bounds a missing non-substitutable claim rather than making it direct NR", () => {
     const { gap, fact: missingClaim } = missingMechanism(
       "claim-and-segregation", "gap:claim", "fiat.claim.required", "The direct reserve claim is unresolved",
     );
@@ -610,8 +727,11 @@ describe("Safety Score v9 archetype backing adapters", () => {
       V9_CANDIDATE_POLICY_V1,
     );
 
-    expect(result.rateability).toBe("NR");
-    expect(result.unresolved).toContainEqual(expect.objectContaining({ code: "critical-unresolved", treatment: "NR" }));
+    expect(result.rateability).toBe("rateable");
+    expect(result.unresolved).toContainEqual(expect.objectContaining({
+      code: "critical-unresolved", treatment: "pillar", cause: "U",
+    }));
+    expect(result.contributions.find(row => row.componentKey === "mechanism:claim-and-segregation")!.score).toBe(35);
   });
 
   it("redistributes an explicitly inapplicable component without inventing a weak score", () => {
@@ -709,7 +829,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
     },
   );
 
-  it("fires structural signals for unavailable sdn/rwa metrics and skips evidenced N/A ones", () => {
+  it("never emits structural adversity from unavailable sdn/rwa metrics and skips evidenced N/A ones", () => {
     const sdnBase = reviews["synthetic-delta-neutral"];
     const rwaBase = reviews["rwa-credit-fund"];
 
@@ -729,17 +849,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
     });
     if (sdnUnavailable.archetype !== "synthetic-delta-neutral") throw new Error("unexpected archetype");
     const sdnPenalized = evaluateV9Backing(asset(), sdnUnavailable, V9_CANDIDATE_POLICY_V1);
-    // Unavailable hedge coverage fires the hedge signal the full measured
-    // review (ratio 1) does not.
-    expect(sdnPenalized.structuralReasons.length).toBeGreaterThan(sdnFull.structuralReasons.length);
-    expect(
-      sdnPenalized.structuralReasons.find(
-        (reason) => reason.pathKey === "mechanism:hedge-reconciliation",
-      ),
-    ).toMatchObject({
-      responsibility: "issuer-undisclosed",
-      evidenceRefIds: ["evidence:hedge-unavailable"],
-    });
+    expect(sdnPenalized.structuralReasons).toEqual(sdnFull.structuralReasons);
 
     const rwaFull = evaluateV9Backing(asset(), rwaBase, V9_CANDIDATE_POLICY_V1);
     const rwaUnavailable = V9MechanismRiskReviewSchema.parse({
@@ -756,15 +866,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
     });
     if (rwaUnavailable.archetype !== "rwa-credit-fund") throw new Error("unexpected archetype");
     const rwaPenalized = evaluateV9Backing(asset(), rwaUnavailable, V9_CANDIDATE_POLICY_V1);
-    expect(rwaPenalized.structuralReasons.length).toBeGreaterThan(rwaFull.structuralReasons.length);
-    expect(
-      rwaPenalized.structuralReasons.find(
-        (reason) => reason.pathKey === "mechanism:maturity-and-liquidity",
-      ),
-    ).toMatchObject({
-      responsibility: "issuer-undisclosed",
-      evidenceRefIds: ["evidence:wam-unavailable"],
-    });
+    expect(rwaPenalized.structuralReasons).toEqual(rwaFull.structuralReasons);
 
     // An evidenced N/A maturity metric skips the mismatch signal entirely.
     const rwaNotApplicable = V9MechanismRiskReviewSchema.parse({

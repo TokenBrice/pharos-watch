@@ -73,7 +73,7 @@ export interface DdrV9ExitContext {
   } | null;
   primaryRoute: {
     key: string;
-    score: number;
+    score: number | null;
     capacity: {
       executableUsd: number;
       requestedNotionalUsd: number;

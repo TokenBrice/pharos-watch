@@ -52,6 +52,8 @@ export function DependencyMapClient() {
           name: meta?.name ?? card.id,
           symbol: meta?.symbol ?? card.id,
           grade: card.grade,
+          ratingStatus: card.ratingStatus,
+          partialEvidence: card.partialEvidence,
           sharedBookId: card.sharedBookId,
         };
       }),

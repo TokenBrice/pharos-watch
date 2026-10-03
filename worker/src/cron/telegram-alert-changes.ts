@@ -50,7 +50,9 @@ export function buildSafetyChanges(
 
   for (const [stablecoinId, row] of Object.entries(currentSafetySnapshot)) {
     const previous = safeSafetySnapshot[stablecoinId];
-    if (previous?.grade === row.grade) continue;
+    // Availability gaps are recovery baselines, not grade movements.
+    if (!previous || row.ratingStatus === "pipeline-gap" || previous.ratingStatus === "pipeline-gap" ||
+      row.grade === null || previous.grade === null || previous.grade === row.grade) continue;
     if (
       row.operationallyAffected === true ||
       previous?.operationallyAffected === true
@@ -66,12 +68,11 @@ export function buildSafetyChanges(
       suppressedMethodologyChanges++;
       continue;
     }
-    if (!previous) continue;
 
     changes.push({
       stablecoinId,
       symbol: getSymbol(stablecoinId),
-      oldGrade: previous.grade ?? "UNKNOWN",
+      oldGrade: previous.grade,
       newGrade: row.grade,
       oldScore: previous.score ?? null,
       newScore: row.score ?? null,

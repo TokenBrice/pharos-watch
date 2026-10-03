@@ -16,7 +16,11 @@ export function makeV9Pillar(
   score: number | null,
   overrides: Partial<V9PillarEvaluation> = {},
 ): V9PillarEvaluation {
-  return { score, evidenceLevel: "strong", reasons: [], structuralSignals: [], ...overrides };
+  return {
+    score, aggregationDisposition: "included", causeGapIds: [], limitedEvidenceCauses: [],
+    supportedComponentKeys: ["fixture:known"], evidenceLevel: "strong", reasons: [], structuralSignals: [],
+    ...overrides,
+  };
 }
 
 export function makeV9ProductionScoreInput(

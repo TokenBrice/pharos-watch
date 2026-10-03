@@ -17,6 +17,7 @@ import {
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { compareText, deepFreeze, uniqueSorted } from "./primitives";
+import type { V9EvidenceCause, V9ScoringDisposition } from "../../types/safety-score-v9-causes";
 
 const V9_POLICY_DIGEST_DOMAIN = "safety-score-v9.methodology-policy.v1";
 
@@ -267,48 +268,44 @@ export function assertV9ReasonCodesRegistered(
   if (unknown.length > 0) throw new Error(`Unregistered Safety Score v9 reason codes: ${unknown.join(", ")}`);
 }
 
-export interface V9ResolvedReasonPolicy {
+export interface V9ResolvedReasonTreatment {
   readonly reason: V9ReasonRegistryEntry;
   readonly disposition: V9FactDisposition;
+  readonly treatment: V9ReasonRegistryEntry["defaultTreatment"];
+  readonly cause: V9EvidenceCause | null;
+  readonly scoringDisposition: V9ScoringDisposition;
   readonly critical: boolean;
   readonly ceiling: { readonly kind: string; readonly limit: number } | null;
 }
 
-export function resolveV9ReasonPolicy(envelope: V9ValidatedPolicyEnvelope, code: V9ReasonCode): V9ResolvedReasonPolicy {
+/** Sole treatment seam. Missing-data causes never directly withhold or impose removed caps. */
+export function resolveV9ReasonTreatment(
+  envelope: V9ValidatedPolicyEnvelope,
+  code: V9ReasonCode,
+  cause: V9EvidenceCause | null = "U",
+): V9ResolvedReasonTreatment {
   assertV9ValidatedPolicyEnvelope(envelope);
   const reason = envelope.policy.reasonRegistry.find((entry) => entry.code === code);
   if (!reason) throw new Error(`Safety Score v9 policy does not register reason ${code}`);
-  const disposition = envelope.policy.semantic.evidence.dispositions.find(
-    (entry) => entry.factClass === reason.defaultFactClass,
-  );
-  if (!disposition) throw new Error(`Safety Score v9 policy does not dispose ${reason.defaultFactClass}`);
-  const ceiling = (() => {
-    if (reason.ceilingRule?.source === "evidence-level") {
-      const limit = envelope.policy.semantic.evidence.ceilings[reason.ceilingRule.level];
-      if (limit === null) throw new Error(`Safety Score v9 reason ${code} references a null evidence ceiling`);
-      return { kind: `reason:${code}`, limit };
-    }
-    if (reason.ceilingRule?.source === "minimum-track-record") {
-      const minimumBand = [...envelope.policy.semantic.formula.trackRecordCeilings].sort(
-        (left, right) => left.minMonthsInclusive - right.minMonthsInclusive,
-      )[0];
-      if (!minimumBand || minimumBand.limit === null) {
-        throw new Error(`Safety Score v9 reason ${code} has no finite minimum track-record ceiling`);
-      }
-      return { kind: `reason:${code}`, limit: minimumBand.limit };
-    }
-    if (reason.ceilingRule?.source === "named-ceiling") {
-      return {
-        kind: `reason:${code}`,
-        limit: envelope.policy.semantic.structural.namedReasonCeilings[reason.ceilingRule.key],
-      };
-    }
-    return null;
-  })();
+  const excluded = cause === "A" || cause === "B";
+  const bounded = cause === "C" || cause === "U";
+  const minimumTrackRecord = reason.ceilingRule?.source === "minimum-track-record" && !excluded;
+  const treatment = excluded ? "diagnostic"
+    : minimumTrackRecord ? "ceiling"
+      : bounded && reason.defaultTreatment !== "diagnostic" ? "pillar"
+        : reason.defaultTreatment === "NR" && cause !== "D" ? "diagnostic" : reason.defaultTreatment;
+  const dispositionClass = excluded ? "optional-unsupported"
+    : bounded && !minimumTrackRecord && treatment !== "diagnostic" ? "missing-bounded-exposure"
+      : reason.defaultFactClass;
+  const disposition = envelope.policy.semantic.evidence.dispositions.find((entry) => entry.factClass === dispositionClass);
+  if (!disposition) throw new Error(`Safety Score v9 policy does not dispose ${dispositionClass}`);
+  const minimumBand = minimumTrackRecord ? envelope.policy.semantic.formula.trackRecordCeilings[0] : undefined;
+  const ceiling = minimumBand?.limit != null ? { kind: `reason:${code}`, limit: minimumBand.limit } : null;
   return {
-    reason,
-    disposition,
-    critical: reason.defaultTreatment === "NR",
+    reason, disposition, treatment, cause,
+    scoringDisposition: cause === "A" ? "excluded-pipeline" : cause === "B" ? "excluded-uncurated"
+      : bounded ? "bounded-uncertainty" : cause === "D" ? "measured-adverse" : "included",
+    critical: cause === "D" && treatment === "NR",
     ceiling,
   };
 }
@@ -319,7 +316,7 @@ export function assertV9UnresolvedFactsMatchPolicy(
 ): void {
   assertV9ValidatedPolicyEnvelope(envelope);
   const mismatches = facts
-    .filter((fact) => fact.critical !== resolveV9ReasonPolicy(envelope, fact.code).critical)
+    .filter((fact) => fact.critical !== resolveV9ReasonTreatment(envelope, fact.code, fact.cause ?? "U").critical)
     .map((fact) => fact.code)
     .filter((code, index, codes) => codes.indexOf(code) === index)
     .sort(compareText);

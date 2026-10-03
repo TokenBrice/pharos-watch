@@ -9,6 +9,7 @@ import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extensio
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import type { AssetExtension, SafetyScoreV9FactSetExtensionV2 } from "../safety-score-v9/fact-set-schema";
 import { createAssetBuildContext } from "../safety-score-v9/fact-set-context";
+import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import { buildWrapperLocalFacts } from "../safety-score-v9/fact-set-wrapper";
 import type { V9ExitRouteFactV2 } from "@shared/types/safety-score-v9-facts";
 import { computeV9FactSetDigest } from "@shared/lib/safety-score-v9/facts";
@@ -51,10 +52,19 @@ function compile(fixture: WrapperFixture, unwindRoute?: (route: V9ExitRouteFactV
   const asset = factSet.assets.find((candidate) => candidate.assetId === "alpha")!;
   if (unwindRoute) {
     const route = unwindRoute(structuredClone(asset.exitRoutes[0]!));
+    const context = createAssetBuildContext(normalizeSafetyScoreV9CompilerInput(fixture.fixed), fixture.extension, fixture.wrapper, "a".repeat(64));
     asset.wrapperLocalFacts = buildWrapperLocalFacts(
-      createAssetBuildContext(fixture.fixed, fixture.extension, fixture.wrapper, "a".repeat(64)),
+      context,
       { ...asset, exitRoutes: Array.isArray(route) ? route : [route] },
     );
+    asset.gaps = [
+      ...asset.gaps.filter((gap) => !gap.gapId.startsWith("alpha:gap:wrapper-local:")),
+      ...context.gaps.values(),
+    ].sort((left, right) => left.gapId.localeCompare(right.gapId));
+    asset.evidence = [...new Map([
+      ...asset.evidence.map((evidence) => [evidence.evidenceId, evidence] as const),
+      ...context.evidence,
+    ]).values()].sort((left, right) => left.evidenceId.localeCompare(right.evidenceId));
     factSet = { ...factSet, v9FactSetDigest: computeV9FactSetDigest(factSet) };
   }
   if (asset.wrapperLocalFacts.applicability !== "wrapper") throw new Error("Expected wrapper facts");
@@ -135,7 +145,7 @@ describe("wrapper-local loss absorption and custody scope", () => {
   it("does not let bridge-only inventory establish local loss controls", () => {
     const fixture = wrapperFixture("risk-absorption");
     fixture.wrapper.controlReview = { state: "reviewed-controls", controls: [localControl({ controlKind: "bridge" })] };
-    expect(compile(fixture).facts.facts.lossAbsorptionEmergencyControls).toMatchObject({ disposition: "integration-missing", assessment: null });
+    expect(compile(fixture).facts.facts.lossAbsorptionEmergencyControls).toMatchObject({ disposition: "unresearched", assessment: null });
   });
 
   it.each(["controller-owner", "inherited-domain"] as const)(
@@ -216,7 +226,7 @@ describe("wrapper-local loss absorption and custody scope", () => {
       },
     ]);
     expect(facts.facts.measuredUnwind).toMatchObject({
-      disposition: "integration-missing", assessment: null,
+      disposition: "unresearched", assessment: null,
     });
   });
 
@@ -436,8 +446,11 @@ describe("wrapper-local loss absorption and custody scope", () => {
         }
       }
       const { facts, card } = compile(fixture);
-      expect(facts.facts.custodyEscrow).toMatchObject({ disposition: "issuer-undisclosed", assessment: null });
-      expect(card.trace.wrapperParentLimit!.missingFacts).toContainEqual({ factClass: "custodyEscrow", disposition: "issuer-undisclosed" });
+      expect(facts.facts.custodyEscrow).toMatchObject({ disposition: "unresearched", assessment: null });
+      expect(card.trace.wrapperParentLimit!.missingFacts).toContainEqual(expect.objectContaining({
+        factClass: "custodyEscrow", disposition: "unresearched", cause: "U",
+        causeGapIds: ["alpha:gap:wrapper-local:custodyEscrow"],
+      }));
       expect(card.trace.wrapperParentLimit!.treatment).toBe("fallback-discount");
     },
   );

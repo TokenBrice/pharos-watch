@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import policyAsset from "@shared/data/safety-score-v9/methodology-policy-candidate-v1.json";
 import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
 import { buildV9EvidenceGapQueue, parseV9EvidenceGapQueue } from "@shared/lib/safety-score-v9/evidence-gap-queue";
-import { loadV9MethodologyPolicy, resolveV9ReasonPolicy } from "@shared/lib/safety-score-v9/policy";
+import { loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
+import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
@@ -80,7 +81,7 @@ function mechanismFact(policyRuleId: string) {
 function factSetCore(message = "Launch date evidence has not been established."): V9FactSetCoreV3 {
   const gapId = "asset-001:gap:implementation-date";
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     baseInputGenerationId: BASE_INPUT_GENERATION_ID,
     asOfSec: AS_OF_SEC,
     compiledAtSec: 1_100,
@@ -101,7 +102,9 @@ function factSetCore(message = "Launch date evidence has not been established.")
             path: { kind: "local-component", componentKey: "implementation.launch-date" },
             message,
             evidenceRefIds: [],
-            responsibility: "integration-missing",
+            responsibility: "unresearched",
+            causeProof: { cause: "U", reason: "not-yet-researched", evidenceRefIds: [] },
+            causeScope: { pillar: "control", componentKey: "implementation.launch-date", factorKey: null, routeKey: null, exposureId: null, requiredDatum: "launch-date" },
           },
         ],
         wrapperLocalFacts: {
@@ -150,6 +153,7 @@ function factSetCore(message = "Launch date evidence has not been established.")
         },
         reserveStatus: notApplicableStatus("v9.reserve.not-applicable"),
         reserveExposures: [],
+        reserveResiduals: [],
         exitStatus: notApplicableStatus("v9.exit.not-applicable"),
         exitRoutes: [],
         controlStatus: notApplicableStatus("v9.control.not-applicable"),
@@ -235,7 +239,9 @@ function deploymentControlFactSetCore(
       path: { kind: "deployment-control", deploymentKey, controlKey },
       message: "The control inventory is known, but this control's authority remains unresolved.",
       evidenceRefIds: [EVIDENCE.evidenceId],
-      responsibility: "issuer-undisclosed",
+      responsibility: "unresearched",
+      causeProof: { cause: "U", reason: "not-yet-researched", evidenceRefIds: [] },
+      causeScope: { pillar: "control", componentKey: controlKey, factorKey: "authority", routeKey: null, exposureId: null, requiredDatum: "control-authority" },
     },
   ];
   asset.implementation.status = knownStatus("v9.implementation.launch-date");
@@ -277,7 +283,8 @@ function deploymentControlFactSetCore(
 
 function factSetV3WithResponsibility(responsibility: V9EvidenceResponsibility) {
   const core = structuredClone(factSetCore());
-  core.assets[0]!.gaps[0]!.responsibility = responsibility;
+  const { evidenceHistory: _history, ...gap } = core.assets[0]!.gaps[0]!;
+  core.assets[0]!.gaps[0] = createV9FactGapV3({ ...gap, responsibility });
   return compileV9FactSetV3(core);
 }
 
@@ -311,11 +318,10 @@ describe("Safety Score v9 evidence-gap queue", () => {
 
     expect(V9EvidenceGapQueueV2Schema.parse(queue)).toEqual(queue);
     expect(queue).toMatchObject({
-      schemaVersion: 2,
       purpose: "evidence-work-queue-not-release-gate",
       status: "work-required",
       facts: {
-        sourceSchemaVersion: 3,
+        sourceSchemaVersion: 4,
         sourceFactSetDigest: factSet.v9FactSetDigest,
       },
       summary: {
@@ -324,7 +330,7 @@ describe("Safety Score v9 evidence-gap queue", () => {
         knownSupplyWeightGapCount: 1,
         policyBindingMismatchGapCount: 0,
         responsibilityCounts: expect.arrayContaining([
-          { responsibility: "integration-missing", count: 1 },
+          { responsibility: "unresearched", count: 1 },
           { responsibility: "issuer-undisclosed", count: 0 },
           { responsibility: "measured-adverse", count: 0 },
           { responsibility: "method-unsupported", count: 0 },
@@ -343,9 +349,8 @@ describe("Safety Score v9 evidence-gap queue", () => {
       applicability: "required",
       observationState: "missing",
       action: "collect-evidence",
-      responsibility: "integration-missing",
+      responsibility: "unresearched",
       releaseSeverity: "review-required",
-      treatment: "ceiling",
       critical: false,
       materiality: { basis: "asset-wide", fractionOfAsset: 1 },
       supplyWeight: { state: "current-valid", canonicalUsd: 10_000_000, materialityWeightedUsd: 10_000_000 },
@@ -362,17 +367,17 @@ describe("Safety Score v9 evidence-gap queue", () => {
     "producer-failed",
     "method-unsupported",
     "measured-adverse",
-  ] as const)("preserves native V3 %s responsibility", (responsibility) => {
+  ] as const)("does not treat an unproven historical %s label as a cause", (responsibility) => {
     const factSet = factSetV3WithResponsibility(responsibility);
     const queue = buildV9EvidenceGapQueue({ factSet, policy: loadV9MethodologyPolicy(policyAsset) });
 
     expect(queue.facts).toMatchObject({
-      sourceSchemaVersion: 3,
+      sourceSchemaVersion: 4,
       sourceFactSetDigest: factSet.v9FactSetDigest,
       evaluationFactSetDigest: factSet.v9FactSetDigest,
     });
-    expect(queue.entries[0]?.responsibility).toBe(responsibility);
-    expect(queue.summary.responsibilityCounts.find((entry) => entry.responsibility === responsibility)?.count).toBe(1);
+    expect(queue.entries[0]?.responsibility).toBe("unresearched");
+    expect(queue.entries[0]?.cause).toBe("U");
   });
 
   it("keeps retained V1 queue artifacts parseable under their original digest domain", () => {
@@ -383,7 +388,7 @@ describe("Safety Score v9 evidence-gap queue", () => {
     const { responsibilityCounts: _responsibilityCounts, ...summary } = current.summary;
     // `responsibility` and `bridgeJoin` are V2-only entry fields.
     const entries = current.entries.map(
-      ({ responsibility: _responsibility, bridgeJoin: _bridgeJoin, ...entry }) => entry,
+      ({ responsibility: _responsibility, bridgeJoin: _bridgeJoin, cause: _cause, causeProof: _proof, causeScope: _scope, causeGapIds: _gapIds, ...entry }) => entry,
     );
     const core = {
       schemaVersion: 1 as const,
@@ -489,7 +494,8 @@ describe("Safety Score v9 evidence-gap queue", () => {
       // evidence beyond what the unresolved control already carried.
       expect(queue.entries[0]).toMatchObject({
         observationState: "bounded-unknown",
-        action: "adjudicate-bounded-unknown",
+        action: "collect-evidence",
+        cause: "U",
         evidenceRefIds: [EVIDENCE.evidenceId],
       });
       expect(queue.entries[0]!.materiality).toEqual(
@@ -599,16 +605,6 @@ describe("Safety Score v9 evidence-gap queue", () => {
     expect(queue.entries[0]!.bridgeJoin).toBeNull();
   });
 
-  it("keeps unresolved-control-identity admitting both control path kinds", () => {
-    // Owner ruling 2026-07-31. A future policy edit that drops either kind
-    // would silently reroute deployment-scoped control gaps back to
-    // reconcile-policy-binding, so pin the admitted set.
-    const policy = loadV9MethodologyPolicy(policyAsset);
-    expect(resolveV9ReasonPolicy(policy, "unresolved-control-identity").reason.pathKinds).toEqual([
-      "deployment-control",
-      "local-component",
-    ]);
-  });
 
   it("surfaces fact-to-policy archetype drift as reconciliation work", () => {
     const core = factSetCore();
@@ -662,10 +658,10 @@ describe("Safety Score v9 evidence-gap queue CLI", () => {
     const queue = runV9EvidenceGapQueueCli(argv, io);
     expect(queue?.status).toBe("work-required");
     expect(queue?.facts).toMatchObject({
-      sourceSchemaVersion: 3,
+      sourceSchemaVersion: 4,
       sourceFactSetDigest: factSet.v9FactSetDigest,
     });
-    expect(queue?.entries[0]?.responsibility).toBe("integration-missing");
+    expect(queue?.entries[0]?.responsibility).toBe("unresearched");
     expect(parseV9EvidenceGapQueue(JSON.parse(writes.get("queue.json")!))).toEqual(queue);
     const required = memoryIo({ facts: factSet, policy: policyAsset });
     expect(() => runV9EvidenceGapQueueCli([...argv, "--require-clear"], required.io)).toThrow("contains 1 gap");

@@ -39,6 +39,23 @@ describe("Exposure mode", () => {
     view.rerender(<DependencyExposureResults result={computeDependencyExposure(data, roots)} publication={data} roots={roots} options={[]} inspectedId={null} onInspect={() => {}} networkUpdated={false} held={false} />);
     expect(screen.getByRole("heading", { level: 3 }).textContent).toContain("direct $400.00 (known supply only)");
   });
+  it("shows published Pipeline gap and partial causes without changing known structural exposure", () => {
+    const data = publication();
+    const gap = data.nodes.find(node => node.id === "known")!;
+    gap.ratingStatus = "pipeline-gap";
+    gap.grade = null;
+    gap.score = null;
+    gap.partialEvidence = { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["backing", "exit"], causes: ["A"] };
+    const partial = data.nodes.find(node => node.id === "unknown")!;
+    partial.partialEvidence = { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["exit"], causes: ["B"] };
+    render(<DependencyExposureResults result={computeDependencyExposure(data, roots)} publication={data} roots={roots} options={[]} inspectedId={null} onInspect={() => {}} networkUpdated={false} held={false} />);
+    const table = screen.getByRole("table");
+    expect(within(table).getByText(/Pipeline gap · fewer than two pillars available/)).toBeTruthy();
+    expect(within(table).getByText("pipeline unavailable (A)")).toBeTruthy();
+    expect(within(table).getByText(/Partial evidence: pipeline gap.*public data awaiting curation \(B\)/)).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 3 }).textContent).toContain("$400.00 (known supply only)");
+    expect(within(table).queryByText("NR")).toBeNull();
+  });
   for (const [surface, Component] of [["desktop", DependencyHubsBoard], ["mobile", DependencyMapMobileSummary]] as const) {
     it(`identifies each ${surface} root action by its upstream asset`, () => {
       const data = publication();
@@ -52,7 +69,7 @@ describe("Exposure mode", () => {
   it("keeps the map and root picker available before choosing roots, without reporting empty reach", () => {
     window.history.replaceState(null, "", "/dependency-map/");
     const data = publication();
-    const cards = data.nodes.map(card => ({ id: card.id, name: card.id, symbol: card.id, grade: card.grade }));
+    const cards = data.nodes.map(card => ({ id: card.id, name: card.id, symbol: card.id, grade: card.grade, ratingStatus: card.ratingStatus, partialEvidence: card.partialEvidence }));
     const mcapMap = new Map([["known", 1000]]);
     const model = buildDependencyHubsModel({ cards, edges: data.edges, mcapMap });
     function Harness() {

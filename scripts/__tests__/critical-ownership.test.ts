@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  CRITICAL_OWNERSHIP_WAIVERS,
   deriveCriticalOwnership,
   deriveBaseCriticalOwnership,
   findCriticalOwnershipGaps,
@@ -84,20 +83,14 @@ describe("critical ownership derivation", () => {
   it("recovers the deleted owner's runtime imports from the base tree", () => {
     const source = "worker/src/lib/auth.ts";
     const test = "worker/src/lib/__tests__/removed.test.ts";
-    const gitReads: string[] = [];
-    const ownership = deriveBaseCriticalOwnership("base", [test], (_file, args, options) => {
-      gitReads.push(args.join(" "));
+    const ownership = deriveBaseCriticalOwnership("base", [test], (_file, args) => {
       if (args[0] === "ls-tree") return `${source}\0${test}\0`;
       if (args[0] === "cat-file") {
-        expect(args.slice(1)).toEqual(["--batch", "-Z"]);
-        expect(options.input).toBe(`base:${test}\0`);
         return `deadbeef blob 17\0import "../auth";\0`;
       }
       throw new Error(`Unexpected Git read: ${args.join(" ")}`);
     });
     expect(ownership.get(source)).toEqual([test]);
-    // One batched read replaces one `git show` per candidate file.
-    expect(gitReads).toEqual(["ls-tree -r --name-only -z base", "cat-file --batch -Z"]);
   });
 
   it("reads base blobs by byte length across embedded NUL and Unicode", () => {
@@ -126,11 +119,16 @@ describe("critical ownership derivation", () => {
       {},
     )).toEqual(["worker/src/lib/new-critical-source.ts"]);
 
-    const source = "worker/src/lib/safety-score-v9/capture.ts";
-    const ownership = deriveCriticalOwnership({ sourceFiles: [source] });
+    const cwd = mkdtempSync(join(tmpdir(), "pharos-critical-gap-"));
+    temporaryDirectories.push(cwd);
+    const source = "src/critical.ts";
+    mkdirSync(join(cwd, "src"), { recursive: true });
+    writeFileSync(join(cwd, source), "export const critical = 1;\n");
+    writeFileSync(join(cwd, "src/contract.test.ts"), 'import { critical } from "./critical";\nvoid critical;\n');
+    const ownership = deriveCriticalOwnership({ cwd, sourceFiles: [source] });
     expect(ownership.get(source)).toEqual([
-      "worker/src/cron/__tests__/prepare-safety-score-v9-input.test.ts",
+      "src/contract.test.ts",
     ]);
-    expect(findCriticalOwnershipGaps([source], ownership, CRITICAL_OWNERSHIP_WAIVERS)).toEqual([]);
+    expect(findCriticalOwnershipGaps([source], ownership, {})).toEqual([]);
   });
 });

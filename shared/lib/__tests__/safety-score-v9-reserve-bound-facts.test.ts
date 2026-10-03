@@ -4,6 +4,7 @@ import { reserveBoundTermDays, evaluateV9ReserveEligibilityEnvelope, resolveV9Re
 import { evaluateV9ReserveExposures } from "../safety-score-v9/backing";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { asset, exposure, knownStatus } from "./safety-score-v9-backing.test-support";
+import type { V9FactGapV3 } from "../../types/safety-score-v9-facts";
 const clock = 1790849876;
 const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing;
 const base = { factKey: "bound", scope: { kind: "exposure" as const, exposureKey: "reserve:test" }, asOfSec: clock, publisher: "fixture", sourceUrls: ["https://example.com/primary"], assertion: "pinned claim", contentDigest: "a".repeat(64), provenance: { kind: "reviewed-research" as const, reviewedAt: "2026-09-30", reviewer: "fixture", confidence: "high" as const } };
@@ -18,10 +19,43 @@ describe("bounded reserve facts", () => {
     const original = baseline.contributions.find((row) => row.source === "reserve-exposure")!;
     const improved = bounded.contributions.find((row) => row.source === "reserve-exposure")!;
     const weights = policy.reserve.factorWeights;
-    expect(improved.score - original.score).toBeCloseTo(0.5 * (policy.componentQuality.limited - policy.reserve.liquidityQuality.unknown) * weights.liquidity / (weights.assetQuality + weights.liquidity + weights.maturity));
+    expect(improved.score! - original.score!).toBeCloseTo(0.5 * (policy.componentQuality.limited - policy.reserve.liquidityQuality.unknown) * weights.liquidity / (weights.assetQuality + weights.liquidity + weights.maturity));
     expect(improved.failureDomains).toEqual(original.failureDomains);
     expect(bounded.contributions.find((row) => row.source === "reserve-concentration")).toEqual(baseline.contributions.find((row) => row.source === "reserve-concentration"));
     expect(improved.evidenceRefIds).toContain("evidence:bound");
+  });
+  it("admits only an evidenced liquid fraction when the remaining horizon is pipeline-failed", () => {
+    const gap: V9FactGapV3 = {
+      gapId: "gap:liquidity", ownerDomain: "backing", policyRuleId: "reserve.liquidity",
+      observationState: "missing", reasonCode: "bounded-unknown-reserve-exposure",
+      path: { kind: "local-component", componentKey: "liquidity" },
+      message: "The remaining horizon reader failed", evidenceRefIds: [], responsibility: "producer-failed",
+      causeProof: { cause: "A", producerState: "producer-failed", sourceId: "reader",
+        sourceGenerationId: "fixture:generation", observedAtSec: clock, rejectionCode: "read-failed", evidenceRefIds: ["attempt:generation"] },
+    };
+    const row = { ...reserve, factorStatuses: { liquidity: {
+      ...knownStatus("horizon"), observationState: "missing" as const, gapIds: [gap.gapId],
+    } } };
+    const result = evaluateV9ReserveExposures({ ...asset([row], [gap]), asOfSec: clock,
+      reserveBoundFacts: [compiled(liquid(50))] }, V9_CANDIDATE_POLICY_V1);
+    const contribution = result.contributions.find(entry => entry.componentKey === `reserve:${row.exposureKey}`)!;
+    const factor = contribution.factors!.find(entry => entry.componentKey.endsWith(":liquidity:covered"))!;
+    const omitted = contribution.factors!.find(entry => entry.componentKey.endsWith(":liquidity:uncovered"))!;
+    expect(contribution.wholeAssetWeight).toBe(1);
+    expect(factor).toMatchObject({ score: 60, normalizedWeight: 0.15, cause: null });
+    expect(omitted).toMatchObject({ score: null, normalizedWeight: 0.15, effectiveScoringWeight: 0, cause: "A" });
+    expect(factor.effectiveScoringWeight).toBeCloseTo(0.15 / 0.85, 12);
+    expect(contribution.score).toBeCloseTo((policy.reserve.assetClassQuality["government-security"] * 0.55 + 60 * 0.15 + 48 * 0.15) / 0.85, 12);
+    expect(result.structuralReasons.filter(entry => entry.kind === "unsafe-backing")).toEqual([]);
+  });
+  it("retains the actual covered grade for positive dust instead of cancelling it against the unknown baseline", () => {
+    const result = evaluateV9ReserveExposures({ ...asset([reserve]), asOfSec: clock,
+      reserveBoundFacts: [compiled(liquid(1e-18))] }, V9_CANDIDATE_POLICY_V1);
+    const covered = result.contributions.find(row => row.source === "reserve-exposure")!.factors!
+      .find(row => row.componentKey.endsWith(":liquidity:covered"))!;
+    expect(covered.score).toBe(policy.componentQuality.limited);
+    expect(covered.normalizedWeight).toBeCloseTo(0.3e-20, 35);
+    expect(covered.effectiveScoringWeight).toBeGreaterThan(0);
   });
   it("does not renew stale snapshots, grant future observations, or double credit known horizons", () => {
     for (const asOfSec of [clock - 10801, clock + 1]) {
@@ -63,7 +97,7 @@ describe("bounded reserve facts", () => {
     const envelope = ReserveBoundedFactSchema.parse({ ...base, kind: "eligibility-envelope", scope: { kind: "reserve-envelope" }, legallyBinding: true, exhaustive: true, allocations: [{ assetClass: "cash", minShare: 0.2, maxShare: 1, maximumTerm: null }, { assetClass: "bank-deposit", minShare: 0, maxShare: 0.8, maximumTerm: null }] });
     const result = evaluateV9ReserveEligibilityEnvelope([compiled(envelope)], policy, clock)!;
     const weights = policy.reserve.factorWeights, total = weights.assetQuality + weights.liquidity + weights.maturity;
-    const expected = (0.2 * (policy.reserve.assetClassQuality.cash * weights.assetQuality + policy.boundedUnknownQuality * weights.liquidity + 100 * weights.maturity) + 0.8 * (policy.reserve.assetClassQuality["bank-deposit"] * weights.assetQuality + policy.boundedUnknownQuality * weights.liquidity + policy.boundedUnknownQuality * weights.maturity)) / total;
+    const expected = (0.2 * (policy.reserve.assetClassQuality.cash * weights.assetQuality + policy.reserve.liquidityQuality.unknown * weights.liquidity + 100 * weights.maturity) + 0.8 * (policy.reserve.assetClassQuality["bank-deposit"] * weights.assetQuality + policy.reserve.liquidityQuality.unknown * weights.liquidity + policy.reserve.maturityUnknownQuality * weights.maturity)) / total;
     expect(result.quality).toBeCloseTo(expected);
     expect(evaluateV9ReserveEligibilityEnvelope([compiled({ ...envelope, exhaustive: false } as ReserveBoundedFact)], policy, clock)).toBeNull();
     expect(ReserveBoundedFactSchema.safeParse({ ...envelope, allocations: [{ assetClass: "cash", minShare: 0.6, maxShare: 0.5, maximumTerm: null }] }).success).toBe(false);

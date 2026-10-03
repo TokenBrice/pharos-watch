@@ -25,6 +25,7 @@ import {
 import {
   componentResearchEvidence,
   fallbackResearchEvidence,
+  missingLocalFact,
   type AssetBuildContext,
 } from "./fact-set-context";
 import type { V9AllocationScopeFact, V9AllocationScoredDimension } from "@shared/types/safety-score-v9-allocation";
@@ -72,7 +73,7 @@ function uniqueEvidenceRefIds(values: readonly string[]): string[] {
 function wrapperFactDisposition(
   context: AssetBuildContext,
   statuses: readonly V9FactStatusV2[],
-  fallback: Exclude<V9WrapperFactDisposition, "reviewed" | "not-applicable"> = "integration-missing",
+  _fallback: Exclude<V9WrapperFactDisposition, "reviewed" | "not-applicable"> = "unresearched",
 ): Exclude<V9WrapperFactDisposition, "reviewed" | "not-applicable"> {
   const responsibilities = statuses.flatMap((status) =>
     status.gapIds.flatMap((gapId) => {
@@ -81,14 +82,12 @@ function wrapperFactDisposition(
     }),
   );
   if (responsibilities.includes("issuer-undisclosed")) return "issuer-undisclosed";
+  if (responsibilities.includes("unresearched")) return "unresearched";
   if (responsibilities.includes("method-unsupported")) return "method-unsupported";
-  if (
-    responsibilities.includes("producer-failed") ||
-    statuses.some((status) => status.observationState === "stale")
-  ) {
-    return "producer-failed";
-  }
-  return fallback;
+  if (responsibilities.includes("producer-failed")) return "producer-failed";
+  if (responsibilities.includes("integration-missing")) return "integration-missing";
+  if (responsibilities.includes("public-data-uncurated")) return "public-data-uncurated";
+  return "unresearched";
 }
 
 function reviewedWrapperFact(
@@ -176,12 +175,9 @@ function resolveWrapperFactFromScope(
 }
 
 function allocationCanResolveWrapperFact(fact: V9WrapperLocalDimensionFact): boolean {
-  return (
-    fact.disposition === "issuer-undisclosed" ||
-    fact.disposition === "integration-missing" ||
-    fact.disposition === "producer-failed" ||
-    fact.disposition === "method-unsupported"
-  );
+  // Positive allocation evidence may resolve any unavailable fact, regardless
+  // of its missing-cause label, but must not replace reviewed risk or absence.
+  return fact.disposition !== "reviewed" && fact.disposition !== "not-applicable";
 }
 
 function resolveWrapperFactFromAllocation(
@@ -739,6 +735,8 @@ function buildWrapperExitDimensions(
     stressRequest === null
       ? []
       : observedUnwindRoutes.flatMap((route) => {
+          if (!route.capacityCurve.every((point): point is typeof point & { executionCostBps: number } =>
+            point.executionCostBps !== null)) return [];
           const point = resolveV9ExitCapacityAtRequest(route.capacityCurve, stressRequest);
           return point === null ? [] : [point.completionRatio];
         });
@@ -989,5 +987,18 @@ export function buildWrapperLocalFacts(
       evidenceRefIds: [],
     },
   };
+  for (const [factorKey, fact] of Object.entries(facts.facts)) {
+    if (fact.disposition === "reviewed" || fact.disposition === "not-applicable") continue;
+    const missing = missingLocalFact(context, {
+      componentKey: `wrapper-local:${factorKey}`, reasonCode: "missing-pillar-evidence", ownerDomain: "evidence",
+      responsibility: "unresearched", policyRuleId: "v9.wrapper.local-facts",
+      message: `The wrapper-local ${factorKey} risk datum has not been established.`,
+      evidenceRefIds: fact.evidenceRefIds,
+      causeScope: { pillar: "backing", componentKey: "wrapper-local", factorKey, routeKey: null,
+        exposureId: null, requiredDatum: factorKey },
+    });
+    fact.status = missing.status;
+    fact.disposition = context.gaps.get(missing.gapId)!.responsibility as Exclude<V9WrapperFactDisposition, "reviewed" | "not-applicable">;
+  }
   return V9WrapperLocalFactsSchema.parse(facts);
 }

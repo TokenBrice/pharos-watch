@@ -13,10 +13,10 @@ import {
   evaluateV9Exit,
   projectV9ExitEvaluationRoute,
 } from "@shared/lib/safety-score-v9/exit";
+import { evaluateV9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/control";
 import {
   V9_CANDIDATE_POLICY_V1,
 } from "@shared/lib/safety-score-v9/policy";
-import { scoreV9EvaluatedAsset } from "@shared/lib/safety-score-v9/score";
 import { rebuildFixed } from "./safety-score-v9-fact-set.test-support";
 import {
   compileSafetyScoreV9FactSetFromFixedInput,
@@ -35,6 +35,7 @@ import {
   makeV9Extension as extension,
   makeV9QueuedRedemptionFixedInput as queuedRedemptionFixedInput,
   v9RouteReview as routeReview,
+  v9Status,
 } from "../../test-helpers/v9-fixed-input";
 
 describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
@@ -87,7 +88,7 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
     expect(compiled.assets[0]!.exitRoutes.find((entry) => entry.lane === "redemption")!.capacityCurve).toEqual(observation.capacityCurve);
   });
 
-  it.each([false, true])("bounds unavailable live-only redemption with an observed DEX route (empty DEX: %s)", (emptyDex) => {
+  it.each([false, true])("excludes proven unavailable live-only redemption without reviving an exhausted DEX (empty DEX: %s)", (emptyDex) => {
     const fixed = structuredClone(queuedRedemptionFixedInput());
     const redemption = fixed.redemptionBackstopMap.alpha!;
     redemption.provider = "reserve-sync-metadata";
@@ -118,25 +119,31 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
     const reviewed = structuredClone(extension());
     reviewed.registryFingerprint = rebuilt.registryFingerprint;
     reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(rebuilt, "alpha");
-    const compiled = compileSafetyScoreV9FactSetFromFixedInput(rebuilt, reviewed);
+    const normalized = normalizeSafetyScoreV9CompilerInput(rebuilt);
+    const isolated = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(normalized,
+      materializeSafetyScoreV9FactSetExtension(normalized, reviewed));
+    expect(isolated.quarantines).toEqual([]);
+    const compiled = isolated.factSet;
     const asset = compiled.assets[0]!;
     const missing = asset.exitRoutes.find((route) => route.lane === "redemption")!;
     expect(missing.status.observationState).toBe("missing");
     expect(missing.capacityCurve).toEqual([]);
     expect(missing.scoreEligible).toBe(false);
+    expect(asset.gaps.find((gap) => missing.status.gapIds.includes(gap.gapId))!.causeProof).toMatchObject({
+      cause: "A", rejectionCode: "live-direct-capacity-unavailable",
+    });
     const result = evaluateV9Exit({
       circulatingUsd: 10_000_000,
       portfolioStatus: "incomplete",
+      gaps: asset.gaps, portfolioFactStatus: asset.exitStatus,
       routes: asset.exitRoutes.map(projectV9ExitEvaluationRoute),
     }, V9_CANDIDATE_POLICY_V1);
-    expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
-    expect(result.reasons).toContain("missing-same-notional-route");
-    expect(result.reasons).not.toContain("no-viable-exit-path");
-    const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
-    expect(evaluated.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
-    const trace = scoreV9EvaluatedAsset(evaluated.scoreInput, V9_CANDIDATE_POLICY_V1);
-    expect(trace.finalScore).not.toBeNull();
-    expect(trace.finalScore).toBeGreaterThanOrEqual(40);
+    expect(result.score).toBe(emptyDex ? V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore : 0);
+    expect(result.aggregationDisposition).toBe("included");
+    if (emptyDex) expect(result.limitedEvidenceCauses).toContain("U");
+    expect(result.routes.find((route) => route.routeKey === missing.routeKey)).toMatchObject({
+      score: null, included: false, capacityPoint: null,
+    });
 
   });
 
@@ -259,18 +266,12 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
       settlementModel: "queued",
     });
 
-    // The full production compiler-to-evaluator path, not just the unit
-    // layers: the flagged route floors Exit at the policy bounded-unknown
-    // score, emits the bounded reason, and the exit-unverified named ceiling
-    // bounds the final score.
+    // Unproven settlement remains a bounded C/U Exit floor; it is no longer a
+    // final-score named ceiling.
     const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
     expect(evaluated.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
     expect(evaluated.exit.reasons).toContain("unproven-settlement-bound");
     expect(evaluated.exit.reasons).not.toContain("no-viable-exit-path");
-    const trace = scoreV9EvaluatedAsset(evaluated.scoreInput, V9_CANDIDATE_POLICY_V1);
-    const exitCeiling = V9_CANDIDATE_POLICY_V1.policy.semantic.structural.namedReasonCeilings["exit-unverified"];
-    expect(trace.finalScore).not.toBeNull();
-    expect(trace.finalScore!).toBeLessThanOrEqual(exitCeiling);
   });
 
   it("withdraws producer eligibility when the v9 review has an unbounded settlement queue", () => {
@@ -306,7 +307,7 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
     expect(redemption.request?.settlementHorizonSec).toBe(30 * 86_400);
   });
 
-  it("preserves reviewed capacity and applies the bounded-unknown fee ceiling end to end", () => {
+  it("preserves reviewed capacity without inventing a quantified fee or admitting execution credit", () => {
     const fixed = boundedUnknownFeeRedemptionFixedInput();
     const reviewed = structuredClone(extension());
     reviewed.registryFingerprint = fixed.registryFingerprint;
@@ -327,16 +328,16 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
       {
         circulatingUsd: 10_000_000,
         portfolioStatus: "reviewed-complete",
+        gaps: compiled.assets[0]!.gaps,
+        portfolioFactStatus: compiled.assets[0]!.exitStatus,
         routes: [projectV9ExitEvaluationRoute(redemption)],
       },
       V9_CANDIDATE_POLICY_V1,
     );
-    const ceiling = V9_CANDIDATE_POLICY_V1.policy.semantic.exit.undisclosedFeeRouteScoreCeiling;
     expect(exit.score).toBeGreaterThan(0);
-    expect(exit.score).toBeLessThanOrEqual(ceiling);
     expect(exit.routes[0]).toMatchObject({
       included: true,
-      capsApplied: expect.arrayContaining(["fee-evidence:undisclosed-reviewed"]),
+      rawSameNotionalCostBps: null, components: { cost: 50 },
     });
   });
 
@@ -491,21 +492,17 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
     expect(modelLimitOnly.gaps.map((gap) => gap.reasonCode)).not.toContain("incomplete-dex-route-coverage");
   });
 
-  // Owner rulings R1-A / R1-B / R4 (2026-07-29). Only a producer that could
-  // have delivered may be blamed for an uncovered DEX exit surface.
-  it("splits an uncovered DEX exit surface between method limits and producer failures", () => {
-    // Every cohort here has an empty DEX observation set: cohort A has no
-    // reviewed pool at all, cohort B has retained pools that no execution model
-    // recognises. Whether a portfolio gap or the zero-route branch fires then
-    // depends only on whether another lane carries a route.
-    const withCoverage = (
-      coverage: Partial<
-        NonNullable<ReturnType<typeof exactFixedInput>["dexLiqMap"][string]["exitRouteObservationCoverage"]>
-      >,
-      options: { withRedemptionRoute?: boolean } = {},
-    ) => {
-      const original = options.withRedemptionRoute ? queuedRedemptionFixedInput() : exactFixedInput();
-      return rebuildFixed({
+  it.each([
+    "deploymentCensusUnsupportedMethod",
+    "deploymentCensusProviderOutage",
+    "nonExecutableEvidence:defillama-pool-shaped",
+    "executionCapabilityGate:curve-stableswap:rate-bearing-inputs",
+    "executionCapabilityGate:measured-execution:target-unresolved",
+  ])("does not upgrade the legacy %s coverage counter into pipeline proof", (unsupportedReason) => {
+    for (const withRedemptionRoute of [false, true]) {
+      const original = withRedemptionRoute ? queuedRedemptionFixedInput() : exactFixedInput();
+      const census = unsupportedReason.startsWith("deploymentCensus");
+      const fixed = rebuildFixed({
         ...original,
         dexLiqMap: {
           alpha: {
@@ -513,223 +510,229 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
             exitRouteObservations: [],
             exitRouteObservationCoverage: {
               ...original.dexLiqMap.alpha!.exitRouteObservationCoverage!,
+              status: census ? "unknown" : "unsupported",
+              retainedPoolCount: census ? 0 : 4,
               observationCount: 0,
               scoreEligibleObservationCount: 0,
               scoreEligiblePoolCount: 0,
+              scoreEligibleCapabilityPoolCount: 0,
+              unsupportedPoolCount: census ? 0 : 4,
               evidenceCounts: {},
-              ...coverage,
+              unsupportedReasons: { [unsupportedReason]: 1 },
             },
           },
         },
       });
-    };
-    const reviewedWithoutDexRoutes = () => {
       const reviewed = extension();
       reviewed.assets[0]!.routeReviews = [];
-      return reviewed;
-    };
-    const compileScenario = (fixed: ReturnType<typeof exactFixedInput>) => {
-      const factSet = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewedWithoutDexRoutes());
-      // Reclassified gaps must retain their registered policy binding in both exit branches.
+      const factSet = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
+      const asset = factSet.assets[0]!;
+      const gap = asset.gaps.find((entry) => entry.gapId ===
+        (withRedemptionRoute ? "alpha:gap:exit-portfolio-coverage" : "alpha:gap:exit-routes"));
+      // Counters are useful diagnostics, not exact-generation reader verdicts.
+      expect(gap).toMatchObject({ causeProof: { cause: "U" } });
       const queue = buildV9EvidenceGapQueue({ factSet, policy: V9_CANDIDATE_POLICY_V1 });
       expect(queue.summary.policyBindingMismatchGapCount).toBe(0);
-      return factSet.assets[0]!;
-    };
-    const portfolioGap = (fixed: ReturnType<typeof exactFixedInput>) =>
-      compileScenario(fixed).gaps.find((gap) => gap.gapId === "alpha:gap:exit-portfolio-coverage");
-
-    // R1-A: no reviewed pool exists at all because a deployment chain has no
-    // registered discovery provider. The legacy message claimed reviewed
-    // capability pools were unobserved, which is false for a zero-pool surface.
-    const censusUnsupported = portfolioGap(
-      withCoverage({
-        status: "unknown",
-        retainedPoolCount: 0,
-        observationCount: 0,
-        scoreEligibleObservationCount: 0,
-        scoreEligiblePoolCount: 0,
-        scoreEligibleCapabilityPoolCount: 0,
-        unsupportedPoolCount: 0,
-        evidenceCounts: {},
-        unsupportedReasons: { deploymentCensusUnsupportedMethod: 1 },
-      }, { withRedemptionRoute: true }),
-    );
-    expect(censusUnsupported).toMatchObject({
-      reasonCode: "incomplete-dex-route-coverage",
-      // RULED 2026-08-12: no registered discovery provider is a Pharos
-      // integration gap, not a method floor.
-      responsibility: "integration-missing",
-      observationState: "bounded-unknown",
-    });
-
-    // The other census reasons ARE producer failures and keep that attribution,
-    // but they still stop asserting reviewed capability pools they do not have.
-    const providerOutage = portfolioGap(
-      withCoverage({
-        status: "unknown",
-        retainedPoolCount: 0,
-        observationCount: 0,
-        scoreEligibleObservationCount: 0,
-        scoreEligiblePoolCount: 0,
-        scoreEligibleCapabilityPoolCount: 0,
-        unsupportedPoolCount: 0,
-        evidenceCounts: {},
-        unsupportedReasons: { deploymentCensusProviderOutage: 1 },
-      }, { withRedemptionRoute: true }),
-    );
-    expect(providerOutage).toMatchObject({
-      reasonCode: "incomplete-dex-route-coverage",
-      responsibility: "producer-failed",
-    });
-
-    // R1-B: retained pools exist, but no reviewed execution model recognises
-    // any of them and nothing is gated — Pharos has no method for this venue.
-    const noExactCapableVenue = portfolioGap(
-      withCoverage({
-        status: "unsupported",
-        retainedPoolCount: 4,
-        scoreEligiblePoolCount: 0,
-        scoreEligibleCapabilityPoolCount: 0,
-        unsupportedPoolCount: 4,
-        unsupportedReasons: { "nonExecutableEvidence:defillama-pool-shaped": 4 },
-      }, { withRedemptionRoute: true }),
-    );
-    expect(noExactCapableVenue).toMatchObject({
-      reasonCode: "incomplete-dex-route-coverage",
-      responsibility: "method-unsupported",
-    });
-
-    // 9.2: a recognised venue whose only remaining gate is a reviewed model
-    // limit (rate-bearing StableSwap) is a method floor, not a feed failure.
-    expect(
-      portfolioGap(
-        withCoverage({
-          status: "unsupported",
-          retainedPoolCount: 4,
-          scoreEligiblePoolCount: 0,
-          scoreEligibleCapabilityPoolCount: 0,
-          unsupportedPoolCount: 4,
-          unsupportedReasons: { "executionCapabilityGate:curve-stableswap:rate-bearing-inputs": 1 },
-        }, { withRedemptionRoute: true }),
-      ),
-    ).toMatchObject({ reasonCode: "incomplete-dex-route-coverage", responsibility: "method-unsupported" });
-
-    // A construction/delivery gate is still a producer failure.
-    expect(
-      portfolioGap(
-        withCoverage({
-          status: "unsupported",
-          retainedPoolCount: 4,
-          scoreEligiblePoolCount: 0,
-          scoreEligibleCapabilityPoolCount: 0,
-          unsupportedPoolCount: 4,
-          unsupportedReasons: { "executionCapabilityGate:measured-execution:target-unresolved": 1 },
-        }, { withRedemptionRoute: true }),
-      ),
-    ).toMatchObject({ reasonCode: "incomplete-dex-route-coverage", responsibility: "producer-failed" });
-
-    // An absent capability count proves nothing about the venue set and must
-    // fail closed to the producer.
-    const unknownCapabilityCount = withCoverage(
-      {
-        status: "unsupported",
-        retainedPoolCount: 4,
-        scoreEligiblePoolCount: 0,
-        scoreEligibleCapabilityPoolCount: undefined,
-        unsupportedPoolCount: 4,
-        unsupportedReasons: { "nonExecutableEvidence:defillama-pool-shaped": 4 },
-      },
-      { withRedemptionRoute: true },
-    );
-    expect(
-      unknownCapabilityCount.dexLiqMap.alpha!.exitRouteObservationCoverage!.scoreEligibleCapabilityPoolCount,
-    ).toBeUndefined();
-    expect(portfolioGap(unknownCapabilityCount)).toMatchObject({
-      reasonCode: "incomplete-dex-route-coverage",
-      responsibility: "producer-failed",
-    });
-
-    // R4 scope: the same split on the zero-route branch, where no observation
-    // of any lane exists to hang a portfolio gap on.
-    const zeroRouteAsset = compileScenario;
-    const zeroRouteCensusUnsupported = zeroRouteAsset(
-      withCoverage(
-        {
-          status: "unknown",
-          retainedPoolCount: 0,
-          observationCount: 0,
-          scoreEligibleObservationCount: 0,
-          scoreEligiblePoolCount: 0,
-          scoreEligibleCapabilityPoolCount: 0,
-          unsupportedPoolCount: 0,
-          evidenceCounts: {},
-          unsupportedReasons: { deploymentCensusUnsupportedMethod: 1 },
-        },
-      ),
-    );
-    expect(zeroRouteCensusUnsupported.exitRoutes).toEqual([]);
-    expect(zeroRouteCensusUnsupported.exitStatus.observationState).toBe("unsupported");
-    expect(zeroRouteCensusUnsupported.gaps).toContainEqual(
-      expect.objectContaining({
-        gapId: "alpha:gap:exit-routes",
-        reasonCode: "missing-runtime-route-evidence",
-        responsibility: "integration-missing",
-        observationState: "unsupported",
-      }),
-    );
-
-    const zeroRouteProviderOutage = zeroRouteAsset(
-      withCoverage(
-        {
-          status: "unknown",
-          retainedPoolCount: 0,
-          observationCount: 0,
-          scoreEligibleObservationCount: 0,
-          scoreEligiblePoolCount: 0,
-          scoreEligibleCapabilityPoolCount: 0,
-          unsupportedPoolCount: 0,
-          evidenceCounts: {},
-          unsupportedReasons: { deploymentCensusProviderOutage: 1 },
-        },
-      ),
-    );
-    expect(zeroRouteProviderOutage.gaps).toContainEqual(
-      expect.objectContaining({
-        gapId: "alpha:gap:exit-routes",
-        reasonCode: "missing-runtime-route-evidence",
-        responsibility: "producer-failed",
-        observationState: "missing",
-      }),
-    );
-
-    // ODR-B3 (2026-08-12 ruling, extended to the zero-route branch): retained
-    // pools exist but no reviewed execution model recognises any of them.
-    // Before this fix the zero-route branch only ever consulted the census
-    // classifier and fell through to `producer-failed` here; it must now
-    // match the portfolio-coverage branch's `method-unsupported` attribution.
-    // The reason code stays `missing-runtime-route-evidence` — the swap to
-    // `unsupported-same-notional-route` rides the pending v9.04 policy bump.
-    const zeroRouteNoExactCapableVenue = zeroRouteAsset(
-      withCoverage({
-        status: "unsupported",
-        retainedPoolCount: 4,
-        scoreEligiblePoolCount: 0,
-        scoreEligibleCapabilityPoolCount: 0,
-        unsupportedPoolCount: 4,
-        unsupportedReasons: { "nonExecutableEvidence:defillama-pool-shaped": 4 },
-      }),
-    );
-    expect(zeroRouteNoExactCapableVenue.exitRoutes).toEqual([]);
-    expect(zeroRouteNoExactCapableVenue.exitStatus.observationState).toBe("unsupported");
-    expect(zeroRouteNoExactCapableVenue.gaps).toContainEqual(
-      expect.objectContaining({
-        gapId: "alpha:gap:exit-routes",
-        reasonCode: "missing-runtime-route-evidence",
-        responsibility: "method-unsupported",
-        observationState: "unsupported",
-      }),
-    );
-
+      const result = evaluateV9Exit({
+        circulatingUsd: asset.supply.circulatingUsd,
+        gaps: asset.gaps, portfolioFactStatus: asset.exitStatus,
+        routes: asset.exitRoutes.map(projectV9ExitEvaluationRoute),
+      }, V9_CANDIDATE_POLICY_V1);
+      expect(result.aggregationDisposition).toBe("included");
+    }
   });
 
+});
+
+describe("cause-bound Exit compiler admission", () => {
+  it.each([
+    { evidenceKind: "measured-executable-depth" as const, tier: "live-direct" as const },
+    { evidenceKind: "direct-orderbook-depth" as const, tier: "live-direct" as const },
+    { evidenceKind: "reserve-based-amm-simulation" as const, tier: "heuristic" as const },
+  ])("retains established fresh $evidenceKind capacity without a missing-method discount", ({ evidenceKind, tier }) => {
+    const draft = structuredClone(exactFixedInput());
+    const observation = draft.dexLiqMap.alpha!.exitRouteObservations![0]!;
+    observation.evidenceKind = evidenceKind;
+    observation.capacityEvidenceTier = "unknown";
+    observation.observedAt = draft.clockSec;
+    if (evidenceKind === "direct-orderbook-depth") observation.routeFamily = "dex-orderbook";
+    const fixed = rebuildFixed(draft);
+    const reviewed = structuredClone(extension());
+    reviewed.registryFingerprint = fixed.registryFingerprint;
+    for (const route of reviewed.assets[0]!.routeReviews) route.modelConfidence = "high";
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed).assets[0]!;
+    const route = asset.exitRoutes.find((route) => route.lane === "dex")!;
+    const result = evaluateV9Exit({ circulatingUsd: asset.supply.circulatingUsd, gaps: asset.gaps,
+      portfolioFactStatus: asset.exitStatus, routes: [projectV9ExitEvaluationRoute(route)] }, V9_CANDIDATE_POLICY_V1);
+    expect(result.routes[0]).toMatchObject({ included: true, capacityEvidenceTier: tier, confidenceFactor: 1,
+      confidenceDimensions: { capacityMethod: { factor: 1, cause: null, causeGapIds: [] } } });
+  });
+
+  it("does not let a recognized measured method revive stale DEX capacity", () => {
+    const draft = structuredClone(exactFixedInput({ clockSec: 20_000 }));
+    const observation = draft.dexLiqMap.alpha!.exitRouteObservations![0]!;
+    observation.evidenceKind = "measured-executable-depth";
+    observation.observedAt = 1;
+    const fixed = rebuildFixed(draft);
+    const reviewed = structuredClone(extension({ clockSec: fixed.clockSec }));
+    reviewed.registryFingerprint = fixed.registryFingerprint;
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed).assets[0]!;
+    const route = asset.exitRoutes.find((route) => route.lane === "dex")!;
+    const result = evaluateV9Exit({ circulatingUsd: asset.supply.circulatingUsd, gaps: asset.gaps,
+      portfolioFactStatus: asset.exitStatus, routes: [projectV9ExitEvaluationRoute(route)] }, V9_CANDIDATE_POLICY_V1);
+    expect(result.routes[0]).toMatchObject({ included: false, score: null, capacityPoint: null,
+      exclusionReason: "missing-runtime-route-evidence" });
+  });
+
+  it("transports a same-run queue/proxy tier without clearing its queue, limits or eligibility", () => {
+    const draft = structuredClone(queuedRedemptionFixedInput(300, false));
+    draft.redemptionBackstopMap.alpha!.capacityProfile!.exitRouteObservations![0]!.capacityEvidenceTier = "live-queue-proxy";
+    const fixed = rebuildFixed(draft);
+    const reviewed = structuredClone(extension());
+    reviewed.registryFingerprint = fixed.registryFingerprint;
+    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha");
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed).assets[0]!;
+    const route = asset.exitRoutes.find((route) => route.lane === "redemption")!;
+    const result = evaluateV9Exit({ circulatingUsd: asset.supply.circulatingUsd, gaps: asset.gaps,
+      portfolioFactStatus: asset.exitStatus, routes: [projectV9ExitEvaluationRoute(route)] }, V9_CANDIDATE_POLICY_V1);
+    expect(result.routes[0]!.confidenceDimensions).toMatchObject({
+      observation: { factor: 1 }, model: { factor: 1 }, capacityMethod: { factor: 0.75 },
+    });
+    expect(result.routes[0]).toMatchObject({ capacityEvidenceTier: "live-queue-proxy",
+      queueDepthUsd: 1_500_000, dailyLimitUsd: 1_000_000, minRedeemUsd: 1_000_000,
+      eligibilityMultiplier: 0.9 });
+    expect(route.settlementModel).toBe("queued");
+    expect(route.scoreEligible).toBe(false);
+    expect(result.score).toBeGreaterThan(0);
+  });
+
+  it("retains a stale captured observation as diagnostic A rather than executable current capacity", () => {
+    const draft = structuredClone(queuedRedemptionFixedInput(300, true));
+    draft.redemptionBackstopMap.alpha!.capacityProfile!.exitRouteObservations![0]!.observedAt = draft.clockSec - 501;
+    const fixed = rebuildFixed(draft);
+    const reviewed = structuredClone(extension());
+    reviewed.registryFingerprint = fixed.registryFingerprint;
+    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha");
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed).assets[0]!;
+    const route = asset.exitRoutes.find((route) => route.lane === "redemption")!;
+    const capacityGap = asset.gaps.find((gap) => route.status.gapIds.includes(gap.gapId))!;
+    expect(capacityGap.causeProof).toMatchObject({ cause: "A",
+      sourceGenerationId: fixed.redemptionGenerationId });
+    const result = evaluateV9Exit({ circulatingUsd: asset.supply.circulatingUsd, gaps: asset.gaps,
+      portfolioFactStatus: asset.exitStatus, routes: [projectV9ExitEvaluationRoute(route)] }, V9_CANDIDATE_POLICY_V1);
+    expect(result).toMatchObject({ score: null, aggregationDisposition: "excluded-a-b", limitedEvidenceCauses: [] });
+    expect(result.routes[0]).toMatchObject({ score: null, included: false, capacityPoint: null });
+  });
+
+  it("rejects the entire 65-route reader inventory with scoped A proof and retains the last diagnostic", () => {
+    const queue = queuedRedemptionFixedInput(300, true);
+    const observation = queue.redemptionBackstopMap.alpha!.capacityProfile!.exitRouteObservations![0]!;
+    const redemptionReview = buildSafetyScoreV9RouteReviews(queue, "alpha").find((route) => route.lane === "redemption")!;
+    const fixed = exactFixedInput();
+    const reviewed = structuredClone(extension());
+    reviewed.registryFingerprint = fixed.registryFingerprint;
+    const retained = Array.from({ length: 65 }, (_, index) => ({
+      lane: "redemption" as const, observation: { ...structuredClone(observation),
+        routeId: `redemption:alpha:${String(index).padStart(2, "0")}` },
+      disposition: "observed" as const, rejection: null,
+    }));
+    reviewed.assets[0]!.retainedRoutes = retained;
+    reviewed.assets[0]!.routeReviews = [...reviewed.assets[0]!.routeReviews,
+      ...retained.map((route) => ({ ...structuredClone(redemptionReview), routeId: route.observation.routeId }))];
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed).assets[0]!;
+    const overflow = asset.gaps.find((gap) => gap.causeProof.cause === "A" &&
+      gap.causeProof.rejectionCode === "route-inventory-over-limit")!;
+    expect(overflow.causeScope).toMatchObject({ pillar: "exit", componentKey: "exit-routes", requiredDatum: "route-inventory" });
+    expect(overflow.causeProof).toMatchObject({ cause: "A", producerState: "unsupported-reader",
+      sourceGenerationId: fixed.sourceGeneration });
+    const result = evaluateV9Exit({ circulatingUsd: asset.supply.circulatingUsd, gaps: asset.gaps,
+      portfolioFactStatus: asset.exitStatus, routes: asset.exitRoutes.map(projectV9ExitEvaluationRoute) }, V9_CANDIDATE_POLICY_V1);
+    expect(result).toMatchObject({ score: null, aggregationDisposition: "excluded-a-b",
+      primaryRouteKey: null, diversificationRouteKey: null, supportedComponentKeys: [] });
+    const last = asset.exitRoutes.find((route) => route.routeId === "redemption:alpha:64")!;
+    expect(result.routes.find((route) => route.routeKey === last.routeKey)).toMatchObject({
+      score: null, included: false, capacityPoint: null, cause: "A", effectiveScoringWeight: 0,
+    });
+  });
+});
+
+describe("rejected-source route factor exclusion", () => {
+  it.each([false, true])("keeps rejected runtime factors non-known with a reviewed route: %s", (withReview) => {
+    const queue = queuedRedemptionFixedInput(300, true);
+    const observation = structuredClone(queue.redemptionBackstopMap.alpha!.capacityProfile!.exitRouteObservations![0]!);
+    observation.routeId = "redemption:alpha:rejected";
+    observation.capacityEvidenceTier = "live-direct";
+    const fixed = exactFixedInput();
+    const reviewed = structuredClone(extension());
+    reviewed.registryFingerprint = fixed.registryFingerprint;
+    reviewed.assets[0]!.retainedRoutes = [{ lane: "redemption", observation, disposition: "rejected",
+      rejection: { code: "captured-reader-rejected", reason: "The captured producer rejected this route.", rejectedAtSec: fixed.clockSec } }];
+    if (withReview) {
+      const route = buildSafetyScoreV9RouteReviews(queue, "alpha").find((route) => route.lane === "redemption")!;
+      reviewed.assets[0]!.routeReviews.push({ ...route, routeId: observation.routeId });
+    }
+    const normalized = normalizeSafetyScoreV9CompilerInput(fixed);
+    const compiled = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(normalized,
+      materializeSafetyScoreV9FactSetExtension(normalized, reviewed));
+    expect(compiled.quarantines).toEqual([]);
+    const asset = compiled.factSet.assets[0]!;
+    const route = asset.exitRoutes.find((route) => route.routeId === observation.routeId)!;
+    for (const factorKey of ["capacity", "observationConfidence", "cost", "capacityEvidenceTier"] as const) {
+      const status = route.factorStatuses[factorKey]!;
+      expect(status.observationState).not.toBe("known");
+      const gap = asset.gaps.find((gap) => status.gapIds.includes(gap.gapId))!;
+      expect(gap.causeProof).toMatchObject({ cause: "A", rejectionCode: "captured-reader-rejected" });
+      expect(gap.causeScope).toMatchObject({ routeKey: route.routeKey, factorKey, requiredDatum: factorKey });
+    }
+    const result = evaluateV9Exit({ circulatingUsd: asset.supply.circulatingUsd, gaps: asset.gaps,
+      portfolioFactStatus: asset.exitStatus, routes: [projectV9ExitEvaluationRoute(route)] }, V9_CANDIDATE_POLICY_V1);
+    expect(result).toMatchObject({ score: null, aggregationDisposition: "excluded-a-b" });
+    expect(result.routes[0]).toMatchObject({ included: false, capacityPoint: null });
+  });
+});
+
+describe("compiled Control causal minimum regressions", () => {
+  it.each([
+    { reconciliation: "internal-ledger" as const, cap: "unbounded" as const, supervision: "none" as const, missingWholeSupply: true },
+    { reconciliation: "continuous" as const, cap: "unbounded" as const, supervision: "none" as const, missingWholeSupply: false },
+    { reconciliation: "internal-ledger" as const, cap: "bounded" as const, supervision: "none" as const, missingWholeSupply: false },
+    { reconciliation: "internal-ledger" as const, cap: "unbounded" as const, supervision: "prudential" as const, missingWholeSupply: false },
+  ])("scopes whole-supply absence only to $reconciliation/$cap/$supervision", ({ reconciliation, cap, supervision, missingWholeSupply }) => {
+    const fixed = exactFixedInput();
+    const reviewed = structuredClone(extension());
+    reviewed.registryFingerprint = fixed.registryFingerprint;
+    const overlay = reviewed.assets[0]!;
+    overlay.controlReview = { state: "reviewed-controls", controls: [{
+      controlKey: "mint:issuer", deploymentKey: "ethereum:issuer", controlKind: "mint", scope: "global",
+      capabilities: ["mint"], capSemantics: { kind: cap, bound: cap === "bounded" ? { amount: 0.1, unit: "supply-fraction" } : null },
+      claimImpairment: cap, economicLossScope: "global-claim",
+      authority: { authorityKey: "ethereum:issuer", model: "eoa", threshold: null },
+      delaySec: null, materialSupplyShare: null, keyCustody: "unknown", modulesOrGuards: "unknown",
+      incidentState: "none", failureDomains: [{ kind: "mint-control", key: "ethereum:issuer" }],
+    }] };
+    overlay.economicControlReview!.mint = {
+      status: v9Status("known", "v9.control.mint-review"), controlKey: "mint:issuer", reconciliation, supervision,
+      latestResolvedIncidentAtSec: null, upgrade: { state: "not-applicable", controlKey: null },
+    };
+    const normalized = normalizeSafetyScoreV9CompilerInput(fixed);
+    const compiled = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(normalized,
+      materializeSafetyScoreV9FactSetExtension(normalized, reviewed));
+    expect(compiled.quarantines).toEqual([]);
+    const asset = compiled.factSet.assets[0]!;
+    const result = evaluateV9EconomicControlAssetFacts(asset, { assetId: asset.assetId, ...asset.economicControlReview },
+      V9_CANDIDATE_POLICY_V1);
+    const mint = result.components.find((component) => component.kind === "mint")!;
+    if (missingWholeSupply) {
+      const status = asset.economicControlReview.mint.factorStatuses!.reconciliation!;
+      expect(status.observationState).not.toBe("known");
+      const gap = asset.gaps.find((gap) => status.gapIds.includes(gap.gapId))!;
+      expect(gap.causeScope).toMatchObject({ pillar: "control", componentKey: "economic-control:mint",
+        factorKey: "reconciliation", requiredDatum: "reconciliation" });
+      expect(mint).toMatchObject({ score: 52, cause: "U", causeGapIds: [gap.gapId], scoringDisposition: "bounded-uncertainty" });
+    } else {
+      expect(mint).toMatchObject({ cause: null, scoringDisposition: "included" });
+    }
+    expect(result.score).toBe(Math.min(...result.components
+      .filter((component) => component.binding && component.score !== null).map((component) => component.score!)));
+  });
 });

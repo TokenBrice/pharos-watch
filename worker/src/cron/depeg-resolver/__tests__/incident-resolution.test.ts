@@ -647,7 +647,7 @@ describe("loadDdrContext", () => {
       updatedAt: NOW_SEC - 60,
       cards: [card],
       publicationHealth: {
-        schemaVersion: 1,
+        schemaVersion: 2,
         status: "held",
         acceptedPublicationGenerationId: "report-cards:v9:1",
         acceptedAtSec: NOW_SEC - 120,

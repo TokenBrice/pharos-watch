@@ -100,12 +100,12 @@ describe("hasV9DangerSignal", () => {
 });
 
 describe("Lever 1 — insufficient-evidence withhold", () => {
-  it("withholds a >=2-limited, no-danger, would-be-F asset to NR", () => {
+  it("withholds a C-limited backing and C-limited second pillar below 55 without danger", () => {
     const trace = scoreV9EvaluatedAsset(
       assetInput({
         pillars: {
-          backing: pillar(35, { evidenceLevel: "limited" }),
-          exit: pillar(35, { evidenceLevel: "limited" }),
+          backing: pillar(35, { evidenceLevel: "limited", limitedEvidenceCauses: ["C"], causeGapIds: ["gap:backing"] }),
+          exit: pillar(35, { evidenceLevel: "limited", limitedEvidenceCauses: ["C"], causeGapIds: ["gap:exit"] }),
           control: pillar(45),
         },
       }),
@@ -114,12 +114,132 @@ describe("Lever 1 — insufficient-evidence withhold", () => {
     expect(trace.finalScore).toBeNull();
     expect(trace.finalGrade).toBe("NR");
     expect(trace.nrReasons.map((reason) => reason.code)).toContain("insufficient-evidence");
+    expect(trace.nrReasons).toContainEqual(expect.objectContaining({
+      code: "insufficient-evidence", cause: "C", contributingPillars: ["backing", "exit"],
+      causeGapIds: ["gap:backing", "gap:exit"],
+    }));
+  });
+
+  it("treats U-limited backing and a U-limited second pillar as collective witnesses below 55", () => {
+    const trace = scoreV9EvaluatedAsset(assetInput({ pillars: {
+      backing: pillar(50, { evidenceLevel: "limited", limitedEvidenceCauses: ["U"], causeGapIds: ["gap:backing"] }),
+      exit: pillar(50, { evidenceLevel: "limited", limitedEvidenceCauses: ["U"], causeGapIds: ["gap:exit"] }),
+      control: pillar(60),
+    } }), POLICY);
+    expect(trace.finalGrade).toBe("NR");
+    expect(trace.finalScore).toBeNull();
+    expect(trace.nrReasons).toEqual([expect.objectContaining({
+      code: "insufficient-evidence", field: "evidenceLevel", cause: "U",
+      contributingPillars: ["backing", "exit"], causeGapIds: ["gap:backing", "gap:exit"],
+    })]);
+  });
+
+  it("does not count a witness-less limited pillar or borrow its unrelated diagnostic gaps", () => {
+    const baseline = scoreV9EvaluatedAsset(assetInput({ pillars: {
+      backing: pillar(50, { evidenceLevel: "limited", limitedEvidenceCauses: ["C"], causeGapIds: ["gap:backing"] }),
+      exit: pillar(50),
+      control: pillar(60),
+    } }), POLICY);
+    const trace = scoreV9EvaluatedAsset(assetInput({ pillars: {
+      backing: pillar(50, { evidenceLevel: "limited", limitedEvidenceCauses: ["C"], causeGapIds: ["gap:backing"] }),
+      exit: pillar(50, {
+        evidenceLevel: "limited", limitedEvidenceCauses: ["U"],
+        causeGapIds: ["gap:unrelated-diagnostic"], limitingCauseGapIds: [],
+      }),
+      control: pillar(60),
+    } }), POLICY);
+    expect(trace.preCapScore).toBeLessThan(55);
+    expect(trace.finalScore).toBe(baseline.finalScore);
+    expect(trace.finalGrade).toBe(baseline.finalGrade);
+    expect(trace.nrReasons).toEqual([]);
+    expect(trace.limitingPillars.map((item) => item.pillar)).toEqual(["backing"]);
+  });
+
+  it.each(["C", "U"] as const)("does not let an unrelated %s diagnostic count a strong second pillar", (cause) => {
+    const trace = scoreV9EvaluatedAsset(assetInput({ pillars: {
+      backing: pillar(50, { evidenceLevel: "limited", limitedEvidenceCauses: ["C"], causeGapIds: ["gap:backing"] }),
+      exit: pillar(50, { evidenceLevel: "strong", limitedEvidenceCauses: [cause], causeGapIds: ["gap:diagnostic"] }),
+      control: pillar(60),
+    } }), POLICY);
+    expect(trace.finalGrade).not.toBe("NR");
+    expect(trace.nrReasons).toEqual([]);
+    expect(trace.limitingPillars.map((item) => item.pillar)).toEqual(["backing"]);
+  });
+
+  it("counts a U-limited second pillar alongside C-limited backing", () => {
+    const trace = scoreV9EvaluatedAsset(assetInput({ pillars: {
+      backing: pillar(50, { evidenceLevel: "limited", limitedEvidenceCauses: ["C"], causeGapIds: ["gap:backing"] }),
+      exit: pillar(50, { evidenceLevel: "limited", limitedEvidenceCauses: ["U"], causeGapIds: ["gap:exit"] }),
+      control: pillar(60),
+    } }), POLICY);
+    expect(trace.finalGrade).toBe("NR");
+    expect(trace.nrReasons).toEqual([expect.objectContaining({
+      code: "insufficient-evidence", cause: "C", contributingPillars: ["backing", "exit"],
+    })]);
+  });
+
+  it.each(["A", "B"] as const)("never counts %s-only evidence gaps toward Lever1", (cause) => {
+    const trace = scoreV9EvaluatedAsset(assetInput({ pillars: {
+      backing: pillar(50, { evidenceLevel: "limited", limitedEvidenceCauses: [cause], causeGapIds: ["gap:backing"] }),
+      exit: pillar(50, { evidenceLevel: "limited", limitedEvidenceCauses: [cause], causeGapIds: ["gap:exit"] }),
+      control: pillar(60),
+    } }), POLICY);
+    expect(trace.finalScore).toBeLessThan(55);
+    expect(trace.finalGrade).not.toBe("NR");
+    expect(trace.limitingPillars).toEqual([]);
+    expect(trace.nrReasons).toEqual([]);
+  });
+
+  it("does not withhold at the exclusive score threshold of 55", () => {
+    const trace = scoreV9EvaluatedAsset(assetInput({ pillars: {
+      backing: pillar(55, { evidenceLevel: "limited", limitedEvidenceCauses: ["C"], causeGapIds: ["gap:backing"] }),
+      exit: pillar(55, { evidenceLevel: "limited", limitedEvidenceCauses: ["C"], causeGapIds: ["gap:exit"] }),
+      control: pillar(55),
+    } }), POLICY);
+    expect(trace.finalScore).toBe(55);
+    expect(trace.nrReasons).toEqual([]);
+  });
+
+  it("requires backing among the two C/D-limited pillars", () => {
+    const trace = scoreV9EvaluatedAsset(assetInput({ pillars: {
+      backing: pillar(50),
+      exit: pillar(50, { evidenceLevel: "limited", limitedEvidenceCauses: ["C"], causeGapIds: ["gap:exit"] }),
+      control: pillar(50, { evidenceLevel: "limited", limitedEvidenceCauses: ["C"], causeGapIds: ["gap:control"] }),
+    } }), POLICY);
+    expect(trace.finalScore).toBe(50);
+    expect(trace.nrReasons).toEqual([]);
+  });
+
+  it("records D rather than U when measured evidence supplies the collective witnesses", () => {
+    const trace = scoreV9EvaluatedAsset(assetInput({ pillars: {
+      backing: pillar(50, { evidenceLevel: "limited", limitedEvidenceCauses: ["D"], causeGapIds: ["gap:backing"] }),
+      exit: pillar(50, { evidenceLevel: "limited", limitedEvidenceCauses: ["D"], causeGapIds: ["gap:exit"] }),
+      control: pillar(50),
+    } }), POLICY);
+    expect(trace.nrReasons).toEqual([expect.objectContaining({
+      code: "insufficient-evidence", cause: "D", contributingPillars: ["backing", "exit"],
+    })]);
+    expect(trace.finalScore).toBeNull();
   });
 
   it("withholds at the formula boundary when the limited count is threaded", () => {
-    const trace = scoreV9Input(rawInput({ evidenceLevel: "limited" }), POLICY, [], 2, true);
+    const trace = scoreV9Input(rawInput({ evidenceLevel: "limited" }), POLICY, [], 2, true, [], [], [], [], [], [], undefined, {
+      includedPillars: ["backing", "exit", "control"], partialEvidence: null,
+      limitingPillars: [{ pillar: "backing", causes: ["C"], causeGapIds: ["gap:backing"] }, { pillar: "exit", causes: ["C"], causeGapIds: ["gap:exit"] }],
+    });
     expect(trace.finalGrade).toBe("NR");
     expect(trace.nrReasons.map((reason) => reason.code)).toContain("insufficient-evidence");
+  });
+
+  it("counts U collective witnesses at the formula boundary", () => {
+    const trace = scoreV9Input(rawInput({ pillars: { backing: 50, exit: 50, control: 60 }, evidenceLevel: "limited" }), POLICY, [], 2, true, [], [], [], [], [], [], undefined, {
+      includedPillars: ["backing", "exit", "control"], partialEvidence: null,
+      limitingPillars: [{ pillar: "backing", causes: ["U"], causeGapIds: ["gap:backing"] }, { pillar: "exit", causes: ["U"], causeGapIds: ["gap:exit"] }],
+    });
+    expect(trace.finalGrade).toBe("NR");
+    expect(trace.nrReasons).toEqual([expect.objectContaining({
+      code: "insufficient-evidence", cause: "U", contributingPillars: ["backing", "exit"],
+    })]);
   });
 
   it("keeps a measured-adverse control-25 asset rated with explicit structural attribution", () => {
@@ -188,8 +308,12 @@ describe("Lever 1 — insufficient-evidence withhold", () => {
       evidenceLevel: "limited",
     });
 
-    const baseline = scoreV9Input(input, POLICY, [], 2, true);
-    const changed = scoreV9Input(input, counterfactual, [], 2, true);
+    const coverage = {
+      includedPillars: ["backing", "exit", "control"] as const, partialEvidence: null,
+      limitingPillars: [{ pillar: "backing" as const, causes: ["C" as const], causeGapIds: ["gap:backing"] }, { pillar: "exit" as const, causes: ["C" as const], causeGapIds: ["gap:exit"] }],
+    };
+    const baseline = scoreV9Input(input, POLICY, [], 2, true, [], [], [], [], [], [], undefined, coverage);
+    const changed = scoreV9Input(input, counterfactual, [], 2, true, [], [], [], [], [], [], undefined, coverage);
 
     // Floor 0.9: 0.85 is danger, so the measured-adverse peg stays rated.
     expect(baseline.finalGrade).toBe("F");
@@ -220,7 +344,7 @@ describe("Workstream A — attributable D/F ratings", () => {
     expect(trace.caps.map((cap) => cap.kind)).not.toContain("evidence-floor:d");
     expect(trace.adverseAttribution).toEqual([]);
     expect(trace.nrReasons).toContainEqual(
-      expect.objectContaining({ field: "adverseAttribution", responsibility: "method-unsupported" }),
+      expect.objectContaining({ code: "f-without-measured-adverse", field: "adverseAttribution", cause: "U" }),
     );
   });
 
@@ -337,27 +461,6 @@ describe("Reshape-v3 T5 — seasoned-issuer credit (R2)", () => {
     expect(policy.backing.assuranceSeasonedCredit).toEqual({ points: 3, minMonths: 60 });
   });
 
-  it("applies seasoning at 60 months without crossing the next mint rung", () => {
-    const control = makeDeploymentControl("mint:seasoned", "mint", {
-      authority: { authorityKey: "issuer", model: "issuer-backend", threshold: null },
-      capSemantics: { kind: "unbounded", bound: null },
-      claimImpairment: "unbounded",
-    });
-    for (const [trackRecordMonths, expected] of [[59, 35], [60, 44]]) {
-      const result = evaluateV9EconomicControl(makeEconomicControlArgs({
-        facts: makeEconomicControlFacts([control]),
-        mint: makeReviewedMintInput(control.controlKey, {
-          reconciliation: "unknown",
-          supervision: "none",
-        }),
-        trackRecordMonths,
-      }));
-      expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
-        posture: "unbounded-reconciliation-unknown",
-        score: expected,
-      });
-    }
-  });
 
   it("does not award seasoning above the resolved no-mint top rung", () => {
     for (const trackRecordMonths of [59, 60]) {

@@ -12,6 +12,7 @@ import {
   type V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
 import type { V9EvidenceResponsibility } from "../../types/safety-score-v9-facts";
+import type { V9EvidenceCause, V9PartialEvidence, V9RatingStatus } from "../../types/safety-score-v9-causes";
 import {
   aggregateV9SmoothBoundedHeadroom,
   type V9AggregationStrategy,
@@ -21,7 +22,7 @@ import {
   assertV9ReasonCodesRegistered,
   assertV9UnresolvedFactsMatchPolicy,
   assertV9ValidatedPolicyEnvelope,
-  resolveV9ReasonPolicy,
+  resolveV9ReasonTreatment,
 } from "./policy";
 import {
   resolveV9ScopedRisk,
@@ -29,7 +30,17 @@ import {
   type V9ScopedRiskSignal,
 } from "./scoped-risk";
 import { clampScore } from "../math";
-import { canonicalUniqueBy, compareText } from "./primitives";
+import { canonicalUniqueBy, compareText, deepFreeze } from "./primitives";
+
+const validatedScoringInputs = new WeakSet<object>();
+
+/** Validate and freeze a reusable formula input without retaining it after its caller releases it. */
+export function parseV9ScoringInput(rawInput: unknown): V9ScoringInput {
+  const input = V9ScoringInputSchema.parse(rawInput);
+  deepFreeze(input);
+  validatedScoringInputs.add(input);
+  return input;
+}
 
 export type { V9AggregationStrategy } from "./aggregation";
 
@@ -53,6 +64,9 @@ export interface V9NRReason {
   message: string;
   field?: string;
   responsibility?: V9EvidenceResponsibility;
+  cause?: V9EvidenceCause | null;
+  causeGapIds?: readonly string[];
+  contributingPillars?: readonly V9QualityPillar[];
   /** Internal stable origin key for downstream causal-path attribution. */
   causalKey?: string;
 }
@@ -96,6 +110,8 @@ export interface V9BoundedUncertaintyAttribution {
   message: string;
   responsibility: V9BoundedUncertaintyResponsibility;
   boundedness: "exposure-bounded" | "globally-bounded";
+  cause?: "C" | "U";
+  causeGapIds?: readonly string[];
 }
 
 export type V9ParentBoundedUncertaintyAttribution = V9BoundedUncertaintyAttribution & {
@@ -105,10 +121,33 @@ export type V9ParentBoundedUncertaintyAttribution = V9BoundedUncertaintyAttribut
 export interface V9PillarReasonProvenance {
   pillar: V9QualityPillar;
   fact: V9UnresolvedFact;
+  componentScore?: number;
+  effectiveScoringWeight?: number;
+}
+
+export interface V9ScoreCoverage {
+  includedPillars: readonly V9QualityPillar[];
+  partialEvidence: V9PartialEvidence | null;
+  limitingPillars: readonly {
+    pillar: V9QualityPillar;
+    causes: readonly V9EvidenceCause[];
+    causeGapIds: readonly string[];
+  }[];
+  parentStatus?: V9RatingStatus;
 }
 
 export interface V9ScoreTrace {
   assetId: string;
+  ratingStatus: V9RatingStatus;
+  partialEvidence: V9PartialEvidence | null;
+  includedPillars: readonly V9QualityPillar[];
+  excludedPillars: readonly V9QualityPillar[];
+  effectiveScoringWeights: Readonly<Record<V9QualityPillar, number>> | null;
+  supportCeiling: number | null;
+  limitingPillars: V9ScoreCoverage["limitingPillars"];
+  causeGapIds: readonly string[];
+  limitedEvidenceCauses: readonly V9EvidenceCause[];
+  diagnosticPillarScores: V9ScoringInput["pillars"];
   policyId: string;
   policyDigest: string;
   configName: string;
@@ -134,7 +173,7 @@ export interface V9ScoreTrace {
   finalScore: number | null;
   /** Ordinary post-cap score consumed by downstream serial dependencies. */
   inheritableScore: number | null;
-  finalGrade: V9Grade;
+  finalGrade: V9Grade | null;
   adverseAttribution: readonly V9AdverseAttribution[];
   boundedUncertaintyAttribution: readonly V9BoundedUncertaintyAttribution[];
   unresolvedFacts: readonly V9UnresolvedFact[];
@@ -200,7 +239,7 @@ function canonicalBoundedUncertaintyAttribution(
   values: readonly V9BoundedUncertaintyAttribution[],
 ): V9BoundedUncertaintyAttribution[] {
   return canonicalUniqueBy(
-    values,
+    values.filter((value) => (value.causeGapIds?.length ?? 0) > 0),
     (value) =>
       [
         value.source,
@@ -209,6 +248,8 @@ function canonicalBoundedUncertaintyAttribution(
         value.message,
         value.responsibility,
         value.boundedness,
+        value.cause ?? "U",
+        ...(value.causeGapIds ?? []),
       ].join("\u0000"),
     (left, right) =>
       compareText(left.source, right.source) ||
@@ -366,7 +407,7 @@ function unresolvedFactAffectedScore(
   policy: V9ValidatedPolicyEnvelope,
 ): boolean {
   if (fact.responsibility !== "measured-adverse") return false;
-  const resolved = resolveV9ReasonPolicy(policy, fact.code);
+  const resolved = resolveV9ReasonTreatment(policy, fact.code, fact.cause ?? "U");
   if (
     resolved.reason.boundedness === "exposure-bounded" ||
     resolved.reason.boundedness === "globally-bounded"
@@ -408,20 +449,10 @@ function boundedUncertaintyForFact(
   ) {
     return null;
   }
-  const resolved = resolveV9ReasonPolicy(policy, fact.code);
-  if (
-    resolved.critical ||
-    (
-      resolved.reason.boundedness !== "exposure-bounded" &&
-      resolved.reason.boundedness !== "globally-bounded"
-    ) ||
-    (
-      resolved.reason.defaultTreatment !== "pillar" &&
-      resolved.reason.defaultTreatment !== "ceiling"
-    )
-  ) {
-    return null;
-  }
+  const cause = fact.cause ?? "U";
+  if (cause !== "C" && cause !== "U") return null;
+  const resolved = resolveV9ReasonTreatment(policy, fact.code, cause);
+  if (resolved.critical || resolved.treatment === "diagnostic") return null;
   const cMinusFloor = v9CMinusFloor(policy);
   const pillarReasonAffectedScore = pillarReasonProvenance.some(
     (candidate) =>
@@ -430,23 +461,29 @@ function boundedUncertaintyForFact(
       candidate.fact.reason === fact.reason &&
       candidate.fact.responsibility === fact.responsibility &&
       pillars[candidate.pillar] !== null &&
-      pillars[candidate.pillar]! < cMinusFloor,
+      (pillars[candidate.pillar]! < cMinusFloor ||
+        (candidate.componentScore !== undefined && candidate.componentScore < cMinusFloor &&
+          (candidate.effectiveScoringWeight ?? 0) > 0)),
   );
   const ceilingAffectedScore =
-    resolved.reason.defaultTreatment === "ceiling" &&
+    resolved.treatment === "ceiling" &&
     resolved.ceiling !== null &&
     bindingCap?.source === "evidence" &&
     bindingCap.kind === resolved.ceiling.kind &&
     bindingCap.limit === resolved.ceiling.limit &&
     bindingCap.reason === fact.reason;
   if (!pillarReasonAffectedScore && !ceilingAffectedScore) return null;
+  const causeGapIds = fact.causeGapIds ?? (fact.sourceGapId == null ? [] : [fact.sourceGapId]);
+  if (causeGapIds.length === 0) return null;
   return {
     source: "reason",
     code: fact.code,
     path: fact.path,
     message: fact.reason,
     responsibility: fact.responsibility,
-    boundedness: resolved.reason.boundedness,
+    cause,
+    causeGapIds,
+    boundedness: resolved.reason.boundedness === "exposure-bounded" ? "exposure-bounded" : "globally-bounded",
   };
 }
 
@@ -662,7 +699,7 @@ export function hasV9DangerSignal(
   const subFloorPillar = anyPillarBelowFloor(input.pillars, policy, gate);
   // (7) A registry-classified unsupported-design reason.
   const unsupportedDesign = input.unresolvedCodes.some(
-    (code) => resolveV9ReasonPolicy(policy, code).reason.auditClassification === "unsupported-design",
+    (code) => resolveV9ReasonTreatment(policy, code, "D").reason.auditClassification === "unsupported-design",
   );
   // (8) An active control-compromise incident, at ANY severity — a live incident
   // is danger even if its signal is graded below critical, so it is never
@@ -865,67 +902,63 @@ function scoreV9InputWithCaps(
     readonly V9BoundedUncertaintyAttribution[] = [],
   pillarReasonProvenance: readonly V9PillarReasonProvenance[] = [],
   aggregationStrategy: V9AggregationStrategy = aggregateV9SmoothBoundedHeadroom,
+  coverage?: V9ScoreCoverage,
 ): V9ScoreTrace {
   assertV9ValidatedPolicyEnvelope(policy);
-  const input = V9ScoringInputSchema.parse(rawInput);
+  const input = validatedScoringInputs.has(rawInput) ? rawInput : V9ScoringInputSchema.parse(rawInput);
   assertV9UnresolvedFactsMatchPolicy(policy, input.unresolved);
   const formula = policy.policy.semantic.formula;
   const nrReasons: V9NRReason[] = [];
   const reasonCeilings: Omit<V9CapTrace, "binding">[] = [];
   const pillarContributions: V9ScoreTrace["pillarContributions"][number][] = [];
 
-  for (const pillar of V9_QUALITY_PILLARS) {
+  const includedPillars = coverage?.includedPillars ?? V9_QUALITY_PILLARS;
+  const excludedPillars = V9_QUALITY_PILLARS.filter((pillar) => !includedPillars.includes(pillar));
+  const pipelineGap = includedPillars.length < 2;
+  const limitingPillars: V9ScoreCoverage["limitingPillars"][number][] = [];
+  const diagnosticLimitedCauses = new Set<V9EvidenceCause>();
+  for (const item of coverage?.limitingPillars ?? []) {
+    if (!includedPillars.includes(item.pillar)) continue;
+    let hasLimitingCause = false;
+    for (const cause of item.causes) {
+      if (cause !== "C" && cause !== "U" && cause !== "D") continue;
+      diagnosticLimitedCauses.add(cause);
+      hasLimitingCause = true;
+    }
+    if (hasLimitingCause && item.causeGapIds.length > 0) limitingPillars.push(item);
+  }
+  limitedPillarCount = limitingPillars.length;
+  backingLimited = limitingPillars.some((item) => item.pillar === "backing");
+  const includedWeight = includedPillars.reduce((sum, pillar) => sum + formula.pillarWeights[pillar], 0);
+  for (const pillar of includedPillars) {
     const score = input.pillars[pillar];
     if (score === null) {
-      nrReasons.push({
-        code: "missing-pillar",
-        field: `pillars.${pillar}`,
-        message: `Required ${pillar} pillar is missing; weights are not redistributed.`,
-      });
-    } else {
-      const weight = formula.pillarWeights[pillar];
-      pillarContributions.push({
-        pillar,
-        score,
-        weight,
-        weightedContribution: roundTo(score * weight, 4),
-      });
+      throw new Error(`Safety Score v9 included ${pillar} pillar is missing its bounded score`);
+    }
+    if (!pipelineGap) {
+      const weight = formula.pillarWeights[pillar] / includedWeight;
+      pillarContributions.push({ pillar, score, weight, weightedContribution: roundTo(score * weight, 4) });
     }
   }
-
-  if (input.evidenceLevel === "insufficient") {
+  if (pipelineGap) {
     nrReasons.push({
-      code: "insufficient-evidence",
-      field: "evidenceLevel",
-      message: "Critical evidence is insufficient for a v9 research rating.",
+      code: includedPillars.length === 0 ? "all-pillars-pipeline-gap" : "single-pillar-pipeline-gap",
+      message: "Fewer than two supported pillars are available; no Safety Score is published.",
+      causeGapIds: coverage?.partialEvidence?.causeGapIds ?? [],
     });
   }
-  let pegUnverified = false;
-  if (input.pegApplicable && input.pegScore === null) {
-    const missingPegPolicy = resolveV9ReasonPolicy(policy, "missing-applicable-peg");
-    if (missingPegPolicy.critical) {
-      nrReasons.push({
-        code: "missing-applicable-peg",
-        field: "pegScore",
-        message: "A peg score is required when peg risk applies.",
-      });
+  // Missing peg evidence is diagnostic, not a second generic cap beside its
+  // cause-bearing producer reason. This neutral multiplier does not claim par.
+  const pegUnverified = input.pegApplicable && input.pegScore === null;
+  if (!pipelineGap && input.parentRequired && input.parentScore === null) {
+    const witnesses = propagatedParentReasons.filter((reason) =>
+      reason.cause === "C" || reason.cause === "U" || reason.cause === "D",
+    );
+    if (coverage?.parentStatus === "not-rated" && witnesses.length > 0) {
+      nrReasons.push(...witnesses);
     } else {
-      pegUnverified = true;
-      if (missingPegPolicy.ceiling) {
-        reasonCeilings.push({
-          source: "evidence",
-          ...missingPegPolicy.ceiling,
-          reason: "Peg risk applies but no peg evidence is available; the peg multiplier is bounded at par.",
-        });
-      }
+      throw new Error("Safety Score v9 required unavailable parent lacks status/cause coverage");
     }
-  }
-  if (input.parentRequired && input.parentScore === null) {
-    nrReasons.push({
-      code: "missing-parent-score",
-      field: "parentScore",
-      message: "A required parent must be rated before its child.",
-    });
   }
   const unresolvedFacts = [...input.unresolved].sort(
     (left, right) =>
@@ -933,106 +966,31 @@ function scoreV9InputWithCaps(
       compareText(left.path ?? "", right.path ?? "") ||
       compareText(left.reason, right.reason),
   );
-  for (const fact of unresolvedFacts) {
-    const resolved = resolveV9ReasonPolicy(policy, fact.code);
-    const responsibility = fact.responsibility;
-    const uncertaintyIsUnbounded =
-      responsibility !== "measured-adverse" &&
-      resolved.reason.boundedness === "unbounded";
-    if (responsibility === "integration-missing") {
-      // Integration-owned gaps remain explicit confidence diagnostics when the
-      // compiler can still produce a bounded pillar. Missing pillars are
-      // withheld above, so turning every integration backlog item into NR
-      // would erase otherwise rateable assets and let Pharos coverage dictate
-      // the public risk distribution.
-      if (resolved.critical || uncertaintyIsUnbounded) {
-        nrReasons.push({
-          code: fact.code,
-          field: fact.path,
-          message: fact.reason,
-          responsibility,
-        });
-      } else if (resolved.ceiling) {
-        reasonCeilings.push({ source: "evidence", ...resolved.ceiling, reason: fact.reason });
-      }
-      continue;
-    }
-    if (responsibility === "producer-failed") {
-      // A producer outage is an availability state, not evidence that the
-      // asset became unsafe. Fresh LKG facts do not enter this score-bearing
-      // list. When the compiler can still produce a policy-bounded pillar,
-      // retain the score under that reason's ceiling; a genuinely missing or
-      // unbounded required fact is still withheld by the pillar/critical gates.
-      if (resolved.critical || uncertaintyIsUnbounded) {
-        nrReasons.push({
-          code: fact.code,
-          field: fact.path,
-          message: fact.reason,
-          responsibility,
-        });
-      } else if (resolved.ceiling) {
-        reasonCeilings.push({ source: "evidence", ...resolved.ceiling, reason: fact.reason });
-      }
-      continue;
-    }
-    if (responsibility === "method-unsupported") {
-      // Method responsibility describes why the fact is unresolved; the
-      // reviewed reason registry still owns its treatment. A globally bounded
-      // unsupported method is provisional under its ceiling, while genuinely
-      // unbounded applicability/integrity failures remain NR.
-      if (resolved.critical || uncertaintyIsUnbounded) {
-        nrReasons.push({
-          code: fact.code,
-          field: fact.path,
-          message: fact.reason,
-          responsibility,
-        });
-      } else if (resolved.ceiling) {
-        reasonCeilings.push({ source: "evidence", ...resolved.ceiling, reason: fact.reason });
-      }
-      continue;
-    }
-    if (resolved.critical || uncertaintyIsUnbounded) {
+  if (!pipelineGap) for (const fact of unresolvedFacts) {
+    const cause = fact.cause ?? "U";
+    const resolved = resolveV9ReasonTreatment(policy, fact.code, cause);
+    if (resolved.critical && cause === "D") {
       nrReasons.push({
-        code: fact.code,
-        field: fact.path,
-        message: fact.reason,
-        responsibility,
+        code: fact.code, field: fact.path, message: fact.reason,
+        responsibility: fact.responsibility, cause, causeGapIds: fact.causeGapIds ?? [],
       });
-    } else if (resolved.ceiling) {
+    } else if (resolved.ceiling !== null) {
       reasonCeilings.push({ source: "evidence", ...resolved.ceiling, reason: fact.reason });
     }
   }
 
-  const pillarsComplete = pillarContributions.length === V9_QUALITY_PILLARS.length;
-  const weightedQualityRaw = pillarsComplete
-    ? pillarContributions.reduce((sum, contribution) => sum + contribution.score * contribution.weight, 0)
-    : null;
-  const weakestPillar = pillarsComplete
-    ? pillarContributions.reduce(
-        (weakest, contribution) =>
-          contribution.score < weakest.score ? { pillar: contribution.pillar, score: contribution.score } : weakest,
-        { pillar: pillarContributions[0]!.pillar, score: pillarContributions[0]!.score },
-      )
-    : null;
-  // A pillar-dependent headroom changes discontinuously when two pillars cross
-  // and can make an improved control score lower the composite. The selected
-  // smooth aggregator therefore uses one policy headroom for every pillar.
-  const aggregationHeadroom =
-    weakestPillar === null ? null : formula.compensabilityHeadroom;
-  const aggregationRaw =
-    pillarsComplete && aggregationHeadroom !== null
-      ? aggregationStrategy(
-          {
-            backing: input.pillars.backing!,
-            exit: input.pillars.exit!,
-            control: input.pillars.control!,
-          },
-          formula.pillarWeights,
-          aggregationHeadroom,
-        )
-      : null;
-  const pegMultiplierRaw = input.pegApplicable
+  const aggregationHeadroom = pipelineGap ? null : formula.compensabilityHeadroom;
+  const aggregationRaw = pipelineGap ? null : aggregationStrategy(
+    input.pillars, formula.pillarWeights, formula.compensabilityHeadroom, includedPillars,
+  );
+  if (!pipelineGap && aggregationRaw === null) {
+    throw new Error("Safety Score v9 eligible aggregation returned no score");
+  }
+  const weightedQualityRaw = aggregationRaw?.weightedQuality ?? null;
+  const weakestPillar = aggregationRaw === null ? null : {
+    pillar: aggregationRaw.weakestPillar, score: aggregationRaw.weakestScore,
+  };
+  const pegMultiplierRaw = pipelineGap ? null : input.pegApplicable
     ? input.pegScore === null
       ? pegUnverified
         ? 1
@@ -1056,37 +1014,16 @@ function scoreV9InputWithCaps(
 
   const capCandidates: Omit<V9CapTrace, "binding">[] = [];
   capCandidates.push(...reasonCeilings);
-  if (input.unresolvedDeploymentShare !== undefined && preCapScoreRaw !== null) {
-    const materiality = policy.policy.semantic.materiality;
-    const start = materiality.unresolvedDeploymentBlendStartSharePct / 100;
-    const end = materiality.unresolvedDeploymentFullCeilingSharePct / 100;
-    const blend = Math.max(0, Math.min(1, (input.unresolvedDeploymentShare - start) / (end - start)));
-    const ceiling = resolveV9ReasonPolicy(policy, "unresolved-control-identity").ceiling;
-    if (blend > 0 && ceiling !== null) {
-      capCandidates.push({
-        source: "evidence",
-        kind: "unresolved-deployment-share-band",
-        limit: decimalSnap(preCapScoreRaw - Math.max(0, preCapScoreRaw - ceiling.limit) * blend),
-        reason: `Unresolved deployment exposure (${decimalSnap(input.unresolvedDeploymentShare * 100)}%) blends proportional pricing into the whole-coin control ceiling.`,
-      });
-    }
-  }
-  const evidenceCeiling = policy.policy.semantic.evidence.ceilings[input.evidenceLevel];
-  if (evidenceCeiling !== null) {
-    capCandidates.push({
-      source: "evidence",
-      kind: `evidence:${input.evidenceLevel}`,
-      limit: evidenceCeiling,
-      reason: `${input.evidenceLevel} evidence ceiling.`,
-    });
-  }
   const trackRecordBand = formula.trackRecordCeilings.find(
     (band) =>
       input.trackRecordMonths >= band.minMonthsInclusive &&
       (band.maxMonthsExclusive === null || input.trackRecordMonths < band.maxMonthsExclusive),
   );
   if (!trackRecordBand) throw new Error(`No track-record ceiling covers ${input.trackRecordMonths} months`);
-  if (trackRecordBand.limit !== null) {
+  const excludedUnknownAge = input.unresolved.some((fact) =>
+    fact.code === "missing-implementation-date" && (fact.cause === "A" || fact.cause === "B"),
+  );
+  if (trackRecordBand.limit !== null && !excludedUnknownAge) {
     capCandidates.push({
       source: "track-record",
       kind: trackRecordBand.kind,
@@ -1214,6 +1151,10 @@ function scoreV9InputWithCaps(
       code: "insufficient-evidence",
       field: "evidenceLevel",
       message: "Critical evidence is insufficient for a v9 research rating.",
+      causeGapIds: [...new Set(limitingPillars.flatMap((item) => item.causeGapIds))].sort(compareText),
+      contributingPillars: limitingPillars.map((item) => item.pillar),
+      cause: limitingPillars.some((item) => item.causes.includes("C")) ? "C"
+        : limitingPillars.some((item) => item.causes.includes("U")) ? "U" : "D",
     });
     finalScore = null;
   }
@@ -1323,6 +1264,7 @@ function scoreV9InputWithCaps(
       field: "boundedUncertaintyAttribution",
       message: "A D rating requires causal measured-adverse or bounded-uncertainty attribution.",
       responsibility: "method-unsupported",
+      cause: "U",
     });
     finalScore = null;
   } else if (
@@ -1333,10 +1275,11 @@ function scoreV9InputWithCaps(
     adverseAttribution.length === 0
   ) {
     effectiveNrReasons.push({
-      code: "insufficient-evidence",
+      code: "f-without-measured-adverse",
       field: "adverseAttribution",
-      message: "An F rating requires at least one attributable measured-adverse fact.",
-      responsibility: "method-unsupported",
+      message: "Score below the F threshold without a measured adverse fact",
+      cause: limitingPillars.find((item) => item.causes.includes("C")) ? "C" : "U",
+      causeGapIds: [...new Set(limitingPillars.flatMap((item) => item.causeGapIds))].sort(compareText),
     });
     finalScore = null;
   }
@@ -1348,6 +1291,19 @@ function scoreV9InputWithCaps(
 
   return {
     assetId: input.assetId,
+    ratingStatus: pipelineGap ? "pipeline-gap" : finalScore === null ? "not-rated" : "rated",
+    partialEvidence: coverage?.partialEvidence ?? null,
+    includedPillars,
+    excludedPillars,
+    effectiveScoringWeights: aggregationRaw?.effectiveScoringWeights ?? null,
+    supportCeiling: aggregationRaw?.supportCeiling ?? null,
+    limitingPillars,
+    causeGapIds: [...new Set([
+      ...limitingPillars.flatMap((item) => item.causeGapIds),
+      ...(coverage?.partialEvidence?.causeGapIds ?? []),
+    ])].sort(compareText),
+    limitedEvidenceCauses: [...diagnosticLimitedCauses].sort(compareText),
+    diagnosticPillarScores: input.pillars,
     policyId: policy.policy.policyId,
     policyDigest: policy.semanticDigest,
     configName: policy.policy.policyId,
@@ -1382,7 +1338,7 @@ function scoreV9InputWithCaps(
     structuralSignals: input.structuralSignals,
     finalScore,
     inheritableScore: finalScore,
-    finalGrade: finalScore === null ? "NR" : gradeForScore(finalScore, policy),
+    finalGrade: pipelineGap ? null : finalScore === null ? "NR" : gradeForScore(finalScore, policy),
     adverseAttribution,
     boundedUncertaintyAttribution,
     unresolvedFacts,
@@ -1407,6 +1363,7 @@ export function scoreV9Input(
     readonly V9BoundedUncertaintyAttribution[] = [],
   pillarReasonProvenance: readonly V9PillarReasonProvenance[] = [],
   aggregationStrategy: V9AggregationStrategy = aggregateV9SmoothBoundedHeadroom,
+  coverage?: V9ScoreCoverage,
 ): V9ScoreTrace {
   return scoreV9InputWithCaps(
     rawInput,
@@ -1422,6 +1379,7 @@ export function scoreV9Input(
     wrapperLocalBoundedUncertaintyAttribution,
     pillarReasonProvenance,
     aggregationStrategy,
+    coverage,
   );
 }
 
@@ -1430,6 +1388,7 @@ export function scoreV9InputWithScenarioCaps(
   rawInput: V9ScoringInput,
   policy: V9ValidatedPolicyEnvelope,
   scenarioCaps: readonly V9AttributedScenarioCap[],
+  coverage?: V9ScoreCoverage,
 ): V9ScoreTrace {
-  return scoreV9InputWithCaps(rawInput, policy, scenarioCaps);
+  return scoreV9InputWithCaps(rawInput, policy, scenarioCaps, [], 0, false, [], [], [], [], [], [], undefined, coverage);
 }

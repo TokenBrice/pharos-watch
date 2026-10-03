@@ -189,10 +189,14 @@ describe("V10 exact authority scope", () => {
     const result = evaluateV9EconomicControl(makeEconomicControlArgs({ facts: makeEconomicControlFacts([control]), mint }));
     expect(result.structuralFailures).toContainEqual(expect.objectContaining({ kind: "centralized-mint", severity: "high" }));
     expect(result.reasons.map((reason) => reason.code)).toContain("unknown-control-mint-ability");
-    expect(result.score).toBeLessThanOrEqual(policy.boundedUnknownQuality);
-    const unknownControl = { ...control, capSemantics: { kind: "unknown" as const, bound: null } };
-    const unknownResult = evaluateV9EconomicControl(makeEconomicControlArgs({ facts: makeEconomicControlFacts([unknownControl]), mint }));
-    expect(result.score).toBeLessThanOrEqual(unknownResult.score!);
+    const reconciliationUnknown = { ...mint, reconciliation: "unknown" as const };
+    const unknownResult = evaluateV9EconomicControl(makeEconomicControlArgs({
+      facts: makeEconomicControlFacts([control]), mint: reconciliationUnknown,
+    }));
+    expect(result.score).toBe(unknownResult.score);
+    expect(result.components).toContainEqual(expect.objectContaining({
+      kind: "mint", posture: "unbounded-reconciled", score: 52,
+    }));
   });
 
   it("does not let a friendly reviewed mint authority erase another unreviewed authority on the deployment", () => {

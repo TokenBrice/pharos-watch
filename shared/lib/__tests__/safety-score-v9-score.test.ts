@@ -13,7 +13,8 @@ import {
   type V9ProductionScoreInput,
 } from "../safety-score-v9/score";
 import { computeV9ResultDigest, projectCompactV9ScoreTrace } from "../safety-score-v9/trace";
-import { makeV9Pillar as pillar, makeV9ProductionScoreInput } from "./safety-score-v9-score.test-support";
+import { scoreV9ResearchScenarioInput } from "../safety-score-v9-research";
+import { makeV9Pillar as pillar, makeV9ProductionScoreInput, makeV9ScoringInput } from "./safety-score-v9-score.test-support";
 
 const DIGEST = "a".repeat(64);
 const BUILD_DIGEST = "b".repeat(64);
@@ -45,29 +46,11 @@ const ROOT_BOUNDED_UNCERTAINTY: V9BoundedUncertaintyAttribution = {
   message: "A bounded backing component remains unresolved.",
   responsibility: "integration-missing",
   boundedness: "exposure-bounded",
+  cause: "U",
+  causeGapIds: ["root:gap:custody-continuity"],
 };
 
 describe("scoreV9EvaluatedAsset", () => {
-  it("threads an optional counterfactual aggregation strategy", () => {
-    const trace = scoreV9EvaluatedAsset(
-      input({ pillars: { backing: pillar(50), exit: pillar(80), control: pillar(100) } }),
-      V9_CANDIDATE_POLICY_V1,
-      (pillars, weights) => {
-        const score = pillars.backing * weights.backing
-          + pillars.exit * weights.exit
-          + pillars.control * weights.control;
-        return {
-          method: "smooth-bounded-headroom",
-          score,
-          weightedQuality: score,
-          weakestPillar: "backing",
-          weakestScore: pillars.backing,
-        };
-      },
-    );
-
-    expect(trace.finalScore).toBe(73);
-  });
 
   it("binds the score to fact, policy, build, clock, and source identities", () => {
     const trace = scoreV9EvaluatedAsset(input(), V9_CANDIDATE_POLICY_V1);
@@ -82,14 +65,110 @@ describe("scoreV9EvaluatedAsset", () => {
     });
   });
 
-  it("does not redistribute a missing pillar", () => {
-    const trace = scoreV9EvaluatedAsset(
+  it("rejects an unavailable included pillar without A/B admission proof", () => {
+    expect(() => scoreV9EvaluatedAsset(
       input({ pillars: { backing: pillar(100), exit: pillar(null), control: pillar(100) } }),
       V9_CANDIDATE_POLICY_V1,
-    );
-    expect(trace.finalScore).toBeNull();
+    )).toThrow(/included exit pillar/);
+  });
+  it.each(["A", "B", "C", "U"] as const)("keeps implementation-age cause %s distinct from known young history", (cause) => {
+    const trace = scoreV9EvaluatedAsset(input({
+      trackRecordMonths: 0,
+      methodologyReasons: [{
+        code: "missing-implementation-date", path: "implementation:launch-date", message: "Launch date is unavailable.",
+        responsibility: cause === "A" ? "producer-failed" : cause === "B" ? "public-data-uncurated" : cause === "C" ? "issuer-undisclosed" : "unresearched",
+        cause, causeGapIds: ["gap:launch-date"],
+      }],
+    }), V9_CANDIDATE_POLICY_V1);
+    expect(trace.finalScore).toBe(cause === "A" || cause === "B" ? 95 : 79);
+    expect(trace.ratingStatus).toBe("rated");
+    expect(trace.partialEvidence === null).toBe(cause === "C" || cause === "U");
+    expect(trace.limitingPillars).toEqual([]);
+  });
+
+  it("does not let a raw insufficient-evidence label manufacture NR", () => {
+    const trace = scoreV9EvaluatedAsset(input({ pillars: {
+      backing: pillar(80, { evidenceLevel: "insufficient" }), exit: pillar(80), control: pillar(80),
+    } }), V9_CANDIDATE_POLICY_V1);
+    expect(trace).toMatchObject({ ratingStatus: "rated", finalScore: 80, finalGrade: "A-", nrReasons: [] });
+  });
+
+  it("bounds unclassified research nulls without inventing A/B proof or D eligibility", () => {
+    const trace = scoreV9ResearchScenarioInput(makeV9ScoringInput({
+      pillars: { backing: null, exit: 50, control: 50 },
+    }), V9_CANDIDATE_POLICY_V1, []);
+    expect(trace.diagnosticPillarScores.backing).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.backing.boundedUnknownQuality);
+    expect(trace.partialEvidence).toBeNull();
+    expect(trace.limitedEvidenceCauses).toEqual(["U"]);
+    expect(trace.boundedUncertaintyAttribution).toEqual([]);
     expect(trace.finalGrade).toBe("NR");
-    expect(trace.nrReasons.map((reason) => reason.code)).toContain("missing-pillar");
+    expect(trace.ratingStatus).toBe("not-rated");
+  });
+  it.each(["C", "U"] as const)("accepts real %s component bounds above the whole-pillar C- threshold", (cause) => {
+    const reason = {
+      code: "material-reserve-slice-unstructured" as const, path: "backing:reserve:concentration:bounded-component",
+      message: "The obligor-concentration factor is unresolved.",
+      responsibility: cause === "C" ? "issuer-undisclosed" as const : "unresearched" as const,
+      cause, causeGapIds: ["gap:obligor-concentration"],
+    };
+    const trace = scoreV9EvaluatedAsset(input({ trackRecordMonths: 0, pillars: {
+      backing: pillar(54.6372, { reasons: [reason], boundedComponents: [{ reason, score: 35, effectiveScoringWeight: 0.125 }] }),
+      exit: pillar(35), control: pillar(58),
+    } }), V9_CANDIDATE_POLICY_V1);
+    expect(trace).toMatchObject({ finalGrade: "D", ratingStatus: "rated" });
+    expect(trace.adverseAttribution).toEqual([]);
+    expect(trace.boundedUncertaintyAttribution).toContainEqual(expect.objectContaining({
+      source: "reason", code: reason.code, cause, causeGapIds: reason.causeGapIds, path: reason.path,
+    }));
+  });
+
+  it.each([
+    { effectiveScoringWeight: 0, causeGapIds: ["gap:obligor-concentration"] },
+    { effectiveScoringWeight: 0.125, causeGapIds: [] },
+  ])("does not qualify a component without both a positive scoring weight and a witness ($effectiveScoringWeight, $causeGapIds)", ({ effectiveScoringWeight, causeGapIds }) => {
+    const reason = {
+      code: "material-reserve-slice-unstructured" as const, path: "backing:reserve:concentration:bounded-component",
+      message: "The obligor-concentration factor is unresolved.", responsibility: "unresearched" as const,
+      cause: "U" as const, causeGapIds,
+    };
+    const trace = scoreV9EvaluatedAsset(input({ trackRecordMonths: 0, pillars: {
+      backing: pillar(54.6372, { reasons: [reason], boundedComponents: [{ reason, score: 35, effectiveScoringWeight }] }),
+      exit: pillar(35), control: pillar(58),
+    } }), V9_CANDIDATE_POLICY_V1);
+    expect(trace).toMatchObject({ finalGrade: "NR", ratingStatus: "not-rated", boundedUncertaintyAttribution: [] });
+    expect(trace.nrReasons).toContainEqual(expect.objectContaining({ field: "boundedUncertaintyAttribution" }));
+  });
+
+  it.each(["higher-grade", "NR", "D-other-proof"] as const)("does not publish extra component proofs for $0 cards", (scenario) => {
+    const reason = {
+      code: "material-reserve-slice-unstructured" as const, path: "backing:reserve:concentration:bounded-component",
+      message: "The obligor-concentration factor is unresolved.", responsibility: "unresearched" as const,
+      cause: "U" as const, causeGapIds: ["gap:obligor-concentration"],
+    };
+    const ordinaryExitReason = {
+      code: "missing-same-notional-route" as const, path: "exit:missing-same-notional-route",
+      message: "An admitted route component is conservatively bounded.", responsibility: "unresearched" as const,
+      cause: "U" as const, causeGapIds: ["gap:ordinary-exit"],
+    };
+    const nrBacking = scenario === "NR" ? {
+      evidenceLevel: "limited" as const, limitedEvidenceCauses: ["U" as const], limitingCauseGapIds: ["gap:backing-inventory"],
+    } : {};
+    const nrControl = scenario === "NR" ? {
+      evidenceLevel: "limited" as const, limitedEvidenceCauses: ["U" as const], limitingCauseGapIds: ["gap:control-inventory"],
+    } : {};
+    const trace = scoreV9EvaluatedAsset(input({ trackRecordMonths: 0, pillars: {
+      backing: pillar(54.6372, { ...nrBacking, reasons: [reason], boundedComponents: [{ reason, score: 35, effectiveScoringWeight: 0.125 }] }),
+      control: pillar(scenario === "higher-grade" ? 80 : 58, nrControl),
+      exit: pillar(scenario === "higher-grade" ? 80 : 35, { reasons: scenario === "D-other-proof" ? [ordinaryExitReason] : [] }),
+    } }), V9_CANDIDATE_POLICY_V1);
+    if (scenario === "higher-grade") expect(trace.preCapScore).toBeGreaterThanOrEqual(50);
+    if (scenario === "NR") expect(trace.finalGrade).toBe("NR");
+    if (scenario === "D-other-proof") {
+      expect(trace.finalGrade).toBe("D");
+      expect(trace.boundedUncertaintyAttribution).toContainEqual(expect.objectContaining({ path: ordinaryExitReason.path }));
+    }
+    expect(trace.boundedUncertaintyAttribution.some((item) => item.path === reason.path)).toBe(false);
+    expect(trace.unresolvedFacts.some((fact) => fact.path === reason.path)).toBe(false);
   });
 
   it("rejects conflicting owners for one public fact identity", () => {
@@ -152,7 +231,7 @@ describe("scoreV9EvaluatedAsset", () => {
     expect(trace.caps.map((cap) => cap.kind)).not.toContain("bounded-compensability");
   });
 
-  it("resolves reason-coded critical facts and evidence ceilings through policy", () => {
+  it("bounds C/U facts without legacy critical NR or missingness ceilings", () => {
     const critical = scoreV9EvaluatedAsset(
       input({
         pillars: {
@@ -170,7 +249,7 @@ describe("scoreV9EvaluatedAsset", () => {
       }),
       V9_CANDIDATE_POLICY_V1,
     );
-    expect(critical.finalGrade).toBe("NR");
+    expect(critical.finalGrade).toBe("A+");
 
     const bounded = scoreV9EvaluatedAsset(
       input({
@@ -189,8 +268,8 @@ describe("scoreV9EvaluatedAsset", () => {
       }),
       V9_CANDIDATE_POLICY_V1,
     );
-    expect(bounded.finalScore).toBe(69);
-    expect(bounded.bindingCap?.kind).toBe("reason:material-unknown-reserve-exposure");
+    expect(bounded.finalScore).toBe(90);
+    expect(bounded.bindingCap).toBeNull();
   });
 
   it("keeps a child rateable when a measured D parent cap binds", () => {
@@ -273,7 +352,7 @@ describe("scoreV9EvaluatedAsset", () => {
     ).toEqual(propagatedBoundedUncertaintyAttribution);
   });
 
-  it("retains a rateable upstream evidence ceiling through a serial parent cap", () => {
+  it("retains bounded upstream uncertainty through a serial quality cap", () => {
     const parentUncertainty: V9BoundedUncertaintyAttribution = {
       source: "reason",
       code: "missing-reserve-composition",
@@ -281,6 +360,8 @@ describe("scoreV9EvaluatedAsset", () => {
       message: "The parent's reserve composition is missing.",
       responsibility: "integration-missing",
       boundedness: "globally-bounded",
+      cause: "U",
+      causeGapIds: ["parent:gap:reserve-composition"],
     };
     const propagatedBoundedUncertaintyAttribution =
       resolveV9SerialParentBoundedUncertaintyAttribution(
@@ -370,9 +451,11 @@ describe("scoreV9EvaluatedAsset", () => {
         parent: {
           required: true,
           score: null,
-          propagatedReasons: [],
           propagatedAdverseAttribution:
             propagateV9SerialParentAdverseAttribution("root", [ROOT_ADVERSE]),
+          ratingStatus: "not-rated",
+          limitedEvidenceCauses: ["D"],
+          propagatedReasons: [{ code: "critical-unresolved", field: "parent", message: "Measured parent insolvency", cause: "D" }],
         },
       }),
       V9_CANDIDATE_POLICY_V1,

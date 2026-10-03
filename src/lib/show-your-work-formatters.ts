@@ -24,6 +24,8 @@ import type { DexLiquidityData, StressSignalEntry } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { StabilityIndexCurrent } from "@shared/types/stability";
 import type { ChainEnvironmentEvidence, ChainHealthFactors } from "@shared/types/chains";
+import { SAFETY_SCORE_V9_RESPONSIBILITY_LABELS } from "@/lib/safety-score-v9-labels";
+import type { V9EvidenceCause } from "@shared/types/safety-score-v9-causes";
 
 export interface ShowYourWorkRow {
   label: string;
@@ -72,6 +74,17 @@ function fmtSigned(v: number): string {
 function fmtUsd(v: number): string {
   return `$${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 }
+function evidenceCauseLabel(cause: V9EvidenceCause | null | undefined): string {
+  switch (cause) {
+    case "A": return "excluded — pipeline gap";
+    case "B": return "excluded — awaiting curation";
+    case "C": return SAFETY_SCORE_V9_RESPONSIBILITY_LABELS["issuer-undisclosed"];
+    case "U": return SAFETY_SCORE_V9_RESPONSIBILITY_LABELS.unresearched;
+    case "D": return "Measured and adverse";
+    case null: case undefined: return "included";
+  }
+}
+
 
 export function formatReportCardV9(
   card: SafetyScoreV9ShowWorkCard,
@@ -80,19 +93,22 @@ export function formatReportCardV9(
   const stages = card.scoreTrace.stages;
   const breakdowns = card.breakdowns;
   const rows: ShowYourWorkRow[] = [
+    { label: "Rating status", value: card.ratingStatus === "pipeline-gap" ? "Pipeline gap — no Safety Score published" : card.ratingStatus },
+    ...(card.partialEvidence === null ? [] : [{ label: "Evidence coverage",
+      value: `Partial evidence: pipeline gap · ${card.partialEvidence.causes.map(evidenceCauseLabel).join(" · ")}` }]),
     {
       label: "Backing pillar",
-      value: fmtNum(card.pillars.backing.score, 1),
+      value: card.pillars.backing.aggregationDisposition === "excluded-a-b" ? "excluded — pipeline gap / awaiting curation" : fmtNum(card.pillars.backing.score, 1),
       weight: breakdowns === null ? undefined : fmtFractionPct(breakdowns.backing.aggregationWeight),
     },
     {
       label: "Exit pillar",
-      value: fmtNum(card.pillars.exit.score, 1),
+      value: card.pillars.exit.aggregationDisposition === "excluded-a-b" ? "excluded — pipeline gap / awaiting curation" : fmtNum(card.pillars.exit.score, 1),
       weight: breakdowns === null ? undefined : fmtFractionPct(breakdowns.exit.aggregationWeight),
     },
     {
       label: "Economic Control pillar",
-      value: fmtNum(card.pillars.control.score, 1),
+      value: card.pillars.control.aggregationDisposition === "excluded-a-b" ? "excluded — pipeline gap / awaiting curation" : fmtNum(card.pillars.control.score, 1),
       weight: breakdowns === null ? undefined : fmtFractionPct(breakdowns.control.aggregationWeight),
     },
   ];
@@ -105,17 +121,24 @@ export function formatReportCardV9(
     for (const group of breakdowns.backing.groups) {
       rows.push({
         label: `Backing group · ${group.label} [${group.key}]`,
-        value: fmtNum(group.score, 1),
-        weight: fmtFractionPct(group.effectiveWeight),
+        value: `${fmtNum(group.score, 1)} · ${evidenceCauseLabel(group.cause)}`,
+        weight: fmtFractionPct(group.effectiveScoringWeight),
       });
     }
     for (const component of breakdowns.backing.components) {
       rows.push({
         label: `Backing component · ${component.label} [${component.key}]`,
-        value: `${fmtNum(component.score, 1)} · ${component.source} · ${component.observationState}`,
-        weight: fmtFractionPct(component.effectiveWeight),
+        value: `${fmtNum(component.score, 1)} · ${component.source} · ${component.observationState} · ${evidenceCauseLabel(component.cause)} · ${fmtFractionPct(component.wholeAssetWeight)} of whole asset`,
+        weight: fmtFractionPct(component.effectiveScoringWeight),
         contribution: fmtNum(component.weightedContribution, 1),
       });
+      for (const factor of component.factors ?? []) {
+        rows.push({
+          label: `Backing factor · ${component.label} [${factor.componentKey}]`,
+          value: `${fmtNum(factor.score, 1)} · ${evidenceCauseLabel(factor.cause)} · ${fmtFractionPct(factor.normalizedWeight)} normalized weight`,
+          weight: fmtFractionPct(factor.effectiveScoringWeight),
+        });
+      }
     }
     for (const adjustment of breakdowns.backing.adjustments) {
       rows.push({
@@ -154,8 +177,8 @@ export function formatReportCardV9(
       for (const component of primaryRoute.components) {
         rows.push({
           label: `Exit component · ${component.label} [${component.key}]`,
-          value: fmtNum(component.score, 1),
-          weight: fmtFractionPct(component.weight),
+          value: `${fmtNum(component.score, 1)} · ${evidenceCauseLabel(component.cause)}`,
+          weight: fmtFractionPct(component.effectiveScoringWeight),
           contribution: fmtNum(component.weightedContribution, 1),
         });
       }
@@ -169,6 +192,12 @@ export function formatReportCardV9(
           value: `${primaryRoute.eligibilityMultiplier.toFixed(3)}x`,
         },
       );
+      for (const [dimension, confidence] of Object.entries(primaryRoute.confidenceDimensions)) {
+        rows.push({ label: `Exit confidence · ${dimension}`,
+          value: `${confidence.factor.toFixed(3)}x · ${evidenceCauseLabel(confidence.cause)}` });
+      }
+      rows.push({ label: "Exit capacity evidence tier", value: primaryRoute.capacityEvidenceTier });
+      rows.push({ label: "Exit raw same-notional cost", value: primaryRoute.rawSameNotionalCostBps === null ? "Not evaluated" : `${fmtNum(primaryRoute.rawSameNotionalCostBps)} bps` });
       for (const cap of primaryRoute.capsApplied) {
         rows.push({ label: `Exit route cap · ${cap}`, value: "applied" });
       }
@@ -185,7 +214,7 @@ export function formatReportCardV9(
       rows.push({
         label: `Exit alternative · ${route.label} [${route.key}]`,
         value: [
-          route.score === null ? "NR" : fmtNum(route.score, 1),
+          route.score === null ? "Not scored" : fmtNum(route.score, 1),
           route.routeFamily,
           route.included ? "included" : route.exclusionReason ?? "excluded",
         ].join(" · "),
@@ -211,7 +240,9 @@ export function formatReportCardV9(
           component.binding ? "binding" : "diagnostic",
           component.kind,
           component.posture,
+          evidenceCauseLabel(component.cause),
         ].join(" · "),
+        weight: fmtFractionPct(component.effectiveScoringWeight),
       });
     }
     for (const adjustment of breakdowns.control.adjustments) {
@@ -259,8 +290,8 @@ export function formatReportCardV9(
     rows,
     formula:
       breakdowns === null
-        ? "three pillars → bounded-headroom aggregation → peg multiplier → deployment adjustment → policy score adjustment → caps → published score"
-        : "Backing = weighted effective components; Exit = selected weighted route × confidence × eligibility, then caps and diversification; Economic Control = minimum binding component; published pillars → bounded-headroom aggregation → peg multiplier → deployment adjustment → policy score adjustment → caps → published score",
+        ? "included pillars → bounded-headroom aggregation → peg multiplier → deployment adjustment → policy score adjustment → caps → published score"
+        : "Backing = weighted effective components; Exit = selected weighted route × confidence × eligibility, then caps and diversification; Economic Control = minimum included binding component; excluded A/B components have zero effective weight; included pillars with renormalized weights → bounded-headroom aggregation → peg multiplier → deployment adjustment → policy score adjustment → caps → published score",
     topic: "safetyScore",
     versionLabel: methodologyVersion,
   };

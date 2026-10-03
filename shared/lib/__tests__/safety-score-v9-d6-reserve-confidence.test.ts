@@ -34,9 +34,6 @@ function reserve(evidenceClass?: V9ReserveExposureFactV2["evidenceClass"]): V9Re
 }
 
 describe("D6 issuer-attested reserve confidence", () => {
-  it("pins the proposed owner-ratify confidence multiplier at 0.80", () => {
-    expect(V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.issuerAttestedConfidenceMultiplier).toBe(0.8);
-  });
 
   it("discounts an admitted classification exactly once without adding uncertainty gaps", () => {
     const policyMultiplier = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.issuerAttestedConfidenceMultiplier;
@@ -68,5 +65,30 @@ describe("D6 issuer-attested reserve confidence", () => {
     expect(missingClassExposure).toBe(discountedExposure);
     expect(discounted.score).toBeLessThan(baseline.score!);
     expect(discounted.unresolved).toEqual([]);
+  });
+
+  it("uses the admitted envelope's source strength for unidentified tails, never a known sibling's stronger source", () => {
+    const evaluate = (evidenceClass?: V9ReserveExposureFactV2["evidenceClass"]) =>
+      evaluateV9ReserveExposures({
+        assetId: "d6-fixture", reserveStatus: knownStatus("reserve.envelope"),
+        reserveExposures: [{ ...reserve("independent"), weight: 0.9 }],
+        reserveResiduals: [{ residualId: "unknown", weight: 0.1, status: {
+          ...knownStatus("reserve.tail"), observationState: "bounded-unknown", evidenceRefIds: [], gapIds: ["gap:tail"],
+        } }],
+        reserveCompositionProvenance: "curated", reserveCompositionEvidenceClass: evidenceClass,
+        gaps: [{ gapId: "gap:tail", ownerDomain: "backing", policyRuleId: "reserve.tail",
+          observationState: "bounded-unknown", reasonCode: "bounded-unknown-reserve-exposure",
+          path: { kind: "local-component", componentKey: "tail" }, message: "Unresearched tail", evidenceRefIds: [] }],
+        resolvedUpstreamExposures: [],
+      }, V9_CANDIDATE_POLICY_V1);
+    const independent = evaluate("independent"), attested = evaluate("issuer-attested");
+    expect(independent.contributions.find(row => row.componentKey.startsWith("reserve:unclassified-residual:")))
+      .toMatchObject({ score: 35, wholeAssetWeight: 0.1, cause: "U" });
+    for (const strength of ["issuer-attested", "static-validated", undefined] as const) {
+      expect(evaluate(strength).contributions.find(row => row.componentKey.startsWith("reserve:unclassified-residual:")))
+        .toMatchObject({ score: 35 * 0.8, wholeAssetWeight: 0.1, cause: "U" });
+    }
+    expect(independent.contributions.find(row => row.componentKey === "reserve:cash")!.score)
+      .toBe(attested.contributions.find(row => row.componentKey === "reserve:cash")!.score);
   });
 });

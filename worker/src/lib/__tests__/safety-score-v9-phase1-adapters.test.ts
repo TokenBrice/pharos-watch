@@ -30,7 +30,7 @@ import {
 } from "../safety-score-v9/extension-shared";
 import {
   LIVE_RESERVES_CONFIG,
-  eligibleReserveMeta,
+  eligibleReserveMeta as reserveMetaFixture,
   mintMeta,
 } from "./safety-score-v9-reserve-admission.test-support";
 
@@ -38,6 +38,21 @@ const CLOCK_SEC = Date.UTC(2026, 6, 17) / 1_000;
 const CURATION_CLOCK_SEC = Date.UTC(2026, 7, 9, 12) / 1_000;
 const XSGD_CURATED_CLOCK_SEC = Date.UTC(2026, 8, 30, 12) / 1_000;
 const WINDOW_SEC = Math.ceil(3 * 365.25 * 86_400);
+
+function eligibleReserveMeta(overrides: Partial<V9ExtensionRegistryMeta> = {}): V9ExtensionRegistryMeta {
+  const base = reserveMetaFixture();
+  return {
+    ...base,
+    proofOfReserves: {
+      ...base.proofOfReserves!,
+      latestReport: {
+        ...base.proofOfReserves!.latestReport!,
+        sources: [{ label: "Independent LLP signed examination", url: "https://example.com/report.pdf" }],
+      },
+    },
+    ...overrides,
+  };
+}
 
 describe("shared extension evidence helpers", () => {
   it("keeps limited reviews bounded and resolves year-only evidence through year end", () => {
@@ -360,7 +375,7 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
   });
 
   it.each(["independent-audit", "agreed-upon-procedures", "attestation"] as const)(
-    "admits %s as audited reserve evidence only when it carries an audit opinion",
+    "admits %s only when the dated signed report identifies its independent firm",
     (type) => {
       const base = eligibleReserveMeta();
       const supervised = eligibleReserveMeta({
@@ -371,7 +386,7 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
         proofOfReserves: { ...base.proofOfReserves!, type },
       });
 
-      const audited = type === "independent-audit";
+      const audited = type === "independent-audit" || type === "attestation";
       const admitted = buildSafetyScoreV9ReviewedStaticReserveRows(supervised, CLOCK_SEC);
       const fallback = buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(unsupervised, CLOCK_SEC);
       expect(admitted !== null).toBe(audited);
@@ -462,19 +477,6 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
           },
         },
       }),
-      eligibleReserveMeta({
-        reserveReview: {
-          ...directlySourced,
-          sources: [{ label: "Transparency index", url: base.proofOfReserves!.url }],
-        },
-        proofOfReserves: {
-          ...base.proofOfReserves!,
-          latestReport: {
-            ...base.proofOfReserves!.latestReport!,
-            sources: [{ label: "Transparency index", url: base.proofOfReserves!.url }],
-          },
-        },
-      }),
       eligibleReserveMeta(),
     ];
 
@@ -483,6 +485,24 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
         evidenceClass: "issuer-attested",
       });
     }
+  });
+
+  it("does not admit an issuer transparency index as a signed named-firm report", () => {
+    const base = eligibleReserveMeta();
+    const indexOnly = eligibleReserveMeta({
+      reserveReview: {
+        ...base.reserveReview!,
+        sources: [{ label: "Transparency index", url: base.proofOfReserves!.url }],
+      },
+      proofOfReserves: {
+        ...base.proofOfReserves!,
+        latestReport: {
+          ...base.proofOfReserves!.latestReport!,
+          sources: [{ label: "Transparency index", url: base.proofOfReserves!.url }],
+        },
+      },
+    });
+    expect(buildSafetyScoreV9ReviewedStaticReserveRows(indexOnly, CLOCK_SEC)).toBeNull();
   });
 
   it("normalizes the real USDG-shaped 100.01% rounded composition before fact compilation", () => {

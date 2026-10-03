@@ -6,6 +6,10 @@ import { stableJsonStringifyChunksV1 } from "../stable-json";
 // Compatibility name for existing V9 callers; implementation lives in compare.ts.
 export { compareCodeUnits as compareText } from "../compare";
 
+// Shared immutable result metadata, never a mutable working list. The mutable
+// annotation matches schema-inferred arrays; the finalized graph is read-only.
+export const V9_EMPTY_ARRAY: never[] = Object.freeze([]) as unknown as never[];
+
 export function assertScore(value: number, field: string): void {
   if (!Number.isFinite(value) || value < 0 || value > 100) {
     throw new Error(`Safety Score v9 ${field} must be between 0 and 100`);
@@ -86,7 +90,9 @@ export function domainDigest(domain: string, payload: unknown): string {
 
 export function deepFreeze<T>(value: T): Readonly<T> {
   if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
-    for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
+    for (const key in value) {
+      if (Object.prototype.hasOwnProperty.call(value, key)) deepFreeze((value as Record<string, unknown>)[key]);
+    }
     Object.freeze(value);
   }
   return value;

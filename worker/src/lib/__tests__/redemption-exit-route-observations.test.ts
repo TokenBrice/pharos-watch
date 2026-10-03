@@ -818,6 +818,7 @@ describe("reserve-sync observations with tiny live capacity", () => {
       capacityKind: "live-direct",
       freshnessKind: "same-run-onchain",
       evidenceObservedAt: Date.UTC(2026, 6, 13, 10) / 1_000,
+      now: Date.UTC(2026, 6, 13, 10, 1) / 1_000,
       resolvedFeeBps: 0,
     });
 
@@ -831,4 +832,36 @@ describe("reserve-sync observations with tiny live capacity", () => {
       scoreEligible: true,
     });
   });
+});
+
+describe("live queue/proxy capacity-method tier", () => {
+  it("keeps an InfiniFi-shaped same-run queue at its measured bound, not atomic completion", () => {
+    const now = Date.UTC(2026, 9, 2, 12) / 1000;
+    const observation = build({
+      stablecoinId: "iusd-infinifi", config: getRedemptionBackstopConfig("iusd-infinifi")!,
+      capacityProfile: { ...profile, scoringHorizon: "queued", scoringUsd: 1_250_000 },
+      scoringCapacityUsd: 1_250_000, sourceMode: "dynamic", capacityConfidence: "live-proxy",
+      capacityKind: "live-queue", freshnessKind: "same-run-onchain",
+      evidenceObservedAt: now, now, settlementDelaySec: 7 * 86_400, resolvedFeeBps: 0,
+    })!;
+    expect(observation.capacityEvidenceTier).toBe("live-queue-proxy");
+    expect(observation.confidence).toBe("high");
+    expect(observation.evidenceKind).toBe("onchain-contract-state");
+    expect(observation.scoreEligible).toBe(false);
+    expect(observation.settlementHorizonSec).toBe(7 * 86_400);
+    expect(observation.executableUsd).toBe(1_250_000);
+    expect(observation.capacityCurve!.find((point) => point.requestedNotionalUsd === 25_000_000)!.executableUsd).toBe(1_250_000);
+  });
+
+  it.each(["live-queue", "live-proxy-validated"] as const)(
+    "never assigns the live %s tier to absent/future/stale clocks", (capacityKind) => {
+      const now = Date.UTC(2026, 9, 2, 12) / 1000;
+      for (const evidenceObservedAt of [undefined, Number.NaN, now + 1, now - 7 * 86_400]) {
+        const observation = build({ sourceMode: "dynamic", capacityConfidence: "live-proxy",
+          capacityKind, freshnessKind: "same-run-onchain", evidenceObservedAt, now })!;
+        expect(observation.capacityEvidenceTier).not.toBe("live-queue-proxy");
+        expect(observation.scoreEligible).toBe(false);
+      }
+    },
+  );
 });

@@ -15,6 +15,9 @@
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
+import { categorizeReplayChanges, diffReplayArtifacts, type ReplayChangeCategory, type ReplayDiffEntry } from "../../worker/scripts/diff-safety-score-v9-replays";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const USAGE = `Usage: npm run safety-score-v9:movers -- --before <path> --after <path> [options]
 
@@ -24,23 +27,26 @@ Options:
   --manifest <path>     Expected-movers manifest JSON
   --json <path>         Write the machine-readable mover report here
   --markdown            Emit a Markdown table instead of text
-  --assert-declared     Exit non-zero when a grade flip is not declared in the manifest
+  --assert-declared     Fail on an undeclared grade or availability-status change
   -h, --help            Show this help`;
 
 interface ReplayCard {
   id: string;
   score: number | null;
-  grade: string;
-  pillars?: Record<string, { score: number }>;
+  grade: string | null;
+  ratingStatus?: "rated" | "not-rated" | "pipeline-gap";
+  pillars?: Record<string, { score: number | null }>;
   bindingCap?: { kind: string; limit: number } | null;
-  weakestPillar?: { pillar: string; score: number };
+  weakestPillar?: { pillar: string; score: number } | null;
 }
 
 /** One declared mover. `score` is optional: a grade flip is the gated fact. */
 interface ManifestEntry {
   id: string;
-  from: string;
-  to: string;
+  from: string | null;
+  to: string | null;
+  ratingStatusFrom?: "rated" | "not-rated" | "pipeline-gap";
+  ratingStatusTo?: "rated" | "not-rated" | "pipeline-gap";
   reason: string;
   workstream: string;
 }
@@ -53,17 +59,21 @@ export interface Mover {
   scoreBefore: number | null;
   scoreAfter: number | null;
   scoreDelta: number | null;
-  gradeBefore: string;
-  gradeAfter: string;
+  gradeBefore: string | null;
+  gradeAfter: string | null;
   gradeFlipped: boolean;
-  pillarDeltas: Record<string, number>;
+  ratingStatusBefore: "rated" | "not-rated" | "pipeline-gap";
+  ratingStatusAfter: "rated" | "not-rated" | "pipeline-gap";
+  ratingStatusChanged: boolean;
+  changes: ReplayDiffEntry[];
+  categories: Partial<Record<ReplayChangeCategory, ReplayDiffEntry[]>>;
+  pillarDeltas: Record<string, number | null>;
   capBefore: string | null;
   capAfter: string | null;
   declared: ManifestEntry | null;
 }
 
-function readCards(path: string): Map<string, ReplayCard> {
-  const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
+function readCards(parsed: unknown, path: string): Map<string, ReplayCard> {
   if (parsed === null || typeof parsed !== "object" || !("pipeline" in parsed)) {
     throw new Error(`${path}: not a replay artifact (no pipeline key)`);
   }
@@ -84,6 +94,7 @@ function readCards(path: string): Map<string, ReplayCard> {
 
 const PILLARS = ["backing", "exit", "control"] as const;
 
+
 export function collectMovers(
   before: Map<string, ReplayCard>,
   after: Map<string, ReplayCard>,
@@ -96,15 +107,22 @@ export function collectMovers(
     if (!b) continue;
     const scoreDelta = a.score === null || b.score === null ? null : +(a.score - b.score).toFixed(2);
     const gradeFlipped = a.grade !== b.grade;
-    if (scoreDelta === 0 && !gradeFlipped) continue;
-    if (scoreDelta === null && a.score === b.score && !gradeFlipped) continue;
-    const pillarDeltas: Record<string, number> = {};
+    const ratingStatusBefore = b.ratingStatus ?? (b.grade === null ? "pipeline-gap" : b.grade === "NR" ? "not-rated" : "rated");
+    const ratingStatusAfter = a.ratingStatus ?? (a.grade === null ? "pipeline-gap" : a.grade === "NR" ? "not-rated" : "rated");
+    const ratingStatusChanged = ratingStatusBefore !== ratingStatusAfter;
+    const baseline = { pipeline: { candidate: { cards: [b] } } };
+    const candidate = { pipeline: { candidate: { cards: [a] } } };
+    const changes = diffReplayArtifacts(baseline, candidate).entries;
+    if (changes.length === 0) continue;
+    const categories = Object.fromEntries(Object.entries(categorizeReplayChanges(baseline, candidate)).filter(([, entries]) => entries.length > 0));
+    const pillarDeltas: Record<string, number | null> = {};
     for (const pillar of PILLARS) {
       const bp = b.pillars?.[pillar]?.score;
       const ap = a.pillars?.[pillar]?.score;
       if (typeof bp === "number" && typeof ap === "number" && Math.abs(ap - bp) > 0.005) {
         pillarDeltas[pillar] = +(ap - bp).toFixed(2);
       }
+      if (bp !== ap && (bp === null || ap === null)) pillarDeltas[pillar] = null;
     }
     movers.push({
       id,
@@ -114,6 +132,11 @@ export function collectMovers(
       gradeBefore: b.grade,
       gradeAfter: a.grade,
       gradeFlipped,
+      ratingStatusBefore,
+      ratingStatusAfter,
+      ratingStatusChanged,
+      changes,
+      categories,
       pillarDeltas,
       capBefore: b.bindingCap?.kind ?? null,
       capAfter: a.bindingCap?.kind ?? null,
@@ -151,16 +174,21 @@ async function main(): Promise<void> {
       ? (JSON.parse(readFileSync(values.manifest, "utf8")) as Manifest)
       : null;
 
+  const beforeArtifact: unknown = JSON.parse(readFileSync(values.before, "utf8"));
+  const afterArtifact: unknown = JSON.parse(readFileSync(values.after, "utf8"));
+  const artifactCategories = categorizeReplayChanges(beforeArtifact, afterArtifact);
   const { movers, appeared, disappeared } = collectMovers(
-    readCards(values.before),
-    readCards(values.after),
+    readCards(beforeArtifact, values.before),
+    readCards(afterArtifact, values.after),
     manifest,
   );
 
-  const flips = movers.filter((m) => m.gradeFlipped);
+  const flips = movers.filter((m) => m.gradeFlipped || m.ratingStatusChanged);
   const undeclaredFlips = flips.filter((m) => m.declared === null);
   const wrongDirection = flips.filter(
-    (m) => m.declared !== null && (m.declared.from !== m.gradeBefore || m.declared.to !== m.gradeAfter),
+    (m) => m.declared !== null && (m.declared.from !== m.gradeBefore || m.declared.to !== m.gradeAfter ||
+      (m.declared.ratingStatusFrom !== undefined && m.declared.ratingStatusFrom !== m.ratingStatusBefore) ||
+      (m.declared.ratingStatusTo !== undefined && m.declared.ratingStatusTo !== m.ratingStatusAfter)),
   );
   const declaredButAbsent = (manifest?.movers ?? []).filter(
     (entry) => !flips.some((m) => m.id === entry.id),
@@ -169,28 +197,30 @@ async function main(): Promise<void> {
   if (values.markdown === true) {
     console.log(`# Safety Score V9 movers\n`);
     console.log(
-      `${movers.length} assets moved · ${flips.length} grade flips · ${undeclaredFlips.length} undeclared\n`,
+      `${movers.length} assets moved · ${flips.length} grade/status changes · ${undeclaredFlips.length} undeclared\n`,
     );
-    console.log(`| id | score | grade | pillar deltas | binding cap | declared |`);
-    console.log(`| --- | ---: | --- | --- | --- | --- |`);
+    console.log(`| id | score | grade | rating status | pillar deltas | binding cap | categories | declared |`);
+    console.log(`| --- | ---: | --- | --- | --- | --- | --- | --- |`);
     for (const m of movers) {
       const pd =
         Object.entries(m.pillarDeltas)
-          .map(([p, d]) => `${p} ${d > 0 ? "+" : ""}${d}`)
+          .map(([p, d]) => `${p} ${d === null ? "availability transition" : `${d > 0 ? "+" : ""}${d}`}`)
           .join(", ") || "—";
       const cap = m.capBefore === m.capAfter ? (m.capAfter ?? "—") : `${m.capBefore ?? "none"} → ${m.capAfter ?? "none"}`;
       console.log(
-        `| \`${m.id}\` | ${m.scoreBefore} → ${m.scoreAfter} (${(m.scoreDelta ?? 0) > 0 ? "+" : ""}${m.scoreDelta}) | ${m.gradeBefore}${m.gradeFlipped ? ` → **${m.gradeAfter}**` : ""} | ${pd} | ${cap} | ${m.declared ? `${m.declared.workstream}: ${m.declared.reason}` : m.gradeFlipped ? "**UNDECLARED**" : "n/a" } |`,
+        `| \`${m.id}\` | ${m.scoreBefore ?? "—"} → ${m.scoreAfter ?? "—"} (${m.scoreDelta ?? "—"}) | ${m.gradeBefore ?? "—"} → ${m.gradeAfter ?? "—"} | ${m.ratingStatusBefore} → ${m.ratingStatusAfter} | ${pd} | ${cap} | ${Object.keys(m.categories).join(", ") || "other diagnostics"} | ${m.declared ? `${m.declared.workstream}: ${m.declared.reason}` : m.gradeFlipped || m.ratingStatusChanged ? "**UNDECLARED**" : "n/a" } |`,
       );
     }
   } else {
     console.log(`movers: ${movers.length}  grade flips: ${flips.length}  undeclared flips: ${undeclaredFlips.length}`);
     for (const m of movers) {
       console.log(
-        `  ${m.gradeFlipped ? "*" : " "} ${m.id.padEnd(34)} ${String(m.scoreBefore).padStart(5)} -> ${String(m.scoreAfter).padStart(5)}  ${m.gradeBefore} -> ${m.gradeAfter}${m.declared ? `  [${m.declared.workstream}]` : m.gradeFlipped ? "  [UNDECLARED]" : ""}`,
+        `  ${m.gradeFlipped || m.ratingStatusChanged ? "*" : " "} ${m.id.padEnd(34)} ${String(m.scoreBefore).padStart(5)} -> ${String(m.scoreAfter).padStart(5)}  ${m.gradeBefore} -> ${m.gradeAfter}  ${m.ratingStatusBefore} -> ${m.ratingStatusAfter}  [${Object.keys(m.categories).join(", ") || "other diagnostics"}]${m.declared ? `  [${m.declared.workstream}]` : m.gradeFlipped || m.ratingStatusChanged ? "  [UNDECLARED]" : ""}`,
       );
     }
   }
+  const categoryCounts = Object.entries(artifactCategories).map(([category, rows]) => `${category}: ${rows.length}`).join(", ");
+  console.log(`\nObserved diagnostic categories (not independent point effects): ${categoryCounts}`);
   if (appeared.length > 0) console.log(`\nassets only in --after: ${appeared.join(", ")}`);
   if (disappeared.length > 0) console.log(`assets only in --before: ${disappeared.join(", ")}`);
   if (declaredButAbsent.length > 0) {
@@ -205,15 +235,17 @@ async function main(): Promise<void> {
   if (typeof values.json === "string") {
     writeFileSync(
       values.json,
-      `${JSON.stringify({ movers, appeared, disappeared, flips: flips.length, undeclaredFlips: undeclaredFlips.length }, null, 2)}\n`,
+      `${JSON.stringify({ attributionSemantics: "observed-diagnostic-changes-not-independent-point-effects", artifactCategories, movers, appeared, disappeared, flips: flips.length, undeclaredFlips: undeclaredFlips.length }, null, 2)}\n`,
     );
   }
 
   if (values["assert-declared"] === true && (undeclaredFlips.length > 0 || wrongDirection.length > 0)) {
     throw new Error(
-      `expected-movers gate failed: ${undeclaredFlips.length} undeclared grade flip(s), ${wrongDirection.length} mis-declared`,
+      `expected-movers gate failed: ${undeclaredFlips.length} undeclared grade/status change(s), ${wrongDirection.length} mis-declared`,
     );
   }
 }
 
-void runCliEntrypoint(main, { label: "safety-score-v9:movers", usage: USAGE });
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  void runCliEntrypoint(main, { label: "safety-score-v9:movers", usage: USAGE });
+}

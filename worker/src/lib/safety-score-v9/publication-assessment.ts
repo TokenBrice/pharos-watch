@@ -1,13 +1,10 @@
 import type {
   V9PublicationHoldReason,
 } from "@shared/types/report-cards-v9";
-import type {
-  SafetyScoreV9Card,
-  SafetyScoreV9CurrentResponse,
-} from "@shared/types/safety-score-v9-public";
-import { REPORT_CARD_GRADE_RANK } from "@shared/lib/report-card-core";
+import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import type { V9Grade } from "@shared/types/safety-score-v9";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
+import { REPORT_CARD_GRADE_RANK } from "@shared/lib/report-card-core";
 import { z } from "zod";
 import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
 import {
@@ -27,6 +24,14 @@ interface MeasuredExitPublicationInput {
   >;
 }
 
+
+/** Preserve the stale measured-route guard across rating and availability transitions. */
+function cardDeteriorated(candidate: SafetyScoreV9CurrentResponse["cards"][number], accepted: SafetyScoreV9AcceptedCardBaseline): boolean {
+  if (accepted.grade !== null && accepted.grade !== "NR" && candidate.ratingStatus !== "rated") return true;
+  if (candidate.score !== null && accepted.score !== null && candidate.score < accepted.score) return true;
+  return candidate.grade !== null && accepted.grade !== null &&
+    REPORT_CARD_GRADE_RANK[candidate.grade] < REPORT_CARD_GRADE_RANK[accepted.grade];
+}
 /** Snapshot publication time cannot refresh the measured history embedded in it. */
 export function expiredMeasuredExitAssetIds(
   fixedInput: MeasuredExitPublicationInput,
@@ -128,39 +133,17 @@ const V9_PRODUCER_FAILURE_MINIMUM_HEALTHY_ASSET_DENOMINATOR = 10;
  */
 const V9_LIVE_RESERVE_MINIMUM_COVERAGE_RATIO = 0.6;
 
-/**
- * The hold gate compares grades only relatively, so it reads the one grade-rank
- * ladder instead of restating it. `REPORT_CARD_GRADE_RANK` is this table shifted
- * by one (NR -1 .. A+ 10 versus NR 0 .. A+ 11) — order-isomorphic, so every
- * `<` comparison below is unchanged.
- */
-const GRADE_RANK: Record<V9Grade, number> = REPORT_CARD_GRADE_RANK;
-
-function producerFailedBindings(card: SafetyScoreV9Card) {
-  if (!("scoreTrace" in card)) return [];
-  if (!("boundedUncertaintyAttribution" in card.scoreTrace)) return [];
-  return card.scoreTrace.boundedUncertaintyAttribution.items.filter(
-    (item) => item.responsibility === "producer-failed",
-  );
-}
-
-type ProducerFailedBinding = Pick<
-  ReturnType<typeof producerFailedBindings>[number],
-  "source" | "code" | "path"
->;
-
 export interface SafetyScoreV9AcceptedCardBaseline {
   id: string;
-  grade: V9Grade;
+  grade: V9Grade | null;
   score: number | null;
-  producerFailedBindings: ProducerFailedBinding[];
   primaryRouteKey: string | null;
   diversificationRouteKey: string | null;
   primaryRouteCapacityUsd: number | null;
   pillarScores: {
-    backing: number;
-    exit: number;
-    control: number;
+    backing: number | null;
+    exit: number | null;
+    control: number | null;
   } | null;
 }
 
@@ -201,13 +184,6 @@ export function buildSafetyScoreV9AcceptedPublicationBaseline(
         id: card.id,
         grade: card.grade,
         score: card.score,
-        producerFailedBindings: producerFailedBindings(card).map(
-          (item) => ({
-            source: item.source,
-            code: item.code,
-            path: item.path,
-          }),
-        ),
         primaryRouteKey:
           breakdowns?.exit.primaryRoute?.key ?? null,
         diversificationRouteKey:
@@ -226,47 +202,6 @@ export function buildSafetyScoreV9AcceptedPublicationBaseline(
   };
 }
 
-function bindingKey(
-  item: ProducerFailedBinding,
-  effect: Extract<
-    V9PublicationHoldReason,
-    { code: "producer-failed-downgrade" | "producer-failed-nr" }
-  >["effect"],
-): string {
-  return [
-    item.source,
-    item.code,
-    item.path,
-    effect,
-  ].join("\u0000");
-}
-
-function cardDeteriorated(
-  candidate: SafetyScoreV9Card,
-  accepted: SafetyScoreV9AcceptedCardBaseline,
-): boolean {
-  if (accepted.grade !== "NR" && candidate.grade === "NR") return true;
-  if (
-    accepted.score !== null &&
-    candidate.score !== null &&
-    candidate.score < accepted.score
-  ) {
-    return true;
-  }
-  return GRADE_RANK[candidate.grade] < GRADE_RANK[accepted.grade];
-}
-
-function scoringIdentityMatches(
-  candidate: SafetyScoreV9CurrentResponse,
-  accepted: SafetyScoreV9AcceptedPublicationBaseline,
-): boolean {
-  return (
-    candidate.policyVersion === accepted.policyVersion &&
-    candidate.policy.id === accepted.policyId &&
-    candidate.policy.semanticDigest === accepted.policyDigest &&
-    candidate.evaluationBuildDigest === accepted.evaluationBuildDigest
-  );
-}
 
 function inputHealthReasons(
   health: V9PublicationInputHealth,
@@ -335,10 +270,6 @@ export function assessV9Publication(input: {
   if (expiredMeasuredAssets.size > 0 && !reasons.some((reason) => reason.code === "dex-stale")) {
     reasons.push({ code: "dex-stale" });
   }
-  const producerFailureReasons: Extract<
-    V9PublicationHoldReason,
-    { code: "producer-failed-downgrade" | "producer-failed-nr" }
-  >[] = [];
   const failedFloorIds = input.coverageFloors
     .filter((floor) => floor.status === "fail")
     .map((floor) => floor.id)
@@ -362,9 +293,9 @@ export function assessV9Publication(input: {
         `Quarantined Safety Score v9 asset ${assetId} is absent from the candidate`,
       );
     }
-    if (card.grade !== "NR" || card.score !== null) {
+    if (card.ratingStatus !== "pipeline-gap" || card.score !== null || card.grade !== null) {
       throw new Error(
-        `Quarantined Safety Score v9 asset ${assetId} is not current NR`,
+        `Quarantined Safety Score v9 asset ${assetId} is not a technical pipeline gap`,
       );
     }
   }
@@ -390,52 +321,7 @@ export function assessV9Publication(input: {
     }
   }
 
-  if (
-    input.acceptedPublication !== null &&
-    scoringIdentityMatches(
-      input.candidate,
-      input.acceptedPublication,
-    )
-  ) {
-    const acceptedById = new Map(
-      input.acceptedPublication.cards.map((card) => [card.id, card]),
-    );
-    for (const candidate of input.candidate.cards) {
-      const accepted = acceptedById.get(candidate.id);
-      if (!accepted || !cardDeteriorated(candidate, accepted)) continue;
-      const acceptedEffect =
-        accepted.grade === "NR"
-          ? "not-rated"
-          : "score-or-grade-downgrade";
-      const acceptedBindings = new Set(
-        accepted.producerFailedBindings.map((binding) =>
-          bindingKey(binding, acceptedEffect),
-        ),
-      );
-      const effect =
-        accepted.grade !== "NR" && candidate.grade === "NR"
-          ? "not-rated"
-          : "score-or-grade-downgrade";
-      for (const binding of producerFailedBindings(candidate)) {
-        if (acceptedBindings.has(bindingKey(binding, effect))) continue;
-        producerFailureReasons.push({
-          code:
-            effect === "not-rated"
-              ? "producer-failed-nr"
-              : "producer-failed-downgrade",
-          assetId: candidate.id,
-          source: binding.source,
-          reasonCode: binding.code,
-          path: binding.path,
-          effect,
-        });
-      }
-    }
-  }
-  const producerAffectedAssetIds = new Set([
-    ...quarantineAffectedAssetIds,
-    ...producerFailureReasons.map((reason) => reason.assetId),
-  ]);
+  const producerAffectedAssetIds = quarantineAffectedAssetIds;
   const affectedAssetIds = new Set([...expiredMeasuredAssets, ...producerAffectedAssetIds]);
   if (
     affectedAssetsRequireGlobalHold(
@@ -443,35 +329,14 @@ export function assessV9Publication(input: {
       input.candidate.cards.length,
     )
   ) {
-    const reasonByAssetId = new Map(
-      producerFailureReasons.map((reason) => [
-        reason.assetId,
-        reason,
-      ]),
-    );
     for (const assetId of [...producerAffectedAssetIds].sort()) {
-      const existing = reasonByAssetId.get(assetId);
-      if (existing) {
-        reasons.push(existing);
-        continue;
-      }
-      const parentBinding = producerFailedBindings(
-        input.candidate.cards.find((card) => card.id === assetId)!,
-      ).find(
-        (binding) =>
-          binding.source === "parent-score" &&
-          [...directQuarantines].some((quarantinedId) =>
-            binding.path.includes(`parent:${quarantinedId}:`),
-          ),
-      );
       reasons.push({
-        code: "producer-failed-nr",
+        code: "producer-failed-pipeline-gap",
         assetId,
-        source: parentBinding?.source ?? "reason",
-        reasonCode:
-          parentBinding?.code ?? "missing-pillar-evidence",
-        path: parentBinding?.path ?? "asset-compilation",
-        effect: "not-rated",
+        source: "reason",
+        reasonCode: "missing-pillar-evidence",
+        path: "asset-compilation",
+        effect: "pipeline-gap",
       });
     }
   }

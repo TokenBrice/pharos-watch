@@ -90,7 +90,9 @@ describe("reviewed exact-channel suspension", () => {
       expect(result.reasons).toEqual(["missing-same-notional-route"]);
       expect(result.reasons).not.toContain("no-viable-exit-path");
       expect(result.routes[0]).toMatchObject({ included: false, capacityPoint: null, routeSuspension: suspension });
-      expect(asset.gaps.filter((gap) => gap.gapId.includes(":suspended")).map((gap) => gap.responsibility)).toEqual(["integration-missing"]);
+      expect(asset.gaps.filter((gap) => gap.gapId.includes(":suspended"))).toEqual([
+        expect.objectContaining({ responsibility: "unresearched", causeProof: expect.objectContaining({ cause: "U" }) }),
+      ]);
       const published = evaluateV9FactSet(compileSet(fixed), V9_CANDIDATE_POLICY_V1).assets[0]!;
       expect(published.trace.finalGrade).not.toBe("F");
       expect(published.trace.adverseAttribution).toEqual([]);

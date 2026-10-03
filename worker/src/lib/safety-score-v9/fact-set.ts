@@ -38,6 +38,8 @@ import {
   normalizeCompiledFailureDomains,
   componentResearchEvidence,
   projectResearchOverlayPayload,
+  compileRouteFactorStatuses,
+  createRuntimeGapVerdict,
   type AssetBuildContext,
 } from "./fact-set-context";
 import { buildOperationalResilienceFact } from "./fact-set-operational-resilience";
@@ -121,12 +123,19 @@ function buildAssetFacts(
   const mechanismExitFacts = buildMechanismExitFacts(context);
   const cdpStressCoverage = buildCdpStressCoverage(context);
   const routes = buildRoutes(context);
+  const exitRoutes = routes.exitRoutes.map((route) => compileRouteFactorStatuses(context, route));
   const controls = buildControls(context);
   const economicControlReview = buildEconomicControlReview(context);
   const accessReview = buildAccessReview(context, reserves, dependencies);
   const peg = buildPeg(context);
   const supply = buildSupply(context);
   const operationalResilience = buildOperationalResilienceFact(context);
+  const operationalGap = operationalResilience === null ? context.gaps.get(`${context.asset.assetId}:gap:operational-resilience`) : undefined;
+  const operationalResilienceStatus = operationalGap ? createV9FactStatus({
+    applicability: requiredV9Applicability("v9.control.operational-resilience"),
+    observationState: operationalGap.observationState, gapIds: [operationalGap.gapId],
+    evidenceRefIds: operationalGap.evidenceRefIds,
+  }) : undefined;
   const allocationScopeFacts = buildAllocationScopeFacts(context, {
     dependencies, reserveStatus: reserves.reserveStatus, reserveExposures: reserves.reserveExposures,
   });
@@ -138,7 +147,7 @@ function buildAssetFacts(
       reserveStatus: reserves.reserveStatus,
       reserveExposures: reserves.reserveExposures,
       exitStatus: routes.exitStatus,
-      exitRoutes: routes.exitRoutes,
+      exitRoutes,
       controlStatus: controls.controlStatus,
       controls: controls.controls,
       economicControlReview,
@@ -167,14 +176,19 @@ function buildAssetFacts(
     ...reserves,
     ...(reserveScopeAdmissions === undefined ? {} : { reserveScopeAdmissions }),
     ...routes,
+    exitRoutes,
     ...controls,
     economicControlReview,
     accessReview,
     peg,
     supply,
     operationalResilience,
+    ...(operationalResilienceStatus === undefined ? {} : { operationalResilienceStatus }),
     wrapperLocalFacts,
     allocationScopeFacts,
+    ...(context.causeResolutionDiagnostics.length === 0 ? {} : {
+      causeResolutionDiagnostics: context.causeResolutionDiagnostics,
+    }),
   };
   // Normalize once at the producer boundary so every score-bearing pillar,
   // including nested mechanism reviews, shares the same chain identity.
@@ -218,6 +232,7 @@ function dependencySupport(
 function quarantinedWrapperLocalFacts(
   asset: AssetExtension,
   dependencies: V9EffectiveDependenciesV3,
+  unavailableStatus: V9AssetFactsV3["reserveStatus"],
 ): V9WrapperLocalFacts {
   const wrapperApplicable =
     asset.variantKind === "pure-wrapper" ||
@@ -241,6 +256,7 @@ function quarantinedWrapperLocalFacts(
     assessment: null,
     signals: ["asset-compilation-unavailable"],
     evidenceRefIds: [],
+    status: unavailableStatus,
   });
   return V9WrapperLocalFactsSchema.parse({
     schemaVersion: 1,
@@ -249,6 +265,7 @@ function quarantinedWrapperLocalFacts(
     formDisposition: "producer-failed",
     formSignals: ["asset-compilation-unavailable"],
     formEvidenceRefIds: [],
+    formStatus: unavailableStatus,
     facts: {
       contractMutability: unavailableDimension(),
       custodyEscrow: unavailableDimension(),
@@ -266,6 +283,7 @@ function quarantinedWrapperLocalFacts(
       maximumParentLossAbsorptionPoints: 0,
       signals: ["asset-compilation-unavailable"],
       evidenceRefIds: [],
+      status: unavailableStatus,
     },
   });
 }
@@ -273,9 +291,19 @@ function quarantinedWrapperLocalFacts(
 function buildQuarantinedAssetFacts(
   context: AssetBuildContext,
   dependencies: V9EffectiveDependenciesV3,
+  quarantine: V9AssetQuarantine,
 ): V9AssetFactsV3 {
   const support = dependencySupport(context, dependencies);
   const gapId = `${context.asset.assetId}:gap:asset-compilation`;
+  const runtime = createRuntimeGapVerdict({
+    assetId: context.asset.assetId,
+    scope: { pillar: "backing", componentKey: "asset-compilation", factorKey: null, routeKey: null,
+      exposureId: null, requiredDatum: "compiledAssetFacts" },
+    sourceId: "safety-score-v9-compiler", sourceGenerationId: context.fixedInput.baseInputGenerationId,
+    observedAtSec: context.fixedInput.clockSec, asOfSec: context.fixedInput.clockSec,
+    producerState: "producer-failed", rejectionCode: quarantine.code, reason: quarantine.message,
+    contentSha256: context.researchPayloadSha256,
+  });
   const quarantineGap = createV9FactGapV3({
     gapId,
     reasonCode: "missing-pillar-evidence",
@@ -283,19 +311,21 @@ function buildQuarantinedAssetFacts(
     policyRuleId: "v9.asset.compilation",
     observationState: "missing",
     responsibility: "producer-failed",
+    causeScope: runtime.verdict.scope,
+    causeProof: runtime.verdict.proof,
     path: {
       kind: "local-component",
       componentKey: "asset-compilation",
     },
     message:
       "Current score-bearing facts for this asset could not be compiled.",
-    evidenceRefIds: [],
+    evidenceRefIds: [runtime.evidence.evidenceId],
   });
   const unavailableStatus = () =>
     createV9FactStatus({
       applicability: requiredV9Applicability("v9.asset.compilation"),
       observationState: "missing",
-      evidenceRefIds: [],
+      evidenceRefIds: [runtime.evidence.evidenceId],
       gapIds: [gapId],
     });
   const reference = context.asset.pegReference;
@@ -306,7 +336,7 @@ function buildQuarantinedAssetFacts(
     ...(context.asset.variantKind == null
       ? {}
       : { variantKind: context.asset.variantKind }),
-    evidence: support.evidence,
+    evidence: [...support.evidence, runtime.evidence],
     gaps: [...support.gaps, quarantineGap],
     implementation: {
       status: unavailableStatus(),
@@ -320,6 +350,7 @@ function buildQuarantinedAssetFacts(
     dependencies,
     reserveStatus: unavailableStatus(),
     reserveExposures: [],
+    reserveResiduals: [],
     exitStatus: unavailableStatus(),
     exitRoutes: [],
     controlStatus: unavailableStatus(),
@@ -327,6 +358,7 @@ function buildQuarantinedAssetFacts(
     economicControlReview: {
       mint: {
         status: unavailableStatus(),
+        factorStatuses: { reconciliation: unavailableStatus(), supervision: unavailableStatus(), upgrade: unavailableStatus() },
         controlKey: null,
         reconciliation: "unknown",
         supervision: "unknown",
@@ -334,11 +366,13 @@ function buildQuarantinedAssetFacts(
       },
       oracle: {
         status: unavailableStatus(),
+        factorStatuses: { tier: unavailableStatus() },
         tier: null,
         branches: [],
       },
       bridge: {
         status: unavailableStatus(),
+        factorStatuses: { tier: unavailableStatus() },
         routes: [],
       },
     },
@@ -389,6 +423,7 @@ function buildQuarantinedAssetFacts(
     wrapperLocalFacts: quarantinedWrapperLocalFacts(
       context.asset,
       dependencies,
+      unavailableStatus(),
     ),
   });
 }
@@ -430,7 +465,7 @@ function quarantinedAssetOutcome(
     metadata: { assetId: quarantine.assetId, stage, code: quarantine.code, message: quarantine.message },
   });
   return {
-    facts: buildQuarantinedAssetFacts(quarantineContext, dependencies),
+    facts: buildQuarantinedAssetFacts(quarantineContext, dependencies, quarantine),
     quarantine,
   };
 }
@@ -603,7 +638,7 @@ export function compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
         );
   });
   const factSet = compileV9FactSetV3({
-    schemaVersion: 3,
+    schemaVersion: 4,
     baseInputGenerationId: fixedInput.baseInputGenerationId,
     asOfSec: fixedInput.clockSec,
     compiledAtSec: extension.compiledAtSec,

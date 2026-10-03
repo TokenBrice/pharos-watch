@@ -30,12 +30,12 @@ const ROW_TONE_SCORE_CLASS: Record<BreakdownRow["tone"], string> = {
 
 function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?: boolean }) {
   const [open, setOpen] = useState(false);
-  const boundedScore = Math.max(0, Math.min(100, row.score));
+  const boundedScore = row.score === null ? null : Math.max(0, Math.min(100, row.score));
   const weightLabel = row.weight === null
     ? null
     : `${(row.weight * 100).toFixed(row.weight * 100 < 10 ? 1 : 0)}%`;
   const hasChildren = row.children.length > 0;
-  const displayedScore =
+  const displayedScore = row.score === null ? "—" :
     row.score > 0 && row.score < 1 ? "<1" : row.score.toFixed(0);
 
   const bar = (
@@ -46,12 +46,14 @@ function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?
       <span
         className="h-2.5 overflow-hidden rounded-[3px] border border-neutral-300 bg-neutral-200 dark:border-[#2a2a2d] dark:bg-[#1f1f21]"
         role="img"
-        aria-label={`${row.label}: ${displayedScore} out of 100${weightLabel === null ? "" : `, ${weightLabel} weight`}`}
+        aria-label={`${row.label}: ${row.score === null ? row.status ?? "Not scored" : `${displayedScore} out of 100`}${weightLabel === null ? "" : `, ${weightLabel} effective weight`}`}
       >
-        <span
-          className={cn("block h-full rounded-[2px]", ROW_TONE_FILL_CLASS[row.tone])}
-          style={{ width: `${boundedScore}%` }}
-        />
+        {boundedScore === null ? null : (
+          <span
+            className={cn("block h-full rounded-[2px]", ROW_TONE_FILL_CLASS[row.tone])}
+            style={{ width: `${boundedScore}%` }}
+          />
+        )}
       </span>
       <span
         className={cn(
@@ -318,7 +320,7 @@ export function SafetyScoreV9PillarRow({
   const open = userOpen ?? false;
   const detailsId = useId();
   const hasDetails = pillar.breakdown !== null || pillar.componentCount > 0 || pillar.reasons.length > 0;
-  const scoreGrade = scoreToGrade(pillar.score);
+  const scoreGrade = pillar.score === null ? null : scoreToGrade(pillar.score);
   const gradeMetadata = getSafetyGradeMetadata(scoreGrade);
   return (
     <div className="py-2">
@@ -340,7 +342,7 @@ export function SafetyScoreV9PillarRow({
               <>
                 <span className="mt-1 block font-mono text-[10px] text-foreground/85">
                   Primary V10 route: {pillar.breakdown.exitHighlight.primaryRouteLabel}{" "}
-                  {pillar.breakdown.exitHighlight.primaryRouteScore.toFixed(1)}
+                  {pillar.breakdown.exitHighlight.primaryRouteScore === null ? "Not scored" : pillar.breakdown.exitHighlight.primaryRouteScore.toFixed(1)}
                   {pillar.breakdown.exitHighlight.redundancyCredit > 0
                     ? ` · backup +${pillar.breakdown.exitHighlight.redundancyCredit.toFixed(1)}`
                     : ""}
@@ -354,10 +356,10 @@ export function SafetyScoreV9PillarRow({
             ) : null}
           </span>
           <span className="whitespace-nowrap font-mono text-sm font-semibold tabular-nums text-foreground">
-            {pillar.score === null ? "NR" : `${pillar.score.toFixed(0)} / 100`}
+            {pillar.score === null ? "Not scored" : `${pillar.score.toFixed(0)} / 100`}
           </span>
           <ScorePill
-            label={scoreGrade}
+            label={scoreGrade === null ? "Excluded" : scoreGrade}
             toneClass={gradeMetadata.pillClassName}
             title="Pillar score band"
             className="min-w-9 justify-center text-[10px] font-semibold"

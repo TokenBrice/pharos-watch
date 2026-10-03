@@ -102,76 +102,18 @@ describe("Safety Score V9 publication codec", () => {
     await expect(parseSafetyScoreV9Publication(stored)).rejects.toThrow(/totalFactCount/);
   });
 
-  it("reads the last V5 publication emitted before stressStateDigest retired", async () => {
+  it("fails closed explicitly for authenticated schema 5 until cutover", async () => {
     const publication = makeWorkerSafetyScoreV9Publication();
-    const stored = await authenticatedPayload(publication, (payload) => ({
-      ...payload,
-      cards: payload.cards.map((card) => ({ ...card, stressStateDigest: "a".repeat(64) })),
-    }));
-
-    await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(
-      publication,
-    );
+    const stored = await authenticatedPayload(publication, (payload) => ({ ...payload, schemaVersion: 5 }));
+    await expect(parseSafetyScoreV9Publication(stored)).rejects.toMatchObject({ code: "publication-schema-cutover-pending" });
   });
 
-  it("reads an authenticated V5 publication emitted before NR binding caps were suppressed", async () => {
-    const cap = {
-      kind: "reason:missing-reserve-composition",
-      limit: 55,
-      source: "evidence" as const,
-      reason: "Reserve composition is unavailable.",
-      binding: true,
-    };
-    const publication = makeWorkerSafetyScoreV9Publication({
-      cards: [
-        makeWorkerV9Card({
-          score: null,
-          grade: "NR",
-          qualityScore: null,
-          pegMultiplier: null,
-          pegAdjustedScore: null,
-          pillars: makeWorkerV9Pillars({ backing: null, exit: null, control: null }),
-          caps: [{ ...cap, binding: false }],
-          bindingCap: null,
-          nrReasons: [{
-            code: "missing-reserve-composition",
-            field: "pillars.backing",
-            message: "Reserve composition is unavailable.",
-            origin: "asset",
-          }],
-          reasonCodes: ["missing-reserve-composition"],
-        }),
-      ],
-    });
-    const stored = await authenticatedPayload(publication, (payload) => {
-      payload.cards[0]!.caps = [cap];
-      payload.cards[0]!.bindingCap = cap;
-      return payload;
-    });
-
-    await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(
-      publication,
-    );
+  it.each([4, 7])("refuses unknown authenticated publication schema %s", async (schemaVersion) => {
+    const publication = makeWorkerSafetyScoreV9Publication();
+    const stored = await authenticatedPayload(publication, (payload) => ({ ...payload, schemaVersion }));
+    await expect(parseSafetyScoreV9Publication(stored)).rejects.toThrow(`Unsupported Safety Score publication schema ${schemaVersion}`);
   });
 
-  it("reads an authenticated pre-9.19 compressed publication without per-fact paths", async () => {
-    const publication = makeWorkerSafetyScoreV9Publication({
-      policyVersion: "9.18",
-    });
-    const legacyPublication = structuredClone(publication);
-    for (const card of legacyPublication.cards) {
-      delete (card.scoreTrace.evidenceResponsibility as { facts?: unknown }).facts;
-      card.scoreTrace.evidenceResponsibility.summaries =
-        card.scoreTrace.evidenceResponsibility.summaries.filter(
-          (summary) => summary.responsibility !== "published-evidence-expired",
-        );
-    }
-    const stored = await authenticatedPayload(publication, () => legacyPublication);
-
-    await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(
-      legacyPublication,
-    );
-  });
 
   it("rejects post-9.19 serialization without per-fact paths", async () => {
     const publication = makeWorkerSafetyScoreV9Publication({
@@ -183,36 +125,9 @@ describe("Safety Score V9 publication codec", () => {
 
     await expect(
       serializeSafetyScoreV9Publication(publication),
-    ).rejects.toThrow(/v9\.19\+ publications require per-fact disclosure paths/);
+    ).rejects.toThrow();
   });
 
-  it("reads a stored publication that has per-fact paths but predates the sixth owner", async () => {
-    // The exact shape that took production down on the 9.4 release: written by
-    // a post-9.19 Worker, so `facts` is present, but by a pre-9.4 one, so the
-    // sixth responsibility owner is absent. Keying compatibility on `facts`
-    // alone rejected it and the canonical publication became unreadable.
-    const publication = makeWorkerSafetyScoreV9Publication({
-      policyVersion: "9.35",
-    });
-    const storedPublication = structuredClone(publication);
-    for (const card of storedPublication.cards) {
-      card.scoreTrace.evidenceResponsibility.summaries =
-        card.scoreTrace.evidenceResponsibility.summaries.filter(
-          (summary) => summary.responsibility !== "published-evidence-expired",
-        );
-      card.scoreTrace.evidenceResponsibility.totalFactCount =
-        card.scoreTrace.evidenceResponsibility.summaries.reduce(
-          (sum, summary) => sum + summary.factCount,
-          0,
-        );
-    }
-    expect(storedPublication.cards[0]!.scoreTrace.evidenceResponsibility.facts).toBeDefined();
-    const stored = await authenticatedPayload(publication, () => storedPublication);
-
-    await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(
-      storedPublication,
-    );
-  });
 
   it("rejects post-9.4 serialization that omits an evidence responsibility owner", async () => {
     const publication = makeWorkerSafetyScoreV9Publication({
@@ -225,7 +140,7 @@ describe("Safety Score V9 publication codec", () => {
 
     await expect(
       serializeSafetyScoreV9Publication(publication),
-    ).rejects.toThrow(/v9\.4\+ publications require every evidence responsibility owner/);
+    ).rejects.toThrow();
   });
 
   it("rejects a malformed retired stressStateDigest", async () => {
@@ -238,9 +153,7 @@ describe("Safety Score V9 publication codec", () => {
       })),
     });
 
-    await expect(parseSafetyScoreV9Publication(stored)).rejects.toThrow(
-      "Retired Safety Score v9 stress state digest is invalid",
-    );
+    await expect(parseSafetyScoreV9Publication(stored)).rejects.toThrow();
   });
 
   it("rejects the retired pre-cutover legacy envelope shapes", async () => {

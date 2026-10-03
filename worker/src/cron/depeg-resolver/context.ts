@@ -587,7 +587,7 @@ export async function loadDdrContext(
       safetyByCoin = new Map(
         activeSafetySource.snapshot.cards
           .filter((card) => activeCoinIds.includes(card.id))
-          .map((card) => [
+          .flatMap((card) => card.ratingStatus === "pipeline-gap" || card.grade === null ? [] : [[
             card.id,
             {
               stablecoin_id: card.id,
@@ -595,7 +595,7 @@ export async function loadDdrContext(
               score: card.score,
               recorded_at: activeSafetySource.snapshot.updatedAt,
             },
-          ]),
+          ] as const]),
       );
       v9ExitByCoin = new Map(
         activeSafetySource.snapshot.cards

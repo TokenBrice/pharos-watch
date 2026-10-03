@@ -153,21 +153,29 @@ export function PortfolioClient() {
         <Card className="pharos-card-shell">
           <CardContent className="space-y-5 pt-6">
             <div>
-              <p className="pharos-kicker">Weighted V10 safety aggregate</p>
+              <p className="pharos-kicker">{v9Projection.value.partialEvidence ? "Known-only weighted V10 safety subtotal" : "Weighted V10 safety aggregate"}</p>
               <p className="mt-1 pharos-numeric text-3xl font-semibold text-foreground">
-                {v9Projection.value.score}<span className="text-sm text-muted-foreground">/100</span>
+                {v9Projection.value.score === null ? "Pipeline gap" : <>{v9Projection.value.score}<span className="text-sm text-muted-foreground">/100</span></>}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Portfolio aggregate only; this is not an asset safety grade.
               </p>
+              {v9Projection.value.partialEvidence && <p className="mt-2 text-xs text-muted-foreground">
+                Partial evidence: pipeline gap. Known-only score covers {v9Projection.value.coverageUsd.score} USD of {v9Projection.value.coverageUsd.total} USD;
+                unavailable holdings and pillars are excluded, not scored as zero.
+              </p>}
             </div>
             <dl className="grid gap-3 sm:grid-cols-3">
-              {Object.entries(v9Projection.value.pillars).map(([pillar, score]) => (
+              {(["backing", "exit", "control"] as const).map((pillar) => {
+                const score = v9Projection.value.pillars[pillar];
+                return (
                 <div key={pillar} className="rounded-lg border border-border/60 px-3 py-3">
-                  <dt className="pharos-kicker">{pillar === "control" ? "Economic control" : pillar}</dt>
-                  <dd className="mt-1 pharos-numeric text-lg font-semibold">{score}/100</dd>
+                  <dt className="pharos-kicker">{pillar === "control" ? "Economic control" : pillar}{v9Projection.value.partialEvidence && " · known-only subtotal"}</dt>
+                  <dd className="mt-1 pharos-numeric text-lg font-semibold">{score === null ? "Unavailable" : `${score}/100`}</dd>
+                  {v9Projection.value.partialEvidence && <p className="mt-1 text-xs text-muted-foreground">Included holdings: {v9Projection.value.coverageUsd.pillars[pillar]} USD of {v9Projection.value.coverageUsd.total} USD</p>}
                 </div>
-              ))}
+                );
+              })}
             </dl>
             <p className="text-xs text-muted-foreground">
               {v9Projection.value.dependencyExposure.length} modeled upstream exposure{" "}
@@ -191,7 +199,13 @@ export function PortfolioClient() {
                 return (
                   <Link key={card.id} href={buildStablecoinUrl(card.id)} className="pharos-card-shell p-3">
                     <p className="truncate text-sm font-medium">{meta?.symbol ?? card.id}</p>
-                    <SafetyGradeBadge grade={card.grade} score={card.score} showScore size="sm" className="mt-2" />
+                    {card.ratingStatus === "pipeline-gap" || card.grade === null
+                      ? <p className="mt-2 text-sm">Pipeline gap · {card.reasonCodes.includes("all-pillars-pipeline-gap") ? "all pillars unavailable" : "fewer than two pillars available"}</p>
+                      : <SafetyGradeBadge grade={card.grade} score={card.score} showScore size="sm" className="mt-2" />}
+                    {card.partialEvidence && <p className="mt-2 text-xs text-muted-foreground">
+                      {card.ratingStatus === "rated" && "Partial evidence: pipeline gap · "}
+                      {card.partialEvidence.causes.map(cause => cause === "A" ? "pipeline unavailable (A)" : "public data awaiting curation (B)").join("; ")}
+                    </p>}
                   </Link>
                 );
               })}

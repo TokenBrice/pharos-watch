@@ -118,6 +118,9 @@ function resolutionModeFor(
   entry: V9EvidenceGapQueueEntryV2,
   context: unknown,
 ): V9MissingDataResolutionMode {
+  if (entry.cause === "A") return "producer-runtime";
+  if (entry.cause === "B") return "agent-curation";
+  if (entry.cause === "C") return "issuer-or-onchain-evidence";
   // Mechanism review resists a static default: ratified disclosure-backed
   // archetypes intentionally take the direct-curation lane.
   if (workType === "MECHANISM_REVIEW") return mechanismResolutionMode(entry);
@@ -128,22 +131,13 @@ function resolutionModeFor(
   return WORK_TYPES[workType].defaultResolutionMode;
 }
 
-function evidenceAction(entry: V9EvidenceGapQueueEntryV2, mode: V9MissingDataResolutionMode): string {
-  if (entry.responsibility === "issuer-undisclosed") return "obtain-issuer-or-onchain-disclosure";
-  if (entry.responsibility === "integration-missing") return "repair-fact-integration";
-  if (entry.responsibility === "producer-failed") return "repair-or-refresh-producer";
-  if (entry.responsibility === "method-unsupported") return "define-reviewed-methodology-capability";
-  if (entry.responsibility === "measured-adverse") return "adjudicate-measured-adverse-evidence";
-  const agentCurationAction =
-    entry.observationState === "missing"
-      ? "collect-and-curate-evidence"
-      : entry.observationState === "stale"
-        ? "refresh-and-curate-evidence"
-        : entry.observationState === "unsupported"
-          ? "implement-supported-evidence-path"
-          : "adjudicate-and-curate-bounded-unknown";
-  return resolutionModeAction(mode, agentCurationAction);
-}
+const EVIDENCE_ACTION_BY_CAUSE: Record<V9EvidenceGapQueueEntryV2["cause"], string> = {
+  A: "repair-or-refresh-producer",
+  B: "curate-proven-public-datum",
+  C: "obtain-issuer-or-onchain-disclosure",
+  U: "research-and-classify-required-datum",
+  D: "adjudicate-measured-adverse-evidence",
+};
 
 export function scoreProjectionResolutionMode(
   workType: V9MissingDataWorkType,
@@ -274,6 +268,8 @@ export function mechanismOverlayCaptureDayWarnings(captureClockSec: number): str
 function cardScoreProjection(card: SafetyScoreV9Card) {
   return {
     grade: card.grade,
+    ratingStatus: card.ratingStatus,
+    partialEvidence: card.partialEvidence,
     score: card.score,
     qualityScore: card.qualityScore,
     pegMultiplier: card.pegMultiplier,
@@ -359,7 +355,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
         priorityBand: priorityBand(entry.critical, entry.supplyWeight.canonicalUsd),
         workType,
         resolutionMode,
-        recommendedEvidenceAction: evidenceAction(entry, resolutionMode),
+        recommendedEvidenceAction: EVIDENCE_ACTION_BY_CAUSE[entry.cause],
         gapId: entry.gapId,
         queueKey: entry.queueKey,
         reasonCode: entry.reasonCode,
@@ -369,6 +365,10 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
         factOwnerDomain: entry.factOwnerDomain,
         policyRuleId: entry.policyRuleId,
         responsibility: entry.responsibility,
+        cause: entry.cause,
+        causeProof: entry.causeProof,
+        causeScope: entry.causeScope,
+        causeGapIds: entry.causeGapIds,
         applicability: entry.applicability,
         observationState: entry.observationState,
         path: entry.path,
@@ -594,7 +594,8 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
       policyBindingReviewCount: registryItems.filter((item) => item.policyBinding.coordinatorReviewRequired).length,
       responsibilityCounts: queue.summary.responsibilityCounts,
       observationStateCounts: countBy(registryItems, (entry) => entry.observationState),
-      gradeCounts: countBy(candidate.cards, (card) => card.grade),
+      gradeCounts: countBy(candidate.cards.filter(card => card.grade !== null), (card) => card.grade!),
+      ratingStatusCounts: countBy(candidate.cards, card => card.ratingStatus),
       workTypeCounts: countBy(allItems, (item) => item.workType),
       reasonCounts: countBy(registryItems, (entry) => entry.reasonCode),
       resolutionModeCounts: countBy(allItems, (item) => item.resolutionMode),

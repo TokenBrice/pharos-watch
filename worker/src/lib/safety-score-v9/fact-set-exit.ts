@@ -19,7 +19,7 @@ import {
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import { selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
+import { isV9CreditableNonAtomicRedemption, projectV9ExitEvaluationRoute, selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
 import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExecutionReviewDigest, validateExitExecutionModelReviews } from "@shared/lib/safety-score-v9/exit-execution";
 import reviewedExecutionModels from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
@@ -46,7 +46,10 @@ import {
   addEvidence,
   addGap,
   missingLocalFact,
+  componentResearchEvidence,
+  assertKnownComponentEvidenceCurrent,
   stableFailureDomains,
+  createRuntimeGapVerdict,
   type AssetBuildContext,
 } from "./fact-set-context";
 
@@ -167,6 +170,18 @@ function routeGap(
   message: string,
   evidenceRefIds: readonly string[],
 ): string {
+  const causeScope = { pillar: "exit" as const, componentKey: "exit-route", factorKey: suffix,
+    routeKey, exposureId: null, requiredDatum: suffix };
+  const reference = evidenceRefIds.map((id) => context.evidence.get(id)).find((reference) =>
+    reference?.freshness.state === "stale" || reference?.disposition === "rejected");
+  const runtime = reference ? createRuntimeGapVerdict({
+    assetId: context.asset.assetId, scope: causeScope, sourceId: reference.sourceId,
+    sourceGenerationId: reference.sourceGenerationId,
+    observedAtSec: context.fixedInput.clockSec, asOfSec: context.fixedInput.clockSec,
+    producerState: reference.freshness.state === "stale" ? "stale-producer" : "producer-failed",
+    rejectionCode: reference.rejection?.code ?? "route-observation-stale", reason: message,
+  }) : undefined;
+  if (runtime) addEvidence(context, runtime.evidence);
   return addGap(
     context,
     createV9FactGapV3({
@@ -179,6 +194,8 @@ function routeGap(
       path: optionalExitV9Path(routeKey),
       message,
       evidenceRefIds,
+      causeScope,
+      ...(runtime ? { causeProof: runtime.verdict.proof } : {}),
     }),
   );
 }
@@ -216,6 +233,31 @@ function buildSuspendedRoute(context: AssetBuildContext, suspension: RedemptionR
     failureDomains: [{ kind: "redemption-rail", key: suspension.channel }],
   };
 }
+function capacityEvidenceTierForObservation(
+  observation: ExitRouteObservation,
+): NonNullable<ExitRouteObservation["capacityEvidenceTier"]> {
+  if (observation.capacityEvidenceTier && observation.capacityEvidenceTier !== "unknown") {
+    return observation.capacityEvidenceTier;
+  }
+  // A positive method identity is not a missing datum merely because an older
+  // producer did not serialize the tier. Freshness/admission remains separate.
+  switch (observation.evidenceKind) {
+    case "measured-executable-depth":
+    case "direct-orderbook-depth":
+    case "live-reserve-state":
+    case "onchain-contract-state":
+      return "live-direct";
+    case "documented-terms":
+      return "documented";
+    case "reserve-based-amm-simulation":
+    case "generic-tvl-proxy":
+    case "synthetic-or-fallback":
+      return "heuristic";
+    default:
+      return "unknown";
+  }
+}
+
 
 function buildRoute(
   context: AssetBuildContext,
@@ -245,6 +287,17 @@ function buildRoute(
   );
   const evidence = context.evidence.get(evidenceId)!;
   const baseDomains = scopeFailureDomains(args.observation, args.lane);
+  const rejectedFactorStatuses: V9ExitRouteFactV2["factorStatuses"] = {};
+  if (evidence.disposition === "rejected") {
+    for (const factorKey of ["capacity", "observationConfidence", "cost", "capacityEvidenceTier"] as const) {
+      const factorGapId = routeGap(context, routeKey, factorKey, "unsupported", "unsupported-same-notional-route",
+        "producer-failed", `Rejected route telemetry cannot establish current ${factorKey}.`, [evidenceId]);
+      rejectedFactorStatuses[factorKey] = createV9FactStatus({
+        applicability: requiredV9Applicability("v9.exit.route-factors"), observationState: "unsupported",
+        evidenceRefIds: [evidenceId], gapIds: [factorGapId],
+      });
+    }
+  }
   const certificate = args.observation.executionCertificate;
   const supplyUsd = getCirculatingRawOrNull(context.fixedInput.aggregateCirculatingById?.[context.asset.assetId] ?? {});
   const executionPolicy = args.observation.executionModelId ? loadV9CandidateMethodologyPolicy(context.fixedInput.clockSec) : null;
@@ -290,7 +343,9 @@ function buildRoute(
       observationConfidence: args.observation.confidence,
       observationHistory: args.observation.observationHistory ?? null,
       evidenceKind: args.observation.evidenceKind,
+      capacityEvidenceTier: capacityEvidenceTierForObservation(args.observation),
       ...(args.observation.feeEvidence ? { feeEvidence: args.observation.feeEvidence } : {}),
+      factorStatuses: rejectedFactorStatuses,
       coverageClass: "diagnostic",
       capacityScoringHorizon: "unknown",
       settlementModel: "unknown",
@@ -477,6 +532,22 @@ function buildRoute(
     executionModelId: args.observation.executionModelId,
     executionAdmission,
   });
+  if (evidence.disposition === "rejected") {
+    for (const [factorKey, known] of [
+      ["access", args.review.holderAccess !== "unknown"],
+      ["holderEligibility", args.review.holderAccess !== "unknown"],
+      ["executionConfidence", args.review.executionCertainty !== "unknown" && args.review.modelConfidence !== "unknown"],
+      ["settlement", args.review.settlementSlaSec !== null && args.observation.settlementBoundUnproven !== true],
+    ] as const) {
+      if (!known) continue;
+      const componentKey = `exit-route:${routeKey}:${factorKey}`;
+      const refs = componentResearchEvidence(context, componentKey);
+      assertKnownComponentEvidenceCurrent(context, componentKey, refs);
+      rejectedFactorStatuses[factorKey] = createV9FactStatus({
+        applicability: requiredV9Applicability("v9.exit.route-factors"), observationState: "known", evidenceRefIds: refs,
+      });
+    }
+  }
   return {
     routeKey,
     routeId: args.observation.routeId,
@@ -488,6 +559,7 @@ function buildRoute(
     executionCertainty: args.review.executionCertainty,
     modelConfidence: args.review.modelConfidence,
     observationConfidence: args.observation.confidence,
+    capacityEvidenceTier: capacityEvidenceTierForObservation(args.observation),
     observationHistory: args.observation.observationHistory ?? null,
     evidenceKind: args.observation.evidenceKind,
     ...((args.review.feeEvidence ?? args.observation.feeEvidence)
@@ -507,6 +579,11 @@ function buildRoute(
     settlementEvidenceRefIds: [evidenceId],
     physicalResourceKeys: args.review.physicalResourceKeys,
     status: routeStatus,
+    factorStatuses: {
+      ...(routeState !== "known" ? { capacity: routeStatus } : {}),
+      ...(output.status.observationState !== "known" ? { output: output.status } : {}),
+      ...rejectedFactorStatuses,
+    },
     scoreEligible,
     settlementBoundUnproven: args.observation.settlementBoundUnproven === true,
     request: {
@@ -670,30 +747,37 @@ export function buildRoutes(context: AssetBuildContext): {
       evidenceId: `${context.asset.assetId}:redemption-capacity-unavailable`,
       sourceId: "report-cards-redemption-route-observation",
       sourceGenerationId: generationId,
-      disposition: "observed",
+      disposition: "rejected",
       observedAtSec: redemption.updatedAt,
       contentSha256: domainDigest("safety-score-v9.redemption-capacity-unavailable.v1", redemption),
       maxAgeSec: context.extension.routeFreshness.redemptionMaxAgeSec,
+      rejection: { code: "live-direct-capacity-unavailable", rejectedAtSec: context.fixedInput.clockSec,
+        reason: "Captured redemption resolutionState is missing-capacity for an open live-direct telemetry rail." },
     }, context.fixedInput.clockSec));
     const message = "The configured live-only redemption route has unavailable capacity telemetry.";
     const gapId = routeGap(context, routeKey, "capacity", "missing",
       "missing-runtime-route-evidence", "producer-failed", message, [evidenceId]);
     const status = createV9FactStatus({
-      applicability: unresolvedV9Applicability("v9.exit.same-notional-route", message, gapId),
+      applicability: requiredV9Applicability("v9.exit.same-notional-route"),
       observationState: "missing",
       evidenceRefIds: [evidenceId],
       gapIds: [gapId],
     });
+    const costGapId = routeGap(context, routeKey, "cost", "bounded-unknown", "missing-same-notional-route",
+      "unresearched", "No current same-notional cost datum is established for the unavailable rail.", []);
+    const costStatus = createV9FactStatus({ applicability: requiredV9Applicability("v9.exit.route-factors"),
+      observationState: "bounded-unknown", gapIds: [costGapId], evidenceRefIds: [evidenceId] });
     routes.push({
       routeKey, routeId, lane: "redemption", sourceGenerationId: generationId,
       routeFamily: "protocol-redemption",
       holderAccess: "unknown", executionModel: "unknown", executionCertainty: "unknown",
-      modelConfidence: "low", observationConfidence: "low", observationHistory: null,
+      modelConfidence: "unknown", observationConfidence: "unknown", observationHistory: null,
       evidenceKind: "documented-terms", coverageClass: "diagnostic",
       capacityScoringHorizon: "unknown", settlementModel: "unknown", settlementSlaSec: null,
       queueDepthUsd: null, dailyLimitUsd: null, minRedeemUsd: null,
       settlementEvidenceRefIds: [], physicalResourceKeys: [], status, scoreEligible: false,
       request: null, capacityCurve: [],
+      factorStatuses: { capacity: status, cost: costStatus },
       output: { status, kind: "unknown", assetKeys: [], basketWeights: [], valuation: null },
       failureDomains: [{ kind: "redemption-rail", key: context.asset.assetId }],
     });
@@ -703,6 +787,37 @@ export function buildRoutes(context: AssetBuildContext): {
     throw new Error(
       `Route reviews do not match captured observations for ${context.asset.assetId}: ${unconsumedReviews}`,
     );
+  }
+  const policy = loadV9CandidateMethodologyPolicy(context.fixedInput.clockSec);
+  const eligibleCount = routes.filter((route) => {
+    const projected = projectV9ExitEvaluationRoute(route);
+    return !projected.settlementBoundUnproven && (route.scoreEligible || isV9CreditableNonAtomicRedemption({
+      ...projected, outputResolved: projected.outputResolved !== false,
+      failureDomainCount: projected.failureDomains.length,
+    }, policy));
+  }).length;
+  if (eligibleCount > policy.policy.semantic.exit.maximumScoreEligiblePortfolioCandidates) {
+    const scope = { pillar: "exit" as const, componentKey: "exit-routes", factorKey: null,
+      routeKey: null, exposureId: null, requiredDatum: "route-inventory" };
+    const runtime = createRuntimeGapVerdict({
+      assetId: context.asset.assetId, scope, sourceId: "safety-score-v10-exit-portfolio-reader",
+      sourceGenerationId: context.fixedInput.sourceGeneration,
+      observedAtSec: context.fixedInput.clockSec, asOfSec: context.fixedInput.clockSec,
+      producerState: "unsupported-reader", rejectionCode: "route-inventory-over-limit",
+      reason: `${eligibleCount} score-eligible routes exceed the 64-candidate portfolio reader limit.`,
+    });
+    addEvidence(context, runtime.evidence);
+    const gapId = addGap(context, createV9FactGapV3({
+      gapId: `${context.asset.assetId}:gap:route-inventory-over-limit`,
+      ownerDomain: "exit", reasonCode: "missing-runtime-route-evidence", policyRuleId: "v10.exit.portfolio-limit",
+      path: { kind: "local-component", componentKey: "exit-routes" }, responsibility: "method-unsupported",
+      observationState: "unsupported", causeProof: runtime.verdict.proof, causeScope: scope,
+      evidenceRefIds: [runtime.evidence.evidenceId], message: runtime.evidence.rejection!.reason,
+    }));
+    return { exitStatus: createV9FactStatus({
+      applicability: requiredV9Applicability("v10.exit.portfolio-limit"), observationState: "unsupported",
+      gapIds: [gapId], evidenceRefIds: [runtime.evidence.evidenceId],
+    }), exitRoutes: routes };
   }
   if (routes.length === 0) {
     // Local 0/0 pool coverage proves global exhaustion only when the captured

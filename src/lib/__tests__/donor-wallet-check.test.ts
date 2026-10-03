@@ -85,13 +85,22 @@ describe("donor wallet check", () => {
   });
 
   const RESPONSE = {
+    schemaVersion: 1 as const,
     model: "v9" as const,
     methodologyVersion: "9.0",
     asOfSec: 1_780_000_000,
     updatedAt: 1_780_000_000,
     publicationStatus: "current" as const,
-    grades: [{ id: "usdc-circle", score: 90, grade: "A" as const }],
+    grades: [{ id: "usdc-circle", score: 90, grade: "A" as const, ratingStatus: "rated" as const, partialEvidence: null }],
   };
+  it("keeps technical-gap donations unconfirmed instead of declaring the grade ineligible", () => {
+    const grades = donorKeyGradesFromResponse({ ...RESPONSE, grades: [{
+      id: "usdc-circle", score: null, grade: null, ratingStatus: "pipeline-gap",
+      partialEvidence: { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["backing", "exit"], causes: ["A"] },
+    }] });
+    expect(checkDonorWallet(DONOR, [donation({ asset_symbol: "USDC", usd_at_receipt: 25 })], grades))
+      .toMatchObject({ verdict: "unconfirmed", qualifyingUsd: 0, rows: [{ status: "grade-unavailable" }] });
+  });
 
   it("drops grades from a held publication", () => {
     expect(donorKeyGradesFromResponse({ ...RESPONSE, publicationStatus: "held" })).toBeNull();

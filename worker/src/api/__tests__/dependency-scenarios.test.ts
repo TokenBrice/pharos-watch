@@ -8,11 +8,11 @@ vi.mock("../../lib/safety-score-active-source", () => ({ loadActiveSafetyScoreId
 import { handleDependencyScenarios } from "../dependency-scenarios";
 function artifact(): DependencyScenarioArtifact {
   return {
-    schemaVersion: 1, sourcePublicationGenerationId: "accepted-1", sourceBaseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`, methodologyVersion: "9.98", evaluationBuildDigest: "b".repeat(64), computedAtSec: 1000,
+    schemaVersion: 2, sourcePublicationGenerationId: "accepted-1", sourceBaseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`, methodologyVersion: "9.98", evaluationBuildDigest: "b".repeat(64), computedAtSec: 1000,
     cohort: { rootIds: ["root"], selection: "A1 publication-bound direct USD" },
     scenarios: [{ id: "root:mint-control-compromise", rootId: "root", shock: { kind: "mint-control-compromise", assetId: "root" }, assumptions: ["Compromised mint authority"], failures: [], results: [
-      { assetId: "root", publishedScore: 80, publishedGrade: "B", modeledScore: 40, modeledGrade: "D", deltaScore: -40, minHop: 0, roles: [] },
-      { assetId: "child", publishedScore: 70, publishedGrade: "C", modeledScore: null, modeledGrade: "NR", deltaScore: null, minHop: 1, roles: ["control-operator"] },
+      { assetId: "root", publishedScore: 80, publishedGrade: "B", publishedRatingStatus: "rated", publishedPartialEvidence: null, modeledScore: 40, modeledGrade: "D", modeledRatingStatus: "rated", modeledPartialEvidence: null, deltaScore: -40, minHop: 0, roles: [] },
+      { assetId: "child", publishedScore: 70, publishedGrade: "C", publishedRatingStatus: "rated", publishedPartialEvidence: null, modeledScore: null, modeledGrade: "NR", modeledRatingStatus: "not-rated", modeledPartialEvidence: null, deltaScore: null, minHop: 1, roles: ["control-operator"] },
     ] }],
   };
 }
@@ -76,6 +76,22 @@ describe("dependency scenario read handler", () => {
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(body.freshness).toMatchObject({ status: "current", reason: null, ageSec: 100 });
     expect(body.artifact?.scenarios[0]?.results[1]).toMatchObject({ modeledScore: null, modeledGrade: "NR" });
+  });
+  it("preserves modeled technical null separately from NR and refuses stale schema bytes", async () => {
+    const value = artifact();
+    const row = value.scenarios[0]!.results[1]!;
+    row.modeledGrade = null;
+    row.modeledRatingStatus = "pipeline-gap";
+    row.modeledPartialEvidence = {
+      reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["backing", "exit"], causes: ["A"],
+    };
+    const body = DependencyScenariosResponseSchema.parse(await (await handleDependencyScenarios(database(JSON.stringify(value)))).json());
+    expect(body.artifact?.scenarios[0]?.results[1]).toMatchObject({
+      modeledGrade: null, modeledScore: null, modeledRatingStatus: "pipeline-gap", deltaScore: null,
+    });
+    const oldBytes = { ...value, schemaVersion: 1 };
+    const rejected = await (await handleDependencyScenarios(database(JSON.stringify(oldBytes)))).json();
+    expect(rejected).toMatchObject({ artifact: null, freshness: { status: "unavailable" } });
   });
   it("returns earlier-generation when accepted publication advances, including held publications", async () => {
     loadIdentity.mockResolvedValue({ kind: "held", safetyScoreIdentity: { publicationGenerationId: "accepted-2" } });

@@ -99,7 +99,7 @@ export function buildControls(context: AssetBuildContext): {
           componentKey: "deployment-controls",
           reasonCode: allUnresolvedScoped ? "scoped-control-question" : "unresolved-control-identity",
           ownerDomain: "control",
-          responsibility: "issuer-undisclosed",
+          responsibility: "unresearched",
           policyRuleId: "v9.control.review",
           message: review.state === "partially-reviewed-controls" ? review.rationale : "One or more independently identified authorities remain unreviewed.",
           observationState: "bounded-unknown",
@@ -122,10 +122,32 @@ export function buildControls(context: AssetBuildContext): {
             evidenceRefIds: evidenceIds,
           })
         : boundedControlSemanticsStatus(context, control, evidenceIds);
+      const factorStatuses: NonNullable<V9DeploymentControlFactV2["factorStatuses"]> = {};
+      for (const [factorKey, unknown] of [
+        ["authority", control.authority === null || control.authority.model === "unknown"],
+        ["capAuthority", control.capSemantics.kind === "unknown"],
+        ["claimImpairment", control.claimImpairment === "unknown"],
+        ["economicLossScope", control.economicLossScope === "unknown"],
+        ["incidentState", control.incidentState === "unknown"],
+        ["materialSupplyShare", control.scope === "deployment" && control.materialSupplyShare === null],
+        ["executionScope", control.executionScopeComplete === false],
+        ["multisigTopology", control.authority?.model === "multisig" && control.authority.threshold === null],
+      ] as const) {
+        if (!unknown) continue;
+        factorStatuses[factorKey] = missingLocalFact(context, {
+          componentKey: `control:${control.controlKey}:${factorKey}`, reasonCode: "unresolved-control-identity",
+          ownerDomain: "control", responsibility: "unresearched", policyRuleId: "v9.control.review",
+          message: `The ${factorKey} datum for independently identified control ${control.controlKey} remains unresolved.`,
+          evidenceRefIds: evidenceIds,
+          causeScope: { pillar: "control", componentKey: `control:${control.controlKey}`, factorKey,
+            routeKey: null, exposureId: control.scope === "deployment" ? control.deploymentKey : null, requiredDatum: factorKey },
+        }).status;
+      }
       return {
         ...control,
         sourceGenerationId: context.extension.sources.researchOverlays.generationId,
         status: controlStatus,
+        factorStatuses,
       };
     }),
   };
@@ -177,7 +199,7 @@ function boundedControlSemanticsStatus(
       ownerDomain: "control",
       policyRuleId: "v9.control.review",
       observationState: "bounded-unknown",
-      responsibility: "issuer-undisclosed",
+      responsibility: "unresearched",
       path:
         control.scope === "deployment"
           ? { kind: "deployment-control", deploymentKey: control.deploymentKey, controlKey: control.controlKey }
@@ -213,10 +235,61 @@ function normalizeEconomicControlStatus(
   });
 }
 
+function compileEconomicFactorStatuses(
+  context: AssetBuildContext,
+  review: V9EconomicControlReviewV2,
+): V9EconomicControlReviewV2 {
+  const missingFactor = (componentKey: string, factorKey: string, routeKey: string | null = null) =>
+    missingLocalFact(context, {
+      componentKey: `${componentKey}:${routeKey ?? ""}:${factorKey}`,
+      reasonCode: componentKey.endsWith("mint") ? "missing-mint-authority"
+        : componentKey.endsWith("oracle") ? "missing-oracle-profile" : "missing-bridge-routes",
+      ownerDomain: "control", responsibility: "unresearched", policyRuleId: `v9.control.${factorKey}`,
+      message: componentKey === "economic-control:mint" && factorKey === "reconciliation" &&
+        review.mint.reconciliation === "internal-ledger"
+        ? "The reviewed internal ledger establishes the mint process, not whole-supply reconciliation against reserves for unbounded minting."
+        : `The ${factorKey} datum for ${componentKey}${routeKey ? ` route ${routeKey}` : ""} has not been established.`,
+      causeScope: { pillar: "control", componentKey, factorKey, routeKey, exposureId: null, requiredDatum: factorKey },
+    }).status;
+  // An internal ledger establishes the mint process, not reconciliation of
+  // otherwise unbounded supply against reserves.
+  const missingWholeSupplyReconciliation = review.mint.reconciliation === "internal-ledger" &&
+    review.mint.supervision !== "prudential" &&
+    (context.asset.controlReview?.state === "reviewed-controls" ||
+      context.asset.controlReview?.state === "partially-reviewed-controls") &&
+    context.asset.controlReview.controls.some((control) =>
+      control.controlKind !== "bridge" &&
+      (control.capabilities.includes("mint") || control.controlKey === review.mint.controlKey) &&
+      (control.capSemantics.kind === "unbounded" || control.claimImpairment === "unbounded"));
+  if (review.mint.status.applicability.state !== "not-applicable") {
+    review.mint.factorStatuses = {};
+    for (const [factorKey, unknown] of [
+      ["reconciliation", review.mint.reconciliation === "unknown" || missingWholeSupplyReconciliation],
+      ["supervision", review.mint.supervision === "unknown"],
+      ["upgrade", review.mint.upgrade.state === "unknown"],
+    ] as const) {
+      if (unknown) review.mint.factorStatuses[factorKey] = missingFactor("economic-control:mint", factorKey);
+    }
+  }
+  if (review.oracle.status.applicability.state !== "not-applicable" &&
+      (review.oracle.tier === null || review.oracle.tier === "opaque-or-unknown")) {
+    review.oracle.factorStatuses = { tier: missingFactor("economic-control:oracle", "tier") };
+  }
+  if (review.bridge.status.applicability.state !== "not-applicable" && review.bridge.routes.length === 0) {
+    review.bridge.factorStatuses = { tier: missingFactor("economic-control:bridge", "tier") };
+  }
+  for (const route of review.bridge.routes) {
+    if (route.tier === "opaque-or-unknown") {
+      route.factorStatuses = { tier: missingFactor("economic-control:bridge", "tier", route.controlKey) };
+    }
+  }
+  return review;
+}
+
 export function buildEconomicControlReview(context: AssetBuildContext): V9EconomicControlReviewV2 {
   const review = context.asset.economicControlReview;
   if (review === null) {
-    return {
+    return compileEconomicFactorStatuses(context, {
       mint: {
         status: missingLocalFact(context, {
           componentKey: "economic-control:mint",
@@ -255,9 +328,9 @@ export function buildEconomicControlReview(context: AssetBuildContext): V9Econom
         }).status,
         routes: [],
       },
-    };
+    });
   }
-  const normalized = structuredClone(review);
+  const normalized: V9EconomicControlReviewV2 = structuredClone(review);
   normalized.mint.status = normalizeEconomicControlStatus(
     context,
     normalized.mint.status,
@@ -285,7 +358,7 @@ export function buildEconomicControlReview(context: AssetBuildContext): V9Econom
     "bridge",
     "missing-bridge-routes",
   );
-  return normalized;
+  return compileEconomicFactorStatuses(context, normalized);
 }
 
 function normalizeAccessStatus(
@@ -325,7 +398,7 @@ function normalizeAccessStatus(
     message: structural
       ? structuralMessage
       : `The ${componentKey} access/censorship review is not a current known fact.`,
-    responsibility: structural ? "measured-adverse" : undefined,
+    adverseFactId: structural ? `${context.asset.assetId}:access:${componentKey}:${structuralDisposition}` : undefined,
   });
 }
 

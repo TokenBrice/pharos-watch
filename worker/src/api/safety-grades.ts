@@ -17,6 +17,7 @@ export const handleSafetyGrades = async (db: D1Database): Promise<Response> => {
   }
   const snapshot = active.snapshot;
   const body: SafetyGradesResponse = {
+    schemaVersion: 1,
     model: "v9",
     methodologyVersion: snapshot.methodology.version,
     asOfSec: snapshot.asOfSec,

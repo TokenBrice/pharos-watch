@@ -103,7 +103,7 @@ export function buildTrackedIdSet(
       // Check grade filters (from reportCards)
       if (gradeFilters.length > 0) {
         const grade = reportCards?.[stablecoin.id]?.grade;
-        const gradeMatch = gradeFilters.every((filter) => gradeMatchesFilter(grade, filter));
+        const gradeMatch = grade != null && gradeFilters.every((filter) => gradeMatchesFilter(grade, filter));
         if (!gradeMatch) return false;
       }
 

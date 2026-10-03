@@ -5,6 +5,8 @@ import {
 import { createNativeSafetyScoreV9FullRegistryInput } from "../../lib/__tests__/fixtures/safety-score-v9-full-registry-input";
 import { compactCronMetadataForPersistence } from "../../lib/cron-metadata-persistence";
 import type { NativeSafetyScoreV9Input } from "../../lib/safety-score-v9/native-input";
+import { normalizeNativeV9Input } from "../../lib/safety-score-v9/native-input";
+import { createRuntimeGapVerdict } from "../../lib/safety-score-v9/fact-set-context";
 
 const mocks = vi.hoisted(() => ({
   getCaches: vi.fn(),
@@ -162,6 +164,42 @@ describe("computeSafetyScoreV9", () => {
       .mockReset()
       .mockResolvedValue({});
     mocks.runPublication.mockReset();
+  });
+
+  it("v10.01 second preparation keeps captured proof identity and rejects subsequent proof substitution", async () => {
+    const failure = createRuntimeGapVerdict({
+      assetId: "usdc-circle", scope: { pillar: "backing", componentKey: "reserve-composition",
+        factorKey: null, routeKey: null, exposureId: null, requiredDatum: "reserve-composition" },
+      sourceId: "fixture-reserve-reader", sourceGenerationId: "attempt:second-prepare",
+      observedAtSec: fixedInput.clockSec, asOfSec: fixedInput.clockSec, producerState: "producer-failed",
+      rejectionCode: "read-failed", reason: "A captured reserve read failed.",
+    });
+    fixedInput = normalizeNativeV9Input({ ...fixedInput, baseInputGenerationId: undefined,
+      pipelineGapByAssetId: { "usdc-circle": [failure] } });
+    mocks.supplyGenerationCadenceDeferred.mockReturnValue(false);
+    mocks.applySupplyGeneration.mockReturnValue({ status: "applied", generationId: "fixture-supply-generation",
+      fixedInput, acceptedAssetIds: [], rejectedAssetIds: [], invalidAssetIds: [] });
+    const identity = buildSafetyScoreV9InputIdentity({
+      methodologyVersion: fixedInput.methodologyVersion, baseInputGenerationId: fixedInput.baseInputGenerationId,
+      publicationGenerationId: fixedInput.sourceGeneration,
+    });
+    mocks.parseFixedInput.mockResolvedValue({ input: fixedInput, safetyScoreIdentity: identity });
+    mocks.parsePegSeed.mockReturnValue({ sourceGeneration: fixedInput.sourceGeneration, clockSec: fixedInput.clockSec,
+      safetyScoreIdentity: identity, pegProvenanceById: {} });
+    mocks.runPublication.mockImplementationOnce(async (input: {
+      fixedInput: NativeSafetyScoreV9Input;
+      prepareFixedInput: (input: NativeSafetyScoreV9Input, signal: AbortSignal) => Promise<NativeSafetyScoreV9Input>;
+    }) => {
+      const prepared = await input.prepareFixedInput(input.fixedInput, new AbortController().signal);
+      expect(normalizeNativeV9Input(prepared).baseInputGenerationId).toBe(fixedInput.baseInputGenerationId);
+      const substituted = structuredClone(prepared);
+      substituted.pipelineGapByAssetId!["usdc-circle"]![0]!.evidence.rejection!.reason = "Uncaptured current-store failure";
+      expect(() => normalizeNativeV9Input(substituted)).toThrow(/does not match payload/);
+      return { status: "published", attemptId: "attempt", publicationGenerationId: fixedInput.sourceGeneration,
+        candidateId: "candidate", outcome: "full", quarantines: [], affectedAssetIds: [], bridgeJoinDiagnostics: [] };
+    });
+    const result = await computeSafetyScoreV9({} as D1Database);
+    expect(result.status).toBe("ok");
   });
 
   it("skips neutrally when the only supply attribution generation belongs to a later cadence phase", async () => {
@@ -382,6 +420,8 @@ describe("computeSafetyScoreV9", () => {
         attemptedPublicationGenerationId: "report-cards:v9:v1:6d64205b",
         reasons: [
           { code: "coverage-floor-failed", floorIds: ["minimum-rateable-assets"] },
+          { code: "producer-failed-pipeline-gap", assetId: "usdc-circle", source: "reason",
+            reasonCode: "missing-pillar-evidence", path: "asset-compilation", effect: "pipeline-gap" },
         ],
         coverageFloors: [
           {
@@ -431,7 +471,7 @@ describe("computeSafetyScoreV9", () => {
     expect(envelope.diagnostics?.publication).toMatchObject({
       coverageFloorVerdicts:
         "active-result-count:pass:observed=332,required== 332;minimum-rateable-assets:fail:observed=264,required=>= 271",
-      holdReasonCodes: "coverage-floor-failed:minimum-rateable-assets",
+      holdReasonCodes: "coverage-floor-failed:minimum-rateable-assets,producer-failed-pipeline-gap:usdc-circle:missing-pillar-evidence:pipeline-gap",
     });
   });
 

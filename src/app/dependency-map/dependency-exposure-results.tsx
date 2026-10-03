@@ -33,6 +33,7 @@ export function DependencyExposureResults({ result, publication, roots, options,
   const inspected = result.rows.find(row => row.id === inspectedId);
   const clocks = [...new Set(publication.nodes.filter(card => card?.circulatingUsdAtEvaluation !== null).map(card => `${publication.publicationGenerationId} at ${typeof card.supplyAsOfSec === "number" && Number.isFinite(card.supplyAsOfSec) ? new Date(card.supplyAsOfSec * 1000).toISOString() : "unknown"}`))];
   const roles = rootCards.flatMap(card => (Array.isArray(card?.roles) ? card.roles : []).filter(role => role && typeof role.upstreamAssetId === "string").map((role, index) => ({ root: card!.id, role, index })));
+  const nodeById = new Map(publication.nodes.map(node => [node.id, node]));
   const knownRows = result.rows.filter(row => row.exposureUsd !== null);
   const directAvailable = knownRows.some(row => row.minHop === 1) || (result.direct.complete && knownRows.length > 0);
   const indirectAvailable = knownRows.some(row => row.minHop > 1) || (result.indirect.complete && knownRows.length > 0);
@@ -44,6 +45,10 @@ export function DependencyExposureResults({ result, publication, roots, options,
     <div className="space-y-2"><h3 className="text-lg font-semibold">{result.reached} mapped dependents · direct {directUsd} · indirect {indirectUsd} (includes {overlapUsd} counted in more than one layer)</h3><p className="text-sm font-medium">Linked coins; not a loss forecast</p><p className="text-sm text-muted-foreground">Results use the full published graph and ignore Focus, Type and Limit. USD totals include known supply only; unknown values are not zero.</p></div>
     <p className="break-all text-xs text-muted-foreground">Publication {publication.publicationGenerationId} · methodology {publication.methodologyVersion} · asOfSec {publication.asOfSec} · supply clock {clocks.length ? clocks.join("; ") : "not published"}</p>
     {held && <p role="status" className="text-sm">Held publication. Results use the retained publication and its supply clock.</p>}
+    {rootCards.map(card => card && (card.ratingStatus === "pipeline-gap" || card.partialEvidence) && <p key={card.id} className="text-sm">
+      {label(card.id)} · {card.ratingStatus === "pipeline-gap" ? "Pipeline gap · fewer than two pillars available" : "Partial evidence: pipeline gap"}
+      {card.partialEvidence && ` · ${card.partialEvidence.causes.map(cause => cause === "A" ? "pipeline unavailable (A)" : "public data awaiting curation (B)").join("; ")}`}
+    </p>)}
     {networkUpdated && <p role="status" className="text-sm">Network updated. Results now use the latest publication.</p>}
     {publication.nodes.some(card => card?.circulatingUsdAtEvaluation === null) && <p className="text-sm text-muted-foreground">Supply at evaluation not published for this generation</p>}
     <p className="text-sm">{Object.entries(result.bandCounts).map(([band, count]) => `${EXPOSURE_BAND_LABELS[band as keyof typeof EXPOSURE_BAND_LABELS]} ${count}`).join(" · ")}</p>
@@ -60,6 +65,7 @@ export function DependencyExposureResults({ result, publication, roots, options,
           <TableHead scope="col">Share</TableHead>
           <TableHead scope="col">Band</TableHead>
           <TableHead scope="col">Exposure USD</TableHead>
+          <TableHead scope="col">Safety rating</TableHead>
           {scenarioSelection.scenario && <TableHead scope="col">Modeled Safety Score change</TableHead>}
           <TableHead scope="col">Actions</TableHead>
         </TableRow></TableHeader>
@@ -69,6 +75,13 @@ export function DependencyExposureResults({ result, publication, roots, options,
           <TableCell>{row.share === null ? "Unknown" : `${(row.share * 100).toFixed(2)}%`}</TableCell>
           <TableCell>{EXPOSURE_BAND_LABELS[row.band]}</TableCell>
           <TableCell>{row.exposureUsd === null ? "Unknown supply or share" : formatCurrency(row.exposureUsd, 2)}</TableCell>
+          <TableCell>{(() => {
+            const node = nodeById.get(row.id);
+            if (!node) return "Unavailable";
+            return <>{node.ratingStatus === "pipeline-gap" ? "Pipeline gap · fewer than two pillars available" : node.grade}
+              {node.partialEvidence && <span className="block text-xs">{node.ratingStatus === "rated" && "Partial evidence: pipeline gap · "}{node.partialEvidence.causes.map(cause => cause === "A" ? "pipeline unavailable (A)" : "public data awaiting curation (B)").join("; ")}</span>}
+            </>;
+          })()}</TableCell>
           {scenarioSelection.scenario && <TableCell><DependencyScenarioChange selection={scenarioSelection} assetId={row.id} /></TableCell>}
           <TableCell><button type="button" className="pharos-focus-ring min-h-11 rounded px-2 underline" onClick={() => onInspect(row.id)}>Inspect path</button><Link href={buildStablecoinUrl(row.id)} className="pharos-focus-ring inline-flex min-h-11 items-center rounded px-2 underline">Open coin</Link></TableCell>
         </TableRow>)}</TableBody>

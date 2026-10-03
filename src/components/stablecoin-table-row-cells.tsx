@@ -21,7 +21,7 @@ import {
   GOVERNANCE_LABELS_SHORT,
 } from "@shared/lib/classification";
 import { formatBps, formatCurrency, formatPercentChange, getNetColor } from "@shared/lib/format";
-import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
+import { getSafetyGradeBadgeClassName } from "@/lib/report-card-ui";
 
 interface RowCellsProps {
   row: StablecoinTableRowCellProps;
@@ -90,16 +90,21 @@ function MobileRiskSummary({ model }: { model: StablecoinTableRowModel }) {
     >
       {model.reportCard ? (
         <span
-          className={`inline-flex h-5 min-w-5 items-center justify-center rounded border px-1 pharos-numeric text-[10px] font-semibold leading-none ${REPORT_CARD_GRADE_COLORS[model.reportCard.grade]}`}
-          title={`Safety grade ${model.reportCard.grade}`}
+          className={`inline-flex h-5 min-w-5 items-center justify-center rounded border px-1 pharos-numeric text-[10px] font-semibold leading-none ${getSafetyGradeBadgeClassName(model.reportCard.grade)}`}
+          title={`${model.reportCard.grade === null ? "Pipeline gap" : `Safety grade ${model.reportCard.grade}`}${model.reportCard.partialEvidence ? " · Partial evidence: pipeline gap" : ""}`}
         >
-          {model.reportCard.grade}
+          {model.reportCard.grade ?? "Pipeline gap"}
         </span>
       ) : (
         <span className="inline-flex h-5 items-center rounded border border-border/60 px-1 text-[10px] text-muted-foreground">
-          NR
+          —
         </span>
       )}
+      {model.reportCard?.partialEvidence ? (
+        <span className="text-[10px] text-muted-foreground">
+          Partial evidence: pipeline gap ({model.reportCard.partialEvidence.causes.join("/")})
+        </span>
+      ) : null}
       <span className="inline-flex h-5 items-center rounded border border-border/60 bg-background/60 px-1.5 text-[10px] text-muted-foreground">
         Peg{" "}
         <span className={`ml-1 pharos-numeric ${model.pegScore !== null ? pegScoreColor(model.pegScore) : "text-muted-foreground"}`}>
@@ -243,13 +248,20 @@ function RiskCells({ row, model }: RowCellsProps) {
       {row.isVisible("grade") ? (
         <TableCell className="px-3 py-2 text-center">
           {model.reportCard ? (
+            <>
             <Badge
               variant="outline"
-              className={`rounded-full px-2 py-0.5 pharos-numeric text-xs font-semibold transition-all duration-200 ${REPORT_CARD_GRADE_COLORS[model.reportCard.grade]} ${["D", "F"].includes(model.reportCard.grade) ? "animate-risk-pulse border-red-500/60 bg-red-500/5" : ""}`}
-              title={`Pharos grade: ${model.reportCard.grade}${model.reportCard.score ? ` (${model.reportCard.score}/100)` : ""}`}
+              className={`rounded-full px-2 py-0.5 pharos-numeric text-xs font-semibold transition-all duration-200 ${getSafetyGradeBadgeClassName(model.reportCard.grade)} ${model.reportCard.grade !== null && ["D", "F"].includes(model.reportCard.grade) ? "animate-risk-pulse border-red-500/60 bg-red-500/5" : ""}`}
+              title={`${model.reportCard.grade === null ? "Pipeline gap" : `Pharos grade: ${model.reportCard.grade}`}${model.reportCard.score !== null ? ` (${model.reportCard.score}/100)` : ""}`}
             >
-              {model.reportCard.grade}
+              {model.reportCard.grade ?? "Pipeline gap"}
             </Badge>
+            {model.reportCard?.partialEvidence ? (
+              <span className="block text-[10px] text-muted-foreground">
+                Partial evidence: pipeline gap ({model.reportCard.partialEvidence.causes.join("/")})
+              </span>
+            ) : null}
+            </>
           ) : null}
         </TableCell>
       ) : null}

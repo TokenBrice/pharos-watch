@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { FullRouteContext, StaticRouteDefinition } from "../shared";
+import { runAdminJob } from "../../lib/admin-job";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(fixtures.closeAll);
@@ -20,13 +21,10 @@ vi.mock("../../api/backfill-depegs", () => ({
   handleBackfillDepegsTrusted: handlers.backfillDepegs,
 }));
 
-vi.mock("../../api/backfill-mint-burn", async () => {
-  const { runAdminJob } = await import("../../lib/admin-job");
-  return {
-    handleBackfillMintBurn: ({ request, url }: { request?: Request; url: URL }) =>
-      runAdminJob({ request, url, parseBody: true }, () => handlers.backfillMintBurn()),
-  };
-});
+vi.mock("../../api/backfill-mint-burn", () => ({
+  handleBackfillMintBurn: ({ request, url }: { request?: Request; url: URL }) =>
+    runAdminJob({ request, url, parseBody: true }, () => handlers.backfillMintBurn()),
+}));
 
 vi.mock("../../api/backfill-yield-history", () => ({
   handleBackfillYieldHistory: handlers.backfillYieldHistory,
@@ -104,10 +102,7 @@ describe("admin route boundary contract", () => {
     expect(handlers.backfillDepegs).toHaveBeenCalledTimes(callsBefore);
   });
 
-  // The mocked handler lazily imports the real admin-job module graph on first
-  // invocation; under a loaded full-suite worker pool that import can exceed the
-  // default 5s budget even though the behavior under test is deterministic.
-  it("owns malformed-body handling and no-store headers for parsed admin jobs", { timeout: 30_000 }, async () => {
+  it("owns malformed-body handling and no-store headers for parsed admin jobs", async () => {
     const route = findRoute("backfill-mint-burn");
 
     const response = await route.handler(makeContext(route, { trustedAdmin: true, body: "{" }));

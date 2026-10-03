@@ -3,12 +3,14 @@ import { z } from "zod";
 const V9_EVIDENCE_RESPONSIBILITIES = [
   "measured-adverse", "issuer-undisclosed", "integration-missing",
   "producer-failed", "method-unsupported", "published-evidence-expired",
+  "unresearched", "public-data-uncurated",
 ] as const;
 export const V9EvidenceResponsibilitySchema = z.enum(V9_EVIDENCE_RESPONSIBILITIES);
 export const V9BoundedEvidenceResponsibilitySchema = V9EvidenceResponsibilitySchema.exclude(["measured-adverse"]);
 export const V9_PUBLIC_EVIDENCE_RESPONSIBILITIES = [
   "integration-missing", "issuer-undisclosed", "measured-adverse",
-  "method-unsupported", "producer-failed", "published-evidence-expired",
+  "method-unsupported", "producer-failed", "public-data-uncurated",
+  "published-evidence-expired", "unresearched",
 ] as const satisfies readonly (typeof V9_EVIDENCE_RESPONSIBILITIES)[number][];
 
 export const V9_ACCESS_POSTURE_FIELDS = ["transfer", "freezeExposure", "primaryExit", "governance"] as const;

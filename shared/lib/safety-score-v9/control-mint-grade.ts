@@ -1,5 +1,5 @@
-import type { V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
-import { isKnownRequired, type V9ControlPolicy } from "./control-primitives";
+import type { V9DeploymentControlFactV2, V9FactGapV3 } from "../../types/safety-score-v9-facts";
+import { isKnownRequired, resolveV9StatusCauses, type V9ControlPolicy } from "./control-primitives";
 import { effectiveAuthoritySignatureRequirement } from "./control-scope";
 
 /**
@@ -27,7 +27,7 @@ export function isStaticallyVerifiedControl(control: V9DeploymentControlFactV2):
 export function mintQualityLadder(controlPolicy: V9ControlPolicy): readonly number[] {
   const values = new Set<number>();
   for (const posture in controlPolicy.mintPostureQuality) {
-    if (posture !== "unknown") {
+    if (posture !== "unknown" && posture !== "unbounded-reconciliation-unknown") {
       values.add(controlPolicy.mintPostureQuality[posture as keyof V9ControlPolicy["mintPostureQuality"]]);
     }
   }
@@ -44,16 +44,17 @@ export function mintQualityLadder(controlPolicy: V9ControlPolicy): readonly numb
  * module surface. Derived strictly from the passed row; a control whose
  * topology was never reviewed takes the conservative unknown rung.
  */
-function multisigQuorumRawAdjustment(control: V9DeploymentControlFactV2, controlPolicy: V9ControlPolicy): number {
+function multisigQuorumRawAdjustment(control: V9DeploymentControlFactV2, controlPolicy: V9ControlPolicy, gaps?: readonly V9FactGapV3[]): number {
   const knobs = controlPolicy.mintMergedSignals.multisigQuorumAdjustment;
+  const unknownAdjustment = resolveV9StatusCauses([control.factorStatuses?.topology], gaps).excluded ? 0 : knobs.unknownTopology;
   if (control.authority?.weightedQuorum) {
     const required = effectiveAuthoritySignatureRequirement(control.authority);
-    if (required === null) return knobs.unknownTopology;
+    if (required === null) return unknownAdjustment;
     const penalty = required <= 1 ? knobs.singleSigner : required === 2 ? knobs.twoSigner : knobs.thresholdThreePlus;
     return Math.max(knobs.minAdjustment, penalty + (control.executionScopeComplete === true && control.delaySec !== null && control.delaySec > 0 ? knobs.timelockCredit : 0));
   }
   const quorum = control.authority?.threshold ?? null;
-  if (quorum === null) return knobs.unknownTopology;
+  if (quorum === null) return unknownAdjustment;
   let adjustment =
     quorum.required <= 1
       ? knobs.singleSigner
@@ -113,6 +114,7 @@ export function applyMergedMintSignals(
   mintControl: V9DeploymentControlFactV2 | null,
   resolvedIncidentAgeMonths: number | undefined,
   controlPolicy: V9ControlPolicy,
+  gaps?: readonly V9FactGapV3[],
 ): number {
   // A native/immutable supply mechanism can have a measured historical
   // integrity incident without exposing a live privileged mint controller.
@@ -131,7 +133,7 @@ export function applyMergedMintSignals(
     // manufacture a lift out of an unchanged posture.
     adjustment += Math.min(
       signals.multisigQuorumAdjustment.maxAdjustment,
-      multisigQuorumRawAdjustment(mintControl, controlPolicy),
+      multisigQuorumRawAdjustment(mintControl, controlPolicy, gaps),
     );
   }
   // A bare externally-owned mint key is a single-point custody failure that the
@@ -176,7 +178,7 @@ export function applyMergedMintSignals(
  * which is strictly above this rung, so naming a validation domain can never lift
  * a control into the multisig class.
  */
-export function gradeVerifiedControlAuthority(control: V9DeploymentControlFactV2, controlPolicy: V9ControlPolicy): number {
+export function gradeVerifiedControlAuthority(control: V9DeploymentControlFactV2, controlPolicy: V9ControlPolicy, gaps?: readonly V9FactGapV3[]): number {
   const quality = controlPolicy.mintPostureQuality;
   const authority = control.authority;
   if (authority === null || authority.model === "unknown") return controlPolicy.boundedUnknownQuality;
@@ -210,7 +212,7 @@ export function gradeVerifiedControlAuthority(control: V9DeploymentControlFactV2
       // its ceiling from the partially-bounded rung below.
       const graded =
         quality["concentrated-admin"] +
-        multisigQuorumRawAdjustment(control, controlPolicy) +
+        multisigQuorumRawAdjustment(control, controlPolicy, gaps) +
         modulesOrGuardsAdjustment(control, controlPolicy);
       return Math.max(
         quality["unbounded-or-compromised"],

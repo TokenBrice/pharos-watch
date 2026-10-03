@@ -1,3 +1,4 @@
+import { V9RatingStatusSchema, V9CompactPartialEvidenceSchema } from "./safety-score-v9-causes";
 import { z } from "zod";
 import {
   DIGEST_SAFETY_MAP_TIERS,
@@ -72,6 +73,8 @@ export const DigestV9SafetyCoinSchema = z
     symbol: z.string(),
     grade: z.string(),
     score: z.number().nullable(),
+    ratingStatus: V9RatingStatusSchema.optional(),
+    partialEvidence: V9CompactPartialEvidenceSchema.nullable().optional(),
     pillars: z
       .object({
         backing: DigestV9SafetyPillarSchema,

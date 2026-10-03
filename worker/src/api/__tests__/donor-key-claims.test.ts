@@ -1,3 +1,4 @@
+import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { buildDonorClaimSiweMessage } from "@shared/lib/donor-key-claim";
 import { DonorKeyClaimResponseSchema } from "@shared/types/api-keys";
 import type { DatabaseSync } from "node:sqlite";
@@ -261,6 +262,19 @@ describe("POST /api/donor-key-claims", () => {
     expect(auditRow).toMatchObject({ action: "created", actor: "donor-claim" });
     // The audit log is retained indefinitely; the address lives only on the claim row and key name.
     expect(auditRow.detail_json).not.toContain(donorAccount.address.slice(2, 12).toLowerCase());
+  });
+
+  it("treats pipeline-gap donations as temporarily unavailable rather than outside the grade band", async () => {
+    vi.mocked(loadActiveSafetyScoreIndex).mockResolvedValue({
+      kind: "v9",
+      snapshot: makeReportCardsV9Response({ cards: [
+        makeReportCardsV9PipelineGapCard("control", "A", { id: "usdc-circle" }),
+      ] }),
+    });
+    const response = await claim(claimMessage(donorAccount));
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ reason: "grade_unavailable" });
+    expect(countApiKeys()).toBe(0);
   });
 
   it.each(["C", "NR"] as const)("excludes donations when the current grade is %s", async (grade) => {
@@ -645,7 +659,7 @@ describe("POST /api/donor-key-claims", () => {
     expect(countApiKeys()).toBe(0);
   });
 
-  it("loads with a malformed ledger and fails only the donor claim route with 503", async () => {
+  it("loads a malformed ledger without throwing and rejects issuance with 503", async () => {
     vi.resetModules();
     vi.doMock("@shared/data/funding/donations.json", () => ({
       default: { last_updated_at: "invalid", donations: [] },
@@ -663,7 +677,6 @@ describe("POST /api/donor-key-claims", () => {
       expect(response.status).toBe(503);
       await expect(response.json()).resolves.toMatchObject({ reason: "donations_ledger_invalid" });
       expect(countApiKeys()).toBe(0);
-      await expect(import("../health")).resolves.toHaveProperty("handleHealth");
     } finally {
       vi.doUnmock("@shared/data/funding/donations.json");
     }

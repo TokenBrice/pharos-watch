@@ -5,6 +5,8 @@ import type {
   V9FactStatusV2,
   V9FailureDomainRef,
 } from "../../types/safety-score-v9-facts";
+import type { V9FactGapV3 } from "../../types/safety-score-v9-facts";
+import type { V9EvidenceCause, V9ScoringDisposition } from "../../types/safety-score-v9-causes";
 import type { BridgeRouteRiskTier, OracleRiskTier } from "../../types/core";
 import type {
   V9ReasonCode,
@@ -12,6 +14,7 @@ import type {
   V9StructuralSignalKind,
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
+import { V9_EMPTY_ARRAY } from "./primitives";
 
 export type V9MintReconciliation = V9EconomicControlReviewV2["mint"]["reconciliation"];
 export type V9MintSupervision = V9EconomicControlReviewV2["mint"]["supervision"];
@@ -61,6 +64,7 @@ export interface V9EconomicControlAssetFacts {
   archetype: V9AssetFactsBase["archetype"];
   controlStatus: V9AssetFactsBase["controlStatus"];
   controls: readonly V9DeploymentControlFactV2[];
+  gaps?: readonly V9FactGapV3[];
   supply: Pick<
     V9AssetFactsBase["supply"],
     | "status"
@@ -107,9 +111,13 @@ export interface V9EconomicControlReviewExtension {
 
 export interface V9ControlComponent {
   componentKey: string;
-  kind: "mint" | "oracle" | "bridge";
+  kind: "mint" | "oracle" | "bridge" | "inventory";
   posture: V9MintPosture | V9OracleTier | V9BridgeTier;
-  score: number;
+  score: number | null;
+  cause: V9EvidenceCause | null;
+  causeGapIds: readonly string[];
+  scoringDisposition: V9ScoringDisposition;
+  effectiveScoringWeight: number;
   binding: boolean;
   controlKeys: readonly string[];
   failureDomains: readonly V9FailureDomainRef[];
@@ -149,6 +157,10 @@ export type V9ControlStructuralFailure = V9ControlStructuralFailureDetails & ({
 
 export interface V9EconomicControlResult {
   score: number | null;
+  aggregationDisposition: "included" | "excluded-a-b";
+  causeGapIds: readonly string[];
+  limitedEvidenceCauses: readonly ("C" | "U" | "D")[];
+  supportedComponentKeys: readonly string[];
   /** Proportional unresolved-deployment pricing, before resilience and dependency adjustments. */
   unresolvedDeploymentAdjustment?: { scoreBefore: number; scoreAfter: number };
   /** Admitted full unresolved cohort share used by the composite ceiling band. */
@@ -256,3 +268,31 @@ export function bindingByMateriality(
   return share === null || share >= materialShareThreshold;
 }
 export type V9ControlPolicy = V9ValidatedPolicyEnvelope["policy"]["semantic"]["control"];
+
+/** Resolve only admitted gap proofs; legacy owner labels never authorize exclusion. */
+export function resolveV9StatusCauses(
+  statuses: readonly (V9FactStatusV2 | undefined)[],
+  gaps: readonly V9FactGapV3[] = [],
+): { cause: V9EvidenceCause | null; causeGapIds: string[]; causes: V9EvidenceCause[]; excluded: boolean } {
+  const missing = statuses.filter((status): status is V9FactStatusV2 =>
+    status !== undefined && status.applicability.state !== "not-applicable" &&
+    (status.observationState !== "known" || status.applicability.state === "unresolved"));
+  const firstGapIds = missing[0]?.gapIds ?? V9_EMPTY_ARRAY;
+  const canShareGapIds = firstGapIds.every((id, index) => index === 0 || id > firstGapIds[index - 1]!) &&
+    missing.every((status) => status.gapIds === firstGapIds &&
+      (!status.applicability.gapId || firstGapIds.includes(status.applicability.gapId)));
+  const causeGapIds = canShareGapIds ? firstGapIds : [...new Set(missing.flatMap((status) => [
+    ...status.gapIds, ...(status.applicability.gapId ? [status.applicability.gapId] : []),
+  ]))].sort();
+  const causes: V9EvidenceCause[] = causeGapIds.length === 0 ? [] :
+    [...new Set(causeGapIds.map((id) => gaps.find((gap) => gap.gapId === id)?.causeProof.cause ?? "U"))];
+  if (missing.length > 0 && causes.length === 0) causes.push("U");
+  const cause = (["D", "C", "U", "A", "B"] as const).find((value) => causes.includes(value)) ?? null;
+  return { cause, causeGapIds, causes, excluded: causes.length > 0 && causes.every((value) => value === "A" || value === "B") };
+}
+
+export function v9ScoringDisposition(cause: V9EvidenceCause | null): V9ScoringDisposition {
+  return cause === "A" ? "excluded-pipeline" : cause === "B" ? "excluded-uncurated"
+    : cause === "C" || cause === "U" ? "bounded-uncertainty"
+      : cause === "D" ? "measured-adverse" : "included";
+}

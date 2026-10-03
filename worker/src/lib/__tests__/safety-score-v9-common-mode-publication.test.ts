@@ -14,7 +14,7 @@ function replay() {
   const pipeline = buildSafetyScoreV9Candidate({ fixedInput, publishedAtSec: capture.publishedAtSec });
   const publication = pipeline.candidate;
   const report = projectSafetyScoreV9PublicationToPublicSnapshot(publication, {
-    schemaVersion: 1, status: "current", acceptedPublicationGenerationId: publication.publicationGenerationId,
+    schemaVersion: 2, status: "current", acceptedPublicationGenerationId: publication.publicationGenerationId,
     acceptedAtSec: publication.publishedAtSec, attemptedAtSec: publication.publishedAtSec, heldSinceSec: null, reasons: [],
   });
   return { pipeline, report };
@@ -114,12 +114,13 @@ describe("V9 common-mode publication", () => {
     expect(ReportCardsV9CurrentResponseSchema.safeParse(unsorted).success).toBe(false);
   });
 
-  it("reads report v5 without claiming an unpublished group census is empty", () => {
+  it("rejects retired report families instead of interpreting absent census fields as current", () => {
     const { report } = replay();
     const legacy = { ...report };
     delete legacy.commonModeGroups;
-    expect(ReportCardsV9CurrentResponseSchema.parse({ ...legacy, schemaVersion: 5 }).commonModeGroups).toBeUndefined();
-    expect(ReportCardsV9CurrentResponseSchema.safeParse({ ...report, schemaVersion: 5 }).success).toBe(false);
+    expect(ReportCardsV9CurrentResponseSchema.safeParse({ ...legacy, schemaVersion: 5 }).success).toBe(false);
+    expect(ReportCardsV9CurrentResponseSchema.safeParse({ ...report, schemaVersion: 6 }).success).toBe(false);
+    expect(ReportCardsV9CurrentResponseSchema.safeParse(report).success).toBe(true);
   });
 
   it("does not publish multiple paths on one asset as a shared failure domain", () => {

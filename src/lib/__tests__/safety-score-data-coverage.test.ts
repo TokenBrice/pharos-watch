@@ -39,7 +39,7 @@ function withGaps(
       ...card.scoreTrace,
       evidenceResponsibility: {
         ...card.scoreTrace.evidenceResponsibility,
-        totalFactCount: base.reduce((sum, summary) => sum + summary.factCount, 0),
+        totalFactCount: base.reduce((sum, summary) => sum + (summary.factCount ?? 0), 0),
         summaries: base,
       },
     },
@@ -136,7 +136,6 @@ describe("buildDataCoverageModel", () => {
     expect(model.openGapCount).toBe(3);
     expect(model.gapOwners).toContainEqual(expect.objectContaining({
       responsibility: "published-evidence-expired",
-      label: "Issuer's newest report predates our window",
       count: 3,
     }));
     expect(model.gapTypes).toContainEqual({
@@ -358,28 +357,28 @@ describe("describeDataCoverageHoldCauses", () => {
   it("folds repeated producer failures into one asset-scoped sentence", () => {
     const causes = describeDataCoverageHoldCauses([
       {
-        code: "producer-failed-downgrade",
+        code: "producer-failed-pipeline-gap",
         assetId: "msusd-metronome",
         source: "reason",
         reasonCode: "missing-runtime-route-evidence",
         path: "exit:missing-runtime-route-evidence",
-        effect: "score-or-grade-downgrade",
+        effect: "pipeline-gap",
       },
       {
-        code: "producer-failed-downgrade",
+        code: "producer-failed-pipeline-gap",
         assetId: "msusd-metronome",
         source: "reason",
         reasonCode: "missing-same-notional-route",
         path: "exit:missing-same-notional-route",
-        effect: "score-or-grade-downgrade",
+        effect: "pipeline-gap",
       },
       {
-        code: "producer-failed-nr",
+        code: "producer-failed-pipeline-gap",
         assetId: "cdxusd-cod3x",
         source: "reason",
         reasonCode: "missing-runtime-route-evidence",
         path: "exit:missing-runtime-route-evidence",
-        effect: "not-rated",
+        effect: "pipeline-gap",
       },
     ]);
 

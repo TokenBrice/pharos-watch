@@ -218,6 +218,7 @@ function hasMeasuredV9ExitRoute(live: DdrLiveContext): boolean {
     exit?.primaryRoute != null &&
     exit.pillarScore != null &&
     exit.pillarScore > 0 &&
+    exit.primaryRoute.score != null &&
     exit.primaryRoute.score > 0 &&
     capacity != null &&
     capacity.completionRatio >= V9_EXIT_R2_STRONG_COMPLETION_RATIO &&

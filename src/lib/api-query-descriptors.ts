@@ -512,7 +512,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
   // Lazy validators keep the report-card schema family out of the eager client bundle.
   dependencyGraph: defineApiQuery(
     {
-      queryKey: ["dependency-graph", "v1"] as const,
+      queryKey: ["dependency-graph", "v2"] as const,
       path: API_PATHS.dependencyGraph(),
       producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.reportCards,
     },

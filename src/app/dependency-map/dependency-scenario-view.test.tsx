@@ -12,10 +12,10 @@ vi.mock("@/hooks/use-dependency-scenarios", () => ({ useDependencyScenarios: () 
 afterEach(() => { cleanup(); query.data = undefined; query.isError = false; });
 
 function response(): DependencyScenariosResponse {
-  const row: DependencyScenarioArtifact["scenarios"][number]["results"][number] = { assetId: "root", publishedScore: 80, publishedGrade: "B", modeledScore: 20, modeledGrade: "F", deltaScore: -60, minHop: 0, roles: [] };
-  return { artifact: { schemaVersion: 1, sourcePublicationGenerationId: "pub", sourceBaseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`, methodologyVersion: "9.98", evaluationBuildDigest: "b".repeat(64), computedAtSec: 900, cohort: { rootIds: ["root"], selection: "Top direct exposure" }, scenarios: [
+  const row: DependencyScenarioArtifact["scenarios"][number]["results"][number] = { assetId: "root", publishedScore: 80, publishedGrade: "B", publishedRatingStatus: "rated", publishedPartialEvidence: null, modeledScore: 20, modeledGrade: "F", modeledRatingStatus: "rated", modeledPartialEvidence: null, deltaScore: -60, minHop: 0, roles: [] };
+  return { artifact: { schemaVersion: 2, sourcePublicationGenerationId: "pub", sourceBaseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`, methodologyVersion: "10.01", evaluationBuildDigest: "b".repeat(64), computedAtSec: 900, cohort: { rootIds: ["root"], selection: "Top direct exposure" }, scenarios: [
     { id: "limit", rootId: "root", shock: { kind: "score-limit", assetId: "root", dimension: "final", limit: 20 }, assumptions: ["Final score capped at 20."], results: [row, { ...row, assetId: "dependent", minHop: 1 }], failures: [] },
-    { id: "mint", rootId: "root", shock: { kind: "mint-control-compromise", assetId: "root" }, assumptions: ["Reviewed mint authority compromised."], results: [{ ...row, modeledScore: null, modeledGrade: "NR", deltaScore: null }, { ...row, assetId: "dependent", modeledScore: null, modeledGrade: "NR", deltaScore: null, minHop: 1 }], failures: [] },
+    { id: "mint", rootId: "root", shock: { kind: "mint-control-compromise", assetId: "root" }, assumptions: ["Reviewed mint authority compromised."], results: [{ ...row, modeledRatingStatus: "not-rated", modeledScore: null, modeledGrade: "NR", deltaScore: null }, { ...row, assetId: "dependent", modeledRatingStatus: "not-rated", modeledScore: null, modeledGrade: "NR", deltaScore: null, minHop: 1 }], failures: [] },
   ] }, freshness: { status: "current", reason: null, ageSec: 100, budgetSec: 7200, sourcePublicationGenerationId: "pub", acceptedPublicationGenerationId: "pub" } };
 }
 function surface(roots = ["root"]) {
@@ -38,6 +38,22 @@ describe("modeled dependency results", () => {
     expect(within(panel).getByText("Reviewed mint authority compromised.")).toBeTruthy();
     expect(within(panel).queryByText("Final score capped at 20.")).toBeNull();
     expect(screen.getAllByText("Modeled NR · change unavailable")).toHaveLength(3);
+  });
+  it("keeps technical null grades distinct from NR and shows partial causes without numeric deltas", () => {
+    query.data = response();
+    const rows = query.data.artifact!.scenarios[0].results;
+    rows[0] = { ...rows[0], modeledRatingStatus: "pipeline-gap", modeledScore: null, modeledGrade: null, deltaScore: null,
+      modeledPartialEvidence: { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["backing", "exit"], causes: ["A"] } };
+    rows[1] = { ...rows[1], publishedRatingStatus: "pipeline-gap", publishedGrade: null, publishedScore: null, deltaScore: null,
+      publishedPartialEvidence: { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["backing", "exit"], causes: ["A"] },
+      modeledPartialEvidence: { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["exit"], causes: ["B"] } };
+    render(surface());
+    const panel = screen.getByRole("region", { name: "Modeled Safety Score results" });
+    expect(within(panel).getByText("B → Pipeline gap")).toBeTruthy();
+    expect(within(panel).getByText("Pipeline gap → F")).toBeTruthy();
+    expect(within(panel).getByText(/Modeled Pipeline gap.*pipeline unavailable \(A\)/)).toBeTruthy();
+    expect(within(panel).getByText(/Modeled F.*Partial evidence: pipeline gap.*public data awaiting curation \(B\)/)).toBeTruthy();
+    expect(within(panel).queryByText(/Modeled NR|-60.00 points/)).toBeNull();
   });
   it.each(["stale", "unavailable"] as const)("withholds all modeled scores and grades when %s", status => {
     query.data = response(); query.data.freshness.status = status; query.data.freshness.reason = "artifact-outside-freshness-budget";

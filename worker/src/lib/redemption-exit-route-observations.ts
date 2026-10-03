@@ -16,6 +16,7 @@ import type {
   RedemptionLiveFreshnessKind,
 } from "@shared/types/redemption";
 
+import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserves/store";
 // Conservative documented ceilings for projecting a reviewed settlement model
 // onto an observation horizon. Only "atomic" satisfies the same-notional
 // request horizon; every other model is published as diagnostic evidence.
@@ -66,18 +67,31 @@ function resolveRouteEvidence(input: BuildRedemptionExitRouteObservationInput): 
   confidence: ExitRouteObservation["confidence"];
   observedAt: number;
   supportsScoring: boolean;
+  capacityEvidenceTier: NonNullable<ExitRouteObservation["capacityEvidenceTier"]>;
 } {
   const liveDirect = input.capacityKind === "live-direct" || input.capacityKind === "live-direct-bounded";
   const directFreshness =
     input.freshnessKind === "verified-source-timestamp" ||
     input.freshnessKind === "same-run-onchain" ||
     input.freshnessKind === "same-run-api";
+  const observedAt = floorTimestampSec(input.evidenceObservedAt);
+  const now = floorTimestampSec(input.now);
+  const freshClock = observedAt !== null && now !== null && observedAt <= now &&
+    now - observedAt <= LIVE_RESERVE_FRESHNESS_SEC;
+  const liveProxy = input.capacityKind === "live-queue" || input.capacityKind === "live-proxy-validated";
+  if (liveProxy && input.sourceMode === "dynamic" && directFreshness && freshClock) {
+    return {
+      evidenceKind: input.freshnessKind === "same-run-onchain" ? "onchain-contract-state" : "live-reserve-state",
+      confidence: "high", capacityEvidenceTier: "live-queue-proxy", observedAt, supportsScoring: true,
+    };
+  }
   if (liveDirect && input.sourceMode === "dynamic" && directFreshness) {
     return {
       evidenceKind: input.freshnessKind === "same-run-onchain" ? "onchain-contract-state" : "live-reserve-state",
       confidence: "high",
+      capacityEvidenceTier: freshClock ? "live-direct" : "unknown",
       observedAt: floorTimestampSec(input.evidenceObservedAt) ?? 0,
-      supportsScoring: floorTimestampSec(input.evidenceObservedAt) != null,
+      supportsScoring: freshClock,
     };
   }
 
@@ -87,6 +101,7 @@ function resolveRouteEvidence(input: BuildRedemptionExitRouteObservationInput): 
     return {
       evidenceKind: "documented-terms",
       confidence: "medium",
+      capacityEvidenceTier: "documented",
       // The observation time is when the evidence was read, not when the
       // terms were reviewed: a same-run direct read carries its own
       // timestamp, and only evidence without one falls back to the review.
@@ -99,6 +114,7 @@ function resolveRouteEvidence(input: BuildRedemptionExitRouteObservationInput): 
   return {
     evidenceKind: hasReviewedTerms ? "documented-terms" : "manual-review",
     confidence: input.capacityConfidence === "heuristic" ? "low" : "unknown",
+    capacityEvidenceTier: input.capacityConfidence === "heuristic" ? "heuristic" : "unknown",
     observedAt: reviewTimestamp ?? floorTimestampSec(input.evidenceObservedAt) ?? 0,
     supportsScoring: false,
   };
@@ -274,10 +290,8 @@ export function buildRedemptionExitRouteObservation(
       ? mainCostBps +
         Math.max(0, (1 - outputValuation.unitValueUsd / outputExpectedUnitValueUsd) * 10_000)
       : null;
-  // A reviewed route with a documented but unbounded fee still proves that the
-  // capacity exists. Preserve that capacity and let V9's explicit
-  // undisclosed-fee ceiling bound its score instead of converting uncertainty
-  // about cost into a false zero-liquidity observation.
+  // Retain a reviewed modeled capacity without asserting a measured fee or
+  // certifying execution inside the request budget.
   const boundedUnknownFee =
     mainCostBps === null &&
     evidence.supportsScoring &&
@@ -339,6 +353,7 @@ export function buildRedemptionExitRouteObservation(
     settlementHorizonSec,
     output: resolveOutput(input.stablecoinId, input.config, outputValuation),
     evidenceKind: evidence.evidenceKind,
+    capacityEvidenceTier: evidence.capacityEvidenceTier,
     ...(boundedUnknownFee
       ? { feeEvidence: input.config.costModel.kind === "dynamic-or-unclear" &&
           input.config.costModel.confidence === "formula"

@@ -71,8 +71,10 @@ export interface V9ScenarioScoreTrace {
   readonly bindingCap: V9CapTrace | null;
   readonly structuralSignals: readonly V9ScenarioStructuralSignal[];
   readonly finalScore: number | null;
-  readonly finalGrade: V9Grade;
+  readonly finalGrade: V9Grade | null;
   readonly nrReasons: readonly V9NRReason[];
+  readonly ratingStatus: V9ScoreTrace["ratingStatus"];
+  readonly partialEvidence: V9ScoreTrace["partialEvidence"];
 }
 
 export function scoreV9GoldenScenario(
@@ -111,6 +113,8 @@ export function scoreV9GoldenScenario(
     structuralSignals: scenario.structuralSignals ?? [],
     finalScore: trace.finalScore,
     finalGrade: trace.finalGrade,
+    ratingStatus: trace.ratingStatus,
+    partialEvidence: trace.partialEvidence,
     nrReasons: trace.nrReasons,
   };
 }

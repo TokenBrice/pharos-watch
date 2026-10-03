@@ -5,6 +5,7 @@ import {
   type V9CuratedMintPostureQueue,
 } from "@shared/lib/safety-score-v9/mint-posture-annotation";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type { V9RatingStatus } from "@shared/types/safety-score-v9-causes";
 import {
   assertCliUsage,
   parseStrictCliArgs,
@@ -21,9 +22,9 @@ annotation disagrees with the mint posture V9 derives and publishes. Safety 9.1
 demoted the curated field to a validated annotation: it never scores, so a
 disagreement is curation work rather than a score effect.
 
-Assets whose card publishes no breakdowns (NR) derive no posture at all. They are
-reported in a separate \`nrCards\` bucket and excluded from the disagreement
-count: an NR card is a rating gap, not a curation disagreement.
+Technical pipeline-gap cards are reported separately in \`pipelineGapCards\`,
+never \`nrCards\`. Other cards without a published mint breakdown cannot
+disagree with a derived posture that does not exist.
 
 Options:
   --replay <path>    V9 replay artifact or publication payload with cards (required)
@@ -45,6 +46,7 @@ const DEFAULT_IO: V9MintPostureQueueIo = {
 
 interface PublishedCard {
   id?: unknown;
+  ratingStatus?: V9RatingStatus;
   breakdowns?: { control?: { components?: { kind?: unknown; posture?: unknown }[] } | null } | null;
 }
 
@@ -68,6 +70,7 @@ export function buildV9MintPostureQueueFromCards(cards: readonly PublishedCard[]
     const mint = card.breakdowns?.control?.components?.find((component) => component.kind === "mint");
     inputs.push({
       assetId,
+      ratingStatus: card.ratingStatus,
       curatedPosture: TRACKED_META_BY_ID.get(assetId)?.mintAuthority?.authorityPosture,
       derivedPosture: typeof mint?.posture === "string" ? mint.posture : null,
       publishesBreakdowns: card.breakdowns != null,
@@ -95,7 +98,7 @@ export function runV9MintPostureQueueCli(
   io.writeText(outputPath, `${JSON.stringify(queue, null, 2)}\n`);
   io.stdout.write(
     `Curated mint-posture queue: ${queue.entries.length} disagreement(s) across ${queue.reviewedAssetCount} asset(s); ` +
-      `${queue.nrCards.length} NR card(s) excluded.\n`,
+      `${queue.nrCards.length} NR card(s), ${queue.pipelineGapCards.length} pipeline-gap card(s) excluded.\n`,
   );
   if (values["require-clear"] === true && queue.entries.length > 0) {
     throw new Error(`${queue.entries.length} curated mint-posture disagreement(s) remain`);

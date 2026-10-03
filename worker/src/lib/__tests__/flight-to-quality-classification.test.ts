@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import {
   buildFlightToQualityClassificationFromV9Snapshot,
 } from "../flight-to-quality-classification";
@@ -31,6 +32,23 @@ describe("buildFlightToQualityClassificationFromV9Snapshot", () => {
     expect(classification.safeIds).toEqual(new Set(["usdc-circle"]));
     expect(classification.riskyIds).toEqual(new Set(["usdt-tether"]));
     expect(result.classification.safetyScoreIdentity.model).toBe("v9");
+  });
+
+  it("includes rated partial cards but excludes pipeline gaps from both cohorts", () => {
+    const snapshot = makeWorkerReportCardsV9Response({
+      updatedAt: Math.floor(Date.now() / 1000),
+      cards: [
+        makeReportCardsV9PipelineGapCard(null, "B", { id: "dai-makerdao" }),
+        makeReportCardsV9PartialCard("exit", "B", { id: "usdc-circle" }),
+        makeReportCardsV9PipelineGapCard("control", "A", { id: "usdt-tether" }),
+      ],
+    });
+    ReportCardsV9CurrentResponseSchema.parse(snapshot);
+    const result = buildFlightToQualityClassificationFromV9Snapshot(snapshot);
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") throw new Error("Expected available partial publication");
+    expect(result.classification.safeIds).toEqual(new Set(["usdc-circle"]));
+    expect(result.classification.riskyIds).toEqual(new Set());
   });
 
 

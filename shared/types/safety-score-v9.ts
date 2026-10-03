@@ -17,6 +17,7 @@ import {
   RedemptionOutputAssetTypeSchema,
   RedemptionSettlementModelSchema,
 } from "./redemption";
+import { V9EvidenceCauseSchema, V9ScoringDispositionSchema } from "./safety-score-v9-causes";
 
 export const V9QualityPillarSchema = z.enum(["backing", "exit", "control"]);
 export type V9QualityPillar = z.infer<typeof V9QualityPillarSchema>;
@@ -91,6 +92,10 @@ export const V9_REASON_CODES = [
   "unreviewed-dependency-relationships",
   "unreviewed-oracle-profile",
   "unreviewed-reserve-envelope",
+  "partial-evidence-pipeline-gap",
+  "single-pillar-pipeline-gap",
+  "all-pillars-pipeline-gap",
+  "f-without-measured-adverse",
 ] as const;
 export const V9ReasonCodeSchema = z.enum(V9_REASON_CODES);
 export type V9ReasonCode = z.infer<typeof V9ReasonCodeSchema>;
@@ -115,6 +120,9 @@ export const V9UnresolvedFactSchema = z
     path: z.string().min(1).optional(),
     responsibility: V9EvidenceResponsibilitySchema,
     sourceGapId: z.string().min(1).nullable().optional(),
+    cause: V9EvidenceCauseSchema.optional(),
+    causeGapIds: z.array(z.string().min(1)).optional(),
+    scoringDisposition: V9ScoringDispositionSchema.optional(),
   })
   .strict();
 export type V9UnresolvedFact = z.infer<typeof V9UnresolvedFactSchema>;
@@ -394,20 +402,8 @@ export const V9ManualInputClassificationSchema = z.enum([
 const V9ReasonArchetypeSchema = z.union([z.literal("*"), z.enum(MECHANISM_ARCHETYPE_VALUES)]);
 const V9ReasonPathKindSchema = z.union([z.literal("*"), V9PathKindSchema]);
 
-const V9NamedReasonCeilingKeySchema = z.enum([
-  "control-unverified",
-  "control-scoped-gap",
-  "oracle-unverified",
-  "backing-unverified",
-  "exit-unverified",
-  "peg-unverified",
-]);
 
-const V9ReasonCeilingRuleSchema = z.discriminatedUnion("source", [
-  z.object({ source: z.literal("evidence-level"), level: V9EvidenceLevelSchema }).strict(),
-  z.object({ source: z.literal("minimum-track-record") }).strict(),
-  z.object({ source: z.literal("named-ceiling"), key: V9NamedReasonCeilingKeySchema }).strict(),
-]);
+const V9ReasonCeilingRuleSchema = z.object({ source: z.literal("minimum-track-record") }).strict();
 
 const V9ReasonRegistryEntrySchema = z
   .object({
@@ -690,6 +686,7 @@ const V9EvidencePolicySchema = z
         researchOverlayMaxAgeSec: z.number().int().positive(),
         mechanismOverlayMaxAgeSec: z.number().int().positive(),
         assuranceReportMaxAgeSec: z.number().int().positive(),
+        namedFirmReserveReportMaxAgeSec: z.number().int().positive(),
         issuerAttestedReserveMaxAgeSec: z.number().int().positive(),
         reviewedReserveClassificationMaxAgeSec: z.number().int().positive(),
         reviewedReserveCompositionMaxAgeSec: z.number().int().positive(),
@@ -812,6 +809,7 @@ const V9BackingPolicySchema = z
         maturityBands: z
           .array(z.object({ maxDaysInclusive: z.number().int().nonnegative().nullable(), score: ScoreSchema }).strict())
           .min(1),
+        maturityUnknownQuality: ScoreSchema,
         factorWeights: z
           .object({
             assetQuality: z.number().finite().min(0).max(1),
@@ -932,8 +930,7 @@ const V9ControlPolicySchema = z
         // but the privileged administrator surface remains concentrated.
         "collateral-gated": ScoreSchema,
         "unbounded-reconciled": ScoreSchema,
-        // MINT-LADDER 9.32 (2026-08-21): absence of reconciliation evidence
-        // stays below the unknown-everything rung and above the confirmed floor.
+        // Unknown reconciliation compares the ordinary unbounded family, not generic mint.
         "unbounded-reconciliation-unknown": ScoreSchema,
         "unbounded-or-compromised": ScoreSchema,
         unknown: ScoreSchema,
@@ -1106,6 +1103,14 @@ const V9ExitPolicySchema = z
         unknown: z.number().finite().min(0).max(1),
       })
       .strict(),
+    capacityEvidenceTierFactors: z.object({
+      "live-direct": z.number().finite().min(0).max(1),
+      "live-queue-proxy": z.number().finite().min(0).max(1),
+      documented: z.number().finite().min(0).max(1),
+      heuristic: z.number().finite().min(0).max(1),
+      unknown: z.number().finite().min(0).max(1),
+    }).strict(),
+    maximumScoreEligiblePortfolioCandidates: z.number().int().positive().max(64),
     /**
      * Credit retained by a route whose observation aged past its lane freshness
      * bound but is otherwise a known, supported, reviewed route. A retained
@@ -1158,10 +1163,6 @@ const V9ExitPolicySchema = z
     // reach. Applied as a min on top of the settlement haircut and reliability
     // gates; stronger evidence kinds are uncapped.
     documentedTermsCreditCeiling: ScoreSchema,
-    // Credit ceiling for a route whose reviewed fee is the undisclosed-reviewed
-    // class: modeled capacity is emitted but the exit cost is unbounded, so the
-    // scored contribution is capped below what a cost-bounded route can earn.
-    undisclosedFeeRouteScoreCeiling: ScoreSchema,
   })
   .strict()
   .superRefine((exit, ctx) => {
@@ -1228,16 +1229,6 @@ const V9StructuralPolicySchema = z
   .object({
     signalLimits: V9StructuralSignalLimitMapSchema,
     commonModeOracleLimit: ScoreSchema,
-    namedReasonCeilings: z
-      .object({
-        "control-unverified": ScoreSchema,
-        "control-scoped-gap": ScoreSchema,
-        "oracle-unverified": ScoreSchema,
-        "backing-unverified": ScoreSchema,
-        "exit-unverified": ScoreSchema,
-        "peg-unverified": ScoreSchema,
-      })
-      .strict(),
   })
   .strict();
 
@@ -1347,6 +1338,48 @@ const V9MethodologySemanticSchema = z
   .strict();
 export type V9MethodologySemantic = z.infer<typeof V9MethodologySemanticSchema>;
 
+export interface V9UnknownRungLedgerEntry {
+  path: string;
+  polarity: "credit" | "retained-charge";
+  current: number;
+  value: number;
+  ordinaryMinimum: number | null;
+  required: number;
+}
+
+/** Same-posture credit minima exclude unknown, failed and compromised rungs. */
+export function v9UnknownRungLedger(semantic: V9MethodologySemantic): V9UnknownRungLedgerEntry[] {
+  const { backing, control, exit, formula } = semantic;
+  const reserve = backing.reserve;
+  const mint = control.mintPostureQuality;
+  const rows: Array<[string, number, number, number | null, "credit" | "retained-charge"]> = [
+    ["backing.boundedUnknownQuality", 35, backing.boundedUnknownQuality, Math.min(backing.componentQuality.strong, backing.componentQuality.adequate, backing.componentQuality.limited, backing.componentQuality.weak), "credit"],
+    ["backing.reserve.assetClassUnknown", 35, backing.boundedUnknownQuality, Math.min(...Object.values(reserve.assetClassQuality)), "credit"],
+    ["backing.reserve.liquidityQuality.unknown", 45, reserve.liquidityQuality.unknown, Math.min(reserve.liquidityQuality.immediate, reserve.liquidityQuality["one-day"], reserve.liquidityQuality["seven-days"], reserve.liquidityQuality["over-seven-days"]), "credit"],
+    ["backing.reserve.maturityUnknownQuality", 35, reserve.maturityUnknownQuality, Math.min(...reserve.maturityBands.map((band) => band.score)), "credit"],
+    ["backing.reserve.concentrationUnknown", 35, backing.boundedUnknownQuality, Math.min(...reserve.concentrationBands.map((band) => band.score)), "credit"],
+    ["control.mintPostureQuality.unknown", 45, mint.unknown, Math.min(mint["none-resolved"], mint["bounded-admin"], mint["partially-bounded-admin"], mint["concentrated-admin"], mint["collateral-gated"], mint["unbounded-reconciled"]), "credit"],
+    ["control.mintPostureQuality.unbounded-reconciliation-unknown", 35, mint["unbounded-reconciliation-unknown"], mint["unbounded-reconciled"], "credit"],
+    ["control.oracleTierQuality.opaque-or-unknown", 45, control.oracleTierQuality["opaque-or-unknown"], Math.min(...Object.entries(control.oracleTierQuality).filter(([key]) => key !== "opaque-or-unknown").map(([, value]) => value)), "credit"],
+    ["control.bridgeTierQuality.opaque-or-unknown", 45, control.bridgeTierQuality["opaque-or-unknown"], Math.min(...Object.entries(control.bridgeTierQuality).filter(([key]) => key !== "opaque-or-unknown").map(([, value]) => value)), "credit"],
+    ["control.boundedUnknownQuality", 45, control.boundedUnknownQuality, 45, "credit"],
+    ["exit.boundedUnknownScore", 35, exit.boundedUnknownScore, 35, "credit"],
+    ["exit.observationConfidenceFactors.unknown", 0.35, exit.observationConfidenceFactors.unknown, Math.min(exit.observationConfidenceFactors.high, exit.observationConfidenceFactors.medium, exit.observationConfidenceFactors.low), "credit"],
+    ["exit.modeledConfidenceFactors.low", 0.35, exit.modeledConfidenceFactors.low, Math.min(...Object.values(exit.modeledConfidenceFactors)), "credit"],
+    ["exit.capacityEvidenceTierFactors.unknown", 0.75, exit.capacityEvidenceTierFactors.unknown, Math.min(exit.capacityEvidenceTierFactors["live-direct"], exit.capacityEvidenceTierFactors["live-queue-proxy"], exit.capacityEvidenceTierFactors.documented, exit.capacityEvidenceTierFactors.heuristic), "credit"],
+    ["exit.boundedCostScore", 50, exit.boundedCostScore, null, "retained-charge"],
+    ["exit.holderEligibilityMultipliers.unknown", 0.85, exit.holderEligibilityMultipliers.unknown, null, "retained-charge"],
+    ["control.mintMergedSignals.multisigQuorumAdjustment.unknownTopology", -6, control.mintMergedSignals.multisigQuorumAdjustment.unknownTopology, null, "retained-charge"],
+    ["formula.wrapperStrategyCap.pure", -3, -formula.wrapperStrategyCap.pure, null, "retained-charge"],
+    ["formula.wrapperStrategyCap.staked", -5, -formula.wrapperStrategyCap.staked, null, "retained-charge"],
+    ["formula.wrapperStrategyCap.vault", -10, -formula.wrapperStrategyCap.vault, null, "retained-charge"],
+  ];
+  return rows.map(([path, current, value, ordinaryMinimum, polarity]) => ({
+    path, current, value, ordinaryMinimum, polarity,
+    required: polarity === "credit" ? Math.max(current, ordinaryMinimum!) : current,
+  }));
+}
+
 const V9_RATED_GRADES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F"] as const;
 
 const V9MethodologyPolicyBaseSchema = z
@@ -1386,6 +1419,11 @@ function validateAscendingBreakpoints(
 
 export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefine((policy, ctx) => {
   const formula = policy.semantic.formula;
+  for (const row of v9UnknownRungLedger(policy.semantic)) {
+    if (Math.abs(row.value - row.required) > 1e-9) {
+      addPolicyIssue(ctx, ["semantic", ...row.path.split(".")], "Unknown credit must be max(current, ordinary sub-family minimum); retained charges stay current");
+    }
+  }
   const weightTotal = Object.values(formula.pillarWeights).reduce((sum, value) => sum + value, 0);
   if (Math.abs(weightTotal - 1) > 1e-9) {
     addPolicyIssue(
@@ -1603,16 +1641,6 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
         ["reasonRegistry", index, "defaultTreatment"],
         "NR treatment and disposition rateability must agree",
       );
-    }
-    if (entry.ceilingRule?.source === "evidence-level") {
-      const limit = policy.semantic.evidence.ceilings[entry.ceilingRule.level];
-      if (limit === null) {
-        addPolicyIssue(
-          ctx,
-          ["reasonRegistry", index, "ceilingRule"],
-          `Reason ceiling references ${entry.ceilingRule.level} evidence, which has no ceiling`,
-        );
-      }
     }
     if (entry.ceilingRule?.source === "minimum-track-record") {
       const minimumBand = [...policy.semantic.formula.trackRecordCeilings].sort(

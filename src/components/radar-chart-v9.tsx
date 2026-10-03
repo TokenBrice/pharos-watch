@@ -47,7 +47,7 @@ export function buildV9RadarDataset(
     return { status: "unavailable", reason: "identity-mismatch" };
   }
   if (
-    series.some((entry) => V9_PILLARS.some((pillar) => entry.card.pillars[pillar].score === null))
+    series.some((entry) => entry.card.ratingStatus !== "rated" || V9_PILLARS.some((pillar) => entry.card.pillars[pillar].score === null))
   ) {
     return { status: "unavailable", reason: "card-unavailable" };
   }
@@ -59,7 +59,7 @@ export function buildV9RadarDataset(
           pillar,
           median(
             cohortSeries.flatMap((entry) => {
-              const score = entry.card.pillars[pillar].score;
+              const score = entry.card.ratingStatus === "rated" ? entry.card.pillars[pillar].score : null;
               return score === null ? [] : [score];
             }),
           ),
@@ -78,7 +78,7 @@ export function buildV9RadarDataset(
       rows: V9_PILLARS.map((pillar) => ({
         pillar: V9_PILLAR_LABELS[pillar],
         fullMark: 100,
-        ...Object.fromEntries(series.map((entry) => [entry.card.id, entry.card.pillars[pillar].score ?? 0])),
+        ...Object.fromEntries(series.map((entry) => [entry.card.id, entry.card.pillars[pillar].score!])),
         ...(completeMedians ? { __cohortMedian: completeMedians[pillar] } : {}),
       })),
       cohortMedians: completeMedians,
@@ -105,7 +105,8 @@ export function CompareRadarV9({
         style={{ height: size }}
         role="alert"
       >
-        V10 safety comparison unavailable.
+        {series.some((entry) => entry.card.ratingStatus === "pipeline-gap" || entry.card.partialEvidence !== null)
+          ? "Pipeline gap — full pillar radar unavailable." : "V10 safety comparison unavailable."}
       </div>
     );
   }

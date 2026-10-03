@@ -159,6 +159,12 @@ describe("VERITAS finding VER-006: zero-route completeness is compiled as missin
       expect.objectContaining({
         code: "no-viable-exit-path",
         responsibility: "measured-adverse",
+        cause: "D",
+        causeProof: {
+          cause: "D",
+          adverseFactId: "alpha:exit:empty-route-inventory",
+          evidenceRefIds: ["alpha:exit-route-observation-coverage"],
+        },
       }),
     );
     expect(evaluated.trace.finalScore).not.toBeNull();

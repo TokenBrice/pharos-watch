@@ -26,6 +26,7 @@ import type {
   V9AssetFactsV2,
   V9AssetFactsV3,
   V9FactGapV2,
+  V9FactGapV3,
 } from "../../types/safety-score-v9-facts";
 import type { DependencyType, V9DependencyEconomicRole } from "../../types/dependency-types";
 
@@ -708,26 +709,75 @@ export function nativeWrapperLocalFactsForFixture(asset: V9AssetFactsV2) {
   };
 }
 
-export function compileNativeV3FactSet(input: ReturnType<typeof coreFixture>) {
+// Author current test inputs explicitly; historical labels never certify a cause.
+export function compileNativeV3FactSet(input: unknown) {
+  const { v9FactSetDigest: _digest, ...core } = compileV9FactSetV2(input);
   return compileV9FactSetV3({
-    ...input,
-    schemaVersion: 3,
-    assets: input.assets.map((asset) => ({
-      ...asset,
-      dependencies: {
-        ...asset.dependencies,
-        edges: asset.dependencies.edges.map((edge) => ({
-          ...edge,
-          edgeKey: canonicalV9DependencyEdgeKey(
-            edge.dependencyType as DependencyType,
-            edge.upstreamAssetId,
-            edge.economicRole as V9DependencyEconomicRole | undefined,
-          ),
+    ...core, schemaVersion: 4,
+    assets: core.assets.map((asset) => {
+      const gaps: V9FactGapV3[] = asset.gaps.map(upgradeV9FactGapV2);
+      const unresolved = (componentKey: string, ownerDomain: "backing" | "exit" | "control") => {
+        const gap = createV9FactGapV3({
+          gapId: `fixture:${componentKey}`, reasonCode: ownerDomain === "exit" ? "missing-runtime-route-evidence" : ownerDomain === "control" ? "scoped-control-question" : "bounded-mechanism-review",
+          ownerDomain, policyRuleId: componentKey, observationState: "missing",
+          path: { kind: "local-component", componentKey }, message: `Unresearched fixture datum ${componentKey}.`,
+          responsibility: "unresearched",
+        });
+        gaps.push(gap);
+        return createV9FactStatus({ observationState: "missing", applicability: requiredV9Applicability(componentKey), gapIds: [gap.gapId] });
+      };
+      const identifiedShare = asset.reserveExposures.reduce((sum, row) => sum + row.weight, 0);
+      const reserveResiduals = asset.reserveExposures.length > 0 && identifiedShare < 1 - 1e-9
+        ? [{ residualId: "fixture-tail", weight: 1 - identifiedShare, status: unresolved("reserve:fixture-tail", "backing") }]
+        : [];
+      const wrapper = nativeWrapperLocalFactsForFixture(asset);
+      const wrapperLocalFacts = wrapper.applicability === "not-wrapper" ? wrapper : {
+        ...wrapper,
+        ...(wrapper.formDisposition === "reviewed" ? {} : { formStatus: unresolved("wrapper:form", "backing") }),
+        facts: Object.fromEntries(Object.entries(wrapper.facts).map(([key, fact]) => [
+          key, { ...fact, disposition: "unresearched", status: unresolved(`wrapper:${key}`, "backing") },
+        ])),
+        riskTransfer: { ...wrapper.riskTransfer, disposition: "unresearched", status: unresolved("wrapper:risk-transfer", "backing") },
+      };
+      return {
+        ...asset, gaps, wrapperLocalFacts, reserveResiduals,
+        dependencies: { ...asset.dependencies, edges: asset.dependencies.edges.map((edge) => ({
+          ...edge, edgeKey: `${edge.economicRole}:${edge.dependencyType}:${edge.upstreamAssetId}`,
+        })) },
+        reserveExposures: asset.reserveExposures.map((row) => ({
+          ...row, factorStatuses: row.maturityDaysMax === null ? {
+            maturity: { ...knownStatus(), applicability: notApplicableV9Fact("reserve:maturity", "Fixture stablecoin holdings have no contractual maturity.") },
+          } : {},
         })),
-      },
-      wrapperLocalFacts: nativeWrapperLocalFactsForFixture(asset as unknown as V9AssetFactsV2),
-      gaps: asset.gaps.map(upgradeV9FactGapV2),
-    })),
+        exitRoutes: asset.exitRoutes.map((route) => ({ ...route, capacityEvidenceTier: "live-direct", factorStatuses: {} })),
+        economicControlReview: {
+          mint: { ...asset.economicControlReview.mint, factorStatuses: asset.economicControlReview.mint.status.applicability.state !== "required" ? {} : {
+            ...(asset.economicControlReview.mint.reconciliation === "unknown" ? { reconciliation: unresolved("mint:reconciliation", "control") } : {}),
+            ...(asset.economicControlReview.mint.supervision === "unknown" ? { supervision: unresolved("mint:supervision", "control") } : {}),
+            ...(asset.economicControlReview.mint.upgrade.state === "unknown" ? { upgrade: unresolved("mint:upgrade", "control") } : {}),
+          } },
+          oracle: { ...asset.economicControlReview.oracle, factorStatuses:
+            asset.economicControlReview.oracle.status.applicability.state === "required" &&
+            (asset.economicControlReview.oracle.tier === null || asset.economicControlReview.oracle.tier === "opaque-or-unknown")
+              ? { tier: unresolved("oracle:tier", "control") } : {} },
+          bridge: { ...asset.economicControlReview.bridge, factorStatuses:
+            asset.economicControlReview.bridge.status.applicability.state === "required" && asset.economicControlReview.bridge.routes.length === 0
+              ? { tier: unresolved("bridge:tier", "control") } : {},
+            routes: asset.economicControlReview.bridge.routes.map((route) => ({ ...route, factorStatuses:
+              route.tier === "opaque-or-unknown" ? { tier: unresolved(`bridge:${route.controlKey}:tier`, "control") } : {} })),
+          },
+        },
+        controls: asset.controls.map((control) => ({
+          ...control, factorStatuses: {
+            ...(control.authority === null || control.authority.model === "unknown" ? { authority: unresolved(`control:${control.controlKey}:authority`, "control") } : {}),
+            ...(control.capSemantics.kind === "unknown" ? { capAuthority: unresolved(`control:${control.controlKey}:cap`, "control") } : {}),
+            ...(control.claimImpairment === "unknown" ? { claimImpairment: unresolved(`control:${control.controlKey}:claim`, "control") } : {}),
+            ...(control.economicLossScope === "unknown" ? { economicLossScope: unresolved(`control:${control.controlKey}:loss-scope`, "control") } : {}),
+            ...(control.scope === "deployment" && control.materialSupplyShare === null ? { materialSupplyShare: unresolved(`control:${control.controlKey}:share`, "control") } : {}),
+          },
+        })),
+      };
+    }),
   });
 }
 

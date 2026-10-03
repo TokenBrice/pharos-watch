@@ -34,30 +34,16 @@ function compileExpiredReserveHistory(publishedBy: "issuer" | "unknown") {
   return compileSafetyScoreV9FactSetFromFixedInput(fixed, overlay);
 }
 
-describe("Safety Score v9 Worker evidence-history attribution", () => {
-  it("attributes an expired issuer-published reserve document to published-evidence-expired", () => {
-    const compiled = compileExpiredReserveHistory("issuer");
-    const reserveGap = compiled.assets[0]!.gaps.find(
-      (gap) => gap.gapId === "alpha:gap:reserve-composition",
-    );
-
-    expect(reserveGap).toMatchObject({
-      observationState: "stale",
-      responsibility: "published-evidence-expired",
-      evidenceRefIds: ["alpha:research:expired-reserve-report"],
+describe("Safety Score v10.01 current cause versus historical publisher", () => {
+  it.each(["issuer", "unknown"] as const)("retains %s publication history without certifying current nondisclosure", (publisher) => {
+    const asset = compileExpiredReserveHistory(publisher).assets[0]!;
+    const gap = asset.gaps.find((row) => row.gapId === "alpha:gap:reserve-composition")!;
+    expect(gap.causeProof).toMatchObject({ cause: "U", evidenceRefIds: [] });
+    expect(gap.evidenceHistory).toEqual({ publishedBy: publisher, evidenceRefIds: ["alpha:research:expired-reserve-report"] });
+    expect(asset.evidence.find((row) => row.evidenceId === gap.evidenceHistory!.evidenceRefIds[0])).toMatchObject({
+      observedAtSec: 9_000, publishedAtSec: 9_100, freshness: { state: "stale" },
     });
-  });
-
-  it("keeps an expired reserve document with unknown publisher at issuer-undisclosed", () => {
-    const compiled = compileExpiredReserveHistory("unknown");
-    const reserveGap = compiled.assets[0]!.gaps.find(
-      (gap) => gap.gapId === "alpha:gap:reserve-composition",
-    );
-
-    expect(reserveGap).toMatchObject({
-      observationState: "stale",
-      responsibility: "issuer-undisclosed",
-      evidenceRefIds: ["alpha:research:expired-reserve-report"],
-    });
+    expect(asset.reserveExposures).toEqual([]);
+    expect(asset.reserveResiduals).toMatchObject([{ weight: 1, status: { gapIds: [gap.gapId] } }]);
   });
 });

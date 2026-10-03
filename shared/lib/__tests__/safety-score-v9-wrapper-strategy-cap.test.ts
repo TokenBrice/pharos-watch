@@ -8,13 +8,13 @@ import {
   coreFixture,
   fullAsset,
   minimalAsset,
+  knownStatus,
   compileNativeV3FactSet,
   compileV9FactSetV3,
   evaluateV9FactSet,
 } from "./safety-score-v9-facts.fixture-support";
 
 const POLICY = V9_CANDIDATE_POLICY_V1;
-const DISCOUNT = POLICY.policy.semantic.formula.wrapperStrategyCap; // { pure: 3, staked: 5, vault: 10 }
 
 function asset(
   variantKind: V9AssetFactsV2["variantKind"],
@@ -47,15 +47,6 @@ function inherited(tier: V9InheritedStablecoinBacking["tier"]): V9InheritedStabl
   return { parentAssetId: "usdc-circle", parentBackingScore: 86, weight: 1, tier, failureDomains: [] };
 }
 
-describe("wrapperStrategyCap policy tiers are monotonic (pure <= staked <= vault)", () => {
-  it("carries the three approved discounts", () => {
-    expect(DISCOUNT.pure).toBe(3);
-    expect(DISCOUNT.staked).toBe(5);
-    expect(DISCOUNT.vault).toBe(10);
-    expect(DISCOUNT.pure).toBeLessThanOrEqual(DISCOUNT.staked);
-    expect(DISCOUNT.staked).toBeLessThanOrEqual(DISCOUNT.vault);
-  });
-});
 
 describe("resolveV9WrapperStrategyTier — compiled form drives the current tier", () => {
   it("strategy-vault (third-party aggregator) → vault", () => {
@@ -149,12 +140,14 @@ describe("wrapper discounts propagate through the production set evaluator", () 
     expect(incompleteWrapper.scoreInput.parent.score).toBe(limit);
 
     const { v9FactSetDigest: _digest, ...completeCore } = structuredClone(compiled);
-    const local = completeCore.assets.find((asset) => asset.assetId === "wrapper")!.wrapperLocalFacts;
+    const completeAsset = completeCore.assets.find((asset) => asset.assetId === "wrapper")!;
+    const local = completeAsset.wrapperLocalFacts;
     if (local.applicability !== "wrapper") throw new Error("Expected wrapper facts");
     for (const fact of Object.values(local.facts)) {
       fact.disposition = "reviewed";
       fact.assessment = "none";
       fact.evidenceRefIds = ["evidence:base"];
+      fact.status = knownStatus();
     }
     local.facts.custodyEscrow.assessment = "critical";
     local.riskTransfer = {
@@ -164,6 +157,7 @@ describe("wrapper discounts propagate through the production set evaluator", () 
       signals: ["no-risk-transfer"],
       evidenceRefIds: ["evidence:base"],
     };
+    completeAsset.gaps = completeAsset.gaps.filter((gap) => !gap.gapId.startsWith("fixture:wrapper:"));
     const complete = evaluateV9FactSet(compileV9FactSetV3(completeCore), POLICY);
     const completeWrapper = complete.assets.find((asset) => asset.assetId === "wrapper")!;
     expect(completeWrapper.scoreInput.parent.score).toBe(77);

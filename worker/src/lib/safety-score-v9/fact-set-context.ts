@@ -1,12 +1,16 @@
 import { resolveChainId } from "@shared/types/chain-identity";
 import {
   createV9EvidenceReference,
+  createV9ClassificationEvidence,
+  createV9TypedReviewEvidence,
   createV9FactStatus,
   requiredV9Applicability,
+  resolveV9EvidenceCause,
   type V9PublishedEvidenceAttribution,
+  type V9ResolvedEvidenceCause,
 } from "@shared/lib/safety-score-v9/evidence";
 import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
-import { compareText } from "@shared/lib/safety-score-v9/primitives";
+import { compareText, deepFreeze, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type {
   V9EvidenceReferenceV2,
@@ -15,11 +19,59 @@ import type {
   V9FactStatusV2,
   V9FailureDomainRef,
 } from "@shared/types/safety-score-v9-facts";
+import type { V9AssetFactsV3, V9ExitRouteFactV2 } from "@shared/types/safety-score-v9-facts";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 import type {
   AssetExtension,
   SafetyScoreV9FactSetExtensionV2,
 } from "./fact-set-schema";
+import classificationsAsset from "@shared/data/safety-score-v9/evidence-gap-classifications-v1.json";
+import {
+  V9EvidenceGapClassificationSchema, V9TypedReviewGapClassificationSchema, v9EvidenceCauseScopeKey,
+  type V9EvidenceCauseScope, type V9RuntimeProducerVerdict, type V9CauseResolutionDiagnostic,
+} from "@shared/types/safety-score-v9-causes";
+import { createReviewedAssetRegistry } from "./extension-reviewed-registry";
+
+// Immutable imported evaluation input; validation failures stay asset-local.
+const classifications = createReviewedAssetRegistry({
+  rows: classificationsAsset.entries,
+  schema: V9EvidenceGapClassificationSchema,
+  path: "evidenceGapClassifications.entries",
+  keyOf: (row) => typeof row.id === "string" ? row.id : undefined,
+  keyPath: "id",
+});
+
+function scopeForGap(gap: Pick<V9FactGapV3, "path" | "ownerDomain" | "policyRuleId">): V9EvidenceCauseScope {
+  const pillar = gap.ownerDomain === "exit" ? "exit" : gap.ownerDomain === "control" ? "control" : "backing";
+  const path = gap.path;
+  const routeKey = path.kind === "optional-exit" ? path.routeKey : null;
+  const exposureId = path.kind === "collateral-exposure" ? path.exposureKey : null;
+  const componentKey = "componentKey" in path ? path.componentKey
+    : path.kind === "deployment-control" ? `control:${path.controlKey}`
+      : path.kind === "serial-dependency" ? `serial-dependency:${path.dependencyType}:${path.upstreamAssetId}`
+        : routeKey !== null ? "exit-route" : exposureId !== null ? "reserve-exposure" : gap.policyRuleId;
+  return { pillar, componentKey, factorKey: null, routeKey, exposureId, requiredDatum: componentKey };
+}
+
+export function createRuntimeGapVerdict(args: {
+  assetId: string; scope: V9EvidenceCauseScope; sourceId: string; sourceGenerationId: string;
+  observedAtSec: number; asOfSec: number; producerState: V9RuntimeProducerVerdict["proof"]["producerState"];
+  rejectionCode: string; reason: string; contentSha256?: string | null; url?: string | null;
+}): { verdict: V9RuntimeProducerVerdict; evidence: V9EvidenceReferenceV2 } {
+  const evidenceId = `${args.assetId}:pipeline:${args.sourceGenerationId}:${domainDigest("safety-score-v9.pipeline-gap-scope.v1", args.scope).slice(0, 24)}`;
+  const evidence = createV9EvidenceReference({
+    evidenceId, sourceId: args.sourceId, sourceGenerationId: args.sourceGenerationId,
+    observedAtSec: args.observedAtSec, disposition: "rejected", contentSha256: args.contentSha256, url: args.url,
+    rejection: { code: args.rejectionCode, reason: args.reason, rejectedAtSec: args.observedAtSec },
+    causeBinding: { assetId: args.assetId, scope: args.scope, producerState: args.producerState,
+      rejectionCode: args.rejectionCode, adverseFactId: null },
+  }, args.asOfSec);
+  return { evidence, verdict: { assetId: args.assetId, scope: args.scope, proof: {
+    cause: "A", producerState: args.producerState, sourceId: args.sourceId, sourceGenerationId: args.sourceGenerationId,
+    observedAtSec: args.observedAtSec, rejectionCode: args.rejectionCode, evidenceRefIds: [evidenceId],
+  } } };
+}
+
 
 export interface AssetBuildContext {
   readonly fixedInput: SafetyScoreV9CompilerInput;
@@ -29,6 +81,7 @@ export interface AssetBuildContext {
   readonly evidence: Map<string, V9EvidenceReferenceV2>;
   readonly evidencePublisherById: Map<string, V9PublishedEvidenceAttribution>;
   readonly gaps: Map<string, V9FactGapV3>;
+  readonly causeResolutionDiagnostics: V9CauseResolutionDiagnostic[];
 }
 
 export function projectResearchOverlayPayload(value: unknown): unknown {
@@ -118,13 +171,108 @@ export function addEvidence(context: AssetBuildContext, evidence: V9EvidenceRefe
   return evidence.evidenceId;
 }
 
-export function addGap(context: AssetBuildContext, gap: V9FactGapV3): string {
-  const existing = context.gaps.get(gap.gapId);
-  if (existing && stableJsonStringifyV1(existing) !== stableJsonStringifyV1(gap)) {
-    throw new Error(`Conflicting Safety Score v9 gap identity ${gap.gapId}`);
+function capturedReserveFailure(context: AssetBuildContext, scope: V9EvidenceCauseScope) {
+  if (scope.pillar !== "backing" || scope.componentKey !== "reserve-composition" ||
+      scope.factorKey !== null || scope.routeKey !== null || scope.exposureId !== null ||
+      scope.requiredDatum !== "reserve-composition") return undefined;
+  const records = context.fixedInput.evidenceJournalById?.[context.asset.assetId] ?? [];
+  let latest: typeof records[number] | undefined;
+  for (const record of records) {
+    if (record.completedAtSec > context.fixedInput.clockSec) continue;
+    if (!latest || record.completedAtSec > latest.completedAtSec ||
+        (record.completedAtSec === latest.completedAtSec && compareText(record.attemptId, latest.attemptId) < 0)) latest = record;
   }
-  context.gaps.set(gap.gapId, gap);
-  return gap.gapId;
+  if (latest?.attemptCode === "reserve.collector.attempted" &&
+      latest.admissionCode.startsWith("reserve.admission.rejected-")) {
+    return createRuntimeGapVerdict({
+      assetId: context.asset.assetId, scope, sourceId: latest.sourceId, sourceGenerationId: latest.attemptId,
+      observedAtSec: latest.completedAtSec, asOfSec: context.fixedInput.clockSec,
+      producerState: latest.admissionCode === "reserve.admission.rejected-sidecar-mismatch" ? "config-mismatch"
+        : latest.admissionCode === "reserve.admission.rejected-stale" ? "stale-producer" : "producer-failed",
+      rejectionCode: latest.admissionCode, reason: latest.admissionCode,
+      contentSha256: latest.admissionCode === "reserve.admission.rejected-sidecar-mismatch"
+        ? latest.sidecarMaterializationSha256 : latest.contentSha256,
+    });
+  }
+  const provenance = context.fixedInput.liveReserveProvenanceMap[context.asset.assetId];
+  const failure = provenance?.reserveObservationFailure;
+  return failure && provenance.fetchedAt <= context.fixedInput.clockSec ? createRuntimeGapVerdict({
+    assetId: context.asset.assetId, scope, sourceId: provenance.source,
+    sourceGenerationId: `rejected-reserve-observation:${failure.sourceSha256}`,
+    observedAtSec: provenance.fetchedAt, asOfSec: context.fixedInput.clockSec,
+    producerState: "producer-failed", rejectionCode: failure.reason, reason: failure.reason,
+    contentSha256: failure.sourceSha256,
+  }) : undefined;
+}
+
+export function addGap(context: AssetBuildContext, gap: V9FactGapV3): string {
+  const scope = gap.causeScope ?? scopeForGap(gap);
+  const scopeKey = v9EvidenceCauseScopeKey(context.asset.assetId, scope);
+  const entries = classifications.getAll(context.asset.assetId);
+  const scoped = entries.filter((entry) => v9EvidenceCauseScopeKey(entry.assetId, entry.scope) === scopeKey);
+  if (scoped.length > 1) throw new Error(`Conflicting evidence classifications for ${scopeKey}`);
+  const captured = context.fixedInput.pipelineGapByAssetId?.[context.asset.assetId]?.find(
+    ({ verdict }) => v9EvidenceCauseScopeKey(verdict.assetId, verdict.scope) === scopeKey,
+  ) ?? capturedReserveFailure(context, scope);
+  if (captured) addEvidence(context, captured.evidence);
+  const classification = scoped[0];
+  let typedReview: unknown;
+  if (scope.componentKey.startsWith("mechanism-review:") && scope.factorKey === null) {
+    const componentKey = scope.componentKey.slice("mechanism-review:".length);
+    const reviewed = context.asset.mechanismReviewedUnavailable?.find((row) => row.componentKey === componentKey);
+    if (reviewed) typedReview = {
+      id: `mechanism-review:${context.asset.assetId}:${componentKey}:${reviewed.reviewedAt}`,
+      assetId: context.asset.assetId, scope, cause: "C", assertion: "researched-nondisclosure",
+      reviewedAt: reviewed.reviewedAt, sources: [{ url: reviewed.sourceUrl }],
+      searchedSurfaces: reviewed.searchedSurfaces, rationale: reviewed.rationale,
+    };
+  }
+  const classificationEvidence = classification && Date.parse(classification.reviewedAt) / 1000 <= context.fixedInput.clockSec
+    ? createV9ClassificationEvidence(classification, context.fixedInput.clockSec) : undefined;
+  if (classificationEvidence) addEvidence(context, classificationEvidence);
+  let typedReviewEvidence: V9EvidenceReferenceV2 | undefined;
+  let historyDiagnostic: V9CauseResolutionDiagnostic | undefined;
+  const parsedTypedReview = typedReview === undefined ? undefined : V9TypedReviewGapClassificationSchema.safeParse(typedReview);
+  if (parsedTypedReview?.success && Date.parse(parsedTypedReview.data.reviewedAt) / 1000 <= context.fixedInput.clockSec) {
+    try {
+      typedReviewEvidence = createV9TypedReviewEvidence(parsedTypedReview.data, context.fixedInput.clockSec);
+      addEvidence(context, typedReviewEvidence);
+    } catch (error) {
+      historyDiagnostic = { code: "cause-proof-conversion-failed", scope,
+        message: error instanceof Error ? error.message : "Typed research history could not be bound" };
+    }
+  }
+  const referenceIds = new Set([...gap.evidenceRefIds, ...gap.causeProof.evidenceRefIds,
+    ...(captured ? [captured.evidence.evidenceId] : []),
+    ...(classificationEvidence ? [classificationEvidence.evidenceId] : []),
+    ...(typedReviewEvidence ? [typedReviewEvidence.evidenceId] : [])]);
+  const references = [...referenceIds].flatMap((id) => {
+    const reference = context.evidence.get(id);
+    return reference ? [reference] : [];
+  });
+  const result: V9ResolvedEvidenceCause = gap.causeProof.cause === "U"
+    ? resolveV9EvidenceCause({
+        assetId: context.asset.assetId, scope, asOfSec: context.fixedInput.clockSec,
+        sourceGenerationId: captured?.verdict.proof.sourceGenerationId ?? context.fixedInput.sourceGeneration,
+        evidenceReferences: references, runtimeVerdict: captured?.verdict, classification, typedReview,
+      })
+    : { causeProof: gap.causeProof, responsibility: gap.responsibility, evidenceReferences: references };
+  const diagnostics = result.diagnostics ?? (historyDiagnostic ? [historyDiagnostic] : undefined);
+  if (diagnostics) context.causeResolutionDiagnostics.push(...diagnostics);
+  for (const evidence of result.evidenceReferences) {
+    if (!context.evidence.has(evidence.evidenceId)) addEvidence(context, evidence);
+  }
+  const resolved = createV9FactGapV3({
+    ...gap, causeScope: scope, causeProof: result.causeProof, responsibility: result.responsibility,
+    evidenceRefIds: result.evidenceReferences.map((reference) => reference.evidenceId),
+    evidenceHistory: { publishedBy: gap.evidenceHistory?.publishedBy ?? "unknown", references: result.evidenceReferences },
+  });
+  const existing = context.gaps.get(resolved.gapId);
+  if (existing && stableJsonStringifyV1(existing) !== stableJsonStringifyV1(resolved)) {
+    throw new Error(`Conflicting Safety Score v9 gap identity ${resolved.gapId}`);
+  }
+  context.gaps.set(resolved.gapId, resolved);
+  return resolved.gapId;
 }
 
 export function fallbackResearchEvidence(context: AssetBuildContext): string {
@@ -233,15 +381,6 @@ export function collateralExposureMappingIssues(
 }
 
 
-function stalePublishedEvidenceFallback(
-  observationState: Exclude<V9FactStatusV2["observationState"], "known">,
-  references: readonly V9EvidenceReferenceV2[],
-  fallback: V9EvidenceResponsibility,
-): V9EvidenceResponsibility {
-  return observationState === "stale" && references.some((reference) => reference.disposition === "published")
-    ? "issuer-undisclosed"
-    : fallback;
-}
 
 export function assertKnownComponentEvidenceCurrent(
   context: AssetBuildContext,
@@ -269,13 +408,11 @@ export function timestampSec(value: string, label: string, asOfSec: number): num
   return timestamp;
 }
 
+/** Observation state alone certifies no responsibility. */
 export function reviewedGapResponsibility(
-  observationState: Exclude<V9FactStatusV2["observationState"], "known">,
+  _observationState: Exclude<V9FactStatusV2["observationState"], "known">,
 ): V9EvidenceResponsibility {
-  if (observationState === "stale") return "producer-failed";
-  if (observationState === "unsupported") return "method-unsupported";
-  if (observationState === "bounded-unknown") return "issuer-undisclosed";
-  return "integration-missing";
+  return "unresearched";
 }
 
 export function normalizeReviewedFactStatus(
@@ -290,6 +427,8 @@ export function normalizeReviewedFactStatus(
     componentKey: string;
     message: string;
     responsibility?: V9EvidenceResponsibility;
+    causeScope?: V9EvidenceCauseScope;
+    adverseFactId?: string;
   },
 ): V9FactStatusV2 {
   const evidenceIds =
@@ -315,7 +454,32 @@ export function normalizeReviewedFactStatus(
   }
   const evidenceRefIds = keepEvidence ? evidenceIds : [];
   const evidenceHistory = evidenceHistoryFor(context, evidenceRefIds);
-  const fallbackResponsibility = descriptor.responsibility ?? reviewedGapResponsibility(original.observationState);
+  const causeScope = descriptor.causeScope ?? scopeForGap({
+    ownerDomain: descriptor.ownerDomain,
+    policyRuleId: original.applicability.policyRuleId,
+    path: { kind: "local-component", componentKey: descriptor.componentKey },
+  });
+  const adverseFactId = descriptor.adverseFactId;
+  let adverseEvidenceRefIds: string[] = [];
+  if (adverseFactId !== undefined) {
+    assertKnownComponentEvidenceCurrent(context, descriptor.bindingKey, evidenceRefIds);
+    adverseEvidenceRefIds = evidenceRefIds.map((evidenceId) => {
+      const source = context.evidence.get(evidenceId);
+      if (!source || source.rejection !== null) throw new Error(`Adverse fact ${adverseFactId} lacks admitted source evidence`);
+      return addEvidence(context, createV9EvidenceReference({
+        ...source,
+        evidenceId: `${evidenceId}:adverse:${adverseFactId}`,
+        disposition: "observed",
+        publishedAtSec: null,
+        maxAgeSec: source.freshness.maxAgeSec,
+        causeBinding: {
+          assetId: context.asset.assetId, scope: causeScope,
+          producerState: null, rejectionCode: null, adverseFactId,
+        },
+      }, context.fixedInput.clockSec));
+    });
+  }
+  const fallbackResponsibility = "unresearched";
   const gapId = addGap(
     context,
     createV9FactGapV3({
@@ -324,11 +488,11 @@ export function normalizeReviewedFactStatus(
       ownerDomain: descriptor.ownerDomain,
       policyRuleId: original.applicability.policyRuleId,
       observationState: original.observationState,
-      responsibility: stalePublishedEvidenceFallback(
-        original.observationState,
-        evidenceHistory.references,
-        fallbackResponsibility,
-      ),
+      responsibility: adverseFactId === undefined ? fallbackResponsibility : "measured-adverse",
+      ...(adverseFactId === undefined ? {} : {
+        causeProof: { cause: "D" as const, adverseFactId, evidenceRefIds: adverseEvidenceRefIds },
+      }),
+      causeScope,
       path: { kind: "local-component", componentKey: descriptor.componentKey },
       message: descriptor.message,
       evidenceRefIds,
@@ -348,6 +512,7 @@ export function missingLocalFact(
   context: AssetBuildContext,
   args: {
     componentKey: string;
+    path?: V9FactGapV3["path"];
     reasonCode: V9FactGapV3["reasonCode"];
     ownerDomain: V9FactGapV3["ownerDomain"];
     responsibility: V9EvidenceResponsibility;
@@ -355,6 +520,7 @@ export function missingLocalFact(
     message: string;
     observationState?: Exclude<V9FactStatusV2["observationState"], "known">;
     evidenceRefIds?: readonly string[];
+    causeScope?: V9EvidenceCauseScope;
   },
 ): { gapId: string; status: V9FactStatusV2 } {
   const observationState = args.observationState ?? "missing";
@@ -367,7 +533,8 @@ export function missingLocalFact(
       policyRuleId: args.policyRuleId,
       observationState,
       responsibility: args.responsibility,
-      path: { kind: "local-component", componentKey: args.componentKey },
+      ...(args.causeScope === undefined ? {} : { causeScope: args.causeScope }),
+      path: args.path ?? { kind: "local-component", componentKey: args.componentKey },
       message: args.message,
       evidenceRefIds: args.evidenceRefIds,
       evidenceHistory: evidenceHistoryFor(context, args.evidenceRefIds ?? []),
@@ -382,6 +549,43 @@ export function missingLocalFact(
       gapIds: [gapId],
     }),
   };
+}
+/** Complete atomic route scopes without upgrading an unproven legacy capacity tier. */
+export function compileRouteFactorStatuses(
+  context: AssetBuildContext,
+  route: V9ExitRouteFactV2,
+): V9AssetFactsV3["exitRoutes"][number] {
+  const capacityEvidenceTier = route.capacityEvidenceTier ?? "unknown";
+  const factorStatuses = { ...route.factorStatuses };
+  let knownFactorStatus: V9FactStatusV2 | undefined;
+  for (const [factorKey, missing] of [
+    ["access", route.holderAccess === "unknown"],
+    ["holderEligibility", route.holderAccess === "unknown"],
+    ["executionConfidence", route.executionCertainty === "unknown" || route.modelConfidence === "unknown"],
+    ["observationConfidence", route.observationConfidence === "unknown"],
+    ["capacityEvidenceTier", capacityEvidenceTier === "unknown"],
+    ["capacity", route.capacityCurve.length === 0 || route.status.observationState !== "known"],
+    ["output", route.output.status.observationState !== "known"],
+    ["cost", route.feeEvidence !== undefined || route.capacityCurve.some((point) => point.executionCostBps === null)],
+    ["settlement", route.settlementBoundUnproven === true || route.settlementSlaSec === null],
+  ] as const) {
+    if (factorStatuses[factorKey]) continue;
+    factorStatuses[factorKey] = missing
+      ? missingLocalFact(context, {
+          componentKey: `exit-route:${route.routeKey}:${factorKey}`, reasonCode: "missing-same-notional-route",
+          ownerDomain: "exit", responsibility: "unresearched", policyRuleId: "v9.exit.route-factors",
+          path: { kind: "optional-exit", routeKey: route.routeKey },
+          message: `The ${factorKey} datum for route ${route.routeKey} has not been established.`,
+          evidenceRefIds: route.status.evidenceRefIds,
+          causeScope: { pillar: "exit", componentKey: "exit-route", factorKey,
+            routeKey: route.routeKey, exposureId: null, requiredDatum: factorKey },
+        }).status
+      : (knownFactorStatus ??= deepFreeze(createV9FactStatus({
+          applicability: route.status.applicability, observationState: "known",
+          evidenceRefIds: route.status.evidenceRefIds,
+        })));
+  }
+  return { ...route, factorStatuses, capacityEvidenceTier };
 }
 
 export function createAssetBuildContext(
@@ -398,5 +602,6 @@ export function createAssetBuildContext(
     evidence: new Map(),
     evidencePublisherById: new Map(),
     gaps: new Map(),
+    causeResolutionDiagnostics: [],
   };
 }

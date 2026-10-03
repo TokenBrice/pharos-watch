@@ -8,6 +8,9 @@ import {
 } from "../../types/safety-score-v9-wrapper";
 import { round4 } from "../math";
 import { assertScore, compareText } from "./primitives";
+import type { V9FactGapV3, V9FactStatusV2 } from "../../types/safety-score-v9-facts";
+import type { V9EvidenceCause, V9ScoringDisposition } from "../../types/safety-score-v9-causes";
+import { resolveV9StatusCauses, v9ScoringDisposition } from "./control-primitives";
 
 export type { V9WrapperForm } from "../../types/safety-score-v9-wrapper";
 
@@ -17,6 +20,7 @@ export interface V9WrapperParentLimitInput {
   parentScore: number;
   localFacts: V9ApplicableWrapperLocalFacts;
   fallbackDiscounts: Readonly<Record<V9WrapperForm, number>>;
+  gaps?: readonly V9FactGapV3[];
 }
 
 export interface V9WrapperLocalRiskAdjustment {
@@ -25,11 +29,17 @@ export interface V9WrapperLocalRiskAdjustment {
   assessment: V9WrapperRiskAssessment | null;
   maximumDiscountPoints: number;
   discountPoints: number;
+  cause: V9EvidenceCause | null;
+  causeGapIds: readonly string[];
+  scoringDisposition: V9ScoringDisposition;
 }
 
 export interface V9WrapperMissingFact {
   factClass: V9WrapperMissingFactClass;
   disposition: Exclude<V9WrapperFactDisposition, "reviewed" | "not-applicable">;
+  cause: V9EvidenceCause;
+  causeGapIds: readonly string[];
+  scoringDisposition: V9ScoringDisposition;
 }
 
 export interface V9WrapperParentLimit {
@@ -115,6 +125,11 @@ export function resolveV9WrapperParentLimit(input: V9WrapperParentLimitInput): V
     throw new Error("Safety Score v9 wrapper fallback discount must be between 0 and 100");
   }
 
+  const missingCause = (status?: V9FactStatusV2) => {
+    const resolved = resolveV9StatusCauses([status], input.gaps);
+    return { cause: resolved.cause ?? "U", causeGapIds: resolved.causeGapIds,
+      scoringDisposition: v9ScoringDisposition(resolved.cause ?? "U") };
+  };
   const adjustments = V9_WRAPPER_LOCAL_FACT_KEYS.map((factKey): V9WrapperLocalRiskAdjustment => {
     const fact = input.localFacts.facts[factKey];
     const maximumDiscountPoints = MAXIMUM_DISCOUNT_POINTS[factKey];
@@ -123,24 +138,29 @@ export function resolveV9WrapperParentLimit(input: V9WrapperParentLimitInput): V
       assessment !== null
         ? round4(maximumDiscountPoints * ASSESSMENT_MULTIPLIER[assessment])
         : 0;
+    const causal = discountPoints > 0 && fact.signals.some((signal) => signal === "active-incident" || signal === "prior-incident")
+      ? { cause: "D" as const, causeGapIds: [], scoringDisposition: "measured-adverse" as const }
+      : assessment === null && unavailableDisposition(fact.disposition) ? missingCause(fact.status)
+        : { cause: null, causeGapIds: [], scoringDisposition: "included" as const };
     return {
       factKey,
       disposition: fact.disposition,
       assessment,
       maximumDiscountPoints,
       discountPoints,
+      ...causal,
     };
   });
   const missingFacts: V9WrapperMissingFact[] = adjustments.flatMap((adjustment) =>
     unavailableDisposition(adjustment.disposition)
-      ? [{ factClass: adjustment.factKey, disposition: adjustment.disposition }]
+      ? [{ factClass: adjustment.factKey, disposition: adjustment.disposition, ...missingCause(input.localFacts.facts[adjustment.factKey].status) }]
       : [],
   );
   if (unavailableDisposition(input.localFacts.formDisposition)) {
-    missingFacts.push({ factClass: "wrapperForm", disposition: input.localFacts.formDisposition });
+    missingFacts.push({ factClass: "wrapperForm", disposition: input.localFacts.formDisposition, ...missingCause(input.localFacts.formStatus) });
   }
   if (unavailableDisposition(input.localFacts.riskTransfer.disposition)) {
-    missingFacts.push({ factClass: "riskTransfer", disposition: input.localFacts.riskTransfer.disposition });
+    missingFacts.push({ factClass: "riskTransfer", disposition: input.localFacts.riskTransfer.disposition, ...missingCause(input.localFacts.riskTransfer.status) });
   }
   missingFacts.sort(
     (left, right) =>
@@ -152,12 +172,14 @@ export function resolveV9WrapperParentLimit(input: V9WrapperParentLimitInput): V
     adjustments.reduce((sum, adjustment) => sum + adjustment.discountPoints, 0),
   );
   const factsComplete = missingFacts.length === 0;
-  // Bounded execution-integration gaps are not evidence of local loss. Keep
-  // them visible and withhold risk-transfer credit, without a new haircut.
+  // Proven A/B gaps are not local loss. C/U withdrawal uncertainty retains
+  // the form fallback; measured-unwind uncertainty alone remains exempt.
   const fallbackRequired = missingFacts.some(
     (fact) =>
+      fact.cause !== "A" && fact.cause !== "B" &&
       fact.factClass !== "measuredUnwind" &&
-      (fact.factClass !== "withdrawalTerms" || fact.disposition === "issuer-undisclosed"),
+      (fact.factClass !== "withdrawalTerms" ||
+        fact.cause === "C" || fact.cause === "U" || fact.disposition === "issuer-undisclosed"),
   );
   const fallbackDiscount = fallbackRequired ? configuredFallbackDiscount : 0;
   const appliedDiscount = round4(Math.max(localRiskDiscount, fallbackDiscount));

@@ -1,5 +1,7 @@
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import { computeDexLiquidityPayloadFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
+import { iterateEvidenceResponsibilityFacts } from "@shared/types/safety-score-v9-public-evidence-facts";
+import { resolveCauseGapId } from "@shared/types/safety-score-v9-public-cause-gaps";
 import {
   evaluateV9FactSet,
   evaluateValidatedV9FactSet,
@@ -364,15 +366,15 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       "canonical-chain-supply-distribution.v1",
       "canonical-lock-mint-supply-attribution.v1",
       "exit-route-modeled-confidence.v1",
-      "fact-gap-responsibility.v1",
+      "fact-gap-cause-proofs.v1",
       "journaled-cdp-shock-coverage.v1",
       "reviewed-deployment-unit-supply-attribution.v1",
       "reviewed-transfer-deployments.v1",
       "wrapper-local-facts.v1",
     ]);
     expect(left.compilerFactSchemaIdentity).toMatchObject({
-      compiledFactSchemaVersion: 3,
-      compilerAdapter: "exact-fixed-input-to-v9-facts.v2",
+      compiledFactSchemaVersion: 4,
+      compilerAdapter: "exact-fixed-input-to-v9-facts.v3",
     });
     expect(left.producerCapabilityIdentity.sourceAdapters.dexExitRoutes).toBe("fixed-input.dex-exit-observations.v2");
     expect(left.producerCapabilityIdentity.sourceAdapters.redemptionExitRoutes).toBe(
@@ -380,7 +382,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     );
     expect(left.producerCapabilityIdentity.sourceAdapters.chainSupply).toBe("fixed-input.usd-circulating-supply.v4");
     expect(left.producerCapabilityIdentity.sourceAdapters.researchOverlays).toBe(
-      "v9-fact-extension.review-overlays.v3",
+      "v9-fact-extension.review-overlays.v4",
     );
     expect(left.producerCapabilityIdentity.sourceAdapters.shockCoverage).toBe("journal-registry.cdp-shock-coverage.v1");
     expect(left.producerCapabilityIdentity.freshnessPolicySec.accessReviews).toBe(31_536_000);
@@ -426,7 +428,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     ]);
     expect(result.quarantineAffectedAssetIds).toEqual(["alpha"]);
     expect(result.candidate.cards).toEqual([
-      expect.objectContaining({ id: "alpha", grade: "NR", score: null }),
+      expect.objectContaining({ id: "alpha", ratingStatus: "pipeline-gap", grade: null, score: null }),
     ]);
     evaluate.mockRestore();
   });
@@ -514,8 +516,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     });
     const changedPolicy = structuredClone(V9_CANDIDATE_POLICY_V1.policy);
     changedPolicy.policyId = "safety-score-v9";
-    changedPolicy.semantic.formula.pillarWeights.backing = 0.39;
-    changedPolicy.semantic.formula.pillarWeights.exit = 0.36;
+    changedPolicy.semantic.formula.compensabilityHeadroom += 1;
     const policyResult = buildSafetyScoreV9Candidate({
       fixedInput,
       extension,
@@ -617,7 +618,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       accessReview: { transfer: { posture: "restrictable" } },
     });
     expect(result.candidate.cards).toHaveLength(1);
-    expect(result.candidate.cards[0]).toMatchObject({ id: "usdc-circle", score: 53, grade: "C-" });
+    expect(result.candidate.cards[0]).toMatchObject({ id: "usdc-circle", ratingStatus: "rated" });
     expect(result.candidate.cards[0]!.nrReasons).toEqual([]);
     expect(result.candidate.cards[0]!.reasonCodes).toContain("missing-same-notional-route");
     expect(result.candidate.completeness).toEqual({
@@ -625,10 +626,11 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       ratedCount: 1,
       notRatedCount: 0,
       notRatedIds: [],
+      pipelineGapCount: 0, pipelineGapIds: [],
     });
   });
 
-  it("keeps a diagnostic bounded route-terms gap rateable and producer-attributed through its causal output gap", () => {
+  it("preserves distinct route-output and bounded-fee causes under diagnostic review", () => {
     const fixedInput = makeV9BoundedUnknownFeeRedemptionFixedInput({ clockSec: AS_OF_SEC });
     const extension = structuredClone(buildSafetyScoreV9BaselineExtension(fixedInput));
     for (const review of extension.assets[0]!.routeReviews) {
@@ -645,28 +647,28 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     expect(card.score).not.toBeNull();
     expect(card.nrReasons).toEqual([]);
     expect(card.reasonCodes).toContain("missing-same-notional-route");
-    // This reason is carried by a real authored gap (the stale last-known
-    // route output valuation), so its owner is the gap's authored
-    // `producer-failed` and it stays causally linked. The gapless variant —
-    // a route withheld by methodology with no authored gap — attributes to
-    // `integration-missing` instead; that contract is asserted in
-    // safety-score-v9-facts-compile-upgrade.test.ts.
     expect(card.scoreTrace.boundedUncertaintyAttribution.items).toContainEqual(
       expect.objectContaining({
         source: "reason",
         code: "missing-same-notional-route",
-        responsibility: "producer-failed",
+        cause: "U", responsibility: "unresearched",
         path: expect.stringContaining(":cause:"),
       }),
     );
-    expect(card.scoreTrace.evidenceResponsibility.facts).toContainEqual(
-      expect.objectContaining({
-        reasonCode: "missing-same-notional-route",
-        sourceGapId: expect.stringContaining("offchain-issuer:output"),
-        responsibility: "producer-failed",
-        critical: false,
-      }),
-    );
+    expect([...iterateEvidenceResponsibilityFacts(card.scoreTrace.evidenceResponsibility)]
+      .map(([reasonCode, , sourceGapRef, responsibility, critical, cause]) => ({
+        reasonCode, responsibility, critical, cause,
+        sourceGapId: sourceGapRef === null ? null : resolveCauseGapId(result.candidate, card, sourceGapRef),
+      }))).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          reasonCode: "missing-same-notional-route", responsibility: "unresearched", critical: false, cause: "U",
+          sourceGapId: expect.stringContaining("offchain-issuer:cost"),
+        }),
+        expect.objectContaining({
+          reasonCode: "unresolved-exit-output", responsibility: "producer-failed", critical: false, cause: "A",
+          sourceGapId: expect.stringContaining("offchain-issuer:output"),
+        }),
+      ]));
   });
 
   it("reaches A+ through the normal candidate compiler and evaluator from ideal reviewed facts", () => {
@@ -680,6 +682,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     const observation = fixedInput.dexLiqMap.alpha!.exitRouteObservations![0]!;
     observation.executableUsd = observation.requestedNotionalUsd;
     observation.completionRatio = 1;
+    observation.capacityEvidenceTier = "live-direct";
     observation.capacityCurve = stressGrid.map((requestedNotionalUsd) => ({
       requestedNotionalUsd,
       maxCostBps: observation.maxCostBps,
@@ -697,6 +700,8 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     asset.routeReviews[0]!.executionModel = "atomic";
     asset.routeReviews[0]!.executionCertainty = "guaranteed";
     asset.routeReviews[0]!.modelConfidence = "high";
+    asset.routeReviews[0]!.settlementModel = "atomic";
+    asset.routeReviews[0]!.settlementSlaSec = 0;
     asset.routeReviews[0]!.executionCosts = stressGrid.map((requestedNotionalUsd) => ({
       requestedNotionalUsd,
       maxCostBps: observation.maxCostBps,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import {
   buildV9GradeCounts,
   buildV9HeadlineStats,
@@ -118,6 +119,21 @@ describe("Safety Scores V9 view model", () => {
 
   it("reports zero percent rather than NaN for rated cards without supply", () => {
     expect(buildV9HeadlineStats(cards, new Map())[1]).toMatchObject({ value: "0%" });
+  });
+  it("separates Pipeline gap from NR and keeps partial ratings ranked without filling missing pillars", () => {
+    const gap = makeReportCardsV9PipelineGapCard("control", "A", { id: "gap" });
+    const partial = makeReportCardsV9PartialCard("exit", "B", { id: "partial", score: 75 });
+    const nr = makeV9Card({ id: "nr", score: null, grade: "NR", ratingStatus: "not-rated" });
+    const input = [gap, nr, partial];
+    expect(buildV9GradeCounts(input)).toMatchObject({ B: 1, NR: 1, F: 0, "pipeline-gap": 1 });
+    expect(groupV9CardsByGrade(input).map(group => group.grade)).toEqual(["B", "NR", "pipeline-gap"]);
+    const options = { gradeFilter: "pipeline-gap" as const, pegFilter: "all" as const, pegTypeMap: new Map<string, string>(), sortKey: "overall" as const, mcapMap: new Map([["partial", 100], ["gap", 900]]) };
+    expect(filterAndSortV9Cards(input, options).map(card => card.id)).toEqual(["gap"]);
+    expect(filterAndSortV9Cards(input, { ...options, gradeFilter: "all", sortKey: "control" }).map(card => card.id)).toEqual(["partial", "gap", "nr"]);
+    expect(buildV9HeadlineStats(input, options.mcapMap)[0]).toMatchObject({ value: "75" });
+    expect(buildV9HeadlineStats(input, options.mcapMap)[2].value).not.toBe("Exit");
+    expect(partial.pillars.exit.score).toBeNull();
+    expect(gap.score).toBeNull();
   });
 
 });

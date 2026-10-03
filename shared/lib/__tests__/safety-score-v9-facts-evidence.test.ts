@@ -10,15 +10,12 @@ import {
   collateralExposureV9Path,
   createV9FactGap,
   createV9FactGapV3,
-  deploymentControlV9Path,
   optionalExitV9Path,
-  serialDependencyV9Path,
 } from "../safety-score-v9/reasons";
 import {
   V9FactGapV2Schema,
   V9FactGapV3Schema,
 } from "../../types/safety-score-v9-facts";
-import { V9EvidenceResponsibilitySchema } from "../../types/safety-score-v9-fact-primitives";
 
 describe("Safety Score v9 evidence, applicability, and reason helpers", () => {
   it("preserves observed, published, rejected, current, and stale source states", () => {
@@ -178,46 +175,8 @@ describe("Safety Score v9 evidence, applicability, and reason helpers", () => {
     ).toThrow("requires evidence");
   });
 
-  it("constructs every typed economic path and reason-coded gap", () => {
-    const paths = [
-      serialDependencyV9Path("parent", "wrapper"),
-      collateralExposureV9Path("exposure:cash"),
-      deploymentControlV9Path("deployment:ethereum", "control:admin"),
-      optionalExitV9Path("dex:dex:g1:pool"),
-    ];
-    expect(paths.map((path) => path.kind)).toEqual([
-      "serial-dependency",
-      "collateral-exposure",
-      "deployment-control",
-      "optional-exit",
-    ]);
-    expect(
-      createV9FactGap({
-        gapId: "gap:output",
-        reasonCode: "unresolved-exit-output",
-        ownerDomain: "exit",
-        policyRuleId: "exit.output.valuation",
-        observationState: "missing",
-        path: paths[3]!,
-        message: "The route output cannot be valued at the fact-set clock.",
-      }),
-    ).toMatchObject({
-      ownerDomain: "exit",
-      policyRuleId: "exit.output.valuation",
-      reasonCode: "unresolved-exit-output",
-      path: { kind: "optional-exit" },
-    });
-  });
 
   it("versions evidence responsibility without weakening retained V2 parsing", () => {
-    expect(V9EvidenceResponsibilitySchema.options).toEqual([
-      "measured-adverse",
-      "issuer-undisclosed",
-      "integration-missing",
-      "producer-failed",
-      "method-unsupported",
-      "published-evidence-expired",
-    ]);
     const retained = createV9FactGap({
       gapId: "gap:retained",
       reasonCode: "missing-runtime-route-evidence",
@@ -234,11 +193,11 @@ describe("Safety Score v9 evidence, applicability, and reason helpers", () => {
     );
 
     const current = createV9FactGapV3({ ...retained, responsibility: "producer-failed" });
+    expect(current).toMatchObject({ responsibility: "unresearched", causeProof: { cause: "U", reason: "not-yet-researched", evidenceRefIds: [] } });
     expect(V9FactGapV3Schema.parse(current)).toEqual(current);
-    expect(() => createV9FactGapV3({ ...retained, responsibility: "publisher-late" as never })).toThrow();
   });
 
-  it("assigns expired published evidence to Pharos and keeps absent or unknown history fail-closed", () => {
+  it("keeps expired/absent/unknown publication history at U until a current cause is proved", () => {
     const expiredPublication = createV9EvidenceReference(
       {
         evidenceId: "e:expired-publication",
@@ -263,22 +222,25 @@ describe("Safety Score v9 evidence, applicability, and reason helpers", () => {
       responsibility: "issuer-undisclosed" as const,
     };
 
-    expect(createV9FactGapV3({
+    const withIssuerHistory = createV9FactGapV3({
       ...gap,
       evidenceHistory: { publishedBy: "issuer", references: [expiredPublication] },
-    }).responsibility).toBe("published-evidence-expired");
+    });
+    expect(withIssuerHistory.responsibility).toBe("unresearched");
+    expect(withIssuerHistory.causeProof.cause).toBe("U");
+    expect(withIssuerHistory.evidenceHistory).toEqual({ publishedBy: "issuer", evidenceRefIds: [expiredPublication.evidenceId] });
     expect(createV9FactGapV3({
       ...gap,
       evidenceHistory: { publishedBy: "parent", references: [expiredPublication] },
-    }).responsibility).toBe("published-evidence-expired");
+    }).responsibility).toBe("unresearched");
     expect(createV9FactGapV3({
       ...gap,
       evidenceHistory: { publishedBy: "issuer", references: [] },
-    }).responsibility).toBe("issuer-undisclosed");
+    }).responsibility).toBe("unresearched");
     expect(createV9FactGapV3({
       ...gap,
       evidenceHistory: { publishedBy: "unknown", references: [expiredPublication] },
-    }).responsibility).toBe("issuer-undisclosed");
+    }).responsibility).toBe("unresearched");
     const observedOnly = createV9EvidenceReference({
       evidenceId: "e:observed-only", sourceId: "issuer-reserve-report", sourceGenerationId: "report:g1",
       disposition: "observed", observedAtSec: 700, maxAgeSec: 200,
@@ -291,12 +253,12 @@ describe("Safety Score v9 evidence, applicability, and reason helpers", () => {
       expect(createV9FactGapV3({
         ...gap,
         evidenceHistory: { publishedBy: "issuer", references: [reference] },
-      }).responsibility).toBe("issuer-undisclosed");
+      }).responsibility).toBe("unresearched");
     }
     expect(createV9FactGapV3({
       ...gap,
       observationState: "missing",
       evidenceHistory: { publishedBy: "issuer", references: [expiredPublication] },
-    }).responsibility).toBe("issuer-undisclosed");
+    }).responsibility).toBe("unresearched");
   });
 });

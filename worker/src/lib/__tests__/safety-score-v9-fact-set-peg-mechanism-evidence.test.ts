@@ -65,7 +65,9 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
       metaById: assetId === "uusd-anything-labs" ? pinnedUusdMeta() : metaMap(alphaMeta({ id: assetId, mechanismArchetype: "cdp" })),
     });
     expect(baseline.assets[0]!.mechanismReviewGapDisposition?.responsibility).toBe("method-unsupported");
-    expect(compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline).assets[0]!.gaps).toContainEqual(expect.objectContaining({ reasonCode: "bounded-mechanism-review", responsibility: "method-unsupported" }));
+    expect(compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline).assets[0]!.gaps).toContainEqual(expect.objectContaining({
+      reasonCode: "bounded-mechanism-review", responsibility: "unresearched", causeProof: expect.objectContaining({ cause: "U" }),
+    }));
   });
 
   it("attributes reviewed unavailable mechanism components to issuer nondisclosure after the date gate", () => {
@@ -81,7 +83,7 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     for (const componentKey of ["assuranceAndReconciliation", "claimAndSegregation", "custodyContinuity"]) expect(asset.gaps).toContainEqual(expect.objectContaining({ path: { kind: "local-component", componentKey: `mechanism-review:${componentKey}` }, responsibility: "issuer-undisclosed", reasonCode: "bounded-mechanism-review" }));
   });
 
-  it("compiles current operational-resilience evidence and rejects a missing evidence binding", () => {
+  it("retains operational-resilience evidence without granting credit while required score-bearing data remains unresearched", () => {
     const clockSec = v9TestClockSec();
     const fixed = exactFixedInput({ assetId: "usdt-tether", clockSec });
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(usdtMeta()) });
@@ -90,8 +92,9 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     expect(baseline.assets[0]!.operationalResilience).toEqual(overlay);
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
     const asset = compiled.assets[0]!;
-    expect(asset.evidence.filter((evidence) => evidence.evidenceId.startsWith("usdt-tether:operational-resilience:"))).toHaveLength(23);
-    expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.operationalResilience).toMatchObject({ eligible: true, blockerCodes: [], rawPillarCredits: { backing: 2.55, exit: 1.5, control: 2.55 } });
+    expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.operationalResilience).toMatchObject({
+      eligible: false, blockerCodes: ["issuerOpacity"], rawPillarCredits: { backing: 0, exit: 0, control: 0 },
+    });
     const retained = structuredClone(compiled);
     const removed = asset.evidence.find((evidence) => evidence.evidenceId.startsWith("usdt-tether:operational-resilience:"))!.evidenceId;
     retained.assets[0]!.evidence = retained.assets[0]!.evidence.filter((evidence) => evidence.evidenceId !== removed);
@@ -210,9 +213,16 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
       form: "native-staked",
       facts: {
         strategyComplexity: { assessment: "low" },
-        measuredUnwind: { assessment: null, disposition: "integration-missing" },
+        measuredUnwind: { assessment: null, disposition: "unresearched" },
       },
     });
+    const wrapper = compiledAlpha.wrapperLocalFacts;
+    if (wrapper.applicability !== "wrapper") throw new Error("Expected native savings wrapper facts");
+    const unwindStatus = wrapper.facts.measuredUnwind.status;
+    if (unwindStatus === undefined) throw new Error("Expected cause-bearing unwind status");
+    expect(compiledAlpha.gaps.filter((gap) => unwindStatus.gapIds.includes(gap.gapId))).toEqual([
+      expect.objectContaining({ causeProof: expect.objectContaining({ cause: "U" }) }),
+    ]);
   });
 
   it("admits only live-backed or explicitly eligible reserve compositions", () => {
@@ -236,6 +246,7 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
   it("compiles eligible issuer-attested reserves, independent reports, and curated fallbacks", () => {
     const noLive = exactFixedInput({ omitLiveReserve: true });
     const meta = attestedReserveMeta();
+    meta.proofOfReserves!.latestReport!.sources[0]!.label = `${meta.proofOfReserves!.provider} signed examination`;
     const issuer = buildSafetyScoreV9BaselineExtension(noLive, { metaById: metaMap(meta) });
     expect(issuer.assets[0]!.reviewedStaticReserveRows).toMatchObject({ evidenceClass: "issuer-attested" });
     expect(compileSafetyScoreV9FactSetFromFixedInput(noLive, issuer).assets[0]!.reserveExposures).toHaveLength(2);
@@ -252,7 +263,7 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     expect(buildSafetyScoreV9BaselineExtension(exactFixedInput({ omitLiveReserve: true }), { metaById: metaMap({ ...fallbackMeta, variantOf: "beta" } as V9ExtensionRegistryMeta) }).assets[0]!.reviewedStaticReserveRows).toBeNull();
   });
 
-  it("reclassifies evidenced structural freeze dispositions without changing score state", () => {
+  it("binds evidenced structural freeze dispositions to adverse proof without changing their score state", () => {
     const bounded = { applicability: { state: "required" as const, policyRuleId: "v9.access.freeze-review", rationale: null, gapId: null }, observationState: "bounded-unknown" as const, evidenceRefIds: ["placeholder:evidence"], gapIds: ["placeholder:gap"] };
     const reviewed = structuredClone(extension());
     const freeze = reviewed.assets[0]!.accessReview!.freeze;
@@ -262,23 +273,23 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     const gaps = (asset: { gaps: Array<{ gapId: string; reasonCode: string; responsibility: string }> }) => asset.gaps.filter((gap) => gap.gapId.includes(":gap:access:freeze"));
     const inheritedAsset = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), reviewed).assets[0]!;
     expect(gaps(inheritedAsset)).toMatchObject([
-      { gapId: "alpha:gap:access:freeze", reasonCode: "inherited-access-exposure", responsibility: "measured-adverse" },
-      { gapId: "alpha:gap:access:freeze:blacklist:alpha", reasonCode: "inherited-access-exposure", responsibility: "measured-adverse" },
+      { gapId: "alpha:gap:access:freeze", reasonCode: "inherited-access-exposure", responsibility: "measured-adverse", causeProof: { cause: "D" } },
+      { gapId: "alpha:gap:access:freeze:blacklist:alpha", reasonCode: "inherited-access-exposure", responsibility: "measured-adverse", causeProof: { cause: "D" } },
     ]);
     const missing = structuredClone(reviewed);
     delete missing.assets[0]!.accessReview!.freeze.structuralDisposition;
     const missingAsset = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), missing).assets[0]!;
     expect(gaps(missingAsset)).toMatchObject([
-      { gapId: "alpha:gap:access:freeze", reasonCode: "missing-access-review", responsibility: "issuer-undisclosed" },
-      { gapId: "alpha:gap:access:freeze:blacklist:alpha", reasonCode: "missing-access-review", responsibility: "issuer-undisclosed" },
+      { gapId: "alpha:gap:access:freeze", reasonCode: "missing-access-review", responsibility: "unresearched", causeProof: { cause: "U" } },
+      { gapId: "alpha:gap:access:freeze:blacklist:alpha", reasonCode: "missing-access-review", responsibility: "unresearched", causeProof: { cause: "U" } },
     ]);
     const possible = structuredClone(reviewed);
     possible.assets[0]!.accessReview!.freeze.structuralDisposition = "reviewed-possible";
     possible.assets[0]!.accessReview!.freeze.reviews[0] = { ...possible.assets[0]!.accessReview!.freeze.reviews[0]!, source: "blacklist", upstreamAssetId: null, failureDomains: [] };
     const possibleAsset = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), possible).assets[0]!;
     expect(gaps(possibleAsset)).toMatchObject([
-      { gapId: "alpha:gap:access:freeze", reasonCode: "reviewed-possible-access", responsibility: "measured-adverse" },
-      { gapId: "alpha:gap:access:freeze:blacklist:alpha", reasonCode: "reviewed-possible-access", responsibility: "measured-adverse" },
+      { gapId: "alpha:gap:access:freeze", reasonCode: "reviewed-possible-access", responsibility: "measured-adverse", causeProof: { cause: "D" } },
+      { gapId: "alpha:gap:access:freeze:blacklist:alpha", reasonCode: "reviewed-possible-access", responsibility: "measured-adverse", causeProof: { cause: "D" } },
     ]);
     expect(inheritedAsset.accessReview.freeze.status.observationState).toBe("bounded-unknown");
     expect(missingAsset.accessReview.freeze.status.observationState).toBe(inheritedAsset.accessReview.freeze.status.observationState);
@@ -297,7 +308,7 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
       currentDeviationBps: null, depegEventCoverageLimited: true,
     }), extension()).assets[0]!;
     expect(unobserved.gaps).toContainEqual(expect.objectContaining({
-      reasonCode: "missing-peg-input", responsibility: "producer-failed",
+      reasonCode: "missing-peg-input", responsibility: "unresearched", causeProof: expect.objectContaining({ cause: "U" }),
     }));
   });
 
@@ -307,7 +318,7 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     expect(active.gaps).toContainEqual(expect.objectContaining({ reasonCode: "missing-peg-input" }));
     const missing = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput({ pegScore: 27, currentDeviationBps: null, activeDepeg: true }), extension()).assets[0]!;
     expect(missing.peg).toMatchObject({ status: { observationState: "bounded-unknown" }, activeDepeg: null, activeDepegBps: null });
-    expect(missing.gaps).toContainEqual(expect.objectContaining({ reasonCode: "missing-peg-input", responsibility: "producer-failed" }));
+    expect(missing.gaps).toContainEqual(expect.objectContaining({ reasonCode: "missing-peg-input", responsibility: "unresearched", causeProof: expect.objectContaining({ cause: "U" }) }));
   });
 
   it.each([
@@ -362,7 +373,7 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     expect(rwaReview.metricApplicability?.weightedAverageMaturityDays).toMatchObject({ state: "unavailable", evidenceRefIds: ["alpha:research-overlay"] });
   });
 
-  it("turns unavailable dimensions into typed gaps and keeps causal output ownership", () => {
+  it("turns unavailable dimensions into typed gaps without elevating legacy output ownership labels into proof", () => {
     const incomplete = extension();
     const asset = incomplete.assets[0]!;
     asset.mechanismRiskReview = null;
@@ -378,7 +389,9 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
       const reviewed = extension();
       reviewed.assets[0]!.routeReviews[0]!.output = null;
       reviewed.assets[0]!.routeReviews[0]!.unresolvedOutputResponsibility = responsibility;
-      expect(compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), reviewed).assets[0]!.gaps).toContainEqual(expect.objectContaining({ reasonCode: "unresolved-exit-output", responsibility }));
+      expect(compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), reviewed).assets[0]!.gaps).toContainEqual(expect.objectContaining({
+        reasonCode: "unresolved-exit-output", responsibility: "unresearched", causeProof: expect.objectContaining({ cause: "U" }),
+      }));
     }
   });
 

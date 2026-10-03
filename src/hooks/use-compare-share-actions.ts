@@ -14,6 +14,7 @@ import { GOVERNANCE_LABELS_SHORT, BACKING_LABELS_SHORT } from "@shared/lib/class
 import { getSupplyChangePercent } from "@/components/stablecoin-table-logic";
 import type { StablecoinData } from "@shared/types";
 import type { ComparisonMeta } from "@/lib/compare-derive";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 
 interface CompareCoinForShare {
   id: string;
@@ -23,15 +24,12 @@ interface CompareCoinForShare {
   meta: ComparisonMeta;
   pegDetails?: { pegScore: number | null } | null;
   liquidity?: { liquidityScore: number | null } | null;
-  safetyCard?: { grade: string | null } | null;
+  safetyCard?: Pick<SafetyScoreV9CurrentCard, "grade" | "ratingStatus" | "partialEvidence"> | null;
 }
 
 interface CompareRadarCard {
   symbol: string;
-  card: {
-    grade: string;
-    pillars: Record<string, { score: number | null }>;
-  };
+  card: Pick<SafetyScoreV9CurrentCard, "grade" | "ratingStatus" | "pillars">;
   color: string;
 }
 
@@ -104,20 +102,23 @@ export function useCompareShareActions({
         governance: GOVERNANCE_LABELS_SHORT[coin.meta.flags.governance] ?? coin.meta.flags.governance,
         backing: BACKING_LABELS_SHORT[coin.meta.flags.backing] ?? coin.meta.flags.backing,
         pegCurrency: coin.meta.flags.pegCurrency,
-        safetyRating: coin.safetyCard?.grade ?? null,
+        safetyRating: coin.safetyCard?.ratingStatus === "pipeline-gap" ? "Pipeline gap"
+          : coin.safetyCard ? `${coin.safetyCard.grade}${coin.safetyCard.partialEvidence === null ? "" : " · Partial evidence"}` : null,
         logoImg: logoImages[index],
       };
     });
 
     let radarData: ShareRadarData | undefined;
-    if (radarCards.length >= 2) {
+    if (radarCards.length >= 2 && radarCards.every(({ card }) =>
+      card.ratingStatus === "rated" && card.grade !== null && axisOrder.every((key) =>
+        card.pillars[key as keyof typeof card.pillars]?.score != null))) {
       radarData = {
         dimensionLabels: axisOrder.map((key) => axisLabels[key] ?? key),
         coins: radarCards.map(({ card, color, symbol }) => ({
           symbol,
-          overallGrade: card.grade,
+          overallGrade: card.grade!,
           color,
-          scores: axisOrder.map((key) => card.pillars[key]?.score ?? 0),
+          scores: axisOrder.map((key) => card.pillars[key as keyof typeof card.pillars].score!),
         })),
       };
     }

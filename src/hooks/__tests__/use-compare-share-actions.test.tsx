@@ -40,7 +40,7 @@ function makeCoin(id: string, symbol: string): ComparisonCoinEntry {
     } as unknown as StablecoinMeta,
     pegDetails: { pegScore: 99 },
     liquidity: { liquidityScore: 88 },
-    safetyCard: { grade: "A" },
+    safetyCard: { grade: "A", ratingStatus: "rated", partialEvidence: null },
   } as unknown as ComparisonCoinEntry;
 }
 

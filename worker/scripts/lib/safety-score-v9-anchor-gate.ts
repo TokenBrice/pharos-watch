@@ -20,7 +20,8 @@ export type V9RatedGrade = Exclude<V9Grade, "NR">;
 export interface V9AnchorGateCard {
   id: string;
   score: number | null;
-  grade: V9Grade;
+  grade: V9Grade | null;
+  ratingStatus?: "rated" | "not-rated" | "pipeline-gap";
   archetype: string | null;
 }
 
@@ -252,7 +253,8 @@ export type V9AnchorGateVerdictCode =
   | "relative-inversion"
   | "adverse-above-bound"
   | "asset-missing"
-  | "asset-not-rated";
+  | "asset-not-rated"
+  | "asset-pipeline-gap";
 
 export interface V9AnchorGateVerdict {
   rule: string;
@@ -324,10 +326,10 @@ function missingOrUnrated(
     return failVerdict(
       rule,
       kind,
-      "asset-not-rated",
+      card.ratingStatus === "pipeline-gap" ? "asset-pipeline-gap" : "asset-not-rated",
       required,
-      `${card.id} is NR and cannot satisfy a score-based rule`,
-      "NR",
+      `${card.id} is ${card.ratingStatus === "pipeline-gap" ? "Pipeline gap" : "NR"} and cannot satisfy a score-based rule`,
+      card.ratingStatus === "pipeline-gap" ? "Pipeline gap" : "NR",
     );
   }
   return null;

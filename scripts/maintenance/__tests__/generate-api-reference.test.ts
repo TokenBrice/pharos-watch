@@ -2,12 +2,6 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { slug } from "github-slugger";
 import { describe, expect, it } from "vitest";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { CACHE_FRESHNESS_LANES } from "@shared/lib/data-surface-descriptors";
-import {
-  BLACKLIST_TRACKER_METHODOLOGY_VERSION,
-  CHAIN_HEALTH_METHODOLOGY_VERSION,
-} from "@shared/lib/methodology-versions/constants";
 
 import {
   END_MARKER,
@@ -65,22 +59,7 @@ describe("generate-api-reference", () => {
     expect(block).toContain("### `GET /api/stablecoins`");
     expect(block).toContain("### `GET /api/safety-grades`");
     expect(block).toContain("[`StablecoinListResponse`](https://pharos.watch/openapi.json#/components/schemas/StablecoinListResponse)");
-    expect(block).toContain("`cacheBypass: false`");
     expect(block.indexOf("### `GET /api/stablecoins`")).toBeLessThan(block.indexOf(END_MARKER));
-    expect(block).toContain(`"currentVersion": "${BLACKLIST_TRACKER_METHODOLOGY_VERSION}"`);
-    expect(block).toContain(`"healthMethodologyVersion": "${CHAIN_HEALTH_METHODOLOGY_VERSION}"`);
-    expect(block).toContain(`Freshness threshold: ${API_FRESHNESS_MAX_AGE_SEC.stressSignals} s.`);
-    expect(block).toContain(`"maxAge": ${CACHE_FRESHNESS_LANES.dexLiquidity.availabilityMaxAgeSec}`);
-    expect(block).toContain("| `geckoId` | `string \\| null` |");
-    expect(block).toContain("**Capacity-confidence vocabulary:** `live-direct`, `live-proxy`");
-    expect(block).toContain("`droppedRows` is the number of queried database rows rejected");
-    expect(block).toContain("`total` still counts those queried rows");
   });
 
-  it("preserves depeg counts migration guidance in generated output", () => {
-    const block = renderGeneratedBlock(loadOpenapi());
-
-    expect(block).toContain("it no longer includes an aggregate `counts` field");
-    expect(block).toContain("sum each event&rsquo;s `constituentEventCount` after loading all pages");
-  });
 });

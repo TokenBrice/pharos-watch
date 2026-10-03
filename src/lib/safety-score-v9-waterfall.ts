@@ -42,7 +42,9 @@ export function buildScoreWaterfall(card: WaterfallCard): ScoreWaterfallStep[] {
       kind: "base",
       operator: null,
       value: quality,
-      detail: "Weighted mean of the Backing, Exit, and Control pillars.",
+      detail: card.partialEvidence === null
+        ? "Smooth bounded headroom over the included Backing, Exit, and Control pillars."
+        : "Smooth bounded headroom over included pillars only; excluded pipeline gaps have zero weight and remaining weights are renormalized.",
     },
   ];
 
@@ -108,7 +110,7 @@ export function buildScoreWaterfall(card: WaterfallCard): ScoreWaterfallStep[] {
 
   // A single stage that never moved the number explains nothing the headline
   // does not already say.
-  if (steps.length === 1) return [];
+  if (steps.length === 1 && card.partialEvidence === null) return [];
 
   // A binding cap already lands on the published number, so appending a second
   // row would print the same value twice. Otherwise close on the anchor row.

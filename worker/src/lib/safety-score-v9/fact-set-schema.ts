@@ -433,6 +433,7 @@ const AssetExtensionSchema = z
           rationale: CanonicalTextSchema,
           sourceUrl: CanonicalTextSchema,
           reviewedAt: CanonicalTextSchema,
+          searchedSurfaces: z.array(z.string().url()).min(1),
         })
         .strict(),
       (row) => row.componentKey,
@@ -550,7 +551,7 @@ function assetExtensionClockIssues(asset: AdmittedAssetExtension, compiledAtSec:
 }
 
 const ExtensionEnvelopeShape = {
-  schemaVersion: z.literal(2),
+  schemaVersion: z.literal(3),
   registryFingerprint: Sha256Schema,
   compiledAtSec: UnixSecondsSchema,
   sources: z

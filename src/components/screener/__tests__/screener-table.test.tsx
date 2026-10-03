@@ -23,6 +23,8 @@ const row: ScreenerRow = {
   liquidityScore: 86,
   safetyGrade: "B+",
   safetyScore: 82,
+  ratingStatus: "rated",
+  partialEvidence: null,
   safetyBackingScore: 78,
   safetyExitScore: 86,
   safetyControlScore: 42,

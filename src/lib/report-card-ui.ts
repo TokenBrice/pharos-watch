@@ -13,11 +13,16 @@ function getSafetyGradeRange(grade: ReportCardGrade): SafetyGradeRange {
   return gradeRange(grade);
 }
 
-export function getSafetyGradeMetadata(grade: ReportCardGrade | SafetyGradeRange): SafetyGradeRangeMetadata {
+export function getSafetyGradeMetadata(grade: ReportCardGrade | SafetyGradeRange | null): SafetyGradeRangeMetadata {
+  if (grade === null) return {
+    ...REPORT_CARD_GRADE_RANGE_METADATA.NR,
+    sectionDescription: "Pipeline gap — no Safety Score published",
+    pulse: { ...REPORT_CARD_GRADE_RANGE_METADATA.NR.pulse, tagline: "Pipeline gap — no Safety Score published." },
+  };
   const range = getSafetyGradeRange(grade as ReportCardGrade);
   return REPORT_CARD_GRADE_RANGE_METADATA[range];
 }
 
-export function getSafetyGradeBadgeClassName(grade: ReportCardGrade): string {
-  return REPORT_CARD_GRADE_COLORS[grade];
+export function getSafetyGradeBadgeClassName(grade: ReportCardGrade | null): string {
+  return grade === null ? "bg-muted text-muted-foreground border-border" : REPORT_CARD_GRADE_COLORS[grade];
 }

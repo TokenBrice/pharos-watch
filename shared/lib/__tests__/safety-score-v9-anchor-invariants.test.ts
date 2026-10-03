@@ -12,8 +12,7 @@ import {
   type V9DependencyPlanningEdge,
 } from "../safety-score-v9/dependencies";
 import { scoreV9Input } from "../safety-score-v9/formula";
-import { V9_LEGACY_RESPONSIBILITY_BY_REASON } from "../safety-score-v9/facts";
-import { V9_CANDIDATE_POLICY_V1, resolveV9ReasonPolicy } from "../safety-score-v9/policy";
+import { V9_CANDIDATE_POLICY_V1, resolveV9ReasonTreatment } from "../safety-score-v9/policy";
 import { scoreV9GoldenScenario } from "../safety-score-v9/scenario-evaluator";
 import { scoreCompiledAssetSet } from "../safety-score-v9-research";
 import {
@@ -47,14 +46,15 @@ function scoringInput(overrides: Partial<V9ScoringInput> = {}): V9ScoringInput {
   });
 }
 
-function boundedCeilingFact(code: string): V9UnresolvedFact {
-  const resolved = resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, code as V9UnresolvedFact["code"]);
+function boundedFact(code: string): V9UnresolvedFact {
+  const resolved = resolveV9ReasonTreatment(V9_CANDIDATE_POLICY_V1, code as V9UnresolvedFact["code"], "U");
   const reasonCode = code as V9UnresolvedFact["code"];
   return {
     code: reasonCode,
     reason: `fixture ${code}`,
     critical: resolved.critical,
-    responsibility: V9_LEGACY_RESPONSIBILITY_BY_REASON[reasonCode],
+    responsibility: "unresearched",
+    cause: "U",
   };
 }
 
@@ -114,13 +114,13 @@ describe("anchor-coherence invariants — active", () => {
     ]) {
       const baseTrace = score({ pillars });
       const variants = [
-        { unresolved: [boundedCeilingFact("missing-reserve-composition")] },
+        { unresolved: [boundedFact("missing-reserve-composition")] },
         { structuralSignals: [signal("critical-dependency", "high")] },
         {
-          unresolved: [boundedCeilingFact("missing-reserve-composition")],
+          unresolved: [boundedFact("missing-reserve-composition")],
           structuralSignals: [signal("critical-dependency", "high")],
         },
-        { unresolved: [boundedCeilingFact("missing-same-notional-route")] },
+        { unresolved: [boundedFact("missing-same-notional-route")] },
       ];
       for (const variant of variants) {
         const candidate = score({ pillars, ...variant });
@@ -249,19 +249,15 @@ describe("anchor-coherence invariants — active", () => {
     expect(control.trace.finalScore).toBe(child.trace.finalScore);
   });
 
-  it("no double-charged uncertainty: dual-channel expression costs exactly the stronger single channel", () => {
-    const viaReason = score({ unresolved: [boundedCeilingFact("missing-reserve-composition")] });
+  it("does not double-charge a measured structural signal through an unrelated missing-data global cap", () => {
     const viaSignal = score({ structuralSignals: [signal("critical-dependency", "high")] });
     const dual = score({
-      unresolved: [boundedCeilingFact("missing-reserve-composition")],
+      unresolved: [boundedFact("missing-reserve-composition")],
       structuralSignals: [signal("critical-dependency", "high")],
     });
-    expect(viaReason.finalScore).toBe(60);
-    expect(viaSignal.finalScore).toBe(64);
-    expect(dual.finalScore).toBe(Math.min(viaReason.finalScore!, viaSignal.finalScore!));
-    expect(dual.caps.map((cap) => cap.kind)).toEqual(
-      expect.arrayContaining(["reason:missing-reserve-composition", "signal:critical-dependency:high"]),
-    );
+    expect(dual.finalScore).toBe(viaSignal.finalScore);
+    expect(dual.caps.some((cap) => cap.kind === "reason:missing-reserve-composition")).toBe(false);
+    expect(dual.bindingCap).toEqual(viaSignal.bindingCap);
   });
 });
 

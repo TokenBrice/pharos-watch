@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "10.0",
+  "releaseVersion": "10.01",
   "semantic": {
     "accessLookthrough": {
       "edgeKinds": ["reserve-position", "receipt", "bridge-representation"],
@@ -246,8 +246,8 @@
     "evidence": {
       "ceilings": {
         "strong": null,
-        "adequate": 84,
-        "limited": 69,
+        "adequate": null,
+        "limited": null,
         "insufficient": null
       },
       "rank": {
@@ -284,7 +284,7 @@
         {
           "factClass": "missing-global-bounded",
           "boundedness": "globally-bounded",
-          "defaultTreatment": "ceiling",
+          "defaultTreatment": "pillar",
           "rateability": "rateable",
           "routeAction": "include",
           "publicLabel": "Unknown with a defensible upper bound"
@@ -324,7 +324,7 @@
         {
           "factClass": "stale-bounded",
           "boundedness": "globally-bounded",
-          "defaultTreatment": "ceiling",
+          "defaultTreatment": "pillar",
           "rateability": "rateable",
           "routeAction": "include",
           "publicLabel": "Stale evidence with a conservative bound"
@@ -344,6 +344,7 @@
         "researchOverlayMaxAgeSec": 31536000,
         "mechanismOverlayMaxAgeSec": 31536000,
         "assuranceReportMaxAgeSec": 8640000,
+        "namedFirmReserveReportMaxAgeSec": 10368000,
         "issuerAttestedReserveMaxAgeSec": 31536000,
         "reviewedReserveClassificationMaxAgeSec": 31536000,
         "reviewedReserveCompositionMaxAgeSec": 2678400,
@@ -399,7 +400,7 @@
         "minMonths": 60
       },
       "reserve": {
-        "maxUnclassifiedCuratedResidualPct": 0.1,
+        "maxUnclassifiedCuratedResidualPct": 100,
         "boundedFacts": {
           "factKinds": ["contractual-maturity-maximum", "observed-portfolio-maturity", "eligibility-envelope", "currently-liquid-fraction", "maturity-applicability", "stressed-realization-bound"],
           "scopeKinds": ["reserve-envelope", "exposure", "sub-instrument"],
@@ -433,7 +434,7 @@
           "one-day": 92,
           "seven-days": 78,
           "over-seven-days": 55,
-          "unknown": 45
+          "unknown": 55
         },
         "maturityNotApplicableClasses": [
           "cash",
@@ -465,6 +466,7 @@
             "score": 48
           }
         ],
+        "maturityUnknownQuality": 48,
         "factorWeights": {
           "assetQuality": 0.55,
           "liquidity": 0.3,
@@ -929,9 +931,13 @@
         "high": 1,
         "medium": 0.85,
         "low": 0.6,
-        "unknown": 0.35
+        "unknown": 0.6
       },
       "staleObservationConfidenceFactor": 0.6,
+      "capacityEvidenceTierFactors": {
+        "live-direct": 1, "live-queue-proxy": 0.75, "documented": 1, "heuristic": 1, "unknown": 0.75
+      },
+      "maximumScoreEligiblePortfolioCandidates": 64,
       "scoreableEvidenceKinds": {
         "dex": [
           "measured-executable-depth",
@@ -1093,8 +1099,7 @@
       },
       "boundedUnknownScore": 35,
       "boundedCostScore": 50,
-      "documentedTermsCreditCeiling": 80,
-      "undisclosedFeeRouteScoreCeiling": 52
+      "documentedTermsCreditCeiling": 80
     },
     "control": {
       "exactScope": {
@@ -1117,9 +1122,9 @@
         "concentrated-admin": 55,
         "collateral-gated": 50,
         "unbounded-reconciled": 55,
-        "unbounded-reconciliation-unknown": 35,
+        "unbounded-reconciliation-unknown": 55,
         "unbounded-or-compromised": 25,
-        "unknown": 45
+        "unknown": 50
       },
       "mintPostureGrading": {
         "prudentialReconciled": 80,
@@ -1241,15 +1246,7 @@
           "critical": 49
         }
       },
-      "commonModeOracleLimit": 49,
-      "namedReasonCeilings": {
-        "control-unverified": 55,
-        "control-scoped-gap": 69,
-        "oracle-unverified": 55,
-        "backing-unverified": 60,
-        "exit-unverified": 65,
-        "peg-unverified": 60
-      }
+      "commonModeOracleLimit": 49
     },
     "operationalResilience": {
       "minimumLiveHistoryMonths": 36,
@@ -1352,10 +1349,7 @@
       ],
       "defaultFactClass": "missing-bounded-exposure",
       "boundedness": "exposure-bounded",
-      "permittedTreatments": [
-        "pillar",
-        "ceiling"
-      ],
+      "permittedTreatments": ["pillar"],
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Mechanism review component is bounded-unknown",
@@ -1393,10 +1387,7 @@
       ],
       "defaultFactClass": "known-current",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling",
-        "diagnostic"
-      ],
+      "permittedTreatments": ["pillar", "diagnostic"],
       "defaultTreatment": "diagnostic",
       "releaseSeverity": "review-required",
       "publicLabel": "Exit routes share a failure domain",
@@ -1489,17 +1480,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Exit routes were measured under different stress requests",
       "auditClassification": "unresolved-methodology",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "exit-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "incomplete-dex-route-coverage",
@@ -1513,17 +1499,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "DEX route coverage is incomplete",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "exit-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "incomplete-oracle-liquidation-branch",
@@ -1536,17 +1517,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Oracle and liquidation branch is incomplete",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "oracle-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "insufficient-evidence",
@@ -1578,17 +1554,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Material deployment supply is not mapped to a bridge route",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "control-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "material-dependency-unavailable",
@@ -1602,17 +1573,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Material upstream dependency is unavailable",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "evidence-level",
-        "level": "limited"
-      }
+      "ceilingRule": null
     },
     {
       "code": "material-reserve-slice-unstructured",
@@ -1625,10 +1591,7 @@
       ],
       "defaultFactClass": "missing-bounded-exposure",
       "boundedness": "exposure-bounded",
-      "permittedTreatments": [
-        "pillar",
-        "ceiling"
-      ],
+      "permittedTreatments": ["pillar"],
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Material reserve slice lacks structured evidence",
@@ -1645,15 +1608,9 @@
       ],
       "defaultFactClass": "missing-bounded-exposure",
       "boundedness": "exposure-bounded",
-      "permittedTreatments": [
-        "pillar",
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
-      "ceilingRule": {
-        "source": "evidence-level",
-        "level": "limited"
-      },
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
+      "ceilingRule": null,
       "releaseSeverity": "review-required",
       "publicLabel": "Material reserve exposure remains unknown",
       "auditClassification": "missing-data"
@@ -1669,17 +1626,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Mint control question is unresolved",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "control-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "missing-applicable-peg",
@@ -1692,17 +1644,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Applicable peg evidence is missing",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "peg-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "missing-archetype",
@@ -1734,17 +1681,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Bridge profile lacks deployment routes",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "control-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "missing-bridge-routes",
@@ -1758,17 +1700,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Material bridge routes are not reviewed",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "control-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "missing-custody-profile",
@@ -1781,17 +1718,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Custody profile is missing",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "backing-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "missing-implementation-date",
@@ -1804,10 +1736,7 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling",
-        "diagnostic"
-      ],
+      "permittedTreatments": ["ceiling", "diagnostic"],
       "defaultTreatment": "ceiling",
       "ceilingRule": {
         "source": "minimum-track-record"
@@ -1827,15 +1756,9 @@
       ],
       "defaultFactClass": "stale-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling",
-        "diagnostic"
-      ],
-      "defaultTreatment": "ceiling",
-      "ceilingRule": {
-        "source": "evidence-level",
-        "level": "adequate"
-      },
+      "permittedTreatments": ["pillar", "diagnostic"],
+      "defaultTreatment": "pillar",
+      "ceilingRule": null,
       "releaseSeverity": "review-required",
       "publicLabel": "Latest assurance report is missing",
       "auditClassification": "missing-data"
@@ -1851,17 +1774,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Mint authority path is missing",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "control-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "missing-oracle-profile",
@@ -1876,17 +1794,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Oracle and liquidation profile is missing",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "oracle-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "oracle-topology-undisclosed",
@@ -1895,15 +1808,12 @@
       "pathKinds": ["local-component"],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": ["ceiling"],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "The issuer has not disclosed the oracle topology",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "oracle-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "missing-parent-score",
@@ -1936,17 +1846,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Peg input is missing",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "peg-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "peg-price-unavailable-adverse-history",
@@ -1960,17 +1865,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "No usable price exists and the tracked peg record is adverse",
       "auditClassification": "measured-structural",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "peg-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "peg-supply-floor-withheld",
@@ -1984,17 +1884,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Peg deviation is withheld below the $1M supply floor",
       "auditClassification": "measured-structural",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "peg-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "missing-pillar",
@@ -2102,17 +1997,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Required oracle branches are missing",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "oracle-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "missing-reserve-composition",
@@ -2126,17 +2016,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Reserve composition is missing",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "backing-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "missing-runtime-route-evidence",
@@ -2150,17 +2035,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Runtime exit-route evidence is missing",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "exit-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "missing-same-notional-route",
@@ -2173,17 +2053,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Comparable exit route is missing",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "exit-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "unproven-settlement-bound",
@@ -2196,17 +2071,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Redemption is an operator-batched request queue with no proven settlement bound",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "exit-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "missing-upgrade-control",
@@ -2219,17 +2089,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Upgrade authority is not linked to a reviewed control",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "control-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "missing-upgradeability-review",
@@ -2242,17 +2107,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Upgradeability review is missing",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "control-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "nonmaterial-bridge-supply-unmatched",
@@ -2342,15 +2202,9 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling",
-        "NR"
-      ],
-      "defaultTreatment": "ceiling",
-      "ceilingRule": {
-        "source": "evidence-level",
-        "level": "adequate"
-      },
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
+      "ceilingRule": null,
       "releaseSeverity": "review-required",
       "publicLabel": "Independently audited reserve composition is not current",
       "auditClassification": "missing-data"
@@ -2362,19 +2216,14 @@
         "*"
       ],
       "pathKinds": [
-        "collateral-exposure"
+        "collateral-exposure",
+        "local-component"
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling",
-        "NR"
-      ],
-      "defaultTreatment": "ceiling",
-      "ceilingRule": {
-        "source": "evidence-level",
-        "level": "limited"
-      },
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
+      "ceilingRule": null,
       "releaseSeverity": "review-required",
       "publicLabel": "Reserve review covers only part of the backing envelope",
       "auditClassification": "missing-data"
@@ -2391,17 +2240,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Bridge deployment materiality is unavailable",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "control-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "scoped-control-question",
@@ -2415,17 +2259,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "A reviewer-scoped control question is open",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "control-scoped-gap"
-      }
+      "ceilingRule": null
     },
     {
       "code": "selected-bridge-route-missing",
@@ -2438,17 +2277,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Selected bridge route is missing",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "control-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "selected-bridge-route-unresolved",
@@ -2461,17 +2295,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Selected bridge route is unresolved",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "control-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "unknown-control-cap-authority",
@@ -2484,17 +2313,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Control cap authority is unknown",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "control-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "unknown-control-mint-ability",
@@ -2507,17 +2331,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Control mint ability is unknown",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "control-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "unknown-upgrade-authority",
@@ -2530,17 +2349,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Upgrade authority is unknown",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "control-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "unresolved-control-identity",
@@ -2554,17 +2368,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Critical control identity is unresolved",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "control-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "unresolved-exit-output",
@@ -2596,17 +2405,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Mint authority is unresolved",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "control-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "unresolved-oracle-branch-applicability",
@@ -2619,17 +2423,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Oracle branch applicability is unresolved",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "oracle-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "unsupported-same-notional-route",
@@ -2642,17 +2441,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "No comparable route is supported",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "exit-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "unreviewed-dependency-relationships",
@@ -2667,17 +2461,12 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Dependency relationships are not reviewed",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "evidence-level",
-        "level": "limited"
-      }
+      "ceilingRule": null
     },
     {
       "code": "unreviewed-oracle-profile",
@@ -2690,17 +2479,12 @@
       ],
       "defaultFactClass": "stale-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Oracle profile lacks review provenance",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "oracle-unverified"
-      }
+      "ceilingRule": null
     },
     {
       "code": "unreviewed-reserve-envelope",
@@ -2709,21 +2493,45 @@
         "*"
       ],
       "pathKinds": [
-        "collateral-exposure"
+        "collateral-exposure",
+        "local-component"
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": [
-        "ceiling"
-      ],
-      "defaultTreatment": "ceiling",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Reserve envelope is not reviewed",
       "auditClassification": "missing-data",
-      "ceilingRule": {
-        "source": "named-ceiling",
-        "key": "backing-unverified"
-      }
+      "ceilingRule": null
+    },
+    {
+      "code": "partial-evidence-pipeline-gap", "ownerDomain": "evidence",
+      "archetypes": ["*"], "pathKinds": ["*"], "defaultFactClass": "optional-unsupported",
+      "boundedness": "not-applicable", "permittedTreatments": ["diagnostic"], "defaultTreatment": "diagnostic",
+      "releaseSeverity": "diagnostic", "auditClassification": "missing-data",
+      "publicLabel": "Partial evidence: pipeline gap"
+    },
+    {
+      "code": "single-pillar-pipeline-gap", "ownerDomain": "evidence",
+      "archetypes": ["*"], "pathKinds": ["*"], "defaultFactClass": "optional-unsupported",
+      "boundedness": "not-applicable", "permittedTreatments": ["diagnostic"], "defaultTreatment": "diagnostic",
+      "releaseSeverity": "diagnostic", "auditClassification": "missing-data",
+      "publicLabel": "Only one pillar has scoreable evidence because of pipeline gaps"
+    },
+    {
+      "code": "all-pillars-pipeline-gap", "ownerDomain": "evidence",
+      "archetypes": ["*"], "pathKinds": ["*"], "defaultFactClass": "optional-unsupported",
+      "boundedness": "not-applicable", "permittedTreatments": ["diagnostic"], "defaultTreatment": "diagnostic",
+      "releaseSeverity": "diagnostic", "auditClassification": "missing-data",
+      "publicLabel": "All pillars are unavailable because of pipeline gaps"
+    },
+    {
+      "code": "f-without-measured-adverse", "ownerDomain": "evidence",
+      "archetypes": ["*"], "pathKinds": ["*"], "defaultFactClass": "optional-unsupported",
+      "boundedness": "not-applicable", "permittedTreatments": ["diagnostic"], "defaultTreatment": "diagnostic",
+      "releaseSeverity": "diagnostic", "auditClassification": "unresolved-methodology",
+      "publicLabel": "Score below the F threshold without a measured adverse fact"
     }
   ]
 }

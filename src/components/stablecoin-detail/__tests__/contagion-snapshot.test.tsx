@@ -50,7 +50,8 @@ import { ContagionSnapshot } from "../contagion-snapshot";
 function basketOn(upstreamAssetId: string) {
   return {
     serial: [],
-    basket: [{ upstreamAssetId, weight: 0.8, score: 84, boundedUnknown: false }],
+    basket: [{ upstreamAssetId, weight: 0.8, score: 84, boundedUnknown: false,
+      ratingStatus: "rated" as const, partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: [] }],
     cycleBlocked: false,
     reasonCodes: [],
   };
@@ -146,8 +147,8 @@ describe("ContagionSnapshot", () => {
         makeV9Card({ id: "usdc-circle" }),
         makeV9Card({ id: "susdc-spark", dependencies: {
           serial: [
-            { upstreamAssetId: "usds-sky", score: 84, blocked: false, dependencyType: "mechanism", wrapperForm: null },
-            { upstreamAssetId: "usdc-circle", score: 84, blocked: false, dependencyType: "wrapper", wrapperForm: "pure" },
+            { upstreamAssetId: "usds-sky", score: 84, ratingStatus: 84 === null ? "not-rated" as const : "rated" as const, partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: 84 === null ? ["U" as const] : [], blocked: false, dependencyType: "mechanism", wrapperForm: null },
+            { upstreamAssetId: "usdc-circle", score: 84, ratingStatus: 84 === null ? "not-rated" as const : "rated" as const, partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: 84 === null ? ["U" as const] : [], blocked: false, dependencyType: "wrapper", wrapperForm: "pure" },
           ],
           basket: [], cycleBlocked: false, reasonCodes: [],
         } }),
@@ -166,7 +167,7 @@ describe("ContagionSnapshot", () => {
       cards: [
         makeV9Card({ id: "usdc-circle" }),
         makeV9Card({ id: "pusd-polymarket", dependencies: {
-          serial: [{ upstreamAssetId: "usdc-circle", score: 84, blocked: false, dependencyType: "wrapper", wrapperForm: null }],
+          serial: [{ upstreamAssetId: "usdc-circle", score: 84, ratingStatus: 84 === null ? "not-rated" as const : "rated" as const, partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: 84 === null ? ["U" as const] : [], blocked: false, dependencyType: "wrapper", wrapperForm: null }],
           basket: [], cycleBlocked: false, reasonCodes: [],
         } }),
       ],
@@ -185,7 +186,7 @@ describe("ContagionSnapshot", () => {
       cards: [
         makeV9Card({ id: "usdc-circle" }),
         makeV9Card({ id: dependent, dependencies: {
-          serial: [{ upstreamAssetId: "usdc-circle", score: 84, blocked: false, ...(wrapperForm === undefined ? {} : { wrapperForm }) }],
+          serial: [{ upstreamAssetId: "usdc-circle", score: 84, ratingStatus: 84 === null ? "not-rated" as const : "rated" as const, partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: 84 === null ? ["U" as const] : [], blocked: false, ...(wrapperForm === undefined ? {} : { wrapperForm }) }],
           basket: [], cycleBlocked: false, reasonCodes: [],
         } }),
       ],
@@ -204,7 +205,8 @@ describe("ContagionSnapshot", () => {
         makeV9Card({ id: upstream }),
         makeV9Card({ id: dependent, dependencies: {
           ...basketOn(upstream),
-          basket: [{ upstreamAssetId: upstream, weight, score: 84, boundedUnknown: false }],
+          basket: [{ upstreamAssetId: upstream, weight, score: 84, boundedUnknown: false,
+            ratingStatus: "rated", partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: [] }],
         } }),
       ],
     });
@@ -231,12 +233,7 @@ describe("ContagionSnapshot", () => {
             dependencies: {
               serial: [],
               basket: [
-                {
-                  upstreamAssetId: "untracked-coin",
-                  weight: 0.8,
-                  score: 84,
-                  boundedUnknown: false,
-                },
+                { upstreamAssetId: "untracked-coin", weight: 0.8, score: 84, ratingStatus: 84 === null ? "not-rated" as const : "rated" as const, partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: 84 === null ? ["U" as const] : [], boundedUnknown: false, },
               ],
               cycleBlocked: false,
               reasonCodes: [],
@@ -456,19 +453,4 @@ describe("ContagionSnapshot", () => {
     expect(summary.textContent).not.toContain("$0");
   });
 
-  it("renders a retained v5 payload with legacy upstream kind and unpublished coverage", () => {
-    const data = makeDependencyResponse();
-    data.schemaVersion = 5;
-    delete data.commonModeGroups;
-    data.dependencyGraph.edges.forEach((edge) => { delete edge.dependencyType; });
-    data.cards.forEach((card) => { delete card.dependencyCoverage; delete card.dependencies.roles; });
-    useReportCardsV9Mock.mockReturnValue({ data, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
-    render(<ContagionSnapshot stablecoinId="usde-ethena" />);
-    const upstreams = screen.getByRole("region", { name: "What I depend on" });
-    expect(upstreams.textContent).toContain("USDC");
-    expect(upstreams.textContent).toContain("Collateral (basket)");
-    expect(upstreams.textContent).toContain("80%");
-    expect(screen.getByRole("region", { name: "Known, not in the scored graph" }).textContent)
-      .toContain("not published for this generation");
-  });
 });

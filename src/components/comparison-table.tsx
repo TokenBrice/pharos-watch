@@ -180,7 +180,9 @@ function blacklistLabel(coin: ComparisonCoinEntry): string {
 function safetyGradeLabel(coin: ComparisonCoinEntry): ReactNode {
   const card = coin.safetyCard;
   if (!card) return NULL_VALUE;
-  return card.score == null ? card.grade : `${card.grade} · ${formatScore(card.score, { trimInteger: true })}`;
+  if (card.ratingStatus === "pipeline-gap") return "Pipeline gap — no Safety Score published";
+  const label = card.score == null ? card.grade : `${card.grade} · ${formatScore(card.score, { trimInteger: true })}`;
+  return card.partialEvidence === null ? label : `${label} · Partial evidence: pipeline gap (${card.partialEvidence.causes.join("/")})`;
 }
 
 function buildSections(pegRates: Record<string, number>): ComparisonSection[] {

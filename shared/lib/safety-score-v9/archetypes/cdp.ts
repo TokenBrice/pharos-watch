@@ -180,6 +180,8 @@ export function evaluateV9CdpBacking(
   // below already excludes `not-applicable`, whose ratio is null by schema.
   if (
     review.metricApplicability.collateralizationRatio.state === "measured" &&
+    review.collateralizationParameters.status.observationState === "known" &&
+    review.collateralizationParameters.status.evidenceRefIds.length > 0 &&
     review.collateralizationRatio !== null &&
     review.collateralizationRatio < cdpPolicy.minimumCollateralizationRatio
   ) {
@@ -212,11 +214,15 @@ export function evaluateV9CdpBacking(
   }
   if (
     liquidationCapacity.coverageRatio !== null &&
+    (liquidationCapacity.selectedPath === "stress-measurement"
+      ? liquidationCapacity.selectedEvidenceRefIds.length > 0
+      : review.liquidationMechanics.status.observationState === "known" &&
+        review.liquidationMechanics.status.evidenceRefIds.length > 0) &&
     liquidationCapacity.coverageRatio < backing.structural.cdp.minimumLiquidationCapacityRatio
   ) {
     structuralReasons.push(
       createV9BackingStructuralReason(policy, backing.structural.cdp.liquidationSignal, {
-        responsibility: v9StructuralResponsibilityForStatus(review.liquidationMechanics.status),
+        responsibility: "measured-adverse",
         pathKey:
           liquidationCapacity.selectedPath === "stress-measurement"
             ? "mechanism:liquidation-mechanics:stress-measurement"

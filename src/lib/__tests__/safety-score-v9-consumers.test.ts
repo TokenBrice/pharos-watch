@@ -12,7 +12,47 @@ import {
   makeV9Card,
 } from "@/test/fixtures/safety-score-v9";
 
+import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 describe("V9 safety consumer projections", () => {
+  it("preserves technical gap nulls and excludes them from grade risk buckets", () => {
+    const gap = makeReportCardsV9PipelineGapCard("control", "A");
+    const response = makeReportCardsV9Response({ cards: [gap] });
+    expect(buildV9SafetyTableRows(response, response.safetyScoreIdentity)).toMatchObject({
+      status: "available",
+      value: [{ grade: null, score: null, ratingStatus: "pipeline-gap", riskBucket: null }],
+    });
+    for (const filter of ["safe", "neutral", "risky", "unavailable"] as const) {
+      expect(buildV9SafetyTableRows(response, response.safetyScoreIdentity, filter)).toMatchObject({
+        status: "available", value: [],
+      });
+    }
+  });
+
+  it("uses known-only score and per-pillar USD denominators for partial portfolios", () => {
+    const known = makeReportCardsV9PartialCard("exit", "B", { id: "partial" });
+    const gap = makeReportCardsV9PipelineGapCard(null, "A", { id: "gap" });
+    const response = makeReportCardsV9Response({ cards: [gap, known] });
+    expect(buildV9PortfolioProjection(response, response.safetyScoreIdentity, [
+      { coinId: "partial", amount: 100 }, { coinId: "gap", amount: 300 },
+    ])).toMatchObject({
+      status: "available",
+      value: {
+        score: known.score, assetGrade: null, partialEvidence: true,
+        pillars: { backing: 80, exit: null, control: 80 },
+        coverageUsd: { total: 400, score: 100, pillars: { backing: 100, exit: 0, control: 100 } },
+      },
+    });
+  });
+
+  it("returns null portfolio aggregates when no holding has a score", () => {
+    const card = makeReportCardsV9PipelineGapCard(null, "B");
+    const response = makeReportCardsV9Response({ cards: [card] });
+    expect(buildV9PortfolioProjection(response, response.safetyScoreIdentity, [{ coinId: card.id, amount: 50 }]))
+      .toMatchObject({ status: "available", value: {
+        score: null, pillars: { backing: null, exit: null, control: null },
+        coverageUsd: { total: 50, score: 0, pillars: { backing: 0, exit: 0, control: 0 } },
+      } });
+  });
   it("requires a complete exact identity and rejects stale previous publications", () => {
     const response = makeReportCardsV9Response();
     expect(resolveV9ConsumerResponse(response, response.safetyScoreIdentity).status).toBe("available");
@@ -85,7 +125,7 @@ describe("V9 safety consumer projections", () => {
   it("attributes full serial exposure only to held dependents", () => {
     const dependent = (id: string) => makeV9Card({
       id, dependencies: {
-        serial: [{ upstreamAssetId: "upstream", score: 80, blocked: false }],
+        serial: [{ upstreamAssetId: "upstream", score: 80, ratingStatus: 80 === null ? "not-rated" as const : "rated" as const, partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: 80 === null ? ["U" as const] : [], blocked: false }],
         basket: [], cycleBlocked: false, reasonCodes: [],
       },
     });
@@ -175,9 +215,9 @@ describe("V9 safety consumer projections", () => {
       pegMultiplier: null,
       pegAdjustedScore: null,
       pillars: {
-        backing: { score: null, evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
-        exit: { score: null, evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
-        control: { score: null, evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
+        backing: { score: null, aggregationDisposition: "included", supportedComponentKeys: [], causeGapRefs: [], limitedEvidenceCauses: ["U"], evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
+        exit: { score: null, aggregationDisposition: "included", supportedComponentKeys: [], causeGapRefs: [], limitedEvidenceCauses: ["U"], evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
+        control: { score: null, aggregationDisposition: "included", supportedComponentKeys: [], causeGapRefs: [], limitedEvidenceCauses: ["U"], evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
       },
       weakestPillar: null,
       nrReasons: [{ code: "missing-pillar", message: "Required pillar evidence is missing.", field: "backing", origin: "asset" }],
@@ -235,7 +275,7 @@ describe("V9 safety consumer projections", () => {
         pegAdjustedScore: 90,
         dependencies: {
           serial: [],
-          basket: [{ upstreamAssetId: "asset-a", score: 80, weight: 0.5, boundedUnknown: false }],
+          basket: [{ upstreamAssetId: "asset-a", score: 80, ratingStatus: 80 === null ? "not-rated" as const : "rated" as const, partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: 80 === null ? ["U" as const] : [], weight: 0.5, boundedUnknown: false }],
           cycleBlocked: false,
           reasonCodes: [],
         },
@@ -271,9 +311,9 @@ describe("V9 safety consumer projections", () => {
       pegMultiplier: null,
       pegAdjustedScore: null,
       pillars: {
-        backing: { score: null, evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
-        exit: { score: null, evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
-        control: { score: null, evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
+        backing: { score: null, aggregationDisposition: "included", supportedComponentKeys: [], causeGapRefs: [], limitedEvidenceCauses: ["U"], evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
+        exit: { score: null, aggregationDisposition: "included", supportedComponentKeys: [], causeGapRefs: [], limitedEvidenceCauses: ["U"], evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
+        control: { score: null, aggregationDisposition: "included", supportedComponentKeys: [], causeGapRefs: [], limitedEvidenceCauses: ["U"], evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
       },
       weakestPillar: null,
       nrReasons: [{ code: "missing-pillar", message: "Required pillar evidence is missing.", field: "backing", origin: "asset" }],

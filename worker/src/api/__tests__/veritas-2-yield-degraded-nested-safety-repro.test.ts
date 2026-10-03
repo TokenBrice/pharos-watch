@@ -4,10 +4,10 @@ import type { YieldRankingsResponse } from "@shared/types/yield";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeAltYieldSource, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 
-const computeSafetyScoresSnapshotMock = vi.hoisted(() => vi.fn());
+const loadActiveSafetyScoreIndexMock = vi.hoisted(() => vi.fn());
 
-vi.mock("../../lib/safety-scores", () => ({
-  computeSafetyScoresSnapshot: computeSafetyScoresSnapshotMock,
+vi.mock("../../lib/safety-score-index", () => ({
+  loadActiveSafetyScoreIndex: loadActiveSafetyScoreIndexMock,
 }));
 
 import { handleYieldRankings } from "../cache-handlers";
@@ -89,19 +89,11 @@ describe("VERITAS-II finding: degraded yield rows retain nested safety numbers",
         first: { key: "yield-rankings", value: JSON.stringify(payload), updated_at: updatedAt },
       },
     ]);
-    computeSafetyScoresSnapshotMock.mockResolvedValueOnce({
-      kind: "degraded",
-      mode: "map",
-      coveredCount: 0,
-      trackedCount: 1,
-      coverageRatio: 0,
-      reason: "safety-score-v9-publication:missing-cache",
-      scores: new Map(),
-      source: "safety-score-v9-publication",
-      safetyScoreIdentity: null,
-      publicationGenerationId: null,
-      methodologyVersion: null,
-      publishedAt: null,
+    loadActiveSafetyScoreIndexMock.mockResolvedValueOnce({
+      kind: "error",
+      reason: "safety-score-index-missing",
+      detail: "Compact safety index is unavailable",
+      snapshot: null,
     });
 
     const response = await handleYieldRankings(db);
@@ -112,7 +104,7 @@ describe("VERITAS-II finding: degraded yield rows retain nested safety numbers",
 
     expect(row).toMatchObject({
       safetyScore: null,
-      safetyGrade: "NR",
+      safetyGrade: null,
       safetyReason: "safety-snapshot-unavailable",
       pharosYieldScore: null,
       pysNullReason: "source-freshness-unknown",

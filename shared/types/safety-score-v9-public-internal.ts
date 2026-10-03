@@ -4,11 +4,51 @@ import {
   numbersAgree,
   roundAttributionValue,
   SCORE_TOLERANCE,
-  V9_BOUNDED_ATTRIBUTION_REASON_CODE_SET,
 } from "./safety-score-v9-public-facts";
 import { V9ReasonCodeSchema } from "./safety-score-v9";
 import type { SafetyScoreV9CardRefinementInput, SafetyScoreV9CardWithDependencies } from "./safety-score-v9-public-shapes";
 import type { SafetyScoreV9SerialDependencyInput } from "./safety-score-v9-public-shapes";
+import { V9_PILLAR_WEIGHTS } from "./safety-score-v9-grade";
+import { iterateEvidenceResponsibilityFacts } from "./safety-score-v9-public-evidence-facts";
+import { resolveV9EffectiveScoringWeight } from "./safety-score-v9-public-causes";
+import type { SafetyScoreV9BackingBreakdown } from "./safety-score-v9-public-breakdowns";
+
+type BoundedAttributionItem = SafetyScoreV9CardRefinementInput["scoreTrace"]["boundedUncertaintyAttribution"]["items"][number];
+type BoundedBackingContribution = Pick<SafetyScoreV9BackingBreakdown["components"][number],
+  "score" | "cause" | "causeGapRefs" | "scoringDisposition" | "effectiveScoringWeight">;
+
+function matchesBoundedBackingComponent(card: SafetyScoreV9CardRefinementInput, item: BoundedAttributionItem): boolean {
+  const backing = card.breakdowns?.backing;
+  if (backing === undefined || backing.aggregationDisposition === "excluded-a-b" ||
+      card.pillars.backing.aggregationDisposition === "excluded-a-b" ||
+      card.pillars.backing.score === null || backing.aggregationWeight <= 0 ||
+      !card.pillars.backing.reasons.some(reason =>
+        reason.code === item.code && reason.path === item.path && reason.message === item.message &&
+        reason.cause === item.cause && item.causeGapRefs.every(ref => reason.causeGapRefs?.includes(ref)))) {
+    return false;
+  }
+  let matchesCausalFact = false;
+  for (const fact of iterateEvidenceResponsibilityFacts(card.scoreTrace.evidenceResponsibility)) {
+    if (fact[0] === item.code && fact[1] === item.path && fact[3] === item.responsibility &&
+        fact[5] === item.cause && item.causeGapRefs.every(ref => fact[6].includes(ref))) {
+      matchesCausalFact = true;
+      break;
+    }
+  }
+  if (!matchesCausalFact) return false;
+  const matchesContribution = (key: string, contribution: BoundedBackingContribution): boolean =>
+    contribution.score !== null && contribution.score < C_MINUS_MIN_SCORE &&
+    contribution.scoringDisposition === "bounded-uncertainty" && (contribution.cause === "C" || contribution.cause === "U") &&
+    resolveV9EffectiveScoringWeight(contribution) > 0 &&
+    item.causeGapRefs.every(ref => contribution.causeGapRefs?.includes(ref)) &&
+    item.causeGapRefs.some(ref => item.path === `backing:${key}:bounded-component:cause:${ref}`);
+  return backing.components.some(component =>
+    component.score !== null && resolveV9EffectiveScoringWeight(component) > 0 &&
+    component.scoringDisposition !== "excluded-pipeline" && component.scoringDisposition !== "excluded-uncurated" &&
+    component.scoringDisposition !== "not-applicable" &&
+    (matchesContribution(component.key, component) ||
+      (component.factors?.some(factor => matchesContribution(factor.componentKey, factor)) ?? false)));
+}
 
 export function attributedSerialParent(
   card: SafetyScoreV9CardWithDependencies,
@@ -150,6 +190,18 @@ export function refineCard(
         message: "V9 aggregation trace must match the card's pillar summary",
       });
     }
+    if (scoreTrace.aggregation !== null) {
+      const aggregation = scoreTrace.aggregation;
+      const included = (["backing", "exit", "control"] as const).filter((pillar) => card.pillars[pillar].aggregationDisposition !== "excluded-a-b").sort();
+      const weightSum = included.reduce((sum, pillar) => sum + V9_PILLAR_WEIGHTS[pillar], 0);
+      const mean = included.reduce((sum, pillar) => sum + (card.pillars[pillar].score ?? 0) * aggregation.effectiveScoringWeights[pillar], 0);
+      if (JSON.stringify(included) !== JSON.stringify(aggregation.includedPillars) ||
+          included.some((pillar) => card.pillars[pillar].score === null ||
+            Math.abs(aggregation.effectiveScoringWeights[pillar] - V9_PILLAR_WEIGHTS[pillar] / weightSum) > 1e-9) ||
+          !numbersAgree(mean, aggregation.supportCeiling)) {
+        ctx.addIssue({ code: "custom", path: ["scoreTrace", "aggregation"], message: "Aggregation must use the included pillars and renormalized policy weights only" });
+      }
+    }
     for (const item of scoreTrace.adverseAttribution.items) {
       if (
         item.source === "active-depeg" &&
@@ -251,16 +303,19 @@ export function refineCard(
             message: "V9 reason attribution must match a low pillar reason or binding evidence cap",
           });
         }
-        if (
-          matchingReasonCodes.length > 0 &&
-          matchingReasonCodes.every((code) =>
-            V9_BOUNDED_ATTRIBUTION_REASON_CODE_SET.has(code),
-          )
-        ) {
+        let hasMeasuredReasonFact = false;
+        for (const fact of iterateEvidenceResponsibilityFacts(scoreTrace.evidenceResponsibility)) {
+          if (fact[1] === item.path && fact[3] === "measured-adverse" && fact[5] === "D" &&
+              matchingReasonCodes.includes(fact[0])) {
+            hasMeasuredReasonFact = true;
+            break;
+          }
+        }
+        if (!hasMeasuredReasonFact) {
           ctx.addIssue({
             code: "custom",
             path: ["scoreTrace", "adverseAttribution", "items"],
-            message: "V9 measured-adverse reason attribution requires a non-bounded policy reason code",
+            message: "V9 measured-adverse reason attribution requires its exact D evidence fact",
           });
         }
         const conflictsWithBoundedAttribution =
@@ -282,9 +337,9 @@ export function refineCard(
           );
         if (
           measuredSummary === undefined ||
-          measuredSummary.factCount === 0 ||
+          (measuredSummary.factCount ?? 0) === 0 ||
           !matchingReasonCodes.some((code) =>
-            measuredSummary.reasonCodes.includes(code),
+            measuredSummary.reasonCodes?.includes(code),
           )
         ) {
           ctx.addIssue({
@@ -365,11 +420,11 @@ export function refineCard(
             cap.kind === `reason:${item.code}` &&
             cap.reason === item.message,
         );
-        if (!matchesPillarReason && !matchesReasonCap) {
+        if (!matchesPillarReason && !matchesReasonCap && !matchesBoundedBackingComponent(card, item)) {
           ctx.addIssue({
             code: "custom",
             path: ["scoreTrace", "boundedUncertaintyAttribution", "items"],
-            message: "V9 direct bounded attribution must match a low pillar reason or binding reason cap",
+            message: "V9 direct bounded attribution must match a low pillar reason, charged backing component, or binding reason cap",
           });
         }
       } else if (item.source === "parent-score") {
@@ -421,7 +476,7 @@ export function refineCard(
     if (
       card.score !== null &&
       scoreTrace.evidenceResponsibility.summaries.some(
-        (summary) => summary.criticalFactCount > 0,
+        (summary) => (summary.criticalFactCount ?? 0) > 0,
       )
     ) {
       ctx.addIssue({

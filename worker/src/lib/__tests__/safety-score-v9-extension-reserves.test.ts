@@ -24,6 +24,16 @@ import { buildSafetyScoreV9MechanismReview } from "../safety-score-v9/extension-
 import { ReviewEvidenceBuilder } from "../safety-score-v9/extension-shared";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { makeV9RoleExtension, makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
+import usdtCoin from "@shared/data/stablecoins/coins/usdt-tether.json";
+import usdtReserveEnvelope from "@shared/data/stablecoins/domains/reserves/usdt-tether.json";
+import usdyCoin from "@shared/data/stablecoins/coins/usdy-ondo-finance.json";
+import usdyReserveEnvelope from "@shared/data/stablecoins/domains/reserves/usdy-ondo-finance.json";
+import xagmCoin from "@shared/data/stablecoins/coins/xagm-matrixdock.json";
+import xagmReserveEnvelope from "@shared/data/stablecoins/domains/reserves/xagm-matrixdock.json";
+import mxneCoin from "@shared/data/stablecoins/coins/mxne-real-mxn.json";
+import mxneReserveEnvelope from "@shared/data/stablecoins/domains/reserves/mxne-real-mxn.json";
+import usdoCoin from "@shared/data/stablecoins/coins/usdo-openeden.json";
+import usdoReserveEnvelope from "@shared/data/stablecoins/domains/reserves/usdo-openeden.json";
 
 const CLOCK_SEC = Date.UTC(2026, 6, 14) / 1_000;
 const DEPENDENCY_CLOCK_SEC = Date.UTC(2026, 7, 20) / 1_000;
@@ -118,6 +128,120 @@ function reviewedMeta(
   };
 }
 
+describe("v10.01 named reserve reports", () => {
+  const asOfSec = Date.parse("2026-06-30T00:00:00Z") / 1000;
+  const usdt = { ...usdtCoin, ...usdtReserveEnvelope } as unknown as V9ExtensionRegistryMeta;
+
+  it.each([94 * 86400, 120 * 86400, 120 * 86400 + 1])(
+    "uses the same as-of admission and evidence expiry at age %s seconds", (ageSec) => {
+      const clockSec = asOfSec + ageSec;
+      const meta = structuredClone(usdt);
+      meta.liveReservesConfig = undefined;
+      const supervised = { ...meta, mintAuthority: { supervision: "prudential" } as V9ExtensionRegistryMeta["mintAuthority"] };
+      const admissions = [
+        buildSafetyScoreV9ReviewedStaticReserveRows(supervised, clockSec),
+        buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec),
+        buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, clockSec),
+        buildSafetyScoreV9ReviewedCuratedFallbackReserveRows({ ...meta, liveReservesConfig: LIVE_RESERVES_CONFIG }, clockSec),
+      ];
+      for (const [index, admission] of admissions.entries()) {
+        const sourceMeta = index === 0 ? supervised : meta;
+        const evidence = new ReviewEvidenceBuilder(meta.id, clockSec);
+        addReviewedStaticReserveEvidence(sourceMeta, admission, evidence, clockSec);
+        const references = evidence.finish().researchEvidence;
+        if (ageSec <= 10368000) {
+          expect(admission).not.toBeNull();
+          expect(admission!.evidenceClass).toBe(index === 0 ? "issuer-attested" : "static-validated");
+          expect(admission!.rows.reduce((sum, row) => sum + row.pct, 0)).toBeCloseTo(100, 9);
+          expect(references).toContainEqual(expect.objectContaining({
+            observedAtSec: asOfSec, maxAgeSec: 10368000, publishedBy: "issuer",
+          }));
+        } else {
+          expect(admission).toBeNull();
+          expect(references).toContainEqual(expect.objectContaining({
+            sourceId: "stablecoin-meta.expired-reviewed-static-reserves",
+            observedAtSec: asOfSec, maxAgeSec: 10368000,
+          }));
+        }
+      }
+    },
+  );
+
+  it("admits actual USDT through BDO's report label, not its unrelated curation reviewer", () => {
+    const meta = structuredClone(usdt);
+    const clockSec = asOfSec + 94 * 86400;
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec)).toMatchObject({
+      evidenceClass: "static-validated",
+    });
+    for (const source of meta.proofOfReserves!.latestReport!.sources) source.label = "Issuer financial figures";
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec)).toBeNull();
+  });
+
+  it("admits actual USDY through its explicit Ankura report signer without promoting partial assurance or the BVI tail", () => {
+    const meta = { ...usdyCoin, ...usdyReserveEnvelope } as unknown as V9ExtensionRegistryMeta;
+    const clockSec = Date.parse(`${meta.proofOfReserves!.latestReport!.periodEnd}T00:00:00Z`) / 1000 + 94 * 86400;
+    const admission = buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec);
+    expect(admission).toMatchObject({ evidenceClass: "static-validated", provenance: "audited-fallback" });
+    expect(admission!.rows.find(row => row.name.includes("BVI"))).toMatchObject({
+      pct: 5.9490355116630695, unclassifiedResidual: true,
+    });
+    const unsigned = structuredClone(meta);
+    unsigned.proofOfReserves!.latestReport!.reviewer = "Pharos curation reviewer";
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(unsigned, clockSec)).toBeNull();
+    const indexOnly = structuredClone(meta);
+    for (const source of indexOnly.proofOfReserves!.latestReport!.sources) source.url = indexOnly.proofOfReserves!.url;
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(indexOnly, clockSec)).toBeNull();
+  });
+  it.each([
+    { ...xagmCoin, ...xagmReserveEnvelope },
+    { ...mxneCoin, ...mxneReserveEnvelope },
+  ])("retains the actual named $id report despite a direct PDF or issuer-prefixed firm description", (registryMeta) => {
+    const meta = registryMeta as unknown as V9ExtensionRegistryMeta;
+    const clockSec = Date.parse("2026-10-03T07:16:45Z") / 1000;
+    const admission = buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec);
+    expect(admission).toMatchObject({
+      evidenceClass: "static-validated", provenance: "audited-fallback",
+      rows: [expect.objectContaining({ pct: 100 })],
+    });
+    const unnamed = structuredClone(meta);
+    unnamed.proofOfReserves!.provider = "Unnamed independent auditor";
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(unnamed, clockSec)).toBeNull();
+  });
+  it("does not substitute MXNE's issuer prefix for corroboration of the actual BHR report firm", () => {
+    const meta = structuredClone({ ...mxneCoin, ...mxneReserveEnvelope }) as unknown as V9ExtensionRegistryMeta;
+    const clockSec = Date.parse("2026-10-03T07:16:45Z") / 1000;
+    for (const source of meta.proofOfReserves!.latestReport!.sources) source.label = "Etherfuse issuer figures";
+    meta.proofOfReserves!.latestReport!.reviewer = "Pharos curation reviewer";
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec)).toBeNull();
+  });
+
+
+  it("does not treat actual USDO self-verification as a named independent report that blocks curated admission", () => {
+    const meta = { ...usdoCoin, ...usdoReserveEnvelope, liveReservesConfig: LIVE_RESERVES_CONFIG } as unknown as V9ExtensionRegistryMeta;
+    const clockSec = Date.parse("2026-10-03T07:16:45Z") / 1000;
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec)).toBeNull();
+    const admission = buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, clockSec);
+    expect(admission).toMatchObject({ evidenceClass: "static-validated", provenance: "curated-fallback" });
+    expect(admission!.rows).toContainEqual(expect.objectContaining({
+      name: "OpenEden TBILL tokens (tokenized U.S. T-bills)", pct: 79.31833137, assetClass: "tokenized-security",
+    }));
+  });
+
+
+  it.each(["self", "none", "undisclosed", "name-missing", "firm-not-in-report"] as const)(
+    "does not widen an unnamed or uncorroborated %s report to 120 days", (failure) => {
+      const meta = structuredClone(usdt);
+      meta.liveReservesConfig = undefined;
+      if (failure === "name-missing") meta.proofOfReserves!.provider = " ";
+      else if (failure === "firm-not-in-report") meta.proofOfReserves!.provider = "Unidentified firm";
+      else meta.proofOfReserves!.attestorTier = failure;
+      const clockSec = asOfSec + 94 * 86400;
+      expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec)).toBeNull();
+      expect(buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, clockSec)).toBeNull();
+    },
+  );
+});
+
 describe("reviewed live unknown residuals", () => {
   const known: ReserveSlice = {
     sourceKey: "fixture:known", name: "Measured adverse credit", pct: 60, risk: "very-high",
@@ -165,7 +289,7 @@ describe("reviewed live unknown residuals", () => {
   it("charges the live tail once, with live weights, while retaining measured adverse credit", () => {
     const { alpha, result } = compile([{ ...known, pct: 63 }, { ...unknown, pct: 37 }], metaFor());
     expect(alpha.reserveExposures.map(row => row.weight)).toEqual([0.63]);
-    const residuals = result.contributions.filter(row => row.componentKey === "reserve:unclassified-residual");
+    const residuals = result.contributions.filter(row => row.componentKey.startsWith("reserve:unclassified-residual:"));
     expect(residuals).toHaveLength(1);
     expect(residuals[0]).toMatchObject({
       normalizedWeight: 0.37, observationState: "bounded-unknown",
@@ -173,7 +297,7 @@ describe("reviewed live unknown residuals", () => {
       failureDomains: [],
     });
     expect(result.unresolved).toContainEqual(expect.objectContaining({
-      pathKey: "reserve:unclassified-residual", code: "material-unknown-reserve-exposure", treatment: "ceiling",
+      pathKey: expect.stringContaining("reserve:unclassified-residual:"), cause: "U", treatment: "pillar",
     }));
     expect(result.structuralReasons.some(row => row.responsibility === "measured-adverse")).toBe(true);
     expect(result.structuralReasons.some(row => row.pathKey.includes("fixture:unknown"))).toBe(false);
@@ -185,7 +309,7 @@ describe("reviewed live unknown residuals", () => {
     const { alpha, result } = compile(rows, meta);
     expect(alpha.reserveStatus.observationState).toBe("bounded-unknown");
     expect(alpha.reserveExposures).toEqual([]);
-    expect(result.contributions.filter(row => row.componentKey === "reserve:unclassified-residual")).toEqual([
+    expect(result.contributions.filter(row => row.componentKey.startsWith("reserve:unclassified-residual:"))).toEqual([
       expect.objectContaining({
         normalizedWeight: 1, observationState: "bounded-unknown",
         score: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.boundedUnknownQuality,
@@ -208,11 +332,11 @@ describe("reviewed live unknown residuals", () => {
       if (kind === "duplicate-disposition") meta.reserveReview!.nonLinkDispositions!.push({ ...meta.reserveReview!.nonLinkDispositions![0]! });
       const { alpha, result } = compile(rows, meta);
       expect(alpha.reserveExposures.reduce((sum, row) => sum + row.weight, 0)).toBe(1);
-      expect(result.contributions.some(row => row.componentKey === "reserve:unclassified-residual")).toBe(false);
+      expect(result.contributions.some(row => row.componentKey.startsWith("reserve:unclassified-residual:"))).toBe(false);
     },
   );
 
-  it("leaves undisposed and other-disposition classifications byte-identical", () => {
+  it("requires an approved unresolved disposition before treating a live row as an unidentified remainder", () => {
     const meta = metaFor();
     const withoutDisposition = { ...meta, reserveReview: { ...meta.reserveReview!, nonLinkDispositions: undefined } };
     const classes = buildReviewedReserveClassifications([known, unknown], withoutDisposition, CLOCK_SEC);
@@ -221,8 +345,7 @@ describe("reviewed live unknown residuals", () => {
     other.reserveReview!.nonLinkDispositions![0]!.disposition = "untracked-exogenous-asset";
     const { alpha, result } = compile([known, unknown], other);
     expect(alpha.reserveExposures.map(row => row.weight).sort()).toEqual([0.4, 0.6]);
-    expect(result.contributions.some(row => row.componentKey === "reserve:unclassified-residual")).toBe(false);
-    expect(classes).toEqual(buildSafetyScoreV9ReserveClassifications([known, unknown]));
+    expect(result.contributions.some(row => row.componentKey.startsWith("reserve:unclassified-residual:"))).toBe(false);
   });
 
   it("keeps an unmarked exact joined insufficient-evidence slice unchanged", () => {
@@ -232,7 +355,7 @@ describe("reviewed live unknown residuals", () => {
     expect(classifications.every(row => row.unclassifiedResidual === undefined)).toBe(true);
     const { alpha, result } = compile([known, unmarked], meta);
     expect(alpha.reserveExposures.map(row => row.weight).sort()).toEqual([0.4, 0.6]);
-    expect(result.contributions.some(row => row.componentKey === "reserve:unclassified-residual")).toBe(false);
+    expect(result.contributions.some(row => row.componentKey.startsWith("reserve:unclassified-residual:"))).toBe(false);
   });
 
   const classifiedShapes: Partial<ReserveSlice>[] = [
@@ -253,7 +376,7 @@ describe("reviewed live unknown residuals", () => {
       expect(alpha.reserveExposures.find(row => row.name === unknown.name)).toMatchObject({
         weight: 0.4, status: { observationState: "known" },
       });
-      expect(result.contributions.some(row => row.componentKey === "reserve:unclassified-residual")).toBe(false);
+      expect(result.contributions.some(row => row.componentKey.startsWith("reserve:unclassified-residual:"))).toBe(false);
       if (shapeOwner === "live" && shape.assetClass === "private-credit") {
         expect(alpha.reserveExposures.find(row => row.name === unknown.name)).toMatchObject({
           assetClass: "private-credit", issuerOrObligorKey: shape.issuerOrObligor,
@@ -282,7 +405,7 @@ describe("reviewed curated reserve admission", () => {
     ],
   };
 
-  it("rejects unresolved known-unknown exposure on live fallback and standalone paths", () => {
+  it("retains identified reserve quality with a separately marked unsplit basket tail", () => {
     const fallbackMeta = reviewedMeta(opaqueRows, unresolvedReview);
     fallbackMeta.liveReservesConfig = {
       adapter: "curated-validated",
@@ -291,10 +414,15 @@ describe("reviewed curated reserve admission", () => {
       inputs: { primary: { kind: "onchain-solana" } },
     };
 
-    expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(fallbackMeta, CLOCK_SEC)).toBeNull();
-    expect(
+    for (const admission of [
+      buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(fallbackMeta, CLOCK_SEC),
       buildSafetyScoreV9ReviewedStandaloneReserveRows(reviewedMeta(opaqueRows, unresolvedReview), CLOCK_SEC),
-    ).toBeNull();
+    ]) {
+      expect(admission!.rows.find(row => row.name === "Opaque basket")).toMatchObject({
+        pct: 40, unclassifiedResidual: true, residualReason: "insufficient-evidence",
+      });
+      expect(admission!.rows.find(row => row.name === "Treasury bills")!.pct).toBe(60);
+    }
   });
 
   it("admits complete current verified fallback and standalone reserve evidence", () => {
@@ -321,10 +449,11 @@ describe("reviewed curated reserve admission", () => {
 
   function residualMeta(residualPct: number, portfolio: boolean): V9ExtensionRegistryMeta {
     const meta = reviewedMeta([
-      { name: "Cash", pct: 100 - residualPct, risk: "very-low", assetClass: "cash",
+      { sourceKey: "fixture:cash", name: "Cash", pct: 100 - residualPct, risk: "very-low", assetClass: "cash",
         issuerOrObligor: "issuer:alpha", liquidityHorizon: "immediate", maturityDaysMax: 0 },
-      { name: "Unclassified residual", pct: residualPct, risk: "high", assetClass: "other",
-        issuerOrObligor: "Unidentified assets", liquidityHorizon: "unknown" },
+      { sourceKey: "fixture:tail", name: "Unclassified residual", pct: residualPct, risk: "high", assetClass: "other",
+        issuerOrObligor: "Unidentified assets", liquidityHorizon: "unknown",
+        ...(residualPct > 0 ? { unclassifiedResidual: true, residualReason: "insufficient-evidence" as const } : {}) },
     ], {
       reviewedAt: "2026-07-13", compositionAsOf: "2026-07-12",
       knownUnknownExposurePct: residualPct,
@@ -362,87 +491,56 @@ describe("reviewed curated reserve admission", () => {
     meta.proofOfReserves = { type: "independent-audit", url: "https://example.com/reports", provider: "Independent examiner", attestorTier: "niche",
       latestReport: { periodEnd: "2026-07-12", publishedAt: "2026-07-13", assuranceMethod: "examination",
         scope: "assets-and-liabilities", liabilityReconciliation: "full", confidence: "verified", reviewer: "fixture",
-        sources: [{ label: "Report", url: "https://example.com/reserves" }] } };
+        sources: [{ label: "Independent examiner report", url: "https://example.com/reserves" }] } };
     return meta;
   }
 
-  it.each([false, true])("attested composition keeps the policy threshold tail charged unknown, prudential=%s", (prudential) => {
-    const residualPct = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.maxUnclassifiedCuratedResidualPct;
-    const meta = attestedResidualMeta(residualPct, prudential);
-    const fixed = makeV9TwoAssetFixedInput({ omitAlphaReserve: true, clockSec: CLOCK_SEC });
-    const admit = prudential ? buildSafetyScoreV9ReviewedStaticReserveRows : buildSafetyScoreV9ReviewedAuditedFallbackReserveRows;
-    const admitted = admit(meta, CLOCK_SEC)!;
-    expect(admitted.rows.reduce((sum, row) => sum + row.pct, 0)).toBeCloseTo(100 - residualPct, 12);
-    const extension = makeV9RoleExtension(fixed, {});
-    const reviewedAsset = extension.assets.find(row => row.assetId === "alpha")!;
-    reviewedAsset.reviewedStaticReserveRows = admitted;
-    reviewedAsset.reserveClassifications = buildSafetyScoreV9ReserveClassifications(admitted.rows);
-    const evidence = new ReviewEvidenceBuilder(meta.id, CLOCK_SEC);
-    addReviewedStaticReserveEvidence(meta, admitted, evidence, CLOCK_SEC);
-    Object.assign(reviewedAsset, evidence.finish());
-    const alpha = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets.find(row => row.assetId === "alpha")!;
-    const result = evaluateV9ReserveExposures({ ...alpha, resolvedUpstreamExposures: [] }, V9_CANDIDATE_POLICY_V1);
-    expect(result.contributions.find(row => row.componentKey === "reserve:unclassified-residual")).toMatchObject({
-      observationState: "bounded-unknown", score: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.boundedUnknownQuality,
-    });
-    expect(result.contributions.find(row => row.componentKey === "reserve:unclassified-residual")!.normalizedWeight).toBeCloseTo(residualPct / 100, 12);
-  });
+  it.each([0, 0.1, 0.100001, 5.9490355116630695, 11.98, 100])(
+    "v10.01 retains identified weights and disjoint %s percent tails in every admitted envelope", (residualPct) => {
+      for (const portfolio of [false, true]) {
+        const meta = residualMeta(residualPct, portfolio);
+        const fixed = makeV9TwoAssetFixedInput({ omitAlphaReserve: true, clockSec: CLOCK_SEC });
+        const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: new Map([
+          ["alpha", { ...meta, mechanismArchetype: "fiat-cash", launchDate: "2020-01-01" }],
+          ["beta", { id: "beta", mechanismArchetype: "fiat-cash", launchDate: "2020-01-01" }],
+        ]) });
+        const admitted = extension.assets.find(row => row.assetId === "alpha")!.reviewedStaticReserveRows!;
+        expect(admitted.rows.reduce((sum, row) => sum + row.pct, 0)).toBeCloseTo(100, 12);
+        const alpha = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets.find(row => row.assetId === "alpha")!;
+        expect(alpha.reserveExposures.reduce((sum, row) => sum + row.weight, 0)).toBeCloseTo(1 - residualPct / 100, 12);
+        expect(alpha.reserveResiduals.reduce((sum, row) => sum + row.weight, 0)).toBeCloseTo(residualPct / 100, 12);
+        const result = evaluateV9ReserveExposures({ ...alpha, resolvedUpstreamExposures: [] }, V9_CANDIDATE_POLICY_V1);
+        const tails = result.contributions.filter(row => row.componentKey.startsWith("reserve:unclassified-residual:"));
+        expect(tails.reduce((sum, row) => sum + row.wholeAssetWeight!, 0)).toBeCloseTo(residualPct / 100, 12);
+        for (const tail of tails) expect(tail).toMatchObject({
+          score: 35 * 0.8, cause: "U", scoringDisposition: "bounded-uncertainty", failureDomains: [],
+        });
+        if (residualPct === 100) expect(result.score).toBeLessThanOrEqual(35);
+      }
+      for (const prudential of [false, true]) {
+        const meta = attestedResidualMeta(residualPct, prudential);
+        const admit = prudential ? buildSafetyScoreV9ReviewedStaticReserveRows : buildSafetyScoreV9ReviewedAuditedFallbackReserveRows;
+        const admitted = admit(meta, CLOCK_SEC)!;
+        expect(admitted.rows.filter(row => !row.unclassifiedResidual).reduce((sum, row) => sum + row.pct, 0)).toBeCloseTo(100 - residualPct, 12);
+        expect(admitted.rows.filter(row => row.unclassifiedResidual).reduce((sum, row) => sum + row.pct, 0)).toBeCloseTo(residualPct, 12);
+      }
+    },
+  );
 
-  it.each([false, true])("attested composition rejects excessive or unbound residuals, prudential=%s", (prudential) => {
-    const threshold = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.maxUnclassifiedCuratedResidualPct;
-    const admit = prudential ? buildSafetyScoreV9ReviewedStaticReserveRows : buildSafetyScoreV9ReviewedAuditedFallbackReserveRows;
-    const above = attestedResidualMeta(threshold + 0.000001, prudential);
-    const missing = attestedResidualMeta(threshold, prudential);
+  it.each([false, true])("v10.01 retains denominator, identity and chronology rejection guards, portfolio=%s", (portfolio) => {
+    const missing = residualMeta(5.9490355116630695, portfolio);
     missing.reserveReview!.nonLinkDispositions = [];
-    const mismatch = attestedResidualMeta(threshold, prudential);
-    mismatch.reserveReview!.nonLinkDispositions![0]!.pct = threshold / 2;
-    const zero = attestedResidualMeta(0, prudential);
-    zero.reserveReview!.nonLinkDispositions = [{ reserveIndex: 0, reserveName: "Cash", pct: 100, disposition: "insufficient-evidence", rationale: "Unresolved" }];
-    for (const meta of [above, missing, mismatch, zero]) expect(admit(meta, CLOCK_SEC)).toBeNull();
-    const older = attestedResidualMeta(threshold, prudential);
-    const olderClock = CLOCK_SEC + 90 * 86400;
-    expect(admit(older, olderClock)?.rows.reduce((sum, row) => sum + row.pct, 0)).toBeCloseTo(100 - threshold, 12);
-  });
-
-  it.each([false, true])("admits the threshold residual and charges bounded unknown, portfolio=%s", (portfolio) => {
-    const residualPct = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.maxUnclassifiedCuratedResidualPct;
-    const meta = residualMeta(residualPct, portfolio);
-    const fixed = makeV9TwoAssetFixedInput({ omitAlphaReserve: true, clockSec: CLOCK_SEC });
-    const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: new Map([
-      ["alpha", { ...meta, mechanismArchetype: "fiat-cash", launchDate: "2020-01-01" }],
-      ["beta", { id: "beta", mechanismArchetype: "fiat-cash", launchDate: "2020-01-01" }],
-    ]) });
-    const admitted = extension.assets.find(row => row.assetId === "alpha")!.reviewedStaticReserveRows;
-    expect(admitted).toMatchObject({ evidenceClass: "static-validated", provenance: "curated",
-      ...(portfolio ? { sourceKind: "portfolio-observation" } : {}) });
-    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
-    const alpha = compiled.assets.find(row => row.assetId === "alpha")!;
-    const result = evaluateV9ReserveExposures({ ...alpha, resolvedUpstreamExposures: [] }, V9_CANDIDATE_POLICY_V1);
-    const residual = result.contributions.find(row => row.componentKey === "reserve:unclassified-residual")!;
-    expect(residual.observationState).toBe("bounded-unknown");
-    expect(residual.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.backing.boundedUnknownQuality);
-    expect(residual.normalizedWeight).toBeCloseTo(residualPct / 100, 12);
-    expect(residual.weightedScore).toBeCloseTo(residualPct / 100 * residual.score, 12);
-    expect(result.unresolved).toContainEqual(expect.objectContaining({
-      code: "bounded-unknown-reserve-exposure", pathKey: "reserve:unclassified-residual", treatment: "pillar",
-    }));
-    expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows({
-      ...meta, liveReservesConfig: LIVE_RESERVES_CONFIG,
-    }, CLOCK_SEC)).toMatchObject({ evidenceClass: "static-validated", provenance: "curated-fallback" });
-  });
-
-  it.each([false, true])("rejects above-threshold or unrecorded residuals, portfolio=%s", (portfolio) => {
-    const threshold = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.maxUnclassifiedCuratedResidualPct;
-    const above = residualMeta(threshold + 0.000001, portfolio);
-    const missing = residualMeta(threshold, portfolio);
-    missing.reserveReview!.nonLinkDispositions = [];
-    const mismatched = residualMeta(threshold, portfolio);
-    mismatched.reserveReview!.nonLinkDispositions![0]!.pct = threshold / 2;
-    const classified = residualMeta(threshold, portfolio);
+    const mismatched = residualMeta(5.9490355116630695, portfolio);
+    mismatched.reserveReview!.nonLinkDispositions![0]!.pct /= 2;
+    const classified = residualMeta(5.9490355116630695, portfolio);
     classified.reserves![1]!.assetClass = "cash";
-    const undated = residualMeta(threshold, portfolio);
+    const undated = residualMeta(5.9490355116630695, portfolio);
     undated.reserveReview!.reviewedAt = "2026-07-11";
-    for (const meta of [above, missing, mismatched, classified, undated]) {
+    const duplicate = residualMeta(5.9490355116630695, portfolio);
+    duplicate.reserveReview!.nonLinkDispositions!.push({ ...duplicate.reserveReview!.nonLinkDispositions![0]! });
+    const incomplete = residualMeta(5.9490355116630695, portfolio);
+    incomplete.reserves![0]!.pct -= 1;
+    for (const meta of [missing, mismatched, classified, undated, duplicate, incomplete]) {
       expect(buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, CLOCK_SEC)).toBeNull();
       expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows({
         ...meta, liveReservesConfig: LIVE_RESERVES_CONFIG,
@@ -450,14 +548,11 @@ describe("reviewed curated reserve admission", () => {
     }
   });
 
-  it.each([false, true])("rejects positive residuals at or below scoring precision, portfolio=%s", (portfolio) => {
-    for (const residualPct of [SCORE_EPSILON * 50, SCORE_EPSILON * 100]) {
-      const meta = residualMeta(residualPct, portfolio);
-      expect(buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, CLOCK_SEC)).toBeNull();
-      expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows({
-        ...meta, liveReservesConfig: LIVE_RESERVES_CONFIG,
-      }, CLOCK_SEC)).toBeNull();
-    }
+  it("v10.01 preserves positive dust instead of discarding identified reserves", () => {
+    const meta = residualMeta(SCORE_EPSILON * 50, false);
+    const rows = buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, CLOCK_SEC)!.rows;
+    expect(rows.find(row => row.unclassifiedResidual)!.pct).toBe(SCORE_EPSILON * 50);
+    expect(rows.find(row => !row.unclassifiedResidual)!.pct).toBe(100 - SCORE_EPSILON * 50);
   });
 
   it.each([false, true])("keeps zero-residual admission and weights unchanged, portfolio=%s", (portfolio) => {

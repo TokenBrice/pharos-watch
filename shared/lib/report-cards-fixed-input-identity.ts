@@ -9,6 +9,58 @@ import { REPORT_CARDS_REGISTRY_FINGERPRINT } from "../data/stablecoins/report-ca
 import { compareCodeUnits, sortedRecord } from "./compare";
 import { sha256Hex } from "./sha256";
 import { stableJsonStringifyV1 } from "./stable-json";
+import { V9RuntimeProducerVerdictSchema, v9EvidenceCauseScopeKey } from "../types/safety-score-v9-causes";
+import { V9EvidenceReferenceV2Schema } from "../types/safety-score-v9-facts";
+import { findV9EvidenceCauseProofIssues } from "../types/safety-score-v9-causes";
+
+/** Captured reader verdicts are base facts, not mutable compute-time enrichment. */
+export const PipelineGapByAssetIdSchema = z.record(z.string(), z.array(z.object({
+  verdict: V9RuntimeProducerVerdictSchema,
+  evidence: V9EvidenceReferenceV2Schema,
+}).strict())).superRefine((rows, ctx) => {
+  for (const [assetId, entries] of Object.entries(rows)) {
+    const scopes = new Set<string>();
+    for (const [index, entry] of entries.entries()) {
+      const key = v9EvidenceCauseScopeKey(assetId, entry.verdict.scope);
+      if (entry.verdict.assetId !== assetId || scopes.has(key)) {
+        ctx.addIssue({ code: "custom", path: [assetId, index], message: "Pipeline verdict requires a unique exact asset/datum scope" });
+      }
+      scopes.add(key);
+    }
+  }
+});
+export type PipelineGapByAssetId = z.infer<typeof PipelineGapByAssetIdSchema>;
+
+export function normalizePipelineGapByAssetId(rows: PipelineGapByAssetId): PipelineGapByAssetId {
+  return sortedRecord(Object.fromEntries(Object.entries(rows).map(([id, entries]) => [id,
+    [...entries].sort((a, b) => compareCodeUnits(
+      v9EvidenceCauseScopeKey(id, a.verdict.scope), v9EvidenceCauseScopeKey(id, b.verdict.scope),
+    )),
+  ])));
+}
+
+export function assertPipelineGapCapture(rows: PipelineGapByAssetId, assetIds: readonly string[], asOfSec: number): void {
+  for (const [assetId, entries] of Object.entries(rows)) {
+    if (!assetIds.includes(assetId)) throw new Error(`Pipeline verdict has noncaptured asset ${assetId}`);
+    for (const { verdict, evidence } of entries) {
+      const issues = findV9EvidenceCauseProofIssues({
+        proof: verdict.proof, assetId, scope: verdict.scope, asOfSec,
+        sourceGenerationId: evidence.sourceGenerationId, evidence: [evidence], researchMaxAgeSec: 365 * 86400,
+      });
+      if (issues.length) throw new Error(`Pipeline verdict ${assetId}: ${issues.join("; ")}`);
+      if (evidence.observedAtSec + evidence.freshness.ageSec !== asOfSec) {
+        throw new Error(`Pipeline verdict ${assetId} freshness clock does not match capture`);
+      }
+    }
+  }
+}
+
+/** Retained V3 identity stays historical unless the capture explicitly carries proofs. */
+export function bindPipelineGapBaseInputIdentity(baseGenerationId: string, rows: PipelineGapByAssetId | undefined): string {
+  return rows === undefined ? baseGenerationId : `report-cards-input:v1:${sha256Hex(stableJsonStringifyV1({
+    domain: "report-cards.fixed-input.pipeline-proof.v1", baseGenerationId, pipelineGapByAssetId: normalizePipelineGapByAssetId(rows),
+  }))}`;
+}
 
 export const FixedDexLiquidityRowSchema = z
   .object({

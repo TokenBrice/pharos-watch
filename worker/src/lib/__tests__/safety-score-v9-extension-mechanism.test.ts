@@ -18,6 +18,8 @@ import {
   SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
   type MechanismReviewOverlay,
 } from "../safety-score-v9/extension-mechanism";
+import { makeV9Extension, makeV9FixedInput, v9Status } from "../../test-helpers/v9-fixed-input";
+import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 
 type MechanismMeta = Pick<StablecoinMeta, "id" | "reserves" | "reserveReview" | "custodyProfile" | "proofOfReserves">;
 
@@ -372,38 +374,6 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     ).toBeNull();
   });
 
-  it("carries the adjudicated non-disclosure only while the overlay is current", () => {
-    // a7a5-old-vector's committed fiat-cash overlay is reviewed 2026-08-08 and
-    // adjudicates all three components as reviewed-but-unpublished.
-    const currentSec = Date.UTC(2026, 7, 20) / 1_000;
-    expect(
-      getSafetyScoreV9MechanismReviewedUnavailableComponents("a7a5-old-vector", "fiat-cash", currentSec),
-    ).toEqual([
-      expect.objectContaining({
-        componentKey: "assuranceAndReconciliation",
-        sourceUrl: "https://docs.a7a5.io/legal/transparency.md",
-        reviewedAt: "2026-08-08",
-      }),
-      expect.objectContaining({ componentKey: "claimAndSegregation", reviewedAt: "2026-08-08" }),
-      expect.objectContaining({ componentKey: "custodyContinuity", reviewedAt: "2026-08-08" }),
-    ]);
-
-    // Inside the reviewed UTC day the overlay is not admitted at all, so the
-    // clock guard owns the gap and no adjudication is carried.
-    const sameDaySec = Date.UTC(2026, 7, 8, 12) / 1_000;
-    expect(
-      getSafetyScoreV9MechanismReviewedUnavailableComponents("a7a5-old-vector", "fiat-cash", sameDaySec),
-    ).toEqual([]);
-    expect(
-      getSafetyScoreV9MechanismReviewGapDisposition("a7a5-old-vector", "fiat-cash", sameDaySec),
-    ).toMatchObject({ responsibility: "method-unsupported" });
-
-    // A resolved archetype that disagrees with the overlay ignores it, exactly
-    // as the review build does.
-    expect(
-      getSafetyScoreV9MechanismReviewedUnavailableComponents("a7a5-old-vector", "tbill", currentSec),
-    ).toEqual([]);
-  });
 
   it("validates the schema and expansion of every curated overlay", () => {
     for (const rawOverlay of mechanismReviewOverlaysAsset.overlays) {
@@ -438,18 +408,6 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     });
   });
 
-  it("admits unavailable adjudications next day and removes every component at exact expiry", () => {
-    const admitted = Date.UTC(2026, 7, 9) / 1_000;
-    const expires = Date.UTC(2027, 7, 8) / 1_000;
-    const componentsAt = (clockSec: number) => getSafetyScoreV9MechanismReviewedUnavailableComponents(
-      "a7a5-old-vector", "fiat-cash", clockSec,
-    ).map((row) => row.componentKey);
-    const expected = ["assuranceAndReconciliation", "claimAndSegregation", "custodyContinuity"];
-    expect(componentsAt(admitted - 1)).toEqual([]);
-    expect(componentsAt(admitted)).toEqual(expected);
-    expect(componentsAt(expires - 1)).toEqual(expected);
-    expect(componentsAt(expires)).toEqual([]);
-  });
 
   it("projects exit facts from current overlays only, and none for profile-less cdp", () => {
     // PaxG's curated physical-redemption statement is the single source for
@@ -635,6 +593,11 @@ describe("buildSafetyScoreV9MechanismReview", () => {
       ...overlay,
       metrics: { collateralizationRatio: 0.5, liquidationCapacityRatio: 0 },
       metricApplicability: { collateralizationRatio: { state: "measured" }, liquidationCapacityRatio: { state: "measured" } },
+      components: {
+        ...overlay.components,
+        collateralizationParameters: { quality: "strong" },
+        liquidationMechanics: { quality: "strong" },
+      },
     });
     expect(evaluateV9Backing(input, measured, V9_CANDIDATE_POLICY_V1).structuralReasons).toEqual(expect.arrayContaining([
       expect.objectContaining({ pathKey: "mechanism:collateralization-parameters", severity: "critical" }),
@@ -1090,5 +1053,30 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(() => expandOverlayReview(overlay)).toThrow(
       /support null metrics \(null-algorithmic\)/,
     );
+  });
+});
+
+describe("v10.01 mechanism research expiry history", () => {
+  it("retains an expired published review without current C relief or fabricated dates", () => {
+    const fixed = makeV9FixedInput({ assetId: "a7a5-old-vector", omitLiveReserve: true,
+      clockSec: Date.parse("2027-08-10T00:00:00Z") / 1000 });
+    const extension = makeV9Extension({ assetId: "a7a5-old-vector", clockSec: fixed.clockSec,
+      registryFingerprint: fixed.registryFingerprint });
+    const review = extension.assets[0]!.mechanismRiskReview!;
+    if (review.archetype !== "fiat-cash") throw new Error("Expected fiat review");
+    review.claimAndSegregation.status = v9Status("missing");
+    review.claimAndSegregation.quality = null;
+    extension.assets[0]!.mechanismReviewedUnavailable = getSafetyScoreV9MechanismReviewedUnavailableComponents(
+      "a7a5-old-vector", "fiat-cash", fixed.clockSec,
+    );
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+    const gap = asset.gaps.find((row) => row.causeScope?.componentKey === "mechanism-review:claimAndSegregation")!;
+    expect(gap.causeProof.cause).toBe("U");
+    const history = asset.evidence.filter((row) => gap.evidenceHistory?.evidenceRefIds.includes(row.evidenceId));
+    expect(history).toEqual(expect.arrayContaining([expect.objectContaining({
+      freshness: expect.objectContaining({ state: "stale" }),
+      observedAtSec: Date.parse("2026-08-08T00:00:00Z") / 1000,
+    })]));
+    expect(asset.implementation.status.observationState).toBe("known");
   });
 });

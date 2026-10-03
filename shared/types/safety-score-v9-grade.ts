@@ -12,6 +12,8 @@ export const V9_GRADE_THRESHOLDS: readonly { grade: Exclude<V9Grade, "NR">; min:
   V9_POLICY.semantic.formula.gradeThresholds.map(({ grade, minScore }) => ({ grade, min: minScore })),
 );
 
+export const V9_PILLAR_WEIGHTS = Object.freeze({ ...V9_POLICY.semantic.formula.pillarWeights });
+
 export function scoreToGrade(score: number | null): ReportCardGrade {
   if (score === null) return "NR";
   const clampedScore = !Number.isFinite(score)

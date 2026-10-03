@@ -80,6 +80,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "Validated fact inputs and their digest are authoritative; markers only prove local admission/compilation and never bypass cohort/reference validation.",
   },
   {
+    sourcePath: "shared/lib/safety-score-v9/formula.ts",
+    stateNames: ["validatedScoringInputs"],
+    owner: "Safety Score V9 immutable scoring-input validation",
+    kind: "cache",
+    resetOrTtl: "Weak object-identity markers for frozen validated scoring inputs; entries are garbage-collectable and disappear on isolate recycle.",
+    durableTruth: "Each immutable scoring input and validated policy envelope are authoritative; the WeakSet only avoids repeated validation of the same locally admitted object, retains no input data, and cannot transfer admission between distinct requests' objects.",
+  },
+  {
     sourcePath: "shared/lib/safety-score-v9/policy.ts",
     stateNames: ["validatedPolicyEnvelopes", "policyChainMaturityIdentities"],
     owner: "Safety Score V9 policy validation and chain-maturity identity",

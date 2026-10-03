@@ -47,7 +47,8 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
     const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed).assets[0]!;
     expect(asset.controls.find((control) => control.controlKey === known.controlKey)?.status.observationState).toBe("known");
     expect(asset.controls.find((control) => control.controlKey === unresolved.controlKey)?.status.observationState).toBe("bounded-unknown");
-    expect(asset.gaps).toContainEqual(expect.objectContaining({ responsibility: "issuer-undisclosed", path: expect.objectContaining({ componentKey: `control:${unresolved.controlKey}` }) }));
+    const authorityGap = asset.gaps.find((gap) => gap.causeScope?.componentKey === `control:${unresolved.controlKey}` && gap.causeScope.factorKey === "authority")!;
+    expect(authorityGap.causeProof.cause).toBe("U");
   });
 
   it("rejects a merged bridge's favorable certificate when another contributor was not reviewed", () => {
@@ -187,7 +188,7 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
       feeExtension.assets[0]!.assetId = "usdc-circle";
       feeExtension.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(feeFixed, "usdc-circle");
       feeExtension.assets[0]!.retainedRoutes = buildSafetyScoreV9RetainedRedemptionRoutes(feeFixed, "usdc-circle");
-      expect(facts(feeExtension, feeFixed).withdrawalTerms).toMatchObject({ disposition: "issuer-undisclosed", signals: ["wrapper-withdrawal-fee-undisclosed"] });
+      expect(facts(feeExtension, feeFixed).withdrawalTerms).toMatchObject({ assessment: null, signals: ["wrapper-withdrawal-fee-undisclosed"] });
       for (const [holderAccess, assessment] of [["issuer-only", "critical"], ["allowlisted", "moderate"], ["permissionless", "low"]] as const) {
         const fixed = queuedRedemptionFixedInput(86_400, true);
         const reviewed = withRedemptionRoute(fixed, { settlementModel: "atomic", executionModel: "market-depth", executionCertainty: "bounded", holderAccess, settlementSlaSec: null });
@@ -209,7 +210,7 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
       const reviewed = strategyVaultExtension();
       reviewed.assets[0]!.routeReviews = reviewed.assets[0]!.routeReviews.map((review) => ({ ...review, executionCosts: review.executionCosts.map((cost) => ({ ...cost, maxCostBps: 300 })) }));
       const incomparable = facts(reviewed, rebuildFixed(draft)).measuredUnwind;
-      expect(incomparable).toMatchObject({ disposition: "integration-missing", assessment: null });
+      expect(incomparable).toMatchObject({ assessment: null });
       const unavailable = strategyVaultExtension();
       unavailable.assets[0]!.routeReviews = [];
       unavailable.assets[0]!.retainedRoutes = [];
@@ -321,7 +322,9 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
     expect(baseline.assets[0]!.controlReview).toMatchObject({ state: "reviewed-controls", controls: [expect.objectContaining({ economicLossScope: "access-only", authority: null })] });
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
     expect(compiled.assets[0]!.controls[0]!.status).toMatchObject({ observationState: "known", gapIds: [] });
-    expect(compiled.assets[0]!.gaps.some((gap) => gap.reasonCode === "unresolved-control-identity")).toBe(false);
+    const controlKey = compiled.assets[0]!.controls[0]!.controlKey;
+    expect(compiled.assets[0]!.gaps.filter((gap) => gap.reasonCode === "unresolved-control-identity" &&
+      gap.causeScope?.componentKey === `control:${controlKey}` && gap.causeScope.factorKey === null)).toEqual([]);
     expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.control.score).toBe(45);
   });
 
@@ -342,7 +345,7 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
       code: "fact-build-failed",
       message: expect.stringMatching(/^accessReview: .*later than the scoring clock/),
     }]);
-    expect(evaluateV9FactSet(futureCompiled.factSet, V9_CANDIDATE_POLICY_V1).assets[0]!.trace).toMatchObject({ finalGrade: "NR", finalScore: null });
+    expect(evaluateV9FactSet(futureCompiled.factSet, V9_CANDIDATE_POLICY_V1).assets[0]!.trace).toMatchObject({ ratingStatus: "pipeline-gap", finalGrade: null, finalScore: null });
     const stale = strategyVaultExtension();
     stale.assets[0]!.researchEvidence = [{ evidenceKey: "stale-control-review", sourceId: "fixture.stale-control-review", observedAtSec: 8_000, publishedAtSec: null, url: "https://example.com/stale", contentSha256: "a".repeat(64), confidence: "verified", maxAgeSec: 500 }];
     stale.assets[0]!.componentEvidence = [{ componentKey: "control", evidenceKeys: ["stale-control-review"] }];
@@ -360,5 +363,26 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
     expect(computeSafetyScoreV9ReserveExposureKey({ ...slice, pct: 50 })).toBe(computeSafetyScoreV9ReserveExposureKey(slice));
     const keyed = { ...slice, sourceKey: "fixture:alpha:treasury" };
     expect(computeSafetyScoreV9ReserveExposureKey({ ...keyed, name: "Renamed treasury", pct: 5 })).toBe(computeSafetyScoreV9ReserveExposureKey(keyed));
+  });
+});
+
+describe("v10.01 control atomic cause scopes", () => {
+  it("keeps measured authority facts while emitting independent unknown mint subfactors", () => {
+    const fixed = exactFixedInput();
+    const extension = reviewedUpgradeExtension();
+    extension.assets[0]!.economicControlReview!.mint.reconciliation = "unknown";
+    extension.assets[0]!.economicControlReview!.mint.supervision = "unknown";
+    extension.assets[0]!.economicControlReview!.mint.upgrade = { state: "unknown", controlKey: null };
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+    expect(asset.controls.find((row) => row.controlKey === "upgrade:reviewed")?.status.observationState).toBe("known");
+    const mint = asset.economicControlReview!.mint;
+    expect(mint.status.observationState).toBe("known");
+    for (const factorKey of ["reconciliation", "supervision", "upgrade"] as const) {
+      const gapId = mint.factorStatuses![factorKey]!.gapIds[0];
+      const gap = asset.gaps.find((row) => row.gapId === gapId)!;
+      expect(gap.causeProof.cause).toBe("U");
+      expect(gap.causeScope).toEqual({ pillar: "control", componentKey: "economic-control:mint",
+        factorKey, routeKey: null, exposureId: null, requiredDatum: factorKey });
+    }
   });
 });

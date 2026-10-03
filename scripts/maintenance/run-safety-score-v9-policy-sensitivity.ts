@@ -29,8 +29,6 @@ Options:
   -h, --help          Show this help`;
 
 const DEFAULT_PARAMETER_PATHS = [
-  "semantic.evidence.ceilings.adequate",
-  "semantic.evidence.ceilings.limited",
   "semantic.exit.outputAssetScores.physical-commodity-delivery",
   "semantic.exit.unboundedDeliveryCap",
   // activeDepegCaps[0] and [1] limits sit at the top of their grade bands, so
@@ -62,7 +60,9 @@ interface ScenarioChange {
   scenarioId: string;
   preCapScore: { from: number | null; to: number | null; delta: number | null };
   finalScore: { from: number | null; to: number | null; delta: number | null };
-  grade: { from: string; to: string; changed: boolean };
+  grade: { from: string | null; to: string | null; changed: boolean };
+  ratingStatus: { from: V9ScenarioScoreTrace["ratingStatus"]; to: V9ScenarioScoreTrace["ratingStatus"]; changed: boolean };
+  partialEvidence: { from: V9ScenarioScoreTrace["partialEvidence"]; to: V9ScenarioScoreTrace["partialEvidence"]; changed: boolean };
   bindingCap: { from: BindingCapSummary | null; to: BindingCapSummary | null; changed: boolean };
   capCandidates: { from: CapCandidateSummary[]; to: CapCandidateSummary[]; changed: boolean };
 }
@@ -89,8 +89,8 @@ export interface V9PolicySensitivityCase {
   changes: ScenarioChange[];
   gradeCliffs: Array<{
     scenarioId: string;
-    fromGrade: string;
-    toGrade: string;
+    fromGrade: string | null;
+    toGrade: string | null;
     fromScore: number | null;
     toScore: number | null;
   }>;
@@ -382,6 +382,14 @@ function scenarioChange(
       to: perturbed.finalGrade,
       changed: baseline.finalGrade !== perturbed.finalGrade,
     },
+    ratingStatus: {
+      from: baseline.ratingStatus, to: perturbed.ratingStatus,
+      changed: baseline.ratingStatus !== perturbed.ratingStatus,
+    },
+    partialEvidence: {
+      from: baseline.partialEvidence, to: perturbed.partialEvidence,
+      changed: JSON.stringify(baseline.partialEvidence) !== JSON.stringify(perturbed.partialEvidence),
+    },
     bindingCap: {
       from: fromCap,
       to: toCap,
@@ -400,6 +408,8 @@ function changeIsAffected(change: ScenarioChange): boolean {
     change.preCapScore.from !== change.preCapScore.to ||
     change.finalScore.from !== change.finalScore.to ||
     change.grade.changed ||
+    change.ratingStatus.changed ||
+    change.partialEvidence.changed ||
     change.bindingCap.changed ||
     change.capCandidates.changed
   );

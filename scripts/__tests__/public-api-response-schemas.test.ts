@@ -32,6 +32,16 @@ function resolveSharedRef(schema: JsonSchemaObject): JsonSchemaObject {
 }
 
 describe("public API response schemas", () => {
+  it("preserves pipeline-gap nulls separately from NR and partial rated grades in the free contract", () => {
+    const schema = PUBLIC_API_RESPONSE_SCHEMAS.SafetyGradesResponse;
+    const envelope = { schemaVersion: 1, model: "v9", methodologyVersion: "10.01", asOfSec: 1790972280, updatedAt: 1790972280, publicationStatus: "current" };
+    const gap = { id: "technical", ratingStatus: "pipeline-gap", score: null, grade: null, partialEvidence: { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["backing", "control"], causes: ["A"] } };
+    const partial = { id: "partial", ratingStatus: "rated", score: 77, grade: "B+", partialEvidence: { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["backing"], causes: ["B"] } };
+    expect(schema.parse({ ...envelope, grades: [gap, partial] }).grades).toEqual([gap, partial]);
+    for (const substitution of [{ ...gap, grade: "NR" }, { ...gap, score: 0 }, { ...partial, grade: null }]) {
+      expect(schema.safeParse({ ...envelope, grades: [substitution] }).success).toBe(false);
+    }
+  });
   it("accepts the public null-price response and preserves its provenance", () => {
     const payload = {
       price: null,

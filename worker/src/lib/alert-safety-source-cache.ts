@@ -1,21 +1,26 @@
 import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import { isRecord } from "@shared/lib/type-guards";
 import type { SafetyAlertSourceState } from "@shared/types";
-import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
+import { SafetyGradesResponseSchema, type ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
+import {
+  projectV9CompactPartialEvidence,
+  refineV9RatingStatusFields,
+  type V9RatingStatus,
+  type V9CompactPartialEvidence,
+} from "@shared/types/safety-score-v9-causes";
 import {
   SafetyScorePublicationIdentitySchema,
   type SafetyScorePublicationIdentity,
   type SafetyScoreV9PublicationIdentity,
 } from "@shared/types/safety-score-publication";
 import { getCache, setCache } from "./db-cache";
-import {
-  loadActiveSafetyScoreSource,
-  type ActiveSafetyScoreSource,
-} from "./safety-score-active-source";
+import type { ActiveSafetyScoreSource } from "./safety-score-active-source";
 import { loadSafetyScoreV9PublicationHealth } from "./safety-score-v9/publication-store";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./safety-score-v9/consumer-freshness";
 
-const ALERT_SAFETY_V9_SOURCE_GENERATION = "safety-v9-alert-source-v1";
+const ALERT_SAFETY_V9_SOURCE_GENERATION = "safety-v9-alert-source-v2";
+const AlertSafetyRatingRowSchema = SafetyGradesResponseSchema.shape.grades.element
+  .superRefine(refineV9RatingStatusFields);
 
 /**
  * Persisted thin projection of the accepted V9 publication for the alert
@@ -43,7 +48,9 @@ export interface AlertSafetyV9ExplainSnapshot {
 }
 
 export interface AlertSafetySourceRow {
-  grade: string;
+  grade: string | null;
+  ratingStatus: V9RatingStatus;
+  partialEvidence: V9CompactPartialEvidence | null;
   score: number | null;
   methodologyVersion: string | null;
   operationallyAffected?: boolean;
@@ -181,11 +188,6 @@ function parseSnapshot(value: unknown): AlertSafetySourceSnapshot | null {
   for (const [id, candidate] of Object.entries(value)) {
     if (
       !isRecord(candidate) ||
-      typeof candidate.grade !== "string" ||
-      !(
-        candidate.score === null ||
-        (typeof candidate.score === "number" && Number.isFinite(candidate.score))
-      ) ||
       !(
         candidate.methodologyVersion === null ||
         typeof candidate.methodologyVersion === "string"
@@ -197,11 +199,21 @@ function parseSnapshot(value: unknown): AlertSafetySourceSnapshot | null {
     ) {
       return null;
     }
+    const rating = AlertSafetyRatingRowSchema.safeParse({
+      id,
+      grade: candidate.grade,
+      score: candidate.score,
+      ratingStatus: candidate.ratingStatus,
+      partialEvidence: candidate.partialEvidence,
+    });
+    if (!rating.success) return null;
     const v9Explain = parseV9Explain(candidate.v9Explain);
     if (!v9Explain) return null;
     snapshot[id] = {
-      grade: candidate.grade,
-      score: candidate.score,
+      grade: rating.data.grade,
+      score: rating.data.score,
+      ratingStatus: rating.data.ratingStatus,
+      partialEvidence: rating.data.partialEvidence,
       methodologyVersion: candidate.methodologyVersion,
       ...(candidate.operationallyAffected === undefined
         ? {}
@@ -250,6 +262,8 @@ export function buildAlertSafetyV9SourceEnvelopeFromParts(source: {
         {
           grade: card.grade,
           score: card.score,
+          ratingStatus: card.ratingStatus,
+          partialEvidence: projectV9CompactPartialEvidence(card.partialEvidence),
           methodologyVersion:
             source.safetyScoreIdentity.methodologyVersion,
           v9Explain: {
@@ -351,7 +365,7 @@ export function parsePersistedAlertSafetyV9SourceEnvelope(
     const parsed: unknown = JSON.parse(cached.value);
     if (
       !isRecord(parsed) ||
-      typeof parsed.generation !== "string" ||
+      parsed.generation !== ALERT_SAFETY_V9_SOURCE_GENERATION ||
       typeof parsed.publicationGenerationId !== "string" ||
       typeof parsed.methodologyVersion !== "string" ||
       typeof parsed.publishedAt !== "number" ||
@@ -396,52 +410,39 @@ export async function loadActiveAlertSafetySourceAssessment(
   nowSec: number,
   signal?: AbortSignal,
 ): Promise<AlertSafetySourceAssessment> {
-  // Envelope-first read: the small publication-health record names the
-  // accepted publication generation, so when the persisted thin projection
-  // matches it the ~8MB publication decode is skipped entirely — including in
-  // the held state, which previously forced the heavy fallback on every
-  // five-minute alert slot for as long as a hold lasted (observed OOM-killing
-  // the telegram lane on 2026-08-19). A held publication still assesses as
-  // unusable; only the decode is skipped. Any mismatch or unparseable state
-  // falls back to the authoritative full decode.
-  //
-  // The one state this trades away: a crash between the publication write and
-  // the health write leaves health (and the matching envelope) one accepted
-  // publication behind, and this path serves that last-verified envelope
-  // where the full decode would have served the newer row downgraded to held.
-  // The window closes at the next publication attempt.
+  // Alert reads stay on the compact accepted projection. A missing, old or
+  // invalid envelope suppresses alerts; it never inflates the full publication.
+  const unavailable = (
+    state: "missing" | "corrupt",
+    failureReason: string,
+  ): AlertSafetySourceAssessment => ({
+    state, failureReason, ageSeconds: null, generation: null, envelope: null,
+  });
   try {
     const [health, cachedRaw] = await Promise.all([
       loadSafetyScoreV9PublicationHealth(db, signal),
       getCache(db, ALERT_SAFETY_V9_SOURCE_CACHE_KEY, signal),
     ]);
-    if (health !== null) {
-      const cached = parsePersistedAlertSafetyV9SourceEnvelope(cachedRaw);
-      if (
-        cached &&
-        cached.generation === ALERT_SAFETY_V9_SOURCE_GENERATION &&
-        cached.publicationGenerationId === health.acceptedPublicationGenerationId
-      ) {
-        if (health.status === "held") {
-          return {
-            state: "corrupt",
-            ageSeconds: null,
-            generation: null,
-            envelope: null,
-            failureReason: "v9-publication-held",
-            ...heldPublicationDiagnostics(health),
-          };
-        }
-        return assessAlertSafetyEnvelope(cached, nowSec);
-      }
+    if (health?.status === "held") {
+      return {
+        ...unavailable("corrupt", "v9-publication-held"),
+        ...heldPublicationDiagnostics(health),
+      };
     }
+    if (cachedRaw === null) return unavailable("missing", "v9-snapshot-unavailable");
+    const cached = parsePersistedAlertSafetyV9SourceEnvelope(cachedRaw);
+    if (cached === null) {
+      const raw: unknown = JSON.parse(cachedRaw.value);
+      return unavailable("corrupt", isRecord(raw) && raw.generation === "safety-v9-alert-source-v1"
+        ? "publication-schema-cutover-pending" : "v9-snapshot-invalid");
+    }
+    if (health === null || cached.publicationGenerationId !== health.acceptedPublicationGenerationId) {
+      return unavailable("corrupt", "v9-snapshot-invalid");
+    }
+    return assessAlertSafetyEnvelope(cached, nowSec);
   } catch {
-    // Fall through to the authoritative full decode.
+    return unavailable("corrupt", "v9-snapshot-invalid");
   }
-  return assessActiveAlertSafetySource(
-    await loadActiveSafetyScoreSource(db, signal),
-    { nowSec },
-  );
 }
 
 export function buildAlertSafetySnapshotEnvelope(
@@ -463,7 +464,7 @@ export function parseAlertSafetySnapshotEnvelope(
   if (!cached) return null;
   try {
     const parsed: unknown = JSON.parse(cached.value);
-    if (!isRecord(parsed) || typeof parsed.generation !== "string") {
+    if (!isRecord(parsed) || parsed.generation !== ALERT_SAFETY_V9_SOURCE_GENERATION) {
       return null;
     }
     const identity = SafetyScorePublicationIdentitySchema.safeParse(
