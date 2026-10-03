@@ -11507,6 +11507,105 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "usdx-kava",
+      "reviewedAt": "2026-10-03T23:04:48Z",
+      "expiresAt": "2027-10-03T23:04:48Z",
+      "reviewer": "Unknown-wave W1R90 primary-source review",
+      "notes": "Dated exact-asset primary operating evidence establishes only a lower bound of live history, not independent verification or continuity. No throughput, stress recovery, reconciliation, or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "kava-mint-live",
+          "label": "Kava Mint operating documentation",
+          "publisher": "Kava Labs",
+          "publishedAt": "2023-04-03",
+          "url": "https://help.app.kava.io/article/15-what-is-kava-mint",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 42,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "kava-mint-live"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "xmd-metal-dollar",
+      "reviewedAt": "2026-10-03T23:04:48Z",
+      "expiresAt": "2027-10-03T23:04:48Z",
+      "reviewer": "Unknown-wave W1R90 primary-source review",
+      "notes": "Dated exact-asset primary operating evidence establishes only a lower bound of live history, not independent verification or continuity. No throughput, stress recovery, reconciliation, or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "xmd-redemption-live",
+          "label": "Metal Dollar live redemption instructions",
+          "publisher": "Metallicus / XPR Network",
+          "publishedAt": "2024-03-14",
+          "url": "https://help.xprnetwork.org/hc/en-us/articles/11560190160151-How-do-I-redeem-Metal-Dollar-XMD",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 30,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "xmd-redemption-live"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "djed-coti",
+      "reviewedAt": "2026-10-03T23:04:48Z",
+      "expiresAt": "2027-10-03T23:04:48Z",
+      "reviewer": "Unknown-wave W1R90 primary-source review",
+      "notes": "Dated exact-asset primary operating evidence establishes only a lower bound of live history, not independent verification or continuity. No throughput, stress recovery, reconciliation, or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "djed-mainnet-launch",
+          "label": "Djed is Live on Mainnet",
+          "publisher": "COTI",
+          "publishedAt": "2023-01-31",
+          "url": "https://medium.com/cotinetwork/a-new-era-for-stablecoins-begins-djed-is-live-on-mainnet-55971971f2a8",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 44,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "djed-mainnet-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

@@ -24975,6 +24975,307 @@
         "https://files.baconcoin.finance/bacon-protocol-full-audit.pdf"
       ],
       "rationale": "No dated recurring reconciliation of all HOME liabilities/mint-burn movements against current USDC, outstanding loan balances and enforceable lien backing is disclosed in the issuer website, complete docs index/FAQ, whitepaper or Pool16 accounting source. Public lien descriptors and a historical design equality are not this datum. Linked code-audit hosts fail DNS; those failures are not evidence of financial non-disclosure. Preserve unknown, not none."
+    },
+    {
+      "id": "uw-usdx-kava-17382338ea21f15b",
+      "assetId": "usdx-kava",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:295461c969d8677f350f7ea3",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:58Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R90)",
+      "sources": [
+        {
+          "url": "https://docs.kava.io/docs/cosmos/modules/cdp/concepts/",
+          "observedAt": "2026-10-03T23:16:40Z",
+          "datumAsOf": null,
+          "location": "Collateralized Debt Positions and Dependency: pricefeed",
+          "excerpt": "Once created, stable assets are free to be transferred between users, but a CDP owner must repay their debt to get their collateral back.",
+          "assertion": "Discloses repayment-gated collateral release and liquidation; no whole-position realization horizon for BNB, HBTC, XRPB, KAVA or BTCB."
+        },
+        {
+          "url": "https://docs.kava.io/docs/cosmos/modules/auction/concepts/",
+          "observedAt": "2026-10-03T23:16:41Z",
+          "datumAsOf": null,
+          "location": "Auction expiry paragraph",
+          "excerpt": "Auctions start with an expiry, the time at which the auction is guaranteed to end, even if there have been no bidders.",
+          "assertion": "Auction expiry is disclosed but explicitly permits no bidders; it is not a maximum time to realize all scoped collateral at known value."
+        },
+        {
+          "url": "https://www.kava.io/terms-of-use",
+          "observedAt": "2026-10-03T23:16:41Z",
+          "datumAsOf": null,
+          "location": "Modifications and interruptions",
+          "excerpt": "We cannot guarantee the Site will be available at all times.",
+          "assertion": "Site terms provide no collateral-specific final realization commitment or liquidity-horizon guarantee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.kava.io/",
+        "https://www.kava.io/terms-of-use",
+        "https://help.app.kava.io/article/15-what-is-kava-mint",
+        "https://docs.kava.io/docs/cosmos/modules/cdp/",
+        "https://docs.kava.io/docs/cosmos/modules/cdp/concepts/",
+        "https://docs.kava.io/docs/cosmos/modules/cdp/messages/",
+        "https://docs.kava.io/docs/cosmos/modules/auction/concepts/",
+        "https://docs.kava.io/docs/cosmos/modules/auction/params/",
+        "https://api.data.kava.io/kava/cdp/v1beta1/params",
+        "https://github.com/Kava-Labs/kava/tree/master/x/cdp"
+      ],
+      "rationale": "Exact missing datum is a whole-slice liquidityHorizon for BNB, HBTC, XRPB, KAVA and BTCB collateral in USDX CDPs. Primary module/withdrawal/liquidation/auction docs, current collateral parameters, protocol-source index, issuer help and legal surfaces disclose locked collateral, conditional repayment/withdrawal and auctions, but no per-slice maximum realization commitment. The example 48-hour auction expiry can end without bidders. No instant or one-day whole-position liquidity is inferred from transferable crypto or bank execution speed."
+    },
+    {
+      "id": "uw-usdx-kava-8d3deb38eb3a14b8",
+      "assetId": "usdx-kava",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:3fc6a8efb2ae289a692cb2ac",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:58Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R90)",
+      "sources": [
+        {
+          "url": "https://docs.kava.io/docs/cosmos/modules/cdp/concepts/",
+          "observedAt": "2026-10-03T23:16:40Z",
+          "datumAsOf": null,
+          "location": "Collateralized Debt Positions and Dependency: pricefeed",
+          "excerpt": "Once created, stable assets are free to be transferred between users, but a CDP owner must repay their debt to get their collateral back.",
+          "assertion": "Discloses repayment-gated collateral release and liquidation; no whole-position realization horizon for BNB, HBTC, XRPB, KAVA or BTCB."
+        },
+        {
+          "url": "https://docs.kava.io/docs/cosmos/modules/auction/concepts/",
+          "observedAt": "2026-10-03T23:16:41Z",
+          "datumAsOf": null,
+          "location": "Auction expiry paragraph",
+          "excerpt": "Auctions start with an expiry, the time at which the auction is guaranteed to end, even if there have been no bidders.",
+          "assertion": "Auction expiry is disclosed but explicitly permits no bidders; it is not a maximum time to realize all scoped collateral at known value."
+        },
+        {
+          "url": "https://www.kava.io/terms-of-use",
+          "observedAt": "2026-10-03T23:16:41Z",
+          "datumAsOf": null,
+          "location": "Modifications and interruptions",
+          "excerpt": "We cannot guarantee the Site will be available at all times.",
+          "assertion": "Site terms provide no collateral-specific final realization commitment or liquidity-horizon guarantee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.kava.io/",
+        "https://www.kava.io/terms-of-use",
+        "https://help.app.kava.io/article/15-what-is-kava-mint",
+        "https://docs.kava.io/docs/cosmos/modules/cdp/",
+        "https://docs.kava.io/docs/cosmos/modules/cdp/concepts/",
+        "https://docs.kava.io/docs/cosmos/modules/cdp/messages/",
+        "https://docs.kava.io/docs/cosmos/modules/auction/concepts/",
+        "https://docs.kava.io/docs/cosmos/modules/auction/params/",
+        "https://api.data.kava.io/kava/cdp/v1beta1/params",
+        "https://github.com/Kava-Labs/kava/tree/master/x/cdp"
+      ],
+      "rationale": "Exact missing datum is a whole-slice liquidityHorizon for BNB, HBTC, XRPB, KAVA and BTCB collateral in USDX CDPs. Primary module/withdrawal/liquidation/auction docs, current collateral parameters, protocol-source index, issuer help and legal surfaces disclose locked collateral, conditional repayment/withdrawal and auctions, but no per-slice maximum realization commitment. The example 48-hour auction expiry can end without bidders. No instant or one-day whole-position liquidity is inferred from transferable crypto or bank execution speed."
+    },
+    {
+      "id": "uw-usdx-kava-09cd34642087e148",
+      "assetId": "usdx-kava",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:86a80c74eb72c4ffa662cad1",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:58Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R90)",
+      "sources": [
+        {
+          "url": "https://docs.kava.io/docs/cosmos/modules/cdp/concepts/",
+          "observedAt": "2026-10-03T23:16:40Z",
+          "datumAsOf": null,
+          "location": "Collateralized Debt Positions and Dependency: pricefeed",
+          "excerpt": "Once created, stable assets are free to be transferred between users, but a CDP owner must repay their debt to get their collateral back.",
+          "assertion": "Discloses repayment-gated collateral release and liquidation; no whole-position realization horizon for BNB, HBTC, XRPB, KAVA or BTCB."
+        },
+        {
+          "url": "https://docs.kava.io/docs/cosmos/modules/auction/concepts/",
+          "observedAt": "2026-10-03T23:16:41Z",
+          "datumAsOf": null,
+          "location": "Auction expiry paragraph",
+          "excerpt": "Auctions start with an expiry, the time at which the auction is guaranteed to end, even if there have been no bidders.",
+          "assertion": "Auction expiry is disclosed but explicitly permits no bidders; it is not a maximum time to realize all scoped collateral at known value."
+        },
+        {
+          "url": "https://www.kava.io/terms-of-use",
+          "observedAt": "2026-10-03T23:16:41Z",
+          "datumAsOf": null,
+          "location": "Modifications and interruptions",
+          "excerpt": "We cannot guarantee the Site will be available at all times.",
+          "assertion": "Site terms provide no collateral-specific final realization commitment or liquidity-horizon guarantee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.kava.io/",
+        "https://www.kava.io/terms-of-use",
+        "https://help.app.kava.io/article/15-what-is-kava-mint",
+        "https://docs.kava.io/docs/cosmos/modules/cdp/",
+        "https://docs.kava.io/docs/cosmos/modules/cdp/concepts/",
+        "https://docs.kava.io/docs/cosmos/modules/cdp/messages/",
+        "https://docs.kava.io/docs/cosmos/modules/auction/concepts/",
+        "https://docs.kava.io/docs/cosmos/modules/auction/params/",
+        "https://api.data.kava.io/kava/cdp/v1beta1/params",
+        "https://github.com/Kava-Labs/kava/tree/master/x/cdp"
+      ],
+      "rationale": "Exact missing datum is a whole-slice liquidityHorizon for BNB, HBTC, XRPB, KAVA and BTCB collateral in USDX CDPs. Primary module/withdrawal/liquidation/auction docs, current collateral parameters, protocol-source index, issuer help and legal surfaces disclose locked collateral, conditional repayment/withdrawal and auctions, but no per-slice maximum realization commitment. The example 48-hour auction expiry can end without bidders. No instant or one-day whole-position liquidity is inferred from transferable crypto or bank execution speed."
+    },
+    {
+      "id": "uw-usdx-kava-669860e4c40e651d",
+      "assetId": "usdx-kava",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d3ce97150ec2070653fcd204",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:58Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R90)",
+      "sources": [
+        {
+          "url": "https://docs.kava.io/docs/cosmos/modules/cdp/concepts/",
+          "observedAt": "2026-10-03T23:16:40Z",
+          "datumAsOf": null,
+          "location": "Collateralized Debt Positions and Dependency: pricefeed",
+          "excerpt": "Once created, stable assets are free to be transferred between users, but a CDP owner must repay their debt to get their collateral back.",
+          "assertion": "Discloses repayment-gated collateral release and liquidation; no whole-position realization horizon for BNB, HBTC, XRPB, KAVA or BTCB."
+        },
+        {
+          "url": "https://docs.kava.io/docs/cosmos/modules/auction/concepts/",
+          "observedAt": "2026-10-03T23:16:41Z",
+          "datumAsOf": null,
+          "location": "Auction expiry paragraph",
+          "excerpt": "Auctions start with an expiry, the time at which the auction is guaranteed to end, even if there have been no bidders.",
+          "assertion": "Auction expiry is disclosed but explicitly permits no bidders; it is not a maximum time to realize all scoped collateral at known value."
+        },
+        {
+          "url": "https://www.kava.io/terms-of-use",
+          "observedAt": "2026-10-03T23:16:41Z",
+          "datumAsOf": null,
+          "location": "Modifications and interruptions",
+          "excerpt": "We cannot guarantee the Site will be available at all times.",
+          "assertion": "Site terms provide no collateral-specific final realization commitment or liquidity-horizon guarantee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.kava.io/",
+        "https://www.kava.io/terms-of-use",
+        "https://help.app.kava.io/article/15-what-is-kava-mint",
+        "https://docs.kava.io/docs/cosmos/modules/cdp/",
+        "https://docs.kava.io/docs/cosmos/modules/cdp/concepts/",
+        "https://docs.kava.io/docs/cosmos/modules/cdp/messages/",
+        "https://docs.kava.io/docs/cosmos/modules/auction/concepts/",
+        "https://docs.kava.io/docs/cosmos/modules/auction/params/",
+        "https://api.data.kava.io/kava/cdp/v1beta1/params",
+        "https://github.com/Kava-Labs/kava/tree/master/x/cdp"
+      ],
+      "rationale": "Exact missing datum is a whole-slice liquidityHorizon for BNB, HBTC, XRPB, KAVA and BTCB collateral in USDX CDPs. Primary module/withdrawal/liquidation/auction docs, current collateral parameters, protocol-source index, issuer help and legal surfaces disclose locked collateral, conditional repayment/withdrawal and auctions, but no per-slice maximum realization commitment. The example 48-hour auction expiry can end without bidders. No instant or one-day whole-position liquidity is inferred from transferable crypto or bank execution speed."
+    },
+    {
+      "id": "uw-usdx-kava-31d2479eb263a32c",
+      "assetId": "usdx-kava",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:ffecac51103022e1da105ee4",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:58Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R90)",
+      "sources": [
+        {
+          "url": "https://docs.kava.io/docs/cosmos/modules/cdp/concepts/",
+          "observedAt": "2026-10-03T23:16:40Z",
+          "datumAsOf": null,
+          "location": "Collateralized Debt Positions and Dependency: pricefeed",
+          "excerpt": "Once created, stable assets are free to be transferred between users, but a CDP owner must repay their debt to get their collateral back.",
+          "assertion": "Discloses repayment-gated collateral release and liquidation; no whole-position realization horizon for BNB, HBTC, XRPB, KAVA or BTCB."
+        },
+        {
+          "url": "https://docs.kava.io/docs/cosmos/modules/auction/concepts/",
+          "observedAt": "2026-10-03T23:16:41Z",
+          "datumAsOf": null,
+          "location": "Auction expiry paragraph",
+          "excerpt": "Auctions start with an expiry, the time at which the auction is guaranteed to end, even if there have been no bidders.",
+          "assertion": "Auction expiry is disclosed but explicitly permits no bidders; it is not a maximum time to realize all scoped collateral at known value."
+        },
+        {
+          "url": "https://www.kava.io/terms-of-use",
+          "observedAt": "2026-10-03T23:16:41Z",
+          "datumAsOf": null,
+          "location": "Modifications and interruptions",
+          "excerpt": "We cannot guarantee the Site will be available at all times.",
+          "assertion": "Site terms provide no collateral-specific final realization commitment or liquidity-horizon guarantee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.kava.io/",
+        "https://www.kava.io/terms-of-use",
+        "https://help.app.kava.io/article/15-what-is-kava-mint",
+        "https://docs.kava.io/docs/cosmos/modules/cdp/",
+        "https://docs.kava.io/docs/cosmos/modules/cdp/concepts/",
+        "https://docs.kava.io/docs/cosmos/modules/cdp/messages/",
+        "https://docs.kava.io/docs/cosmos/modules/auction/concepts/",
+        "https://docs.kava.io/docs/cosmos/modules/auction/params/",
+        "https://api.data.kava.io/kava/cdp/v1beta1/params",
+        "https://github.com/Kava-Labs/kava/tree/master/x/cdp"
+      ],
+      "rationale": "Exact missing datum is a whole-slice liquidityHorizon for BNB, HBTC, XRPB, KAVA and BTCB collateral in USDX CDPs. Primary module/withdrawal/liquidation/auction docs, current collateral parameters, protocol-source index, issuer help and legal surfaces disclose locked collateral, conditional repayment/withdrawal and auctions, but no per-slice maximum realization commitment. The example 48-hour auction expiry can end without bidders. No instant or one-day whole-position liquidity is inferred from transferable crypto or bank execution speed."
+    },
+    {
+      "id": "uw-xmd-metal-dollar-ffb8468e371b7da0",
+      "assetId": "xmd-metal-dollar",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2bab8d4bdab7f903f0a643d6",
+        "factorKey": "obligorConcentration",
+        "pillar": "backing",
+        "requiredDatum": "issuerOrObligorKey",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:16:58Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R90)",
+      "sources": [
+        {
+          "url": "https://proton.eosusa.io/v1/chain/get_currency_stats",
+          "observedAt": "2026-10-03T23:16:49Z",
+          "datumAsOf": "2026-10-03",
+          "location": "POST body {\"code\":\"xtokens\",\"symbol\":\"XPYUSD\"}; XPYUSD.issuer",
+          "excerpt": "\"issuer\":\"xtokens\"",
+          "assertion": "Exact local XPYUSD wrapper issuer is xtokens, not an inferred Paxos claim. Current live adapter supplies no sourceKey; classification-only metadata cannot join this new live slice to the static sidecar."
+        }
+      ]
     }
   ]
 }
