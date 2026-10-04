@@ -3325,135 +3325,6 @@
       "rationale": "The Stablecoin Terms disclose reserve segregation and discretionary program changes, but no XO-specific prohibition, permission conditions or complete encumbrance/reuse policy. Marketing full backing and the parent M reserve policy do not settle the local holder-contract reuse rights. No reuse prohibition is inferred."
     },
     {
-      "id": "uw-zys-zephyr-protocol-f0b4abdcbfadac2e",
-      "assetId": "zys-zephyr-protocol",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:fd346d791b2a1ffe7526dc30",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:20:56Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R72)",
-      "sources": [
-        {
-          "url": "https://raw.githubusercontent.com/ZephyrProtocol/zephyr/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h",
-          "observedAt": "2026-10-03T23:20:54Z",
-          "datumAsOf": null,
-          "location": "Native consensus configuration, spendable age and difficulty target",
-          "excerpt": "#define CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE             10",
-          "assertion": "A spendability age in blocks is disclosed, not a guaranteed elapsed-time whole-slice realization horizon."
-        },
-        {
-          "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
-          "observedAt": "2026-10-03T23:20:55Z",
-          "datumAsOf": "2026-10-03",
-          "location": "on_chain reserve snapshot",
-          "excerpt": "\"reserve_height\": 877372",
-          "assertion": "Snapshot discloses balances and reserve ratio, not a whole-position realization SLA."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf",
-        "https://zephyrprotocol.com/documentation",
-        "https://raw.githubusercontent.com/ZephyrProtocol/zephyr/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h",
-        "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
-        "https://zephyrprotocol.com/documentation/scanner-api",
-        "https://zephyrprotocol.com/blog/2024-09-30-Zephyr-Protocol-v2-0-0-ZSD-Yield-Hardfork-Annoucement"
-      ],
-      "rationale": "No hard whole-position liquidity/realization horizon is published for the ZSD yield reserve backing ZYS shares. Native conversion availability and block-based output spendability do not guarantee an elapsed-time full-position realization at a known value; the published reserve snapshot only measures balances. No fixed one-day or immediate bound is inferred from target block time."
-    },
-    {
-      "id": "uw-zsd-zephyr-protocol-6b6e9c91949391e0",
-      "assetId": "zsd-zephyr-protocol",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:269781b362b9fc8899c60d27",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:20:56Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R72)",
-      "sources": [
-        {
-          "url": "https://raw.githubusercontent.com/ZephyrProtocol/zephyr/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h",
-          "observedAt": "2026-10-03T23:20:54Z",
-          "datumAsOf": null,
-          "location": "Native consensus configuration, spendable age and difficulty target",
-          "excerpt": "#define CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE             10",
-          "assertion": "A spendability age in blocks is disclosed, not a guaranteed elapsed-time whole-slice realization horizon."
-        },
-        {
-          "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
-          "observedAt": "2026-10-03T23:20:55Z",
-          "datumAsOf": "2026-10-03",
-          "location": "on_chain reserve snapshot",
-          "excerpt": "\"reserve_height\": 877372",
-          "assertion": "Snapshot discloses balances and reserve ratio, not a whole-position realization SLA."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf",
-        "https://zephyrprotocol.com/documentation",
-        "https://raw.githubusercontent.com/ZephyrProtocol/zephyr/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h",
-        "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
-        "https://zephyrprotocol.com/documentation/scanner-api",
-        "https://zephyrprotocol.com/blog/2024-09-30-Zephyr-Protocol-v2-0-0-ZSD-Yield-Hardfork-Annoucement"
-      ],
-      "rationale": "No hard whole-position liquidity/realization horizon is published for the ZEPH protocol reserve. Native conversion availability and block-based output spendability do not guarantee an elapsed-time full-position realization at a known value; the published reserve snapshot only measures balances. No fixed one-day or immediate bound is inferred from target block time."
-    },
-    {
-      "id": "uw-eurw-newrails-1128818c29525c34",
-      "assetId": "eurw-newrails",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:20:56Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R72)",
-      "sources": [
-        {
-          "url": "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml",
-          "observedAt": "2026-10-03T23:20:55Z",
-          "datumAsOf": "2026-06-25",
-          "location": "D.1 Reserve policy",
-          "excerpt": "A minimum of 30% of client funds will be held in a safeguarding account in cash, in Euros, with a reputable European regulated credit institution.",
-          "assertion": "Policy minimum is not observed portfolio weight or a dated full-denominator reserve schedule."
-        },
-        {
-          "url": "https://www.newrails.xyz/en/platform/eurw",
-          "observedAt": "2026-10-03T23:20:56Z",
-          "datumAsOf": null,
-          "location": "Trust and transparency",
-          "excerpt": "Monthly attestation reports published publicly.",
-          "assertion": "Issuer claims published reports, but linked public download/archive provides whitepaper, audit and policies rather than a dated reserve allocation report."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.newrails.xyz/en/platform/eurw",
-        "https://www.newrails.xyz/en/download-centre",
-        "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml",
-        "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf",
-        "https://www.newrails.xyz/en/hubs/euro-stablecoin",
-        "https://www.lb.lt/en/sfi-financial-market-participants/newrails-uab"
-      ],
-      "rationale": "The exact current EURW reserve composition, measured whole-asset weights and named holding/custodian allocation are not disclosed in the accessed primary public archive. The whitepaper gives a >=30% cash/<=70% permitted-investment policy; the current guide says cash and overnight deposits. Neither supplies a dated observed reserve schedule. Do not convert the policy into fabricated 30/70 weights or admit the undisclosed placeholder as measured composition."
-    },
-    {
       "id": "uw-chfm-mento-e34812d6b85f1204",
       "assetId": "chfm-mento",
       "scope": {
@@ -21877,211 +21748,6 @@
       "rationale": "The missing datum is a complete USD3 wrapper-local borrowing/encumbrance absence or leverage maximum across the pool, including FCC and Erebor staging. Wave 2 closes BaseHooks/BaseStrategy fallback inspection and the fixed TokenizedStrategy implementation: lending/asset-side accounting is not a legal whole-book liabilities covenant. Public supplier terms, FCC security/collection documents and backing disclosure give junior and borrower leverage but no USD3-wide borrowing prohibition, liability reconciliation or enforceable maximum. No claim that missing source code is issuer silence."
     },
     {
-      "id": "uw-nxusd-nereus-2cf669e993693ebe",
-      "assetId": "nxusd-nereus",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:22Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R88)",
-      "sources": [
-        {
-          "url": "https://medium.com/nereus-protocol/the-nxusd-genesis-event-41d22f8b2020?source=collection_home---4------0-----------------------",
-          "observedAt": "2026-10-03T23:03:39Z",
-          "datumAsOf": "2022-05-20",
-          "location": "NXUSD Genesis Event",
-          "excerpt": "15 million NXUSDs were minted and collateralized with 4 billion WXTs.",
-          "assertion": "A historical genesis issuance/backing pair is disclosed, not a current recurring whole-supply reconciliation across native deployments."
-        },
-        {
-          "url": "https://resources.cryptocompare.com/asset-management/558/1692883376123.pdf",
-          "observedAt": "2026-10-03T23:09:43Z",
-          "datumAsOf": null,
-          "location": "November 2022 audit, p.1, Introduction",
-          "excerpt": "The scope of the audit is NXUSDV2, ProtocolAddressesProvider, TokenOracle, NXUSDStakingOneTier and NXUSDStakingOneTierCalculation contracts.",
-          "assertion": "The located independent audit is scoped to code, not financial reserve/liability reconciliation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.nereus.finance/",
-        "https://docs.nereus.finance/",
-        "https://www.nereus.finance/blog",
-        "https://nxusd.nereus.finance/",
-        "https://nxusd.nereus.finance/js/app.60bde321.js",
-        "https://github.com/nereusfinance/nereus-stablecoin-core",
-        "https://sourcify.dev/server/v2/contract/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387?fields=abi,sources",
-        "https://resources.cryptocompare.com/asset-management/558/1692883376123.pdf"
-      ],
-      "rationale": "No dated whole-supply mint/burn-to-backing reconciliation procedure or cadence covering Avalanche and Polygon native NXUSD and collateral was located. Genesis collateral, owner-only mint throttles, individual Cauldron debt accounting and code assurance do not prove that exact datum. Current issuer/docs redirect and disclaimer, application bundle, repository/deployments and audit disclose operating machinery but no common-clock whole-supply reconciliation. Preserve reconciliation unknown, not none."
-    },
-    {
-      "id": "uw-home-homecoin-62c98762ed768d3a",
-      "assetId": "home-homecoin",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:22Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R88)",
-      "sources": [
-        {
-          "url": "https://raw.githubusercontent.com/homecoin-finance/gitbook/live/getting-started/faq.md",
-          "observedAt": "2026-10-03T23:09:43Z",
-          "datumAsOf": null,
-          "location": "Are there a predetermined amount of HOME tokens?",
-          "excerpt": "HOME is minted when a home owner takes out a loan. There\u2019s not a predetermined number of HOME available.",
-          "assertion": "Mint origination is described; a current recurring whole-supply/backing reconciliation is not."
-        },
-        {
-          "url": "https://social-feed-media.s3.ap-southeast-1.amazonaws.com/pdfs/1674044427141-BACON.pdf",
-          "observedAt": "2026-10-03T23:04:08Z",
-          "datumAsOf": "2022-07-25",
-          "location": "Whitepaper v1.4, Pans, p.6",
-          "excerpt": "The amount of USDC in the Pan plus the amount of outstanding loans is always equal to the amount of outstanding HOME.",
-          "assertion": "Historical design invariant, not a dated procedure/cadence reconciling current lien validity, borrower payment status and all HOME liabilities."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.homecoin.finance/",
-        "https://www.homecoin.finance/home-benefits",
-        "https://github.com/homecoin-finance/gitbook",
-        "https://raw.githubusercontent.com/homecoin-finance/gitbook/live/SUMMARY.md",
-        "https://raw.githubusercontent.com/homecoin-finance/gitbook/live/getting-started/faq.md",
-        "https://social-feed-media.s3.ap-southeast-1.amazonaws.com/pdfs/1674044427141-BACON.pdf",
-        "https://app.homecoin.finance/",
-        "https://etherscan.io/address/0xb8919522331c59f5c16bdfaa6a121a6e03a91f62",
-        "https://raw.githubusercontent.com/homecoin-finance/HomeDAO/e2742bb707aa6d75eb310ed8729c3ca04f91d296/contracts/PoolCore/Pool16.sol",
-        "https://files.baconcoin.com/baconcoin-blocksec-audit.pdf",
-        "https://files.baconcoin.finance/bacon-protocol-full-audit.pdf"
-      ],
-      "rationale": "No dated recurring reconciliation of all HOME liabilities/mint-burn movements against current USDC, outstanding loan balances and enforceable lien backing is disclosed in the issuer website, complete docs index/FAQ, whitepaper or Pool16 accounting source. Public lien descriptors and a historical design equality are not this datum. Linked code-audit hosts fail DNS; those failures are not evidence of financial non-disclosure. Preserve unknown, not none."
-    },
-    {
-      "id": "uw-usdcx-movement-a7f8826d87cfb5ec",
-      "assetId": "usdcx-movement",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "custodyEscrow",
-        "pillar": "backing",
-        "requiredDatum": "custodyEscrow",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:57:30Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R43)",
-      "sources": [
-        {
-          "url": "https://console.circle.com/legal/developer-terms",
-          "observedAt": "2026-10-03T23:54:39Z",
-          "datumAsOf": "2026-09-16",
-          "location": "Schedule Additional Terms, xReserve paragraphs 1-3",
-          "excerpt": "Circle acquires no lien, security interest, or other claim in the USDC deposited into the xReserve smart contract wallet and assumes no fiduciary or trust obligations with respect to it.",
-          "assertion": "Non-Circle ownership and absence of Circle custody are disclosed; no holder-specific reserve segregation, insolvency priority or complete reserve-reuse covenant is supplied."
-        },
-        {
-          "url": "https://www.movementnetwork.xyz/terms-of-service",
-          "observedAt": "2026-10-03T23:54:39Z",
-          "datumAsOf": "2026-04-06",
-          "location": "Section 9.7; full HTML fetched with Accept: text/html",
-          "excerpt": "We do not take custody of, hold for our own account, rehypothecate, lend, or otherwise exercise discretionary control over staked assets.",
-          "assertion": "This prohibition is expressly about staked assets, not xReserve USDC; it cannot establish USDCx reserve non-rehypothecation or holder insolvency protections."
-        },
-        {
-          "url": "https://developers.circle.com/xreserve/concepts/technical-guide",
-          "observedAt": "2026-10-03T23:54:40Z",
-          "datumAsOf": null,
-          "location": "USDC reserve",
-          "excerpt": "xReserve uses Circle Gateway wallets to hold these balances for USDC-backed stablecoins on the remote chain.",
-          "assertion": "Technical reserve custody is described, but not complete USDCx-holder legal segregation, creditor priority or reserve-reuse terms."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.circle.com/legal",
-        "https://console.circle.com/legal/developer-terms",
-        "https://www.circle.com/xreserve",
-        "https://developers.circle.com/xreserve",
-        "https://developers.circle.com/xreserve/concepts/how-xreserve-works",
-        "https://developers.circle.com/xreserve/concepts/technical-guide",
-        "https://developers.circle.com/xreserve/references/supported-blockchains-and-domains",
-        "https://www.movementnetwork.xyz/terms-of-service",
-        "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin",
-        "https://docs.movementnetwork.xyz/",
-        "https://eth.blockscout.com/address/0x8888888199b2Df864bf678259607d6D5EBb4e3Ce"
-      ],
-      "rationale": "Exact missing data are USDCx-holder reserve segregation/insolvency protection and complete local reserve-reuse terms. Circle's September 16 developer terms newly disclose non-Circle ownership, noncustody and no Circle lien, but disclaim a trust and make the partner token nonredeemable with Circle. Movement's April 6 non-rehypothecation provision is staking-only. Product, technical, deployment and legal surfaces disclose mechanics rather than these complete protections. No prohibition or bankruptcy remoteness is inferred from smart-contract custody."
-    },
-    {
-      "id": "uw-usdcx-movement-5ca290a9c353b3c4",
-      "assetId": "usdcx-movement",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "rehypothecationCorrelation",
-        "pillar": "backing",
-        "requiredDatum": "rehypothecationCorrelation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:57:30Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R43)",
-      "sources": [
-        {
-          "url": "https://console.circle.com/legal/developer-terms",
-          "observedAt": "2026-10-03T23:54:39Z",
-          "datumAsOf": "2026-09-16",
-          "location": "Schedule Additional Terms, xReserve paragraphs 1-3",
-          "excerpt": "Circle acquires no lien, security interest, or other claim in the USDC deposited into the xReserve smart contract wallet and assumes no fiduciary or trust obligations with respect to it.",
-          "assertion": "Non-Circle ownership and absence of Circle custody are disclosed; no holder-specific reserve segregation, insolvency priority or complete reserve-reuse covenant is supplied."
-        },
-        {
-          "url": "https://www.movementnetwork.xyz/terms-of-service",
-          "observedAt": "2026-10-03T23:54:39Z",
-          "datumAsOf": "2026-04-06",
-          "location": "Section 9.7; full HTML fetched with Accept: text/html",
-          "excerpt": "We do not take custody of, hold for our own account, rehypothecate, lend, or otherwise exercise discretionary control over staked assets.",
-          "assertion": "This prohibition is expressly about staked assets, not xReserve USDC; it cannot establish USDCx reserve non-rehypothecation or holder insolvency protections."
-        },
-        {
-          "url": "https://developers.circle.com/xreserve/concepts/technical-guide",
-          "observedAt": "2026-10-03T23:54:40Z",
-          "datumAsOf": null,
-          "location": "USDC reserve",
-          "excerpt": "xReserve uses Circle Gateway wallets to hold these balances for USDC-backed stablecoins on the remote chain.",
-          "assertion": "Technical reserve custody is described, but not complete USDCx-holder legal segregation, creditor priority or reserve-reuse terms."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.circle.com/legal",
-        "https://console.circle.com/legal/developer-terms",
-        "https://www.circle.com/xreserve",
-        "https://developers.circle.com/xreserve",
-        "https://developers.circle.com/xreserve/concepts/how-xreserve-works",
-        "https://developers.circle.com/xreserve/concepts/technical-guide",
-        "https://developers.circle.com/xreserve/references/supported-blockchains-and-domains",
-        "https://www.movementnetwork.xyz/terms-of-service",
-        "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin",
-        "https://docs.movementnetwork.xyz/",
-        "https://eth.blockscout.com/address/0x8888888199b2Df864bf678259607d6D5EBb4e3Ce"
-      ],
-      "rationale": "Exact missing data are USDCx-holder reserve segregation/insolvency protection and complete local reserve-reuse terms. Circle's September 16 developer terms newly disclose non-Circle ownership, noncustody and no Circle lien, but disclaim a trust and make the partner token nonredeemable with Circle. Movement's April 6 non-rehypothecation provision is staking-only. Product, technical, deployment and legal surfaces disclose mechanics rather than these complete protections. No prohibition or bankruptcy remoteness is inferred from smart-contract custody."
-    },
-    {
       "id": "uw-usdq-quill-24c7e74e7b76b73c",
       "assetId": "usdq-quill",
       "scope": {
@@ -28700,327 +28366,6 @@
         "https://github.com/Satoshi-Protocol/satoshi-core"
       ],
       "rationale": "Current whole-token reserve composition/denominator remains undisclosed. Live app shows collateral TVL and circulation; Prime/Smart docs also describe internal minted liabilities and custodial/external strategies without reconciled holdings and obligations. Gross product deposits cannot be normalized into whole-token backing weights. Preserve selected-slices status and historical evidence; no fabricated remainder."
-    },
-    {
-      "id": "uw-senpyusdmwin-sentora-22c3401a575b6341",
-      "assetId": "senpyusdmwin-sentora",
-      "scope": {
-        "componentKey": "control:mint-meta:senpyusdmwin-sentora:1be9607c721d81c35ac8",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:senpyusdmwin-sentora:1be9607c721d81c35ac8",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-04T00:02:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
-      "sources": [
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T23:59:20Z",
-          "datumAsOf": null,
-          "location": "Definitions, item 3: Vaults",
-          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
-          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
-        },
-        {
-          "url": "https://ethereum-rpc.publicnode.com",
-          "observedAt": "2026-10-04T00:02:38Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Block 26115203; owner Safe getOwners()",
-          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
-          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/",
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/platform/risk-management",
-        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
-        "https://sentora.com/asset-risk-reviews/huma",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
-        "https://ethereum-rpc.publicnode.com"
-      ],
-      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
-    },
-    {
-      "id": "uw-senpyusdmwin-sentora-b4695b740d839ab9",
-      "assetId": "senpyusdmwin-sentora",
-      "scope": {
-        "componentKey": "control:mint-meta:senpyusdmwin-sentora:f188864829dfe0fe3ccd",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:senpyusdmwin-sentora:f188864829dfe0fe3ccd",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-04T00:02:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
-      "sources": [
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T23:59:20Z",
-          "datumAsOf": null,
-          "location": "Definitions, item 3: Vaults",
-          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
-          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
-        },
-        {
-          "url": "https://ethereum-rpc.publicnode.com",
-          "observedAt": "2026-10-04T00:02:38Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Block 26115203; owner Safe getOwners()",
-          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
-          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/",
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/platform/risk-management",
-        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
-        "https://sentora.com/asset-risk-reviews/huma",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
-        "https://ethereum-rpc.publicnode.com"
-      ],
-      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
-    },
-    {
-      "id": "uw-senpyusdmwin-sentora-9d0c8c104a3d32af",
-      "assetId": "senpyusdmwin-sentora",
-      "scope": {
-        "componentKey": "deployment-controls",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "deployment-controls",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-04T00:02:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
-      "sources": [
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T23:59:20Z",
-          "datumAsOf": null,
-          "location": "Definitions, item 3: Vaults",
-          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
-          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
-        },
-        {
-          "url": "https://ethereum-rpc.publicnode.com",
-          "observedAt": "2026-10-04T00:02:38Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Block 26115203; owner Safe getOwners()",
-          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
-          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/",
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/platform/risk-management",
-        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
-        "https://sentora.com/asset-risk-reviews/huma",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
-        "https://ethereum-rpc.publicnode.com"
-      ],
-      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
-    },
-    {
-      "id": "uw-senpyusdpst-sentora-8d80637939486aaf",
-      "assetId": "senpyusdpst-sentora",
-      "scope": {
-        "componentKey": "control:mint-meta:senpyusdpst-sentora:b7310f8ffc318dc58be7",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:senpyusdpst-sentora:b7310f8ffc318dc58be7",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-04T00:02:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
-      "sources": [
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T23:59:20Z",
-          "datumAsOf": null,
-          "location": "Definitions, item 3: Vaults",
-          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
-          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
-        },
-        {
-          "url": "https://ethereum-rpc.publicnode.com",
-          "observedAt": "2026-10-04T00:02:38Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Block 26115203; owner Safe getOwners()",
-          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
-          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/",
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/platform/risk-management",
-        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
-        "https://sentora.com/asset-risk-reviews/huma",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
-        "https://ethereum-rpc.publicnode.com"
-      ],
-      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
-    },
-    {
-      "id": "uw-senpyusdpst-sentora-bc2edfa58b4612d7",
-      "assetId": "senpyusdpst-sentora",
-      "scope": {
-        "componentKey": "control:mint-meta:senpyusdpst-sentora:c2c2e21589eb38c9ac47",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:senpyusdpst-sentora:c2c2e21589eb38c9ac47",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-04T00:02:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
-      "sources": [
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T23:59:20Z",
-          "datumAsOf": null,
-          "location": "Definitions, item 3: Vaults",
-          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
-          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
-        },
-        {
-          "url": "https://ethereum-rpc.publicnode.com",
-          "observedAt": "2026-10-04T00:02:38Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Block 26115203; owner Safe getOwners()",
-          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
-          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/",
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/platform/risk-management",
-        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
-        "https://sentora.com/asset-risk-reviews/huma",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
-        "https://ethereum-rpc.publicnode.com"
-      ],
-      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
-    },
-    {
-      "id": "uw-senpyusdpst-sentora-8336c0da2d7693f2",
-      "assetId": "senpyusdpst-sentora",
-      "scope": {
-        "componentKey": "deployment-controls",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "deployment-controls",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-04T00:02:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
-      "sources": [
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T23:59:20Z",
-          "datumAsOf": null,
-          "location": "Definitions, item 3: Vaults",
-          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
-          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
-        },
-        {
-          "url": "https://ethereum-rpc.publicnode.com",
-          "observedAt": "2026-10-04T00:02:38Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Block 26115203; owner Safe getOwners()",
-          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
-          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/",
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/platform/risk-management",
-        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
-        "https://sentora.com/asset-risk-reviews/huma",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
-        "https://ethereum-rpc.publicnode.com"
-      ],
-      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
-    },
-    {
-      "id": "uw-acrdx-anemoy-apollo-1485ddb454b91b34",
-      "assetId": "acrdx-anemoy-apollo",
-      "scope": {
-        "componentKey": "economic-control:bridge",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "economic-control:bridge",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-04T00:02:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
-      "sources": [
-        {
-          "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/",
-          "observedAt": "2026-10-04T00:02:38Z",
-          "datumAsOf": null,
-          "location": "Bridging warning",
-          "excerpt": "Share tokens can only be bridged between EVM networks. Solana (`centrifugeId` 7) and Stellar (`centrifugeId` 8) cannot be used as a target network.",
-          "assertion": "Published EVM share-bridge semantics cannot establish the separately catalogued exact Solana liability's transport or conservation model."
-        },
-        {
-          "url": "https://api.mainnet-beta.solana.com",
-          "observedAt": "2026-10-03T23:58:54Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Finalized getMultipleAccounts, slot 453087623",
-          "excerpt": "3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb",
-          "assertion": "Exact mint/freeze/permanent delegate authority is live but System-owned and nonexecutable. A token-specific bridge program or publicly disclosed offchain authorization/conservation procedure is absent."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.anemoy.io/",
-        "https://www.anemoy.io/news/acrdx-launched",
-        "https://docs.centrifuge.io/developer/protocol/deployments/",
-        "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/",
-        "https://docs.centrifuge.io/developer/protocol/features/token-compliance/",
-        "https://docs.centrifuge.io/developer/centrifuge-api/",
-        "https://solscan.io/token/ACDR3LGFrMuDZSDRyJjncFCzo5c8xkQxhWx4im4Vmq8G",
-        "https://api.mainnet-beta.solana.com"
-      ],
-      "rationale": "The complete bridge review lacks publicly disclosed Solana liability transport, cross-chain burn/release conservation and backend authorization/operator semantics. Current exact mint and its live authority were successfully read, and the latter is a System-owned nonprogram account, not an executable bridge address. Issuer announcement names Wormhole generically; official deployments name the Solana mint but bridge/API docs restrict executable share transport to EVM. This is exact missing offchain disclosure, not a failed lookup, zero-supply exemption or permission to delete Solana."
     },
     {
       "id": "uw-senpyusdmwin-sentora-1b4b759ba82fe191",
@@ -36343,423 +35688,6 @@
       "rationale": "The named scoped question asks independent human control, operational key custody and signing policy of the identified USDso 3-of-6 owner Safe. Issuer/product/terms/technical and exact implementation disclosures do not publish operator identities, independence or custody/signing attestation. Public address/quorum code is not those safeguards. Other incident and execution uncertainties remain U."
     },
     {
-      "id": "uw-sdusd-dtrinity-02a8280e0601e237",
-      "assetId": "sdusd-dtrinity",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:4de57642127ec5384ce3e34a",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:40Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
-      "sources": [
-        {
-          "url": "https://docs.dtrinity.org/protocol-components/sdusd",
-          "observedAt": "2026-10-03T23:09:35Z",
-          "datumAsOf": null,
-          "location": "Issuer public documentation",
-          "excerpt": "Unstaking capacity is based on unutilized liquidity that\u2019s available for withdrawal from dLEND.",
-          "assertion": "Discloses utilization-dependent withdrawal, not a whole-position time bound."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.dtrinity.org/protocol-components/sdusd",
-        "https://docs.dtrinity.org/protocol-components/dusd",
-        "https://docs.dtrinity.org/protocol-components/dlend",
-        "https://docs.dtrinity.org/informational/terms-of-use",
-        "https://docs.dtrinity.org/security/addresses",
-        "https://docs.dtrinity.org/security/security-audits",
-        "https://docs.dtrinity.org/key-concepts/stablecoinomics-101"
-      ],
-      "rationale": "Exact sdUSD whole-position liquidity horizon is not published. Permissionless atomic unstaking is contingent on available dLEND liquidity and is not a guaranteed current realization bound."
-    },
-    {
-      "id": "uw-sdusd-dtrinity-b4c8c9c2759ba8f8",
-      "assetId": "sdusd-dtrinity",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "custodyEscrow",
-        "pillar": "backing",
-        "requiredDatum": "custodyEscrow",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:40Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
-      "sources": [
-        {
-          "url": "https://docs.dtrinity.org/informational/terms-of-use",
-          "observedAt": "2026-10-03T23:09:35Z",
-          "datumAsOf": null,
-          "location": "Issuer public documentation",
-          "excerpt": "No fiduciary duties",
-          "assertion": "Nearby legal disclaimer does not establish whole-allocation segregation or remoteness."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.dtrinity.org/protocol-components/sdusd",
-        "https://docs.dtrinity.org/protocol-components/dusd",
-        "https://docs.dtrinity.org/protocol-components/dlend",
-        "https://docs.dtrinity.org/informational/terms-of-use",
-        "https://docs.dtrinity.org/security/addresses",
-        "https://docs.dtrinity.org/security/security-audits",
-        "https://docs.dtrinity.org/key-concepts/stablecoinomics-101"
-      ],
-      "rationale": "Exact whole-sdUSD allocation legal segregation/bankruptcy remoteness, leverage and reuse/correlation bounds are not published. dLEND default collateral rehypothecation settings and loan LTVs are not an exhaustive current sdUSD allocation certificate; technical noncustody is not legal escrow."
-    },
-    {
-      "id": "uw-sdusd-dtrinity-847706772559b29e",
-      "assetId": "sdusd-dtrinity",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "leverage",
-        "pillar": "backing",
-        "requiredDatum": "leverage",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:40Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
-      "sources": [
-        {
-          "url": "https://docs.dtrinity.org/informational/terms-of-use",
-          "observedAt": "2026-10-03T23:09:35Z",
-          "datumAsOf": null,
-          "location": "Issuer public documentation",
-          "excerpt": "No fiduciary duties",
-          "assertion": "Nearby legal disclaimer does not establish whole-allocation segregation or remoteness."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.dtrinity.org/protocol-components/sdusd",
-        "https://docs.dtrinity.org/protocol-components/dusd",
-        "https://docs.dtrinity.org/protocol-components/dlend",
-        "https://docs.dtrinity.org/informational/terms-of-use",
-        "https://docs.dtrinity.org/security/addresses",
-        "https://docs.dtrinity.org/security/security-audits",
-        "https://docs.dtrinity.org/key-concepts/stablecoinomics-101"
-      ],
-      "rationale": "Exact whole-sdUSD allocation legal segregation/bankruptcy remoteness, leverage and reuse/correlation bounds are not published. dLEND default collateral rehypothecation settings and loan LTVs are not an exhaustive current sdUSD allocation certificate; technical noncustody is not legal escrow."
-    },
-    {
-      "id": "uw-sdusd-dtrinity-32eb3d952092b0bd",
-      "assetId": "sdusd-dtrinity",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "rehypothecationCorrelation",
-        "pillar": "backing",
-        "requiredDatum": "rehypothecationCorrelation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:40Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
-      "sources": [
-        {
-          "url": "https://docs.dtrinity.org/informational/terms-of-use",
-          "observedAt": "2026-10-03T23:09:35Z",
-          "datumAsOf": null,
-          "location": "Issuer public documentation",
-          "excerpt": "No fiduciary duties",
-          "assertion": "Nearby legal disclaimer does not establish whole-allocation segregation or remoteness."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.dtrinity.org/protocol-components/sdusd",
-        "https://docs.dtrinity.org/protocol-components/dusd",
-        "https://docs.dtrinity.org/protocol-components/dlend",
-        "https://docs.dtrinity.org/informational/terms-of-use",
-        "https://docs.dtrinity.org/security/addresses",
-        "https://docs.dtrinity.org/security/security-audits",
-        "https://docs.dtrinity.org/key-concepts/stablecoinomics-101"
-      ],
-      "rationale": "Exact whole-sdUSD allocation legal segregation/bankruptcy remoteness, leverage and reuse/correlation bounds are not published. dLEND default collateral rehypothecation settings and loan LTVs are not an exhaustive current sdUSD allocation certificate; technical noncustody is not legal escrow."
-    },
-    {
-      "id": "uw-dusd-dtrinity-b71d41b45aa1c254",
-      "assetId": "dusd-dtrinity",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:40Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
-      "sources": [
-        {
-          "url": "https://docs.dtrinity.org/protocol-components/dusd",
-          "observedAt": "2026-10-03T23:09:35Z",
-          "datumAsOf": null,
-          "location": "Issuer public documentation",
-          "excerpt": "Each network deployment maintains fully isolated reserves.",
-          "assertion": "Discloses reserve isolation but not a dated complete reconciliation or weights."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.dtrinity.org/protocol-components/sdusd",
-        "https://docs.dtrinity.org/protocol-components/dusd",
-        "https://docs.dtrinity.org/protocol-components/dlend",
-        "https://docs.dtrinity.org/informational/terms-of-use",
-        "https://docs.dtrinity.org/security/addresses",
-        "https://docs.dtrinity.org/security/security-audits",
-        "https://docs.dtrinity.org/key-concepts/stablecoinomics-101"
-      ],
-      "rationale": "No current complete dUSD reserve weight table or independently verified whole-supply reserve/liability reconciliation is published in the searched issuer disclosures. Asset lists, reserve-ratio formulas, contract addresses and smart-contract audits do not supply complete chain-wide reserve/AMO/LP denominators or a recurring reconciliation cadence."
-    },
-    {
-      "id": "uw-dusd-dtrinity-b948728c69487048",
-      "assetId": "dusd-dtrinity",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:40Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
-      "sources": [
-        {
-          "url": "https://docs.dtrinity.org/protocol-components/dusd",
-          "observedAt": "2026-10-03T23:09:35Z",
-          "datumAsOf": null,
-          "location": "Issuer public documentation",
-          "excerpt": "Each network deployment maintains fully isolated reserves.",
-          "assertion": "Discloses reserve isolation but not a dated complete reconciliation or weights."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.dtrinity.org/protocol-components/sdusd",
-        "https://docs.dtrinity.org/protocol-components/dusd",
-        "https://docs.dtrinity.org/protocol-components/dlend",
-        "https://docs.dtrinity.org/informational/terms-of-use",
-        "https://docs.dtrinity.org/security/addresses",
-        "https://docs.dtrinity.org/security/security-audits",
-        "https://docs.dtrinity.org/key-concepts/stablecoinomics-101"
-      ],
-      "rationale": "No current complete dUSD reserve weight table or independently verified whole-supply reserve/liability reconciliation is published in the searched issuer disclosures. Asset lists, reserve-ratio formulas, contract addresses and smart-contract audits do not supply complete chain-wide reserve/AMO/LP denominators or a recurring reconciliation cadence."
-    },
-    {
-      "id": "uw-usdn-noble-ccb8d0cf1f4a5932",
-      "assetId": "usdn-noble",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdn-noble:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:40Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
-      "sources": [
-        {
-          "url": "https://dollar.noble.xyz/",
-          "observedAt": "2026-10-03T23:09:35Z",
-          "datumAsOf": null,
-          "location": "Issuer public documentation",
-          "excerpt": "Move your USDN to Ethereum as wM.",
-          "assertion": "Discloses a redemption pathway, not fixed fees or end-to-end settlement bounds."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.noble.xyz/learn/usdn/overview/",
-        "https://docs.noble.xyz/learn/usdn/architecture/",
-        "https://dollar.noble.xyz/",
-        "https://noble.xyz/terms-of-use"
-      ],
-      "rationale": "Exact USDN issuer redemption cost schedule and guaranteed whole-wrapper withdrawal terms are not published. Current claim/transfer/relay/wM conversion steps do not disclose a fixed USDN fee or maximum completion window; generic Noble site terms do not establish them."
-    },
-    {
-      "id": "uw-usdn-noble-1dbea78a422ad5df",
-      "assetId": "usdn-noble",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "withdrawalTerms",
-        "pillar": "backing",
-        "requiredDatum": "withdrawalTerms",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:40Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
-      "sources": [
-        {
-          "url": "https://dollar.noble.xyz/",
-          "observedAt": "2026-10-03T23:09:35Z",
-          "datumAsOf": null,
-          "location": "Issuer public documentation",
-          "excerpt": "Move your USDN to Ethereum as wM.",
-          "assertion": "Discloses a redemption pathway, not fixed fees or end-to-end settlement bounds."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.noble.xyz/learn/usdn/overview/",
-        "https://docs.noble.xyz/learn/usdn/architecture/",
-        "https://dollar.noble.xyz/",
-        "https://noble.xyz/terms-of-use"
-      ],
-      "rationale": "Exact USDN issuer redemption cost schedule and guaranteed whole-wrapper withdrawal terms are not published. Current claim/transfer/relay/wM conversion steps do not disclose a fixed USDN fee or maximum completion window; generic Noble site terms do not establish them."
-    },
-    {
-      "id": "uw-musd-metamask-807a7bda02f166cc",
-      "assetId": "musd-metamask",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:musd-metamask:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:40Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
-      "sources": [
-        {
-          "url": "https://apidocs.bridge.xyz/platform/issuance/faq.md",
-          "observedAt": "2026-10-03T23:09:35Z",
-          "datumAsOf": null,
-          "location": "Issuer public documentation",
-          "excerpt": "USDC/T or USD",
-          "assertion": "Bridge discloses redemption output choices, not a token-specific complete fee or liquidity bound."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://metamask.io/news/introducing-metamask-usd-your-dollar-your-wallet",
-        "https://diligence.security/audits/2025/08/metamask-usd-token/",
-        "https://apidocs.bridge.xyz/platform/issuance/faq.md",
-        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
-        "https://www.bridge.xyz/legal/fee-disclosure-statement/overview"
-      ],
-      "rationale": "No mUSD-specific complete redemption fee schedule, whole-position liquidity horizon, or guaranteed end-to-end wrapper withdrawal bound is published. Bridge terms condition processing on compliance determination; partner charges, gas and conversion charges remain variable. A reversible swap facility alone establishes no realizable whole-allocation time bound."
-    },
-    {
-      "id": "uw-musd-metamask-3bca800702eb2049",
-      "assetId": "musd-metamask",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:cd90caea07dec56c93f5e7e6",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:40Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
-      "sources": [
-        {
-          "url": "https://apidocs.bridge.xyz/platform/issuance/faq.md",
-          "observedAt": "2026-10-03T23:09:35Z",
-          "datumAsOf": null,
-          "location": "Issuer public documentation",
-          "excerpt": "USDC/T or USD",
-          "assertion": "Bridge discloses redemption output choices, not a token-specific complete fee or liquidity bound."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://metamask.io/news/introducing-metamask-usd-your-dollar-your-wallet",
-        "https://diligence.security/audits/2025/08/metamask-usd-token/",
-        "https://apidocs.bridge.xyz/platform/issuance/faq.md",
-        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
-        "https://www.bridge.xyz/legal/fee-disclosure-statement/overview"
-      ],
-      "rationale": "No mUSD-specific complete redemption fee schedule, whole-position liquidity horizon, or guaranteed end-to-end wrapper withdrawal bound is published. Bridge terms condition processing on compliance determination; partner charges, gas and conversion charges remain variable. A reversible swap facility alone establishes no realizable whole-allocation time bound."
-    },
-    {
-      "id": "uw-musd-metamask-5e6536c813fabef7",
-      "assetId": "musd-metamask",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "withdrawalTerms",
-        "pillar": "backing",
-        "requiredDatum": "withdrawalTerms",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:40Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
-      "sources": [
-        {
-          "url": "https://apidocs.bridge.xyz/platform/issuance/faq.md",
-          "observedAt": "2026-10-03T23:09:35Z",
-          "datumAsOf": null,
-          "location": "Issuer public documentation",
-          "excerpt": "USDC/T or USD",
-          "assertion": "Bridge discloses redemption output choices, not a token-specific complete fee or liquidity bound."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://metamask.io/news/introducing-metamask-usd-your-dollar-your-wallet",
-        "https://diligence.security/audits/2025/08/metamask-usd-token/",
-        "https://apidocs.bridge.xyz/platform/issuance/faq.md",
-        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
-        "https://www.bridge.xyz/legal/fee-disclosure-statement/overview"
-      ],
-      "rationale": "No mUSD-specific complete redemption fee schedule, whole-position liquidity horizon, or guaranteed end-to-end wrapper withdrawal bound is published. Bridge terms condition processing on compliance determination; partner charges, gas and conversion charges remain variable. A reversible swap facility alone establishes no realizable whole-allocation time bound."
-    },
-    {
-      "id": "uw-eurs-stasis-ea24f3f8d4acca6b",
-      "assetId": "eurs-stasis",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:2da42fd87a81a8fc6097e261",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:40Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
-      "sources": [
-        {
-          "url": "https://stasis.net/terms",
-          "observedAt": "2026-10-03T23:09:35Z",
-          "datumAsOf": null,
-          "location": "Issuer public documentation",
-          "excerpt": "You may hold EURS and we may hold funds/assets corresponding to your EURS indefinitely.",
-          "assertion": "Terms disclose backing and indefinite holding, not a maximum deposit maturity."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://stasis.net/terms",
-        "https://stasis.net/transparency",
-        "https://stasis.net/faq",
-        "https://stasis.net/eurs-info"
-      ],
-      "rationale": "The exact maximum contractual maturity of the captured EURS bank-deposit reserve slice is not published. Liquid safeguarded accounts, daily statements and a holder right to redeem at par do not specify a per-deposit maximum maturity."
-    },
-    {
       "id": "uw-cumiu-chinaamc-39af867ebcc791b1",
       "assetId": "cumiu-chinaamc",
       "scope": {
@@ -39608,6 +38536,1006 @@
         "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview"
       ],
       "rationale": "No current whole-issued-AID composition is disclosed across product/API/terms, rendered dashboard and recovered September 1 deployment attestation. Cash ratio divides redeemer/minter cash by only circulating AID, excluding staked liabilities; GPU report totals assets without AID-specific attribution. Cannot normalize those scoped quantities to 100% of all issued AID."
+    },
+    {
+      "id": "uw-sdusd-dtrinity-02a8280e0601e237",
+      "assetId": "sdusd-dtrinity",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:4de57642127ec5384ce3e34a",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
+      "sources": [
+        {
+          "url": "https://docs.dtrinity.org/protocol-components/sdusd",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Issuer public documentation",
+          "excerpt": "unstaking capacity is based on unutilized liquidity that\u2019s available for withdrawal from dLEND.",
+          "assertion": "Discloses utilization-dependent withdrawal, not a whole-position time bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.dtrinity.org/protocol-components/sdusd",
+        "https://docs.dtrinity.org/protocol-components/dusd",
+        "https://docs.dtrinity.org/protocol-components/dlend",
+        "https://docs.dtrinity.org/informational/terms-of-use",
+        "https://docs.dtrinity.org/security/addresses",
+        "https://docs.dtrinity.org/security/security-audits",
+        "https://docs.dtrinity.org/key-concepts/stablecoinomics-101"
+      ],
+      "rationale": "Exact sdUSD whole-position liquidity horizon is not published. Permissionless atomic unstaking is contingent on available dLEND liquidity and is not a guaranteed current realization bound."
+    },
+    {
+      "id": "uw-sdusd-dtrinity-b4c8c9c2759ba8f8",
+      "assetId": "sdusd-dtrinity",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
+      "sources": [
+        {
+          "url": "https://docs.dtrinity.org/informational/terms-of-use",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Issuer public documentation",
+          "excerpt": "No fiduciary duties",
+          "assertion": "Nearby legal disclaimer does not establish whole-allocation segregation or remoteness."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.dtrinity.org/protocol-components/sdusd",
+        "https://docs.dtrinity.org/protocol-components/dusd",
+        "https://docs.dtrinity.org/protocol-components/dlend",
+        "https://docs.dtrinity.org/informational/terms-of-use",
+        "https://docs.dtrinity.org/security/addresses",
+        "https://docs.dtrinity.org/security/security-audits",
+        "https://docs.dtrinity.org/key-concepts/stablecoinomics-101"
+      ],
+      "rationale": "Exact whole-sdUSD allocation legal segregation/bankruptcy remoteness, leverage and reuse/correlation bounds are not published. dLEND default collateral rehypothecation settings and loan LTVs are not an exhaustive current sdUSD allocation certificate; technical noncustody is not legal escrow."
+    },
+    {
+      "id": "uw-dusd-dtrinity-b71d41b45aa1c254",
+      "assetId": "dusd-dtrinity",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
+      "sources": [
+        {
+          "url": "https://docs.dtrinity.org/protocol-components/dusd",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Issuer public documentation",
+          "excerpt": "Each network deployment maintains fully isolated reserves.",
+          "assertion": "Discloses reserve isolation but not a dated complete reconciliation or weights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.dtrinity.org/protocol-components/sdusd",
+        "https://docs.dtrinity.org/protocol-components/dusd",
+        "https://docs.dtrinity.org/protocol-components/dlend",
+        "https://docs.dtrinity.org/informational/terms-of-use",
+        "https://docs.dtrinity.org/security/addresses",
+        "https://docs.dtrinity.org/security/security-audits",
+        "https://docs.dtrinity.org/key-concepts/stablecoinomics-101"
+      ],
+      "rationale": "No current complete dUSD reserve weight table or independently verified whole-supply reserve/liability reconciliation is published in the searched issuer disclosures. Asset lists, reserve-ratio formulas, contract addresses and smart-contract audits do not supply complete chain-wide reserve/AMO/LP denominators or a recurring reconciliation cadence."
+    },
+    {
+      "id": "uw-dusd-dtrinity-b948728c69487048",
+      "assetId": "dusd-dtrinity",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
+      "sources": [
+        {
+          "url": "https://docs.dtrinity.org/protocol-components/dusd",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Issuer public documentation",
+          "excerpt": "Each network deployment maintains fully isolated reserves.",
+          "assertion": "Discloses reserve isolation but not a dated complete reconciliation or weights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.dtrinity.org/protocol-components/sdusd",
+        "https://docs.dtrinity.org/protocol-components/dusd",
+        "https://docs.dtrinity.org/protocol-components/dlend",
+        "https://docs.dtrinity.org/informational/terms-of-use",
+        "https://docs.dtrinity.org/security/addresses",
+        "https://docs.dtrinity.org/security/security-audits",
+        "https://docs.dtrinity.org/key-concepts/stablecoinomics-101"
+      ],
+      "rationale": "No current complete dUSD reserve weight table or independently verified whole-supply reserve/liability reconciliation is published in the searched issuer disclosures. Asset lists, reserve-ratio formulas, contract addresses and smart-contract audits do not supply complete chain-wide reserve/AMO/LP denominators or a recurring reconciliation cadence."
+    },
+    {
+      "id": "uw-usdn-noble-ccb8d0cf1f4a5932",
+      "assetId": "usdn-noble",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdn-noble:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
+      "sources": [
+        {
+          "url": "https://dollar.noble.xyz/",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Issuer public documentation",
+          "excerpt": "Move your USDN to Ethereum as wM.",
+          "assertion": "Discloses a redemption pathway, not fixed fees or end-to-end settlement bounds."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.noble.xyz/learn/usdn/overview/",
+        "https://docs.noble.xyz/learn/usdn/architecture/",
+        "https://dollar.noble.xyz/",
+        "https://noble.xyz/terms-of-use"
+      ],
+      "rationale": "Exact USDN issuer redemption cost schedule and guaranteed whole-wrapper withdrawal terms are not published. Current claim/transfer/relay/wM conversion steps do not disclose a fixed USDN fee or maximum completion window; generic Noble site terms do not establish them."
+    },
+    {
+      "id": "uw-usdn-noble-1dbea78a422ad5df",
+      "assetId": "usdn-noble",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "withdrawalTerms",
+        "pillar": "backing",
+        "requiredDatum": "withdrawalTerms",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
+      "sources": [
+        {
+          "url": "https://dollar.noble.xyz/",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Issuer public documentation",
+          "excerpt": "Move your USDN to Ethereum as wM.",
+          "assertion": "Discloses a redemption pathway, not fixed fees or end-to-end settlement bounds."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.noble.xyz/learn/usdn/overview/",
+        "https://docs.noble.xyz/learn/usdn/architecture/",
+        "https://dollar.noble.xyz/",
+        "https://noble.xyz/terms-of-use"
+      ],
+      "rationale": "Exact USDN issuer redemption cost schedule and guaranteed whole-wrapper withdrawal terms are not published. Current claim/transfer/relay/wM conversion steps do not disclose a fixed USDN fee or maximum completion window; generic Noble site terms do not establish them."
+    },
+    {
+      "id": "uw-musd-metamask-807a7bda02f166cc",
+      "assetId": "musd-metamask",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:musd-metamask:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
+      "sources": [
+        {
+          "url": "https://apidocs.bridge.xyz/platform/issuance/faq.md",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Issuer public documentation",
+          "excerpt": "USDC/T or USD",
+          "assertion": "Bridge discloses redemption output choices, not a token-specific complete fee or liquidity bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://metamask.io/news/introducing-metamask-usd-your-dollar-your-wallet",
+        "https://diligence.security/audits/2025/08/metamask-usd-token/",
+        "https://apidocs.bridge.xyz/platform/issuance/faq.md",
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "https://www.bridge.xyz/legal/fee-disclosure-statement/overview"
+      ],
+      "rationale": "No mUSD-specific complete redemption fee schedule, whole-position liquidity horizon, or guaranteed end-to-end wrapper withdrawal bound is published. Bridge terms condition processing on compliance determination; partner charges, gas and conversion charges remain variable. A reversible swap facility alone establishes no realizable whole-allocation time bound."
+    },
+    {
+      "id": "uw-musd-metamask-3bca800702eb2049",
+      "assetId": "musd-metamask",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:cd90caea07dec56c93f5e7e6",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
+      "sources": [
+        {
+          "url": "https://apidocs.bridge.xyz/platform/issuance/faq.md",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Issuer public documentation",
+          "excerpt": "USDC/T or USD",
+          "assertion": "Bridge discloses redemption output choices, not a token-specific complete fee or liquidity bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://metamask.io/news/introducing-metamask-usd-your-dollar-your-wallet",
+        "https://diligence.security/audits/2025/08/metamask-usd-token/",
+        "https://apidocs.bridge.xyz/platform/issuance/faq.md",
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "https://www.bridge.xyz/legal/fee-disclosure-statement/overview"
+      ],
+      "rationale": "No mUSD-specific complete redemption fee schedule, whole-position liquidity horizon, or guaranteed end-to-end wrapper withdrawal bound is published. Bridge terms condition processing on compliance determination; partner charges, gas and conversion charges remain variable. A reversible swap facility alone establishes no realizable whole-allocation time bound."
+    },
+    {
+      "id": "uw-musd-metamask-5e6536c813fabef7",
+      "assetId": "musd-metamask",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "withdrawalTerms",
+        "pillar": "backing",
+        "requiredDatum": "withdrawalTerms",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
+      "sources": [
+        {
+          "url": "https://apidocs.bridge.xyz/platform/issuance/faq.md",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Issuer public documentation",
+          "excerpt": "USDC/T or USD",
+          "assertion": "Bridge discloses redemption output choices, not a token-specific complete fee or liquidity bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://metamask.io/news/introducing-metamask-usd-your-dollar-your-wallet",
+        "https://diligence.security/audits/2025/08/metamask-usd-token/",
+        "https://apidocs.bridge.xyz/platform/issuance/faq.md",
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "https://www.bridge.xyz/legal/fee-disclosure-statement/overview"
+      ],
+      "rationale": "No mUSD-specific complete redemption fee schedule, whole-position liquidity horizon, or guaranteed end-to-end wrapper withdrawal bound is published. Bridge terms condition processing on compliance determination; partner charges, gas and conversion charges remain variable. A reversible swap facility alone establishes no realizable whole-allocation time bound."
+    },
+    {
+      "id": "uw-eurs-stasis-ea24f3f8d4acca6b",
+      "assetId": "eurs-stasis",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2da42fd87a81a8fc6097e261",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
+      "sources": [
+        {
+          "url": "https://stasis.net/terms",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Issuer public documentation",
+          "excerpt": "You may hold EURS and we may hold funds/assets corresponding to your EURS indefinitely.",
+          "assertion": "Terms disclose backing and indefinite holding, not a maximum deposit maturity."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://stasis.net/terms",
+        "https://stasis.net/transparency",
+        "https://stasis.net/faq",
+        "https://stasis.net/eurs-info"
+      ],
+      "rationale": "The exact maximum contractual maturity of the captured EURS bank-deposit reserve slice is not published. Liquid safeguarded accounts, daily statements and a holder right to redeem at par do not specify a per-deposit maximum maturity."
+    },
+    {
+      "id": "uw-zys-zephyr-protocol-f0b4abdcbfadac2e",
+      "assetId": "zys-zephyr-protocol",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:fd346d791b2a1ffe7526dc30",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:20:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R72)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/ZephyrProtocol/zephyr/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h",
+          "observedAt": "2026-10-03T23:20:54Z",
+          "datumAsOf": null,
+          "location": "Native consensus configuration, spendable age and difficulty target",
+          "excerpt": "#define CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE             10",
+          "assertion": "A spendability age in blocks is disclosed, not a guaranteed elapsed-time whole-slice realization horizon."
+        },
+        {
+          "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
+          "observedAt": "2026-10-03T23:20:55Z",
+          "datumAsOf": "2026-10-03",
+          "location": "on_chain reserve snapshot",
+          "excerpt": "\"reserve_height\": 877372",
+          "assertion": "Snapshot discloses balances and reserve ratio, not a whole-position realization SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf",
+        "https://zephyrprotocol.com/documentation",
+        "https://raw.githubusercontent.com/ZephyrProtocol/zephyr/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h",
+        "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
+        "https://zephyrprotocol.com/documentation/scanner-api",
+        "https://zephyrprotocol.com/blog/2024-09-30-Zephyr-Protocol-v2-0-0-ZSD-Yield-Hardfork-Annoucement"
+      ],
+      "rationale": "No hard whole-position liquidity/realization horizon is published for the ZSD yield reserve backing ZYS shares. Native conversion availability and block-based output spendability do not guarantee an elapsed-time full-position realization at a known value; the published reserve snapshot only measures balances. No fixed one-day or immediate bound is inferred from target block time."
+    },
+    {
+      "id": "uw-zsd-zephyr-protocol-6b6e9c91949391e0",
+      "assetId": "zsd-zephyr-protocol",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:269781b362b9fc8899c60d27",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:20:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R72)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/ZephyrProtocol/zephyr/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h",
+          "observedAt": "2026-10-03T23:20:54Z",
+          "datumAsOf": null,
+          "location": "Native consensus configuration, spendable age and difficulty target",
+          "excerpt": "#define CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE             10",
+          "assertion": "A spendability age in blocks is disclosed, not a guaranteed elapsed-time whole-slice realization horizon."
+        },
+        {
+          "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
+          "observedAt": "2026-10-03T23:20:55Z",
+          "datumAsOf": "2026-10-03",
+          "location": "on_chain reserve snapshot",
+          "excerpt": "\"reserve_height\": 877372",
+          "assertion": "Snapshot discloses balances and reserve ratio, not a whole-position realization SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf",
+        "https://zephyrprotocol.com/documentation",
+        "https://raw.githubusercontent.com/ZephyrProtocol/zephyr/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h",
+        "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
+        "https://zephyrprotocol.com/documentation/scanner-api",
+        "https://zephyrprotocol.com/blog/2024-09-30-Zephyr-Protocol-v2-0-0-ZSD-Yield-Hardfork-Annoucement"
+      ],
+      "rationale": "No hard whole-position liquidity/realization horizon is published for the ZEPH protocol reserve. Native conversion availability and block-based output spendability do not guarantee an elapsed-time full-position realization at a known value; the published reserve snapshot only measures balances. No fixed one-day or immediate bound is inferred from target block time."
+    },
+    {
+      "id": "uw-eurw-newrails-1128818c29525c34",
+      "assetId": "eurw-newrails",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:20:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R72)",
+      "sources": [
+        {
+          "url": "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml",
+          "observedAt": "2026-10-03T23:20:55Z",
+          "datumAsOf": "2026-06-25",
+          "location": "D.1 Reserve policy",
+          "excerpt": "A minimum of 30% of client funds will be held in a safeguarding account in cash, in Euros, with a reputable European regulated credit institution.",
+          "assertion": "Policy minimum is not observed portfolio weight or a dated full-denominator reserve schedule."
+        },
+        {
+          "url": "https://www.newrails.xyz/en/platform/eurw",
+          "observedAt": "2026-10-03T23:20:56Z",
+          "datumAsOf": null,
+          "location": "Trust and transparency",
+          "excerpt": "Monthly attestation reports published publicly.",
+          "assertion": "Issuer claims published reports, but linked public download/archive provides whitepaper, audit and policies rather than a dated reserve allocation report."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.newrails.xyz/en/platform/eurw",
+        "https://www.newrails.xyz/en/download-centre",
+        "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml",
+        "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf",
+        "https://www.newrails.xyz/en/hubs/euro-stablecoin",
+        "https://www.lb.lt/en/sfi-financial-market-participants/newrails-uab"
+      ],
+      "rationale": "The exact current EURW reserve composition, measured whole-asset weights and named holding/custodian allocation are not disclosed in the accessed primary public archive. The whitepaper gives a >=30% cash/<=70% permitted-investment policy; the current guide says cash and overnight deposits. Neither supplies a dated observed reserve schedule. Do not convert the policy into fabricated 30/70 weights or admit the undisclosed placeholder as measured composition."
+    },
+    {
+      "id": "uw-nxusd-nereus-2cf669e993693ebe",
+      "assetId": "nxusd-nereus",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R88)",
+      "sources": [
+        {
+          "url": "https://medium.com/nereus-protocol/the-nxusd-genesis-event-41d22f8b2020?source=collection_home---4------0-----------------------",
+          "observedAt": "2026-10-03T23:03:39Z",
+          "datumAsOf": "2022-05-18",
+          "location": "NXUSD Genesis Event",
+          "excerpt": "15 million NXUSDs were minted and collateralized with 4 billion WXTs.",
+          "assertion": "A historical genesis issuance/backing pair is disclosed, not a current recurring whole-supply reconciliation across native deployments."
+        },
+        {
+          "url": "https://resources.cryptocompare.com/asset-management/558/1692883376123.pdf",
+          "observedAt": "2026-10-03T23:09:43Z",
+          "datumAsOf": null,
+          "location": "November 2022 audit, p.1, Introduction",
+          "excerpt": "The scope of the audit is NXUSDV2, ProtocolAddressesProvider, TokenOracle, NXUSDStakingOneTier and NXUSDStakingOneTierCalculation contracts.",
+          "assertion": "The located independent audit is scoped to code, not financial reserve/liability reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.nereus.finance/",
+        "https://docs.nereus.finance/",
+        "https://www.nereus.finance/blog",
+        "https://nxusd.nereus.finance/",
+        "https://nxusd.nereus.finance/js/app.60bde321.js",
+        "https://github.com/nereusfinance/nereus-stablecoin-core",
+        "https://sourcify.dev/server/v2/contract/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387?fields=abi,sources",
+        "https://resources.cryptocompare.com/asset-management/558/1692883376123.pdf"
+      ],
+      "rationale": "No dated whole-supply mint/burn-to-backing reconciliation procedure or cadence covering Avalanche and Polygon native NXUSD and collateral was located. Genesis collateral, owner-only mint throttles, individual Cauldron debt accounting and code assurance do not prove that exact datum. Current issuer/docs redirect and disclaimer, application bundle, repository/deployments and audit disclose operating machinery but no common-clock whole-supply reconciliation. Preserve reconciliation unknown, not none."
+    },
+    {
+      "id": "uw-home-homecoin-62c98762ed768d3a",
+      "assetId": "home-homecoin",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R88)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/homecoin-finance/gitbook/live/getting-started/faq.md",
+          "observedAt": "2026-10-03T23:09:43Z",
+          "datumAsOf": null,
+          "location": "Are there a predetermined amount of HOME tokens?",
+          "excerpt": "HOME is minted when a home owner takes out a loan. There\u2019s not a predetermined number of HOME available.",
+          "assertion": "Mint origination is described; a current recurring whole-supply/backing reconciliation is not."
+        },
+        {
+          "url": "https://social-feed-media.s3.ap-southeast-1.amazonaws.com/pdfs/1674044427141-BACON.pdf",
+          "observedAt": "2026-10-03T23:04:08Z",
+          "datumAsOf": "2022-07-25",
+          "location": "Whitepaper v1.4, Pans, p.6",
+          "excerpt": "The amount of USDC in the Pan plus the amount of outstanding loans is always equal to the amount of outstanding HOME.",
+          "assertion": "Historical design invariant, not a dated procedure/cadence reconciling current lien validity, borrower payment status and all HOME liabilities."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.homecoin.finance/",
+        "https://www.homecoin.finance/home-benefits",
+        "https://github.com/homecoin-finance/gitbook",
+        "https://raw.githubusercontent.com/homecoin-finance/gitbook/live/SUMMARY.md",
+        "https://raw.githubusercontent.com/homecoin-finance/gitbook/live/getting-started/faq.md",
+        "https://social-feed-media.s3.ap-southeast-1.amazonaws.com/pdfs/1674044427141-BACON.pdf",
+        "https://app.homecoin.finance/",
+        "https://etherscan.io/address/0xb8919522331c59f5c16bdfaa6a121a6e03a91f62",
+        "https://raw.githubusercontent.com/homecoin-finance/HomeDAO/e2742bb707aa6d75eb310ed8729c3ca04f91d296/contracts/PoolCore/Pool16.sol",
+        "https://files.baconcoin.com/baconcoin-blocksec-audit.pdf",
+        "https://files.baconcoin.finance/bacon-protocol-full-audit.pdf"
+      ],
+      "rationale": "No dated recurring reconciliation of all HOME liabilities/mint-burn movements against current USDC, outstanding loan balances and enforceable lien backing is disclosed in the issuer website, complete docs index/FAQ, whitepaper or Pool16 accounting source. Public lien descriptors and a historical design equality are not this datum. Linked code-audit hosts fail DNS; those failures are not evidence of financial non-disclosure. Preserve unknown, not none."
+    },
+    {
+      "id": "uw-usdcx-movement-a7f8826d87cfb5ec",
+      "assetId": "usdcx-movement",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:57:30Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R43)",
+      "sources": [
+        {
+          "url": "https://console.circle.com/legal/developer-terms",
+          "observedAt": "2026-10-03T23:54:39Z",
+          "datumAsOf": "2026-09-16",
+          "location": "Schedule Additional Terms, xReserve paragraphs 1-3",
+          "excerpt": "Circle acquires no lien, security interest, or other claim in the USDC deposited into the xReserve smart contract wallet and assumes no fiduciary or trust obligations with respect to it.",
+          "assertion": "Non-Circle ownership and absence of Circle custody are disclosed; no holder-specific reserve segregation, insolvency priority or complete reserve-reuse covenant is supplied."
+        },
+        {
+          "url": "https://www.movementnetwork.xyz/terms-of-service",
+          "observedAt": "2026-10-03T23:54:39Z",
+          "datumAsOf": "2026-04-06",
+          "location": "Section 9.7; full HTML fetched with Accept: text/html",
+          "excerpt": "We do not take custody of, hold for our own account, rehypothecate, lend, or otherwise exercise discretionary control over staked assets.",
+          "assertion": "This prohibition is expressly about staked assets, not xReserve USDC; it cannot establish USDCx reserve non-rehypothecation or holder insolvency protections."
+        },
+        {
+          "url": "https://developers.circle.com/xreserve/concepts/technical-guide",
+          "observedAt": "2026-10-03T23:54:40Z",
+          "datumAsOf": null,
+          "location": "USDC reserve",
+          "excerpt": "xReserve uses Circle Gateway wallets to hold these balances for USDC-backed stablecoins on the remote chain.",
+          "assertion": "Technical reserve custody is described, but not complete USDCx-holder legal segregation, creditor priority or reserve-reuse terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.circle.com/legal",
+        "https://console.circle.com/legal/developer-terms",
+        "https://www.circle.com/xreserve",
+        "https://developers.circle.com/xreserve",
+        "https://developers.circle.com/xreserve/concepts/how-xreserve-works",
+        "https://developers.circle.com/xreserve/concepts/technical-guide",
+        "https://developers.circle.com/xreserve/references/supported-blockchains-and-domains",
+        "https://www.movementnetwork.xyz/terms-of-service",
+        "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin",
+        "https://docs.movementnetwork.xyz/",
+        "https://eth.blockscout.com/address/0x8888888199b2Df864bf678259607d6D5EBb4e3Ce"
+      ],
+      "rationale": "Exact missing data are USDCx-holder reserve segregation/insolvency protection and complete local reserve-reuse terms. Circle's September 16 developer terms newly disclose non-Circle ownership, noncustody and no Circle lien, but disclaim a trust and make the partner token nonredeemable with Circle. Movement's April 6 non-rehypothecation provision is staking-only. Product, technical, deployment and legal surfaces disclose mechanics rather than these complete protections. No prohibition or bankruptcy remoteness is inferred from smart-contract custody."
+    },
+    {
+      "id": "uw-usdcx-movement-5ca290a9c353b3c4",
+      "assetId": "usdcx-movement",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "rehypothecationCorrelation",
+        "pillar": "backing",
+        "requiredDatum": "rehypothecationCorrelation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:57:30Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R43)",
+      "sources": [
+        {
+          "url": "https://console.circle.com/legal/developer-terms",
+          "observedAt": "2026-10-03T23:54:39Z",
+          "datumAsOf": "2026-09-16",
+          "location": "Schedule Additional Terms, xReserve paragraphs 1-3",
+          "excerpt": "Circle acquires no lien, security interest, or other claim in the USDC deposited into the xReserve smart contract wallet and assumes no fiduciary or trust obligations with respect to it.",
+          "assertion": "Non-Circle ownership and absence of Circle custody are disclosed; no holder-specific reserve segregation, insolvency priority or complete reserve-reuse covenant is supplied."
+        },
+        {
+          "url": "https://www.movementnetwork.xyz/terms-of-service",
+          "observedAt": "2026-10-03T23:54:39Z",
+          "datumAsOf": "2026-04-06",
+          "location": "Section 9.7; full HTML fetched with Accept: text/html",
+          "excerpt": "We do not take custody of, hold for our own account, rehypothecate, lend, or otherwise exercise discretionary control over staked assets.",
+          "assertion": "This prohibition is expressly about staked assets, not xReserve USDC; it cannot establish USDCx reserve non-rehypothecation or holder insolvency protections."
+        },
+        {
+          "url": "https://developers.circle.com/xreserve/concepts/technical-guide",
+          "observedAt": "2026-10-03T23:54:40Z",
+          "datumAsOf": null,
+          "location": "USDC reserve",
+          "excerpt": "xReserve uses Circle Gateway wallets to hold these balances for USDC-backed stablecoins on the remote chain.",
+          "assertion": "Technical reserve custody is described, but not complete USDCx-holder legal segregation, creditor priority or reserve-reuse terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.circle.com/legal",
+        "https://console.circle.com/legal/developer-terms",
+        "https://www.circle.com/xreserve",
+        "https://developers.circle.com/xreserve",
+        "https://developers.circle.com/xreserve/concepts/how-xreserve-works",
+        "https://developers.circle.com/xreserve/concepts/technical-guide",
+        "https://developers.circle.com/xreserve/references/supported-blockchains-and-domains",
+        "https://www.movementnetwork.xyz/terms-of-service",
+        "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin",
+        "https://docs.movementnetwork.xyz/",
+        "https://eth.blockscout.com/address/0x8888888199b2Df864bf678259607d6D5EBb4e3Ce"
+      ],
+      "rationale": "Exact missing data are USDCx-holder reserve segregation/insolvency protection and complete local reserve-reuse terms. Circle's September 16 developer terms newly disclose non-Circle ownership, noncustody and no Circle lien, but disclaim a trust and make the partner token nonredeemable with Circle. Movement's April 6 non-rehypothecation provision is staking-only. Product, technical, deployment and legal surfaces disclose mechanics rather than these complete protections. No prohibition or bankruptcy remoteness is inferred from smart-contract custody."
+    },
+    {
+      "id": "uw-senpyusdmwin-sentora-22c3401a575b6341",
+      "assetId": "senpyusdmwin-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senpyusdmwin-sentora:1be9607c721d81c35ac8",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:senpyusdmwin-sentora:1be9607c721d81c35ac8",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T00:02:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T23:59:20Z",
+          "datumAsOf": null,
+          "location": "Definitions, item 3: Vaults",
+          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
+          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
+        },
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "observedAt": "2026-10-04T00:02:38Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Block 26115203; owner Safe getOwners()",
+          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
+          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
+        "https://sentora.com/asset-risk-reviews/huma",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+        "https://ethereum-rpc.publicnode.com"
+      ],
+      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
+    },
+    {
+      "id": "uw-senpyusdmwin-sentora-b4695b740d839ab9",
+      "assetId": "senpyusdmwin-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senpyusdmwin-sentora:f188864829dfe0fe3ccd",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:senpyusdmwin-sentora:f188864829dfe0fe3ccd",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T00:02:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T23:59:20Z",
+          "datumAsOf": null,
+          "location": "Definitions, item 3: Vaults",
+          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
+          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
+        },
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "observedAt": "2026-10-04T00:02:38Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Block 26115203; owner Safe getOwners()",
+          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
+          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
+        "https://sentora.com/asset-risk-reviews/huma",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+        "https://ethereum-rpc.publicnode.com"
+      ],
+      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
+    },
+    {
+      "id": "uw-senpyusdmwin-sentora-9d0c8c104a3d32af",
+      "assetId": "senpyusdmwin-sentora",
+      "scope": {
+        "componentKey": "deployment-controls",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "deployment-controls",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T00:02:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T23:59:20Z",
+          "datumAsOf": null,
+          "location": "Definitions, item 3: Vaults",
+          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
+          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
+        },
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "observedAt": "2026-10-04T00:02:38Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Block 26115203; owner Safe getOwners()",
+          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
+          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
+        "https://sentora.com/asset-risk-reviews/huma",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+        "https://ethereum-rpc.publicnode.com"
+      ],
+      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
+    },
+    {
+      "id": "uw-senpyusdpst-sentora-8d80637939486aaf",
+      "assetId": "senpyusdpst-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senpyusdpst-sentora:b7310f8ffc318dc58be7",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:senpyusdpst-sentora:b7310f8ffc318dc58be7",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T00:02:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T23:59:20Z",
+          "datumAsOf": null,
+          "location": "Definitions, item 3: Vaults",
+          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
+          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
+        },
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "observedAt": "2026-10-04T00:02:38Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Block 26115203; owner Safe getOwners()",
+          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
+          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
+        "https://sentora.com/asset-risk-reviews/huma",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+        "https://ethereum-rpc.publicnode.com"
+      ],
+      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
+    },
+    {
+      "id": "uw-senpyusdpst-sentora-bc2edfa58b4612d7",
+      "assetId": "senpyusdpst-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senpyusdpst-sentora:c2c2e21589eb38c9ac47",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:senpyusdpst-sentora:c2c2e21589eb38c9ac47",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T00:02:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T23:59:20Z",
+          "datumAsOf": null,
+          "location": "Definitions, item 3: Vaults",
+          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
+          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
+        },
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "observedAt": "2026-10-04T00:02:38Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Block 26115203; owner Safe getOwners()",
+          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
+          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
+        "https://sentora.com/asset-risk-reviews/huma",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+        "https://ethereum-rpc.publicnode.com"
+      ],
+      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
+    },
+    {
+      "id": "uw-senpyusdpst-sentora-8336c0da2d7693f2",
+      "assetId": "senpyusdpst-sentora",
+      "scope": {
+        "componentKey": "deployment-controls",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "deployment-controls",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T00:02:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T23:59:20Z",
+          "datumAsOf": null,
+          "location": "Definitions, item 3: Vaults",
+          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
+          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
+        },
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "observedAt": "2026-10-04T00:02:38Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Block 26115203; owner Safe getOwners()",
+          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
+          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
+        "https://sentora.com/asset-risk-reviews/huma",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+        "https://ethereum-rpc.publicnode.com"
+      ],
+      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
+    },
+    {
+      "id": "uw-acrdx-anemoy-apollo-1485ddb454b91b34",
+      "assetId": "acrdx-anemoy-apollo",
+      "scope": {
+        "componentKey": "economic-control:bridge",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "economic-control:bridge",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T00:02:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
+      "sources": [
+        {
+          "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/",
+          "observedAt": "2026-10-04T00:02:38Z",
+          "datumAsOf": null,
+          "location": "Bridging warning",
+          "excerpt": "Share tokens can only be bridged between EVM networks. Solana (`centrifugeId` 7) and Stellar (`centrifugeId` 8) cannot be used as a target network.",
+          "assertion": "Published EVM share-bridge semantics cannot establish the separately catalogued exact Solana liability's transport or conservation model."
+        },
+        {
+          "url": "https://api.mainnet-beta.solana.com",
+          "observedAt": "2026-10-03T23:58:54Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Finalized getMultipleAccounts, slot 453087623",
+          "excerpt": "3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb",
+          "assertion": "Exact mint/freeze/permanent delegate authority is live but System-owned and nonexecutable. A token-specific bridge program or publicly disclosed offchain authorization/conservation procedure is absent."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.anemoy.io/",
+        "https://www.anemoy.io/news/acrdx-launched",
+        "https://docs.centrifuge.io/developer/protocol/deployments/",
+        "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/",
+        "https://docs.centrifuge.io/developer/protocol/features/token-compliance/",
+        "https://docs.centrifuge.io/developer/centrifuge-api/",
+        "https://solscan.io/token/ACDR3LGFrMuDZSDRyJjncFCzo5c8xkQxhWx4im4Vmq8G",
+        "https://api.mainnet-beta.solana.com"
+      ],
+      "rationale": "The complete bridge review lacks publicly disclosed Solana liability transport, cross-chain burn/release conservation and backend authorization/operator semantics. Current exact mint and its live authority were successfully read, and the latter is a System-owned nonprogram account, not an executable bridge address. Issuer announcement names Wormhole generically; official deployments name the Solana mint but bridge/API docs restrict executable share transport to EVM. This is exact missing offchain disclosure, not a failed lookup, zero-supply exemption or permission to delete Solana."
     }
   ]
 }

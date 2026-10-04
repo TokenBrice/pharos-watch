@@ -8,38 +8,6 @@
     "governance": "centralized",
     "rwa": true
   },
-  "variantOf": "frxusd-frax",
-  "variantKind": "pure-wrapper",
-  "pegReferenceId": "frxusd-frax",
-  "dependencyReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W2R46 exact implementation and pinned Sonic accounting review",
-    "confidence": "verified",
-    "sources": [
-      {
-        "label": "Current USSD BrandedCustodian exact implementation",
-        "url": "https://sonicscan.org/address/0xD2478F5db285e7d4f1a260C9f142168124d02370#code"
-      },
-      {
-        "label": "USSD custodian proxy and parent binding",
-        "url": "https://sonicscan.org/address/0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03#code"
-      },
-      {
-        "label": "Pinned Sonic RPC accounting",
-        "url": "https://rpc.soniclabs.com"
-      }
-    ],
-    "rationale": "At Sonic block 80309799, hash 0x53be86651d9f0d31843042db0a455669993a46ee71f34dc609f67fddab283183, the custodian binds USSD to Sonic frxUSD with equal 18-decimal units and pricePerShare 1e18. The current beacon implementation converts assets/shares solely by token decimals, not NAV or an external valuation oracle. Non-isolated backing is active, both fees are zero, and frxUSD balance equals totalAssets and native USSD totalSupply. This establishes fixed-parent accounting, not immutable controls: upgrade, recovery, isolation and remote bridge authorities remain independently assessed.",
-    "relationships": [
-      {
-        "id": "frxusd-frax",
-        "weight": 1,
-        "type": "wrapper",
-        "economicRole": "serial-claim",
-        "reason": "Each native USSD unit is a fixed 1:1 claim through the BrandedCustodian on Sonic frxUSD; upstream reserve risk is inherited rather than held directly."
-      }
-    ]
-  },
   "collateral": "Sonic frxUSD held 1:1 by the USSD BrandedCustodian contract on Sonic. USSD inherits frxUSD's upstream reserve exposure rather than directly holding Frax's tokenized Treasury and approved-stablecoin portfolio.",
   "pegMechanism": "USSD is minted and redeemed 1:1 against Sonic frxUSD through Frax-derived permissionless contracts. Broader approved-asset and tokenized-Treasury routes belong to the upstream frxUSD reserve layer; cross-chain USSD additionally relies on its omnichain infrastructure.",
   "mechanismArchetype": "tbill",

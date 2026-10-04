@@ -11183,7 +11183,7 @@
       "reviewedAt": "2026-10-03T23:06:40Z",
       "expiresAt": "2027-10-03T23:06:40Z",
       "reviewer": "W1R80 primary-source research",
-      "notes": "Dated exact-token live-operation lower bound only. The dTRINITY dates refer to initial Fraxtal operation, not every later chain deployment. No independent assurance, continuous operation guarantee, redemption throughput, stress recovery or incident-free history is asserted.",
+      "notes": "Dated exact-token live-operation lower bound only. No independent assurance, continuous operation guarantee, redemption throughput, stress recovery or incident-free history is asserted.",
       "sources": [
         {
           "sourceId": "exact-token-live-history",
@@ -11216,7 +11216,7 @@
       "reviewedAt": "2026-10-03T23:06:40Z",
       "expiresAt": "2027-10-03T23:06:40Z",
       "reviewer": "W1R80 primary-source research",
-      "notes": "Dated exact-token live-operation lower bound only. The dTRINITY dates refer to initial Fraxtal operation, not every later chain deployment. No independent assurance, continuous operation guarantee, redemption throughput, stress recovery or incident-free history is asserted.",
+      "notes": "Dated exact-token live-operation lower bound only. No independent assurance, continuous operation guarantee, redemption throughput, stress recovery or incident-free history is asserted.",
       "sources": [
         {
           "sourceId": "exact-token-live-history",
@@ -11249,7 +11249,7 @@
       "reviewedAt": "2026-10-03T23:06:40Z",
       "expiresAt": "2027-10-03T23:06:40Z",
       "reviewer": "W1R80 primary-source research",
-      "notes": "Dated exact-token live-operation lower bound only. The dTRINITY dates refer to initial Fraxtal operation, not every later chain deployment. No independent assurance, continuous operation guarantee, redemption throughput, stress recovery or incident-free history is asserted.",
+      "notes": "Dated exact-token live-operation lower bound only. No independent assurance, continuous operation guarantee, redemption throughput, stress recovery or incident-free history is asserted.",
       "sources": [
         {
           "sourceId": "exact-token-live-history",
@@ -11453,7 +11453,7 @@
           "sourceId": "nxusd-genesis",
           "label": "Nereus: The NXUSD Genesis Event",
           "publisher": "Nereus Protocol",
-          "publishedAt": "2022-05-20",
+          "publishedAt": "2022-05-18",
           "url": "https://medium.com/nereus-protocol/the-nxusd-genesis-event-41d22f8b2020?source=collection_home---4------0-----------------------",
           "confidence": "issuer-reported"
         }
@@ -12941,53 +12941,11 @@
           "publishedAt": "2024-10-13",
           "url": "https://explorer.zephyrprotocol.com/tx/7396c098b702fee02ba9632c8cb9b210fd6d0a5e91488de85b2b6b9a5f12d550",
           "confidence": "issuer-reported"
-        },
-        {
-          "sourceId": "yield-activation-announcement",
-          "label": "ZYS activation announced for block 360000",
-          "publisher": "Zephyr Protocol",
-          "publishedAt": "2024-09-30",
-          "url": "https://zephyrprotocol.com/blog/2024-09-30-Zephyr-Protocol-v2-0-0-ZSD-Yield-Hardfork-Annoucement",
-          "confidence": "issuer-reported"
         }
       ],
       "eligibility": {
         "liveHistory": {
           "minimumLiveHistoryMonths": 23,
-          "observedAt": "2026-10-03",
-          "treatment": "eligibility-only",
-          "sourceIds": [
-            "dated-live-operation",
-            "yield-activation-announcement"
-          ]
-        }
-      },
-      "redemptionThroughput": null,
-      "stressEpisodes": [],
-      "reserveReconciliation": null,
-      "incidentReview": {
-        "state": "not-reviewed"
-      }
-    },
-    {
-      "assetId": "zsd-zephyr-protocol",
-      "reviewedAt": "2026-10-03T23:07:53Z",
-      "expiresAt": "2027-10-03T23:07:53Z",
-      "reviewer": "W1R72 primary-source unknown-wave review",
-      "notes": "Exact-asset live operating-history lower bound from a dated primary record, not original inception where only a later operating record is available. No independently verified performance, redemption throughput, reconciliation continuity or incident-free claim is asserted.",
-      "sources": [
-        {
-          "sourceId": "dated-live-operation",
-          "label": "Dated issuer article explicitly describes already minted ZSD",
-          "publisher": "Zephyr Protocol",
-          "publishedAt": "2024-09-30",
-          "url": "https://zephyrprotocol.com/blog/2024-09-30-Zephyr-Protocol-v2-0-0-ZSD-Yield-Hardfork-Annoucement",
-          "confidence": "issuer-reported"
-        }
-      ],
-      "eligibility": {
-        "liveHistory": {
-          "minimumLiveHistoryMonths": 24,
           "observedAt": "2026-10-03",
           "treatment": "eligibility-only",
           "sourceIds": [
