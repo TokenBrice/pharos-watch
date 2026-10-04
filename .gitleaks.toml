@@ -136,6 +136,39 @@ regexTarget = "secret"
 regexes = ['''^(?:3cad87ae-7846-4bfe-ba2e-411fbf166f60|cad709b6-47f1-427d-ad14-443fa5cd76e1|d5a97752-ca3b-46d3-9077-16ac2bc11ee8)$''']
 paths = ['''(?:^|/)shared/lib/redemption-backstop-configs/offchain-issuer/commodity\.ts$''']
 
+# Reviewed 2026-10-04 against exact public issuer-page hrefs:
+# USD.AI: https://docs.usd.ai/usdai/proof-of-loans
+# Cap: https://docs.cap.app/resources/whitepaper
+# Matrixdock: https://matrixdock.gitbook.io/matrixdock-docs/english/legal/token-terms-and-conditions/stbt-terms-and-conditions
+# Gold DAO: https://docs.gold-dao.org/other/audit-reports
+# Only the evidence-gap registry cites these reviewed capabilities. The mTBILL
+# Final Terms UUID is deliberately absent: its issuer-page href remains unverified.
+[[allowlists]]
+description = "Publicly linked USD.AI attestation, Cap whitepaper, Matrixdock STBT terms and Gold DAO vault audit download tokens"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^(?:34ae6ee1-5f94-4ce9-87e8-c98bcec11762|19d915b4-356f-4abd-a4b2-d331515adc22|79d5fd49-deae-41b4-a809-9e1afaa02f32|7a7a500e-1321-4e9d-8046-46ae8199e244)$''']
+paths = ['''(?:^|/)shared/data/safety-score-v9/evidence-gap-classifications-v1\.json$''']
+
+# Gold DAO's GLDT symbol in reviewed wave ids and the issuer's public article slug
+# resembles a GitLab deploy token. Pin only the exact default-rule match spans.
+[[allowlists]]
+description = "Reviewed GLDT evidence-gap wave ids and Gold DAO article slug are not GitLab deploy tokens"
+targetRules = ["gitlab-deploy-token"]
+condition = "AND"
+regexTarget = "match"
+regexes = ['''^(?:gldt\-gold-dao-df16e419ba0|gldt\-gold-dao-8e6db88665b|gldt\-gold-dao-4d85e1c0e1b|gldt\-gold-dao-3892111dfe4|gldt\-launches-as-the-worl)$''']
+paths = ['''(?:^|/)shared/data/safety-score-v9/evidence-gap-classifications-v1\.json$''']
+
+[[allowlists]]
+description = "Reviewed Gold DAO GLDT article slug in operational-resilience evidence is not a GitLab deploy token"
+targetRules = ["gitlab-deploy-token"]
+condition = "AND"
+regexTarget = "match"
+regexes = ['''^gldt\-launches-as-the-worl$''']
+paths = ['''(?:^|/)shared/data/safety-score-v9/operational-resilience-overlays-v1\.json$''']
+
 # The default GitLab deploy-token rule matches only this prefix of the full
 # `gldt-reverse-swap-to-specific-gld-nft` settlement-leg label.
 [[allowlists]]
@@ -212,6 +245,21 @@ regexTarget = "secret"
 regexes = [
   '''^fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae45655534441$''',
   '''^c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df105553444d$''',
+]
+paths = ['''(?:^|/)shared/data/safety-score-v9/transfer-review-overlays-v1\.json$''']
+
+# Reviewed 2026-10-04: Spiko's CHF share-class API publishes its native Starknet
+# and Stellar/Soroban registers; TronScan publishes the KGST TRON proxy identity.
+# Pin values to the transfer review rather than exempting hex/base32/base58 shapes.
+[[allowlists]]
+description = "Reviewed Spiko CHF Starknet and Stellar registers and KGST TRON proxy are public identifiers"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = [
+  '''^0x06723dcb428eddb160c5adfc2d0a5e5adc184bf6a7298780c3cbf3fa764f709b$''',
+  '''^CAJD2IBSP7VO2VYJQUYJSOGPJINTUYV7MQITINXVPTIH3CCLCUENNMW4$''',
+  '''^TN3cfcFhLrdNZhMdHZVZ4z2XFWb7uB9CXg$''',
 ]
 paths = ['''(?:^|/)shared/data/safety-score-v9/transfer-review-overlays-v1\.json$''']
 

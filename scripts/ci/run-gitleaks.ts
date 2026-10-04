@@ -263,6 +263,25 @@ export function runGitleaksConfigSelfTest(
       ["d5a97752-ca3b-46d3", "-9077-16ac2bc11ee8"].join(""),
     ];
     const gldtLeg = ["gldt-reverse", "swap-to-specific-gld-nft"].join("-");
+    const evidenceGapPath = "shared/data/safety-score-v9/evidence-gap-classifications-v1.json";
+    const researchUuids = [
+      ["34ae6ee1-5f94-4ce9", "-87e8-c98bcec11762"].join(""),
+      ["19d915b4-356f-4abd", "-a4b2-d331515adc22"].join(""),
+      ["79d5fd49-deae-41b4", "-a809-9e1afaa02f32"].join(""),
+      ["7a7a500e-1321-4e9d", "-8046-46ae8199e244"].join(""),
+    ];
+    const researchGldtMatches = [
+      ["gldt-gold-dao", "df16e419ba0"].join("-"),
+      ["gldt-gold-dao", "8e6db88665b"].join("-"),
+      ["gldt-gold-dao", "4d85e1c0e1b"].join("-"),
+      ["gldt-gold-dao", "3892111dfe4"].join("-"),
+      ["gldt-launches", "as-the-worl"].join("-"),
+    ];
+    const transferIdentifiers = [
+      ["0x06723dcb428eddb160c5adfc2d0a5e5", "adc184bf6a7298780c3cbf3fa764f709b"].join(""),
+      ["CAJD2IBSP7VO2VYJQUYJSOGP", "JINTUYV7MQITINXVPTIH3CCLCUENNMW4"].join(""),
+      ["TN3cfcFhLrdNZhMdHZ", "VZ4z2XFWb7uB9CXg"].join(""),
+    ];
     const uniXautPair = [
       "UNI0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
       "XAUT0x68749665ff8d2d112fa859aa293f07a622782f38",
@@ -317,6 +336,22 @@ export function runGitleaksConfigSelfTest(
         path: ".github/workflows/artifacts/safety-score-missing-data-reviewed-ledger.json",
         value: { evidence: `token0/token1 -> ${uniXautPair}; getReserves0x0902f1ac` },
       },
+      ...researchUuids.map((uuid) => ({
+        path: evidenceGapPath,
+        value: { url: `https://files.gitbook.com/a.pdf?alt=media&token=${uuid}` },
+      })),
+      ...researchGldtMatches.map((match) => ({
+        path: evidenceGapPath,
+        value: { id: `uw-${match}` },
+      })),
+      {
+        path: "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
+        value: { url: `https://medium.com/@GoldDAO/${researchGldtMatches[4]}` },
+      },
+      ...transferIdentifiers.map((identifier) => ({
+        path: "shared/data/safety-score-v9/transfer-review-overlays-v1.json",
+        value: { contractOrTokenId: identifier },
+      })),
     ];
     const awsKey = ["AKIA", "Q7M2V3N4P6R2S3T5"].join("");
     for (const control of publicControls) {

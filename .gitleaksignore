@@ -318,3 +318,28 @@ eab0b07185baca9abf44adfa20cd913386371d3e:shared/data/stablecoins/domains/mint-au
 eab0b07185baca9abf44adfa20cd913386371d3e:shared/data/stablecoins/domains/mint-authority/susdat-saturn.json:generic-api-key:235
 eab0b07185baca9abf44adfa20cd913386371d3e:shared/data/stablecoins/domains/mint-authority/susdat-saturn.json:generic-api-key:239
 eab0b07185baca9abf44adfa20cd913386371d3e:worker/src/cron/reserve-adapters/frnt-ledgerlens.ts:generic-api-key:17
+# Reviewed 2026-10-04: anonymously readable mTBILL July 2026 Final Terms;
+# exact issuer-page capability href remains Cloudflare-blocked. HEAD now cites
+# the byte-identical tokenless PDF. Historical findings only; no UUID allowlist.
+14ab0bfbc1f74451190491c5d8f37917c20a9d1f:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:generic-api-key:5781
+bd578551afcbda06525465c453c0f1181e9cf337:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:generic-api-key:14395
+7ebde173e9384a11282c065e8372766311c325e2:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:generic-api-key:14810
+018a1a728fbd3cd865fdbff661ed5e175a934ec7:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:generic-api-key:16026
+0ea775b8a3fb404009ad17292502f010326e4718:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:generic-api-key:17062
+7cd9b195ffb9970d8671c70a0a4464d82d1ce6d4:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:generic-api-key:29863
+8870608c3b210da77d7bd7282daa080d42cc107e:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:generic-api-key:13308
+7383f2e024a925fca5a50f53090f78870e393218:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:generic-api-key:10278
+1bd093a6748b21fabf06ff671adf78594aed3f93:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:generic-api-key:12344
+37aefe7a4c3bfe3abb01d8f69dcf1a3ea3e916b1:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:generic-api-key:8452
+9fa6a88feb9b79c2c13aab9233bcc39d6cc11c3a:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:generic-api-key:28973
+1a1b56127ab9a73a2f0c80d9db185afc21614712:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:generic-api-key:12786
+9037ff598dc5f70a60b09858df146fab193599b4:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:generic-api-key:9108
+8d3623326616525cea393f6a94c3101b42ad1208:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:generic-api-key:20719
+942b957932717a10ffd69454822095c5e5bde35e:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:generic-api-key:19685
+ee4ae70025e31f5bb7dd41f6b3c5a92df4ae98e9:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:generic-api-key:24999
+9ffcf8f5936788dd2be06ea529abed33656f8f87:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:generic-api-key:10879
+c9cdec1a6e88bece953a53bfdc16e0241ce6620e:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:generic-api-key:33686
+8bc0ec8b3a2faa5fea4ad295f0b0174837d98933:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:generic-api-key:30921
+a9e221850546690c59755a13d75de4a09925f218:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:generic-api-key:25749
+24eea1cd43705156f0eb9111e98156adad53534c:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:generic-api-key:27226
+2f51c0becd65f3c261aa9c441a2676655c66c945:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:generic-api-key:32339
