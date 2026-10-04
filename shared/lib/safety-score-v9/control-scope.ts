@@ -197,7 +197,7 @@ export function v1005ProofIsClosed(certificates: V1005ExecutionCertificates | un
         evidence.pin.position === pin.position && evidence.pin.hash === pin.hash);
     });
 }
-export function v1005RuntimeIsMatched(runtime: V1005ExecutionMember["runtime"], certificates: V1005ExecutionCertificates, pin: V1005AuthorityGraph["review"]["pin"]): boolean {
+function v1005RuntimeIsMatched(runtime: V1005ExecutionMember["runtime"], certificates: V1005ExecutionCertificates, pin: V1005AuthorityGraph["review"]["pin"]): boolean {
   if (runtime.runtimeHash === null || !["exact", "metadata-normalized", "immutable-normalized"].includes(runtime.sourceRuntimeMatch) ||
       !v1005ProofIsClosed(certificates, runtime.matchProofRef, pin) || runtime.proxyKind === "unknown") return false;
   const matchProof = certificates.proofs.find((proof) => proof.id === runtime.matchProofRef);

@@ -56,7 +56,7 @@ export const V9WeightedQuorumSchema = z.object({
 }).transform((row) => ({ ...row, signers: row.signers.map((signer) => ({ ...signer, account: row.scheme === "contract" ? signer.account.toLowerCase() : signer.account })).sort((a, b) => a.account.localeCompare(b.account)), totalWeight: row.signers.reduce((sum, signer) => sum + signer.weight, 0) }));
 export type V9WeightedQuorum = z.output<typeof V9WeightedQuorumSchema>;
 
-export const V9ControlExecutionPathSchema = z.object({
+const V9ControlExecutionPathSchema = z.object({
   id: Text, targetDeployment: Deployment,
   entrypointKind: V9ExactControlPolicySchema.shape.entrypointKinds.element,
   entrypoints: z.array(Text).min(1), callMode: V9ExactControlPolicySchema.shape.callModes.element,
@@ -141,10 +141,10 @@ export const V9InProcessControlExecutionScopeSchema = z.union([
 ]);
 export type V9ModuleImpact = z.output<typeof V9ExactControlPolicySchema>["moduleImpactStates"][number];
 
-export const V1005PinSchema = z.object({
+const V1005PinSchema = z.object({
   chain: Text, position: Uint, hash: Hash, timestamp: z.string().datetime({ offset: true }),
 }).strict();
-export const V1005ReviewSchema = z.object({
+const V1005ReviewSchema = z.object({
   observedAt: z.string().date(), reviewedAt: z.string().date(), expiresAt: z.string().date(),
   reviewer: Text, pin: V1005PinSchema,
 }).strict().superRefine((row, ctx) => {
@@ -155,7 +155,7 @@ function isHexBytes(value: string, minBytes: number): boolean {
   return value.length >= 2 + minBytes * 2 && value.length % 2 === 0 && /^0x[0-9a-fA-F]*$/.test(value);
 }
 
-export const V1005EvidenceSchema = z.object({
+const V1005EvidenceSchema = z.object({
   id: Text, pin: V1005PinSchema, deployment: Deployment,
   kind: z.enum(["onchain-read", "verified-source", "controller-attribution"]),
   readType: z.enum(["evm-call", "storage", "code", "event-history", "read-bundle"]).nullable(),
@@ -193,11 +193,11 @@ export const V1005EvidenceSchema = z.object({
     if (row.readType === "event-history" && (row.rawResult !== null || row.fromBlock == null || row.toBlock == null || row.topics == null || row.logCount == null || row.logsHash == null)) issue("logsHash", "Event history requires compact pinned bounds and digest");
   }
 });
-export const V1005ProofSchema = z.object({
+const V1005ProofSchema = z.object({
   id: Text, conclusion: z.enum(["closed", "open", "unknown"]),
   statement: z.string().trim().min(40), evidenceRefIds: Refs,
 }).strict();
-export const V1005RuntimeSchema = z.object({
+const V1005RuntimeSchema = z.object({
   deployment: Deployment, runtimeHash: Hash.nullable(), normalizedRuntimeHash: Hash.nullable(),
   proxyKind: z.enum(["none", "eip1967", "uups", "custom", "unknown"]),
   implementation: Deployment.nullable(), implementationRuntimeHash: Hash.nullable(),
@@ -209,12 +209,12 @@ export const V1005RuntimeSchema = z.object({
   }).strict()),
   matchProofRef: Text, evidenceRefIds: Refs,
 }).strict();
-export const V1005RuntimeIdentitySchema = V1005RuntimeSchema.omit({
+const V1005RuntimeIdentitySchema = V1005RuntimeSchema.omit({
   deployment: true, matchProofRef: true, evidenceRefIds: true, normalization: true,
 }).extend({
   normalization: z.array(V1005RuntimeSchema.shape.normalization.element.omit({ evidenceRefIds: true })),
 }).strict();
-export const V1005PathRefSchema = z.object({ controlRef: Deployment, pathId: Text }).strict();
+const V1005PathRefSchema = z.object({ controlRef: Deployment, pathId: Text }).strict();
 const ConditionSchema = z.object({
   id: Text, kind: z.enum(["immutable", "storage", "authorization", "target", "selector", "accounting"]), description: Text,
   field: Text.optional(),
@@ -299,7 +299,7 @@ export const V1005ExecutionCertificatesSchema = z.object({
   if (row.sharedBookRef && row.sharedBookRef.liabilityBookId !== row.liabilityBookId) ctx.addIssue({ code: "custom", path: ["sharedBookRef", "liabilityBookId"], message: "Shared and local liability book ids must match" });
 });
 export const V1005ExecutionClassRefSchema = z.object({ classId: Text, memberRef: Deployment }).strict();
-export const V1005GraphEdgeKindSchema = z.enum([
+const V1005GraphEdgeKindSchema = z.enum([
   "owner", "ward", "role", "admin", "upgrade", "delegatecall", "execution-hop", "vote-origin",
   "reactivation", "permission-change", "envelope-raise", "credit-origin", "recipient-hop",
   "claim-transfer", "liability-conversion", "delegate", "operator", "vote-cast", "vote-replacement",
@@ -437,5 +437,4 @@ export const V1005OperationalIssuanceSchema = z.object({
 export type V1005ExecutionCertificates = z.output<typeof V1005ExecutionCertificatesSchema>;
 export type V1005ExecutionMember = z.output<typeof V1005ExecutionMemberSchema>;
 export type V1005AuthorityGraph = z.output<typeof V1005AuthorityGraphSchema>;
-export type V1005VotingControl = z.output<typeof V1005VotingControlSchema>;
 export type V1005OperationalIssuance = z.output<typeof V1005OperationalIssuanceSchema>;

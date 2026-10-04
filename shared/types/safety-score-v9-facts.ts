@@ -769,7 +769,7 @@ const V9ModulesOrGuardsSchema = z.enum(["present", "none-detected", "not-applica
 
 const V9IncidentStateSchema = z.enum(["none", "active", "resolved", "unknown"]);
 
-export const V1005ProcessReasonSchema = z.enum([
+const V1005ProcessReasonSchema = z.enum([
   "process-certificate-unavailable", "authority-census-incomplete", "execution-scope-unreviewed",
   "runtime-unmatched", "implementation-unmatched", "instance-state-unmatched", "authority-state-changed", "authority-state-mismatch",
   "execution-class-unmatched", "economic-reach-unclosed", "graph-reference-unresolved", "graph-cycle-unclosed",
@@ -796,7 +796,7 @@ export const V1005ProcessDiagnosticObjectSchema = z.object({
   /** Evaluator diagnostics reference the asset process's complete evidence table instead of copying it. */
   issuanceFactsRef: CanonicalTextSchema.optional(),
 }).strict();
-export const V1005ProcessDiagnosticSchema = V1005ProcessDiagnosticObjectSchema.superRefine((row, ctx) => {
+const V1005ProcessDiagnosticSchema = V1005ProcessDiagnosticObjectSchema.superRefine((row, ctx) => {
   if (row.issuanceFactsRef !== undefined && row.evidenceRefIds.length !== 0) {
     ctx.addIssue({ code: "custom", path: ["evidenceRefIds"], message: "Referenced process diagnostics cannot duplicate inline evidence" });
   }
@@ -909,7 +909,7 @@ export const V9IssuanceGovernanceObjectSchema = z
     diagnostics: z.array(V1005ProcessDiagnosticSchema),
   })
   .strict();
-export const V9IssuanceGovernanceSchema = V9IssuanceGovernanceObjectSchema.superRefine((governance, ctx) => {
+const V9IssuanceGovernanceSchema = V9IssuanceGovernanceObjectSchema.superRefine((governance, ctx) => {
     for (const field of ["vetoQuorumBps", "vetoOverride"] as const) {
       if ((governance.decisionRule === "affirmative-vote") !== (governance[field] === null)) {
         ctx.addIssue({
@@ -927,7 +927,6 @@ export const V9IssuanceGovernanceSchema = V9IssuanceGovernanceObjectSchema.super
       });
     }
   });
-export type V9IssuanceGovernance = z.output<typeof V9IssuanceGovernanceSchema>;
 
 /** Asset-wide proof data is serialized once; native control rows bind its exact identity. */
 export const V1005AssetIssuanceFactsSchema = z.object({
