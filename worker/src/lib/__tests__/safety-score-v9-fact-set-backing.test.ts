@@ -18,6 +18,7 @@ import { normalizeFixedInput } from "../report-cards-fixed-input";
 import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 
 import type { ReserveSlice } from "@shared/types/reserves";
+import { ReserveBoundedFactSchema, type ReserveBoundedFact } from "@shared/types/reserve-bounded-facts";
 import { evaluateV9ReserveExposures } from "@shared/lib/safety-score-v9/backing";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { V9AssetFactsV3Schema } from "@shared/types/safety-score-v9-facts";
@@ -262,6 +263,60 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
     const exposure = asset.reserveExposures[0]!;
     expect(exposure.assetClass).toBe(assetClass ?? null);
     const status = exposure.factorStatuses!.maturity!;
+    expect(status.applicability.state).toBe("required");
+    const gap = asset.gaps.find((row) => row.gapId === status.gapIds[0])!;
+    expect(gap.causeProof.cause).toBe("U");
+    expect(gap.causeScope).toMatchObject({ factorKey: "maturity", requiredDatum: "maturityDaysMax" });
+  });
+
+  function maturityApplicability(overrides: Record<string, unknown> = {}): ReserveBoundedFact {
+    return ReserveBoundedFactSchema.parse({
+      factKey: "fixture:maturity-applicability", kind: "maturity-applicability",
+      scope: { kind: "exposure", exposureKey: "fixture:holding" }, asOfSec: NO_HISTORY_CLOCK_SEC - 2 * 86_400,
+      publisher: "issuer", sourceUrls: ["https://example.com/prospectus"], assertion: "Open-ended shares have no maturity date",
+      contentDigest: "a".repeat(64), provenance: { kind: "reviewed-research", reviewer: "fixture", reviewedAt: "2026-07-30", confidence: "high" },
+      claimId: "fund-share", conclusion: "not-applicable", governingInstrument: "Fund prospectus", allInScope: true, ...overrides,
+    });
+  }
+  function compileWithMaturityBound(fact: ReserveBoundedFact) {
+    const fixed = makeV9FixedInput({ clockSec: NO_HISTORY_CLOCK_SEC, reserves: [{
+      sourceKey: "fixture:holding", name: "Holding", pct: 100, risk: "low", issuerOrObligor: "fund:alpha",
+      assetClass: "fund-share", liquidityHorizon: "immediate",
+    }] });
+    const extension = makeV9Extension({ clockSec: NO_HISTORY_CLOCK_SEC, registryFingerprint: fixed.registryFingerprint });
+    extension.assets[0]!.reserveBoundFacts = [fact];
+    return compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+  }
+
+  it("publishes maturity as not-applicable when an admitted whole-exposure bound fact concludes so", () => {
+    const asset = compileWithMaturityBound(maturityApplicability());
+    const exposure = asset.reserveExposures[0]!;
+    expect(asset.reserveBoundFacts![0]!.rejectionReason).toBeNull();
+    expect(exposure.factorStatuses!.maturity).toMatchObject({
+      observationState: "known", gapIds: [], applicability: { state: "not-applicable" },
+    });
+    expect(exposure.factorStatuses!.maturity!.evidenceRefIds).toContain("alpha:reserve-bound:fixture:maturity-applicability");
+    expect(asset.gaps.filter((gap) => gap.causeScope?.requiredDatum === "maturityDaysMax")).toEqual([]);
+    expect(V9AssetFactsV3Schema.safeParse(asset).success).toBe(true);
+    // The evaluator still covers the whole factor with the admitted bound at 100.
+    const backing = evaluateV9ReserveExposures({ ...asset, resolvedUpstreamExposures: [], asOfSec: NO_HISTORY_CLOCK_SEC }, V9_CANDIDATE_POLICY_V1);
+    const factors = backing.contributions.find(entry => entry.componentKey === `reserve:${exposure.exposureKey}`)!.factors!
+      .filter(entry => entry.componentKey.startsWith(`reserve:${exposure.exposureKey}:maturity`));
+    expect(factors).toEqual([expect.objectContaining({
+      componentKey: `reserve:${exposure.exposureKey}:maturity:covered`, score: 100, cause: null, scoringDisposition: "included",
+    })]);
+  });
+
+  it.each([
+    { label: "an unelapsed review day", fact: () => maturityApplicability({ provenance: { kind: "reviewed-research", reviewer: "fixture", reviewedAt: "2026-08-01", confidence: "high" } }) },
+    { label: "an expired snapshot", fact: () => maturityApplicability({ asOfSec: NO_HISTORY_CLOCK_SEC - 400 * 86_400 }) },
+    { label: "a partial-scope conclusion", fact: () => maturityApplicability({ allInScope: false }) },
+    { label: "a sub-instrument scope", fact: () => maturityApplicability({ scope: { kind: "sub-instrument", exposureKey: "fixture:holding",
+      instrumentId: "class-a", coveredShare: 0.5, coverageAsOfSec: NO_HISTORY_CLOCK_SEC - 2 * 86_400 } }) },
+    { label: "a non-matching exposure key", fact: () => maturityApplicability({ scope: { kind: "exposure", exposureKey: "fixture:other" } }) },
+  ])("keeps the unknown maturity gap for $label", ({ fact }) => {
+    const asset = compileWithMaturityBound(fact());
+    const status = asset.reserveExposures[0]!.factorStatuses!.maturity!;
     expect(status.applicability.state).toBe("required");
     const gap = asset.gaps.find((row) => row.gapId === status.gapIds[0])!;
     expect(gap.causeProof.cause).toBe("U");

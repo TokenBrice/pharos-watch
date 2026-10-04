@@ -43,6 +43,18 @@ function coherentFacts(rows: readonly V9ReserveBoundedFact[], clockSec: number):
     return payloads.size === 1 ? [current[0]!] : [];
   });
 }
+/**
+ * The admitted, current (same gates as factor bounds), exposure-scoped,
+ * all-in-scope maturity not-applicable conclusion for exactly this exposure.
+ * Sub-instrument and partial-scope conclusions cover only part of the factor.
+ */
+export function v9MaturityNotApplicableBoundFact(
+  exposureKey: string, rows: readonly V9ReserveBoundedFact[], clockSec: number,
+): V9ReserveBoundedFact | undefined {
+  return coherentFacts(rows, clockSec).find((row) => row.fact.kind === "maturity-applicability" &&
+    row.fact.conclusion === "not-applicable" && row.fact.allInScope &&
+    row.fact.scope.kind === "exposure" && row.fact.scope.exposureKey === exposureKey);
+}
 function coverage(fact: ReserveBoundedFact): number {
   const scopeShare = fact.scope.kind === "sub-instrument" ? fact.scope.coveredShare ?? 0 : 1;
   if (fact.kind === "observed-portfolio-maturity" || fact.kind === "stressed-realization-bound") {
