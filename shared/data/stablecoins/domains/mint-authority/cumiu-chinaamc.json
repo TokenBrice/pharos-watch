@@ -2,7 +2,7 @@
   "id": "cumiu-chinaamc",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "CUMIU has two default-admin EOAs with immediate mint and UUPS replacement authority, plus two separately granted minter EOAs; organizational key custody remains undisclosed.",
     "controls": [
@@ -103,11 +103,11 @@
       ]
     },
     "economicCapSemantics": "unbounded",
-    "reconciliation": "internal-ledger",
-    "supervision": "attestation-only",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Refine04 pinned role-event census; W2R14 financial-oversight review",
+      "reviewedAt": "2026-10-04",
+      "reviewer": "Sol v10.06 availability-invariant campaign (BEvidence)",
       "disposition": "scoreable",
       "sources": [
         {
@@ -121,9 +121,21 @@
         {
           "label": "KPMG independent financial audit, December 31, 2025 period, signed April 29, 2026",
           "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-25AFS_DigitalOFC_Cover.pdf"
+        },
+        {
+          "label": "ChinaAMC all-class June 30, 2026 interim financial report, dated August 28, 2026",
+          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/ChinaAMCDigitalOFC-InterimReport20260630Final(Clean)_cover_1787921459710.pdf"
+        },
+        {
+          "label": "SFC registered OFC product list: ChinaAMC Digital OFC BVQ025 and USD sub-fund BWG918",
+          "url": "https://apps.sfc.hk/productlistWeb/searchProduct/OFCL.do?isUnlist=N&lang=EN"
+        },
+        {
+          "label": "SFC tokenised investment product circular 26EC22, April 20, 2026",
+          "url": "https://apps.sfc.hk/edistributionWeb/api/circular/list-content/circular/doc?lang=EN&refNo=26EC22"
         }
       ],
-      "evidence": "At block 26110197, exhaustive native role-event replay and hasRole checks establish two default-admin EOAs (0x407374be435ed278fca44be695d32f0230fe46e3, 0x5c943b2b881af70af571098a228d92cbcc2b5ba2) and two delegated MINTER_ROLE EOAs (0x7ba63cdc16abfbe4838eee04aff4150749a21bd8, 0xb99123ccab3e0110742cede9271953c6803947d4). No other explicit role grants occur; default administrators inherit all roles. Verified source establishes immediate UUPS upgrades and unbounded native minting. Legal shareholder registration supports internal-ledger reconciliation only. The on-chain census is closed; organizational identity, human independence and key-custody policies are not publicly attested. Organizational ownership, independence and MPC/HSM/signing policies of the four identified EOA controllers are not publicly attested. The September 14, 2026 prospectus tokenization section specifically discloses Administrator reconciliation of book-entry and blockchain transactions on at least a daily basis, triggered by a transaction, matching tokenized-share counts/ownership in the official register to Tokens on the Digital Platform. This supports internal-ledger only: it is token-to-share-register reconciliation, not a disclosed continuous or periodic supply-to-reserve financial reconciliation or independent financial assurance. W2R14 re-read the KPMG independent auditor report signed April 29, 2026: it expressly audits the USD sub-fund's statement of assets and liabilities and financial statements for July 17 through December 31, 2025 under Hong Kong Standards on Auditing. This establishes attestation-only independent financial oversight, not prudential supervision of minting or current whole-token supply-to-reserve reconciliation. SFC fund authorization is not used as prudential mint supervision.",
+      "evidence": "At block 26110197, exhaustive native role-event replay and hasRole checks establish two default-admin EOAs (0x407374be435ed278fca44be695d32f0230fe46e3, 0x5c943b2b881af70af571098a228d92cbcc2b5ba2) and two delegated MINTER_ROLE EOAs (0x7ba63cdc16abfbe4838eee04aff4150749a21bd8, 0xb99123ccab3e0110742cede9271953c6803947d4). No other explicit role grants occur; default administrators inherit all roles. Verified source establishes immediate UUPS upgrades and unbounded native minting. The on-chain census is closed; organizational identity, human independence and key-custody policies are not publicly attested. Organizational ownership, independence and MPC/HSM/signing policies of the four identified EOA controllers are not publicly attested. Primary documents independently verified on 2026-10-04 establish a two-leg whole-fund reconciliation: the 14 September 2026 prospectus, Schedule 6 printed pages 131-132, requires the Administrator to match the complete official book-entry tokenized-share register and ownership to blockchain Tokens on the Ethereum-based Digital Platform at least daily when triggered by a transaction, with independent Manager verification using per-custody-account token reports; its Financial Reports section requires annual audited reports within four months of 31 December and semi-annual reports within two months of 30 June. The KPMG report signed 29 April 2026 audits the USD sub-fund's all-class assets and liabilities for the period ending 31 December 2025. The 30 June 2026 interim report dated 28 August 2026 enumerates all USD share classes A/B/F/I and Listed Class, including CUMIU Class I USD, and states USD603,917,339 assets = USD552,517 nonshare liabilities + USD603,364,822 net assets attributable to shareholders. Daily full token-to-register matching joined to recurring same-fund all-class asset/liability reports supports periodic reconciliation, not continuous live chain assurance. The interim report is unaudited; KPMG assurance covers 2025 year-end, not current token RPCs, and rounded displayed share counts times NAVs are not an exact supply-proof balance. Nominee end-client allocations are not visible to the fund, although distributor-level legal shares are counted; no separately issued bridge/wrapper population is established or covered. The SFC's registered OFC product list, independently queried on 2026-10-04, identifies ChinaAMC Digital OFC BVQ025, ChinaAMC USD Digital Money Market Fund BWG918 and manager China Asset Management (Hong Kong) Limited, with USD sub-fund authorisation dated 2 July 2025. SFO section 104 authorisation and SFC circular 26EC22 of 20 April 2026 impose ongoing investment, operational and ownership-record obligations on this exact issuing fund and product provider, including SFC-requested third-party tokenisation/smart-contract verification, supporting prudential supervision. This does not rely on HKMA custodian supervision or imply SFC endorsement, guaranteed backing or on-chain mint restrictions.",
       "unresolvedQuestions": [],
       "scopedQuestions": [
         {
