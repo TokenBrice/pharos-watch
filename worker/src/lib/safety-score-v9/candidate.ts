@@ -730,11 +730,24 @@ function buildSafetyScoreV9CandidatePipeline(
   const retained = retainIntermediates ? { extension: extension!, compiledFacts: compiledFacts!, evaluatedSet } : null;
   extension = null;
   compiledFacts = null;
+  // Read the evaluated set only inside closures: a property read in this frame
+  // parks the graph in an interpreter register that outlives `evaluatedSet = null`.
+  const evaluated = (() => {
+    const set = evaluatedSet!;
+    return {
+      evaluationBuildDigest: set.evaluationBuildDigest,
+      baseInputGenerationId: set.baseInputGenerationId,
+      factSetDigest: set.factSetDigest,
+      evaluatedSetDigest: set.evaluatedSetDigest,
+      scoreResultDigest: set.scoreResultDigest,
+      commonModeGroups: set.dependencyPlan.commonModeGroups,
+    };
+  })();
   const candidateIdentity = SafetyScoreV9CandidateIdentityV1Schema.parse({
     schemaVersion: 1,
     policyId: policy.policy.policyId,
     policyDigest: policy.semanticDigest,
-    evaluationBuildDigest: evaluatedSet.evaluationBuildDigest,
+    evaluationBuildDigest: evaluated.evaluationBuildDigest,
     compilerFactSchemaDigest,
     producerCapabilityDigest,
   });
@@ -744,10 +757,10 @@ function buildSafetyScoreV9CandidatePipeline(
       : ReleaseCandidateIdSchema.parse(input.releaseCandidateId);
   const publicationGenerationId = `report-cards:v9:v1:${domainDigest("safety-score-v9.publication.v1", {
     candidateId,
-    baseInputGenerationId: evaluatedSet.baseInputGenerationId,
-    factSetDigest: evaluatedSet.factSetDigest,
-    evaluatedSetDigest: evaluatedSet.evaluatedSetDigest,
-    resultDigest: evaluatedSet.scoreResultDigest,
+    baseInputGenerationId: evaluated.baseInputGenerationId,
+    factSetDigest: evaluated.factSetDigest,
+    evaluatedSetDigest: evaluated.evaluatedSetDigest,
+    resultDigest: evaluated.scoreResultDigest,
     publishedAtSec: input.publishedAtSec,
   })}`;
   const takePublicResults = () => {
@@ -776,8 +789,8 @@ function buildSafetyScoreV9CandidatePipeline(
     policyVersion,
     publicationGenerationId,
     publishedAtSec: input.publishedAtSec,
-    commonModeGroups: evaluatedSet.dependencyPlan.commonModeGroups,
-    results: takePublicResults(),
+    commonModeGroups: evaluated.commonModeGroups,
+    results: takePublicResults,
   });
 
   if (retained === null) {
