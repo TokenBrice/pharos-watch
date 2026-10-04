@@ -2733,402 +2733,6 @@
       "rationale": "Current EURI-specific reserve holdings/weights and as-of denominator are not published on the issuer transparency/audit index, whitepaper or bank annual-accounts surfaces. Legal cash/cash-equivalent eligibility and 1:1 EY-attestation claims do not supply a current measured mix; the linked smart-contract audit and consolidated bank balance sheet are not EURI reserve attestations. The old static 100% mixed class is not date-bumped."
     },
     {
-      "id": "uw-senrlusdv2-sentora-2d4d1e5e596b7680",
-      "assetId": "senrlusdv2-sentora",
-      "scope": {
-        "componentKey": "control:mint-meta:senrlusdv2-sentora:703345b7103b2cf26915",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:senrlusdv2-sentora:703345b7103b2cf26915",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R24)",
-      "sources": [
-        {
-          "url": "https://forum.morpho.org/t/introducing-sentora/2102",
-          "observedAt": "2026-10-03T22:59:46Z",
-          "datumAsOf": "2025-12-05",
-          "location": "How We Work; How We Engage with Governance",
-          "excerpt": "Execution with segregated keys and policy controls, followed by automated state verification",
-          "assertion": "Describes policy-controlled execution but does not identify either exact Safe signer or independently attest custody, recovery or inter-role key independence."
-        },
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": null,
-          "location": "Section 4.3; Appendix B-1 non-custodial structure",
-          "excerpt": "Sentora does not have access to private keys, seed phrases, or wallet credentials and does not maintain omnibus wallets or pooled custody structures.",
-          "assertion": "This statement concerns user assets/keys, not the organizational controllers of Safe signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 or 0x992592e073aa9b98daed79ee05c4af832e1d0abe."
-        },
-        {
-          "url": "https://etherscan.io/block/26114894",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Ethereum pinned eth_call getOwners/getThreshold at block 26114894",
-          "excerpt": "26114894",
-          "assertion": "Pinned role binding confirms both vaults use the same owner/curator Safes, each 1-of-1 with empty-code EOA signer. This proves topology, not human identity or independent attested custody."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/legal/disclaimer",
-        "https://sentora.com/about",
-        "https://sentora.com/platform/risk-management",
-        "https://forum.morpho.org/t/introducing-sentora/2102",
-        "https://sentora.com/research/reports",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
-        "https://etherscan.io/address/0xe8c9c99ecad0686a14a00d8521c572281e938008",
-        "https://etherscan.io/address/0x9e396de3312d373b87f9bd8763fb48184b42aac0"
-      ],
-      "rationale": "The exact scoped questions ask the human/organizational controller, independence from other Sentora role signers and independently attested key custody/signing policy for the owner and curator 1-of-1 Safes. Issuer legal, security, team, governance, reporting and audit surfaces describe non-custody and segregated execution but do not bind those assurances to either exact sole EOA signer. Pinned reads establish topology only. IncidentState and unclosed delegated/registry reach are separately retained U; no incident-free or complete execution claim is inferred."
-    },
-    {
-      "id": "uw-senrlusdv2-sentora-fd7eec6fbd49fb35",
-      "assetId": "senrlusdv2-sentora",
-      "scope": {
-        "componentKey": "control:mint-meta:senrlusdv2-sentora:e5ff3e67a87264457270",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:senrlusdv2-sentora:e5ff3e67a87264457270",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R24)",
-      "sources": [
-        {
-          "url": "https://forum.morpho.org/t/introducing-sentora/2102",
-          "observedAt": "2026-10-03T22:59:46Z",
-          "datumAsOf": "2025-12-05",
-          "location": "How We Work; How We Engage with Governance",
-          "excerpt": "Execution with segregated keys and policy controls, followed by automated state verification",
-          "assertion": "Describes policy-controlled execution but does not identify either exact Safe signer or independently attest custody, recovery or inter-role key independence."
-        },
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": null,
-          "location": "Section 4.3; Appendix B-1 non-custodial structure",
-          "excerpt": "Sentora does not have access to private keys, seed phrases, or wallet credentials and does not maintain omnibus wallets or pooled custody structures.",
-          "assertion": "This statement concerns user assets/keys, not the organizational controllers of Safe signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 or 0x992592e073aa9b98daed79ee05c4af832e1d0abe."
-        },
-        {
-          "url": "https://etherscan.io/block/26114894",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Ethereum pinned eth_call getOwners/getThreshold at block 26114894",
-          "excerpt": "26114894",
-          "assertion": "Pinned role binding confirms both vaults use the same owner/curator Safes, each 1-of-1 with empty-code EOA signer. This proves topology, not human identity or independent attested custody."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/legal/disclaimer",
-        "https://sentora.com/about",
-        "https://sentora.com/platform/risk-management",
-        "https://forum.morpho.org/t/introducing-sentora/2102",
-        "https://sentora.com/research/reports",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
-        "https://etherscan.io/address/0xe8c9c99ecad0686a14a00d8521c572281e938008",
-        "https://etherscan.io/address/0x9e396de3312d373b87f9bd8763fb48184b42aac0"
-      ],
-      "rationale": "The exact scoped questions ask the human/organizational controller, independence from other Sentora role signers and independently attested key custody/signing policy for the owner and curator 1-of-1 Safes. Issuer legal, security, team, governance, reporting and audit surfaces describe non-custody and segregated execution but do not bind those assurances to either exact sole EOA signer. Pinned reads establish topology only. IncidentState and unclosed delegated/registry reach are separately retained U; no incident-free or complete execution claim is inferred."
-    },
-    {
-      "id": "uw-senrlusdv2-sentora-8dfba0c9ae36cdae",
-      "assetId": "senrlusdv2-sentora",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:ad708dff0398a5fc610f9af5",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R24)",
-      "sources": [
-        {
-          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": null,
-          "location": "Advanced Liquidity Curation; Core Non-Custodial Mechanisms",
-          "excerpt": "It does not withdraw assets out of the Morpho protocol; instead, it shifts the user\u2019s exposure from the vault to the underlying positions, even when those positions are illiquid.",
-          "assertion": "In-kind position exit is disclosed; it does not establish a whole-deployed-slice cash realization bound."
-        },
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": null,
-          "location": "Appendix A: Liquidity and Market Risks",
-          "excerpt": "You may be unable to exit positions at desired prices or at all.",
-          "assertion": "Discloses liquidity risk but publishes no whole-deployed-slice realization maximum or guaranteed cash settlement SLA."
-        },
-        {
-          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
-          "observedAt": "2026-10-03T23:00:02Z",
-          "datumAsOf": null,
-          "location": "Verified VaultV2 exit()",
-          "excerpt": "if (assets > idleAssets && liquidityAdapter != address(0)) {",
-          "assertion": "Ordinary cash withdrawal needs idle assets or a configured liquidity adapter; pinned liquidityAdapter is zero. Full deployed positions are not an immediate cash exit."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/legal/terms-of-use",
-        "https://docs.morpho.org/learn/concepts/vault-v2/",
-        "https://sentora.com/platform/risk-management",
-        "https://sentora.com/research/reports",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://app.morpho.org/ethereum/vault/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
-        "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
-      ],
-      "rationale": "The required liquidityHorizon covers the entire deployed Morpho lender-position slice, not the separately identified idle underlying. Source code, strategy/product disclosures, legal terms and technical/audit archive disclose cash exits constrained by available liquidity and force-deallocation into protocol positions, but no guaranteed whole-slice realization/repayment maximum. An observed liquidity buffer or on-chain transaction speed is not a guarantee for the deployed slice. No per-slice immediate, one-day, seven-day or longer contractual cash horizon can be curated honestly."
-    },
-    {
-      "id": "uw-senrlusdv2-sentora-26848beaaaff3595",
-      "assetId": "senrlusdv2-sentora",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "contractMutability",
-        "pillar": "backing",
-        "requiredDatum": "contractMutability",
-        "routeKey": null
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T23:00:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R24)",
-      "sources": [
-        {
-          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": null,
-          "location": "Immutable Contracts",
-          "excerpt": "All vault contracts are immutable-no upgrades can change the core noncustodial guarantees after deployment.",
-          "assertion": "Exact catalog vault is source-verified VaultV2, with bytecode matched at block 26114894. Existing immutable upgradeability is already curated but compiler gates wrapper mutability on known aggregate mint review."
-        },
-        {
-          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
-          "observedAt": "2026-10-03T23:00:02Z",
-          "datumAsOf": null,
-          "location": "Verified exact deployed VaultV2 implementation",
-          "excerpt": "contract VaultV2 is IVaultV2 {",
-          "assertion": "Exact immutable runtime has no upgrade entrypoint. Independent immutable-code fact cannot currently clear wrapper contractMutability while unrelated registry/delegated authorization questions keep aggregate mint non-known."
-        }
-      ]
-    },
-    {
-      "id": "uw-senpyusdprimev2-sentora-7e21eafcc9f0bf38",
-      "assetId": "senpyusdprimev2-sentora",
-      "scope": {
-        "componentKey": "control:mint-meta:senpyusdprimev2-sentora:7f7faab82dd411f7eb89",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:senpyusdprimev2-sentora:7f7faab82dd411f7eb89",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R24)",
-      "sources": [
-        {
-          "url": "https://forum.morpho.org/t/introducing-sentora/2102",
-          "observedAt": "2026-10-03T22:59:46Z",
-          "datumAsOf": "2025-12-05",
-          "location": "How We Work; How We Engage with Governance",
-          "excerpt": "Execution with segregated keys and policy controls, followed by automated state verification",
-          "assertion": "Describes policy-controlled execution but does not identify either exact Safe signer or independently attest custody, recovery or inter-role key independence."
-        },
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": null,
-          "location": "Section 4.3; Appendix B-1 non-custodial structure",
-          "excerpt": "Sentora does not have access to private keys, seed phrases, or wallet credentials and does not maintain omnibus wallets or pooled custody structures.",
-          "assertion": "This statement concerns user assets/keys, not the organizational controllers of Safe signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 or 0x992592e073aa9b98daed79ee05c4af832e1d0abe."
-        },
-        {
-          "url": "https://etherscan.io/block/26114894",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Ethereum pinned eth_call getOwners/getThreshold at block 26114894",
-          "excerpt": "26114894",
-          "assertion": "Pinned role binding confirms both vaults use the same owner/curator Safes, each 1-of-1 with empty-code EOA signer. This proves topology, not human identity or independent attested custody."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/legal/disclaimer",
-        "https://sentora.com/about",
-        "https://sentora.com/platform/risk-management",
-        "https://forum.morpho.org/t/introducing-sentora/2102",
-        "https://sentora.com/research/reports",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
-        "https://etherscan.io/address/0xe8c9c99ecad0686a14a00d8521c572281e938008",
-        "https://etherscan.io/address/0x9e396de3312d373b87f9bd8763fb48184b42aac0"
-      ],
-      "rationale": "The exact scoped questions ask the human/organizational controller, independence from other Sentora role signers and independently attested key custody/signing policy for the owner and curator 1-of-1 Safes. Issuer legal, security, team, governance, reporting and audit surfaces describe non-custody and segregated execution but do not bind those assurances to either exact sole EOA signer. Pinned reads establish topology only. IncidentState and unclosed delegated/registry reach are separately retained U; no incident-free or complete execution claim is inferred."
-    },
-    {
-      "id": "uw-senpyusdprimev2-sentora-5c30895cb288f63f",
-      "assetId": "senpyusdprimev2-sentora",
-      "scope": {
-        "componentKey": "control:mint-meta:senpyusdprimev2-sentora:f832165a7ecac2c871ca",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:senpyusdprimev2-sentora:f832165a7ecac2c871ca",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R24)",
-      "sources": [
-        {
-          "url": "https://forum.morpho.org/t/introducing-sentora/2102",
-          "observedAt": "2026-10-03T22:59:46Z",
-          "datumAsOf": "2025-12-05",
-          "location": "How We Work; How We Engage with Governance",
-          "excerpt": "Execution with segregated keys and policy controls, followed by automated state verification",
-          "assertion": "Describes policy-controlled execution but does not identify either exact Safe signer or independently attest custody, recovery or inter-role key independence."
-        },
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": null,
-          "location": "Section 4.3; Appendix B-1 non-custodial structure",
-          "excerpt": "Sentora does not have access to private keys, seed phrases, or wallet credentials and does not maintain omnibus wallets or pooled custody structures.",
-          "assertion": "This statement concerns user assets/keys, not the organizational controllers of Safe signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 or 0x992592e073aa9b98daed79ee05c4af832e1d0abe."
-        },
-        {
-          "url": "https://etherscan.io/block/26114894",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Ethereum pinned eth_call getOwners/getThreshold at block 26114894",
-          "excerpt": "26114894",
-          "assertion": "Pinned role binding confirms both vaults use the same owner/curator Safes, each 1-of-1 with empty-code EOA signer. This proves topology, not human identity or independent attested custody."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/legal/disclaimer",
-        "https://sentora.com/about",
-        "https://sentora.com/platform/risk-management",
-        "https://forum.morpho.org/t/introducing-sentora/2102",
-        "https://sentora.com/research/reports",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
-        "https://etherscan.io/address/0xe8c9c99ecad0686a14a00d8521c572281e938008",
-        "https://etherscan.io/address/0x9e396de3312d373b87f9bd8763fb48184b42aac0"
-      ],
-      "rationale": "The exact scoped questions ask the human/organizational controller, independence from other Sentora role signers and independently attested key custody/signing policy for the owner and curator 1-of-1 Safes. Issuer legal, security, team, governance, reporting and audit surfaces describe non-custody and segregated execution but do not bind those assurances to either exact sole EOA signer. Pinned reads establish topology only. IncidentState and unclosed delegated/registry reach are separately retained U; no incident-free or complete execution claim is inferred."
-    },
-    {
-      "id": "uw-senpyusdprimev2-sentora-36ad61c761d30c55",
-      "assetId": "senpyusdprimev2-sentora",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:f008ec8f68e4c7bac054781b",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R24)",
-      "sources": [
-        {
-          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": null,
-          "location": "Advanced Liquidity Curation; Core Non-Custodial Mechanisms",
-          "excerpt": "It does not withdraw assets out of the Morpho protocol; instead, it shifts the user\u2019s exposure from the vault to the underlying positions, even when those positions are illiquid.",
-          "assertion": "In-kind position exit is disclosed; it does not establish a whole-deployed-slice cash realization bound."
-        },
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": null,
-          "location": "Appendix A: Liquidity and Market Risks",
-          "excerpt": "You may be unable to exit positions at desired prices or at all.",
-          "assertion": "Discloses liquidity risk but publishes no whole-deployed-slice realization maximum or guaranteed cash settlement SLA."
-        },
-        {
-          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
-          "observedAt": "2026-10-03T23:00:02Z",
-          "datumAsOf": null,
-          "location": "Verified VaultV2 exit()",
-          "excerpt": "if (assets > idleAssets && liquidityAdapter != address(0)) {",
-          "assertion": "Ordinary cash withdrawal needs idle assets or a configured liquidity adapter; pinned liquidityAdapter is zero. Full deployed positions are not an immediate cash exit."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/legal/terms-of-use",
-        "https://docs.morpho.org/learn/concepts/vault-v2/",
-        "https://sentora.com/platform/risk-management",
-        "https://sentora.com/research/reports",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89",
-        "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
-      ],
-      "rationale": "The required liquidityHorizon covers the entire deployed Morpho lender-position slice, not the separately identified idle underlying. Source code, strategy/product disclosures, legal terms and technical/audit archive disclose cash exits constrained by available liquidity and force-deallocation into protocol positions, but no guaranteed whole-slice realization/repayment maximum. An observed liquidity buffer or on-chain transaction speed is not a guarantee for the deployed slice. No per-slice immediate, one-day, seven-day or longer contractual cash horizon can be curated honestly."
-    },
-    {
-      "id": "uw-senpyusdprimev2-sentora-a3f1b6e84685a6d1",
-      "assetId": "senpyusdprimev2-sentora",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "contractMutability",
-        "pillar": "backing",
-        "requiredDatum": "contractMutability",
-        "routeKey": null
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T23:00:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R24)",
-      "sources": [
-        {
-          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": null,
-          "location": "Immutable Contracts",
-          "excerpt": "All vault contracts are immutable-no upgrades can change the core noncustodial guarantees after deployment.",
-          "assertion": "Exact catalog vault is source-verified VaultV2, with bytecode matched at block 26114894. Existing immutable upgradeability is already curated but compiler gates wrapper mutability on known aggregate mint review."
-        },
-        {
-          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
-          "observedAt": "2026-10-03T23:00:02Z",
-          "datumAsOf": null,
-          "location": "Verified exact deployed VaultV2 implementation",
-          "excerpt": "contract VaultV2 is IVaultV2 {",
-          "assertion": "Exact immutable runtime has no upgrade entrypoint. Independent immutable-code fact cannot currently clear wrapper contractMutability while unrelated registry/delegated authorization questions keep aggregate mint non-known."
-        }
-      ]
-    },
-    {
       "id": "uw-senpathusd-sentora-64da7e24a9cf2053",
       "assetId": "senpathusd-sentora",
       "scope": {
@@ -3575,96 +3179,6 @@
           "assertion": "Confirms core-contract immutability, not immutable allocation/fee policy. Schema already represents this exact datum; the compiler suppresses it because separate mint-review questions remain open."
         }
       ]
-    },
-    {
-      "id": "uw-zarp-zarp-b944509ac807af36",
-      "assetId": "zarp-zarp",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:zarp-zarp:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:07:26Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R89)",
-      "sources": [
-        {
-          "url": "https://www.zarpstablecoin.com/terms/",
-          "observedAt": "2026-10-03T23:06:36Z",
-          "datumAsOf": "2024-07-01",
-          "location": "Clauses 3.3 and 6",
-          "excerpt": "Any such interest earned may be kept by the Company as fees.",
-          "assertion": "The public agreement permits retained reserve interest and describes partner bank redemption, but supplies no applicable numeric redemption-charge schedule."
-        },
-        {
-          "url": "https://docs.zarpstablecoin.com/zarp-stablecoin/token-redemption.md",
-          "observedAt": "2026-10-03T23:06:36Z",
-          "datumAsOf": null,
-          "location": "Token Redemption",
-          "excerpt": "the tokens are destroyed and a corresponding amount of fiat money is sent to the Partner\u2019s bank account.",
-          "assertion": "Describes payout endpoint but no percentage, flat charge, tier or all-in redemption fee."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.zarpstablecoin.com/terms/",
-        "https://www.zarpstablecoin.com/transparency/",
-        "https://www.zarpstablecoin.com/compliance/",
-        "https://docs.zarpstablecoin.com/zarp-stablecoin/llms.txt",
-        "https://docs.zarpstablecoin.com/zarp-stablecoin/token-redemption.md",
-        "https://docs.zarpstablecoin.com/zarp-stablecoin/zarp-partners.md",
-        "https://docs.zarpstablecoin.com/zarp-stablecoin/custody.md"
-      ],
-      "rationale": "The exact cost for an approved partner redeeming ZARP to its own ZAR bank account is undisclosed: governing terms, full documentation index, partner onboarding, redemption, transparency and compliance pages publish no applicable percentage/flat/minimum or account-specific fee schedule. Retained reserve interest and blockchain gas are not an all-in redemption quote; 1:1 par payout is not a zero-fee assertion."
-    },
-    {
-      "id": "uw-zarp-zarp-62e96e8539caea04",
-      "assetId": "zarp-zarp",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:9b04ed783059e37aa998ae3f",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:07:26Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R89)",
-      "sources": [
-        {
-          "url": "https://kempengroup.co.za/wp-content/uploads/2026/09/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-09-01-signed-draft.pdf",
-          "observedAt": "2026-10-03T23:06:36Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Page 2, Procedures and Findings, procedure 2",
-          "excerpt": "We have obtained access to the call deposit and current bank accounts of the company as well as that of the Old Mutual Wealth Trust Company JHB (Pty) Ltd trust account.",
-          "assertion": "Identifies account categories and verifies balances, but does not disclose all underlying reserve instruments or a whole-slice contractual maturity maximum."
-        },
-        {
-          "url": "https://www.zarpstablecoin.com/terms/",
-          "observedAt": "2026-10-03T23:06:36Z",
-          "datumAsOf": "2024-07-01",
-          "location": "Clause 3.3",
-          "excerpt": "The Company may apply funds in the said account to earn interest on those funds",
-          "assertion": "Reserve account investment permission is not a maximum term covenant."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.zarpstablecoin.com/terms/",
-        "https://www.zarpstablecoin.com/transparency/",
-        "https://www.zarpstablecoin.com/compliance/",
-        "https://docs.zarpstablecoin.com/zarp-stablecoin/llms.txt",
-        "https://docs.zarpstablecoin.com/zarp-stablecoin/master.md",
-        "https://docs.zarpstablecoin.com/zarp-stablecoin/token-redemption.md",
-        "https://kempengroup.co.za/wp-content/uploads/2026/09/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-09-01-signed-draft.pdf",
-        "https://kempengroup.co.za/wp-content/uploads/2026/03/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-02-27-1773397665324.pdf",
-        "https://eth.blockscout.com/api/v2/addresses/0xb755506531786c8ac63b756bab1ac387bacb0c04"
-      ],
-      "rationale": "The exact maximum maturityDaysMax of the entire ZAR fiat reserve slice remains undisclosed. September and February AUP reports identify call/current balances and a trust account, but no complete account investment mandate or maximum term covering all cash equivalents. Issuer docs, legal terms and compliance disclosures do not add that limit. Do not infer zero maturity from call-account labels, token redemption par or bank liquidity."
     },
     {
       "id": "uw-chfsafo-spiko-708d621780a16eaa",
@@ -14087,164 +13601,6 @@
         "https://sourcify.dev/server/v2/contract/56/0xb4d3c1bb59be7b419af4e10e9b240f425782b22a?fields=sources,abi"
       ],
       "rationale": "Exact whole-book custodyEscrow legal holder claim, segregation and insolvency rights are not disclosed. Site/docs/repository/exact source identify controlled reserves and treasury sweeps but no custodian legal terms or recipient-level legal protections. No statutory remoteness, knownUnknownExposurePct=0 or fully-onchain exemption is inferred."
-    },
-    {
-      "id": "uw-usdx-hex-trust-e6ef208a803d361c",
-      "assetId": "usdx-hex-trust",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:50Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R04)",
-      "sources": [
-        {
-          "url": "https://flare.network/news/flare-confidential-compute-makes-private-institutional-data-usable-onchain-starting-with-hex-trusts-usdx",
-          "observedAt": "2026-10-03T22:51:06Z",
-          "datumAsOf": "2026-09-30",
-          "location": "First application: Proof of Reserves for USDX",
-          "excerpt": "Only that result is published.",
-          "assertion": "Coverage conclusion is published, not reserve components or a dated category allocation."
-        },
-        {
-          "url": "https://www.htdigitalassets.com/",
-          "observedAt": "2026-10-03T22:51:06Z",
-          "datumAsOf": null,
-          "location": "Current Reserves in USD",
-          "excerpt": "Updating Reserves in USD",
-          "assertion": "Issuer publishes a placeholder, not a current composition."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.htdigitalassets.com/",
-        "https://www.htdigitalassets.com/disclaimer",
-        "https://flare.network/news/flare-confidential-compute-makes-private-institutional-data-usable-onchain-starting-with-hex-trusts-usdx",
-        "https://api.htdigitalassets.com/alm-stablecoin-db/metrics/current_reserves_amount",
-        "https://www.hextrust.com/resources-collection/hex-trusts-usdx-launches-with-clearpool-on-flare-network"
-      ],
-      "rationale": "Current whole-book reserve composition and category weights remain undisclosed. Issuer describes Treasury/cash backing; the September 30 FCC mechanism deliberately keeps component balances private and publishes only coverage. The public bond-reserve API is an aggregate, not a complete dated holdings denominator."
-    },
-    {
-      "id": "uw-usdx-hex-trust-6eee7f74d6aad2de",
-      "assetId": "usdx-hex-trust",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdx-hex-trust:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:50Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R04)",
-      "sources": [
-        {
-          "url": "https://www.htdigitalassets.com/disclaimer",
-          "observedAt": "2026-10-03T22:51:06Z",
-          "datumAsOf": null,
-          "location": "Disclaimer 2",
-          "excerpt": "Minting and Redemption of USDX requires the successful completion of HTMI\u2019s onboarding procedures",
-          "assertion": "Direct issuer redemption requires separately executed agreements, with no published applicable fee schedule."
-        },
-        {
-          "url": "https://www.htdigitalassets.com/",
-          "observedAt": "2026-10-03T22:51:06Z",
-          "datumAsOf": null,
-          "location": "Redeem 1:1 Anytime",
-          "excerpt": "USDX is tradable on exchanges and redeemable 1:1 by approved parties anytime.",
-          "assertion": "Par redemption statement does not establish complete same-notional fees."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.htdigitalassets.com/",
-        "https://www.htdigitalassets.com/disclaimer",
-        "https://www.hextrust.com/legal-privacy/aura-terms-of-service"
-      ],
-      "rationale": "Exact direct HTMI offchain USDX redemption cost is not published: issuer/FAQ/disclaimer and Hex Trust help/legal surfaces disclose approved-party redemption and separate agreements but no applicable numeric or formula fee schedule. Aura account withdrawal charges are another rail and cannot establish direct issuer fees."
-    },
-    {
-      "id": "uw-sbc-brale-c61f7ea3be2d1264",
-      "assetId": "sbc-brale",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:sbc-brale:offchain-issuer"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T22:51:06Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R04)",
-      "sources": [
-        {
-          "url": "https://brale.xyz/pricing",
-          "observedAt": "2026-10-03T22:51:06Z",
-          "datumAsOf": null,
-          "location": "Pricing FAQ",
-          "excerpt": "Brale charges 0 bps on standard money movement.",
-          "assertion": "Published fee schedule requires rail-specific flat payout fees plus actual gas +20%; existing captured generic route does not evaluate this same-notional schedule."
-        },
-        {
-          "url": "https://brale.xyz/pricing",
-          "observedAt": "2026-10-03T22:51:06Z",
-          "datumAsOf": null,
-          "location": "API product features",
-          "excerpt": "Offchain transfersSend RTP, wire, or ACH payouts$2per RTP$20per Wire25\u00a2per ACH",
-          "assertion": "Exact applicable public variable schedule is not a uniform fixed-bps route cost."
-        }
-      ]
-    },
-    {
-      "id": "uw-usdx-hex-trust-e73b8d341ef3c196",
-      "assetId": "usdx-hex-trust",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:50Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R04)",
-      "sources": [
-        {
-          "url": "https://flare.network/news/flare-confidential-compute-makes-private-institutional-data-usable-onchain-starting-with-hex-trusts-usdx",
-          "observedAt": "2026-10-03T22:51:06Z",
-          "datumAsOf": "2026-09-30",
-          "location": "First application: Proof of Reserves for USDX",
-          "excerpt": "The extension reads both inside the TEE, checks their combined total against USDX supply across the ecosystem, and signs a result showing whether USDX is backed 1:1 or better.",
-          "assertion": "A reserve-coverage check is disclosed, but common-clock input reconciliation, mint/burn movements and a recurring whole-supply procedure cadence are not."
-        },
-        {
-          "url": "https://www.htdigitalassets.com/disclaimer",
-          "observedAt": "2026-10-03T22:51:06Z",
-          "datumAsOf": null,
-          "location": "Disclaimer 15",
-          "excerpt": "we strive to provide accurate and up-to-date information regarding the reserves backing our assets",
-          "assertion": "Issuer does not guarantee real-time availability of reserve disclosures."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.htdigitalassets.com/",
-        "https://www.htdigitalassets.com/disclaimer",
-        "https://flare.network/news/flare-confidential-compute-makes-private-institutional-data-usable-onchain-starting-with-hex-trusts-usdx",
-        "https://songbird-systems-explorer.flare.rocks/price-feeds/custom?feed=0x21555344582f555344000000000000000000000000&endTime=1790772738",
-        "https://api.htdigitalassets.com/alm-stablecoin-db/metrics/current_reserves_amount"
-      ],
-      "rationale": "FCC discloses an ecosystem coverage calculation, not the exact required recurring common-clock mint/burn and liability-to-backing reconciliation cadence. Its feed sums three token supplies and public bonds plus restricted cash; input timestamps, restricted-cash reconciliation controls and complete movement procedure remain unpublished. Do not misclassify this as no reconciliation or dismiss the new coverage mechanism."
     },
     {
       "id": "uw-brsrv-blackrock-9f4eac200f2c9d44",
@@ -39469,6 +38825,735 @@
         "https://docs.morpho.org/learn/resources/risks/"
       ],
       "rationale": "The exact protocol-position slice has no published bounded maximum cash liquidity horizon. Ordinary cash withdrawal depends on available USDC in the active Morpho market; borrower demand/repayment is open-ended and full source contains no contractual cash-settlement deadline. forceDeallocate can obtain an underlying position, not a cash-realization SLA. A current liquidity reading cannot be converted to a fixed maximum horizon."
+    },
+    {
+      "id": "uw-sbc-brale-2d7fdc3949613550",
+      "assetId": "sbc-brale",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:38d428ad13b1ba01ec656611",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:53:15Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R20)",
+      "sources": [
+        {
+          "url": "https://ipfs.filebase.io/ipfs/QmRasD2fd8xt7gQphCHb4tLw2kwkCu1oekgfJzNp7QuPeA",
+          "observedAt": "2026-10-03T23:53:15Z",
+          "datumAsOf": "2023-04-27",
+          "location": "White Paper v1.1, page 7, Liquid",
+          "excerpt": "Treasury is managed across multiple accounts with various redemption timelines.",
+          "assertion": "Recovered full issuer whitepaper describes treasury management but provides no maximum maturity covenant for the government-debt slice."
+        },
+        {
+          "url": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-08-2026.pdf",
+          "observedAt": "2026-10-03T23:53:15Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2, SBC Reserve Report",
+          "excerpt": "US government backed debt",
+          "assertion": "Category and fair value are disclosed; no instrument identifiers, maturity dates or governing maximum are published."
+        },
+        {
+          "url": "https://docs.brale.xyz/documentation/platform/reserves.md",
+          "observedAt": "2026-10-03T23:53:15Z",
+          "datumAsOf": null,
+          "location": "Reserves composition",
+          "excerpt": "Short-duration U.S. Treasury Bills",
+          "assertion": "Qualitative duration is disclosed, not a numerical maximum term."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://brale.xyz/stablecoins/SBC",
+        "https://docs.brale.xyz/llms.txt",
+        "https://docs.brale.xyz/documentation/platform/reserves.md",
+        "https://brale.xyz/legal",
+        "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-08-2026.pdf",
+        "https://ipfs.filebase.io/ipfs/QmRasD2fd8xt7gQphCHb4tLw2kwkCu1oekgfJzNp7QuPeA"
+      ],
+      "rationale": "The prior access blocker is resolved: issuer-linked SBC White Paper v1.1 was downloaded and read in full through Filebase. Together with current examination, reserve-management docs and prior legal/archive searches, it publishes no contractual or exhaustive holdings maximum maturityDaysMax for the U.S. government-backed debt slice. Qualitative short duration, multiple redemption timelines and par redemption do not establish a maximum."
+    },
+    {
+      "id": "uw-sbc-brale-15904c7079a31c6e",
+      "assetId": "sbc-brale",
+      "scope": {
+        "componentKey": "economic-control:bridge",
+        "exposureId": null,
+        "factorKey": "tier",
+        "pillar": "control",
+        "requiredDatum": "tier",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-04T00:06:18Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R20)",
+      "sources": [
+        {
+          "url": "https://brale.xyz/blog/sbc-integrates-layerzero-for-cross-chain-transfers",
+          "observedAt": "2026-10-03T23:53:15Z",
+          "datumAsOf": "2025-03-20",
+          "location": "Native SBC transfer rail and DVN security",
+          "excerpt": "SBC is minted and burned natively, avoiding wrapping or locking.",
+          "assertion": "Official issuer identifies a LayerZero external-validation native transfer rail. The current bridge tier producer excludes routes with routeClass native or issuanceModel native-issuance from bridge-representation economic controls. The externally validated native rail therefore has no economic bridge tier slot without falsely reclassifying native SBC issuance as a wrapped/bridged representation."
+        },
+        {
+          "url": "https://brale.xyz/blog/sbc-integrates-layerzero-for-cross-chain-transfers",
+          "observedAt": "2026-10-03T23:53:15Z",
+          "datumAsOf": "2025-03-20",
+          "location": "DVN validation",
+          "excerpt": "LayerZero's Decentralized Verifier Networks (DVNs) ensure resilient and institutional grade security for transactions.",
+          "assertion": "The external-validation transfer mechanism is disclosed directly, but an economic bridge tier cannot be emitted for this native rail under the existing producer filter. This is not a claim that every peer/DVN/admin deployment has a completed census."
+        }
+      ]
+    },
+    {
+      "id": "uw-usdx-hex-trust-e6ef208a803d361c",
+      "assetId": "usdx-hex-trust",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R04)",
+      "sources": [
+        {
+          "url": "https://flare.network/news/flare-confidential-compute-makes-private-institutional-data-usable-onchain-starting-with-hex-trusts-usdx",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": "2026-09-30",
+          "location": "First application: Proof of Reserves for USDX",
+          "excerpt": "Only that result is published.",
+          "assertion": "Coverage conclusion is published, not reserve components or a dated category allocation."
+        },
+        {
+          "url": "https://www.htdigitalassets.com/",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": null,
+          "location": "Current Reserves in USD",
+          "excerpt": "Updating Reserves in USD",
+          "assertion": "Issuer publishes a placeholder, not a current composition."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.htdigitalassets.com/",
+        "https://www.htdigitalassets.com/disclaimer",
+        "https://flare.network/news/flare-confidential-compute-makes-private-institutional-data-usable-onchain-starting-with-hex-trusts-usdx",
+        "https://api.htdigitalassets.com/alm-stablecoin-db/metrics/current_reserves_amount",
+        "https://www.hextrust.com/resources-collection/hex-trusts-usdx-launches-with-clearpool-on-flare-network"
+      ],
+      "rationale": "Current whole-book reserve composition and category weights remain undisclosed. Issuer describes Treasury/cash backing; the September 30 FCC mechanism deliberately keeps component balances private and publishes only coverage. The public bond-reserve API is an aggregate, not a complete dated holdings denominator."
+    },
+    {
+      "id": "uw-usdx-hex-trust-6eee7f74d6aad2de",
+      "assetId": "usdx-hex-trust",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdx-hex-trust:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R04)",
+      "sources": [
+        {
+          "url": "https://www.htdigitalassets.com/disclaimer",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": null,
+          "location": "Disclaimer 2",
+          "excerpt": "Minting and Redemption of USDX requires the successful completion of HTMI\u2019s onboarding procedures",
+          "assertion": "Direct issuer redemption requires separately executed agreements, with no published applicable fee schedule."
+        },
+        {
+          "url": "https://www.htdigitalassets.com/",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": null,
+          "location": "Redeem 1:1 Anytime",
+          "excerpt": "USDX is tradable on exchanges and redeemable 1:1 by approved parties anytime.",
+          "assertion": "Par redemption statement does not establish complete same-notional fees."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.htdigitalassets.com/",
+        "https://www.htdigitalassets.com/disclaimer",
+        "https://www.hextrust.com/legal-privacy/aura-terms-of-service"
+      ],
+      "rationale": "Exact direct HTMI offchain USDX redemption cost is not published: issuer/FAQ/disclaimer and Hex Trust help/legal surfaces disclose approved-party redemption and separate agreements but no applicable numeric or formula fee schedule. Aura account withdrawal charges are another rail and cannot establish direct issuer fees."
+    },
+    {
+      "id": "uw-sbc-brale-c61f7ea3be2d1264",
+      "assetId": "sbc-brale",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:sbc-brale:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:51:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R04)",
+      "sources": [
+        {
+          "url": "https://brale.xyz/pricing",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": null,
+          "location": "Pricing FAQ",
+          "excerpt": "Brale charges 0 bps on standard money movement.",
+          "assertion": "Published fee schedule requires rail-specific flat payout fees plus actual gas +20%; existing captured generic route does not evaluate this same-notional schedule."
+        },
+        {
+          "url": "https://brale.xyz/pricing",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": null,
+          "location": "API product features",
+          "excerpt": "Offchain transfersSend RTP, wire, or ACH payouts$2per RTP$20per Wire25\u00a2per ACH",
+          "assertion": "Exact applicable public variable schedule is not a uniform fixed-bps route cost."
+        }
+      ]
+    },
+    {
+      "id": "uw-usdx-hex-trust-e73b8d341ef3c196",
+      "assetId": "usdx-hex-trust",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R04)",
+      "sources": [
+        {
+          "url": "https://flare.network/news/flare-confidential-compute-makes-private-institutional-data-usable-onchain-starting-with-hex-trusts-usdx",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": "2026-09-30",
+          "location": "First application: Proof of Reserves for USDX",
+          "excerpt": "The extension reads both inside the TEE, checks their combined total against USDX supply across the ecosystem, and signs a result showing whether USDX is backed 1:1 or better.",
+          "assertion": "A reserve-coverage check is disclosed, but common-clock input reconciliation, mint/burn movements and a recurring whole-supply procedure cadence are not."
+        },
+        {
+          "url": "https://www.htdigitalassets.com/disclaimer",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": null,
+          "location": "Disclaimer 15",
+          "excerpt": "we strive to provide accurate and up-to-date information regarding the reserves backing our assets",
+          "assertion": "Issuer does not guarantee real-time availability of reserve disclosures."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.htdigitalassets.com/",
+        "https://www.htdigitalassets.com/disclaimer",
+        "https://flare.network/news/flare-confidential-compute-makes-private-institutional-data-usable-onchain-starting-with-hex-trusts-usdx",
+        "https://songbird-systems-explorer.flare.rocks/price-feeds/custom?feed=0x21555344582f555344000000000000000000000000&endTime=1790772738",
+        "https://api.htdigitalassets.com/alm-stablecoin-db/metrics/current_reserves_amount"
+      ],
+      "rationale": "FCC discloses an ecosystem coverage calculation, not the exact required recurring common-clock mint/burn and liability-to-backing reconciliation cadence. Its feed sums three token supplies and public bonds plus restricted cash; input timestamps, restricted-cash reconciliation controls and complete movement procedure remain unpublished. Do not misclassify this as no reconciliation or dismiss the new coverage mechanism."
+    },
+    {
+      "id": "uw-senrlusdv2-sentora-2d4d1e5e596b7680",
+      "assetId": "senrlusdv2-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senrlusdv2-sentora:703345b7103b2cf26915",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:senrlusdv2-sentora:703345b7103b2cf26915",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R24)",
+      "sources": [
+        {
+          "url": "https://forum.morpho.org/t/introducing-sentora/2102",
+          "observedAt": "2026-10-03T22:59:46Z",
+          "datumAsOf": "2025-12-05",
+          "location": "How We Work; How We Engage with Governance",
+          "excerpt": "Execution with segregated keys and policy controls, followed by automated state verification",
+          "assertion": "Describes policy-controlled execution but does not identify either exact Safe signer or independently attest custody, recovery or inter-role key independence."
+        },
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T22:59:47Z",
+          "datumAsOf": null,
+          "location": "Section 4.3; Appendix B-1 non-custodial structure",
+          "excerpt": "Sentora does not have access to private keys, seed phrases, or wallet credentials and does not maintain omnibus wallets or pooled custody structures.",
+          "assertion": "This statement concerns user assets/keys, not the organizational controllers of Safe signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 or 0x992592e073aa9b98daed79ee05c4af832e1d0abe."
+        },
+        {
+          "url": "https://etherscan.io/block/26114894",
+          "observedAt": "2026-10-03T22:59:47Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Ethereum pinned eth_call getOwners/getThreshold at block 26114894",
+          "excerpt": "26114894",
+          "assertion": "Pinned role binding confirms both vaults use the same owner/curator Safes, each 1-of-1 with empty-code EOA signer. This proves topology, not human identity or independent attested custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/legal/disclaimer",
+        "https://sentora.com/about",
+        "https://sentora.com/platform/risk-management",
+        "https://forum.morpho.org/t/introducing-sentora/2102",
+        "https://sentora.com/research/reports",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+        "https://etherscan.io/address/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://etherscan.io/address/0x9e396de3312d373b87f9bd8763fb48184b42aac0"
+      ],
+      "rationale": "The exact scoped questions ask the human/organizational controller, independence from other Sentora role signers and independently attested key custody/signing policy for the owner and curator 1-of-1 Safes. Issuer legal, security, team, governance, reporting and audit surfaces describe non-custody and segregated execution but do not bind those assurances to either exact sole EOA signer. Pinned reads establish topology only. IncidentState and unclosed delegated/registry reach are separately retained U; no incident-free or complete execution claim is inferred."
+    },
+    {
+      "id": "uw-senrlusdv2-sentora-fd7eec6fbd49fb35",
+      "assetId": "senrlusdv2-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senrlusdv2-sentora:e5ff3e67a87264457270",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:senrlusdv2-sentora:e5ff3e67a87264457270",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R24)",
+      "sources": [
+        {
+          "url": "https://forum.morpho.org/t/introducing-sentora/2102",
+          "observedAt": "2026-10-03T22:59:46Z",
+          "datumAsOf": "2025-12-05",
+          "location": "How We Work; How We Engage with Governance",
+          "excerpt": "Execution with segregated keys and policy controls, followed by automated state verification",
+          "assertion": "Describes policy-controlled execution but does not identify either exact Safe signer or independently attest custody, recovery or inter-role key independence."
+        },
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T22:59:47Z",
+          "datumAsOf": null,
+          "location": "Section 4.3; Appendix B-1 non-custodial structure",
+          "excerpt": "Sentora does not have access to private keys, seed phrases, or wallet credentials and does not maintain omnibus wallets or pooled custody structures.",
+          "assertion": "This statement concerns user assets/keys, not the organizational controllers of Safe signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 or 0x992592e073aa9b98daed79ee05c4af832e1d0abe."
+        },
+        {
+          "url": "https://etherscan.io/block/26114894",
+          "observedAt": "2026-10-03T22:59:47Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Ethereum pinned eth_call getOwners/getThreshold at block 26114894",
+          "excerpt": "26114894",
+          "assertion": "Pinned role binding confirms both vaults use the same owner/curator Safes, each 1-of-1 with empty-code EOA signer. This proves topology, not human identity or independent attested custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/legal/disclaimer",
+        "https://sentora.com/about",
+        "https://sentora.com/platform/risk-management",
+        "https://forum.morpho.org/t/introducing-sentora/2102",
+        "https://sentora.com/research/reports",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+        "https://etherscan.io/address/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://etherscan.io/address/0x9e396de3312d373b87f9bd8763fb48184b42aac0"
+      ],
+      "rationale": "The exact scoped questions ask the human/organizational controller, independence from other Sentora role signers and independently attested key custody/signing policy for the owner and curator 1-of-1 Safes. Issuer legal, security, team, governance, reporting and audit surfaces describe non-custody and segregated execution but do not bind those assurances to either exact sole EOA signer. Pinned reads establish topology only. IncidentState and unclosed delegated/registry reach are separately retained U; no incident-free or complete execution claim is inferred."
+    },
+    {
+      "id": "uw-senrlusdv2-sentora-8dfba0c9ae36cdae",
+      "assetId": "senrlusdv2-sentora",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:ad708dff0398a5fc610f9af5",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R24)",
+      "sources": [
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T22:59:47Z",
+          "datumAsOf": null,
+          "location": "Advanced Liquidity Curation; Core Non-Custodial Mechanisms",
+          "excerpt": "It does not withdraw assets out of the Morpho protocol; instead, it shifts the user\u2019s exposure from the vault to the underlying positions, even when those positions are illiquid.",
+          "assertion": "In-kind position exit is disclosed; it does not establish a whole-deployed-slice cash realization bound."
+        },
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T22:59:47Z",
+          "datumAsOf": null,
+          "location": "Appendix A: Liquidity and Market Risks",
+          "excerpt": "You may be unable to exit positions at desired prices or at all.",
+          "assertion": "Discloses liquidity risk but publishes no whole-deployed-slice realization maximum or guaranteed cash settlement SLA."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+          "observedAt": "2026-10-03T23:00:02Z",
+          "datumAsOf": null,
+          "location": "Verified VaultV2 exit()",
+          "excerpt": "if (assets > idleAssets && liquidityAdapter != address(0)) {",
+          "assertion": "Ordinary cash withdrawal needs idle assets or a configured liquidity adapter; pinned liquidityAdapter is zero. Full deployed positions are not an immediate cash exit."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/legal/terms-of-use",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/research/reports",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://app.morpho.org/ethereum/vault/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+        "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
+      ],
+      "rationale": "The required liquidityHorizon covers the entire deployed Morpho lender-position slice, not the separately identified idle underlying. Source code, strategy/product disclosures, legal terms and technical/audit archive disclose cash exits constrained by available liquidity and force-deallocation into protocol positions, but no guaranteed whole-slice realization/repayment maximum. An observed liquidity buffer or on-chain transaction speed is not a guarantee for the deployed slice. No per-slice immediate, one-day, seven-day or longer contractual cash horizon can be curated honestly."
+    },
+    {
+      "id": "uw-senrlusdv2-sentora-26848beaaaff3595",
+      "assetId": "senrlusdv2-sentora",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "contractMutability",
+        "pillar": "backing",
+        "requiredDatum": "contractMutability",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:00:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R24)",
+      "sources": [
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T22:59:47Z",
+          "datumAsOf": null,
+          "location": "Immutable Contracts",
+          "excerpt": "All vault contracts are immutable-no upgrades can change the core noncustodial guarantees after deployment.",
+          "assertion": "Exact catalog vault is source-verified VaultV2, with bytecode matched at block 26114894. Existing immutable upgradeability is already curated but compiler gates wrapper mutability on known aggregate mint review."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+          "observedAt": "2026-10-03T23:00:02Z",
+          "datumAsOf": null,
+          "location": "Verified exact deployed VaultV2 implementation",
+          "excerpt": "contract VaultV2 is IVaultV2 {",
+          "assertion": "Exact immutable runtime has no upgrade entrypoint. Independent immutable-code fact cannot currently clear wrapper contractMutability while unrelated registry/delegated authorization questions keep aggregate mint non-known."
+        }
+      ]
+    },
+    {
+      "id": "uw-senpyusdprimev2-sentora-7e21eafcc9f0bf38",
+      "assetId": "senpyusdprimev2-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senpyusdprimev2-sentora:7f7faab82dd411f7eb89",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:senpyusdprimev2-sentora:7f7faab82dd411f7eb89",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R24)",
+      "sources": [
+        {
+          "url": "https://forum.morpho.org/t/introducing-sentora/2102",
+          "observedAt": "2026-10-03T22:59:46Z",
+          "datumAsOf": "2025-12-05",
+          "location": "How We Work; How We Engage with Governance",
+          "excerpt": "Execution with segregated keys and policy controls, followed by automated state verification",
+          "assertion": "Describes policy-controlled execution but does not identify either exact Safe signer or independently attest custody, recovery or inter-role key independence."
+        },
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T22:59:47Z",
+          "datumAsOf": null,
+          "location": "Section 4.3; Appendix B-1 non-custodial structure",
+          "excerpt": "Sentora does not have access to private keys, seed phrases, or wallet credentials and does not maintain omnibus wallets or pooled custody structures.",
+          "assertion": "This statement concerns user assets/keys, not the organizational controllers of Safe signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 or 0x992592e073aa9b98daed79ee05c4af832e1d0abe."
+        },
+        {
+          "url": "https://etherscan.io/block/26114894",
+          "observedAt": "2026-10-03T22:59:47Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Ethereum pinned eth_call getOwners/getThreshold at block 26114894",
+          "excerpt": "26114894",
+          "assertion": "Pinned role binding confirms both vaults use the same owner/curator Safes, each 1-of-1 with empty-code EOA signer. This proves topology, not human identity or independent attested custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/legal/disclaimer",
+        "https://sentora.com/about",
+        "https://sentora.com/platform/risk-management",
+        "https://forum.morpho.org/t/introducing-sentora/2102",
+        "https://sentora.com/research/reports",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
+        "https://etherscan.io/address/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://etherscan.io/address/0x9e396de3312d373b87f9bd8763fb48184b42aac0"
+      ],
+      "rationale": "The exact scoped questions ask the human/organizational controller, independence from other Sentora role signers and independently attested key custody/signing policy for the owner and curator 1-of-1 Safes. Issuer legal, security, team, governance, reporting and audit surfaces describe non-custody and segregated execution but do not bind those assurances to either exact sole EOA signer. Pinned reads establish topology only. IncidentState and unclosed delegated/registry reach are separately retained U; no incident-free or complete execution claim is inferred."
+    },
+    {
+      "id": "uw-senpyusdprimev2-sentora-5c30895cb288f63f",
+      "assetId": "senpyusdprimev2-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senpyusdprimev2-sentora:f832165a7ecac2c871ca",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:senpyusdprimev2-sentora:f832165a7ecac2c871ca",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R24)",
+      "sources": [
+        {
+          "url": "https://forum.morpho.org/t/introducing-sentora/2102",
+          "observedAt": "2026-10-03T22:59:46Z",
+          "datumAsOf": "2025-12-05",
+          "location": "How We Work; How We Engage with Governance",
+          "excerpt": "Execution with segregated keys and policy controls, followed by automated state verification",
+          "assertion": "Describes policy-controlled execution but does not identify either exact Safe signer or independently attest custody, recovery or inter-role key independence."
+        },
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T22:59:47Z",
+          "datumAsOf": null,
+          "location": "Section 4.3; Appendix B-1 non-custodial structure",
+          "excerpt": "Sentora does not have access to private keys, seed phrases, or wallet credentials and does not maintain omnibus wallets or pooled custody structures.",
+          "assertion": "This statement concerns user assets/keys, not the organizational controllers of Safe signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 or 0x992592e073aa9b98daed79ee05c4af832e1d0abe."
+        },
+        {
+          "url": "https://etherscan.io/block/26114894",
+          "observedAt": "2026-10-03T22:59:47Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Ethereum pinned eth_call getOwners/getThreshold at block 26114894",
+          "excerpt": "26114894",
+          "assertion": "Pinned role binding confirms both vaults use the same owner/curator Safes, each 1-of-1 with empty-code EOA signer. This proves topology, not human identity or independent attested custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/legal/disclaimer",
+        "https://sentora.com/about",
+        "https://sentora.com/platform/risk-management",
+        "https://forum.morpho.org/t/introducing-sentora/2102",
+        "https://sentora.com/research/reports",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
+        "https://etherscan.io/address/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://etherscan.io/address/0x9e396de3312d373b87f9bd8763fb48184b42aac0"
+      ],
+      "rationale": "The exact scoped questions ask the human/organizational controller, independence from other Sentora role signers and independently attested key custody/signing policy for the owner and curator 1-of-1 Safes. Issuer legal, security, team, governance, reporting and audit surfaces describe non-custody and segregated execution but do not bind those assurances to either exact sole EOA signer. Pinned reads establish topology only. IncidentState and unclosed delegated/registry reach are separately retained U; no incident-free or complete execution claim is inferred."
+    },
+    {
+      "id": "uw-senpyusdprimev2-sentora-36ad61c761d30c55",
+      "assetId": "senpyusdprimev2-sentora",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:f008ec8f68e4c7bac054781b",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R24)",
+      "sources": [
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T22:59:47Z",
+          "datumAsOf": null,
+          "location": "Advanced Liquidity Curation; Core Non-Custodial Mechanisms",
+          "excerpt": "It does not withdraw assets out of the Morpho protocol; instead, it shifts the user\u2019s exposure from the vault to the underlying positions, even when those positions are illiquid.",
+          "assertion": "In-kind position exit is disclosed; it does not establish a whole-deployed-slice cash realization bound."
+        },
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T22:59:47Z",
+          "datumAsOf": null,
+          "location": "Appendix A: Liquidity and Market Risks",
+          "excerpt": "You may be unable to exit positions at desired prices or at all.",
+          "assertion": "Discloses liquidity risk but publishes no whole-deployed-slice realization maximum or guaranteed cash settlement SLA."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
+          "observedAt": "2026-10-03T23:00:02Z",
+          "datumAsOf": null,
+          "location": "Verified VaultV2 exit()",
+          "excerpt": "if (assets > idleAssets && liquidityAdapter != address(0)) {",
+          "assertion": "Ordinary cash withdrawal needs idle assets or a configured liquidity adapter; pinned liquidityAdapter is zero. Full deployed positions are not an immediate cash exit."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/legal/terms-of-use",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/research/reports",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89",
+        "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
+      ],
+      "rationale": "The required liquidityHorizon covers the entire deployed Morpho lender-position slice, not the separately identified idle underlying. Source code, strategy/product disclosures, legal terms and technical/audit archive disclose cash exits constrained by available liquidity and force-deallocation into protocol positions, but no guaranteed whole-slice realization/repayment maximum. An observed liquidity buffer or on-chain transaction speed is not a guarantee for the deployed slice. No per-slice immediate, one-day, seven-day or longer contractual cash horizon can be curated honestly."
+    },
+    {
+      "id": "uw-senpyusdprimev2-sentora-a3f1b6e84685a6d1",
+      "assetId": "senpyusdprimev2-sentora",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "contractMutability",
+        "pillar": "backing",
+        "requiredDatum": "contractMutability",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:00:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R24)",
+      "sources": [
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T22:59:47Z",
+          "datumAsOf": null,
+          "location": "Immutable Contracts",
+          "excerpt": "All vault contracts are immutable-no upgrades can change the core noncustodial guarantees after deployment.",
+          "assertion": "Exact catalog vault is source-verified VaultV2, with bytecode matched at block 26114894. Existing immutable upgradeability is already curated but compiler gates wrapper mutability on known aggregate mint review."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
+          "observedAt": "2026-10-03T23:00:02Z",
+          "datumAsOf": null,
+          "location": "Verified exact deployed VaultV2 implementation",
+          "excerpt": "contract VaultV2 is IVaultV2 {",
+          "assertion": "Exact immutable runtime has no upgrade entrypoint. Independent immutable-code fact cannot currently clear wrapper contractMutability while unrelated registry/delegated authorization questions keep aggregate mint non-known."
+        }
+      ]
+    },
+    {
+      "id": "uw-zarp-zarp-b944509ac807af36",
+      "assetId": "zarp-zarp",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:zarp-zarp:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:07:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R89)",
+      "sources": [
+        {
+          "url": "https://www.zarpstablecoin.com/terms/",
+          "observedAt": "2026-10-03T23:06:36Z",
+          "datumAsOf": "2024-07-01",
+          "location": "Clauses 3.3 and 6",
+          "excerpt": "Any such interest earned may be kept by the Company as fees.",
+          "assertion": "The public agreement permits retained reserve interest and describes partner bank redemption, but supplies no applicable numeric redemption-charge schedule."
+        },
+        {
+          "url": "https://docs.zarpstablecoin.com/zarp-stablecoin/token-redemption.md",
+          "observedAt": "2026-10-03T23:06:36Z",
+          "datumAsOf": null,
+          "location": "Token Redemption",
+          "excerpt": "the tokens are destroyed and a corresponding amount of fiat money is sent to the Partner\u2019s bank account.",
+          "assertion": "Describes payout endpoint but no percentage, flat charge, tier or all-in redemption fee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.zarpstablecoin.com/terms/",
+        "https://www.zarpstablecoin.com/transparency/",
+        "https://www.zarpstablecoin.com/compliance/",
+        "https://docs.zarpstablecoin.com/zarp-stablecoin/llms.txt",
+        "https://docs.zarpstablecoin.com/zarp-stablecoin/token-redemption.md",
+        "https://docs.zarpstablecoin.com/zarp-stablecoin/zarp-partners.md",
+        "https://docs.zarpstablecoin.com/zarp-stablecoin/custody.md"
+      ],
+      "rationale": "The exact cost for an approved partner redeeming ZARP to its own ZAR bank account is undisclosed: governing terms, full documentation index, partner onboarding, redemption, transparency and compliance pages publish no applicable percentage/flat/minimum or account-specific fee schedule. Retained reserve interest and blockchain gas are not an all-in redemption quote; 1:1 par payout is not a zero-fee assertion."
+    },
+    {
+      "id": "uw-zarp-zarp-62e96e8539caea04",
+      "assetId": "zarp-zarp",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:9b04ed783059e37aa998ae3f",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:07:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R89)",
+      "sources": [
+        {
+          "url": "https://kempengroup.co.za/wp-content/uploads/2026/09/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-09-01-signed-draft.pdf",
+          "observedAt": "2026-10-03T23:06:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2, Procedures and Findings, procedure 2",
+          "excerpt": "We have obtained access to the call deposit and current bank accounts of the company as well as that of the Old Mutual Wealth Trust Company JHB (Pty) Ltd trust account.",
+          "assertion": "Identifies account categories and verifies balances, but does not disclose all underlying reserve instruments or a whole-slice contractual maturity maximum."
+        },
+        {
+          "url": "https://www.zarpstablecoin.com/terms/",
+          "observedAt": "2026-10-03T23:06:36Z",
+          "datumAsOf": "2024-07-01",
+          "location": "Clause 3.3",
+          "excerpt": "The Company may apply funds in the said account to earn interest on those funds",
+          "assertion": "Reserve account investment permission is not a maximum term covenant."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.zarpstablecoin.com/terms/",
+        "https://www.zarpstablecoin.com/transparency/",
+        "https://www.zarpstablecoin.com/compliance/",
+        "https://docs.zarpstablecoin.com/zarp-stablecoin/llms.txt",
+        "https://docs.zarpstablecoin.com/zarp-stablecoin/master.md",
+        "https://docs.zarpstablecoin.com/zarp-stablecoin/token-redemption.md",
+        "https://kempengroup.co.za/wp-content/uploads/2026/09/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-09-01-signed-draft.pdf",
+        "https://kempengroup.co.za/wp-content/uploads/2026/03/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-02-27-1773397665324.pdf",
+        "https://eth.blockscout.com/api/v2/addresses/0xb755506531786c8ac63b756bab1ac387bacb0c04"
+      ],
+      "rationale": "The exact maximum maturityDaysMax of the entire ZAR fiat reserve slice remains undisclosed. September and February AUP reports identify call/current balances and a trust account, but no complete account investment mandate or maximum term covering all cash equivalents. Issuer docs, legal terms and compliance disclosures do not add that limit. Do not infer zero maturity from call-account labels, token redemption par or bank liquidity."
     }
   ]
 }

@@ -9,7 +9,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Brale supports issuer-native SBC issuance and redemption across networks and separately documents a LayerZero OFT integration for native mint/burn transfers through Stargate. The tracked token deployments are native liabilities, but the LayerZero transfer rail's adapter, peer, verifier, and administration controls require a separate route-scoped review.",
+    "summary": "Brale issuer-native SBC liabilities also use LayerZero native burn/mint through Stargate. Ethereum block 26115235 binds OFT adapter proxy 0xb9d852a3f9b3a82e243faab0272604102a111e1a to SBC 0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16, StableCoinAdapter implementation 0x36e55de93cf279df1a02093c50f5bab77b4319de and EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. The native token is not a wrapped representation. Full per-chain DVN, peer and administrator closure remains separate from the known external-validation rail.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
     "confidence": "verified",
@@ -17,6 +17,14 @@
       {
         "label": "Brale SBC LayerZero OFT integration",
         "url": "https://brale.xyz/blog/sbc-integrates-layerzero-for-cross-chain-transfers"
+      },
+      {
+        "label": "Exact Ethereum SBC OFT proxy source and implementation identity",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb9d852a3f9b3a82e243faab0272604102a111e1a"
+      },
+      {
+        "label": "Exact SBC native mint/burn LayerZero implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x36e55de93cf279df1a02093c50f5bab77b4319de"
       },
       {
         "label": "Brale transfer types",
