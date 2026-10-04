@@ -103,9 +103,13 @@
           {
             "label": "M0 liquidity routes and issuer onboarding",
             "url": "https://docs.m0.org/build/accessing-liquidity"
+          },
+          {
+            "label": "Wave-2 verified facility TimelockController and pinned nested Safe census at RISE block 23465435",
+            "url": "https://explorer.risechain.com/api/v2/smart-contracts/0xcacc556744a9c8de12a627d570156aaa156edf4b"
           }
         ],
-        "evidence": "Verified wrap transfers the parent M claim before minting child balances. The facility is the constructor-bound caller of wrap/unwrap; direct M input/output is approved-swapper-gated. The route does not create base M liabilities.",
+        "evidence": "Verified wrap transfers the parent M claim before minting child balances. The facility is the constructor-bound caller of wrap/unwrap; direct M input/output is approved-swapper-gated. The route does not create base M liabilities. Wave-2 block 23465435: the facility ProxyAdmin owner 0xcacc556744a9c8de12a627d570156aaa156edf4b is a verified OpenZeppelin TimelockController; getMinDelay() is 259200 seconds, its sole proposer/canceller is Safe 0xcfb72f136102559008e960aa33b94b2da94f3f88 (2-of-10), execution is open, and DEFAULT_ADMIN_ROLE is held only by the timelock itself. Facility role-admin Safe 0x8c645e201dd944677864479357f8255ea943b18b is 3-of-5. Both Safes return terminal empty module lists, zero guard words and fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. These observations establish nested controller identities, not complete runtime/fallback noninterference or human key custody.",
         "canRaiseCap": "unknown",
         "capDescription": "Parent-token inventory gates the reviewed M wrapping path; upgradeable local logic and route permissioning are not immutable limits."
       },
@@ -276,7 +280,7 @@
       "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
       "unresolvedQuestions": [
-        "Close the current USDR local SwapFacility upgrade/role-control reach at rise:0xb6807116b3b1b321a390594e31ecd6e0076f6278; the local controller implementation and full permission/upgrade chain remain incompletely reviewed."
+        "Complete runtime/source and fallback-handler noninterference for facility role-admin Safe rise:0x8c645e201dd944677864479357f8255ea943b18b and TimelockController proposer Safe rise:0xcfb72f136102559008e960aa33b94b2da94f3f88. Wave-2 block 23465435 identifies their 3-of-5 and 2-of-10 quorums and the 259200-second self-administered timelock at 0xcacc556744a9c8de12a627d570156aaa156edf4b, but no complete executable certificate binds the shared fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99 and every mutable implementation."
       ],
       "scopedQuestions": [
         {
