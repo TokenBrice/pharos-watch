@@ -7856,7 +7856,7 @@
     {
       "assetId": "strusd-tori",
       "reviewedAt": "2026-10-03",
-      "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+      "reviewer": "W2R33 exact three-deployment transfer census; native evidence retained",
       "deployments": [
         {
           "chainId": "ethereum",
@@ -7892,6 +7892,56 @@
             {
               "label": "Current native implementation and role-census pin",
               "url": "https://etherscan.io/block/26110187"
+            }
+          ]
+        },
+        {
+          "chainId": "monad",
+          "contractOrTokenId": "0x683fb58ee77172626d5b49087ddac71ef7825d20",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "Exact deployed StakedTrUSDL2 runtime is byte-for-byte identical across Monad and Pharos: SHA-256 a402a4efbc97d54c3890b0f36157cd5786019bcb0c4ca95722d237a982375eb6 (7007 bytes). Monad runtime is pinned at block 0x6934f59; Pharos explorer profile supplies deployed_code and explicitly reports nonproxy. Verified Monad StakedTrUSDL2 source hooks every transfer/mint/burn with sender and recipient blackList checks. Owner can appoint blackLister, while owner-only redistributeBlackListedFunds pulls restricted balances to the owner. Pharos explorer additionally records live Set Black Lister and Add To Black List Batch transactions. These are restrictive representations, not permissionless unmodified Chainlink tokens.",
+          "sources": [
+            {
+              "label": "Verified exact Monad StakedTrUSDL2 source",
+              "url": "https://monadscan.com/address/0x683fb58ee77172626D5B49087DdAc71eF7825d20#code"
+            },
+            {
+              "label": "Pinned Monad runtime at block 0x6934f59",
+              "url": "https://rpc.monad.xyz"
+            },
+            {
+              "label": "Pharos exact deployed bytecode, nonproxy identity and deployment transaction",
+              "url": "https://api.socialscan.io/pharos-mainnet/v1/explorer/address/0x25419e949b485d481bed4ea0c5a0496f6c7f7c63/profile"
+            },
+            {
+              "label": "Exhaustive issuer native and CCIP liability census",
+              "url": "https://docs.tori.finance/resources/contracts.md"
+            }
+          ]
+        },
+        {
+          "chainId": "pharos",
+          "contractOrTokenId": "0x25419e949b485d481bed4ea0c5a0496f6c7f7c63",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "Exact deployed StakedTrUSDL2 runtime is byte-for-byte identical across Monad and Pharos: SHA-256 a402a4efbc97d54c3890b0f36157cd5786019bcb0c4ca95722d237a982375eb6 (7007 bytes). Monad runtime is pinned at block 0x6934f59; Pharos explorer profile supplies deployed_code and explicitly reports nonproxy. Verified Monad StakedTrUSDL2 source hooks every transfer/mint/burn with sender and recipient blackList checks. Owner can appoint blackLister, while owner-only redistributeBlackListedFunds pulls restricted balances to the owner. Pharos explorer additionally records live Set Black Lister and Add To Black List Batch transactions. These are restrictive representations, not permissionless unmodified Chainlink tokens.",
+          "sources": [
+            {
+              "label": "Verified exact Monad StakedTrUSDL2 source",
+              "url": "https://monadscan.com/address/0x683fb58ee77172626D5B49087DdAc71eF7825d20#code"
+            },
+            {
+              "label": "Pinned Monad runtime at block 0x6934f59",
+              "url": "https://rpc.monad.xyz"
+            },
+            {
+              "label": "Pharos exact deployed bytecode, nonproxy identity and deployment transaction",
+              "url": "https://api.socialscan.io/pharos-mainnet/v1/explorer/address/0x25419e949b485d481bed4ea0c5a0496f6c7f7c63/profile"
+            },
+            {
+              "label": "Exhaustive issuer native and CCIP liability census",
+              "url": "https://docs.tori.finance/resources/contracts.md"
             }
           ]
         }

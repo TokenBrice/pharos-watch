@@ -18,9 +18,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "USDGLO has seven reviewed native-issuance routes: identical GloDollarV3 CREATE2 proxies on six EVM chains and a native Stellar asset. Across is only a generic intent/liquidity framework reference; no USDGLO-specific bridge representation, adapter, lockbox/escrow, peer, validator/DVN, destination minter, or bridge-admin control is evidenced, and the tokens are minted by the Brale issuer backend rather than by an Across route. The issuer-native-burn-mint tier is retained for this reviewed issuer-native multichain deployment set and does not move native mint authority into Bridge Risk.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial); mint-bridge-boundary migration 2026-08-16",
+    "summary": "USDGLO retains seven reviewed native-issuance routes: six EVM GloDollarV3 proxies and a native Stellar asset. The issuer's official registry additionally names VeChain USDGLO 0x29c630cce4ddb23900f5fe66ab55e488c15b9f5e, which cannot be added to contracts or admitted routes until canonical chain support exists. Brale documents native cross-chain burn/mint swaps. Across is a generic framework reference, not evidence of a USDGLO-specific representation. This authored subset is not an exhaustive eight-chain census.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W2R33 primary-source deployment census reconciliation",
     "confidence": "verified",
     "protocols": [
       {
@@ -46,6 +46,14 @@
       {
         "label": "Across developer docs",
         "url": "https://docs.across.to/"
+      },
+      {
+        "label": "Glo official eight-chain USDGLO address registry",
+        "url": "https://www.glodollar.org/articles/smart-contract-addresses"
+      },
+      {
+        "label": "Brale issuer-native cross-chain burn/mint swaps",
+        "url": "https://docs.brale.xyz/guides/stablecoin-to-stablecoin-swap.md"
       }
     ],
     "routes": [

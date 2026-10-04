@@ -8,7 +8,7 @@
       "risk": "medium",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "Undisclosed regulated custodian banks under Tori's mandate (identities withheld; verified by Accountable and HT Digital)",
-      "liquidityHorizon": "unknown",
+      "liquidityHorizon": "one-day",
       "riskFactors": [
         "counterparty",
         "custody",
@@ -123,8 +123,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency-map nested holdings review",
+    "reviewedAt": "2026-10-04",
+    "reviewer": "W2R33 current Accountable money-market liquidity review; original composition retained",
     "confidence": "verified",
     "sources": [
       {
@@ -160,7 +160,7 @@
         "url": "https://eth.blockscout.com/address/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
       }
     ],
-    "rationale": "The captured Accountable dashboard reports $78,485,841.65 of reserves. Its nested_split reconciles Ethereum and Base token leaves to each On-chain Liquidity chain total. Ethereum USDC supplied to Morpho is $11,153,900.6693676, idle USDC is $303,026.9000899885, and USDT is $106,498.30192926673. Separate keyed slices preserve the Morpho credit and liquidity layer while identifying its USDC exposure. Native ETH, unverified AUSD, and unverified Base Morpho dust remain in the denominator without tracked stablecoin links. The issuer solvency endpoint corroborates these leaf values; its off-chain category totals differ from the dashboard, so dashboard totals remain the composition authority. Custodian identities and the Ethereum Morpho vault remain undisclosed.",
+    "rationale": "The captured Accountable dashboard reports $78,485,841.65 of reserves. Its nested_split reconciles Ethereum and Base token leaves to each On-chain Liquidity chain total. Ethereum USDC supplied to Morpho is $11,153,900.6693676, idle USDC is $303,026.9000899885, and USDT is $106,498.30192926673. Separate keyed slices preserve the Morpho credit and liquidity layer while identifying its USDC exposure. Native ETH, unverified AUSD, and unverified Base Morpho dust remain in the denominator without tracked stablecoin links. The issuer solvency endpoint corroborates these leaf values; its off-chain category totals differ from the dashboard, so dashboard totals remain the composition authority. Custodian identities and the Ethereum Morpho vault remain undisclosed. On 2026-10-04, Accountable data.liquidity (as_of 2026-10-04, complete true, unmapped_instruments 0) explicitly assigns the money_markets class time_to_cash Same day. The keyed money-market sleeve therefore has a one-day operational liquidity horizon; this does not assert a contractual redemption SLA or alter the original 2026-09-30 composition.",
     "compositionBasis": "Accountable assetBreakdown category totals and reserves.nested_split leaves captured 2026-09-30; issuer solvency leaf cross-check",
     "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
