@@ -308,10 +308,10 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "HyperCore FEUSD is a noncanonical Hyperliquid representation linked by the current official spotMeta registry to the HyperEVM native feUSD token. The representation boundary and current EVM proxy identity are verified, but the primary-source inventory does not identify the Hyperliquid system asset-linkage controller or its validator, upgrade, pause, withdrawal, peer, or rate-limit controls; the aggregate bridge tier therefore remains fail-closed opaque-or-unknown.",
-    "reviewedAt": "2026-09-04",
-    "reviewer": "Codex FEUSD HyperCore linkage refresh",
+    "tier": "single-chain-or-native",
+    "summary": "HyperCore FEUSD and its linked HyperEVM feUSD contract are two execution-domain balances within the same Hyperliquid chain, secured by the same HyperBFT consensus. Official transfer specifications describe system-address ERC20 escrow transfers and Transfer-log-based Core credits, not an external bridge quorum. The transport tier is single-chain; asset-specific linkage administration and executable system-controller semantics remain unresolved and receive no protective authority or cap assumptions.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Unknown wave W2R51 exact linkage transport review",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -325,6 +325,14 @@
       }
     ],
     "sources": [
+      {
+        "label": "Hyperliquid unified chain and consensus architecture",
+        "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hyperevm.md"
+      },
+      {
+        "label": "Exact HyperCore/HyperEVM spot linkage and system-transfer specification",
+        "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/hypercore-less-than-greater-than-hyperevm-transfers.md"
+      },
       {
         "label": "Felix docs",
         "url": "https://usefelix.gitbook.io/docs"
@@ -377,19 +385,28 @@
         "protocol": "Hyperliquid native HyperCore/HyperEVM asset linkage (Felix feUSD)",
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
-        "riskTier": "opaque-or-unknown",
+        "riskTier": "single-chain-or-native",
         "semantics": "other",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Refreshed 2026-09-04 from the Hyperliquid operator info API (POST /info, type spotMeta): HyperCore spot token FEUSD sits at index 241 with tokenId 0x88102bea0bbad5f301f6e9e4dacdf979, weiDecimals 8, isCanonical false, fullName 'Felix USD', and evmContract address 0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70 with evm_extra_wei_decimals 10. At HyperEVM block 45001141, the linked EVM token returned name()='feUSD', symbol()='feUSD', decimals()=18, owner()=0x0000000000000000000000000000000000000000000000, and EIP-1967 implementation/admin slots resolving to 0x444322c3c54908fa5a7842a4f3ff085ec67f2598 and 0x44a600c031dbdf652500f4a6d84b168056f13692. The HyperCore/HyperEVM interaction documentation does not publish the system asset-linkage controller, validator, upgrade, pause, withdrawal, peer, or rate-limit authority; the EVM proxy admin does not identify that separate system controller. The route therefore remains reviewed for identity but unresolved for controller semantics.",
+        "reviewNote": "The official POST /info spotMeta response rechecked on 2026-10-03 binds FEUSD index 241/tokenId 0x88102bea0bbad5f301f6e9e4dacdf979 to feUSD 0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70, with eight Core wei decimals and ten extra EVM wei decimals. At HyperEVM block 47595439 the linked contract returns name feUSD and the token-index system address 0x20000000000000000000000000000000000000f1 has empty EVM code. Official architecture states HyperEVM is not a separate chain; transfer documentation specifies ERC20 transfers from/to that system address and Core credits from Transfer logs. This establishes a single-chain transport tier, not an independently validated external bridge. Empty system-address bytecode does not prove absence of native system powers, and neither the spotMeta row nor the documentation certifies the asset-specific finalizer, replacement, upgrade or intervention authority. The representation identity and unresolved controller failure domains are preserved.",
         "mappingVersion": "bridge-route-facts-v1",
         "failureDomainKeys": [
           "protocol:hyperliquid-hypercore-evm-linkage",
           "contract:hyperevm:0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70",
           "system:hyperliquid-feusd-asset-linkage-unknown"
         ],
-        "observedAt": "2026-09-04",
+        "observedAt": "2026-10-03",
+        "observedBlock": 47595439,
         "sources": [
+          {
+            "label": "Hyperliquid unified chain and consensus architecture",
+            "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hyperevm.md"
+          },
+          {
+            "label": "Exact spot-token system transfer and linkage specification",
+            "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/hypercore-less-than-greater-than-hyperevm-transfers.md"
+          },
           {
             "label": "Hyperliquid info API spotMeta",
             "url": "https://api.hyperliquid.xyz/info"
