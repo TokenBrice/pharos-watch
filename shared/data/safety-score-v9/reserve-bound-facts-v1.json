@@ -498,6 +498,60 @@
         "governingInstrument": "Tether June 30 2026 Financial Figures and Reserves Report, Assets table and footnote 9",
         "allInScope": true
       }
+    ],
+    "zchf-frankencoin": [
+      {
+        "factKey": "zchf-boss-equity-maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "collateral-positions-api:boss"
+        },
+        "asOfSec": 1791071541,
+        "publisher": "Boss Info AG",
+        "sourceUrls": [
+          "https://www.bossinfo.com/wp-content/uploads/Boss_Info_AG-Registration_Regulations-CMTA_compatible_220524_signiert-1.pdf",
+          "https://api.frankencoin.com/ecosystem/collateral/positions/details"
+        ],
+        "assertion": "BOSS is exact 0x2e880962a9609aa3eab4def919fe9e917e99073b registered-share instrument in the inventory and agreement. Corporate equity rights have no dated debt repayment maturity. Borrower-position expiry is not share maturity.",
+        "contentDigest": "9f886b9b006a736c097ac4688bee79129f3a3cc37edb77be8e0180a1a2186489",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "W2R45 governing-instrument review",
+          "confidence": "high"
+        },
+        "kind": "maturity-applicability",
+        "claimId": "ethereum:0x2e880962a9609aa3eab4def919fe9e917e99073b",
+        "conclusion": "not-applicable",
+        "governingInstrument": "Boss Info AG Tokenization and Registration Regulations V2.0, 2022-05-24, sections 1 and 2.1",
+        "allInScope": true
+      },
+      {
+        "factKey": "zchf-realu-equity-maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "collateral-positions-api:realu"
+        },
+        "asOfSec": 1791071541,
+        "publisher": "RealUnit Schweiz AG",
+        "sourceUrls": [
+          "https://realunit.ch/wp-content/uploads/2023/10/230929_RegV-EN-RealUnit-Schweiz-AG_final.pdf",
+          "https://api.frankencoin.com/ecosystem/collateral/positions/details"
+        ],
+        "assertion": "REALU is exact 0x553c7f9c780316fc1d34b8e14ac2465ab22a090b registered-share instrument in the inventory and agreement. Corporate equity has no debt repayment maturity. Position expiry and investment horizon are different facts.",
+        "contentDigest": "d94644fea4087a74f10501dbf2eb7d2d50bee20bcda0ba5712f9222351ef1dc5",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "W2R45 governing-instrument review",
+          "confidence": "high"
+        },
+        "kind": "maturity-applicability",
+        "claimId": "ethereum:0x553c7f9c780316fc1d34b8e14ac2465ab22a090b",
+        "conclusion": "not-applicable",
+        "governingInstrument": "RealUnit Schweiz AG Registration Agreement, September 29 2023, sections 1 and 3",
+        "allInScope": true
+      }
     ]
   }
 }

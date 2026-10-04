@@ -5414,206 +5414,6 @@
       ]
     },
     {
-      "id": "uw-gldon-ondo-7b60c3ae2773a905",
-      "assetId": "gldon-ondo",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:01:11Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R54)",
-      "sources": [
-        {
-          "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
-          "observedAt": "2026-10-03T22:59:08Z",
-          "datumAsOf": null,
-          "location": "Full Asset Backing and Security Interest",
-          "excerpt": "Ondo tokenized stocks are all fully backed by their underlying stocks and ETFs (together with cash in transit).",
-          "assertion": "Backing policy includes underlying securities plus transit cash; it does not disclose current GLDon, IAUon, SLVon or USDon-specific measured whole-book weights."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
-        "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md",
-        "https://docs.ondo.finance/ondo-stocks/available-assets.md",
-        "https://app.ondo.finance/api/v2/assets/gldon/info",
-        "https://app.ondo.finance/api/v2/assets/iauon/info",
-        "https://app.ondo.finance/api/v2/assets/slvon/info",
-        "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf",
-        "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf",
-        "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf",
-        "https://cdn.sanity.io/files/8k2tqa6n/production/f22c30e6d14a8000abc4e1ad6f62d6cb41dc3da0.pdf",
-        "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&st=t5vbvab8&dl=0",
-        "https://docs.ondo.finance/addresses.md"
-      ],
-      "rationale": "Exact current whole-book reserve composition per GLDon, IAUon, SLVon and USDon is not disclosed. Retrieved September 29 Ankura report aggregates stocks, USDY and cash and lists chain USDon liabilities, not token-specific backing allocation. Final Terms name underlying securities and allow additional collateral; ETF underlying holdings are not the issuer token book. No measured transit-cash or additional-collateral percentage supports a 100% ETF/brokerage-cash admission."
-    },
-    {
-      "id": "uw-iauon-ondo-6e95413f4628b16c",
-      "assetId": "iauon-ondo",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:01:11Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R54)",
-      "sources": [
-        {
-          "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
-          "observedAt": "2026-10-03T22:59:08Z",
-          "datumAsOf": null,
-          "location": "Full Asset Backing and Security Interest",
-          "excerpt": "Ondo tokenized stocks are all fully backed by their underlying stocks and ETFs (together with cash in transit).",
-          "assertion": "Backing policy includes underlying securities plus transit cash; it does not disclose current GLDon, IAUon, SLVon or USDon-specific measured whole-book weights."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
-        "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md",
-        "https://docs.ondo.finance/ondo-stocks/available-assets.md",
-        "https://app.ondo.finance/api/v2/assets/gldon/info",
-        "https://app.ondo.finance/api/v2/assets/iauon/info",
-        "https://app.ondo.finance/api/v2/assets/slvon/info",
-        "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf",
-        "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf",
-        "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf",
-        "https://cdn.sanity.io/files/8k2tqa6n/production/f22c30e6d14a8000abc4e1ad6f62d6cb41dc3da0.pdf",
-        "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&st=t5vbvab8&dl=0",
-        "https://docs.ondo.finance/addresses.md"
-      ],
-      "rationale": "Exact current whole-book reserve composition per GLDon, IAUon, SLVon and USDon is not disclosed. Retrieved September 29 Ankura report aggregates stocks, USDY and cash and lists chain USDon liabilities, not token-specific backing allocation. Final Terms name underlying securities and allow additional collateral; ETF underlying holdings are not the issuer token book. No measured transit-cash or additional-collateral percentage supports a 100% ETF/brokerage-cash admission."
-    },
-    {
-      "id": "uw-slvon-ondo-b97ec32833fe39dc",
-      "assetId": "slvon-ondo",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:01:11Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R54)",
-      "sources": [
-        {
-          "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
-          "observedAt": "2026-10-03T22:59:08Z",
-          "datumAsOf": null,
-          "location": "Full Asset Backing and Security Interest",
-          "excerpt": "Ondo tokenized stocks are all fully backed by their underlying stocks and ETFs (together with cash in transit).",
-          "assertion": "Backing policy includes underlying securities plus transit cash; it does not disclose current GLDon, IAUon, SLVon or USDon-specific measured whole-book weights."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
-        "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md",
-        "https://docs.ondo.finance/ondo-stocks/available-assets.md",
-        "https://app.ondo.finance/api/v2/assets/gldon/info",
-        "https://app.ondo.finance/api/v2/assets/iauon/info",
-        "https://app.ondo.finance/api/v2/assets/slvon/info",
-        "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf",
-        "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf",
-        "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf",
-        "https://cdn.sanity.io/files/8k2tqa6n/production/f22c30e6d14a8000abc4e1ad6f62d6cb41dc3da0.pdf",
-        "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&st=t5vbvab8&dl=0",
-        "https://docs.ondo.finance/addresses.md"
-      ],
-      "rationale": "Exact current whole-book reserve composition per GLDon, IAUon, SLVon and USDon is not disclosed. Retrieved September 29 Ankura report aggregates stocks, USDY and cash and lists chain USDon liabilities, not token-specific backing allocation. Final Terms name underlying securities and allow additional collateral; ETF underlying holdings are not the issuer token book. No measured transit-cash or additional-collateral percentage supports a 100% ETF/brokerage-cash admission."
-    },
-    {
-      "id": "uw-usdon-ondo-11c10b622fb6a282",
-      "assetId": "usdon-ondo",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:01:11Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R54)",
-      "sources": [
-        {
-          "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
-          "observedAt": "2026-10-03T22:59:08Z",
-          "datumAsOf": null,
-          "location": "Full Asset Backing and Security Interest",
-          "excerpt": "Ondo tokenized stocks are all fully backed by their underlying stocks and ETFs (together with cash in transit).",
-          "assertion": "Backing policy includes underlying securities plus transit cash; it does not disclose current GLDon, IAUon, SLVon or USDon-specific measured whole-book weights."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
-        "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md",
-        "https://docs.ondo.finance/ondo-stocks/available-assets.md",
-        "https://app.ondo.finance/api/v2/assets/gldon/info",
-        "https://app.ondo.finance/api/v2/assets/iauon/info",
-        "https://app.ondo.finance/api/v2/assets/slvon/info",
-        "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf",
-        "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf",
-        "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf",
-        "https://cdn.sanity.io/files/8k2tqa6n/production/f22c30e6d14a8000abc4e1ad6f62d6cb41dc3da0.pdf",
-        "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&st=t5vbvab8&dl=0",
-        "https://docs.ondo.finance/addresses.md"
-      ],
-      "rationale": "Exact current whole-book reserve composition per GLDon, IAUon, SLVon and USDon is not disclosed. Retrieved September 29 Ankura report aggregates stocks, USDY and cash and lists chain USDon liabilities, not token-specific backing allocation. Final Terms name underlying securities and allow additional collateral; ETF underlying holdings are not the issuer token book. No measured transit-cash or additional-collateral percentage supports a 100% ETF/brokerage-cash admission."
-    },
-    {
-      "id": "uw-usdon-ondo-38f0f253d545671c",
-      "assetId": "usdon-ondo",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdon-ondo:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:01:11Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R54)",
-      "sources": [
-        {
-          "url": "https://docs.ondo.finance/ondo-stocks/fees-and-taxes.md",
-          "observedAt": "2026-10-03T22:59:08Z",
-          "datumAsOf": null,
-          "location": "What fees does Ondo Stocks charge?",
-          "excerpt": "Investors are responsible for their own gas costs.",
-          "assertion": "Issuer discusses quote-retained differences and user gas but no USDon-to-USDC standalone cost schedule or same-notional all-in upper bound."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md",
-        "https://docs.ondo.finance/ondo-stocks/fees-and-taxes.md",
-        "https://docs.ondo.finance/ondo-stocks/token-and-quote-pricing.md",
-        "https://docs.ondo.finance/ondo-stocks/available-assets.md",
-        "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md",
-        "https://docs.ondo.finance/addresses.md",
-        "https://cdn.sanity.io/files/8k2tqa6n/production/f22c30e6d14a8000abc4e1ad6f62d6cb41dc3da0.pdf"
-      ],
-      "rationale": "Exact USDon platform conversion/redemption fee schedule and same-notional all-in cost bound remain unpublished. Current docs disclose liquidity-conditioned USDC swaps and user-paid gas, but no standalone USDon fee/minimum/maximum. ETF-token Final Terms' 0.1% underlying-market-price fee limit does not establish a USDon settlement-cash fee."
-    },
-    {
       "id": "uw-zarp-zarp-b944509ac807af36",
       "assetId": "zarp-zarp",
       "scope": {
@@ -12641,371 +12441,6 @@
         "https://docs.inverse.finance/inverse-finance/inverse-finance/technical/smart-contracts.md"
       ],
       "rationale": "Frontier bad debt is explicitly outstanding unbacked borrowing, gradually repaid from DAO revenues. Legacy repayment mechanisms and transparency report progress, reserve-dependent discounts and governance-adjustable terms, but publish no enforceable maximum maturityDaysMax or whole-slice liquidityHorizon. These private-credit facts are missing disclosures, not structural crypto maturity gaps."
-    },
-    {
-      "id": "uw-brlv-crown-1af5f7bcdee2bda7",
-      "assetId": "brlv-crown",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:ad982851599cb9933188f3d5",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:46Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
-      "sources": [
-        {
-          "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
-          "observedAt": "2026-10-03T22:57:48Z",
-          "datumAsOf": "2026-09-30",
-          "location": "September 2026 PoR, p.1, section 3 reserve composition",
-          "excerpt": "Brazilian Treasury Bonds -|R$\u00a0211.011.738,24 55.82%|",
-          "assertion": "The dated itemized schedule publishes Treasury/ETF values but no instrument IDs, maximum remaining maturities or hard liquidation horizons."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.crown-brlv.com/en/transparency",
-        "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
-        "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf",
-        "https://docs.crown-brlv.com/whitepaper",
-        "https://docs.crown-brlv.com/llms.txt"
-      ],
-      "rationale": "Exact maturityDaysMax and liquidation horizon for the two Treasury/ETF slices remain undisclosed. The latest report only itemizes asset classes and values; terms and whitepaper disclose reserve assets and illiquidity risk, not slice-wide contractual maxima. T+3 holder bank payout is not a reserve liquidation bound."
-    },
-    {
-      "id": "uw-brlv-crown-1787296a2cde6813",
-      "assetId": "brlv-crown",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:ad982851599cb9933188f3d5",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:46Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
-      "sources": [
-        {
-          "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
-          "observedAt": "2026-10-03T22:57:48Z",
-          "datumAsOf": "2026-09-30",
-          "location": "September 2026 PoR, p.1, section 3 reserve composition",
-          "excerpt": "Brazilian Treasury Bonds -|R$\u00a0211.011.738,24 55.82%|",
-          "assertion": "The dated itemized schedule publishes Treasury/ETF values but no instrument IDs, maximum remaining maturities or hard liquidation horizons."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.crown-brlv.com/en/transparency",
-        "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
-        "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf",
-        "https://docs.crown-brlv.com/whitepaper",
-        "https://docs.crown-brlv.com/llms.txt"
-      ],
-      "rationale": "Exact maturityDaysMax and liquidation horizon for the two Treasury/ETF slices remain undisclosed. The latest report only itemizes asset classes and values; terms and whitepaper disclose reserve assets and illiquidity risk, not slice-wide contractual maxima. T+3 holder bank payout is not a reserve liquidation bound."
-    },
-    {
-      "id": "uw-brlv-crown-f819331ee5dce6c5",
-      "assetId": "brlv-crown",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:e9dad50bdff131a3c8c00d85",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:46Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
-      "sources": [
-        {
-          "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
-          "observedAt": "2026-10-03T22:57:48Z",
-          "datumAsOf": "2026-09-30",
-          "location": "September 2026 PoR, p.1, section 3 reserve composition",
-          "excerpt": "Brazilian Treasury Bonds -|R$\u00a0211.011.738,24 55.82%|",
-          "assertion": "The dated itemized schedule publishes Treasury/ETF values but no instrument IDs, maximum remaining maturities or hard liquidation horizons."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.crown-brlv.com/en/transparency",
-        "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
-        "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf",
-        "https://docs.crown-brlv.com/whitepaper",
-        "https://docs.crown-brlv.com/llms.txt"
-      ],
-      "rationale": "Exact maturityDaysMax and liquidation horizon for the two Treasury/ETF slices remain undisclosed. The latest report only itemizes asset classes and values; terms and whitepaper disclose reserve assets and illiquidity risk, not slice-wide contractual maxima. T+3 holder bank payout is not a reserve liquidation bound."
-    },
-    {
-      "id": "uw-brlv-crown-1f986e8778ad6025",
-      "assetId": "brlv-crown",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:e9dad50bdff131a3c8c00d85",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:46Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
-      "sources": [
-        {
-          "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
-          "observedAt": "2026-10-03T22:57:48Z",
-          "datumAsOf": "2026-09-30",
-          "location": "September 2026 PoR, p.1, section 3 reserve composition",
-          "excerpt": "Brazilian Treasury Bonds -|R$\u00a0211.011.738,24 55.82%|",
-          "assertion": "The dated itemized schedule publishes Treasury/ETF values but no instrument IDs, maximum remaining maturities or hard liquidation horizons."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.crown-brlv.com/en/transparency",
-        "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
-        "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf",
-        "https://docs.crown-brlv.com/whitepaper",
-        "https://docs.crown-brlv.com/llms.txt"
-      ],
-      "rationale": "Exact maturityDaysMax and liquidation horizon for the two Treasury/ETF slices remain undisclosed. The latest report only itemizes asset classes and values; terms and whitepaper disclose reserve assets and illiquidity risk, not slice-wide contractual maxima. T+3 holder bank payout is not a reserve liquidation bound."
-    },
-    {
-      "id": "uw-brlv-crown-9aaa94c607aba6e2",
-      "assetId": "brlv-crown",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:brlv-crown:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:46Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
-      "sources": [
-        {
-          "url": "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf",
-          "observedAt": "2026-10-03T22:57:49Z",
-          "datumAsOf": "2026-09-18",
-          "location": "p.7, standard redemption fee clause",
-          "excerpt": "valor m\u00ednimo fixo ou taxa vari\u00e1vel de mercado, o que for maior",
-          "assertion": "The fee structure is disclosed, but neither numeric minimum nor variable-rate parameters nor all-in same-notional cap is public."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.crown-brlv.com/en/transparency",
-        "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
-        "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf",
-        "https://docs.crown-brlv.com/whitepaper",
-        "https://docs.crown-brlv.com/llms.txt",
-        "https://www.crown-brlv.com/taxas"
-      ],
-      "rationale": "Exact same-notional total redemption cost is undisclosed: terms permit max(fixed minimum, market-variable fee), payable under the platform tariff, without numerical parameters. The official linked public tariff resolves to 404; docs and current public reserve/terms archive supply no alternate numeric schedule. This is missing issuer tariff data, not an unsupported calculable public formula."
-    },
-    {
-      "id": "uw-usdfr-forest-road-4ea58c3a7d9ac3dd",
-      "assetId": "usdfr-forest-road",
-      "scope": {
-        "componentKey": "control:mint-meta:usdfr-forest-road:e55f36a3d94667588f1b",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:usdfr-forest-road:e55f36a3d94667588f1b",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:46Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
-      "sources": [
-        {
-          "url": "https://forestroadvault.com/docs/roles-and-governance",
-          "observedAt": "2026-10-03T22:57:49Z",
-          "datumAsOf": null,
-          "location": "Role roster, ATTESTER_ROLE",
-          "excerpt": "The m-of-n attester keys",
-          "assertion": "The authorized key role is public; human owners, custody model and signing policy/independence are not disclosed."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://forestroadvault.com",
-        "https://forestroadvault.com/docs/roles-and-governance",
-        "https://forestroadvault.com/docs/overview",
-        "https://forestroadvault.com/docs/addresses",
-        "https://forestroadvault.com/docs/audit",
-        "https://forestroadvault.com/docs/security",
-        "https://forestroadvault.com/transparency",
-        "https://forestroadvault.com/legal",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x870deb459512099e70e9a640cf3140a0d969fc18"
-      ],
-      "rationale": "The scoped controller question asks for custody and signing policy of its two observed oracle attester keys, not enumeration of onchain role bytes. Published verified code and roles specify key roster/threshold authorization but no human ownership, independent custody, or actual signing-policy attestations. Broader timelock census remains U separately."
-    },
-    {
-      "id": "uw-usdfr-forest-road-a629f500a2bb1558",
-      "assetId": "usdfr-forest-road",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:46Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
-      "sources": [
-        {
-          "url": "https://forestroadvault.com/docs/guarantees",
-          "observedAt": "2026-10-03T22:57:49Z",
-          "datumAsOf": null,
-          "location": "Reserve custody / backing reconciliation",
-          "excerpt": "Direct USDC donations never become recognized backing through\nreconciliation: the reconciliation function is intentionally one-way downward and only\nacknowledges a custody shortfall.",
-          "assertion": "Published reconciliation is internal USDC/loan accounting, not assurance of offchain receivables against whole USDfr liabilities."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://forestroadvault.com",
-        "https://forestroadvault.com/docs/guarantees",
-        "https://forestroadvault.com/docs/overview",
-        "https://forestroadvault.com/transparency",
-        "https://forestroadvault.com/docs/audit",
-        "https://forestroadvault.com/docs/security",
-        "https://forestroadvault.com/legal"
-      ],
-      "rationale": "Whole-liability offchain-book reconciliation cadence/scope is undisclosed. ReserveManager internally reconciles recognized USDC and attester-marked loans; the audit register labels predominantly internal engineering reviews. No named dated financial engagement reconciles all material receivables and total USDfr liabilities; smart-contract invariants are not financial assurance."
-    },
-    {
-      "id": "uw-usdfr-forest-road-f3c60a728092f3ac",
-      "assetId": "usdfr-forest-road",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "supervision",
-        "pillar": "control",
-        "requiredDatum": "supervision",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:46Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
-      "sources": [
-        {
-          "url": "https://forestroadvault.com/legal",
-          "observedAt": "2026-10-03T22:57:49Z",
-          "datumAsOf": null,
-          "location": "Definitive legal materials / instrument characterization",
-          "excerpt": "Token characterization is a matter for counsel.",
-          "assertion": "Public terms defer exact legal wrapper/instrument status to private definitive documents; exact USDfr issuer prudential supervision is not identified."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://forestroadvault.com",
-        "https://forestroadvault.com/legal",
-        "https://forestroadvault.com/risk",
-        "https://forestroadvault.com/docs/overview",
-        "https://forestroadvault.com/docs/status",
-        "https://forestroadvault.com/transparency",
-        "https://forestroad.com",
-        "https://files.brokercheck.finra.org/firm/firm_148232.pdf",
-        "https://reports.adviserinfo.sec.gov/reports/ADV/315600/PDF/315600.pdf"
-      ],
-      "rationale": "Exact USDfr legal issuer and its prudential supervisory scope are undisclosed in public definitive materials. FINRA identifies Forest Road Securities BD LLC and SEC ADV identifies Forest Road Asset Management LLC; neither establishes that entity as the USDfr issuer or supervisory oversight of token mint/reserve reconciliation. Affiliate securities/adviser registrations are not token-specific prudential authorization."
-    },
-    {
-      "id": "uw-nusd-neutrl-64ab1a9cadb9d03a",
-      "assetId": "nusd-neutrl",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:46Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
-      "sources": [
-        {
-          "url": "https://www.neutrl.finance/reserves",
-          "observedAt": "2026-10-03T22:58:04Z",
-          "datumAsOf": null,
-          "location": "Allocation, venues, reserve breakdown and solvency panels",
-          "excerpt": "Reserve figures are being recalibrated and will be updated soon.",
-          "assertion": "The current issuer dashboard explicitly withholds every measured allocation/coverage figure; qualitative strategies do not supply full reserve percentages."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.neutrl.finance",
-        "https://www.neutrl.finance/reserves",
-        "https://www.neutrl.finance/legal/terms-of-use",
-        "https://docs.neutrl.finance/resources-and-ecosystem/faq",
-        "https://docs.neutrl.finance/resources-and-ecosystem/audits",
-        "https://docs.neutrl.finance/protocol-design/backing",
-        "https://accountable.neutrl.finance",
-        "https://cache.accountable.capital/dashboard/neutrl"
-      ],
-      "rationale": "Current full NUSD reserve composition and a dated common denominator are undisclosed: the accessible issuer allocation, venue, breakdown and solvency panels explicitly say figures are being recalibrated. Documentation/legal terms give eligible strategies and discretion, not present percentages. Legacy Accountable failures corroborate missing coverage but are not the sole basis for C."
-    },
-    {
-      "id": "uw-nusd-neutrl-d393c0fea96f2f74",
-      "assetId": "nusd-neutrl",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:46Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
-      "sources": [
-        {
-          "url": "https://docs.neutrl.finance/resources-and-ecosystem/faq",
-          "observedAt": "2026-10-03T22:57:49Z",
-          "datumAsOf": null,
-          "location": "Transparency and Governance, accuracy bullets",
-          "excerpt": "Eventual implementation of **proof-of-reserve frameworks** for off-chain holdings",
-          "assertion": "Offchain proof-of-reserve is described as eventual, without a presently delivered whole-liability reconciliation engagement/cadence."
-        },
-        {
-          "url": "https://www.neutrl.finance/reserves",
-          "observedAt": "2026-10-03T22:58:04Z",
-          "datumAsOf": null,
-          "location": "Solvency / reserve coverage panel",
-          "excerpt": "Reserve figures are being recalibrated and will be updated soon.",
-          "assertion": "Current reserve versus NUSD coverage metrics are not being published."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.neutrl.finance",
-        "https://www.neutrl.finance/reserves",
-        "https://www.neutrl.finance/legal/terms-of-use",
-        "https://docs.neutrl.finance/resources-and-ecosystem/faq",
-        "https://docs.neutrl.finance/resources-and-ecosystem/audits",
-        "https://docs.neutrl.finance/protocol-design/backing",
-        "https://accountable.neutrl.finance",
-        "https://cache.accountable.capital/dashboard/neutrl"
-      ],
-      "rationale": "Whole-liability reconciliation scope/cadence for material offchain OTC/custody positions is undisclosed. FAQ describes eventual offchain proof-of-reserve, audits are contract-security engagements, and current solvency panels withhold measured coverage. Neither historical Dashboard claims nor chain custody movements prove ongoing reconciliation of all reserves to total NUSD liabilities."
     },
     {
       "id": "uw-feusd-felix-0581508ec1a0e0c0",
@@ -29521,322 +28956,6 @@
       "rationale": "The exact direct sUSD-to-USDC route has no published numerical all-in protocol/QLP redemption fee schedule or upper bound. Withdrawal docs mention only network fees; the RFQ commission statement concerns subscription quotes. Issuer legal/product/FAQ/technical pages, public withdrawal CLI/IDL, audit and current sunset notice do not define applicable redemption pricing. Pool.Fee and collectFee do not establish a withdrawal-charge formula; upstream OpenEden fees are not proven pass-through."
     },
     {
-      "id": "uw-suiusde-sui-3db7f74f6276d7be",
-      "assetId": "suiusde-sui",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:307254215894779e1640e7d8",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
-      "sources": [
-        {
-          "url": "https://www.esuidollar.io/legal/mint-user-agreement",
-          "observedAt": "2026-10-03T22:52:53Z",
-          "datumAsOf": null,
-          "location": "Sections 1 and 3, reserves and service availability; last updated April 2026",
-          "excerpt": "The Issuer does not guarantee that minting or redemption will always be available.",
-          "assertion": "Issuer describes primarily USDe reserves, institutional custody and discretionary redemption, but no complete slice-specific realization horizon."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.esuidollar.io/",
-        "https://www.esuidollar.io/legal/mint-user-agreement",
-        "https://www.esuidollar.io/legal/terms-of-service",
-        "https://whitelabel.ethena.fi/",
-        "https://whitelabel.ethena.fi/transparency",
-        "https://whitelabel.ethena.fi/api/transparency"
-      ],
-      "rationale": "No complete liquidityHorizon is published for the Coinbase Prime off-chain USDC, USDe, or other USDC reserve slices. The live transparency endpoint gives amounts and custodian locations, not whole-slice withdrawal or liquidation maxima. Unified USDe liquidity and issuer pro-rata redemption do not establish each custody slice's liquidity horizon; legal terms permit suspension and supply no timing bound."
-    },
-    {
-      "id": "uw-suiusde-sui-9feca9a1ada5eba0",
-      "assetId": "suiusde-sui",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:3932ebed0fe9d1fb275fdca0",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
-      "sources": [
-        {
-          "url": "https://www.esuidollar.io/legal/mint-user-agreement",
-          "observedAt": "2026-10-03T22:52:53Z",
-          "datumAsOf": null,
-          "location": "Sections 1 and 3, reserves and service availability; last updated April 2026",
-          "excerpt": "The Issuer does not guarantee that minting or redemption will always be available.",
-          "assertion": "Issuer describes primarily USDe reserves, institutional custody and discretionary redemption, but no complete slice-specific realization horizon."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.esuidollar.io/",
-        "https://www.esuidollar.io/legal/mint-user-agreement",
-        "https://www.esuidollar.io/legal/terms-of-service",
-        "https://whitelabel.ethena.fi/",
-        "https://whitelabel.ethena.fi/transparency",
-        "https://whitelabel.ethena.fi/api/transparency"
-      ],
-      "rationale": "No complete liquidityHorizon is published for the Coinbase Prime off-chain USDC, USDe, or other USDC reserve slices. The live transparency endpoint gives amounts and custodian locations, not whole-slice withdrawal or liquidation maxima. Unified USDe liquidity and issuer pro-rata redemption do not establish each custody slice's liquidity horizon; legal terms permit suspension and supply no timing bound."
-    },
-    {
-      "id": "uw-suiusde-sui-87abe6688d6d92b7",
-      "assetId": "suiusde-sui",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:8278fc97cbe0fe9c83e2aee2",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
-      "sources": [
-        {
-          "url": "https://www.esuidollar.io/legal/mint-user-agreement",
-          "observedAt": "2026-10-03T22:52:53Z",
-          "datumAsOf": null,
-          "location": "Sections 1 and 3, reserves and service availability; last updated April 2026",
-          "excerpt": "The Issuer does not guarantee that minting or redemption will always be available.",
-          "assertion": "Issuer describes primarily USDe reserves, institutional custody and discretionary redemption, but no complete slice-specific realization horizon."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.esuidollar.io/",
-        "https://www.esuidollar.io/legal/mint-user-agreement",
-        "https://www.esuidollar.io/legal/terms-of-service",
-        "https://whitelabel.ethena.fi/",
-        "https://whitelabel.ethena.fi/transparency",
-        "https://whitelabel.ethena.fi/api/transparency"
-      ],
-      "rationale": "No complete liquidityHorizon is published for the Coinbase Prime off-chain USDC, USDe, or other USDC reserve slices. The live transparency endpoint gives amounts and custodian locations, not whole-slice withdrawal or liquidation maxima. Unified USDe liquidity and issuer pro-rata redemption do not establish each custody slice's liquidity horizon; legal terms permit suspension and supply no timing bound."
-    },
-    {
-      "id": "uw-usdsui-sui-0887556cd31999f8",
-      "assetId": "usdsui-sui",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdsui-sui:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
-      "sources": [
-        {
-          "url": "https://www.bridge.xyz/legal/fee-disclosure-statement/overview",
-          "observedAt": "2026-10-03T22:52:53Z",
-          "datumAsOf": null,
-          "location": "Fee Disclosure Statement, section 1",
-          "excerpt": "The decision to impose such a charge, including its amount, is determined solely by the Partner.",
-          "assertion": "The partner charge is not quantified; gas pass-through and currency-conversion spreads do not specify the complete USDsui-to-USD redemption charge."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://blog.sui.io/sui-dollar-launch-bridge/",
-        "https://apidocs.bridge.xyz/platform/issuance/minting-and-burning",
-        "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency",
-        "https://transparency.bridge.xyz/v0/stablecoins/usd_sui",
-        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
-        "https://www.bridge.xyz/legal/fee-disclosure-statement/overview"
-      ],
-      "rationale": "No public numeric all-in cost or complete evaluable fee formula for USDsui direct fiat redemption was found. Bridge leaves a partner's applicable charge and amount to that partner and discloses variable gas, not an exact USDsui schedule. The up-to-1% currency-conversion spread is not a USD-to-USD redemption fee. This is missing cost disclosure, not an unrepresentable complete formula."
-    },
-    {
-      "id": "uw-usdsui-sui-524c959d309062ba",
-      "assetId": "usdsui-sui",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdsui-sui:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
-      "sources": [
-        {
-          "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
-          "observedAt": "2026-10-03T22:52:53Z",
-          "datumAsOf": null,
-          "location": "Section 3, Bridge Stablecoin Redemption Rights",
-          "excerpt": "we will process your sale/redemption Order within two (2) Business Days following our determination that your Order complies with the applicable User Terms",
-          "assertion": "This bounds processing after Bridge determines compliance, not final USD delivery after submission; the sentence additionally excepts factors outside reasonable control."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
-        "https://www.bridge.xyz/legal/overview",
-        "https://apidocs.bridge.xyz/platform/issuance/minting-and-burning",
-        "https://apidocs.bridge.xyz/platform/issuance/reserve-management",
-        "https://transparency.bridge.xyz/v0/stablecoins/usd_sui"
-      ],
-      "rationale": "A maximum final-settlement SLA for USDsui redemption into USD is not disclosed. The two-business-day legal commitment is order processing starting only after compliance determination, and expressly permits external delays. Treasury realization within one business day is a different reserve-side datum. Neither bounds final fiat receipt for the modeled redemption route."
-    },
-    {
-      "id": "uw-usdsui-sui-44a3944854d7c15a",
-      "assetId": "usdsui-sui",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:1c4dd3588a3d275a0d87b130",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
-      "sources": [
-        {
-          "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
-          "observedAt": "2026-10-03T22:52:53Z",
-          "datumAsOf": null,
-          "location": "Section 2, permitted reserve asset classes",
-          "excerpt": "(c) U.S. government money-market funds; (d) deposit accounts; (e) tokenized versions of the assets set forth herein",
-          "assertion": "The three-month Treasury-bill limit does not bound every claim in the aggregate Treasury basket; permitted fund shares and tokenized claims are distinct."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://transparency.bridge.xyz/v0/stablecoins/usd_sui",
-        "https://apidocs.bridge.xyz/platform/issuance/reserve-management",
-        "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency",
-        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc"
-      ],
-      "rationale": "No maturityDaysMax for the entire current USDsui aggregate Treasury slice is publicly disclosed. Bridge permits bills, overnight repo, government MMFs and tokenized versions; its reserve docs list BlackRock, Fidelity, USTB and BUIDL, while the exact USDsui API supplies only aggregate cash/Treasury amounts. Applying the three-month bill restriction across this opaque mixed basket would invent a whole-slice maximum."
-    },
-    {
-      "id": "uw-usdv-solomon-eafa6333f01f1224",
-      "assetId": "usdv-solomon",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
-      "sources": [
-        {
-          "url": "https://blog.solomonlabs.org/p/custodian-attestation-of-assets-backing",
-          "observedAt": "2026-10-03T22:52:53Z",
-          "datumAsOf": "2026-03-01",
-          "location": "Scope of a custodial attestation",
-          "excerpt": "It is not a full reserve report, financial statement audit, or comprehensive reconciliation of all system assets, liabilities, income, or exposures.",
-          "assertion": "Monthly Ceffu reporting is expressly a limited custody snapshot, not comprehensive recurring legacy mint-supply/backing reconciliation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://blog.solomonlabs.org/p/introducing-solomon",
-        "https://blog.solomonlabs.org/p/winding-down-the-original-usdv",
-        "https://blog.solomonlabs.org/p/custodian-attestation-of-assets-backing",
-        "https://api.github.com/repos/SolomonLabs/attestations/git/trees/main?recursive=1",
-        "https://docs.solomonlabs.org/usdv/transparency-and-risk",
-        "https://data.solomonlabs.io/api/solomon-protocol/protocol-data",
-        "https://solomonlabs.org/terms-of-use",
-        "https://solscan.io/account/D4AiKFxjZBrhd6MeRAAj6wNxFcZJuRMBrXW9UpqeS8Ax"
-      ],
-      "rationale": "No public complete recurring reconciliation process/cadence covering legacy USDv minted liabilities against all custody, exchange and on-chain backing was found. The archive ends with an April 2026 Ceffu-only snapshot; March's issuer explanation expressly excludes full reconciliation. Wind-down says positions had to remain reconciled without disclosing control cadence or independent whole-book reconciliation. Successor USDv evidence cannot establish legacy reconciliation."
-    },
-    {
-      "id": "uw-usdv-solomon-116dff134f42785d",
-      "assetId": "usdv-solomon",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
-      "sources": [
-        {
-          "url": "https://blog.solomonlabs.org/p/custodian-attestation-of-assets-backing",
-          "observedAt": "2026-10-03T22:52:53Z",
-          "datumAsOf": "2026-03-01",
-          "location": "Attestation introduction and scope",
-          "excerpt": "Those components are not fully captured by this custodial attestation alone.",
-          "assertion": "The legacy attestation acknowledges omitted exchange and on-chain balances and does not supply a current whole-legacy-denominator composition."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://blog.solomonlabs.org/p/winding-down-the-original-usdv",
-        "https://blog.solomonlabs.org/p/custodian-attestation-of-assets-backing",
-        "https://api.github.com/repos/SolomonLabs/attestations/git/trees/main?recursive=1",
-        "https://app.solomonlabs.org/stats",
-        "https://data.solomonlabs.io/api/solomon-protocol/protocol-data",
-        "https://docs.solomonlabs.org/usdv/transparency-and-risk",
-        "https://solomonlabs.org/terms-of-use"
-      ],
-      "rationale": "A current complete reserve composition and denominator for the exact legacy Ex5DaKY USDv mint remain undisclosed. Successor documentation describes a separate replacement token. The API still reports inverse perpetuals, Ceffu balances and staking, but publishes no mint identifier: its asset scope is unproven. Archived attestations cover only Ceffu custody. API amounts are neither mint-bound nor reconciled into a complete legacy liability denominator."
-    },
-    {
-      "id": "uw-usdv-solomon-800cd0e64a265940",
-      "assetId": "usdv-solomon",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdv-solomon:stablecoin-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
-      "sources": [
-        {
-          "url": "https://blog.solomonlabs.org/p/winding-down-the-original-usdv",
-          "observedAt": "2026-10-03T22:52:53Z",
-          "datumAsOf": "2026-08-28",
-          "location": "Legacy/new token distinction",
-          "excerpt": "There will be no automatic conversion.",
-          "assertion": "Legacy holders must exit separately; successor mint/redeem pricing and venue swap quotes cannot stand in for the legacy direct-redemption fee."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://blog.solomonlabs.org/p/introducing-solomon",
-        "https://blog.solomonlabs.org/p/winding-down-the-original-usdv",
-        "https://docs.solomonlabs.org/usdv/usdv-and-susdv/minting-usdv",
-        "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming",
-        "https://solomonlabs.org/terms-of-use",
-        "https://app.solomonlabs.org/stats",
-        "https://solscan.io/account/D4AiKFxjZBrhd6MeRAAj6wNxFcZJuRMBrXW9UpqeS8Ax"
-      ],
-      "rationale": "No public exact all-in fee schedule or complete cost formula for the legacy USDv direct USDC redemption route was found. The legacy announcement describes qualified-holder mint/burn/redeem without a fee schedule; wind-down recommends market swaps without promising a direct-redemption price. Current docs and transaction fee UI concern the separate new token. Interface terms do not define the legacy API/direct-redemption schedule."
-    },
-    {
       "id": "uw-frnt-wyoming-bb3bbb43016d282d",
       "assetId": "frnt-wyoming",
       "scope": {
@@ -37726,6 +36845,1282 @@
         "https://docs.iron.xyz/"
       ],
       "rationale": "The issuer withdrawal schedule, bounded settlement SLA and current minimum are undisclosed. Terms specify customer onboarding, one-for-one USD redemption and no current issuer fee, but invoke an unpublished redemption schedule and changeable minimum. Generic M0 swapOutM permissions do not establish MoonPay fiat settlement; no instant/permissionless full-holder exit is inferred."
+    },
+    {
+      "id": "uw-zchf-frankencoin-c7a547e4dd48ec94",
+      "assetId": "zchf-frankencoin",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:104ccc28dbe0c6b0efe0386f",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:58:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R45)",
+      "sources": [
+        {
+          "url": "https://docs.frankencoin.com/positions/auctions.md",
+          "observedAt": "2026-10-03T23:46:29Z",
+          "datumAsOf": null,
+          "location": "Auction Design and bid settlement",
+          "excerpt": "Partial bids can leave more collateral under challenge.",
+          "assertion": "Auction phases are disclosed but do not promise complete realization of any entire collateral slice within a bounded time."
+        },
+        {
+          "url": "https://docs.frankencoin.com/positions/adjust.md",
+          "observedAt": "2026-10-03T23:52:21Z",
+          "datumAsOf": null,
+          "location": "Adding or withdrawing collateral",
+          "excerpt": "Active challenges and cooldowns restrict withdrawals.",
+          "assertion": "Borrower repayment and native collateral transfer are conditional, not a full-slice final-cash-settlement SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frankencoin.com/positions.md",
+        "https://docs.frankencoin.com/positions/auctions.md",
+        "https://docs.frankencoin.com/reserve.md",
+        "https://docs.frankencoin.com/risks.md",
+        "https://docs.frankencoin.com/positions/adjust.md",
+        "https://api.frankencoin.com/ecosystem/collateral/positions/details",
+        "https://quitt.ch/wp-content/uploads/tokenterms.pdf",
+        "https://www.bossinfo.com/wp-content/uploads/Boss_Info_AG-Registration_Regulations-CMTA_compatible_220524_signiert-1.pdf",
+        "https://realunit.ch/wp-content/uploads/2023/10/230929_RegV-EN-RealUnit-Schweiz-AG_final.pdf",
+        "https://shares.lend.ch/",
+        "https://www.aktionariat.com/tokenized-companies",
+        "https://www.paxos.com/pax-gold",
+        "https://docs.ondo.finance/ondo-stocks/overview.md"
+      ],
+      "rationale": "No whole-position realization-time maximum is disclosed for these seven exact Frankencoin collateral slices. The API publishes positions and challenge periods; protocol terms permit partial bidding, postponed returns and conditional withdrawals. Gold issuer redemption, equity trading or Ondo atomic redemption does not release collateral held by a Frankencoin borrower position or guarantee whole-slice final proceeds. This classifies the missing scoped horizon, not token transfer speed."
+    },
+    {
+      "id": "uw-zchf-frankencoin-a2f88f83a4be2ded",
+      "assetId": "zchf-frankencoin",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:27b25b267717e34136aeb99a",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:58:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R45)",
+      "sources": [
+        {
+          "url": "https://docs.frankencoin.com/positions/auctions.md",
+          "observedAt": "2026-10-03T23:46:29Z",
+          "datumAsOf": null,
+          "location": "Auction Design and bid settlement",
+          "excerpt": "Partial bids can leave more collateral under challenge.",
+          "assertion": "Auction phases are disclosed but do not promise complete realization of any entire collateral slice within a bounded time."
+        },
+        {
+          "url": "https://docs.frankencoin.com/positions/adjust.md",
+          "observedAt": "2026-10-03T23:52:21Z",
+          "datumAsOf": null,
+          "location": "Adding or withdrawing collateral",
+          "excerpt": "Active challenges and cooldowns restrict withdrawals.",
+          "assertion": "Borrower repayment and native collateral transfer are conditional, not a full-slice final-cash-settlement SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frankencoin.com/positions.md",
+        "https://docs.frankencoin.com/positions/auctions.md",
+        "https://docs.frankencoin.com/reserve.md",
+        "https://docs.frankencoin.com/risks.md",
+        "https://docs.frankencoin.com/positions/adjust.md",
+        "https://api.frankencoin.com/ecosystem/collateral/positions/details",
+        "https://quitt.ch/wp-content/uploads/tokenterms.pdf",
+        "https://www.bossinfo.com/wp-content/uploads/Boss_Info_AG-Registration_Regulations-CMTA_compatible_220524_signiert-1.pdf",
+        "https://realunit.ch/wp-content/uploads/2023/10/230929_RegV-EN-RealUnit-Schweiz-AG_final.pdf",
+        "https://shares.lend.ch/",
+        "https://www.aktionariat.com/tokenized-companies",
+        "https://www.paxos.com/pax-gold",
+        "https://docs.ondo.finance/ondo-stocks/overview.md"
+      ],
+      "rationale": "No whole-position realization-time maximum is disclosed for these seven exact Frankencoin collateral slices. The API publishes positions and challenge periods; protocol terms permit partial bidding, postponed returns and conditional withdrawals. Gold issuer redemption, equity trading or Ondo atomic redemption does not release collateral held by a Frankencoin borrower position or guarantee whole-slice final proceeds. This classifies the missing scoped horizon, not token transfer speed."
+    },
+    {
+      "id": "uw-zchf-frankencoin-c4bc970f95d1c6c3",
+      "assetId": "zchf-frankencoin",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:335532902cd57c0d26304c33",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:58:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R45)",
+      "sources": [
+        {
+          "url": "https://docs.frankencoin.com/positions/auctions.md",
+          "observedAt": "2026-10-03T23:46:29Z",
+          "datumAsOf": null,
+          "location": "Auction Design and bid settlement",
+          "excerpt": "Partial bids can leave more collateral under challenge.",
+          "assertion": "Auction phases are disclosed but do not promise complete realization of any entire collateral slice within a bounded time."
+        },
+        {
+          "url": "https://docs.frankencoin.com/positions/adjust.md",
+          "observedAt": "2026-10-03T23:52:21Z",
+          "datumAsOf": null,
+          "location": "Adding or withdrawing collateral",
+          "excerpt": "Active challenges and cooldowns restrict withdrawals.",
+          "assertion": "Borrower repayment and native collateral transfer are conditional, not a full-slice final-cash-settlement SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frankencoin.com/positions.md",
+        "https://docs.frankencoin.com/positions/auctions.md",
+        "https://docs.frankencoin.com/reserve.md",
+        "https://docs.frankencoin.com/risks.md",
+        "https://docs.frankencoin.com/positions/adjust.md",
+        "https://api.frankencoin.com/ecosystem/collateral/positions/details",
+        "https://quitt.ch/wp-content/uploads/tokenterms.pdf",
+        "https://www.bossinfo.com/wp-content/uploads/Boss_Info_AG-Registration_Regulations-CMTA_compatible_220524_signiert-1.pdf",
+        "https://realunit.ch/wp-content/uploads/2023/10/230929_RegV-EN-RealUnit-Schweiz-AG_final.pdf",
+        "https://shares.lend.ch/",
+        "https://www.aktionariat.com/tokenized-companies",
+        "https://www.paxos.com/pax-gold",
+        "https://docs.ondo.finance/ondo-stocks/overview.md"
+      ],
+      "rationale": "No whole-position realization-time maximum is disclosed for these seven exact Frankencoin collateral slices. The API publishes positions and challenge periods; protocol terms permit partial bidding, postponed returns and conditional withdrawals. Gold issuer redemption, equity trading or Ondo atomic redemption does not release collateral held by a Frankencoin borrower position or guarantee whole-slice final proceeds. This classifies the missing scoped horizon, not token transfer speed."
+    },
+    {
+      "id": "uw-zchf-frankencoin-11e68fd95e5a318b",
+      "assetId": "zchf-frankencoin",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:655027ec95a7828a8bc2fd61",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:58:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R45)",
+      "sources": [
+        {
+          "url": "https://docs.frankencoin.com/positions/auctions.md",
+          "observedAt": "2026-10-03T23:46:29Z",
+          "datumAsOf": null,
+          "location": "Auction Design and bid settlement",
+          "excerpt": "Partial bids can leave more collateral under challenge.",
+          "assertion": "Auction phases are disclosed but do not promise complete realization of any entire collateral slice within a bounded time."
+        },
+        {
+          "url": "https://docs.frankencoin.com/positions/adjust.md",
+          "observedAt": "2026-10-03T23:52:21Z",
+          "datumAsOf": null,
+          "location": "Adding or withdrawing collateral",
+          "excerpt": "Active challenges and cooldowns restrict withdrawals.",
+          "assertion": "Borrower repayment and native collateral transfer are conditional, not a full-slice final-cash-settlement SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frankencoin.com/positions.md",
+        "https://docs.frankencoin.com/positions/auctions.md",
+        "https://docs.frankencoin.com/reserve.md",
+        "https://docs.frankencoin.com/risks.md",
+        "https://docs.frankencoin.com/positions/adjust.md",
+        "https://api.frankencoin.com/ecosystem/collateral/positions/details",
+        "https://quitt.ch/wp-content/uploads/tokenterms.pdf",
+        "https://www.bossinfo.com/wp-content/uploads/Boss_Info_AG-Registration_Regulations-CMTA_compatible_220524_signiert-1.pdf",
+        "https://realunit.ch/wp-content/uploads/2023/10/230929_RegV-EN-RealUnit-Schweiz-AG_final.pdf",
+        "https://shares.lend.ch/",
+        "https://www.aktionariat.com/tokenized-companies",
+        "https://www.paxos.com/pax-gold",
+        "https://docs.ondo.finance/ondo-stocks/overview.md"
+      ],
+      "rationale": "No whole-position realization-time maximum is disclosed for these seven exact Frankencoin collateral slices. The API publishes positions and challenge periods; protocol terms permit partial bidding, postponed returns and conditional withdrawals. Gold issuer redemption, equity trading or Ondo atomic redemption does not release collateral held by a Frankencoin borrower position or guarantee whole-slice final proceeds. This classifies the missing scoped horizon, not token transfer speed."
+    },
+    {
+      "id": "uw-zchf-frankencoin-96870e087aad420d",
+      "assetId": "zchf-frankencoin",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:94e15e62d417d140f8fcabc0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:58:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R45)",
+      "sources": [
+        {
+          "url": "https://docs.frankencoin.com/positions/auctions.md",
+          "observedAt": "2026-10-03T23:46:29Z",
+          "datumAsOf": null,
+          "location": "Auction Design and bid settlement",
+          "excerpt": "Partial bids can leave more collateral under challenge.",
+          "assertion": "Auction phases are disclosed but do not promise complete realization of any entire collateral slice within a bounded time."
+        },
+        {
+          "url": "https://docs.frankencoin.com/positions/adjust.md",
+          "observedAt": "2026-10-03T23:52:21Z",
+          "datumAsOf": null,
+          "location": "Adding or withdrawing collateral",
+          "excerpt": "Active challenges and cooldowns restrict withdrawals.",
+          "assertion": "Borrower repayment and native collateral transfer are conditional, not a full-slice final-cash-settlement SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frankencoin.com/positions.md",
+        "https://docs.frankencoin.com/positions/auctions.md",
+        "https://docs.frankencoin.com/reserve.md",
+        "https://docs.frankencoin.com/risks.md",
+        "https://docs.frankencoin.com/positions/adjust.md",
+        "https://api.frankencoin.com/ecosystem/collateral/positions/details",
+        "https://quitt.ch/wp-content/uploads/tokenterms.pdf",
+        "https://www.bossinfo.com/wp-content/uploads/Boss_Info_AG-Registration_Regulations-CMTA_compatible_220524_signiert-1.pdf",
+        "https://realunit.ch/wp-content/uploads/2023/10/230929_RegV-EN-RealUnit-Schweiz-AG_final.pdf",
+        "https://shares.lend.ch/",
+        "https://www.aktionariat.com/tokenized-companies",
+        "https://www.paxos.com/pax-gold",
+        "https://docs.ondo.finance/ondo-stocks/overview.md"
+      ],
+      "rationale": "No whole-position realization-time maximum is disclosed for these seven exact Frankencoin collateral slices. The API publishes positions and challenge periods; protocol terms permit partial bidding, postponed returns and conditional withdrawals. Gold issuer redemption, equity trading or Ondo atomic redemption does not release collateral held by a Frankencoin borrower position or guarantee whole-slice final proceeds. This classifies the missing scoped horizon, not token transfer speed."
+    },
+    {
+      "id": "uw-zchf-frankencoin-d07aa6f80f726470",
+      "assetId": "zchf-frankencoin",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:acc26fa06966901a9fafd690",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:58:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R45)",
+      "sources": [
+        {
+          "url": "https://docs.frankencoin.com/positions/auctions.md",
+          "observedAt": "2026-10-03T23:46:29Z",
+          "datumAsOf": null,
+          "location": "Auction Design and bid settlement",
+          "excerpt": "Partial bids can leave more collateral under challenge.",
+          "assertion": "Auction phases are disclosed but do not promise complete realization of any entire collateral slice within a bounded time."
+        },
+        {
+          "url": "https://docs.frankencoin.com/positions/adjust.md",
+          "observedAt": "2026-10-03T23:52:21Z",
+          "datumAsOf": null,
+          "location": "Adding or withdrawing collateral",
+          "excerpt": "Active challenges and cooldowns restrict withdrawals.",
+          "assertion": "Borrower repayment and native collateral transfer are conditional, not a full-slice final-cash-settlement SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frankencoin.com/positions.md",
+        "https://docs.frankencoin.com/positions/auctions.md",
+        "https://docs.frankencoin.com/reserve.md",
+        "https://docs.frankencoin.com/risks.md",
+        "https://docs.frankencoin.com/positions/adjust.md",
+        "https://api.frankencoin.com/ecosystem/collateral/positions/details",
+        "https://quitt.ch/wp-content/uploads/tokenterms.pdf",
+        "https://www.bossinfo.com/wp-content/uploads/Boss_Info_AG-Registration_Regulations-CMTA_compatible_220524_signiert-1.pdf",
+        "https://realunit.ch/wp-content/uploads/2023/10/230929_RegV-EN-RealUnit-Schweiz-AG_final.pdf",
+        "https://shares.lend.ch/",
+        "https://www.aktionariat.com/tokenized-companies",
+        "https://www.paxos.com/pax-gold",
+        "https://docs.ondo.finance/ondo-stocks/overview.md"
+      ],
+      "rationale": "No whole-position realization-time maximum is disclosed for these seven exact Frankencoin collateral slices. The API publishes positions and challenge periods; protocol terms permit partial bidding, postponed returns and conditional withdrawals. Gold issuer redemption, equity trading or Ondo atomic redemption does not release collateral held by a Frankencoin borrower position or guarantee whole-slice final proceeds. This classifies the missing scoped horizon, not token transfer speed."
+    },
+    {
+      "id": "uw-zchf-frankencoin-b1bbdeace03f5158",
+      "assetId": "zchf-frankencoin",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d89f0f33e2f6cd9e9da154f0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:58:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R45)",
+      "sources": [
+        {
+          "url": "https://docs.frankencoin.com/positions/auctions.md",
+          "observedAt": "2026-10-03T23:46:29Z",
+          "datumAsOf": null,
+          "location": "Auction Design and bid settlement",
+          "excerpt": "Partial bids can leave more collateral under challenge.",
+          "assertion": "Auction phases are disclosed but do not promise complete realization of any entire collateral slice within a bounded time."
+        },
+        {
+          "url": "https://docs.frankencoin.com/positions/adjust.md",
+          "observedAt": "2026-10-03T23:52:21Z",
+          "datumAsOf": null,
+          "location": "Adding or withdrawing collateral",
+          "excerpt": "Active challenges and cooldowns restrict withdrawals.",
+          "assertion": "Borrower repayment and native collateral transfer are conditional, not a full-slice final-cash-settlement SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frankencoin.com/positions.md",
+        "https://docs.frankencoin.com/positions/auctions.md",
+        "https://docs.frankencoin.com/reserve.md",
+        "https://docs.frankencoin.com/risks.md",
+        "https://docs.frankencoin.com/positions/adjust.md",
+        "https://api.frankencoin.com/ecosystem/collateral/positions/details",
+        "https://quitt.ch/wp-content/uploads/tokenterms.pdf",
+        "https://www.bossinfo.com/wp-content/uploads/Boss_Info_AG-Registration_Regulations-CMTA_compatible_220524_signiert-1.pdf",
+        "https://realunit.ch/wp-content/uploads/2023/10/230929_RegV-EN-RealUnit-Schweiz-AG_final.pdf",
+        "https://shares.lend.ch/",
+        "https://www.aktionariat.com/tokenized-companies",
+        "https://www.paxos.com/pax-gold",
+        "https://docs.ondo.finance/ondo-stocks/overview.md"
+      ],
+      "rationale": "No whole-position realization-time maximum is disclosed for these seven exact Frankencoin collateral slices. The API publishes positions and challenge periods; protocol terms permit partial bidding, postponed returns and conditional withdrawals. Gold issuer redemption, equity trading or Ondo atomic redemption does not release collateral held by a Frankencoin borrower position or guarantee whole-slice final proceeds. This classifies the missing scoped horizon, not token transfer speed."
+    },
+    {
+      "id": "uw-msusd-metronome-48d98c866f460f5e",
+      "assetId": "msusd-metronome",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:58:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R45)",
+      "sources": [
+        {
+          "url": "https://dune.com/dom_xyz1549/metronome-synth-backing",
+          "observedAt": "2026-10-03T23:52:21Z",
+          "datumAsOf": null,
+          "location": "Dashboard accounting definitions",
+          "excerpt": "Everything is live onchain except the rows flagged \"Snapshot\" (xUSD, AMO LP), which are hardcoded. Verify links are on those rows.",
+          "assertion": "The issuer-linked dashboard mixes debt/supply observations with historical excluded-circulation balances; it does not document common-clock whole-supply collateral reconciliation cadence."
+        },
+        {
+          "url": "https://paragraph.com/@metronomedao/metronome-recovery-update",
+          "observedAt": "2026-10-03T23:52:21Z",
+          "datumAsOf": "2026-09-16",
+          "location": "Additional Notes and Next Steps",
+          "excerpt": "The team is committed to publishing and maintaining an itemized backing and transparency dashboard, and will take community feedback on its presentation.",
+          "assertion": "Transparency commitment does not establish complete mint/burn-to-collateral reconciliation process or cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.metronome.io/llms.txt",
+        "https://docs.metronome.io/metronome-synth/contracts.md",
+        "https://docs.metronome.io/contract-overview/pool.md",
+        "https://docs.metronome.io/metronome-synth/metronome-synth-protocol/metronome-dashboard.md",
+        "https://docs.metronome.io/metronome-synth/metronome-synth-protocol/supported-assets.md",
+        "https://paragraph.com/@metronomedao/metronome-recovery-update",
+        "https://dune.com/dom_xyz1549/metronome-synth-backing",
+        "https://metronome.octav.fi/app/Treasury?board=snapshot-reports"
+      ],
+      "rationale": "The exact whole-supply backing reconciliation procedure and cadence remain undisclosed, separately from computable onchain balances. Dashboard Backed is debt, not the collateral book, with July 29 AMO and other hardcoded circulation exclusions. Recovery prose reports surplus and treasury loops but no recurring common-clock reconciliation covering all five native synth deployments, cross-chain mint/burn and backing/excluded treasury positions. Do not assert none or continuous from this dashboard."
+    },
+    {
+      "id": "uw-gldon-ondo-7b60c3ae2773a905",
+      "assetId": "gldon-ondo",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:01:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R54)",
+      "sources": [
+        {
+          "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
+          "observedAt": "2026-10-03T22:59:08Z",
+          "datumAsOf": null,
+          "location": "Full Asset Backing and Security Interest",
+          "excerpt": "Ondo tokenized stocks are all fully backed by their underlying stocks and ETFs (together with cash in transit).",
+          "assertion": "Backing policy includes underlying securities plus transit cash; it does not disclose current GLDon, IAUon, SLVon or USDon-specific measured whole-book weights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
+        "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md",
+        "https://docs.ondo.finance/ondo-stocks/available-assets.md",
+        "https://app.ondo.finance/api/v2/assets/gldon/info",
+        "https://app.ondo.finance/api/v2/assets/iauon/info",
+        "https://app.ondo.finance/api/v2/assets/slvon/info",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/f22c30e6d14a8000abc4e1ad6f62d6cb41dc3da0.pdf",
+        "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&st=t5vbvab8&dl=0",
+        "https://docs.ondo.finance/addresses.md"
+      ],
+      "rationale": "Exact current whole-book reserve composition per GLDon, IAUon, SLVon and USDon is not disclosed. Retrieved September 29 Ankura report aggregates stocks, USDY and cash and lists chain USDon liabilities, not token-specific backing allocation. Final Terms name underlying securities and allow additional collateral; ETF underlying holdings are not the issuer token book. No measured transit-cash or additional-collateral percentage supports a 100% ETF/brokerage-cash admission."
+    },
+    {
+      "id": "uw-iauon-ondo-6e95413f4628b16c",
+      "assetId": "iauon-ondo",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:01:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R54)",
+      "sources": [
+        {
+          "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
+          "observedAt": "2026-10-03T22:59:08Z",
+          "datumAsOf": null,
+          "location": "Full Asset Backing and Security Interest",
+          "excerpt": "Ondo tokenized stocks are all fully backed by their underlying stocks and ETFs (together with cash in transit).",
+          "assertion": "Backing policy includes underlying securities plus transit cash; it does not disclose current GLDon, IAUon, SLVon or USDon-specific measured whole-book weights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
+        "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md",
+        "https://docs.ondo.finance/ondo-stocks/available-assets.md",
+        "https://app.ondo.finance/api/v2/assets/gldon/info",
+        "https://app.ondo.finance/api/v2/assets/iauon/info",
+        "https://app.ondo.finance/api/v2/assets/slvon/info",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/f22c30e6d14a8000abc4e1ad6f62d6cb41dc3da0.pdf",
+        "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&st=t5vbvab8&dl=0",
+        "https://docs.ondo.finance/addresses.md"
+      ],
+      "rationale": "Exact current whole-book reserve composition per GLDon, IAUon, SLVon and USDon is not disclosed. Retrieved September 29 Ankura report aggregates stocks, USDY and cash and lists chain USDon liabilities, not token-specific backing allocation. Final Terms name underlying securities and allow additional collateral; ETF underlying holdings are not the issuer token book. No measured transit-cash or additional-collateral percentage supports a 100% ETF/brokerage-cash admission."
+    },
+    {
+      "id": "uw-slvon-ondo-b97ec32833fe39dc",
+      "assetId": "slvon-ondo",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:01:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R54)",
+      "sources": [
+        {
+          "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
+          "observedAt": "2026-10-03T22:59:08Z",
+          "datumAsOf": null,
+          "location": "Full Asset Backing and Security Interest",
+          "excerpt": "Ondo tokenized stocks are all fully backed by their underlying stocks and ETFs (together with cash in transit).",
+          "assertion": "Backing policy includes underlying securities plus transit cash; it does not disclose current GLDon, IAUon, SLVon or USDon-specific measured whole-book weights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
+        "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md",
+        "https://docs.ondo.finance/ondo-stocks/available-assets.md",
+        "https://app.ondo.finance/api/v2/assets/gldon/info",
+        "https://app.ondo.finance/api/v2/assets/iauon/info",
+        "https://app.ondo.finance/api/v2/assets/slvon/info",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/f22c30e6d14a8000abc4e1ad6f62d6cb41dc3da0.pdf",
+        "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&st=t5vbvab8&dl=0",
+        "https://docs.ondo.finance/addresses.md"
+      ],
+      "rationale": "Exact current whole-book reserve composition per GLDon, IAUon, SLVon and USDon is not disclosed. Retrieved September 29 Ankura report aggregates stocks, USDY and cash and lists chain USDon liabilities, not token-specific backing allocation. Final Terms name underlying securities and allow additional collateral; ETF underlying holdings are not the issuer token book. No measured transit-cash or additional-collateral percentage supports a 100% ETF/brokerage-cash admission."
+    },
+    {
+      "id": "uw-usdon-ondo-11c10b622fb6a282",
+      "assetId": "usdon-ondo",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:01:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R54)",
+      "sources": [
+        {
+          "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
+          "observedAt": "2026-10-03T22:59:08Z",
+          "datumAsOf": null,
+          "location": "Full Asset Backing and Security Interest",
+          "excerpt": "Ondo tokenized stocks are all fully backed by their underlying stocks and ETFs (together with cash in transit).",
+          "assertion": "Backing policy includes underlying securities plus transit cash; it does not disclose current GLDon, IAUon, SLVon or USDon-specific measured whole-book weights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
+        "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md",
+        "https://docs.ondo.finance/ondo-stocks/available-assets.md",
+        "https://app.ondo.finance/api/v2/assets/gldon/info",
+        "https://app.ondo.finance/api/v2/assets/iauon/info",
+        "https://app.ondo.finance/api/v2/assets/slvon/info",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/f22c30e6d14a8000abc4e1ad6f62d6cb41dc3da0.pdf",
+        "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&st=t5vbvab8&dl=0",
+        "https://docs.ondo.finance/addresses.md"
+      ],
+      "rationale": "Exact current whole-book reserve composition per GLDon, IAUon, SLVon and USDon is not disclosed. Retrieved September 29 Ankura report aggregates stocks, USDY and cash and lists chain USDon liabilities, not token-specific backing allocation. Final Terms name underlying securities and allow additional collateral; ETF underlying holdings are not the issuer token book. No measured transit-cash or additional-collateral percentage supports a 100% ETF/brokerage-cash admission."
+    },
+    {
+      "id": "uw-usdon-ondo-38f0f253d545671c",
+      "assetId": "usdon-ondo",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdon-ondo:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:01:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R54)",
+      "sources": [
+        {
+          "url": "https://docs.ondo.finance/ondo-stocks/fees-and-taxes.md",
+          "observedAt": "2026-10-03T22:59:08Z",
+          "datumAsOf": null,
+          "location": "What fees does Ondo Stocks charge?",
+          "excerpt": "Investors are responsible for their own gas costs.",
+          "assertion": "Issuer discusses quote-retained differences and user gas but no USDon-to-USDC standalone cost schedule or same-notional all-in upper bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md",
+        "https://docs.ondo.finance/ondo-stocks/fees-and-taxes.md",
+        "https://docs.ondo.finance/ondo-stocks/token-and-quote-pricing.md",
+        "https://docs.ondo.finance/ondo-stocks/available-assets.md",
+        "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md",
+        "https://docs.ondo.finance/addresses.md",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/f22c30e6d14a8000abc4e1ad6f62d6cb41dc3da0.pdf"
+      ],
+      "rationale": "Exact USDon platform conversion/redemption fee schedule and same-notional all-in cost bound remain unpublished. Current docs disclose liquidity-conditioned USDC swaps and user-paid gas, but no standalone USDon fee/minimum/maximum. ETF-token Final Terms' 0.1% underlying-market-price fee limit does not establish a USDon settlement-cash fee."
+    },
+    {
+      "id": "uw-suiusde-sui-3db7f74f6276d7be",
+      "assetId": "suiusde-sui",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:307254215894779e1640e7d8",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://www.esuidollar.io/legal/mint-user-agreement",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": null,
+          "location": "Sections 1 and 3, reserves and service availability; last updated April 2026",
+          "excerpt": "The Issuer does not guarantee that minting or redemption will always be available.",
+          "assertion": "Issuer describes primarily USDe reserves, institutional custody and discretionary redemption, but no complete slice-specific realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.esuidollar.io/",
+        "https://www.esuidollar.io/legal/mint-user-agreement",
+        "https://www.esuidollar.io/legal/terms-of-service",
+        "https://whitelabel.ethena.fi/",
+        "https://whitelabel.ethena.fi/transparency",
+        "https://whitelabel.ethena.fi/api/transparency"
+      ],
+      "rationale": "No complete liquidityHorizon is published for the Coinbase Prime off-chain USDC, USDe, or other USDC reserve slices. The live transparency endpoint gives amounts and custodian locations, not whole-slice withdrawal or liquidation maxima. Unified USDe liquidity and issuer pro-rata redemption do not establish each custody slice's liquidity horizon; legal terms permit suspension and supply no timing bound."
+    },
+    {
+      "id": "uw-suiusde-sui-9feca9a1ada5eba0",
+      "assetId": "suiusde-sui",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:3932ebed0fe9d1fb275fdca0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://www.esuidollar.io/legal/mint-user-agreement",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": null,
+          "location": "Sections 1 and 3, reserves and service availability; last updated April 2026",
+          "excerpt": "The Issuer does not guarantee that minting or redemption will always be available.",
+          "assertion": "Issuer describes primarily USDe reserves, institutional custody and discretionary redemption, but no complete slice-specific realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.esuidollar.io/",
+        "https://www.esuidollar.io/legal/mint-user-agreement",
+        "https://www.esuidollar.io/legal/terms-of-service",
+        "https://whitelabel.ethena.fi/",
+        "https://whitelabel.ethena.fi/transparency",
+        "https://whitelabel.ethena.fi/api/transparency"
+      ],
+      "rationale": "No complete liquidityHorizon is published for the Coinbase Prime off-chain USDC, USDe, or other USDC reserve slices. The live transparency endpoint gives amounts and custodian locations, not whole-slice withdrawal or liquidation maxima. Unified USDe liquidity and issuer pro-rata redemption do not establish each custody slice's liquidity horizon; legal terms permit suspension and supply no timing bound."
+    },
+    {
+      "id": "uw-suiusde-sui-87abe6688d6d92b7",
+      "assetId": "suiusde-sui",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:8278fc97cbe0fe9c83e2aee2",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://www.esuidollar.io/legal/mint-user-agreement",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": null,
+          "location": "Sections 1 and 3, reserves and service availability; last updated April 2026",
+          "excerpt": "The Issuer does not guarantee that minting or redemption will always be available.",
+          "assertion": "Issuer describes primarily USDe reserves, institutional custody and discretionary redemption, but no complete slice-specific realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.esuidollar.io/",
+        "https://www.esuidollar.io/legal/mint-user-agreement",
+        "https://www.esuidollar.io/legal/terms-of-service",
+        "https://whitelabel.ethena.fi/",
+        "https://whitelabel.ethena.fi/transparency",
+        "https://whitelabel.ethena.fi/api/transparency"
+      ],
+      "rationale": "No complete liquidityHorizon is published for the Coinbase Prime off-chain USDC, USDe, or other USDC reserve slices. The live transparency endpoint gives amounts and custodian locations, not whole-slice withdrawal or liquidation maxima. Unified USDe liquidity and issuer pro-rata redemption do not establish each custody slice's liquidity horizon; legal terms permit suspension and supply no timing bound."
+    },
+    {
+      "id": "uw-usdsui-sui-0887556cd31999f8",
+      "assetId": "usdsui-sui",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdsui-sui:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://www.bridge.xyz/legal/fee-disclosure-statement/overview",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": null,
+          "location": "Fee Disclosure Statement, section 1",
+          "excerpt": "The decision to impose such a charge, including its amount, is determined solely by the Partner.",
+          "assertion": "The partner charge is not quantified; gas pass-through and currency-conversion spreads do not specify the complete USDsui-to-USD redemption charge."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.sui.io/sui-dollar-launch-bridge/",
+        "https://apidocs.bridge.xyz/platform/issuance/minting-and-burning",
+        "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency",
+        "https://transparency.bridge.xyz/v0/stablecoins/usd_sui",
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "https://www.bridge.xyz/legal/fee-disclosure-statement/overview"
+      ],
+      "rationale": "No public numeric all-in cost or complete evaluable fee formula for USDsui direct fiat redemption was found. Bridge leaves a partner's applicable charge and amount to that partner and discloses variable gas, not an exact USDsui schedule. The up-to-1% currency-conversion spread is not a USD-to-USD redemption fee. This is missing cost disclosure, not an unrepresentable complete formula."
+    },
+    {
+      "id": "uw-usdsui-sui-524c959d309062ba",
+      "assetId": "usdsui-sui",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdsui-sui:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": null,
+          "location": "Section 3, Bridge Stablecoin Redemption Rights",
+          "excerpt": "we will process your sale/redemption Order within two (2) Business Days following our determination that your Order complies with the applicable User Terms",
+          "assertion": "This bounds processing after Bridge determines compliance, not final USD delivery after submission; the sentence additionally excepts factors outside reasonable control."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "https://www.bridge.xyz/legal/overview",
+        "https://apidocs.bridge.xyz/platform/issuance/minting-and-burning",
+        "https://apidocs.bridge.xyz/platform/issuance/reserve-management",
+        "https://transparency.bridge.xyz/v0/stablecoins/usd_sui"
+      ],
+      "rationale": "A maximum final-settlement SLA for USDsui redemption into USD is not disclosed. The two-business-day legal commitment is order processing starting only after compliance determination, and expressly permits external delays. Treasury realization within one business day is a different reserve-side datum. Neither bounds final fiat receipt for the modeled redemption route."
+    },
+    {
+      "id": "uw-usdsui-sui-44a3944854d7c15a",
+      "assetId": "usdsui-sui",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1c4dd3588a3d275a0d87b130",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": null,
+          "location": "Section 2, permitted reserve asset classes",
+          "excerpt": "(c) U.S. government money-market funds; (d) deposit accounts; (e) tokenized versions of the assets set forth herein",
+          "assertion": "The three-month Treasury-bill limit does not bound every claim in the aggregate Treasury basket; permitted fund shares and tokenized claims are distinct."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://transparency.bridge.xyz/v0/stablecoins/usd_sui",
+        "https://apidocs.bridge.xyz/platform/issuance/reserve-management",
+        "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency",
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc"
+      ],
+      "rationale": "No maturityDaysMax for the entire current USDsui aggregate Treasury slice is publicly disclosed. Bridge permits bills, overnight repo, government MMFs and tokenized versions; its reserve docs list BlackRock, Fidelity, USTB and BUIDL, while the exact USDsui API supplies only aggregate cash/Treasury amounts. Applying the three-month bill restriction across this opaque mixed basket would invent a whole-slice maximum."
+    },
+    {
+      "id": "uw-usdv-solomon-eafa6333f01f1224",
+      "assetId": "usdv-solomon",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://blog.solomonlabs.org/p/custodian-attestation-of-assets-backing",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": "2026-03-01",
+          "location": "Scope of a custodial attestation",
+          "excerpt": "It is not a full reserve report, financial statement audit, or comprehensive reconciliation of all system assets, liabilities, income, or exposures.",
+          "assertion": "Monthly Ceffu reporting is expressly a limited custody snapshot, not comprehensive recurring legacy mint-supply/backing reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.solomonlabs.org/p/introducing-solomon",
+        "https://blog.solomonlabs.org/p/winding-down-the-original-usdv",
+        "https://blog.solomonlabs.org/p/custodian-attestation-of-assets-backing",
+        "https://api.github.com/repos/SolomonLabs/attestations/git/trees/main?recursive=1",
+        "https://docs.solomonlabs.org/usdv/transparency-and-risk",
+        "https://data.solomonlabs.io/api/solomon-protocol/protocol-data",
+        "https://solomonlabs.org/terms-of-use",
+        "https://solscan.io/account/D4AiKFxjZBrhd6MeRAAj6wNxFcZJuRMBrXW9UpqeS8Ax"
+      ],
+      "rationale": "No public complete recurring reconciliation process/cadence covering legacy USDv minted liabilities against all custody, exchange and on-chain backing was found. The archive ends with an April 2026 Ceffu-only snapshot; March's issuer explanation expressly excludes full reconciliation. Wind-down says positions had to remain reconciled without disclosing control cadence or independent whole-book reconciliation. Successor USDv evidence cannot establish legacy reconciliation."
+    },
+    {
+      "id": "uw-usdv-solomon-116dff134f42785d",
+      "assetId": "usdv-solomon",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://blog.solomonlabs.org/p/custodian-attestation-of-assets-backing",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": "2026-03-01",
+          "location": "Attestation introduction and scope",
+          "excerpt": "Those components are not fully captured by this custodial attestation alone.",
+          "assertion": "The legacy attestation acknowledges omitted exchange and on-chain balances and does not supply a current whole-legacy-denominator composition."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.solomonlabs.org/p/winding-down-the-original-usdv",
+        "https://blog.solomonlabs.org/p/custodian-attestation-of-assets-backing",
+        "https://api.github.com/repos/SolomonLabs/attestations/git/trees/main?recursive=1",
+        "https://app.solomonlabs.org/stats",
+        "https://data.solomonlabs.io/api/solomon-protocol/protocol-data",
+        "https://docs.solomonlabs.org/usdv/transparency-and-risk",
+        "https://solomonlabs.org/terms-of-use"
+      ],
+      "rationale": "A current complete reserve composition and denominator for the exact legacy Ex5DaKY USDv mint remain undisclosed. Successor documentation describes a separate replacement token. The API still reports inverse perpetuals, Ceffu balances and staking, but publishes no mint identifier: its asset scope is unproven. Archived attestations cover only Ceffu custody. API amounts are neither mint-bound nor reconciled into a complete legacy liability denominator."
+    },
+    {
+      "id": "uw-usdv-solomon-800cd0e64a265940",
+      "assetId": "usdv-solomon",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdv-solomon:stablecoin-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R55)",
+      "sources": [
+        {
+          "url": "https://blog.solomonlabs.org/p/winding-down-the-original-usdv",
+          "observedAt": "2026-10-03T22:52:53Z",
+          "datumAsOf": "2026-08-28",
+          "location": "Legacy/new token distinction",
+          "excerpt": "There will be no automatic conversion.",
+          "assertion": "Legacy holders must exit separately; successor mint/redeem pricing and venue swap quotes cannot stand in for the legacy direct-redemption fee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.solomonlabs.org/p/introducing-solomon",
+        "https://blog.solomonlabs.org/p/winding-down-the-original-usdv",
+        "https://docs.solomonlabs.org/usdv/usdv-and-susdv/minting-usdv",
+        "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming",
+        "https://solomonlabs.org/terms-of-use",
+        "https://app.solomonlabs.org/stats",
+        "https://solscan.io/account/D4AiKFxjZBrhd6MeRAAj6wNxFcZJuRMBrXW9UpqeS8Ax"
+      ],
+      "rationale": "No public exact all-in fee schedule or complete cost formula for the legacy USDv direct USDC redemption route was found. The legacy announcement describes qualified-holder mint/burn/redeem without a fee schedule; wind-down recommends market swaps without promising a direct-redemption price. Current docs and transaction fee UI concern the separate new token. Interface terms do not define the legacy API/direct-redemption schedule."
+    },
+    {
+      "id": "uw-brlv-crown-1af5f7bcdee2bda7",
+      "assetId": "brlv-crown",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:ad982851599cb9933188f3d5",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
+      "sources": [
+        {
+          "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
+          "observedAt": "2026-10-03T22:57:48Z",
+          "datumAsOf": "2026-09-30",
+          "location": "September 2026 PoR, p.1, section 3 reserve composition",
+          "excerpt": "Brazilian Treasury Bonds -|R$\u00a0211.011.738,24 55.82%|",
+          "assertion": "The dated itemized schedule publishes Treasury/ETF values but no instrument IDs, maximum remaining maturities or hard liquidation horizons."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.crown-brlv.com/en/transparency",
+        "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
+        "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf",
+        "https://docs.crown-brlv.com/whitepaper",
+        "https://docs.crown-brlv.com/llms.txt"
+      ],
+      "rationale": "Exact maturityDaysMax and liquidation horizon for the two Treasury/ETF slices remain undisclosed. The latest report only itemizes asset classes and values; terms and whitepaper disclose reserve assets and illiquidity risk, not slice-wide contractual maxima. T+3 holder bank payout is not a reserve liquidation bound."
+    },
+    {
+      "id": "uw-brlv-crown-1787296a2cde6813",
+      "assetId": "brlv-crown",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:ad982851599cb9933188f3d5",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
+      "sources": [
+        {
+          "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
+          "observedAt": "2026-10-03T22:57:48Z",
+          "datumAsOf": "2026-09-30",
+          "location": "September 2026 PoR, p.1, section 3 reserve composition",
+          "excerpt": "Brazilian Treasury Bonds -|R$\u00a0211.011.738,24 55.82%|",
+          "assertion": "The dated itemized schedule publishes Treasury/ETF values but no instrument IDs, maximum remaining maturities or hard liquidation horizons."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.crown-brlv.com/en/transparency",
+        "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
+        "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf",
+        "https://docs.crown-brlv.com/whitepaper",
+        "https://docs.crown-brlv.com/llms.txt"
+      ],
+      "rationale": "Exact maturityDaysMax and liquidation horizon for the two Treasury/ETF slices remain undisclosed. The latest report only itemizes asset classes and values; terms and whitepaper disclose reserve assets and illiquidity risk, not slice-wide contractual maxima. T+3 holder bank payout is not a reserve liquidation bound."
+    },
+    {
+      "id": "uw-brlv-crown-f819331ee5dce6c5",
+      "assetId": "brlv-crown",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e9dad50bdff131a3c8c00d85",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
+      "sources": [
+        {
+          "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
+          "observedAt": "2026-10-03T22:57:48Z",
+          "datumAsOf": "2026-09-30",
+          "location": "September 2026 PoR, p.1, section 3 reserve composition",
+          "excerpt": "Brazilian Treasury Bonds -|R$\u00a0211.011.738,24 55.82%|",
+          "assertion": "The dated itemized schedule publishes Treasury/ETF values but no instrument IDs, maximum remaining maturities or hard liquidation horizons."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.crown-brlv.com/en/transparency",
+        "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
+        "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf",
+        "https://docs.crown-brlv.com/whitepaper",
+        "https://docs.crown-brlv.com/llms.txt"
+      ],
+      "rationale": "Exact maturityDaysMax and liquidation horizon for the two Treasury/ETF slices remain undisclosed. The latest report only itemizes asset classes and values; terms and whitepaper disclose reserve assets and illiquidity risk, not slice-wide contractual maxima. T+3 holder bank payout is not a reserve liquidation bound."
+    },
+    {
+      "id": "uw-brlv-crown-1f986e8778ad6025",
+      "assetId": "brlv-crown",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e9dad50bdff131a3c8c00d85",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
+      "sources": [
+        {
+          "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
+          "observedAt": "2026-10-03T22:57:48Z",
+          "datumAsOf": "2026-09-30",
+          "location": "September 2026 PoR, p.1, section 3 reserve composition",
+          "excerpt": "Brazilian Treasury Bonds -|R$\u00a0211.011.738,24 55.82%|",
+          "assertion": "The dated itemized schedule publishes Treasury/ETF values but no instrument IDs, maximum remaining maturities or hard liquidation horizons."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.crown-brlv.com/en/transparency",
+        "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
+        "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf",
+        "https://docs.crown-brlv.com/whitepaper",
+        "https://docs.crown-brlv.com/llms.txt"
+      ],
+      "rationale": "Exact maturityDaysMax and liquidation horizon for the two Treasury/ETF slices remain undisclosed. The latest report only itemizes asset classes and values; terms and whitepaper disclose reserve assets and illiquidity risk, not slice-wide contractual maxima. T+3 holder bank payout is not a reserve liquidation bound."
+    },
+    {
+      "id": "uw-brlv-crown-9aaa94c607aba6e2",
+      "assetId": "brlv-crown",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:brlv-crown:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
+      "sources": [
+        {
+          "url": "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf",
+          "observedAt": "2026-10-03T22:57:49Z",
+          "datumAsOf": "2026-09-18",
+          "location": "p.7, standard redemption fee clause",
+          "excerpt": "valor m\u00ednimo fixo ou taxa vari\u00e1vel de mercado, o que for maior",
+          "assertion": "The fee structure is disclosed, but neither numeric minimum nor variable-rate parameters nor all-in same-notional cap is public."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.crown-brlv.com/en/transparency",
+        "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
+        "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf",
+        "https://docs.crown-brlv.com/whitepaper",
+        "https://docs.crown-brlv.com/llms.txt",
+        "https://www.crown-brlv.com/taxas"
+      ],
+      "rationale": "Exact same-notional total redemption cost is undisclosed: terms permit max(fixed minimum, market-variable fee), payable under the platform tariff, without numerical parameters. The official linked public tariff resolves to 404; docs and current public reserve/terms archive supply no alternate numeric schedule. This is missing issuer tariff data, not an unsupported calculable public formula."
+    },
+    {
+      "id": "uw-usdfr-forest-road-4ea58c3a7d9ac3dd",
+      "assetId": "usdfr-forest-road",
+      "scope": {
+        "componentKey": "control:mint-meta:usdfr-forest-road:e55f36a3d94667588f1b",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:usdfr-forest-road:e55f36a3d94667588f1b",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
+      "sources": [
+        {
+          "url": "https://forestroadvault.com/docs/roles-and-governance",
+          "observedAt": "2026-10-03T22:57:49Z",
+          "datumAsOf": null,
+          "location": "Role roster, ATTESTER_ROLE",
+          "excerpt": "The m-of-n attester keys",
+          "assertion": "The authorized key role is public; human owners, custody model and signing policy/independence are not disclosed."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://forestroadvault.com",
+        "https://forestroadvault.com/docs/roles-and-governance",
+        "https://forestroadvault.com/docs/overview",
+        "https://forestroadvault.com/docs/addresses",
+        "https://forestroadvault.com/docs/audit",
+        "https://forestroadvault.com/docs/security",
+        "https://forestroadvault.com/transparency",
+        "https://forestroadvault.com/legal",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x870deb459512099e70e9a640cf3140a0d969fc18"
+      ],
+      "rationale": "The scoped controller question asks for custody and signing policy of its two observed oracle attester keys, not enumeration of onchain role bytes. Published verified code and roles specify key roster/threshold authorization but no human ownership, independent custody, or actual signing-policy attestations. Broader timelock census remains U separately."
+    },
+    {
+      "id": "uw-usdfr-forest-road-a629f500a2bb1558",
+      "assetId": "usdfr-forest-road",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
+      "sources": [
+        {
+          "url": "https://forestroadvault.com/docs/guarantees",
+          "observedAt": "2026-10-03T22:57:49Z",
+          "datumAsOf": null,
+          "location": "Reserve custody / backing reconciliation",
+          "excerpt": "Direct USDC donations never become recognized backing through\nreconciliation: the reconciliation function is intentionally one-way downward and only\nacknowledges a custody shortfall.",
+          "assertion": "Published reconciliation is internal USDC/loan accounting, not assurance of offchain receivables against whole USDfr liabilities."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://forestroadvault.com",
+        "https://forestroadvault.com/docs/guarantees",
+        "https://forestroadvault.com/docs/overview",
+        "https://forestroadvault.com/transparency",
+        "https://forestroadvault.com/docs/audit",
+        "https://forestroadvault.com/docs/security",
+        "https://forestroadvault.com/legal"
+      ],
+      "rationale": "Whole-liability offchain-book reconciliation cadence/scope is undisclosed. ReserveManager internally reconciles recognized USDC and attester-marked loans; the audit register labels predominantly internal engineering reviews. No named dated financial engagement reconciles all material receivables and total USDfr liabilities; smart-contract invariants are not financial assurance."
+    },
+    {
+      "id": "uw-usdfr-forest-road-f3c60a728092f3ac",
+      "assetId": "usdfr-forest-road",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "supervision",
+        "pillar": "control",
+        "requiredDatum": "supervision",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
+      "sources": [
+        {
+          "url": "https://forestroadvault.com/legal",
+          "observedAt": "2026-10-03T22:57:49Z",
+          "datumAsOf": null,
+          "location": "Definitive legal materials / instrument characterization",
+          "excerpt": "Token characterization is a matter for counsel.",
+          "assertion": "Public terms defer exact legal wrapper/instrument status to private definitive documents; exact USDfr issuer prudential supervision is not identified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://forestroadvault.com",
+        "https://forestroadvault.com/legal",
+        "https://forestroadvault.com/risk",
+        "https://forestroadvault.com/docs/overview",
+        "https://forestroadvault.com/docs/status",
+        "https://forestroadvault.com/transparency",
+        "https://forestroad.com",
+        "https://files.brokercheck.finra.org/firm/firm_148232.pdf",
+        "https://reports.adviserinfo.sec.gov/reports/ADV/315600/PDF/315600.pdf"
+      ],
+      "rationale": "Exact USDfr legal issuer and its prudential supervisory scope are undisclosed in public definitive materials. FINRA identifies Forest Road Securities BD LLC and SEC ADV identifies Forest Road Asset Management LLC; neither establishes that entity as the USDfr issuer or supervisory oversight of token mint/reserve reconciliation. Affiliate securities/adviser registrations are not token-specific prudential authorization."
+    },
+    {
+      "id": "uw-nusd-neutrl-64ab1a9cadb9d03a",
+      "assetId": "nusd-neutrl",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
+      "sources": [
+        {
+          "url": "https://www.neutrl.finance/reserves",
+          "observedAt": "2026-10-03T22:58:04Z",
+          "datumAsOf": null,
+          "location": "Allocation, venues, reserve breakdown and solvency panels",
+          "excerpt": "Reserve figures are being recalibrated and will be updated soon.",
+          "assertion": "The current issuer dashboard explicitly withholds every measured allocation/coverage figure; qualitative strategies do not supply full reserve percentages."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.neutrl.finance",
+        "https://www.neutrl.finance/reserves",
+        "https://www.neutrl.finance/legal/terms-of-use",
+        "https://docs.neutrl.finance/resources-and-ecosystem/faq",
+        "https://docs.neutrl.finance/resources-and-ecosystem/audits",
+        "https://docs.neutrl.finance/protocol-design/backing",
+        "https://accountable.neutrl.finance",
+        "https://cache.accountable.capital/dashboard/neutrl"
+      ],
+      "rationale": "Current full NUSD reserve composition and a dated common denominator are undisclosed: the accessible issuer allocation, venue, breakdown and solvency panels explicitly say figures are being recalibrated. Documentation/legal terms give eligible strategies and discretion, not present percentages. Legacy Accountable failures corroborate missing coverage but are not the sole basis for C."
+    },
+    {
+      "id": "uw-nusd-neutrl-d393c0fea96f2f74",
+      "assetId": "nusd-neutrl",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
+      "sources": [
+        {
+          "url": "https://docs.neutrl.finance/resources-and-ecosystem/faq",
+          "observedAt": "2026-10-03T22:57:49Z",
+          "datumAsOf": null,
+          "location": "Transparency and Governance, accuracy bullets",
+          "excerpt": "Eventual implementation of **proof-of-reserve frameworks** for off-chain holdings",
+          "assertion": "Offchain proof-of-reserve is described as eventual, without a presently delivered whole-liability reconciliation engagement/cadence."
+        },
+        {
+          "url": "https://www.neutrl.finance/reserves",
+          "observedAt": "2026-10-03T22:58:04Z",
+          "datumAsOf": null,
+          "location": "Solvency / reserve coverage panel",
+          "excerpt": "Reserve figures are being recalibrated and will be updated soon.",
+          "assertion": "Current reserve versus NUSD coverage metrics are not being published."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.neutrl.finance",
+        "https://www.neutrl.finance/reserves",
+        "https://www.neutrl.finance/legal/terms-of-use",
+        "https://docs.neutrl.finance/resources-and-ecosystem/faq",
+        "https://docs.neutrl.finance/resources-and-ecosystem/audits",
+        "https://docs.neutrl.finance/protocol-design/backing",
+        "https://accountable.neutrl.finance",
+        "https://cache.accountable.capital/dashboard/neutrl"
+      ],
+      "rationale": "Whole-liability reconciliation scope/cadence for material offchain OTC/custody positions is undisclosed. FAQ describes eventual offchain proof-of-reserve, audits are contract-security engagements, and current solvency panels withhold measured coverage. Neither historical Dashboard claims nor chain custody movements prove ongoing reconciliation of all reserves to total NUSD liabilities."
     }
   ]
 }

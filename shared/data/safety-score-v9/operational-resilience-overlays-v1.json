@@ -13430,6 +13430,39 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "zchf-frankencoin",
+      "reviewedAt": "2026-10-03T23:46:29Z",
+      "expiresAt": "2027-10-03T23:46:29Z",
+      "reviewer": "W2R45 primary deployment review",
+      "notes": "Exact catalog ZCHF contract creation, not April 2023 beta history, establishes 35 completed calendar months of implementation history. No uninterrupted operation, stress redemption, financial reconciliation or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-deployment",
+          "label": "Exact ZCHF contract creation at Ethereum block 18451518",
+          "publisher": "Ethereum / Blockscout",
+          "publishedAt": "2023-10-28",
+          "url": "https://eth.blockscout.com/tx/0xdc09f425cfb64bbb93a07bf22ea7e7922e24874971b6d17ce1f91750ad92ef62",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 35,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-deployment"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
