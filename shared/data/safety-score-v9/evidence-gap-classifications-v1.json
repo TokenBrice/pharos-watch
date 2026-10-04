@@ -2034,302 +2034,6 @@
       "rationale": "The exact deployed lending-position slice has no published whole-slice maximum realization horizon. Reviewed issuer product/risk documents, legal terms and document archive, protocol withdrawal docs and exact verified source disclose liquidity dependence, not a bounded repayment SLA. Instant branding, atomic execution when liquid, and current idle balances do not prove immediate realizability of the complete position. This is a noncustodial protocol vault, not an attested fund with a regulator-mandated redemption term."
     },
     {
-      "id": "uw-usde-ethena-e5e042b07e93180e",
-      "assetId": "usde-ethena",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:f9906611cba344777f696480",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:48Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R03)",
-      "sources": [
-        {
-          "url": "https://gov.ethenafoundation.com/t/proposal-maple-and-anchorage-digital-as-direct-lending-partners/756",
-          "observedAt": "2026-10-03T22:49:40Z",
-          "datumAsOf": "2026-03-10",
-          "location": "Ethena Labs Research proposal, Summary",
-          "excerpt": "While the specific terms of the agreements can\u2019t be shared publicly for confidentiality reasons",
-          "assertion": "Institutional lending agreements embedded in Liquid Cash are confidential; no whole-basket maximum maturity or realization horizon is disclosed."
-        },
-        {
-          "url": "https://docs.ethena.fi/backing-assets/institutional-lending.md",
-          "observedAt": "2026-10-03T22:49:40Z",
-          "datumAsOf": null,
-          "location": "Institutional lending mechanics",
-          "excerpt": "Under these arrangements, an institutional borrower receives a loan of stable assets and posts collateral worth more than the value borrowed.",
-          "assertion": "Loans are actual claims, not immediately liquid cash merely because their pledged collateral is liquid."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.ethena.fi/llms.txt",
-        "https://docs.ethena.fi/backing-assets/overview.md",
-        "https://docs.ethena.fi/backing-assets/institutional-lending.md",
-        "https://docs.ethena.fi/backing-assets/liquid-stablecoins.md",
-        "https://docs.ethena.fi/backing-assets/defi-lending.md",
-        "https://docs.ethena.fi/backing-assets/real-world-assets-rwa.md",
-        "https://gov.ethenafoundation.com/t/ethena-s-june-2026-governance-update/808",
-        "https://gov.ethenafoundation.com/t/announcement-ethena-foundation-risk-committee-re-election-aug-2026/811",
-        "https://gov.ethenafoundation.com/t/proposal-maple-and-anchorage-digital-as-direct-lending-partners/756",
-        "https://docs.ethena.fi/resources/custodian-attestations.md",
-        "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
-        "https://app.ethena.fi/api/positions/current/collateral",
-        "https://app.ethena.fi/api/collateral-breakdown",
-        "https://docs.ethena.fi/resources/usde-terms-and-conditions.md",
-        "https://docs.ethena.fi/technical-design/key-addresses.md"
-      ],
-      "rationale": "The exact Liquid Cash bucket combines stables, DeFi lending, RWA and institutional loans. Public collateral amounts and category descriptions do not provide a reconciled holding-level maturity or whole-basket realization bound. Governance explicitly withholds lending-agreement terms. Liquid collateral, nominal daily redemption and rolling settlement cannot establish the maximum maturityDaysMax or liquidityHorizon of every claim in this bucket."
-    },
-    {
-      "id": "uw-usde-ethena-e2679eac55a24103",
-      "assetId": "usde-ethena",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:f9906611cba344777f696480",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:48Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R03)",
-      "sources": [
-        {
-          "url": "https://gov.ethenafoundation.com/t/proposal-maple-and-anchorage-digital-as-direct-lending-partners/756",
-          "observedAt": "2026-10-03T22:49:40Z",
-          "datumAsOf": "2026-03-10",
-          "location": "Ethena Labs Research proposal, Summary",
-          "excerpt": "While the specific terms of the agreements can\u2019t be shared publicly for confidentiality reasons",
-          "assertion": "Institutional lending agreements embedded in Liquid Cash are confidential; no whole-basket maximum maturity or realization horizon is disclosed."
-        },
-        {
-          "url": "https://docs.ethena.fi/backing-assets/institutional-lending.md",
-          "observedAt": "2026-10-03T22:49:40Z",
-          "datumAsOf": null,
-          "location": "Institutional lending mechanics",
-          "excerpt": "Under these arrangements, an institutional borrower receives a loan of stable assets and posts collateral worth more than the value borrowed.",
-          "assertion": "Loans are actual claims, not immediately liquid cash merely because their pledged collateral is liquid."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.ethena.fi/llms.txt",
-        "https://docs.ethena.fi/backing-assets/overview.md",
-        "https://docs.ethena.fi/backing-assets/institutional-lending.md",
-        "https://docs.ethena.fi/backing-assets/liquid-stablecoins.md",
-        "https://docs.ethena.fi/backing-assets/defi-lending.md",
-        "https://docs.ethena.fi/backing-assets/real-world-assets-rwa.md",
-        "https://gov.ethenafoundation.com/t/ethena-s-june-2026-governance-update/808",
-        "https://gov.ethenafoundation.com/t/announcement-ethena-foundation-risk-committee-re-election-aug-2026/811",
-        "https://gov.ethenafoundation.com/t/proposal-maple-and-anchorage-digital-as-direct-lending-partners/756",
-        "https://docs.ethena.fi/resources/custodian-attestations.md",
-        "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
-        "https://app.ethena.fi/api/positions/current/collateral",
-        "https://app.ethena.fi/api/collateral-breakdown",
-        "https://docs.ethena.fi/resources/usde-terms-and-conditions.md",
-        "https://docs.ethena.fi/technical-design/key-addresses.md"
-      ],
-      "rationale": "The exact Liquid Cash bucket combines stables, DeFi lending, RWA and institutional loans. Public collateral amounts and category descriptions do not provide a reconciled holding-level maturity or whole-basket realization bound. Governance explicitly withholds lending-agreement terms. Liquid collateral, nominal daily redemption and rolling settlement cannot establish the maximum maturityDaysMax or liquidityHorizon of every claim in this bucket."
-    },
-    {
-      "id": "uw-usde-ethena-beee4f4c9f30ad53",
-      "assetId": "usde-ethena",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:b2e79de8a96c1e38f1f81206",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:31Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R03)",
-      "sources": [
-        {
-          "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
-          "observedAt": "2026-10-03T22:49:40Z",
-          "datumAsOf": null,
-          "location": "Management of Risks, accessibility and availability",
-          "excerpt": "Any of these abilities being unavailable or degraded would impede the trading workflows & availability of the **mint**/**redeem** *USDe* functionality.",
-          "assertion": "Custodial access and closeout depend on external operations; rolling four-hour PnL settlement is not a whole-position realization maximum."
-        },
-        {
-          "url": "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
-          "observedAt": "2026-10-03T22:52:31Z",
-          "datumAsOf": null,
-          "location": "Non-crypto basis trade",
-          "excerpt": "A perpetual contract referencing the spot price of a commodity is treated differently from a cash-settled synthetic contract",
-          "assertion": "The other bucket includes heterogeneous crypto and Gold; generic proposed hedges do not identify every current claim or its term maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.ethena.fi/llms.txt",
-        "https://docs.ethena.fi/backing-assets/overview.md",
-        "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
-        "https://docs.ethena.fi/protocol-overview/underlying-derivatives/futures-vs-perpetuals.md",
-        "https://docs.ethena.fi/protocol-overview/risks/backing-assets-risk.md",
-        "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
-        "https://docs.ethena.fi/resources/custodian-attestations.md",
-        "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
-        "https://app.ethena.fi/api/positions/current/collateral",
-        "https://docs.ethena.fi/resources/usde-terms-and-conditions.md",
-        "https://docs.ethena.fi/technical-design/key-addresses.md"
-      ],
-      "rationale": "The ETH/LST, BTC and SOL/XRP/BNB/Gold positions are disclosed as aggregate assets and venues, not complete realization/closeout schedules. No enforceable whole-slice liquidity horizon is published. The mixed Other claim retains class other because Gold identity and per-position hedge instrument scope remain unitemized; its exact maximum term cannot be established. ETH/BTC maturity is separately left structural N/A, not C. Native transferability, proposed hedges and typical PnL cycles are not whole-position USD liquidity bounds."
-    },
-    {
-      "id": "uw-usde-ethena-eeec74201933296f",
-      "assetId": "usde-ethena",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:e92594f8416eb5673a729835",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:31Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R03)",
-      "sources": [
-        {
-          "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
-          "observedAt": "2026-10-03T22:49:40Z",
-          "datumAsOf": null,
-          "location": "Management of Risks, accessibility and availability",
-          "excerpt": "Any of these abilities being unavailable or degraded would impede the trading workflows & availability of the **mint**/**redeem** *USDe* functionality.",
-          "assertion": "Custodial access and closeout depend on external operations; rolling four-hour PnL settlement is not a whole-position realization maximum."
-        },
-        {
-          "url": "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
-          "observedAt": "2026-10-03T22:52:31Z",
-          "datumAsOf": null,
-          "location": "Non-crypto basis trade",
-          "excerpt": "A perpetual contract referencing the spot price of a commodity is treated differently from a cash-settled synthetic contract",
-          "assertion": "The other bucket includes heterogeneous crypto and Gold; generic proposed hedges do not identify every current claim or its term maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.ethena.fi/llms.txt",
-        "https://docs.ethena.fi/backing-assets/overview.md",
-        "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
-        "https://docs.ethena.fi/protocol-overview/underlying-derivatives/futures-vs-perpetuals.md",
-        "https://docs.ethena.fi/protocol-overview/risks/backing-assets-risk.md",
-        "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
-        "https://docs.ethena.fi/resources/custodian-attestations.md",
-        "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
-        "https://app.ethena.fi/api/positions/current/collateral",
-        "https://docs.ethena.fi/resources/usde-terms-and-conditions.md",
-        "https://docs.ethena.fi/technical-design/key-addresses.md"
-      ],
-      "rationale": "The ETH/LST, BTC and SOL/XRP/BNB/Gold positions are disclosed as aggregate assets and venues, not complete realization/closeout schedules. No enforceable whole-slice liquidity horizon is published. The mixed Other claim retains class other because Gold identity and per-position hedge instrument scope remain unitemized; its exact maximum term cannot be established. ETH/BTC maturity is separately left structural N/A, not C. Native transferability, proposed hedges and typical PnL cycles are not whole-position USD liquidity bounds."
-    },
-    {
-      "id": "uw-usde-ethena-4bdf71b9045455b3",
-      "assetId": "usde-ethena",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:0df9df38a7bd2ec6072c6c60",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:31Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R03)",
-      "sources": [
-        {
-          "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
-          "observedAt": "2026-10-03T22:49:40Z",
-          "datumAsOf": null,
-          "location": "Management of Risks, accessibility and availability",
-          "excerpt": "Any of these abilities being unavailable or degraded would impede the trading workflows & availability of the **mint**/**redeem** *USDe* functionality.",
-          "assertion": "Custodial access and closeout depend on external operations; rolling four-hour PnL settlement is not a whole-position realization maximum."
-        },
-        {
-          "url": "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
-          "observedAt": "2026-10-03T22:52:31Z",
-          "datumAsOf": null,
-          "location": "Non-crypto basis trade",
-          "excerpt": "A perpetual contract referencing the spot price of a commodity is treated differently from a cash-settled synthetic contract",
-          "assertion": "The other bucket includes heterogeneous crypto and Gold; generic proposed hedges do not identify every current claim or its term maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.ethena.fi/llms.txt",
-        "https://docs.ethena.fi/backing-assets/overview.md",
-        "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
-        "https://docs.ethena.fi/protocol-overview/underlying-derivatives/futures-vs-perpetuals.md",
-        "https://docs.ethena.fi/protocol-overview/risks/backing-assets-risk.md",
-        "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
-        "https://docs.ethena.fi/resources/custodian-attestations.md",
-        "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
-        "https://app.ethena.fi/api/positions/current/collateral",
-        "https://docs.ethena.fi/resources/usde-terms-and-conditions.md",
-        "https://docs.ethena.fi/technical-design/key-addresses.md"
-      ],
-      "rationale": "The ETH/LST, BTC and SOL/XRP/BNB/Gold positions are disclosed as aggregate assets and venues, not complete realization/closeout schedules. No enforceable whole-slice liquidity horizon is published. The mixed Other claim retains class other because Gold identity and per-position hedge instrument scope remain unitemized; its exact maximum term cannot be established. ETH/BTC maturity is separately left structural N/A, not C. Native transferability, proposed hedges and typical PnL cycles are not whole-position USD liquidity bounds."
-    },
-    {
-      "id": "uw-usde-ethena-51c42686afbaa4b5",
-      "assetId": "usde-ethena",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:0df9df38a7bd2ec6072c6c60",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:31Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R03)",
-      "sources": [
-        {
-          "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
-          "observedAt": "2026-10-03T22:49:40Z",
-          "datumAsOf": null,
-          "location": "Management of Risks, accessibility and availability",
-          "excerpt": "Any of these abilities being unavailable or degraded would impede the trading workflows & availability of the **mint**/**redeem** *USDe* functionality.",
-          "assertion": "Custodial access and closeout depend on external operations; rolling four-hour PnL settlement is not a whole-position realization maximum."
-        },
-        {
-          "url": "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
-          "observedAt": "2026-10-03T22:52:31Z",
-          "datumAsOf": null,
-          "location": "Non-crypto basis trade",
-          "excerpt": "A perpetual contract referencing the spot price of a commodity is treated differently from a cash-settled synthetic contract",
-          "assertion": "The other bucket includes heterogeneous crypto and Gold; generic proposed hedges do not identify every current claim or its term maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.ethena.fi/llms.txt",
-        "https://docs.ethena.fi/backing-assets/overview.md",
-        "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
-        "https://docs.ethena.fi/protocol-overview/underlying-derivatives/futures-vs-perpetuals.md",
-        "https://docs.ethena.fi/protocol-overview/risks/backing-assets-risk.md",
-        "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
-        "https://docs.ethena.fi/resources/custodian-attestations.md",
-        "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
-        "https://app.ethena.fi/api/positions/current/collateral",
-        "https://docs.ethena.fi/resources/usde-terms-and-conditions.md",
-        "https://docs.ethena.fi/technical-design/key-addresses.md"
-      ],
-      "rationale": "The ETH/LST, BTC and SOL/XRP/BNB/Gold positions are disclosed as aggregate assets and venues, not complete realization/closeout schedules. No enforceable whole-slice liquidity horizon is published. The mixed Other claim retains class other because Gold identity and per-position hedge instrument scope remain unitemized; its exact maximum term cannot be established. ETH/BTC maturity is separately left structural N/A, not C. Native transferability, proposed hedges and typical PnL cycles are not whole-position USD liquidity bounds."
-    },
-    {
       "id": "uw-ggbr-goldfish-gold-3dec8d5b817f15db",
       "assetId": "ggbr-goldfish-gold",
       "scope": {
@@ -2545,361 +2249,6 @@
         "https://raw.githubusercontent.com/SwisscoastAG/HLiquity/30f7253f635f6015267b0fcdb5554d259b76e5db/packages/contracts/contracts/TroveManager.sol"
       ],
       "rationale": "No published whole-position realization horizon for the aggregate HBAR collateral across Troves and Stability Pool was located. Borrowing, repayment, liquidation/redistribution and redemption mechanics disclose encumbrance and distinct claims but no maximum for realizing the entire scoped collateral into USD. Atomic HBAR redemption alone does not establish immediate liquidity of the whole reserve slice. Preserve unknown rather than infer zero-day liquidity from native HBAR transferability."
-    },
-    {
-      "id": "uw-vcred-vcred-17a54e20aba3800f",
-      "assetId": "vcred-vcred",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:47Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
-      "sources": [
-        {
-          "url": "https://vcred.trade/",
-          "observedAt": "2026-10-03T22:52:47Z",
-          "datumAsOf": null,
-          "location": "AI Liquidity Layer and VCRED product tile; footer Terms/Privacy labels are nonlinked spans",
-          "excerpt": "Stake VCRED token to get access to your perp portfolio",
-          "assertion": "Website discloses portfolio-access marketing but no exact Hemi reserve denominator, stablecoin holder claim or supply/backing reconciliation cadence."
-        },
-        {
-          "url": "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1",
-          "observedAt": "2026-10-03T22:52:47Z",
-          "datumAsOf": null,
-          "location": "contracts/VC1.sol notice and mint(address,uint256)",
-          "excerpt": "ERC20-compliant stablecoin pegged to the US Dollar.",
-          "assertion": "Exact token is verified owner-minted ERC20; source contains no reserve, payout, NAV or supply/backing reconciliation regime."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://vcred.trade/",
-        "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1",
-        "https://explorer.hemi.xyz/tx/0x8fb15ea8eb517f7503e73ddf4c3e7d28facb54d8cbac30ee64c3566314030be2",
-        "https://medium.com/@vcred",
-        "https://medium.com/@vcred/ai-powered-smart-market-maker-d4517404484a"
-      ],
-      "rationale": "Exact Hemi VCRED whole-supply reconciliation process/cadence, usable whole-book reserve composition/denominator and binding current stablecoin claim/model remain unpublished. The complete linked site has inert legal labels, no transparency/report archive or regulator identity. Verified exact source establishes owner issuance only, not a debt-fund/portfolio claim. Indexed historical product materials are not exact-deployment evidence; Medium direct fetch was blocked and is not the basis of nondisclosure."
-    },
-    {
-      "id": "uw-vcred-vcred-49362164ce878407",
-      "assetId": "vcred-vcred",
-      "scope": {
-        "componentKey": "mechanism-risk-review",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "mechanism-risk-review",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:47Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
-      "sources": [
-        {
-          "url": "https://vcred.trade/",
-          "observedAt": "2026-10-03T22:52:47Z",
-          "datumAsOf": null,
-          "location": "AI Liquidity Layer and VCRED product tile; footer Terms/Privacy labels are nonlinked spans",
-          "excerpt": "Stake VCRED token to get access to your perp portfolio",
-          "assertion": "Website discloses portfolio-access marketing but no exact Hemi reserve denominator, stablecoin holder claim or supply/backing reconciliation cadence."
-        },
-        {
-          "url": "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1",
-          "observedAt": "2026-10-03T22:52:47Z",
-          "datumAsOf": null,
-          "location": "contracts/VC1.sol notice and mint(address,uint256)",
-          "excerpt": "ERC20-compliant stablecoin pegged to the US Dollar.",
-          "assertion": "Exact token is verified owner-minted ERC20; source contains no reserve, payout, NAV or supply/backing reconciliation regime."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://vcred.trade/",
-        "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1",
-        "https://explorer.hemi.xyz/tx/0x8fb15ea8eb517f7503e73ddf4c3e7d28facb54d8cbac30ee64c3566314030be2",
-        "https://medium.com/@vcred",
-        "https://medium.com/@vcred/ai-powered-smart-market-maker-d4517404484a"
-      ],
-      "rationale": "Exact Hemi VCRED whole-supply reconciliation process/cadence, usable whole-book reserve composition/denominator and binding current stablecoin claim/model remain unpublished. The complete linked site has inert legal labels, no transparency/report archive or regulator identity. Verified exact source establishes owner issuance only, not a debt-fund/portfolio claim. Indexed historical product materials are not exact-deployment evidence; Medium direct fetch was blocked and is not the basis of nondisclosure."
-    },
-    {
-      "id": "uw-vcred-vcred-8ef84ffbe0fbff32",
-      "assetId": "vcred-vcred",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:47Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
-      "sources": [
-        {
-          "url": "https://vcred.trade/",
-          "observedAt": "2026-10-03T22:52:47Z",
-          "datumAsOf": null,
-          "location": "AI Liquidity Layer and VCRED product tile; footer Terms/Privacy labels are nonlinked spans",
-          "excerpt": "Stake VCRED token to get access to your perp portfolio",
-          "assertion": "Website discloses portfolio-access marketing but no exact Hemi reserve denominator, stablecoin holder claim or supply/backing reconciliation cadence."
-        },
-        {
-          "url": "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1",
-          "observedAt": "2026-10-03T22:52:47Z",
-          "datumAsOf": null,
-          "location": "contracts/VC1.sol notice and mint(address,uint256)",
-          "excerpt": "ERC20-compliant stablecoin pegged to the US Dollar.",
-          "assertion": "Exact token is verified owner-minted ERC20; source contains no reserve, payout, NAV or supply/backing reconciliation regime."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://vcred.trade/",
-        "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1",
-        "https://explorer.hemi.xyz/tx/0x8fb15ea8eb517f7503e73ddf4c3e7d28facb54d8cbac30ee64c3566314030be2",
-        "https://medium.com/@vcred",
-        "https://medium.com/@vcred/ai-powered-smart-market-maker-d4517404484a"
-      ],
-      "rationale": "Exact Hemi VCRED whole-supply reconciliation process/cadence, usable whole-book reserve composition/denominator and binding current stablecoin claim/model remain unpublished. The complete linked site has inert legal labels, no transparency/report archive or regulator identity. Verified exact source establishes owner issuance only, not a debt-fund/portfolio claim. Indexed historical product materials are not exact-deployment evidence; Medium direct fetch was blocked and is not the basis of nondisclosure."
-    },
-    {
-      "id": "uw-nect-beraborrow-f02f28e770f6406e",
-      "assetId": "nect-beraborrow",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:2bb4f6fb77609e4b22e6cbd3",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:58Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
-      "sources": [
-        {
-          "url": "https://documentation.kodiak.finance/protocol/islands.md",
-          "observedAt": "2026-10-03T22:53:15Z",
-          "datumAsOf": null,
-          "location": "Island redemption semantics",
-          "excerpt": "These tokens can be freely transferred, traded, or redeemed for the underlying assets at any time.",
-          "assertion": "Whole Island withdrawal is a basket in-kind claim; transferable/redeemable receipt does not establish full-slice realization at known value."
-        },
-        {
-          "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
-          "observedAt": "2026-10-03T22:54:58Z",
-          "datumAsOf": null,
-          "location": "Process",
-          "excerpt": "For an x amount of `$NECT`, users receive an x dollar worth of `Collateral` in return.",
-          "assertion": "NECT redemption discloses in-kind collateral and algorithmic fee, not end-to-end whole-collateral liquidity completion."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses.md",
-        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/collateral-screening-and-parameter-methodology.md",
-        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/eth-and-btc-based-derivatives.md",
-        "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
-        "https://documentation.kodiak.finance/protocol/islands.md",
-        "https://beraborrow.gitbook.io/docs/audits/audits.md",
-        "https://documentation.kodiak.finance/informational/terms-of-use.md",
-        "https://documentation.kodiak.finance/developers/kodiak-islands/smart-contract-reference/kodiak-island.md",
-        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/kodiak-islands-as-collateral.md"
-      ],
-      "rationale": "The exact Kodiak scoped collateral liquidityHorizon remains undisclosed as an end-to-end whole-position realization bound. Registry, collateral descriptions, risk-parameter methodology, in-kind NECT redemption terms and native withdrawal/implementation documentation explain mechanics but publish no complete per-slice realization maximum or funded instant guarantee. In-kind receipt withdrawability and typical settlement are not proof of immediate whole-slice USD liquidity."
-    },
-    {
-      "id": "uw-nect-beraborrow-61a1342b81c113b5",
-      "assetId": "nect-beraborrow",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:646b1f4492cd11e423abcf59",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:58Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
-      "sources": [
-        {
-          "url": "https://documentation.kodiak.finance/protocol/islands.md",
-          "observedAt": "2026-10-03T22:53:15Z",
-          "datumAsOf": null,
-          "location": "Island redemption semantics",
-          "excerpt": "These tokens can be freely transferred, traded, or redeemed for the underlying assets at any time.",
-          "assertion": "Whole Island withdrawal is a basket in-kind claim; transferable/redeemable receipt does not establish full-slice realization at known value."
-        },
-        {
-          "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
-          "observedAt": "2026-10-03T22:54:58Z",
-          "datumAsOf": null,
-          "location": "Process",
-          "excerpt": "For an x amount of `$NECT`, users receive an x dollar worth of `Collateral` in return.",
-          "assertion": "NECT redemption discloses in-kind collateral and algorithmic fee, not end-to-end whole-collateral liquidity completion."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses.md",
-        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/collateral-screening-and-parameter-methodology.md",
-        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/eth-and-btc-based-derivatives.md",
-        "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
-        "https://documentation.kodiak.finance/protocol/islands.md",
-        "https://beraborrow.gitbook.io/docs/audits/audits.md",
-        "https://documentation.kodiak.finance/informational/terms-of-use.md",
-        "https://documentation.kodiak.finance/developers/kodiak-islands/smart-contract-reference/kodiak-island.md",
-        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/kodiak-islands-as-collateral.md"
-      ],
-      "rationale": "The exact Kodiak scoped collateral liquidityHorizon remains undisclosed as an end-to-end whole-position realization bound. Registry, collateral descriptions, risk-parameter methodology, in-kind NECT redemption terms and native withdrawal/implementation documentation explain mechanics but publish no complete per-slice realization maximum or funded instant guarantee. In-kind receipt withdrawability and typical settlement are not proof of immediate whole-slice USD liquidity."
-    },
-    {
-      "id": "uw-nect-beraborrow-cd3e0445f866b7b7",
-      "assetId": "nect-beraborrow",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:674c86bbe81b7659ef6d17d7",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:58Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
-      "sources": [
-        {
-          "url": "https://documentation.kodiak.finance/protocol/islands.md",
-          "observedAt": "2026-10-03T22:53:15Z",
-          "datumAsOf": null,
-          "location": "Island redemption semantics",
-          "excerpt": "These tokens can be freely transferred, traded, or redeemed for the underlying assets at any time.",
-          "assertion": "Whole Island withdrawal is a basket in-kind claim; transferable/redeemable receipt does not establish full-slice realization at known value."
-        },
-        {
-          "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
-          "observedAt": "2026-10-03T22:54:58Z",
-          "datumAsOf": null,
-          "location": "Process",
-          "excerpt": "For an x amount of `$NECT`, users receive an x dollar worth of `Collateral` in return.",
-          "assertion": "NECT redemption discloses in-kind collateral and algorithmic fee, not end-to-end whole-collateral liquidity completion."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses.md",
-        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/collateral-screening-and-parameter-methodology.md",
-        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/eth-and-btc-based-derivatives.md",
-        "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
-        "https://documentation.kodiak.finance/protocol/islands.md",
-        "https://beraborrow.gitbook.io/docs/audits/audits.md",
-        "https://documentation.kodiak.finance/informational/terms-of-use.md",
-        "https://documentation.kodiak.finance/developers/kodiak-islands/smart-contract-reference/kodiak-island.md",
-        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/kodiak-islands-as-collateral.md"
-      ],
-      "rationale": "The exact Kodiak scoped collateral liquidityHorizon remains undisclosed as an end-to-end whole-position realization bound. Registry, collateral descriptions, risk-parameter methodology, in-kind NECT redemption terms and native withdrawal/implementation documentation explain mechanics but publish no complete per-slice realization maximum or funded instant guarantee. In-kind receipt withdrawability and typical settlement are not proof of immediate whole-slice USD liquidity."
-    },
-    {
-      "id": "uw-nect-beraborrow-c37f80a1a9707638",
-      "assetId": "nect-beraborrow",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:607968cd426b1b59f3f97e1a",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:58Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
-      "sources": [
-        {
-          "url": "https://dinero.xyz/docs/pirex-eth-sol",
-          "observedAt": "2026-10-03T22:53:17Z",
-          "datumAsOf": null,
-          "location": "Withdrawal/redemption implementation documentation",
-          "excerpt": "Users can also redeem their pxETH for ETH or upxETH.",
-          "assertion": "Native underlying offers queued and instant routes, with pause/fee controls; no guaranteed whole scoped bridged-position realization bound is stated."
-        },
-        {
-          "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
-          "observedAt": "2026-10-03T22:54:58Z",
-          "datumAsOf": null,
-          "location": "Process",
-          "excerpt": "For an x amount of `$NECT`, users receive an x dollar worth of `Collateral` in return.",
-          "assertion": "NECT redemption discloses in-kind collateral and algorithmic fee, not end-to-end whole-collateral liquidity completion."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses.md",
-        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/collateral-screening-and-parameter-methodology.md",
-        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/eth-and-btc-based-derivatives.md",
-        "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
-        "https://dinero.xyz/docs/pirex-eth-sol",
-        "https://beraborrow.gitbook.io/docs/audits/audits.md",
-        "https://dinero.xyz/docs/px-eth-faq",
-        "https://dinero.xyz/docs/beraeth"
-      ],
-      "rationale": "The exact beraETH scoped collateral liquidityHorizon remains undisclosed as an end-to-end whole-position realization bound. Registry, collateral descriptions, risk-parameter methodology, in-kind NECT redemption terms and native withdrawal/implementation documentation explain mechanics but publish no complete per-slice realization maximum or funded instant guarantee. In-kind receipt withdrawability and typical settlement are not proof of immediate whole-slice USD liquidity."
-    },
-    {
-      "id": "uw-nect-beraborrow-6b309fc09d8f3633",
-      "assetId": "nect-beraborrow",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:c26dee587597ad303f87df33",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:58Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
-      "sources": [
-        {
-          "url": "https://docs.stakestone.io/stakestone/stone-eth/how-it-works/unstake-and-omnichain-withdrawal/request",
-          "observedAt": "2026-10-03T22:53:17Z",
-          "datumAsOf": null,
-          "location": "Withdrawal/redemption implementation documentation",
-          "excerpt": "The requested ETH will be available to claim after the next settlement, which typically occurs a few days later depending on the total amount of ETH requested.",
-          "assertion": "Typical request settlement is amount-dependent, not a maximum full-slice liquidity horizon."
-        },
-        {
-          "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
-          "observedAt": "2026-10-03T22:54:58Z",
-          "datumAsOf": null,
-          "location": "Process",
-          "excerpt": "For an x amount of `$NECT`, users receive an x dollar worth of `Collateral` in return.",
-          "assertion": "NECT redemption discloses in-kind collateral and algorithmic fee, not end-to-end whole-collateral liquidity completion."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses.md",
-        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/collateral-screening-and-parameter-methodology.md",
-        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/eth-and-btc-based-derivatives.md",
-        "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
-        "https://docs.stakestone.io/stakestone/stone-eth/how-it-works/unstake-and-omnichain-withdrawal/request",
-        "https://beraborrow.gitbook.io/docs/audits/audits.md",
-        "https://docs.stakestone.io/stakestone/additionals/terms-of-service.md",
-        "https://docs.stakestone.io/stakestone/stone-eth/how-it-works/unstake-and-omnichain-withdrawal/instant.md",
-        "https://docs.stakestone.io/stakestone/stone-eth/how-it-works/bridging.md"
-      ],
-      "rationale": "The exact Stakestone ETH scoped collateral liquidityHorizon remains undisclosed as an end-to-end whole-position realization bound. Registry, collateral descriptions, risk-parameter methodology, in-kind NECT redemption terms and native withdrawal/implementation documentation explain mechanics but publish no complete per-slice realization maximum or funded instant guarantee. In-kind receipt withdrawability and typical settlement are not proof of immediate whole-slice USD liquidity."
     },
     {
       "id": "uw-senpyusdmwin-sentora-1b4b759ba82fe191",
@@ -24482,270 +23831,6 @@
       "rationale": "Current whole-supply STBT liability-to-affiliate-backing reconciliation procedure and cadence are not published in the reviewed surfaces. The 2023 PoR integration announcement is historical; daily reserve NAV, asset statements, mutable reserve-feed mint ceilings and on-chain issuance records do not supply a dated current common-clock whole-liability reconciliation. Bullion audit does not cover STBT."
     },
     {
-      "id": "uw-zaru-blocktower-ba1560f82a3602ec",
-      "assetId": "zaru-blocktower",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:01Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
-      "sources": [
-        {
-          "url": "https://zaru.network/",
-          "observedAt": "2026-10-03T23:16:00Z",
-          "datumAsOf": null,
-          "location": "Reserves & Verification latest report link",
-          "excerpt": "Report Date: August, 2026",
-          "assertion": "The latest linked report is issued August 28 but measures July 31; no current whole-book weights are published."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://zaru.network/",
-        "https://zaru.network/blog/zar-universal-white-paper",
-        "https://blocktower.tech/legal/zaru-terms-of-use",
-        "https://blocktower.tech/legal/platform-user-agreement",
-        "https://blocktower.tech/legal/fais-disclosure-notice",
-        "https://blocktower.tech/legal",
-        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
-        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
-      ],
-      "rationale": "Current reserve composition and whole-book weights are not disclosed. The official latest-report link still points to the July 31 snapshot (signed August 28), older than the ordinary 38-day budget; the report is AUP, not a named-firm assurance opinion. Holder terms publish permitted classes and backing policy, not a newer measured denominator. No date bump or guessed allocation is authored."
-    },
-    {
-      "id": "uw-zaru-blocktower-5182d03363bd0872",
-      "assetId": "zaru-blocktower",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:01Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
-      "sources": [
-        {
-          "url": "https://zaru.network/blog/zar-universal-white-paper",
-          "observedAt": "2026-10-03T23:16:00Z",
-          "datumAsOf": "2026-07-21",
-          "location": "4.14 monthly scope",
-          "excerpt": "Reconciliation of liabilities vs. reserves",
-          "assertion": "A planned monthly scope is published, but the one retrieved snapshot does not prove recurring all-native supply reconciliation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://zaru.network/",
-        "https://zaru.network/blog/zar-universal-white-paper",
-        "https://blocktower.tech/legal/zaru-terms-of-use",
-        "https://blocktower.tech/legal/platform-user-agreement",
-        "https://blocktower.tech/legal/fais-disclosure-notice",
-        "https://blocktower.tech/legal",
-        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
-        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
-      ],
-      "rationale": "An actual recurring whole-supply supply-to-reserve reconciliation cadence covering all four native deployments is not disclosed. Whitepaper monthly procedures and transaction-level deposit validation do not establish that actual cadence; the sole July AUP expressly excludes events outside its snapshot and identifies only Solana. Legal mint/burn processing does not supply recurring financial reconciliation."
-    },
-    {
-      "id": "uw-zaru-blocktower-546af7adc83172a3",
-      "assetId": "zaru-blocktower",
-      "scope": {
-        "componentKey": "control:mint-meta:zaru-blocktower:1660b417cce0e7f5b4d4",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:zaru-blocktower:1660b417cce0e7f5b4d4",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:01Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
-      "sources": [
-        {
-          "url": "https://zaru.network/blog/zar-universal-white-paper",
-          "observedAt": "2026-10-03T23:16:00Z",
-          "datumAsOf": "2026-07-21",
-          "location": "4.09 Architecture & Access Control",
-          "excerpt": "secured under multi-signature controls and hardware security modules (HSMs) to prevent unauthorised issuance.",
-          "assertion": "Generic security claim supplies no exact ordinary-signer quorum, HSM attestation, independent operator roster or recovery/signing policy."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://zaru.network/",
-        "https://zaru.network/blog/zar-universal-white-paper",
-        "https://blocktower.tech/legal/zaru-terms-of-use",
-        "https://blocktower.tech/legal/platform-user-agreement",
-        "https://blocktower.tech/legal/fais-disclosure-notice",
-        "https://blocktower.tech/legal",
-        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
-        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
-      ],
-      "rationale": "For each of the four named ordinary native mint signers, independently verifiable human independence, HSM/key-custody attestation and exact signing/recovery policy are undisclosed. Whitepaper security claims do not bind these arrangements to the Solana signer or shared EVM EOA. Legal terms address customer account security, not issuer signer safeguards. Existing source/runtime and Arc census uncertainty is retained; no incident-free state is claimed."
-    },
-    {
-      "id": "uw-zaru-blocktower-b5aaafe1be7346b5",
-      "assetId": "zaru-blocktower",
-      "scope": {
-        "componentKey": "control:mint-meta:zaru-blocktower:9271bbd8a2c2d4204d5b",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:zaru-blocktower:9271bbd8a2c2d4204d5b",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:01Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
-      "sources": [
-        {
-          "url": "https://zaru.network/blog/zar-universal-white-paper",
-          "observedAt": "2026-10-03T23:16:00Z",
-          "datumAsOf": "2026-07-21",
-          "location": "4.09 Architecture & Access Control",
-          "excerpt": "secured under multi-signature controls and hardware security modules (HSMs) to prevent unauthorised issuance.",
-          "assertion": "Generic security claim supplies no exact ordinary-signer quorum, HSM attestation, independent operator roster or recovery/signing policy."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://zaru.network/",
-        "https://zaru.network/blog/zar-universal-white-paper",
-        "https://blocktower.tech/legal/zaru-terms-of-use",
-        "https://blocktower.tech/legal/platform-user-agreement",
-        "https://blocktower.tech/legal/fais-disclosure-notice",
-        "https://blocktower.tech/legal",
-        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
-        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
-      ],
-      "rationale": "For each of the four named ordinary native mint signers, independently verifiable human independence, HSM/key-custody attestation and exact signing/recovery policy are undisclosed. Whitepaper security claims do not bind these arrangements to the Solana signer or shared EVM EOA. Legal terms address customer account security, not issuer signer safeguards. Existing source/runtime and Arc census uncertainty is retained; no incident-free state is claimed."
-    },
-    {
-      "id": "uw-zaru-blocktower-6367c80c64d1cbce",
-      "assetId": "zaru-blocktower",
-      "scope": {
-        "componentKey": "control:mint-meta:zaru-blocktower:96d61cf9294a798a2697",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:zaru-blocktower:96d61cf9294a798a2697",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:01Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
-      "sources": [
-        {
-          "url": "https://zaru.network/blog/zar-universal-white-paper",
-          "observedAt": "2026-10-03T23:16:00Z",
-          "datumAsOf": "2026-07-21",
-          "location": "4.09 Architecture & Access Control",
-          "excerpt": "secured under multi-signature controls and hardware security modules (HSMs) to prevent unauthorised issuance.",
-          "assertion": "Generic security claim supplies no exact ordinary-signer quorum, HSM attestation, independent operator roster or recovery/signing policy."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://zaru.network/",
-        "https://zaru.network/blog/zar-universal-white-paper",
-        "https://blocktower.tech/legal/zaru-terms-of-use",
-        "https://blocktower.tech/legal/platform-user-agreement",
-        "https://blocktower.tech/legal/fais-disclosure-notice",
-        "https://blocktower.tech/legal",
-        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
-        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
-      ],
-      "rationale": "For each of the four named ordinary native mint signers, independently verifiable human independence, HSM/key-custody attestation and exact signing/recovery policy are undisclosed. Whitepaper security claims do not bind these arrangements to the Solana signer or shared EVM EOA. Legal terms address customer account security, not issuer signer safeguards. Existing source/runtime and Arc census uncertainty is retained; no incident-free state is claimed."
-    },
-    {
-      "id": "uw-zaru-blocktower-9670a89fe65f5293",
-      "assetId": "zaru-blocktower",
-      "scope": {
-        "componentKey": "control:mint-meta:zaru-blocktower:da3ca105f723823b246c",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:zaru-blocktower:da3ca105f723823b246c",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:01Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
-      "sources": [
-        {
-          "url": "https://zaru.network/blog/zar-universal-white-paper",
-          "observedAt": "2026-10-03T23:16:00Z",
-          "datumAsOf": "2026-07-21",
-          "location": "4.09 Architecture & Access Control",
-          "excerpt": "secured under multi-signature controls and hardware security modules (HSMs) to prevent unauthorised issuance.",
-          "assertion": "Generic security claim supplies no exact ordinary-signer quorum, HSM attestation, independent operator roster or recovery/signing policy."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://zaru.network/",
-        "https://zaru.network/blog/zar-universal-white-paper",
-        "https://blocktower.tech/legal/zaru-terms-of-use",
-        "https://blocktower.tech/legal/platform-user-agreement",
-        "https://blocktower.tech/legal/fais-disclosure-notice",
-        "https://blocktower.tech/legal",
-        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
-        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
-      ],
-      "rationale": "For each of the four named ordinary native mint signers, independently verifiable human independence, HSM/key-custody attestation and exact signing/recovery policy are undisclosed. Whitepaper security claims do not bind these arrangements to the Solana signer or shared EVM EOA. Legal terms address customer account security, not issuer signer safeguards. Existing source/runtime and Arc census uncertainty is retained; no incident-free state is claimed."
-    },
-    {
-      "id": "uw-ctusd-citrea-ed9a79233d0b7b35",
-      "assetId": "ctusd-citrea",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "withdrawalTerms",
-        "pillar": "backing",
-        "requiredDatum": "withdrawalTerms",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:17:16Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
-      "sources": [
-        {
-          "url": "https://www.moonpay.com/legal/stablecoin_terms",
-          "observedAt": "2026-10-03T23:16:01Z",
-          "datumAsOf": null,
-          "location": "3.3 redemption schedule",
-          "excerpt": "Once a redemption order has passed compliance checks, it will be processed according to the redemption schedule.",
-          "assertion": "The operative redemption schedule and end-to-end bounded settlement SLA are not published here."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.moonpay.com/legal/stablecoin_terms",
-        "https://docs.citrea.xyz/developer-documentation/citrea-usd-ctusd",
-        "https://www.blog.citrea.xyz/introducing-citrea-usd-ctusd-the-native-stablecoin-for-bitcoin-issued-by-moonpay-and-powered-by-m0/",
-        "https://docs.m0.org/protocol/extensions",
-        "https://dashboard.m0.org/stablecoins/ctusd",
-        "https://dev.moonpay.com/",
-        "https://docs.iron.xyz/"
-      ],
-      "rationale": "The issuer withdrawal schedule, bounded settlement SLA and current minimum are undisclosed. Terms specify customer onboarding, one-for-one USD redemption and no current issuer fee, but invoke an unpublished redemption schedule and changeable minimum. Generic M0 swapOutM permissions do not establish MoonPay fiat settlement; no instant/permissionless full-holder exit is inferred."
-    },
-    {
       "id": "uw-cgusd-cygnus-finance-85b6f4975dba8149",
       "assetId": "cgusd-cygnus-finance",
       "scope": {
@@ -37442,6 +36527,1205 @@
         "https://raw.githubusercontent.com/circlefin/evm-xreserve-contracts/master/src/modules/x-reserve/Withdrawal.sol"
       ],
       "rationale": "Collateral is liquid USDC, but USDCx holders realize it through remote burn intents, independent attestations and release. Technical/API/code/legal/fee documents give the sequence, not a maximum end-to-end realization window. Underlying USDC immediacy cannot be copied onto the cross-chain escrow slice."
+    },
+    {
+      "id": "uw-usdtb-ethena-053d1b553c1d8404",
+      "assetId": "usdtb-ethena",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:cb3fc3b7281d1846a32f9118",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:58:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R05)",
+      "sources": [
+        {
+          "url": "https://usdtb.money/api/transparency/backing-and-supply/current",
+          "observedAt": "2026-10-03T23:55:32Z",
+          "datumAsOf": "2026-10-03",
+          "location": "assetsInMotion; lastUpdatedAt 2026-10-03T23:53:47.000Z",
+          "excerpt": "\"assetsInMotion\":5413133.239999999",
+          "assertion": "The exact live settlement-float bucket discloses an aggregate amount, not instruments, account terms or a maximum contractual maturity."
+        },
+        {
+          "url": "https://learn.anchorage.com/08.31.26_USDtb_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+          "observedAt": "2026-10-03T23:58:45Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Schedule II, page 5",
+          "excerpt": "Demand deposit accounts at FDIC-insured depository institutions, held directly",
+          "assertion": "The examined August cash is demand deposits; it does not certify the instrument census or maturity of October's live assetsInMotion aggregate."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.usdtb.money/transparency.md",
+        "https://docs.usdtb.money/introduction.md",
+        "https://docs.usdtb.money/mint-and-redeem.md",
+        "https://docs.usdtb.money/legal-terms/terms-of-use.md",
+        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+        "https://www.anchorage.com/platform/usdtb-reserve-attestations",
+        "https://usdtb.money/api/transparency/backing-and-supply/current"
+      ],
+      "rationale": "No instrument-level maximum maturity or exhaustive demand-deposit-only covenant for the exact live assetsInMotion settlement float is published. Wave 1 treated the August examined cash schedule as the October live bucket; the live API instead separately reports an aggregate with no account/instrument details. Historical demand deposits are not term claims, but their N/A cannot be exported to all current settlement float. This C concerns the live bucket's undisclosed contractual bound, not the disclosed August demand-deposit claim."
+    },
+    {
+      "id": "uw-nect-beraborrow-03f2fa9f7717355f",
+      "assetId": "nect-beraborrow",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:168d6818dc14a90450b053ee",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:58:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R05)",
+      "sources": [
+        {
+          "url": "https://kerneldao.gitbook.io/kernel/getting-started/kelp/restaking-guide.md",
+          "observedAt": "2026-10-03T23:50:38Z",
+          "datumAsOf": null,
+          "location": "Withdrawing Your Stake",
+          "excerpt": "You can only withdraw your rsETH as ETH, ETHx, or stETH on the Ethereum chain.",
+          "assertion": "Native withdrawal terms apply to Ethereum, not a guaranteed whole-position Berachain unwind."
+        },
+        {
+          "url": "https://kerneldao.gitbook.io/kernel/getting-started/kelp/restaking-guide/instant-withdrawals.md",
+          "observedAt": "2026-10-03T23:52:27Z",
+          "datumAsOf": null,
+          "location": "Instant withdrawal timing footnote",
+          "excerpt": "Subject to availability of funds",
+          "assertion": "The fast alternative is conditional; no unconditional entire Beraborrow rsETH slice realization horizon is disclosed."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral.md",
+        "https://kerneldao.gitbook.io/kernel/llms.txt",
+        "https://kerneldao.gitbook.io/kernel/getting-started/kelp/restaking-guide.md",
+        "https://kerneldao.gitbook.io/kernel/getting-started/kelp/restaking-guide/instant-withdrawals.md",
+        "https://kerneldao.gitbook.io/kernel/getting-started/kelp/smart-contracts.md",
+        "https://rpc.berachain.com"
+      ],
+      "rationale": "At Berachain block 27028385 the exact collateral vault asset is 0x4186bfc76e2e237523cbc30fd220fe055156b41f, named KelpDao Restaked ETH. Registry and native bridge/withdrawal documents identify the position, but publish no contractual horizon covering the whole Beraborrow position, bridge leg and native withdrawal. Ethereum's standard 15\u201321 days and fund-conditional instant mode are nearby disclosed terms, not a Berachain whole-slice realization promise. No unpublished current capacity is invented."
+    },
+    {
+      "id": "uw-nect-beraborrow-3ad4e68617a0770b",
+      "assetId": "nect-beraborrow",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:464451dfc1126bb79a4e7eef",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:58:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R05)",
+      "sources": [
+        {
+          "url": "https://pumpbtc.gitbook.io/pumpbtc/step-by-step-guides/how-to-withdraw-usdpumpbtc-on-the-ethereum-mainnet.md",
+          "observedAt": "2026-10-03T23:54:24Z",
+          "datumAsOf": null,
+          "location": "Opening withdrawal instruction",
+          "excerpt": "If you want to withdraw your $pumpBTC assets, make sure you hold $pumpBTC on the Ethereum chain.",
+          "assertion": "The actual withdrawal instruction is Ethereum-scoped; it provides no whole Berachain position realization bound."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/pumpbtc/pumpBTC-contract/main/README.md",
+          "observedAt": "2026-10-03T23:50:38Z",
+          "datumAsOf": null,
+          "location": "Contract Overview / Theory",
+          "excerpt": "Users can also request an instant unstake, receiving Wrapped BTC immediately from other users' stakes that have not yet been exchanged for BTC, subject to an extra fee.",
+          "assertion": "Instant liquidity is a finite pending-stake pool, not an entire-position guarantee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses.md",
+        "https://pumpbtc.gitbook.io/pumpbtc/llms.txt",
+        "https://pumpbtc.gitbook.io/pumpbtc/key-address.md",
+        "https://pumpbtc.gitbook.io/pumpbtc/tech-specs/how-does-pumpbtc-work.md",
+        "https://pumpbtc.gitbook.io/pumpbtc/tech-specs/mint-and-burn-process.md",
+        "https://pumpbtc.gitbook.io/pumpbtc/resources/term-of-service.md",
+        "https://pumpbtc.gitbook.io/pumpbtc/custody-and-security/transparency-dashboard.md",
+        "https://pumpbtc.gitbook.io/pumpbtc/pumpbtc-berachain-pre-deposit-vault-guideline.md",
+        "https://rpc.berachain.com"
+      ],
+      "rationale": "Exact vault asset() at block 27028385 resolves to 0x1fcca65fb6ae3b2758b9b2b394cb227eae404e1e, named pumpBTC.bera, not CIAN's ylpumpBTC.bera receipt. Primary key addresses, withdrawal/bridge design, transparency and legal terms disclose no guaranteed complete realization horizon for this Berachain collateral position. Native operator-mediated T+10 and pending-stake instant withdrawals cannot establish the bridge-plus-whole-position bound. The predeposit receipt's three-month lockup is a different claim."
+    },
+    {
+      "id": "uw-nect-beraborrow-7beba7218865c83c",
+      "assetId": "nect-beraborrow",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:62207df8244cb1dcae85ef60",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:58:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R05)",
+      "sources": [
+        {
+          "url": "https://docs.cian.app/yieldlayer/for-users-quick-start/core-concepts-and-yield-layer-page-overview.md",
+          "observedAt": "2026-10-03T23:46:34Z",
+          "datumAsOf": null,
+          "location": "How to Withdraw; How to check my position",
+          "excerpt": "it is estimated that the user will receive the withdrawn assets in \\~5 days.",
+          "assertion": "The timing is expressly an estimate, not an unconditional bound covering the whole Berachain collateral position."
+        },
+        {
+          "url": "https://docs.cian.app/term-of-use.md",
+          "observedAt": "2026-10-03T23:52:27Z",
+          "datumAsOf": null,
+          "location": "Services / informational resource",
+          "excerpt": "we cannot guarantee the accuracy, completeness, or timeliness of the information provided.",
+          "assertion": "Legal terms do not convert estimated operational withdrawal timing into a guaranteed full-position horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses.md",
+        "https://docs.cian.app/llms.txt",
+        "https://docs.cian.app/yieldlayer/for-users-quick-start/core-concepts-and-yield-layer-page-overview.md",
+        "https://docs.cian.app/yieldlayer/for-builders-developer-documentation/yield-layer-contracts.md",
+        "https://docs.cian.app/resources/contracts/yield-layer.md",
+        "https://docs.cian.app/resources/contracts/berachain-pre-deposit-vault.md",
+        "https://docs.cian.app/term-of-use.md",
+        "https://rpc.berachain.com"
+      ],
+      "rationale": "Pinned block 27028385 resolves the actual Beraborrow vault's asset to 0xa958090601e21a82e9873042652e35891d945a8c, name CIAN yield layer stETH, symbol ylstETH, eliminating wave 1's YieldNest identity blocker. The owned obligor metadata is corrected to CIAN. CIAN's contract roster, withdrawal instructions, Berachain pages and legal terms publish no unconditional complete-position Berachain realization horizon; ~5 days is an estimate for the native withdrawal flow, not a whole cross-chain bound."
+    },
+    {
+      "id": "uw-nect-beraborrow-f9332f27caa88753",
+      "assetId": "nect-beraborrow",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:92b34ac6af29410721ae4d60",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:58:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R05)",
+      "sources": [
+        {
+          "url": "https://docs.bedrock.technology/multi-asset-liquid-staking/unibtc/bridge.md",
+          "observedAt": "2026-10-03T23:52:26Z",
+          "datumAsOf": null,
+          "location": "Cap",
+          "excerpt": "The cap will be reflected in real-time in the UI, the bridge request will be rejected if exceeding the available cap.",
+          "assertion": "The Berachain-to-Ethereum bridge exists but is quota-limited, without a whole-slice settlement horizon."
+        },
+        {
+          "url": "https://docs.bedrock.technology/multi-asset-liquid-staking/unibtc/unstaking.md",
+          "observedAt": "2026-10-03T23:46:34Z",
+          "datumAsOf": null,
+          "location": "Supported networks and wrapped BTCs",
+          "excerpt": "The initial network supported for unstaking is the Ethereum Mainnet.",
+          "assertion": "Eight-day native processing and daily caps do not certify the complete Berachain branch."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses.md",
+        "https://docs.bedrock.technology/llms.txt",
+        "https://docs.bedrock.technology/multi-asset-liquid-staking/unibtc/bridge.md",
+        "https://docs.bedrock.technology/multi-asset-liquid-staking/unibtc/unstaking.md",
+        "https://docs.bedrock.technology/security/smart-contracts/unibtc.md",
+        "https://docs.bedrock.technology/legal/terms-of-use.md",
+        "https://rpc.berachain.com"
+      ],
+      "rationale": "The exact vault asset() at block 27028385 is 0xc3827a4bc8224ee2d116637023b124ced6db6e90, uniBTC. Unlike wave 1, the issuer's bridge matrix now supplies the Berachain-to-Ethereum route, but expressly constrains bridging by available quotas and EOA eligibility. The native exit lists Ethereum/Bitlayer caps and eight-day processing, with no cumulative whole-position bridge-and-withdrawal realization horizon. Legal and contract docs do not publish that exact complete-slice bound."
+    },
+    {
+      "id": "uw-gusd-gemini-e5278355986bf3fb",
+      "assetId": "gusd-gemini",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:58:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R05)",
+      "sources": [
+        {
+          "url": "https://assets.ctfassets.net/jg6lo9a2ukvr/1fSg98ekn9sHoyC1SnjceC/eca615fb0dfcaf8f3cd1541fc4c1c0bd/Gemini-GUSD_Reserves_Report_-July_2026.pdf",
+          "observedAt": "2026-10-03T23:58:44Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Cover, page 1; management schedule, page 4",
+          "excerpt": "DRAFT AS OF 10/2/2026",
+          "assertion": "The latest public archive entry is a July reserve assertion labelled draft, not a new October reserve measurement or finalized examination."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.gemini.com/dollar",
+        "https://cdn.contentful.com/spaces/jg6lo9a2ukvr/entries?content_type=gusdAttestation&order=-fields.reportDate&limit=1000",
+        "https://www.gemini.com/legal/user-agreement",
+        "https://www.dfs.ny.gov/industry_guidance/industry_letters/il20220608_issuance_stablecoins",
+        "https://github.com/gemini/dollar",
+        "https://etherscan.io/token/0x056fd409e1d7a124bd7017459dfea2f387b6d5cd"
+      ],
+      "rationale": "The full primary archive, not merely the five displayed entries, contains no reserve composition measured within 38 days and no finalized independent examination within 120 days. July 31 and June 30 PDFs are drafts; May 29 is the latest finalized measurement. July discloses cash at State Street and Western Alliance with settlement payables, but neither a current measured composition nor a finalized current report is published. October 2 is publication/draft preparation, not compositionAsOf. This is missing current disclosure, not a failed fetch."
+    },
+    {
+      "id": "uw-gusd-gemini-e4c1fc988f9e1a1a",
+      "assetId": "gusd-gemini",
+      "scope": {
+        "componentKey": "mechanism-review:assuranceAndReconciliation",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "mechanism-review:assuranceAndReconciliation",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:58:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R05)",
+      "sources": [
+        {
+          "url": "https://assets.ctfassets.net/jg6lo9a2ukvr/1fSg98ekn9sHoyC1SnjceC/eca615fb0dfcaf8f3cd1541fc4c1c0bd/Gemini-GUSD_Reserves_Report_-July_2026.pdf",
+          "observedAt": "2026-10-03T23:58:44Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Management assertion, page 3; reserve/liability reconciliation, page 4",
+          "excerpt": "As a practical matter our reconciliation process begins within 30 minutes of 5pm Eastern Time",
+          "assertion": "Exact issuer reconciliation and dated schedule are public, but the component producer binds evidence to stale finalized May latestReport; it cannot separately admit labelled draft issuer-only evidence. No independent opinion is asserted."
+        }
+      ]
+    },
+    {
+      "id": "uw-usde-ethena-e5e042b07e93180e",
+      "assetId": "usde-ethena",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:f9906611cba344777f696480",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:48Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R03)",
+      "sources": [
+        {
+          "url": "https://gov.ethenafoundation.com/t/proposal-maple-and-anchorage-digital-as-direct-lending-partners/756",
+          "observedAt": "2026-10-03T22:49:40Z",
+          "datumAsOf": "2026-03-10",
+          "location": "Ethena Labs Research proposal, Summary",
+          "excerpt": "While the specific terms of the agreements can\u2019t be shared publicly for confidentiality reasons",
+          "assertion": "Institutional lending agreements embedded in Liquid Cash are confidential; no whole-basket maximum maturity or realization horizon is disclosed."
+        },
+        {
+          "url": "https://docs.ethena.fi/backing-assets/institutional-lending.md",
+          "observedAt": "2026-10-03T22:49:40Z",
+          "datumAsOf": null,
+          "location": "Institutional lending mechanics",
+          "excerpt": "Under these arrangements, an institutional borrower receives a loan of stable assets and posts collateral worth more than the value borrowed.",
+          "assertion": "Loans are actual claims, not immediately liquid cash merely because their pledged collateral is liquid."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ethena.fi/llms.txt",
+        "https://docs.ethena.fi/backing-assets/overview.md",
+        "https://docs.ethena.fi/backing-assets/institutional-lending.md",
+        "https://docs.ethena.fi/backing-assets/liquid-stablecoins.md",
+        "https://docs.ethena.fi/backing-assets/defi-lending.md",
+        "https://docs.ethena.fi/backing-assets/real-world-assets-rwa.md",
+        "https://gov.ethenafoundation.com/t/ethena-s-june-2026-governance-update/808",
+        "https://gov.ethenafoundation.com/t/announcement-ethena-foundation-risk-committee-re-election-aug-2026/811",
+        "https://gov.ethenafoundation.com/t/proposal-maple-and-anchorage-digital-as-direct-lending-partners/756",
+        "https://docs.ethena.fi/resources/custodian-attestations.md",
+        "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
+        "https://app.ethena.fi/api/positions/current/collateral",
+        "https://app.ethena.fi/api/collateral-breakdown",
+        "https://docs.ethena.fi/resources/usde-terms-and-conditions.md",
+        "https://docs.ethena.fi/technical-design/key-addresses.md"
+      ],
+      "rationale": "The exact Liquid Cash bucket combines stables, DeFi lending, RWA and institutional loans. Public collateral amounts and category descriptions do not provide a reconciled holding-level maturity or whole-basket realization bound. Governance explicitly withholds lending-agreement terms. Liquid collateral, nominal daily redemption and rolling settlement cannot establish the maximum maturityDaysMax or liquidityHorizon of every claim in this bucket."
+    },
+    {
+      "id": "uw-usde-ethena-e2679eac55a24103",
+      "assetId": "usde-ethena",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:f9906611cba344777f696480",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:48Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R03)",
+      "sources": [
+        {
+          "url": "https://gov.ethenafoundation.com/t/proposal-maple-and-anchorage-digital-as-direct-lending-partners/756",
+          "observedAt": "2026-10-03T22:49:40Z",
+          "datumAsOf": "2026-03-10",
+          "location": "Ethena Labs Research proposal, Summary",
+          "excerpt": "While the specific terms of the agreements can\u2019t be shared publicly for confidentiality reasons",
+          "assertion": "Institutional lending agreements embedded in Liquid Cash are confidential; no whole-basket maximum maturity or realization horizon is disclosed."
+        },
+        {
+          "url": "https://docs.ethena.fi/backing-assets/institutional-lending.md",
+          "observedAt": "2026-10-03T22:49:40Z",
+          "datumAsOf": null,
+          "location": "Institutional lending mechanics",
+          "excerpt": "Under these arrangements, an institutional borrower receives a loan of stable assets and posts collateral worth more than the value borrowed.",
+          "assertion": "Loans are actual claims, not immediately liquid cash merely because their pledged collateral is liquid."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ethena.fi/llms.txt",
+        "https://docs.ethena.fi/backing-assets/overview.md",
+        "https://docs.ethena.fi/backing-assets/institutional-lending.md",
+        "https://docs.ethena.fi/backing-assets/liquid-stablecoins.md",
+        "https://docs.ethena.fi/backing-assets/defi-lending.md",
+        "https://docs.ethena.fi/backing-assets/real-world-assets-rwa.md",
+        "https://gov.ethenafoundation.com/t/ethena-s-june-2026-governance-update/808",
+        "https://gov.ethenafoundation.com/t/announcement-ethena-foundation-risk-committee-re-election-aug-2026/811",
+        "https://gov.ethenafoundation.com/t/proposal-maple-and-anchorage-digital-as-direct-lending-partners/756",
+        "https://docs.ethena.fi/resources/custodian-attestations.md",
+        "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
+        "https://app.ethena.fi/api/positions/current/collateral",
+        "https://app.ethena.fi/api/collateral-breakdown",
+        "https://docs.ethena.fi/resources/usde-terms-and-conditions.md",
+        "https://docs.ethena.fi/technical-design/key-addresses.md"
+      ],
+      "rationale": "The exact Liquid Cash bucket combines stables, DeFi lending, RWA and institutional loans. Public collateral amounts and category descriptions do not provide a reconciled holding-level maturity or whole-basket realization bound. Governance explicitly withholds lending-agreement terms. Liquid collateral, nominal daily redemption and rolling settlement cannot establish the maximum maturityDaysMax or liquidityHorizon of every claim in this bucket."
+    },
+    {
+      "id": "uw-usde-ethena-beee4f4c9f30ad53",
+      "assetId": "usde-ethena",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:b2e79de8a96c1e38f1f81206",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R03)",
+      "sources": [
+        {
+          "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
+          "observedAt": "2026-10-03T22:49:40Z",
+          "datumAsOf": null,
+          "location": "Management of Risks, accessibility and availability",
+          "excerpt": "Any of these abilities being unavailable or degraded would impede the trading workflows & availability of the **mint**/**redeem** *USDe* functionality.",
+          "assertion": "Custodial access and closeout depend on external operations; rolling four-hour PnL settlement is not a whole-position realization maximum."
+        },
+        {
+          "url": "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
+          "observedAt": "2026-10-03T22:52:31Z",
+          "datumAsOf": null,
+          "location": "Non-crypto basis trade",
+          "excerpt": "A perpetual contract referencing the spot price of a commodity is treated differently from a cash-settled synthetic contract",
+          "assertion": "The other bucket includes heterogeneous crypto and Gold; generic proposed hedges do not identify every current claim or its term maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ethena.fi/llms.txt",
+        "https://docs.ethena.fi/backing-assets/overview.md",
+        "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
+        "https://docs.ethena.fi/protocol-overview/underlying-derivatives/futures-vs-perpetuals.md",
+        "https://docs.ethena.fi/protocol-overview/risks/backing-assets-risk.md",
+        "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
+        "https://docs.ethena.fi/resources/custodian-attestations.md",
+        "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
+        "https://app.ethena.fi/api/positions/current/collateral",
+        "https://docs.ethena.fi/resources/usde-terms-and-conditions.md",
+        "https://docs.ethena.fi/technical-design/key-addresses.md"
+      ],
+      "rationale": "The ETH/LST, BTC and SOL/XRP/BNB/Gold positions are disclosed as aggregate assets and venues, not complete realization/closeout schedules. No enforceable whole-slice liquidity horizon is published. The mixed Other claim retains class other because Gold identity and per-position hedge instrument scope remain unitemized; its exact maximum term cannot be established. ETH/BTC maturity is separately left structural N/A, not C. Native transferability, proposed hedges and typical PnL cycles are not whole-position USD liquidity bounds."
+    },
+    {
+      "id": "uw-usde-ethena-eeec74201933296f",
+      "assetId": "usde-ethena",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e92594f8416eb5673a729835",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R03)",
+      "sources": [
+        {
+          "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
+          "observedAt": "2026-10-03T22:49:40Z",
+          "datumAsOf": null,
+          "location": "Management of Risks, accessibility and availability",
+          "excerpt": "Any of these abilities being unavailable or degraded would impede the trading workflows & availability of the **mint**/**redeem** *USDe* functionality.",
+          "assertion": "Custodial access and closeout depend on external operations; rolling four-hour PnL settlement is not a whole-position realization maximum."
+        },
+        {
+          "url": "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
+          "observedAt": "2026-10-03T22:52:31Z",
+          "datumAsOf": null,
+          "location": "Non-crypto basis trade",
+          "excerpt": "A perpetual contract referencing the spot price of a commodity is treated differently from a cash-settled synthetic contract",
+          "assertion": "The other bucket includes heterogeneous crypto and Gold; generic proposed hedges do not identify every current claim or its term maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ethena.fi/llms.txt",
+        "https://docs.ethena.fi/backing-assets/overview.md",
+        "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
+        "https://docs.ethena.fi/protocol-overview/underlying-derivatives/futures-vs-perpetuals.md",
+        "https://docs.ethena.fi/protocol-overview/risks/backing-assets-risk.md",
+        "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
+        "https://docs.ethena.fi/resources/custodian-attestations.md",
+        "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
+        "https://app.ethena.fi/api/positions/current/collateral",
+        "https://docs.ethena.fi/resources/usde-terms-and-conditions.md",
+        "https://docs.ethena.fi/technical-design/key-addresses.md"
+      ],
+      "rationale": "The ETH/LST, BTC and SOL/XRP/BNB/Gold positions are disclosed as aggregate assets and venues, not complete realization/closeout schedules. No enforceable whole-slice liquidity horizon is published. The mixed Other claim retains class other because Gold identity and per-position hedge instrument scope remain unitemized; its exact maximum term cannot be established. ETH/BTC maturity is separately left structural N/A, not C. Native transferability, proposed hedges and typical PnL cycles are not whole-position USD liquidity bounds."
+    },
+    {
+      "id": "uw-usde-ethena-4bdf71b9045455b3",
+      "assetId": "usde-ethena",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:0df9df38a7bd2ec6072c6c60",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R03)",
+      "sources": [
+        {
+          "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
+          "observedAt": "2026-10-03T22:49:40Z",
+          "datumAsOf": null,
+          "location": "Management of Risks, accessibility and availability",
+          "excerpt": "Any of these abilities being unavailable or degraded would impede the trading workflows & availability of the **mint**/**redeem** *USDe* functionality.",
+          "assertion": "Custodial access and closeout depend on external operations; rolling four-hour PnL settlement is not a whole-position realization maximum."
+        },
+        {
+          "url": "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
+          "observedAt": "2026-10-03T22:52:31Z",
+          "datumAsOf": null,
+          "location": "Non-crypto basis trade",
+          "excerpt": "A perpetual contract referencing the spot price of a commodity is treated differently from a cash-settled synthetic contract",
+          "assertion": "The other bucket includes heterogeneous crypto and Gold; generic proposed hedges do not identify every current claim or its term maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ethena.fi/llms.txt",
+        "https://docs.ethena.fi/backing-assets/overview.md",
+        "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
+        "https://docs.ethena.fi/protocol-overview/underlying-derivatives/futures-vs-perpetuals.md",
+        "https://docs.ethena.fi/protocol-overview/risks/backing-assets-risk.md",
+        "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
+        "https://docs.ethena.fi/resources/custodian-attestations.md",
+        "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
+        "https://app.ethena.fi/api/positions/current/collateral",
+        "https://docs.ethena.fi/resources/usde-terms-and-conditions.md",
+        "https://docs.ethena.fi/technical-design/key-addresses.md"
+      ],
+      "rationale": "The ETH/LST, BTC and SOL/XRP/BNB/Gold positions are disclosed as aggregate assets and venues, not complete realization/closeout schedules. No enforceable whole-slice liquidity horizon is published. The mixed Other claim retains class other because Gold identity and per-position hedge instrument scope remain unitemized; its exact maximum term cannot be established. ETH/BTC maturity is separately left structural N/A, not C. Native transferability, proposed hedges and typical PnL cycles are not whole-position USD liquidity bounds."
+    },
+    {
+      "id": "uw-usde-ethena-51c42686afbaa4b5",
+      "assetId": "usde-ethena",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:0df9df38a7bd2ec6072c6c60",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R03)",
+      "sources": [
+        {
+          "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
+          "observedAt": "2026-10-03T22:49:40Z",
+          "datumAsOf": null,
+          "location": "Management of Risks, accessibility and availability",
+          "excerpt": "Any of these abilities being unavailable or degraded would impede the trading workflows & availability of the **mint**/**redeem** *USDe* functionality.",
+          "assertion": "Custodial access and closeout depend on external operations; rolling four-hour PnL settlement is not a whole-position realization maximum."
+        },
+        {
+          "url": "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
+          "observedAt": "2026-10-03T22:52:31Z",
+          "datumAsOf": null,
+          "location": "Non-crypto basis trade",
+          "excerpt": "A perpetual contract referencing the spot price of a commodity is treated differently from a cash-settled synthetic contract",
+          "assertion": "The other bucket includes heterogeneous crypto and Gold; generic proposed hedges do not identify every current claim or its term maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ethena.fi/llms.txt",
+        "https://docs.ethena.fi/backing-assets/overview.md",
+        "https://docs.ethena.fi/backing-assets/non-crypto-basis-trade.md",
+        "https://docs.ethena.fi/protocol-overview/underlying-derivatives/futures-vs-perpetuals.md",
+        "https://docs.ethena.fi/protocol-overview/risks/backing-assets-risk.md",
+        "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail.md",
+        "https://docs.ethena.fi/resources/custodian-attestations.md",
+        "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
+        "https://app.ethena.fi/api/positions/current/collateral",
+        "https://docs.ethena.fi/resources/usde-terms-and-conditions.md",
+        "https://docs.ethena.fi/technical-design/key-addresses.md"
+      ],
+      "rationale": "The ETH/LST, BTC and SOL/XRP/BNB/Gold positions are disclosed as aggregate assets and venues, not complete realization/closeout schedules. No enforceable whole-slice liquidity horizon is published. The mixed Other claim retains class other because Gold identity and per-position hedge instrument scope remain unitemized; its exact maximum term cannot be established. ETH/BTC maturity is separately left structural N/A, not C. Native transferability, proposed hedges and typical PnL cycles are not whole-position USD liquidity bounds."
+    },
+    {
+      "id": "uw-vcred-vcred-17a54e20aba3800f",
+      "assetId": "vcred-vcred",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:47Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
+      "sources": [
+        {
+          "url": "https://vcred.trade/",
+          "observedAt": "2026-10-03T22:52:47Z",
+          "datumAsOf": null,
+          "location": "AI Liquidity Layer and VCRED product tile; footer Terms/Privacy labels are nonlinked spans",
+          "excerpt": "Stake VCRED token to get access to your perp portfolio",
+          "assertion": "Website discloses portfolio-access marketing but no exact Hemi reserve denominator, stablecoin holder claim or supply/backing reconciliation cadence."
+        },
+        {
+          "url": "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1",
+          "observedAt": "2026-10-03T22:52:47Z",
+          "datumAsOf": null,
+          "location": "contracts/VC1.sol notice and mint(address,uint256)",
+          "excerpt": "ERC20-compliant stablecoin pegged to the US Dollar.",
+          "assertion": "Exact token is verified owner-minted ERC20; source contains no reserve, payout, NAV or supply/backing reconciliation regime."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vcred.trade/",
+        "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1",
+        "https://explorer.hemi.xyz/tx/0x8fb15ea8eb517f7503e73ddf4c3e7d28facb54d8cbac30ee64c3566314030be2",
+        "https://medium.com/@vcred",
+        "https://medium.com/@vcred/ai-powered-smart-market-maker-d4517404484a"
+      ],
+      "rationale": "Exact Hemi VCRED whole-supply reconciliation process/cadence, usable whole-book reserve composition/denominator and binding current stablecoin claim/model remain unpublished. The complete linked site has inert legal labels, no transparency/report archive or regulator identity. Verified exact source establishes owner issuance only, not a debt-fund/portfolio claim. Indexed historical product materials are not exact-deployment evidence; Medium direct fetch was blocked and is not the basis of nondisclosure."
+    },
+    {
+      "id": "uw-vcred-vcred-49362164ce878407",
+      "assetId": "vcred-vcred",
+      "scope": {
+        "componentKey": "mechanism-risk-review",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "mechanism-risk-review",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:47Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
+      "sources": [
+        {
+          "url": "https://vcred.trade/",
+          "observedAt": "2026-10-03T22:52:47Z",
+          "datumAsOf": null,
+          "location": "AI Liquidity Layer and VCRED product tile; footer Terms/Privacy labels are nonlinked spans",
+          "excerpt": "Stake VCRED token to get access to your perp portfolio",
+          "assertion": "Website discloses portfolio-access marketing but no exact Hemi reserve denominator, stablecoin holder claim or supply/backing reconciliation cadence."
+        },
+        {
+          "url": "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1",
+          "observedAt": "2026-10-03T22:52:47Z",
+          "datumAsOf": null,
+          "location": "contracts/VC1.sol notice and mint(address,uint256)",
+          "excerpt": "ERC20-compliant stablecoin pegged to the US Dollar.",
+          "assertion": "Exact token is verified owner-minted ERC20; source contains no reserve, payout, NAV or supply/backing reconciliation regime."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vcred.trade/",
+        "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1",
+        "https://explorer.hemi.xyz/tx/0x8fb15ea8eb517f7503e73ddf4c3e7d28facb54d8cbac30ee64c3566314030be2",
+        "https://medium.com/@vcred",
+        "https://medium.com/@vcred/ai-powered-smart-market-maker-d4517404484a"
+      ],
+      "rationale": "Exact Hemi VCRED whole-supply reconciliation process/cadence, usable whole-book reserve composition/denominator and binding current stablecoin claim/model remain unpublished. The complete linked site has inert legal labels, no transparency/report archive or regulator identity. Verified exact source establishes owner issuance only, not a debt-fund/portfolio claim. Indexed historical product materials are not exact-deployment evidence; Medium direct fetch was blocked and is not the basis of nondisclosure."
+    },
+    {
+      "id": "uw-vcred-vcred-8ef84ffbe0fbff32",
+      "assetId": "vcred-vcred",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:47Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
+      "sources": [
+        {
+          "url": "https://vcred.trade/",
+          "observedAt": "2026-10-03T22:52:47Z",
+          "datumAsOf": null,
+          "location": "AI Liquidity Layer and VCRED product tile; footer Terms/Privacy labels are nonlinked spans",
+          "excerpt": "Stake VCRED token to get access to your perp portfolio",
+          "assertion": "Website discloses portfolio-access marketing but no exact Hemi reserve denominator, stablecoin holder claim or supply/backing reconciliation cadence."
+        },
+        {
+          "url": "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1",
+          "observedAt": "2026-10-03T22:52:47Z",
+          "datumAsOf": null,
+          "location": "contracts/VC1.sol notice and mint(address,uint256)",
+          "excerpt": "ERC20-compliant stablecoin pegged to the US Dollar.",
+          "assertion": "Exact token is verified owner-minted ERC20; source contains no reserve, payout, NAV or supply/backing reconciliation regime."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vcred.trade/",
+        "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1",
+        "https://explorer.hemi.xyz/tx/0x8fb15ea8eb517f7503e73ddf4c3e7d28facb54d8cbac30ee64c3566314030be2",
+        "https://medium.com/@vcred",
+        "https://medium.com/@vcred/ai-powered-smart-market-maker-d4517404484a"
+      ],
+      "rationale": "Exact Hemi VCRED whole-supply reconciliation process/cadence, usable whole-book reserve composition/denominator and binding current stablecoin claim/model remain unpublished. The complete linked site has inert legal labels, no transparency/report archive or regulator identity. Verified exact source establishes owner issuance only, not a debt-fund/portfolio claim. Indexed historical product materials are not exact-deployment evidence; Medium direct fetch was blocked and is not the basis of nondisclosure."
+    },
+    {
+      "id": "uw-nect-beraborrow-f02f28e770f6406e",
+      "assetId": "nect-beraborrow",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2bb4f6fb77609e4b22e6cbd3",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:58Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
+      "sources": [
+        {
+          "url": "https://documentation.kodiak.finance/protocol/islands.md",
+          "observedAt": "2026-10-03T22:53:15Z",
+          "datumAsOf": null,
+          "location": "Island redemption semantics",
+          "excerpt": "These tokens can be freely transferred, traded, or redeemed for the underlying assets at any time.",
+          "assertion": "Whole Island withdrawal is a basket in-kind claim; transferable/redeemable receipt does not establish full-slice realization at known value."
+        },
+        {
+          "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
+          "observedAt": "2026-10-03T22:54:58Z",
+          "datumAsOf": null,
+          "location": "Process",
+          "excerpt": "For an x amount of `$NECT`, users receive an x dollar worth of `Collateral` in return.",
+          "assertion": "NECT redemption discloses in-kind collateral and algorithmic fee, not end-to-end whole-collateral liquidity completion."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/collateral-screening-and-parameter-methodology.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/eth-and-btc-based-derivatives.md",
+        "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
+        "https://documentation.kodiak.finance/protocol/islands.md",
+        "https://beraborrow.gitbook.io/docs/audits/audits.md",
+        "https://documentation.kodiak.finance/informational/terms-of-use.md",
+        "https://documentation.kodiak.finance/developers/kodiak-islands/smart-contract-reference/kodiak-island.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/kodiak-islands-as-collateral.md"
+      ],
+      "rationale": "The exact Kodiak scoped collateral liquidityHorizon remains undisclosed as an end-to-end whole-position realization bound. Registry, collateral descriptions, risk-parameter methodology, in-kind NECT redemption terms and native withdrawal/implementation documentation explain mechanics but publish no complete per-slice realization maximum or funded instant guarantee. In-kind receipt withdrawability and typical settlement are not proof of immediate whole-slice USD liquidity."
+    },
+    {
+      "id": "uw-nect-beraborrow-61a1342b81c113b5",
+      "assetId": "nect-beraborrow",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:646b1f4492cd11e423abcf59",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:58Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
+      "sources": [
+        {
+          "url": "https://documentation.kodiak.finance/protocol/islands.md",
+          "observedAt": "2026-10-03T22:53:15Z",
+          "datumAsOf": null,
+          "location": "Island redemption semantics",
+          "excerpt": "These tokens can be freely transferred, traded, or redeemed for the underlying assets at any time.",
+          "assertion": "Whole Island withdrawal is a basket in-kind claim; transferable/redeemable receipt does not establish full-slice realization at known value."
+        },
+        {
+          "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
+          "observedAt": "2026-10-03T22:54:58Z",
+          "datumAsOf": null,
+          "location": "Process",
+          "excerpt": "For an x amount of `$NECT`, users receive an x dollar worth of `Collateral` in return.",
+          "assertion": "NECT redemption discloses in-kind collateral and algorithmic fee, not end-to-end whole-collateral liquidity completion."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/collateral-screening-and-parameter-methodology.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/eth-and-btc-based-derivatives.md",
+        "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
+        "https://documentation.kodiak.finance/protocol/islands.md",
+        "https://beraborrow.gitbook.io/docs/audits/audits.md",
+        "https://documentation.kodiak.finance/informational/terms-of-use.md",
+        "https://documentation.kodiak.finance/developers/kodiak-islands/smart-contract-reference/kodiak-island.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/kodiak-islands-as-collateral.md"
+      ],
+      "rationale": "The exact Kodiak scoped collateral liquidityHorizon remains undisclosed as an end-to-end whole-position realization bound. Registry, collateral descriptions, risk-parameter methodology, in-kind NECT redemption terms and native withdrawal/implementation documentation explain mechanics but publish no complete per-slice realization maximum or funded instant guarantee. In-kind receipt withdrawability and typical settlement are not proof of immediate whole-slice USD liquidity."
+    },
+    {
+      "id": "uw-nect-beraborrow-cd3e0445f866b7b7",
+      "assetId": "nect-beraborrow",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:674c86bbe81b7659ef6d17d7",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:58Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
+      "sources": [
+        {
+          "url": "https://documentation.kodiak.finance/protocol/islands.md",
+          "observedAt": "2026-10-03T22:53:15Z",
+          "datumAsOf": null,
+          "location": "Island redemption semantics",
+          "excerpt": "These tokens can be freely transferred, traded, or redeemed for the underlying assets at any time.",
+          "assertion": "Whole Island withdrawal is a basket in-kind claim; transferable/redeemable receipt does not establish full-slice realization at known value."
+        },
+        {
+          "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
+          "observedAt": "2026-10-03T22:54:58Z",
+          "datumAsOf": null,
+          "location": "Process",
+          "excerpt": "For an x amount of `$NECT`, users receive an x dollar worth of `Collateral` in return.",
+          "assertion": "NECT redemption discloses in-kind collateral and algorithmic fee, not end-to-end whole-collateral liquidity completion."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/collateral-screening-and-parameter-methodology.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/eth-and-btc-based-derivatives.md",
+        "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
+        "https://documentation.kodiak.finance/protocol/islands.md",
+        "https://beraborrow.gitbook.io/docs/audits/audits.md",
+        "https://documentation.kodiak.finance/informational/terms-of-use.md",
+        "https://documentation.kodiak.finance/developers/kodiak-islands/smart-contract-reference/kodiak-island.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/kodiak-islands-as-collateral.md"
+      ],
+      "rationale": "The exact Kodiak scoped collateral liquidityHorizon remains undisclosed as an end-to-end whole-position realization bound. Registry, collateral descriptions, risk-parameter methodology, in-kind NECT redemption terms and native withdrawal/implementation documentation explain mechanics but publish no complete per-slice realization maximum or funded instant guarantee. In-kind receipt withdrawability and typical settlement are not proof of immediate whole-slice USD liquidity."
+    },
+    {
+      "id": "uw-nect-beraborrow-c37f80a1a9707638",
+      "assetId": "nect-beraborrow",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:607968cd426b1b59f3f97e1a",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:58Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
+      "sources": [
+        {
+          "url": "https://dinero.xyz/docs/pirex-eth-sol",
+          "observedAt": "2026-10-03T22:53:17Z",
+          "datumAsOf": null,
+          "location": "Withdrawal/redemption implementation documentation",
+          "excerpt": "Users can also redeem their pxETH for ETH or upxETH.",
+          "assertion": "Native underlying offers queued and instant routes, with pause/fee controls; no guaranteed whole scoped bridged-position realization bound is stated."
+        },
+        {
+          "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
+          "observedAt": "2026-10-03T22:54:58Z",
+          "datumAsOf": null,
+          "location": "Process",
+          "excerpt": "For an x amount of `$NECT`, users receive an x dollar worth of `Collateral` in return.",
+          "assertion": "NECT redemption discloses in-kind collateral and algorithmic fee, not end-to-end whole-collateral liquidity completion."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/collateral-screening-and-parameter-methodology.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/eth-and-btc-based-derivatives.md",
+        "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
+        "https://dinero.xyz/docs/pirex-eth-sol",
+        "https://beraborrow.gitbook.io/docs/audits/audits.md",
+        "https://dinero.xyz/docs/px-eth-faq",
+        "https://dinero.xyz/docs/beraeth"
+      ],
+      "rationale": "The exact beraETH scoped collateral liquidityHorizon remains undisclosed as an end-to-end whole-position realization bound. Registry, collateral descriptions, risk-parameter methodology, in-kind NECT redemption terms and native withdrawal/implementation documentation explain mechanics but publish no complete per-slice realization maximum or funded instant guarantee. In-kind receipt withdrawability and typical settlement are not proof of immediate whole-slice USD liquidity."
+    },
+    {
+      "id": "uw-nect-beraborrow-6b309fc09d8f3633",
+      "assetId": "nect-beraborrow",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c26dee587597ad303f87df33",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:58Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R44)",
+      "sources": [
+        {
+          "url": "https://docs.stakestone.io/stakestone/stone-eth/how-it-works/unstake-and-omnichain-withdrawal/request",
+          "observedAt": "2026-10-03T22:53:17Z",
+          "datumAsOf": null,
+          "location": "Withdrawal/redemption implementation documentation",
+          "excerpt": "The requested ETH will be available to claim after the next settlement, which typically occurs a few days later depending on the total amount of ETH requested.",
+          "assertion": "Typical request settlement is amount-dependent, not a maximum full-slice liquidity horizon."
+        },
+        {
+          "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
+          "observedAt": "2026-10-03T22:54:58Z",
+          "datumAsOf": null,
+          "location": "Process",
+          "excerpt": "For an x amount of `$NECT`, users receive an x dollar worth of `Collateral` in return.",
+          "assertion": "NECT redemption discloses in-kind collateral and algorithmic fee, not end-to-end whole-collateral liquidity completion."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/collateral-screening-and-parameter-methodology.md",
+        "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/eth-and-btc-based-derivatives.md",
+        "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions.md",
+        "https://docs.stakestone.io/stakestone/stone-eth/how-it-works/unstake-and-omnichain-withdrawal/request",
+        "https://beraborrow.gitbook.io/docs/audits/audits.md",
+        "https://docs.stakestone.io/stakestone/additionals/terms-of-service.md",
+        "https://docs.stakestone.io/stakestone/stone-eth/how-it-works/unstake-and-omnichain-withdrawal/instant.md",
+        "https://docs.stakestone.io/stakestone/stone-eth/how-it-works/bridging.md"
+      ],
+      "rationale": "The exact Stakestone ETH scoped collateral liquidityHorizon remains undisclosed as an end-to-end whole-position realization bound. Registry, collateral descriptions, risk-parameter methodology, in-kind NECT redemption terms and native withdrawal/implementation documentation explain mechanics but publish no complete per-slice realization maximum or funded instant guarantee. In-kind receipt withdrawability and typical settlement are not proof of immediate whole-slice USD liquidity."
+    },
+    {
+      "id": "uw-zaru-blocktower-ba1560f82a3602ec",
+      "assetId": "zaru-blocktower",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:01Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
+      "sources": [
+        {
+          "url": "https://zaru.network/",
+          "observedAt": "2026-10-03T23:16:00Z",
+          "datumAsOf": null,
+          "location": "Reserves & Verification latest report link",
+          "excerpt": "Report Date: August, 2026",
+          "assertion": "The latest linked report is issued August 28 but measures July 31; no current whole-book weights are published."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://zaru.network/",
+        "https://zaru.network/blog/zar-universal-white-paper",
+        "https://blocktower.tech/legal/zaru-terms-of-use",
+        "https://blocktower.tech/legal/platform-user-agreement",
+        "https://blocktower.tech/legal/fais-disclosure-notice",
+        "https://blocktower.tech/legal",
+        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
+        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+      ],
+      "rationale": "Current reserve composition and whole-book weights are not disclosed. The official latest-report link still points to the July 31 snapshot (signed August 28), older than the ordinary 38-day budget; the report is AUP, not a named-firm assurance opinion. Holder terms publish permitted classes and backing policy, not a newer measured denominator. No date bump or guessed allocation is authored."
+    },
+    {
+      "id": "uw-zaru-blocktower-5182d03363bd0872",
+      "assetId": "zaru-blocktower",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:01Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
+      "sources": [
+        {
+          "url": "https://zaru.network/blog/zar-universal-white-paper",
+          "observedAt": "2026-10-03T23:16:00Z",
+          "datumAsOf": "2026-07-21",
+          "location": "4.14 monthly scope",
+          "excerpt": "Reconciliation of liabilities vs. reserves",
+          "assertion": "A planned monthly scope is published, but the one retrieved snapshot does not prove recurring all-native supply reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://zaru.network/",
+        "https://zaru.network/blog/zar-universal-white-paper",
+        "https://blocktower.tech/legal/zaru-terms-of-use",
+        "https://blocktower.tech/legal/platform-user-agreement",
+        "https://blocktower.tech/legal/fais-disclosure-notice",
+        "https://blocktower.tech/legal",
+        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
+        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+      ],
+      "rationale": "An actual recurring whole-supply supply-to-reserve reconciliation cadence covering all four native deployments is not disclosed. Whitepaper monthly procedures and transaction-level deposit validation do not establish that actual cadence; the sole July AUP expressly excludes events outside its snapshot and identifies only Solana. Legal mint/burn processing does not supply recurring financial reconciliation."
+    },
+    {
+      "id": "uw-zaru-blocktower-546af7adc83172a3",
+      "assetId": "zaru-blocktower",
+      "scope": {
+        "componentKey": "control:mint-meta:zaru-blocktower:1660b417cce0e7f5b4d4",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:zaru-blocktower:1660b417cce0e7f5b4d4",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:01Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
+      "sources": [
+        {
+          "url": "https://zaru.network/blog/zar-universal-white-paper",
+          "observedAt": "2026-10-03T23:16:00Z",
+          "datumAsOf": "2026-07-21",
+          "location": "4.09 Architecture & Access Control",
+          "excerpt": "secured under multi-signature controls and hardware security modules (HSMs) to prevent unauthorised issuance.",
+          "assertion": "Generic security claim supplies no exact ordinary-signer quorum, HSM attestation, independent operator roster or recovery/signing policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://zaru.network/",
+        "https://zaru.network/blog/zar-universal-white-paper",
+        "https://blocktower.tech/legal/zaru-terms-of-use",
+        "https://blocktower.tech/legal/platform-user-agreement",
+        "https://blocktower.tech/legal/fais-disclosure-notice",
+        "https://blocktower.tech/legal",
+        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
+        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+      ],
+      "rationale": "For each of the four named ordinary native mint signers, independently verifiable human independence, HSM/key-custody attestation and exact signing/recovery policy are undisclosed. Whitepaper security claims do not bind these arrangements to the Solana signer or shared EVM EOA. Legal terms address customer account security, not issuer signer safeguards. Existing source/runtime and Arc census uncertainty is retained; no incident-free state is claimed."
+    },
+    {
+      "id": "uw-zaru-blocktower-b5aaafe1be7346b5",
+      "assetId": "zaru-blocktower",
+      "scope": {
+        "componentKey": "control:mint-meta:zaru-blocktower:9271bbd8a2c2d4204d5b",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:zaru-blocktower:9271bbd8a2c2d4204d5b",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:01Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
+      "sources": [
+        {
+          "url": "https://zaru.network/blog/zar-universal-white-paper",
+          "observedAt": "2026-10-03T23:16:00Z",
+          "datumAsOf": "2026-07-21",
+          "location": "4.09 Architecture & Access Control",
+          "excerpt": "secured under multi-signature controls and hardware security modules (HSMs) to prevent unauthorised issuance.",
+          "assertion": "Generic security claim supplies no exact ordinary-signer quorum, HSM attestation, independent operator roster or recovery/signing policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://zaru.network/",
+        "https://zaru.network/blog/zar-universal-white-paper",
+        "https://blocktower.tech/legal/zaru-terms-of-use",
+        "https://blocktower.tech/legal/platform-user-agreement",
+        "https://blocktower.tech/legal/fais-disclosure-notice",
+        "https://blocktower.tech/legal",
+        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
+        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+      ],
+      "rationale": "For each of the four named ordinary native mint signers, independently verifiable human independence, HSM/key-custody attestation and exact signing/recovery policy are undisclosed. Whitepaper security claims do not bind these arrangements to the Solana signer or shared EVM EOA. Legal terms address customer account security, not issuer signer safeguards. Existing source/runtime and Arc census uncertainty is retained; no incident-free state is claimed."
+    },
+    {
+      "id": "uw-zaru-blocktower-6367c80c64d1cbce",
+      "assetId": "zaru-blocktower",
+      "scope": {
+        "componentKey": "control:mint-meta:zaru-blocktower:96d61cf9294a798a2697",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:zaru-blocktower:96d61cf9294a798a2697",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:01Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
+      "sources": [
+        {
+          "url": "https://zaru.network/blog/zar-universal-white-paper",
+          "observedAt": "2026-10-03T23:16:00Z",
+          "datumAsOf": "2026-07-21",
+          "location": "4.09 Architecture & Access Control",
+          "excerpt": "secured under multi-signature controls and hardware security modules (HSMs) to prevent unauthorised issuance.",
+          "assertion": "Generic security claim supplies no exact ordinary-signer quorum, HSM attestation, independent operator roster or recovery/signing policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://zaru.network/",
+        "https://zaru.network/blog/zar-universal-white-paper",
+        "https://blocktower.tech/legal/zaru-terms-of-use",
+        "https://blocktower.tech/legal/platform-user-agreement",
+        "https://blocktower.tech/legal/fais-disclosure-notice",
+        "https://blocktower.tech/legal",
+        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
+        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+      ],
+      "rationale": "For each of the four named ordinary native mint signers, independently verifiable human independence, HSM/key-custody attestation and exact signing/recovery policy are undisclosed. Whitepaper security claims do not bind these arrangements to the Solana signer or shared EVM EOA. Legal terms address customer account security, not issuer signer safeguards. Existing source/runtime and Arc census uncertainty is retained; no incident-free state is claimed."
+    },
+    {
+      "id": "uw-zaru-blocktower-9670a89fe65f5293",
+      "assetId": "zaru-blocktower",
+      "scope": {
+        "componentKey": "control:mint-meta:zaru-blocktower:da3ca105f723823b246c",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:zaru-blocktower:da3ca105f723823b246c",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:01Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
+      "sources": [
+        {
+          "url": "https://zaru.network/blog/zar-universal-white-paper",
+          "observedAt": "2026-10-03T23:16:00Z",
+          "datumAsOf": "2026-07-21",
+          "location": "4.09 Architecture & Access Control",
+          "excerpt": "secured under multi-signature controls and hardware security modules (HSMs) to prevent unauthorised issuance.",
+          "assertion": "Generic security claim supplies no exact ordinary-signer quorum, HSM attestation, independent operator roster or recovery/signing policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://zaru.network/",
+        "https://zaru.network/blog/zar-universal-white-paper",
+        "https://blocktower.tech/legal/zaru-terms-of-use",
+        "https://blocktower.tech/legal/platform-user-agreement",
+        "https://blocktower.tech/legal/fais-disclosure-notice",
+        "https://blocktower.tech/legal",
+        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
+        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+      ],
+      "rationale": "For each of the four named ordinary native mint signers, independently verifiable human independence, HSM/key-custody attestation and exact signing/recovery policy are undisclosed. Whitepaper security claims do not bind these arrangements to the Solana signer or shared EVM EOA. Legal terms address customer account security, not issuer signer safeguards. Existing source/runtime and Arc census uncertainty is retained; no incident-free state is claimed."
+    },
+    {
+      "id": "uw-ctusd-citrea-ed9a79233d0b7b35",
+      "assetId": "ctusd-citrea",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "withdrawalTerms",
+        "pillar": "backing",
+        "requiredDatum": "withdrawalTerms",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:17:16Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
+      "sources": [
+        {
+          "url": "https://www.moonpay.com/legal/stablecoin_terms",
+          "observedAt": "2026-10-03T23:16:01Z",
+          "datumAsOf": null,
+          "location": "3.3 redemption schedule",
+          "excerpt": "Once a redemption order has passed compliance checks, it will be processed according to the redemption schedule.",
+          "assertion": "The operative redemption schedule and end-to-end bounded settlement SLA are not published here."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.moonpay.com/legal/stablecoin_terms",
+        "https://docs.citrea.xyz/developer-documentation/citrea-usd-ctusd",
+        "https://www.blog.citrea.xyz/introducing-citrea-usd-ctusd-the-native-stablecoin-for-bitcoin-issued-by-moonpay-and-powered-by-m0/",
+        "https://docs.m0.org/protocol/extensions",
+        "https://dashboard.m0.org/stablecoins/ctusd",
+        "https://dev.moonpay.com/",
+        "https://docs.iron.xyz/"
+      ],
+      "rationale": "The issuer withdrawal schedule, bounded settlement SLA and current minimum are undisclosed. Terms specify customer onboarding, one-for-one USD redemption and no current issuer fee, but invoke an unpublished redemption schedule and changeable minimum. Generic M0 swapOutM permissions do not establish MoonPay fiat settlement; no instant/permissionless full-holder exit is inferred."
     }
   ]
 }

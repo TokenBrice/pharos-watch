@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "sUSDS shares held by Legacy UsdcVault",
-      "pct": 100,
+      "pct": 99.99999943645203,
       "risk": "high",
       "coinId": "susds-sky",
       "depType": "collateral",
@@ -15,11 +15,31 @@
         "counterparty"
       ],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Idle USDC held by Legacy UsdcVault",
+      "pct": 5.620471151816011e-7,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial",
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "USDS rounding dust held by Legacy UsdcVault",
+      "pct": 1.5008597053488657e-9,
+      "risk": "high",
+      "coinId": "usds-sky",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky USDS protocol",
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W2R05 pinned exact-vault gross inventory review",
     "confidence": "verified",
     "sources": [
       {
@@ -43,11 +63,11 @@
         "url": "https://eth-mainnet.g.alchemy.com/v2/"
       }
     ],
-    "rationale": "Observed 2026-10-02T22:43:52.688407+00:00 at ethereum block 26107702 (hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6). Native totalSupply 161342339855641335323322489 (18 decimals), asset 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (6 decimals), totalAssets 179331003650749, convertToAssets(10^18) 1111493. One-share redeem from actual holder 0xa09fe38187abecc2768b98b80ea30afbc2fbd774 returned 1111493 asset base units via eth_call at that same block; no transaction broadcast. sUSDS balance 161342339855641335323322489 equals native totalSupply exactly. The implementation values this held receipt by sUSDS.convertToAssets; it ignores 1004961 idle USDC base units and any USDS dust. The 100% row is the modeled ERC-4626 claim-accounting denominator, not a Sky system-wide collateral allocation.",
-    "compositionBasis": "Exact-vault operational position accounting; no independent financial assurance or legal segregation is inferred",
-    "compositionAsOf": "2026-10-02",
-    "scope": "selected-slices",
-    "knownUnknownExposure": "No unresolved composition-link dispositions remain within the immediate sUSDS claim-accounting denominator. This does not establish stressed realization, enforceable priority or independently reconciled ultimate backing; those protections remain unproven. Underlying issuer and protocol risk remains serial, and whole-book custody uncertainty is recorded separately in custodyProfile.",
+    "rationale": "Ethereum block 26115200 (2026-10-03T23:47:59Z; hash 0x0049cb9fd66ba90ddc0b3fb89f299cd7644f5b55ef95dc09949f426f624a6e6f) binds implementation 0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba and its immutable USDC, USDS, sUSDS and PSM accounting. Held sUSDS and vault totalSupply both equal 160851641385946608970541089 base units. sUSDS.convertToAssets(held) is 178803692286874041546569087 USDS base units. Idle USDC is 1004961 base units; USDS rounding dust is 2683592584333002 base units; the implementation-linked DAI balance is zero. Gross book NAV at token-accounting par is 178803693.294518634130902089, comprising all three nonzero holdings, not native totalAssets (178803692286874 USDC base units), which excludes idle tokens. Percentages preserve both dust positions. Par is a book valuation convention, not market price, final USD realization, independent assurance or insolvency priority; upstream sUSDS, USDS and USDC backing remains linked. Unsolicited unrelated token transfers are not reserve-accounting claims.",
+    "compositionBasis": "Complete implementation-defined local gross token inventory at one pinned Ethereum block; sUSDS valued by its native convertToAssets in USDS units, USDS and USDC at accounting par; no fee or stress deduction",
+    "compositionAsOf": "2026-10-03",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All nonzero holdings in the implementation-defined local reserve inventory are identified, including idle USDC and USDS dust. Ultimate backing is inherited from each linked asset; stressed realization, enforceable priority and independently reconciled legal encumbrance are not established by this gross local inventory.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": []
   },
