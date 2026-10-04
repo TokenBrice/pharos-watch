@@ -396,6 +396,9 @@ function projectResolvedUpstreamReserveExposure(params: {
     >();
     for (const reason of causalReasons) {
       if (reason.responsibility === undefined) continue;
+      // An excluded upstream is unavailable because of A/B, not because of
+      // unrelated C/U/D diagnostics that remain on its local backing review.
+      if ((cause === "A" || cause === "B") && reason.cause !== cause) continue;
       byResponsibility.set(reason.responsibility, [
         ...(byResponsibility.get(reason.responsibility) ?? []),
         reason,
@@ -411,7 +414,10 @@ function projectResolvedUpstreamReserveExposure(params: {
           .join("+")}`,
       }));
     unresolved.push(
-      ...(attributions.length > 0 ? attributions : [undefined]).map((attribution) => ({
+      ...(attributions.length > 0 ? attributions
+        : cause === "A" ? [{ responsibility: "producer-failed" as const }]
+          : cause === "B" ? [{ responsibility: "public-data-uncurated" as const }]
+            : [undefined]).map((attribution) => ({
         code: unavailableCode,
         pathKey,
         gapIds: [],

@@ -715,7 +715,11 @@ function buildSafetyScoreV9CandidatePipeline(
         : error instanceof V9PublicCardProjectionError
           ? error.failures.map((failure) => [failure.assetId, error.messageFor(failure.assetId)] as const)
           : null;
-      if (failed === null || failed.some(([assetId]) => evaluationFailures.has(assetId))) throw error;
+      // Every retry adds at least one cohort asset; a failed existing stub
+      // cannot be repaired by another quarantine/recompile round.
+      if (failed === null || failed.some(([assetId]) =>
+        evaluationFailures.has(assetId) || quarantines.some((quarantine) => quarantine.assetId === assetId),
+      )) throw error;
       for (const [assetId, message] of failed) evaluationFailures.set(assetId, message);
       const retryExtension = extension ?? materializeCandidateExtension(input);
       compilation =

@@ -403,10 +403,16 @@ function structuralSignalAffectedScore(
 
 function unresolvedFactAffectedScore(
   fact: V9UnresolvedFact,
+  pillars: V9ScoringInput["pillars"],
   bindingCap: Omit<V9CapTrace, "binding"> | null,
   policy: V9ValidatedPolicyEnvelope,
 ): boolean {
   if (fact.responsibility !== "measured-adverse") return false;
+  // A local adverse fact remains diagnostic when an upstream A/B excludes
+  // its pillar; it did not contribute to the published score.
+  if ((pillars.backing === null && fact.path?.startsWith("backing:")) ||
+      (pillars.exit === null && fact.path?.startsWith("exit:")) ||
+      (pillars.control === null && fact.path?.startsWith("control:"))) return false;
   const resolved = resolveV9ReasonTreatment(policy, fact.code, fact.cause ?? "U");
   if (
     resolved.reason.boundedness === "exposure-bounded" ||
@@ -1168,7 +1174,7 @@ function scoreV9InputWithCaps(
   const adverseAttribution = canonicalAdverseAttribution([
     ...measuredPillarAdverseAttribution,
     ...unresolvedFacts.flatMap<V9AdverseAttribution>((fact) =>
-      unresolvedFactAffectedScore(fact, publishedBindingCap, policy)
+      unresolvedFactAffectedScore(fact, input.pillars, publishedBindingCap, policy)
         ? [{
             source: "reason",
             path: fact.path ?? `reason:${fact.code}`,
