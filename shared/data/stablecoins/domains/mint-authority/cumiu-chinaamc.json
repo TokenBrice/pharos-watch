@@ -104,10 +104,10 @@
     },
     "economicCapSemantics": "unbounded",
     "reconciliation": "internal-ledger",
-    "supervision": "unknown",
+    "supervision": "attestation-only",
     "review": {
       "reviewedAt": "2026-10-03",
-      "reviewer": "Refine04 pinned role-event census",
+      "reviewer": "Refine04 pinned role-event census; W2R14 financial-oversight review",
       "disposition": "scoreable",
       "sources": [
         {
@@ -117,9 +117,13 @@
         {
           "label": "ChinaAMC September 2026 prospectus",
           "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf"
+        },
+        {
+          "label": "KPMG independent financial audit, December 31, 2025 period, signed April 29, 2026",
+          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-25AFS_DigitalOFC_Cover.pdf"
         }
       ],
-      "evidence": "At block 26110197, exhaustive native role-event replay and hasRole checks establish two default-admin EOAs (0x407374be435ed278fca44be695d32f0230fe46e3, 0x5c943b2b881af70af571098a228d92cbcc2b5ba2) and two delegated MINTER_ROLE EOAs (0x7ba63cdc16abfbe4838eee04aff4150749a21bd8, 0xb99123ccab3e0110742cede9271953c6803947d4). No other explicit role grants occur; default administrators inherit all roles. Verified source establishes immediate UUPS upgrades and unbounded native minting. Legal shareholder registration supports internal-ledger reconciliation only. The on-chain census is closed; organizational identity, human independence and key-custody policies are not publicly attested. Organizational ownership, independence and MPC/HSM/signing policies of the four identified EOA controllers are not publicly attested. The September 14, 2026 prospectus tokenization section specifically discloses Administrator reconciliation of book-entry and blockchain transactions on at least a daily basis, triggered by a transaction, matching tokenized-share counts/ownership in the official register to Tokens on the Digital Platform. This supports internal-ledger only: it is token-to-share-register reconciliation, not a disclosed continuous or periodic supply-to-reserve financial reconciliation or independent financial assurance. Supervision remains unknown; fund authorization alone is not prudential mint supervision.",
+      "evidence": "At block 26110197, exhaustive native role-event replay and hasRole checks establish two default-admin EOAs (0x407374be435ed278fca44be695d32f0230fe46e3, 0x5c943b2b881af70af571098a228d92cbcc2b5ba2) and two delegated MINTER_ROLE EOAs (0x7ba63cdc16abfbe4838eee04aff4150749a21bd8, 0xb99123ccab3e0110742cede9271953c6803947d4). No other explicit role grants occur; default administrators inherit all roles. Verified source establishes immediate UUPS upgrades and unbounded native minting. Legal shareholder registration supports internal-ledger reconciliation only. The on-chain census is closed; organizational identity, human independence and key-custody policies are not publicly attested. Organizational ownership, independence and MPC/HSM/signing policies of the four identified EOA controllers are not publicly attested. The September 14, 2026 prospectus tokenization section specifically discloses Administrator reconciliation of book-entry and blockchain transactions on at least a daily basis, triggered by a transaction, matching tokenized-share counts/ownership in the official register to Tokens on the Digital Platform. This supports internal-ledger only: it is token-to-share-register reconciliation, not a disclosed continuous or periodic supply-to-reserve financial reconciliation or independent financial assurance. W2R14 re-read the KPMG independent auditor report signed April 29, 2026: it expressly audits the USD sub-fund's statement of assets and liabilities and financial statements for July 17 through December 31, 2025 under Hong Kong Standards on Auditing. This establishes attestation-only independent financial oversight, not prudential supervision of minting or current whole-token supply-to-reserve reconciliation. SFC fund authorization is not used as prudential mint supervision.",
       "unresolvedQuestions": [],
       "scopedQuestions": [
         {

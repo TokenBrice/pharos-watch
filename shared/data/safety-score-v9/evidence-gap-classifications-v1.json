@@ -2733,296 +2733,6 @@
       "rationale": "Current EURI-specific reserve holdings/weights and as-of denominator are not published on the issuer transparency/audit index, whitepaper or bank annual-accounts surfaces. Legal cash/cash-equivalent eligibility and 1:1 EY-attestation claims do not supply a current measured mix; the linked smart-contract audit and consolidated bank balance sheet are not EURI reserve attestations. The old static 100% mixed class is not date-bumped."
     },
     {
-      "id": "uw-susdc-spark-cd291dccce296499",
-      "assetId": "susdc-spark",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "custodyEscrow",
-        "pillar": "backing",
-        "requiredDatum": "custodyEscrow",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:37Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
-      "sources": [
-        {
-          "url": "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
-          "observedAt": "2026-10-03T23:00:36Z",
-          "datumAsOf": "2026-06-30",
-          "location": "2.1 Spark Liquidity Layer",
-          "excerpt": "This structure extends Spark's capital coordination into custody-supported institutional credit markets beyond onchain venues.",
-          "assertion": "SLL includes offchain institutional custody; no asset-specific complete custody roster or insolvency safeguards accompanies this disclosure."
-        },
-        {
-          "url": "https://docs.spark.finance/dev/savings/spark-vaults-v2",
-          "observedAt": "2026-10-03T23:00:36Z",
-          "datumAsOf": null,
-          "location": "Taker Mechanism",
-          "excerpt": "Transfers `value` units of `asset` from the vault to `msg.sender` and emits `Take(msg.sender, value)`.",
-          "assertion": "Contract discloses taker transfer, not legal segregation/remoteness of downstream savings holdings."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.spark.finance/products/spark-savings",
-        "https://docs.spark.finance/dev/savings/spark-vaults-v2",
-        "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy",
-        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
-        "https://docs.spark.finance/mica/4",
-        "https://spark.finance/",
-        "https://data.spark.finance/financials",
-        "https://app.spark.finance/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
-      ],
-      "rationale": "The exact savings claim has no disclosed complete downstream custody roster, legal segregation, bankruptcy-remoteness regime or attributable unknown-custody fraction. Reviewed product/risk docs, legal white paper (SPK-only; not savings rights), financial report, linked transparency surfaces and exact vault source. Non-custodial shares/intents and USDS backstop are not proof of safeguards for the taker-deployed book; no protections or zero unknown exposure are inferred."
-    },
-    {
-      "id": "uw-susdc-spark-9b5b22514b67dbc9",
-      "assetId": "susdc-spark",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:bb712f786d4d05531807f7c8",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:37Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
-      "sources": [
-        {
-          "url": "https://docs.spark.finance/products/spark-savings",
-          "observedAt": "2026-10-03T23:00:36Z",
-          "datumAsOf": null,
-          "location": "Liquidity",
-          "excerpt": "large withdrawal requests are usually fulfilled within a few minutes.",
-          "assertion": "Typical intent timing is not an enforceable maximum for realization of all deployed strategy positions."
-        },
-        {
-          "url": "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy",
-          "observedAt": "2026-10-03T23:00:36Z",
-          "datumAsOf": "2026-05-05",
-          "location": "Deployment Snapshot (May 5, 2026)",
-          "excerpt": "2-7 day redemption lag",
-          "assertion": "Maple-specific historical lag does not bound the entire savings deployed aggregate."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.spark.finance/products/spark-savings",
-        "https://docs.spark.finance/dev/savings/spark-vaults-v2",
-        "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy",
-        "https://docs.spark.finance/dev/savings/savings-vault-intents",
-        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
-        "https://docs.spark.finance/mica/4",
-        "https://data.spark.finance/financials",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
-      ],
-      "rationale": "No whole-slice maximum realization bound is published for the taker-deployed aggregate. Docs disclose idle-only atomic withdrawal, typically-minutes refill/intents, a user-set expiry that can lapse unfilled, and historical venue-specific lags. Neither these nor the protocol financial report supplies a current exact savings aggregate realization maximum; do not translate average timing or request expiry into immediate/seven-day liquidity."
-    },
-    {
-      "id": "uw-susdt-spark-e0452af4d765f4b5",
-      "assetId": "susdt-spark",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "custodyEscrow",
-        "pillar": "backing",
-        "requiredDatum": "custodyEscrow",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:37Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
-      "sources": [
-        {
-          "url": "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
-          "observedAt": "2026-10-03T23:00:36Z",
-          "datumAsOf": "2026-06-30",
-          "location": "2.1 Spark Liquidity Layer",
-          "excerpt": "This structure extends Spark's capital coordination into custody-supported institutional credit markets beyond onchain venues.",
-          "assertion": "SLL includes offchain institutional custody; no asset-specific complete custody roster or insolvency safeguards accompanies this disclosure."
-        },
-        {
-          "url": "https://docs.spark.finance/dev/savings/spark-vaults-v2",
-          "observedAt": "2026-10-03T23:00:36Z",
-          "datumAsOf": null,
-          "location": "Taker Mechanism",
-          "excerpt": "Transfers `value` units of `asset` from the vault to `msg.sender` and emits `Take(msg.sender, value)`.",
-          "assertion": "Contract discloses taker transfer, not legal segregation/remoteness of downstream savings holdings."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.spark.finance/products/spark-savings",
-        "https://docs.spark.finance/dev/savings/spark-vaults-v2",
-        "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy",
-        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
-        "https://docs.spark.finance/mica/4",
-        "https://spark.finance/",
-        "https://data.spark.finance/financials",
-        "https://app.spark.finance/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xe2e7a17dff93280dec073c995595155283e3c372"
-      ],
-      "rationale": "The exact savings claim has no disclosed complete downstream custody roster, legal segregation, bankruptcy-remoteness regime or attributable unknown-custody fraction. Reviewed product/risk docs, legal white paper (SPK-only; not savings rights), financial report, linked transparency surfaces and exact vault source. Non-custodial shares/intents and USDS backstop are not proof of safeguards for the taker-deployed book; no protections or zero unknown exposure are inferred."
-    },
-    {
-      "id": "uw-susdt-spark-b961e5a15ca5eb24",
-      "assetId": "susdt-spark",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:7fd1f6e757dc56ee53bd46a0",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:37Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
-      "sources": [
-        {
-          "url": "https://docs.spark.finance/products/spark-savings",
-          "observedAt": "2026-10-03T23:00:36Z",
-          "datumAsOf": null,
-          "location": "Liquidity",
-          "excerpt": "large withdrawal requests are usually fulfilled within a few minutes.",
-          "assertion": "Typical intent timing is not an enforceable maximum for realization of all deployed strategy positions."
-        },
-        {
-          "url": "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy",
-          "observedAt": "2026-10-03T23:00:36Z",
-          "datumAsOf": "2026-05-05",
-          "location": "Deployment Snapshot (May 5, 2026)",
-          "excerpt": "2-7 day redemption lag",
-          "assertion": "Maple-specific historical lag does not bound the entire savings deployed aggregate."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.spark.finance/products/spark-savings",
-        "https://docs.spark.finance/dev/savings/spark-vaults-v2",
-        "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy",
-        "https://docs.spark.finance/dev/savings/savings-vault-intents",
-        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
-        "https://docs.spark.finance/mica/4",
-        "https://data.spark.finance/financials",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xe2e7a17dff93280dec073c995595155283e3c372"
-      ],
-      "rationale": "No whole-slice maximum realization bound is published for the taker-deployed aggregate. Docs disclose idle-only atomic withdrawal, typically-minutes refill/intents, a user-set expiry that can lapse unfilled, and historical venue-specific lags. Neither these nor the protocol financial report supplies a current exact savings aggregate realization maximum; do not translate average timing or request expiry into immediate/seven-day liquidity."
-    },
-    {
-      "id": "uw-sparkusdtbc-spark-e82fe90f4da237a1",
-      "assetId": "sparkusdtbc-spark",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:59709ff6bcf4a35db16b90ec",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:37Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
-      "sources": [
-        {
-          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
-          "observedAt": "2026-10-03T23:00:36Z",
-          "datumAsOf": null,
-          "location": "VaultV2.exit",
-          "excerpt": "deallocateInternal(liquidityAdapter, liquidityData, assets - idleAssets);",
-          "assertion": "Ordinary exit requires selected adapter liquidity; no elapsed-time completion maximum is specified."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy",
-        "https://docs.spark.finance/products/isolated-markets",
-        "https://docs.morpho.org/curate/tutorials-v2/withdraw/",
-        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
-        "https://docs.spark.finance/mica/4",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xef4cb7e87f212f128f0b24cf35861e52b3c78a6a"
-      ],
-      "rationale": "The scoped idle-plus-Morpho lender aggregate has no guaranteed realization horizon: all assets are supplied across four markets; zero idle USDT at the pinned block. Source permits ordinary selected-adapter exit conditional on market liquidity, plus separate force-deallocation paths, not a promised repayment maximum. Strategy documents describe junior stress priority and historical allocation rather than a current contractual bound for the whole lender claim."
-    },
-    {
-      "id": "uw-sparkusdc-spark-c15f4e5d093eaf75",
-      "assetId": "sparkusdc-spark",
-      "scope": {
-        "componentKey": "control:mint-meta:sparkusdc-spark:836f8253a7150ceeed01",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:sparkusdc-spark:836f8253a7150ceeed01",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:37Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
-      "sources": [
-        {
-          "url": "https://vote.sky.money/executive/template-executive-vote-reduce-rewards-emissions-complete-guni-vault-offboardings-whitelist-keel-subproxy-to-send-cross-chain-messages-adjust-grove-dc-iam-parameters-delegate-compensation-star-agent-proxy-spells-january-15-2026",
-          "observedAt": "2026-10-03T23:00:37Z",
-          "datumAsOf": "2026-01-15",
-          "location": "Spark Morpho Vault - Update Vault Roles",
-          "excerpt": "Threshold: **3 of 5**",
-          "assertion": "Governance publishes exact Safe address/quorum, but not signer human/operator independence, key custody or recovery controls."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://vote.sky.money/executive/template-executive-vote-reduce-rewards-emissions-complete-guni-vault-offboardings-whitelist-keel-subproxy-to-send-cross-chain-messages-adjust-grove-dc-iam-parameters-delegate-compensation-star-agent-proxy-spells-january-15-2026",
-        "https://docs.spark.finance/dev/security/security-and-audits",
-        "https://docs.spark.finance/products/isolated-markets",
-        "https://docs.spark.finance/mica/4",
-        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
-        "https://base.blockscout.com/api/v2/smart-contracts/0x0f963a8a8c01042b69054e787e5763abbb0646a3",
-        "https://docs.morpho.org/curate/concepts/roles/"
-      ],
-      "rationale": "Scoped question asks independently evidenced Safe signer independence and offchain key custody. Official governance, security/role docs, legal and financial disclosures name the exact curator/quorum but publish no identity-to-owner mapping, independent operator attestations, custody/recovery policy. Fresh block-pinned getOwners/getThreshold/modules confirm 3-of-5 cryptographic topology on both chains, not independent humans. Incident-state uncertainty remains a separate U and is not asserted resolved."
-    },
-    {
-      "id": "uw-sparkusdtbc-spark-b95dd0bfa8fc93b8",
-      "assetId": "sparkusdtbc-spark",
-      "scope": {
-        "componentKey": "control:mint-meta:sparkusdtbc-spark:c1b6ffe83625f92cee82",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:sparkusdtbc-spark:c1b6ffe83625f92cee82",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:37Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
-      "sources": [
-        {
-          "url": "https://vote.sky.money/executive/template-executive-vote-reduce-rewards-emissions-complete-guni-vault-offboardings-whitelist-keel-subproxy-to-send-cross-chain-messages-adjust-grove-dc-iam-parameters-delegate-compensation-star-agent-proxy-spells-january-15-2026",
-          "observedAt": "2026-10-03T23:00:37Z",
-          "datumAsOf": "2026-01-15",
-          "location": "Spark Morpho Vault - Update Vault Roles",
-          "excerpt": "Threshold: **3 of 5**",
-          "assertion": "Governance publishes exact Safe address/quorum, but not signer human/operator independence, key custody or recovery controls."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://vote.sky.money/executive/template-executive-vote-reduce-rewards-emissions-complete-guni-vault-offboardings-whitelist-keel-subproxy-to-send-cross-chain-messages-adjust-grove-dc-iam-parameters-delegate-compensation-star-agent-proxy-spells-january-15-2026",
-        "https://docs.spark.finance/dev/security/security-and-audits",
-        "https://docs.spark.finance/products/isolated-markets",
-        "https://docs.spark.finance/mica/4",
-        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f963a8a8c01042b69054e787e5763abbb0646a3",
-        "https://docs.morpho.org/curate/concepts/roles/"
-      ],
-      "rationale": "Scoped question asks independently evidenced Safe signer independence and offchain key custody. Official governance, security/role docs, legal and financial disclosures name the exact curator/quorum but publish no identity-to-owner mapping, independent operator attestations, custody/recovery policy. Fresh block-pinned getOwners/getThreshold/modules confirm 3-of-5 cryptographic topology on both chains, not independent humans. Incident-state uncertainty remains a separate U and is not asserted resolved."
-    },
-    {
       "id": "uw-senrlusdv2-sentora-2d4d1e5e596b7680",
       "assetId": "senrlusdv2-sentora",
       "scope": {
@@ -12490,545 +12200,6 @@
       ]
     },
     {
-      "id": "uw-reusd-re-protocol-f88abb858b5d6f9e",
-      "assetId": "reusd-re-protocol",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:4dfb91e8806b59cd54dfd4fa",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:19Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
-      "sources": [
-        {
-          "url": "https://storage.googleapis.com/re-files-production/docs/ppm_v2.pdf",
-          "observedAt": "2026-10-03T22:53:19Z",
-          "datumAsOf": "2026-03-16",
-          "location": "Maturity, p.64",
-          "excerpt": "The Final Redemption Date of each Note is not fixed and may fall significantly before or after the expected redemption date at the time the Note is entered into.",
-          "assertion": "PPM explicitly makes note redemption unfixed; it does not give a maximum covering the entire off-chain insurance slice."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://storage.googleapis.com/re-files-production/docs/ppm_v2.pdf",
-        "https://docs.re.xyz/glossary-and-reference/legal-structure.md",
-        "https://docs.re.xyz/transparency-and-data-show-me-the-receipts/audits-attestations-custody-structure.md",
-        "https://www.coverre.com",
-        "https://app.re.xyz/transparency",
-        "https://docs.re.xyz/how-reinsurance-works/underwriting-reserving-and-timing.md"
-      ],
-      "rationale": "maturityDaysMax for the whole off-chain insurance/reinsurance-capital slice is not disclosed. The PPM permits non-fixed final dates and new instruments; descriptions of individual note programmes or actuarial release lags cannot establish a portfolio-wide maximum."
-    },
-    {
-      "id": "uw-reusd-re-protocol-a99286583673ac5e",
-      "assetId": "reusd-re-protocol",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:19Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
-      "sources": [
-        {
-          "url": "https://docs.re.xyz/minting-and-redemptions/redemptions.md",
-          "observedAt": "2026-10-03T22:53:19Z",
-          "datumAsOf": null,
-          "location": "Published product disclosure",
-          "excerpt": "Offchain trust balances (all held with an independent bank/custodian) are verified daily by The Network Firm via read-only account access, with results published through a Chainlink oracle.",
-          "assertion": "Daily trust-balance verification does not publish reconciliation of complete reUSD liabilities to attributable on/offchain reserves."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.re.xyz/minting-and-redemptions/redemptions.md",
-        "https://docs.re.xyz/transparency-and-data-show-me-the-receipts/audits-attestations-custody-structure.md",
-        "https://storage.googleapis.com/re-files-production/docs/ppm_v2.pdf",
-        "https://docs.re.xyz/glossary-and-reference/legal-structure.md",
-        "https://app.re.xyz/metrics",
-        "https://storage.googleapis.com/foundation-files/AUP-Report-2025.pdf",
-        "https://docs.re.xyz/products/smart-contracts.md"
-      ],
-      "rationale": "The exact issuance-to-backing reconciliation for reUSD is undisclosed. Daily bank-balance checking, historical TNF agreed-upon procedures (not token-backing assurance), NAV calculation and pooled metrics do not reconcile current token liabilities, tranche attribution and the complete reserve denominator."
-    },
-    {
-      "id": "uw-reusd-re-protocol-e7d19b95ca7d819f",
-      "assetId": "reusd-re-protocol",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:reusd-re-protocol:queue-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:19Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
-      "sources": [
-        {
-          "url": "https://docs.re.xyz/minting-and-redemptions/redemptions.md",
-          "observedAt": "2026-10-03T22:53:19Z",
-          "datumAsOf": null,
-          "location": "Published product disclosure",
-          "excerpt": "Refer to current fee schedule",
-          "assertion": "Redemption page defers to a fee schedule; it does not give the complete currently applicable queue-redemption charge."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.re.xyz/minting-and-redemptions/redemptions.md",
-        "https://docs.re.xyz/glossary-and-reference/legal-structure.md",
-        "https://storage.googleapis.com/re-files-production/docs/ppm_v2.pdf",
-        "https://re.xyz/terms",
-        "https://re.xyz/disclosure",
-        "https://app.re.xyz/transparency"
-      ],
-      "rationale": "The exact complete current queue-redemption cost is undisclosed in the reviewed public documents. Earlier starting-at 6 bps metadata is a floor, not an all-in current fee; current docs defer to a fee schedule and binding offering terms allow adjustments."
-    },
-    {
-      "id": "uw-reusd-re-protocol-2dd91b57d1ea1201",
-      "assetId": "reusd-re-protocol",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:reusd-re-protocol:queue-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:19Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
-      "sources": [
-        {
-          "url": "https://storage.googleapis.com/re-files-production/docs/token_agreement_reUSD_v2.pdf",
-          "observedAt": "2026-10-03T22:53:19Z",
-          "datumAsOf": null,
-          "location": "Registered Holders & Redemption Rights, p.5",
-          "excerpt": "Redemption requests remain in queue if unfulfilled and roll over to subsequent redemption dates while maintaining queue position.",
-          "assertion": "The binding agreement explicitly allows rolling queue requests without a maximum completion interval."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.re.xyz/minting-and-redemptions/redemptions.md",
-        "https://storage.googleapis.com/re-files-production/docs/ppm_v2.pdf",
-        "https://docs.re.xyz/glossary-and-reference/legal-structure.md",
-        "https://storage.googleapis.com/re-files-production/docs/token_agreement_reUSD_v2.pdf",
-        "https://app.re.xyz/transparency"
-      ],
-      "rationale": "Maximum full-notional reUSD queue settlement time is not disclosed. Quarterly windows are opportunities, not a completion SLA; binding terms allow unfulfilled requests to roll over and impose no obligation to liquidate backing for redemptions."
-    },
-    {
-      "id": "uw-aa-falconx-mev-capital-a8ac635c7488da3c",
-      "assetId": "aa-falconx-mev-capital",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:b09ebd2c39712d16fa442be7",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:19Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
-      "sources": [
-        {
-          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
-          "observedAt": "2026-10-03T22:53:19Z",
-          "datumAsOf": "2026-07-31",
-          "location": "Published product disclosure",
-          "excerpt": "Master Loan Agreement with clear lender protections and covenants",
-          "assertion": "Issuer identifies the exact Ethereum FalconX vault and a binding MLA, but does not publish the MLA or complete economic terms."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
-        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
-        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
-        "https://docs.pareto.credit/product/credit-vaults.md",
-        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
-        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
-        "https://docs.pareto.credit/developer/security/audits.md",
-        "https://www.falconx.io/terms-of-agreement",
-        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
-      ],
-      "rationale": "A maximum maturity covering the exact Ethereum FalconX facility is undisclosed. The live-vault table describes a different Optimism vault and monthly renewal/withdrawal cycles; it is not a maximum maturity for the Ethereum obligor claim. The exact MLA and amendments are not publicly supplied."
-    },
-    {
-      "id": "uw-aa-falconx-mev-capital-981ab5ece67a30d5",
-      "assetId": "aa-falconx-mev-capital",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:19Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
-      "sources": [
-        {
-          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
-          "observedAt": "2026-10-03T22:53:19Z",
-          "datumAsOf": "2026-07-31",
-          "location": "Published product disclosure",
-          "excerpt": "Reporting rails that allow lenders to independently verify position status, accruals, and payment history at any time",
-          "assertion": "Position and payment transparency is disclosed, but full Ethereum issuance-to-underlying-borrower-assets reconciliation is not."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
-        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
-        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
-        "https://docs.pareto.credit/product/credit-vaults.md",
-        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
-        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
-        "https://docs.pareto.credit/developer/security/audits.md",
-        "https://www.falconx.io/terms-of-agreement",
-        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
-      ],
-      "rationale": "Exact Ethereum AA_FalconXUSDC issuance-to-backing reconciliation is undisclosed. Onchain accrual/payment visibility and generic collateral monitoring do not publish an independently verified complete reconciliation of token liabilities with the offchain SPV loan book and collateral."
-    },
-    {
-      "id": "uw-aa-falconx-mev-capital-ba38ec6f1a5caf1a",
-      "assetId": "aa-falconx-mev-capital",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "custodyEscrow",
-        "pillar": "backing",
-        "requiredDatum": "custodyEscrow",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:19Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
-      "sources": [
-        {
-          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
-          "observedAt": "2026-10-03T22:53:19Z",
-          "datumAsOf": "2026-07-31",
-          "location": "Published product disclosure",
-          "excerpt": "Master Loan Agreement with clear lender protections and covenants",
-          "assertion": "Issuer identifies the exact Ethereum FalconX vault and a binding MLA, but does not publish the MLA or complete economic terms."
-        },
-        {
-          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
-          "observedAt": "2026-10-03T22:53:19Z",
-          "datumAsOf": "2026-07-31",
-          "location": "Published product disclosure",
-          "excerpt": "The SPV is designed to lend funds to trading firms and hedge funds, utilizing FalconX\u2019s sophisticated (overcollateralized) lending framework and risk assessment engine to ensure robust risk management.",
-          "assertion": "Onward borrower lending and an SPV are disclosed, but custody coverage, complete local debt bounds and contract reuse permissions are not."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
-        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
-        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
-        "https://docs.pareto.credit/product/credit-vaults.md",
-        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
-        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
-        "https://docs.pareto.credit/developer/security/audits.md",
-        "https://www.falconx.io/terms-of-agreement",
-        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
-      ],
-      "rationale": "Whole-book custody/insolvency protections, local leverage bound and legally permitted capital reuse of the exact Ethereum FalconX claim are undisclosed. Public SPV/first-loss descriptions identify structure, not full custody allocation/security perfection or total SPV liabilities. External holder looping is not wrapper-local leverage. The MLA is not publicly supplied."
-    },
-    {
-      "id": "uw-aa-falconx-mev-capital-4c9fe700d4b9ed54",
-      "assetId": "aa-falconx-mev-capital",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "leverage",
-        "pillar": "backing",
-        "requiredDatum": "leverage",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:19Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
-      "sources": [
-        {
-          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
-          "observedAt": "2026-10-03T22:53:19Z",
-          "datumAsOf": "2026-07-31",
-          "location": "Published product disclosure",
-          "excerpt": "Master Loan Agreement with clear lender protections and covenants",
-          "assertion": "Issuer identifies the exact Ethereum FalconX vault and a binding MLA, but does not publish the MLA or complete economic terms."
-        },
-        {
-          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
-          "observedAt": "2026-10-03T22:53:19Z",
-          "datumAsOf": "2026-07-31",
-          "location": "Published product disclosure",
-          "excerpt": "The SPV is designed to lend funds to trading firms and hedge funds, utilizing FalconX\u2019s sophisticated (overcollateralized) lending framework and risk assessment engine to ensure robust risk management.",
-          "assertion": "Onward borrower lending and an SPV are disclosed, but custody coverage, complete local debt bounds and contract reuse permissions are not."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
-        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
-        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
-        "https://docs.pareto.credit/product/credit-vaults.md",
-        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
-        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
-        "https://docs.pareto.credit/developer/security/audits.md",
-        "https://www.falconx.io/terms-of-agreement",
-        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
-      ],
-      "rationale": "Whole-book custody/insolvency protections, local leverage bound and legally permitted capital reuse of the exact Ethereum FalconX claim are undisclosed. Public SPV/first-loss descriptions identify structure, not full custody allocation/security perfection or total SPV liabilities. External holder looping is not wrapper-local leverage. The MLA is not publicly supplied."
-    },
-    {
-      "id": "uw-aa-falconx-mev-capital-80fb365dd61cd371",
-      "assetId": "aa-falconx-mev-capital",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "rehypothecationCorrelation",
-        "pillar": "backing",
-        "requiredDatum": "rehypothecationCorrelation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:19Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
-      "sources": [
-        {
-          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
-          "observedAt": "2026-10-03T22:53:19Z",
-          "datumAsOf": "2026-07-31",
-          "location": "Published product disclosure",
-          "excerpt": "Master Loan Agreement with clear lender protections and covenants",
-          "assertion": "Issuer identifies the exact Ethereum FalconX vault and a binding MLA, but does not publish the MLA or complete economic terms."
-        },
-        {
-          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
-          "observedAt": "2026-10-03T22:53:19Z",
-          "datumAsOf": "2026-07-31",
-          "location": "Published product disclosure",
-          "excerpt": "The SPV is designed to lend funds to trading firms and hedge funds, utilizing FalconX\u2019s sophisticated (overcollateralized) lending framework and risk assessment engine to ensure robust risk management.",
-          "assertion": "Onward borrower lending and an SPV are disclosed, but custody coverage, complete local debt bounds and contract reuse permissions are not."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
-        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
-        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
-        "https://docs.pareto.credit/product/credit-vaults.md",
-        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
-        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
-        "https://docs.pareto.credit/developer/security/audits.md",
-        "https://www.falconx.io/terms-of-agreement",
-        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
-      ],
-      "rationale": "Whole-book custody/insolvency protections, local leverage bound and legally permitted capital reuse of the exact Ethereum FalconX claim are undisclosed. Public SPV/first-loss descriptions identify structure, not full custody allocation/security perfection or total SPV liabilities. External holder looping is not wrapper-local leverage. The MLA is not publicly supplied."
-    },
-    {
-      "id": "uw-aa-falconx-mev-capital-1f9d95b7a042aeaa",
-      "assetId": "aa-falconx-mev-capital",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:aa-falconx-mev-capital:stablecoin-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:19Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
-      "sources": [
-        {
-          "url": "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
-          "observedAt": "2026-10-03T22:53:19Z",
-          "datumAsOf": null,
-          "location": "Published product disclosure",
-          "excerpt": "Before depositing, users are required to sign two agreements:",
-          "assertion": "Onboarding requires product-specific MLA terms; generic queue descriptions and the Optimism schedule do not establish Ethereum exit cost or maximum completion."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
-        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
-        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
-        "https://docs.pareto.credit/product/credit-vaults.md",
-        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
-        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
-        "https://docs.pareto.credit/developer/security/audits.md",
-        "https://www.falconx.io/terms-of-agreement",
-        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
-      ],
-      "rationale": "The complete exact Ethereum AA_FalconXUSDC redemption fee schedule and maximum full-notional settlement/withdrawal terms are not publicly disclosed. Generic cycle-end queue mechanics and early-exit examples do not bound borrower nonpayment or provide Ethereum-specific MLA charges; the named monthly schedule is Optimism."
-    },
-    {
-      "id": "uw-aa-falconx-mev-capital-487637d875075304",
-      "assetId": "aa-falconx-mev-capital",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:aa-falconx-mev-capital:stablecoin-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:19Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
-      "sources": [
-        {
-          "url": "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
-          "observedAt": "2026-10-03T22:53:19Z",
-          "datumAsOf": null,
-          "location": "Published product disclosure",
-          "excerpt": "Before depositing, users are required to sign two agreements:",
-          "assertion": "Onboarding requires product-specific MLA terms; generic queue descriptions and the Optimism schedule do not establish Ethereum exit cost or maximum completion."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
-        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
-        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
-        "https://docs.pareto.credit/product/credit-vaults.md",
-        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
-        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
-        "https://docs.pareto.credit/developer/security/audits.md",
-        "https://www.falconx.io/terms-of-agreement",
-        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
-      ],
-      "rationale": "The complete exact Ethereum AA_FalconXUSDC redemption fee schedule and maximum full-notional settlement/withdrawal terms are not publicly disclosed. Generic cycle-end queue mechanics and early-exit examples do not bound borrower nonpayment or provide Ethereum-specific MLA charges; the named monthly schedule is Optimism."
-    },
-    {
-      "id": "uw-aa-falconx-mev-capital-519504b77c3ee633",
-      "assetId": "aa-falconx-mev-capital",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "withdrawalTerms",
-        "pillar": "backing",
-        "requiredDatum": "withdrawalTerms",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:19Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
-      "sources": [
-        {
-          "url": "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
-          "observedAt": "2026-10-03T22:53:19Z",
-          "datumAsOf": null,
-          "location": "Published product disclosure",
-          "excerpt": "Before depositing, users are required to sign two agreements:",
-          "assertion": "Onboarding requires product-specific MLA terms; generic queue descriptions and the Optimism schedule do not establish Ethereum exit cost or maximum completion."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
-        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
-        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
-        "https://docs.pareto.credit/product/credit-vaults.md",
-        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
-        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
-        "https://docs.pareto.credit/developer/security/audits.md",
-        "https://www.falconx.io/terms-of-agreement",
-        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
-      ],
-      "rationale": "The complete exact Ethereum AA_FalconXUSDC redemption fee schedule and maximum full-notional settlement/withdrawal terms are not publicly disclosed. Generic cycle-end queue mechanics and early-exit examples do not bound borrower nonpayment or provide Ethereum-specific MLA charges; the named monthly schedule is Optimism."
-    },
-    {
-      "id": "uw-yousd-yield-optimizer-6b6f122b7fc54510",
-      "assetId": "yousd-yield-optimizer",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:5cae943dc263b0125f41d763",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:55:23Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
-      "sources": [
-        {
-          "url": "https://docs.yo.xyz/protocol/risks.md",
-          "observedAt": "2026-10-03T22:53:19Z",
-          "datumAsOf": null,
-          "location": "Liquidity and strategy risk",
-          "excerpt": "Most of the time, you can redeem your assets instantly.",
-          "assertion": "Routine user redemption expectation does not disclose a maximum realization horizon covering every deployed strategy position."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.yo.xyz/protocol/risks.md",
-        "https://docs.yo.xyz/protocol/yo-protocol.md",
-        "https://docs.yo.xyz/protocol/yo-v2-security-framework.md",
-        "https://docs.yo.xyz/protocol/contract-addresses.md",
-        "https://docs.yo.xyz/user-guides/how-to-withdraw-from-yo.md",
-        "https://api.yo.xyz/api/v1/vault/base/0x0000000f2eb9f69274678c76222b35eec7588a65",
-        "https://risk.yo.xyz/api/v1/public/vault/base/0x0000000f2eb9f69274678c76222b35eec7588a65/exposure",
-        "https://base.blockscout.com/api/v2/smart-contracts/0xc84a6e01bff58996540f1abc22355a9dfe0d78dc"
-      ],
-      "rationale": "The maximum asset-realization liquidityHorizon of the complete deployed yoUSD strategy slice is undisclosed. The 24-hour user-withdrawal description is not a bound on all strategy realizations during chain/bridge outages or illiquid pools. Verified fulfillRedeem depends on operator liquidity; neither API publishes per-position enforceable maximum release terms."
-    },
-    {
-      "id": "uw-doc-money-on-chain-cd4e119ecfbbfdc7",
-      "assetId": "doc-money-on-chain",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:doc-money-on-chain:collateral-redeem"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T22:56:36Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
-      "sources": [
-        {
-          "url": "https://docs.moneyonchain.com/main-rbtc-contract/integration-with-moc-platform/fees-calculation.md",
-          "observedAt": "2026-10-03T22:55:23Z",
-          "datumAsOf": null,
-          "location": "Fees calculation: redemption in RBTC",
-          "excerpt": "btcReceived = totalBtc - totalBtc * CommissionReturnStruct.btcCommission - totalBtc * CommissionReturnStruct.btcMarkup - interests",
-          "assertion": "W15: applicable account/vendor/fee-token formula is public, but the Pharos route does not evaluate calculateCommissionsWithPrices and current MoCInrate/vendor inputs for the stress notional."
-        }
-      ]
-    },
-    {
       "id": "uw-eurq-quantoz-110bdf0107e489cf",
       "assetId": "eurq-quantoz",
       "scope": {
@@ -18041,140 +17212,6 @@
       "rationale": "The exact missing datum is maturityDaysMax for Cash at Regulated Financial Institutions (net settlement adjustments). The current signed report and transparency archive identify bank cash and settlement adjustments, and the legal terms explain segregated USD-denominated reserves. None supplies account contracts or a maximum term applying to every claim in this scoped bank-deposit slice. Published Treasury maturity dates and overnight repo maturities cannot be transferred to bank claims; holder redemption at par is not deposit maturity."
     },
     {
-      "id": "uw-witry-brix-4c257c87c5c1bfcb",
-      "assetId": "witry-brix",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:f622cfd7ae455b88dde43438",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:37Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R26)",
-      "sources": [
-        {
-          "url": "https://docs.brix.money/itry/backing.md",
-          "observedAt": "2026-10-03T22:54:37Z",
-          "datumAsOf": null,
-          "location": "Published document",
-          "excerpt": "iTRY is fully backed by the Digital Liquidity Fund's DLF token, which represents shares of a regulated basket of Turkish money-market funds.",
-          "assertion": "Discloses the DLF fund-share basket, not its maximum claim maturity or a whole-position liquidation bound."
-        },
-        {
-          "url": "https://docs.brix.money/technical/collateral-management.md",
-          "observedAt": "2026-10-03T22:44:45Z",
-          "datumAsOf": null,
-          "location": "Published document",
-          "excerpt": "A limited portion is held onchain in the Fast Access Vault smart contract to support instant redemptions.",
-          "assertion": "Only a limited buffer is instant; full reserve realization timing is not quantified."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.brix.money/itry/backing.md",
-        "https://docs.brix.money/itry/proof-of-reserves.md",
-        "https://docs.brix.money/technical/collateral-management.md",
-        "https://docs.brix.money/itry/staking.md",
-        "https://docs.brix.money/resources/terms-and-policies/itry-token-terms.md",
-        "https://docs.brix.money/resources/contracts.md",
-        "https://sourcify.dev/server/v2/contract/1/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee?fields=sources,abi",
-        "https://accountable.brix.money/"
-      ],
-      "rationale": "The exact maximum maturity of the DLF fund-share reserve claim and whole-position liquidity horizon are undisclosed. Public backing, custody, proof-of-reserves, contracts, risks, token terms and withdrawal docs identify the basket and a limited fast buffer, not a fund-share maturity or complete realization bound. wiTRY cooldown and underlying MMF short-duration descriptions do not answer these reserve datums."
-    },
-    {
-      "id": "uw-witry-brix-9ebcb3b25f0f3110",
-      "assetId": "witry-brix",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:f622cfd7ae455b88dde43438",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:37Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R26)",
-      "sources": [
-        {
-          "url": "https://docs.brix.money/itry/backing.md",
-          "observedAt": "2026-10-03T22:54:37Z",
-          "datumAsOf": null,
-          "location": "Published document",
-          "excerpt": "iTRY is fully backed by the Digital Liquidity Fund's DLF token, which represents shares of a regulated basket of Turkish money-market funds.",
-          "assertion": "Discloses the DLF fund-share basket, not its maximum claim maturity or a whole-position liquidation bound."
-        },
-        {
-          "url": "https://docs.brix.money/technical/collateral-management.md",
-          "observedAt": "2026-10-03T22:44:45Z",
-          "datumAsOf": null,
-          "location": "Published document",
-          "excerpt": "A limited portion is held onchain in the Fast Access Vault smart contract to support instant redemptions.",
-          "assertion": "Only a limited buffer is instant; full reserve realization timing is not quantified."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.brix.money/itry/backing.md",
-        "https://docs.brix.money/itry/proof-of-reserves.md",
-        "https://docs.brix.money/technical/collateral-management.md",
-        "https://docs.brix.money/itry/staking.md",
-        "https://docs.brix.money/resources/terms-and-policies/itry-token-terms.md",
-        "https://docs.brix.money/resources/contracts.md",
-        "https://sourcify.dev/server/v2/contract/1/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee?fields=sources,abi",
-        "https://accountable.brix.money/"
-      ],
-      "rationale": "The exact maximum maturity of the DLF fund-share reserve claim and whole-position liquidity horizon are undisclosed. Public backing, custody, proof-of-reserves, contracts, risks, token terms and withdrawal docs identify the basket and a limited fast buffer, not a fund-share maturity or complete realization bound. wiTRY cooldown and underlying MMF short-duration descriptions do not answer these reserve datums."
-    },
-    {
-      "id": "uw-cumiu-chinaamc-7a41ef5d5c23330a",
-      "assetId": "cumiu-chinaamc",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:37Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R26)",
-      "sources": [
-        {
-          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-KFS-ChinaAMCUSDDigitalMMF(UnlistedClass)(April2026).pdf",
-          "observedAt": "2026-10-03T22:50:32Z",
-          "datumAsOf": null,
-          "location": "Tokenization, page 6",
-          "excerpt": "recorded in the register of shareholders \nmaintained by the Administrator and independently verified by the Manager off-chain",
-          "assertion": "Official record is offchain share registration; no whole-supply-to-backing financial cadence is stated."
-        },
-        {
-          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-25AFS_DigitalOFC_Cover.pdf",
-          "observedAt": "2026-10-03T22:50:35Z",
-          "datumAsOf": "2025-12-31",
-          "location": "Report cover",
-          "excerpt": "For the period ended \n31 December 2025",
-          "assertion": "Annual financial accounts are historical fund assurance, not current all-chain token-to-reserve reconciliation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf",
-        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-KFS-ChinaAMCUSDDigitalMMF(UnlistedClass)(April2026).pdf",
-        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-25AFS_DigitalOFC_Cover.pdf",
-        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/Factsheet_USDDTMMF_20260831_EN_1789617629732.pdf",
-        "https://www.chinaamc.com.hk/jeecg-boot/mainWebDailyDocument/tMainWebDailyDocument/listByFundId?fundId=USDDMMF",
-        "https://www.chinaamc.com.hk/detail?fundId=USDDMMF&fundName=ChinaAMC-USD-Digital-Money-Market-Fund-%28Tokenized-Unlisted-Class%29&lan=EN",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"
-      ],
-      "rationale": "Whole-supply on/offchain mint/burn liabilities reconciled to reserve assets on a common observation clock and actual cadence are not disclosed. The prospectus describes daily transaction-triggered book-entry/token-register matching, and KPMG audits historical pooled fund accounts; neither establishes the requested whole minted-supply-to-reserve financial reconciliation. Preserve internal-ledger rather than fabricate periodic financial reconciliation."
-    },
-    {
       "id": "uw-wcop-ripio-4be291ceacb20ff2",
       "assetId": "wcop-ripio",
       "scope": {
@@ -23086,357 +22123,6 @@
         "https://docs.maple.finance/technical-resources/pools/accounting/pool-accounting.md"
       ],
       "rationale": "Exact syrupUSDT whole circulating share supply-to-net-backing reconciliation scope, cadence and exception handling are not disclosed. NetworkFirm verifies aggregate USDC/USDT loan collateral, not all loan principal, idle funds, strategies, bridged liabilities and impairment-adjusted share supply. Public native accounting and collateral graphs do not close that reconciliation scope."
-    },
-    {
-      "id": "uw-fiusd-sygnum-be5090dcc822f82e",
-      "assetId": "fiusd-sygnum",
-      "scope": {
-        "componentKey": "control:mint-meta:fiusd-sygnum:199dcf2d2ac7c4452660",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:fiusd-sygnum:199dcf2d2ac7c4452660",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:18:29Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
-      "sources": [
-        {
-          "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
-          "observedAt": "2026-10-03T23:17:28Z",
-          "datumAsOf": "2025-03-20",
-          "location": "H.5 tokenization application/AWS access safeguards",
-          "excerpt": "Sygnum assigns different access levels to internal users such as administrators, operators, etc.",
-          "assertion": "MFA, VPN, personal whitelisted wallets and AWS four-eye access review are disclosed, but do not map independent key custody/beneficial signer identities to the exact two registries, admin EOA or Safe."
-        },
-        {
-          "url": "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
-          "observedAt": "2026-10-03T23:18:22Z",
-          "datumAsOf": "2026-06-15",
-          "location": "Custody FAQ, updated June 2026",
-          "excerpt": "critical key material stored in Switzerland",
-          "assertion": "General custody architecture and an annual ISAE audit are disclosed, not a per-FIUSD privileged-control signing policy or independently held signer keys."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
-        "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
-        "https://www.sygnum.com/help/custody/how-are-wallets-secured-at-sygnum/",
-        "https://github.com/sygnumbank/solidity-equity-token-contracts",
-        "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xbf9060880363a61e7462039aa8a4aa98fe486067",
-        "https://zksync2-mainnet-explorer.zksync.io/contract_verification/info/0x159d8a100d5a869edda532626fde7737056c06c5",
-        "https://mainnet.era.zksync.io",
-        "https://arb1.arbitrum.io/rpc"
-      ],
-      "rationale": "Exact privileged-control key custody, beneficial human independence and signing/recovery policy remain undisclosed for both named operator registries, the Arbitrum proxy-admin EOA and zkSync 3-of-6 Safe. Public onchain rosters prove addresses/quorum only; general custody HSM/MPC, ISAE, client-wallet and AWS safeguards do not prove these specific issuer/admin keys are independently held. No favorable key-hardening inference is made."
-    },
-    {
-      "id": "uw-fiusd-sygnum-f5ec73be6ff0e44d",
-      "assetId": "fiusd-sygnum",
-      "scope": {
-        "componentKey": "control:mint-meta:fiusd-sygnum:494929369feac8fc23ef",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:fiusd-sygnum:494929369feac8fc23ef",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:18:29Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
-      "sources": [
-        {
-          "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
-          "observedAt": "2026-10-03T23:17:28Z",
-          "datumAsOf": "2025-03-20",
-          "location": "H.5 tokenization application/AWS access safeguards",
-          "excerpt": "Sygnum assigns different access levels to internal users such as administrators, operators, etc.",
-          "assertion": "MFA, VPN, personal whitelisted wallets and AWS four-eye access review are disclosed, but do not map independent key custody/beneficial signer identities to the exact two registries, admin EOA or Safe."
-        },
-        {
-          "url": "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
-          "observedAt": "2026-10-03T23:18:22Z",
-          "datumAsOf": "2026-06-15",
-          "location": "Custody FAQ, updated June 2026",
-          "excerpt": "critical key material stored in Switzerland",
-          "assertion": "General custody architecture and an annual ISAE audit are disclosed, not a per-FIUSD privileged-control signing policy or independently held signer keys."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
-        "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
-        "https://www.sygnum.com/help/custody/how-are-wallets-secured-at-sygnum/",
-        "https://github.com/sygnumbank/solidity-equity-token-contracts",
-        "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xbf9060880363a61e7462039aa8a4aa98fe486067",
-        "https://zksync2-mainnet-explorer.zksync.io/contract_verification/info/0x159d8a100d5a869edda532626fde7737056c06c5",
-        "https://mainnet.era.zksync.io",
-        "https://arb1.arbitrum.io/rpc"
-      ],
-      "rationale": "Exact privileged-control key custody, beneficial human independence and signing/recovery policy remain undisclosed for both named operator registries, the Arbitrum proxy-admin EOA and zkSync 3-of-6 Safe. Public onchain rosters prove addresses/quorum only; general custody HSM/MPC, ISAE, client-wallet and AWS safeguards do not prove these specific issuer/admin keys are independently held. No favorable key-hardening inference is made."
-    },
-    {
-      "id": "uw-fiusd-sygnum-71f1cae4d191e4ad",
-      "assetId": "fiusd-sygnum",
-      "scope": {
-        "componentKey": "control:mint-meta:fiusd-sygnum:505e5a6b88cfec593817",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:fiusd-sygnum:505e5a6b88cfec593817",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:18:29Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
-      "sources": [
-        {
-          "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
-          "observedAt": "2026-10-03T23:17:28Z",
-          "datumAsOf": "2025-03-20",
-          "location": "H.5 tokenization application/AWS access safeguards",
-          "excerpt": "Sygnum assigns different access levels to internal users such as administrators, operators, etc.",
-          "assertion": "MFA, VPN, personal whitelisted wallets and AWS four-eye access review are disclosed, but do not map independent key custody/beneficial signer identities to the exact two registries, admin EOA or Safe."
-        },
-        {
-          "url": "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
-          "observedAt": "2026-10-03T23:18:22Z",
-          "datumAsOf": "2026-06-15",
-          "location": "Custody FAQ, updated June 2026",
-          "excerpt": "critical key material stored in Switzerland",
-          "assertion": "General custody architecture and an annual ISAE audit are disclosed, not a per-FIUSD privileged-control signing policy or independently held signer keys."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
-        "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
-        "https://www.sygnum.com/help/custody/how-are-wallets-secured-at-sygnum/",
-        "https://github.com/sygnumbank/solidity-equity-token-contracts",
-        "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xbf9060880363a61e7462039aa8a4aa98fe486067",
-        "https://zksync2-mainnet-explorer.zksync.io/contract_verification/info/0x159d8a100d5a869edda532626fde7737056c06c5",
-        "https://mainnet.era.zksync.io",
-        "https://arb1.arbitrum.io/rpc"
-      ],
-      "rationale": "Exact privileged-control key custody, beneficial human independence and signing/recovery policy remain undisclosed for both named operator registries, the Arbitrum proxy-admin EOA and zkSync 3-of-6 Safe. Public onchain rosters prove addresses/quorum only; general custody HSM/MPC, ISAE, client-wallet and AWS safeguards do not prove these specific issuer/admin keys are independently held. No favorable key-hardening inference is made."
-    },
-    {
-      "id": "uw-fiusd-sygnum-539cbb7afe7802e8",
-      "assetId": "fiusd-sygnum",
-      "scope": {
-        "componentKey": "control:mint-meta:fiusd-sygnum:524d35c52371ad977ac2",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:fiusd-sygnum:524d35c52371ad977ac2",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:18:29Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
-      "sources": [
-        {
-          "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
-          "observedAt": "2026-10-03T23:17:28Z",
-          "datumAsOf": "2025-03-20",
-          "location": "H.5 tokenization application/AWS access safeguards",
-          "excerpt": "Sygnum assigns different access levels to internal users such as administrators, operators, etc.",
-          "assertion": "MFA, VPN, personal whitelisted wallets and AWS four-eye access review are disclosed, but do not map independent key custody/beneficial signer identities to the exact two registries, admin EOA or Safe."
-        },
-        {
-          "url": "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
-          "observedAt": "2026-10-03T23:18:22Z",
-          "datumAsOf": "2026-06-15",
-          "location": "Custody FAQ, updated June 2026",
-          "excerpt": "critical key material stored in Switzerland",
-          "assertion": "General custody architecture and an annual ISAE audit are disclosed, not a per-FIUSD privileged-control signing policy or independently held signer keys."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
-        "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
-        "https://www.sygnum.com/help/custody/how-are-wallets-secured-at-sygnum/",
-        "https://github.com/sygnumbank/solidity-equity-token-contracts",
-        "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xbf9060880363a61e7462039aa8a4aa98fe486067",
-        "https://zksync2-mainnet-explorer.zksync.io/contract_verification/info/0x159d8a100d5a869edda532626fde7737056c06c5",
-        "https://mainnet.era.zksync.io",
-        "https://arb1.arbitrum.io/rpc"
-      ],
-      "rationale": "Exact privileged-control key custody, beneficial human independence and signing/recovery policy remain undisclosed for both named operator registries, the Arbitrum proxy-admin EOA and zkSync 3-of-6 Safe. Public onchain rosters prove addresses/quorum only; general custody HSM/MPC, ISAE, client-wallet and AWS safeguards do not prove these specific issuer/admin keys are independently held. No favorable key-hardening inference is made."
-    },
-    {
-      "id": "uw-xgz-goldzip-f88fa709e1414227",
-      "assetId": "xgz-goldzip",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:18:29Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
-      "sources": [
-        {
-          "url": "https://goldzip.info/transparency/",
-          "observedAt": "2026-10-03T23:18:23Z",
-          "datumAsOf": null,
-          "location": "Transparency report downloads",
-          "excerpt": "Full Report Download (Coming Soon)",
-          "assertion": "The public report archive offers no dated auditor-signed gold-to-token reconciliation or current independently specified full reserve inventory/valuation denominator."
-        },
-        {
-          "url": "https://goldzip.info/faq/",
-          "observedAt": "2026-10-03T23:18:25Z",
-          "datumAsOf": null,
-          "location": "Gold backing FAQ",
-          "excerpt": "1 gram",
-          "assertion": "The public FAQ gives gold-unit backing claims but no dated full reserve schedule or independently signed reconciliation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://goldzip.info/transparency/",
-        "https://goldzip.info/faq/",
-        "https://goldzip.info/",
-        "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf",
-        "https://goldzip.info/news/",
-        "https://sourcify.dev/server/v2/contract/1/0x29ed41cb1013a4df63d87b82346b384847db7511?fields=sources,abi",
-        "https://etherscan.io/token/0x69af64f409c08e9076bf7f3ed9db3a7409717161",
-        "https://acd.mlaw.gov.sg/regulated-dealers/regulation-coverage/"
-      ],
-      "rationale": "A dated complete XGZ reserve inventory/valuation denominator and independently signed gold-to-token liability reconciliation are not published in the issuer site, FAQ, litepaper or transparency archive. Allocation lookup and downloadable reports are explicitly coming soon. Undated 39kg/39000-token marketing totals and regular-audit claims are not a dated complete reserve attestation; public mint/burn source proves token accounting, not physical inventory."
-    },
-    {
-      "id": "uw-xgz-goldzip-b8b339aefef12c3b",
-      "assetId": "xgz-goldzip",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:18:29Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
-      "sources": [
-        {
-          "url": "https://goldzip.info/transparency/",
-          "observedAt": "2026-10-03T23:18:23Z",
-          "datumAsOf": null,
-          "location": "Transparency report downloads",
-          "excerpt": "Full Report Download (Coming Soon)",
-          "assertion": "The public report archive offers no dated auditor-signed gold-to-token reconciliation or current independently specified full reserve inventory/valuation denominator."
-        },
-        {
-          "url": "https://goldzip.info/faq/",
-          "observedAt": "2026-10-03T23:18:25Z",
-          "datumAsOf": null,
-          "location": "Gold backing FAQ",
-          "excerpt": "1 gram",
-          "assertion": "The public FAQ gives gold-unit backing claims but no dated full reserve schedule or independently signed reconciliation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://goldzip.info/transparency/",
-        "https://goldzip.info/faq/",
-        "https://goldzip.info/",
-        "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf",
-        "https://goldzip.info/news/",
-        "https://sourcify.dev/server/v2/contract/1/0x29ed41cb1013a4df63d87b82346b384847db7511?fields=sources,abi",
-        "https://etherscan.io/token/0x69af64f409c08e9076bf7f3ed9db3a7409717161",
-        "https://acd.mlaw.gov.sg/regulated-dealers/regulation-coverage/"
-      ],
-      "rationale": "A dated complete XGZ reserve inventory/valuation denominator and independently signed gold-to-token liability reconciliation are not published in the issuer site, FAQ, litepaper or transparency archive. Allocation lookup and downloadable reports are explicitly coming soon. Undated 39kg/39000-token marketing totals and regular-audit claims are not a dated complete reserve attestation; public mint/burn source proves token accounting, not physical inventory."
-    },
-    {
-      "id": "uw-usp-pikudao-dbfc5d0186db7a37",
-      "assetId": "usp-pikudao",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:18:29Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
-      "sources": [
-        {
-          "url": "https://piku.co/blog/pikup-vol14",
-          "observedAt": "2026-10-03T23:18:28Z",
-          "datumAsOf": "2026-05-07",
-          "location": "BMMF Proof of Solvency: Live On-Chain",
-          "excerpt": "Every USP holder can now confirm in real time that the largest single piece of their backing is solvent and properly collateralized.",
-          "assertion": "This is solvency verification for one BMMF allocation, not independent reconciliation of all USP backing against circulating USP liabilities."
-        },
-        {
-          "url": "https://docs.piku.co/piku/piku-finance/security-and-risks/audits.md",
-          "observedAt": "2026-10-03T23:18:28Z",
-          "datumAsOf": null,
-          "location": "Reports / Omega Security",
-          "excerpt": "Token, Oracle, Funding, and Payment Processor Upgrades",
-          "assertion": "Published audits are contract-security reviews rather than signed financial assurance reconciling the whole USP reserve book and token liabilities."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.piku.co/piku/llms.txt",
-        "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-vault/reserve-backing.md",
-        "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-vault/usp-backing-wallets.md",
-        "https://docs.piku.co/piku/piku-finance/security-and-risks/audits.md",
-        "https://docs.piku.co/piku/terms-of-use.md",
-        "https://piku.co/blog",
-        "https://piku.co/blog/pikup-vol14",
-        "https://dune.com/piku_dao/pikudao-usp-analytics",
-        "https://public-api.piku.co/v1/tokens/usp"
-      ],
-      "rationale": "Exact independently signed whole-USP asset/liability reconciliation, its financial-assurance scope and cadence are not disclosed. Official terms/docs, wallets, newsletters and Dune publish strategies, wallets, NAV, token supply and TVL; the independently verified BMMF proof is one strategy only, while published Piku audits are contract security scope. Neither substitutes for assurance covering the whole USP backing denominator."
-    },
-    {
-      "id": "uw-krusdc-keyrock-230b3a57a35af04a",
-      "assetId": "krusdc-keyrock",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:f0352c3f9d025c8040c4af93",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:18:29Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
-      "sources": [
-        {
-          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
-          "observedAt": "2026-10-03T23:18:29Z",
-          "datumAsOf": null,
-          "location": "In-Kind Redemptions with forceDeallocate",
-          "excerpt": "It does not withdraw assets out of the Morpho protocol; instead, it shifts the user\u2019s exposure from the vault to the underlying positions, even when those positions are illiquid.",
-          "assertion": "Docs disclose liquidity-dependent cash exits and emergency in-kind positions, but no finite maximum cash realization horizon for the lender position."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://app.morpho.org/arc/vault/0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123",
-        "https://docs.morpho.org/learn/concepts/vault-v2/",
-        "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode",
-        "https://sourcify.dev/server/v2/contract/8453/0x812b71c33ae5eafebae967c5670e37eca3cab0ac?fields=sources,compilation,runtimeBytecode",
-        "https://rpc.mainnet.arc.io",
-        "https://docs.morpho.org/learn/resources/risks/"
-      ],
-      "rationale": "The exact protocol-position slice has no published bounded maximum cash liquidity horizon. Ordinary cash withdrawal depends on available USDC in the active Morpho market; borrower demand/repayment is open-ended and full source contains no contractual cash-settlement deadline. forceDeallocate can obtain an underlying position, not a cash-realization SLA. A current liquidity reading cannot be converted to a fixed maximum horizon."
     },
     {
       "id": "uw-arcusdc-galaxy-7d13156aa68d4c52",
@@ -39356,6 +38042,1433 @@
         "https://stasis.net/eurs-info"
       ],
       "rationale": "The exact maximum contractual maturity of the captured EURS bank-deposit reserve slice is not published. Liquid safeguarded accounts, daily statements and a holder right to redeem at par do not specify a per-deposit maximum maturity."
+    },
+    {
+      "id": "uw-cumiu-chinaamc-39af867ebcc791b1",
+      "assetId": "cumiu-chinaamc",
+      "scope": {
+        "componentKey": "mechanism-review:lossRecoveryDesign",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "mechanism-review:lossRecoveryDesign",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:57:42Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R14)",
+      "sources": [
+        {
+          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf",
+          "observedAt": "2026-10-03T23:57:39Z",
+          "datumAsOf": "2026-09-14",
+          "location": "Winding up of the Company or a Sub-Fund",
+          "excerpt": "The rights of the holders of Shares to participate in the property comprised in the Company or a Sub-Fund on a winding up shall be proportionate to the respective interests in the Company or Sub-Fund represented by the Shares which they hold.",
+          "assertion": "Publishes pro-rata participation on fund winding-up, not a funded default recovery waterfall joining token nominees, omnibus loss sharing and end-investor claims."
+        },
+        {
+          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-KFS-ChinaAMCUSDDigitalMMF(UnlistedClass)(April2026).pdf",
+          "observedAt": "2026-10-03T23:57:40Z",
+          "datumAsOf": "2026-04-30",
+          "location": "Is there any guarantee?, page 11",
+          "excerpt": "The Sub-Fund makes no guarantee of investment return or avoidance of loss. You may not get back the full amount of money you invest.",
+          "assertion": "The exact tokenized unlisted sub-fund discloses investor loss exposure but no reserve fund, insurance amount or recapitalization resources for default recovery."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.chinaamc.com.hk/product/chinaamc-usd-digital-money-market-fund/",
+        "https://www.chinaamc.com.hk/jeecg-boot/mainWebDailyDocument/tMainWebDailyDocument/listByFundId?fundId=USDDMMF",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-KFS-ChinaAMCUSDDigitalMMF(UnlistedClass)(April2026).pdf",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-25AFS_DigitalOFC_Cover.pdf",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/ChinaAMCDigitalOFC-InterimReport20260630Final(Clean)_cover_1787921459710.pdf",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-ChinaAMCDigitalOFC-ShareholderNotice_EN_1788174928733.pdf",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"
+      ],
+      "rationale": "lossRecoveryDesign remains undisclosed for the exact tokenized USD share class: the current prospectus publishes pro-rata fund winding-up, omnibus loss sharing, off-chain record repair and replacement of a failed tokenization provider, but no complete stressed holder/nominee priority waterfall or quantified funded recovery resources. The issuer's document archive, September change notice, KFS and financial reports add no such schedule; statutory wind-up participation and routine token recreation are not funded loss recovery."
+    },
+    {
+      "id": "uw-sparkusdc-spark-0c3b62ff65a63e37",
+      "assetId": "sparkusdc-spark",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "contractMutability",
+        "pillar": "backing",
+        "requiredDatum": "contractMutability",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-04T00:00:49Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R14)",
+      "sources": [
+        {
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a",
+          "observedAt": "2026-10-04T00:00:33Z",
+          "datumAsOf": "2026-10-03",
+          "location": "MetaMorphoV1_1 deployed_bytecode; inherited Multicall.sol, multicall",
+          "excerpt": "results[i] = Address.functionDelegateCall(address(this), data[i]);",
+          "assertion": "At Base 52141322 runtime exactly matches verified immutable MetaMorphoV1_1; multicall targets self. Immutable upgradeability is already curated, but fact-set-wrapper.ts aggregate mint-review gate (~306-318) prevents admitting contractMutability independently."
+        },
+        {
+          "url": "https://base-rpc.publicnode.com",
+          "observedAt": "2026-10-04T00:00:33Z",
+          "datumAsOf": "2026-10-03",
+          "location": "eth_getCode and eth_getStorageAt; 0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a; block 52141322; EIP-1967 implementation/admin/beacon",
+          "excerpt": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "assertion": "All three canonical proxy slots are zero, and runtime matches deployed_bytecode. No false completion of the unresolved controller inventory is made; current compiler admission cannot consume this independently established immutable local mint-logic datum."
+        }
+      ]
+    },
+    {
+      "id": "uw-sparkusdtbc-spark-3c8a81b11430549c",
+      "assetId": "sparkusdtbc-spark",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "contractMutability",
+        "pillar": "backing",
+        "requiredDatum": "contractMutability",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-04T00:00:49Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R14)",
+      "sources": [
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
+          "observedAt": "2026-10-04T00:00:34Z",
+          "datumAsOf": "2026-10-03",
+          "location": "VaultV2 deployed_bytecode; multicall",
+          "excerpt": "(bool success, bytes memory returnData) = address(this).delegatecall(data[i]);",
+          "assertion": "At Ethereum 26115259 runtime exactly matches immutable VaultV2 source bytecode; multicall targets self. Immutable upgradeability is already curated, but fact-set-wrapper.ts aggregate mint-review gate (~306-318) prevents independent contractMutability admission."
+        },
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "observedAt": "2026-10-04T00:00:34Z",
+          "datumAsOf": "2026-10-03",
+          "location": "eth_getCode and eth_getStorageAt; 0xb0c424116172b55cbb6dd3136f5989f7959e5b91; block 26115259; EIP-1967 implementation/admin/beacon",
+          "excerpt": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "assertion": "All three canonical proxy slots are zero, and runtime matches deployed_bytecode. Mint-controller storage-write closure remains unresolved; the compiler cannot use independently public immutability without incorrectly claiming the aggregate review complete."
+        }
+      ]
+    },
+    {
+      "id": "uw-susdc-spark-cd291dccce296499",
+      "assetId": "susdc-spark",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:37Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
+      "sources": [
+        {
+          "url": "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
+          "observedAt": "2026-10-03T23:00:36Z",
+          "datumAsOf": "2026-06-30",
+          "location": "2.1 Spark Liquidity Layer",
+          "excerpt": "This structure extends Spark's capital coordination into custody-supported institutional credit markets beyond onchain venues.",
+          "assertion": "SLL includes offchain institutional custody; no asset-specific complete custody roster or insolvency safeguards accompanies this disclosure."
+        },
+        {
+          "url": "https://docs.spark.finance/dev/savings/spark-vaults-v2",
+          "observedAt": "2026-10-03T23:00:36Z",
+          "datumAsOf": null,
+          "location": "Taker Mechanism",
+          "excerpt": "Transfers `value` units of `asset` from the vault to `msg.sender` and emits `Take(msg.sender, value)`.",
+          "assertion": "Contract discloses taker transfer, not legal segregation/remoteness of downstream savings holdings."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.spark.finance/products/spark-savings",
+        "https://docs.spark.finance/dev/savings/spark-vaults-v2",
+        "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy",
+        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
+        "https://docs.spark.finance/mica/4",
+        "https://spark.finance/",
+        "https://data.spark.finance/financials",
+        "https://app.spark.finance/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
+      ],
+      "rationale": "The exact savings claim has no disclosed complete downstream custody roster, legal segregation, bankruptcy-remoteness regime or attributable unknown-custody fraction. Reviewed product/risk docs, legal white paper (SPK-only; not savings rights), financial report, linked transparency surfaces and exact vault source. Non-custodial shares/intents and USDS backstop are not proof of safeguards for the taker-deployed book; no protections or zero unknown exposure are inferred."
+    },
+    {
+      "id": "uw-susdc-spark-9b5b22514b67dbc9",
+      "assetId": "susdc-spark",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:bb712f786d4d05531807f7c8",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:37Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
+      "sources": [
+        {
+          "url": "https://docs.spark.finance/products/spark-savings",
+          "observedAt": "2026-10-03T23:00:36Z",
+          "datumAsOf": null,
+          "location": "Liquidity",
+          "excerpt": "large withdrawal requests are usually fulfilled within a few minutes.",
+          "assertion": "Typical intent timing is not an enforceable maximum for realization of all deployed strategy positions."
+        },
+        {
+          "url": "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy",
+          "observedAt": "2026-10-03T23:00:36Z",
+          "datumAsOf": "2026-05-05",
+          "location": "Deployment Snapshot (May 5, 2026)",
+          "excerpt": "2-7 day redemption lag",
+          "assertion": "Maple-specific historical lag does not bound the entire savings deployed aggregate."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.spark.finance/products/spark-savings",
+        "https://docs.spark.finance/dev/savings/spark-vaults-v2",
+        "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy",
+        "https://docs.spark.finance/dev/savings/savings-vault-intents",
+        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
+        "https://docs.spark.finance/mica/4",
+        "https://data.spark.finance/financials",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
+      ],
+      "rationale": "No whole-slice maximum realization bound is published for the taker-deployed aggregate. Docs disclose idle-only atomic withdrawal, typically-minutes refill/intents, a user-set expiry that can lapse unfilled, and historical venue-specific lags. Neither these nor the protocol financial report supplies a current exact savings aggregate realization maximum; do not translate average timing or request expiry into immediate/seven-day liquidity."
+    },
+    {
+      "id": "uw-susdt-spark-e0452af4d765f4b5",
+      "assetId": "susdt-spark",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:37Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
+      "sources": [
+        {
+          "url": "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
+          "observedAt": "2026-10-03T23:00:36Z",
+          "datumAsOf": "2026-06-30",
+          "location": "2.1 Spark Liquidity Layer",
+          "excerpt": "This structure extends Spark's capital coordination into custody-supported institutional credit markets beyond onchain venues.",
+          "assertion": "SLL includes offchain institutional custody; no asset-specific complete custody roster or insolvency safeguards accompanies this disclosure."
+        },
+        {
+          "url": "https://docs.spark.finance/dev/savings/spark-vaults-v2",
+          "observedAt": "2026-10-03T23:00:36Z",
+          "datumAsOf": null,
+          "location": "Taker Mechanism",
+          "excerpt": "Transfers `value` units of `asset` from the vault to `msg.sender` and emits `Take(msg.sender, value)`.",
+          "assertion": "Contract discloses taker transfer, not legal segregation/remoteness of downstream savings holdings."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.spark.finance/products/spark-savings",
+        "https://docs.spark.finance/dev/savings/spark-vaults-v2",
+        "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy",
+        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
+        "https://docs.spark.finance/mica/4",
+        "https://spark.finance/",
+        "https://data.spark.finance/financials",
+        "https://app.spark.finance/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe2e7a17dff93280dec073c995595155283e3c372"
+      ],
+      "rationale": "The exact savings claim has no disclosed complete downstream custody roster, legal segregation, bankruptcy-remoteness regime or attributable unknown-custody fraction. Reviewed product/risk docs, legal white paper (SPK-only; not savings rights), financial report, linked transparency surfaces and exact vault source. Non-custodial shares/intents and USDS backstop are not proof of safeguards for the taker-deployed book; no protections or zero unknown exposure are inferred."
+    },
+    {
+      "id": "uw-susdt-spark-b961e5a15ca5eb24",
+      "assetId": "susdt-spark",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:7fd1f6e757dc56ee53bd46a0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:37Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
+      "sources": [
+        {
+          "url": "https://docs.spark.finance/products/spark-savings",
+          "observedAt": "2026-10-03T23:00:36Z",
+          "datumAsOf": null,
+          "location": "Liquidity",
+          "excerpt": "large withdrawal requests are usually fulfilled within a few minutes.",
+          "assertion": "Typical intent timing is not an enforceable maximum for realization of all deployed strategy positions."
+        },
+        {
+          "url": "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy",
+          "observedAt": "2026-10-03T23:00:36Z",
+          "datumAsOf": "2026-05-05",
+          "location": "Deployment Snapshot (May 5, 2026)",
+          "excerpt": "2-7 day redemption lag",
+          "assertion": "Maple-specific historical lag does not bound the entire savings deployed aggregate."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.spark.finance/products/spark-savings",
+        "https://docs.spark.finance/dev/savings/spark-vaults-v2",
+        "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy",
+        "https://docs.spark.finance/dev/savings/savings-vault-intents",
+        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
+        "https://docs.spark.finance/mica/4",
+        "https://data.spark.finance/financials",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe2e7a17dff93280dec073c995595155283e3c372"
+      ],
+      "rationale": "No whole-slice maximum realization bound is published for the taker-deployed aggregate. Docs disclose idle-only atomic withdrawal, typically-minutes refill/intents, a user-set expiry that can lapse unfilled, and historical venue-specific lags. Neither these nor the protocol financial report supplies a current exact savings aggregate realization maximum; do not translate average timing or request expiry into immediate/seven-day liquidity."
+    },
+    {
+      "id": "uw-sparkusdtbc-spark-e82fe90f4da237a1",
+      "assetId": "sparkusdtbc-spark",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:59709ff6bcf4a35db16b90ec",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:37Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
+      "sources": [
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
+          "observedAt": "2026-10-03T23:00:36Z",
+          "datumAsOf": null,
+          "location": "VaultV2.exit",
+          "excerpt": "deallocateInternal(liquidityAdapter, liquidityData, assets - idleAssets);",
+          "assertion": "Ordinary exit requires selected adapter liquidity; no elapsed-time completion maximum is specified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy",
+        "https://docs.spark.finance/products/isolated-markets",
+        "https://docs.morpho.org/curate/tutorials-v2/withdraw/",
+        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
+        "https://docs.spark.finance/mica/4",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xef4cb7e87f212f128f0b24cf35861e52b3c78a6a"
+      ],
+      "rationale": "The scoped idle-plus-Morpho lender aggregate has no guaranteed realization horizon: all assets are supplied across four markets; zero idle USDT at the pinned block. Source permits ordinary selected-adapter exit conditional on market liquidity, plus separate force-deallocation paths, not a promised repayment maximum. Strategy documents describe junior stress priority and historical allocation rather than a current contractual bound for the whole lender claim."
+    },
+    {
+      "id": "uw-sparkusdc-spark-c15f4e5d093eaf75",
+      "assetId": "sparkusdc-spark",
+      "scope": {
+        "componentKey": "control:mint-meta:sparkusdc-spark:836f8253a7150ceeed01",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:sparkusdc-spark:836f8253a7150ceeed01",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:37Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
+      "sources": [
+        {
+          "url": "https://vote.sky.money/executive/template-executive-vote-reduce-rewards-emissions-complete-guni-vault-offboardings-whitelist-keel-subproxy-to-send-cross-chain-messages-adjust-grove-dc-iam-parameters-delegate-compensation-star-agent-proxy-spells-january-15-2026",
+          "observedAt": "2026-10-03T23:00:37Z",
+          "datumAsOf": "2026-01-15",
+          "location": "Spark Morpho Vault - Update Vault Roles",
+          "excerpt": "Threshold: **3 of 5**",
+          "assertion": "Governance publishes exact Safe address/quorum, but not signer human/operator independence, key custody or recovery controls."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vote.sky.money/executive/template-executive-vote-reduce-rewards-emissions-complete-guni-vault-offboardings-whitelist-keel-subproxy-to-send-cross-chain-messages-adjust-grove-dc-iam-parameters-delegate-compensation-star-agent-proxy-spells-january-15-2026",
+        "https://docs.spark.finance/dev/security/security-and-audits",
+        "https://docs.spark.finance/products/isolated-markets",
+        "https://docs.spark.finance/mica/4",
+        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
+        "https://base.blockscout.com/api/v2/smart-contracts/0x0f963a8a8c01042b69054e787e5763abbb0646a3",
+        "https://docs.morpho.org/curate/concepts/roles/"
+      ],
+      "rationale": "Scoped question asks independently evidenced Safe signer independence and offchain key custody. Official governance, security/role docs, legal and financial disclosures name the exact curator/quorum but publish no identity-to-owner mapping, independent operator attestations, custody/recovery policy. Fresh block-pinned getOwners/getThreshold/modules confirm 3-of-5 cryptographic topology on both chains, not independent humans. Incident-state uncertainty remains a separate U and is not asserted resolved."
+    },
+    {
+      "id": "uw-sparkusdtbc-spark-b95dd0bfa8fc93b8",
+      "assetId": "sparkusdtbc-spark",
+      "scope": {
+        "componentKey": "control:mint-meta:sparkusdtbc-spark:c1b6ffe83625f92cee82",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:sparkusdtbc-spark:c1b6ffe83625f92cee82",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:37Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
+      "sources": [
+        {
+          "url": "https://vote.sky.money/executive/template-executive-vote-reduce-rewards-emissions-complete-guni-vault-offboardings-whitelist-keel-subproxy-to-send-cross-chain-messages-adjust-grove-dc-iam-parameters-delegate-compensation-star-agent-proxy-spells-january-15-2026",
+          "observedAt": "2026-10-03T23:00:37Z",
+          "datumAsOf": "2026-01-15",
+          "location": "Spark Morpho Vault - Update Vault Roles",
+          "excerpt": "Threshold: **3 of 5**",
+          "assertion": "Governance publishes exact Safe address/quorum, but not signer human/operator independence, key custody or recovery controls."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vote.sky.money/executive/template-executive-vote-reduce-rewards-emissions-complete-guni-vault-offboardings-whitelist-keel-subproxy-to-send-cross-chain-messages-adjust-grove-dc-iam-parameters-delegate-compensation-star-agent-proxy-spells-january-15-2026",
+        "https://docs.spark.finance/dev/security/security-and-audits",
+        "https://docs.spark.finance/products/isolated-markets",
+        "https://docs.spark.finance/mica/4",
+        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f963a8a8c01042b69054e787e5763abbb0646a3",
+        "https://docs.morpho.org/curate/concepts/roles/"
+      ],
+      "rationale": "Scoped question asks independently evidenced Safe signer independence and offchain key custody. Official governance, security/role docs, legal and financial disclosures name the exact curator/quorum but publish no identity-to-owner mapping, independent operator attestations, custody/recovery policy. Fresh block-pinned getOwners/getThreshold/modules confirm 3-of-5 cryptographic topology on both chains, not independent humans. Incident-state uncertainty remains a separate U and is not asserted resolved."
+    },
+    {
+      "id": "uw-witry-brix-4c257c87c5c1bfcb",
+      "assetId": "witry-brix",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:f622cfd7ae455b88dde43438",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:37Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R26)",
+      "sources": [
+        {
+          "url": "https://docs.brix.money/itry/backing.md",
+          "observedAt": "2026-10-03T22:54:37Z",
+          "datumAsOf": null,
+          "location": "Published document",
+          "excerpt": "iTRY is fully backed by the Digital Liquidity Fund's DLF token, which represents shares of a regulated basket of Turkish money-market funds.",
+          "assertion": "Discloses the DLF fund-share basket, not its maximum claim maturity or a whole-position liquidation bound."
+        },
+        {
+          "url": "https://docs.brix.money/technical/collateral-management.md",
+          "observedAt": "2026-10-03T22:44:45Z",
+          "datumAsOf": null,
+          "location": "Published document",
+          "excerpt": "A limited portion is held onchain in the Fast Access Vault smart contract to support instant redemptions.",
+          "assertion": "Only a limited buffer is instant; full reserve realization timing is not quantified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.brix.money/itry/backing.md",
+        "https://docs.brix.money/itry/proof-of-reserves.md",
+        "https://docs.brix.money/technical/collateral-management.md",
+        "https://docs.brix.money/itry/staking.md",
+        "https://docs.brix.money/resources/terms-and-policies/itry-token-terms.md",
+        "https://docs.brix.money/resources/contracts.md",
+        "https://sourcify.dev/server/v2/contract/1/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee?fields=sources,abi",
+        "https://accountable.brix.money/"
+      ],
+      "rationale": "The exact maximum maturity of the DLF fund-share reserve claim and whole-position liquidity horizon are undisclosed. Public backing, custody, proof-of-reserves, contracts, risks, token terms and withdrawal docs identify the basket and a limited fast buffer, not a fund-share maturity or complete realization bound. wiTRY cooldown and underlying MMF short-duration descriptions do not answer these reserve datums."
+    },
+    {
+      "id": "uw-witry-brix-9ebcb3b25f0f3110",
+      "assetId": "witry-brix",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:f622cfd7ae455b88dde43438",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:37Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R26)",
+      "sources": [
+        {
+          "url": "https://docs.brix.money/itry/backing.md",
+          "observedAt": "2026-10-03T22:54:37Z",
+          "datumAsOf": null,
+          "location": "Published document",
+          "excerpt": "iTRY is fully backed by the Digital Liquidity Fund's DLF token, which represents shares of a regulated basket of Turkish money-market funds.",
+          "assertion": "Discloses the DLF fund-share basket, not its maximum claim maturity or a whole-position liquidation bound."
+        },
+        {
+          "url": "https://docs.brix.money/technical/collateral-management.md",
+          "observedAt": "2026-10-03T22:44:45Z",
+          "datumAsOf": null,
+          "location": "Published document",
+          "excerpt": "A limited portion is held onchain in the Fast Access Vault smart contract to support instant redemptions.",
+          "assertion": "Only a limited buffer is instant; full reserve realization timing is not quantified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.brix.money/itry/backing.md",
+        "https://docs.brix.money/itry/proof-of-reserves.md",
+        "https://docs.brix.money/technical/collateral-management.md",
+        "https://docs.brix.money/itry/staking.md",
+        "https://docs.brix.money/resources/terms-and-policies/itry-token-terms.md",
+        "https://docs.brix.money/resources/contracts.md",
+        "https://sourcify.dev/server/v2/contract/1/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee?fields=sources,abi",
+        "https://accountable.brix.money/"
+      ],
+      "rationale": "The exact maximum maturity of the DLF fund-share reserve claim and whole-position liquidity horizon are undisclosed. Public backing, custody, proof-of-reserves, contracts, risks, token terms and withdrawal docs identify the basket and a limited fast buffer, not a fund-share maturity or complete realization bound. wiTRY cooldown and underlying MMF short-duration descriptions do not answer these reserve datums."
+    },
+    {
+      "id": "uw-cumiu-chinaamc-7a41ef5d5c23330a",
+      "assetId": "cumiu-chinaamc",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:37Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R26)",
+      "sources": [
+        {
+          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-KFS-ChinaAMCUSDDigitalMMF(UnlistedClass)(April2026).pdf",
+          "observedAt": "2026-10-03T22:50:32Z",
+          "datumAsOf": null,
+          "location": "Tokenization, page 6",
+          "excerpt": "recorded in the register of shareholders \nmaintained by the Administrator and independently verified by the Manager off-chain",
+          "assertion": "Official record is offchain share registration; no whole-supply-to-backing financial cadence is stated."
+        },
+        {
+          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-25AFS_DigitalOFC_Cover.pdf",
+          "observedAt": "2026-10-03T22:50:35Z",
+          "datumAsOf": "2025-12-31",
+          "location": "Report cover",
+          "excerpt": "For the period ended \n31 December 2025",
+          "assertion": "Annual financial accounts are historical fund assurance, not current all-chain token-to-reserve reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-KFS-ChinaAMCUSDDigitalMMF(UnlistedClass)(April2026).pdf",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-25AFS_DigitalOFC_Cover.pdf",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/Factsheet_USDDTMMF_20260831_EN_1789617629732.pdf",
+        "https://www.chinaamc.com.hk/jeecg-boot/mainWebDailyDocument/tMainWebDailyDocument/listByFundId?fundId=USDDMMF",
+        "https://www.chinaamc.com.hk/detail?fundId=USDDMMF&fundName=ChinaAMC-USD-Digital-Money-Market-Fund-%28Tokenized-Unlisted-Class%29&lan=EN",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"
+      ],
+      "rationale": "Whole-supply on/offchain mint/burn liabilities reconciled to reserve assets on a common observation clock and actual cadence are not disclosed. The prospectus describes daily transaction-triggered book-entry/token-register matching, and KPMG audits historical pooled fund accounts; neither establishes the requested whole minted-supply-to-reserve financial reconciliation. Preserve internal-ledger rather than fabricate periodic financial reconciliation."
+    },
+    {
+      "id": "uw-reusd-re-protocol-f88abb858b5d6f9e",
+      "assetId": "reusd-re-protocol",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:4dfb91e8806b59cd54dfd4fa",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://storage.googleapis.com/re-files-production/docs/ppm_v2.pdf",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": "2026-03-16",
+          "location": "Maturity, p.64",
+          "excerpt": "The Final Redemption Date of each Note is not fixed and may fall significantly before or after the expected redemption date at the time the Note is entered into.",
+          "assertion": "PPM explicitly makes note redemption unfixed; it does not give a maximum covering the entire off-chain insurance slice."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://storage.googleapis.com/re-files-production/docs/ppm_v2.pdf",
+        "https://docs.re.xyz/glossary-and-reference/legal-structure.md",
+        "https://docs.re.xyz/transparency-and-data-show-me-the-receipts/audits-attestations-custody-structure.md",
+        "https://www.coverre.com",
+        "https://app.re.xyz/transparency",
+        "https://docs.re.xyz/how-reinsurance-works/underwriting-reserving-and-timing.md"
+      ],
+      "rationale": "maturityDaysMax for the whole off-chain insurance/reinsurance-capital slice is not disclosed. The PPM permits non-fixed final dates and new instruments; descriptions of individual note programmes or actuarial release lags cannot establish a portfolio-wide maximum."
+    },
+    {
+      "id": "uw-reusd-re-protocol-a99286583673ac5e",
+      "assetId": "reusd-re-protocol",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://docs.re.xyz/minting-and-redemptions/redemptions.md",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": null,
+          "location": "Published product disclosure",
+          "excerpt": "Offchain trust balances (all held with an independent bank/custodian) are verified daily by The Network Firm via read-only account access, with results published through a Chainlink oracle.",
+          "assertion": "Daily trust-balance verification does not publish reconciliation of complete reUSD liabilities to attributable on/offchain reserves."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.re.xyz/minting-and-redemptions/redemptions.md",
+        "https://docs.re.xyz/transparency-and-data-show-me-the-receipts/audits-attestations-custody-structure.md",
+        "https://storage.googleapis.com/re-files-production/docs/ppm_v2.pdf",
+        "https://docs.re.xyz/glossary-and-reference/legal-structure.md",
+        "https://app.re.xyz/metrics",
+        "https://storage.googleapis.com/foundation-files/AUP-Report-2025.pdf",
+        "https://docs.re.xyz/products/smart-contracts.md"
+      ],
+      "rationale": "The exact issuance-to-backing reconciliation for reUSD is undisclosed. Daily bank-balance checking, historical TNF agreed-upon procedures (not token-backing assurance), NAV calculation and pooled metrics do not reconcile current token liabilities, tranche attribution and the complete reserve denominator."
+    },
+    {
+      "id": "uw-reusd-re-protocol-e7d19b95ca7d819f",
+      "assetId": "reusd-re-protocol",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:reusd-re-protocol:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://docs.re.xyz/minting-and-redemptions/redemptions.md",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": null,
+          "location": "Published product disclosure",
+          "excerpt": "Refer to current fee schedule",
+          "assertion": "Redemption page defers to a fee schedule; it does not give the complete currently applicable queue-redemption charge."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.re.xyz/minting-and-redemptions/redemptions.md",
+        "https://docs.re.xyz/glossary-and-reference/legal-structure.md",
+        "https://storage.googleapis.com/re-files-production/docs/ppm_v2.pdf",
+        "https://re.xyz/terms",
+        "https://re.xyz/disclosure",
+        "https://app.re.xyz/transparency"
+      ],
+      "rationale": "The exact complete current queue-redemption cost is undisclosed in the reviewed public documents. Earlier starting-at 6 bps metadata is a floor, not an all-in current fee; current docs defer to a fee schedule and binding offering terms allow adjustments."
+    },
+    {
+      "id": "uw-reusd-re-protocol-2dd91b57d1ea1201",
+      "assetId": "reusd-re-protocol",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:reusd-re-protocol:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://storage.googleapis.com/re-files-production/docs/token_agreement_reUSD_v2.pdf",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": null,
+          "location": "Registered Holders & Redemption Rights, p.5",
+          "excerpt": "Redemption requests remain in queue if unfulfilled and roll over to subsequent redemption dates while maintaining queue position.",
+          "assertion": "The binding agreement explicitly allows rolling queue requests without a maximum completion interval."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.re.xyz/minting-and-redemptions/redemptions.md",
+        "https://storage.googleapis.com/re-files-production/docs/ppm_v2.pdf",
+        "https://docs.re.xyz/glossary-and-reference/legal-structure.md",
+        "https://storage.googleapis.com/re-files-production/docs/token_agreement_reUSD_v2.pdf",
+        "https://app.re.xyz/transparency"
+      ],
+      "rationale": "Maximum full-notional reUSD queue settlement time is not disclosed. Quarterly windows are opportunities, not a completion SLA; binding terms allow unfulfilled requests to roll over and impose no obligation to liquidate backing for redemptions."
+    },
+    {
+      "id": "uw-aa-falconx-mev-capital-a8ac635c7488da3c",
+      "assetId": "aa-falconx-mev-capital",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:b09ebd2c39712d16fa442be7",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Published product disclosure",
+          "excerpt": "Master Loan Agreement with clear lender protections and covenants",
+          "assertion": "Issuer identifies the exact Ethereum FalconX vault and a binding MLA, but does not publish the MLA or complete economic terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
+        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
+        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
+        "https://docs.pareto.credit/developer/security/audits.md",
+        "https://www.falconx.io/terms-of-agreement",
+        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
+      ],
+      "rationale": "A maximum maturity covering the exact Ethereum FalconX facility is undisclosed. The live-vault table describes a different Optimism vault and monthly renewal/withdrawal cycles; it is not a maximum maturity for the Ethereum obligor claim. The exact MLA and amendments are not publicly supplied."
+    },
+    {
+      "id": "uw-aa-falconx-mev-capital-981ab5ece67a30d5",
+      "assetId": "aa-falconx-mev-capital",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Published product disclosure",
+          "excerpt": "Reporting rails that allow lenders to independently verify position status, accruals, and payment history at any time",
+          "assertion": "Position and payment transparency is disclosed, but full Ethereum issuance-to-underlying-borrower-assets reconciliation is not."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
+        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
+        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
+        "https://docs.pareto.credit/developer/security/audits.md",
+        "https://www.falconx.io/terms-of-agreement",
+        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
+      ],
+      "rationale": "Exact Ethereum AA_FalconXUSDC issuance-to-backing reconciliation is undisclosed. Onchain accrual/payment visibility and generic collateral monitoring do not publish an independently verified complete reconciliation of token liabilities with the offchain SPV loan book and collateral."
+    },
+    {
+      "id": "uw-aa-falconx-mev-capital-ba38ec6f1a5caf1a",
+      "assetId": "aa-falconx-mev-capital",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Published product disclosure",
+          "excerpt": "Master Loan Agreement with clear lender protections and covenants",
+          "assertion": "Issuer identifies the exact Ethereum FalconX vault and a binding MLA, but does not publish the MLA or complete economic terms."
+        },
+        {
+          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Published product disclosure",
+          "excerpt": "The SPV is designed to lend funds to trading firms and hedge funds, utilizing FalconX\u2019s sophisticated (overcollateralized) lending framework and risk assessment engine to ensure robust risk management.",
+          "assertion": "Onward borrower lending and an SPV are disclosed, but custody coverage, complete local debt bounds and contract reuse permissions are not."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
+        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
+        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
+        "https://docs.pareto.credit/developer/security/audits.md",
+        "https://www.falconx.io/terms-of-agreement",
+        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
+      ],
+      "rationale": "Whole-book custody/insolvency protections, local leverage bound and legally permitted capital reuse of the exact Ethereum FalconX claim are undisclosed. Public SPV/first-loss descriptions identify structure, not full custody allocation/security perfection or total SPV liabilities. External holder looping is not wrapper-local leverage. The MLA is not publicly supplied."
+    },
+    {
+      "id": "uw-aa-falconx-mev-capital-4c9fe700d4b9ed54",
+      "assetId": "aa-falconx-mev-capital",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "leverage",
+        "pillar": "backing",
+        "requiredDatum": "leverage",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Published product disclosure",
+          "excerpt": "Master Loan Agreement with clear lender protections and covenants",
+          "assertion": "Issuer identifies the exact Ethereum FalconX vault and a binding MLA, but does not publish the MLA or complete economic terms."
+        },
+        {
+          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Published product disclosure",
+          "excerpt": "The SPV is designed to lend funds to trading firms and hedge funds, utilizing FalconX\u2019s sophisticated (overcollateralized) lending framework and risk assessment engine to ensure robust risk management.",
+          "assertion": "Onward borrower lending and an SPV are disclosed, but custody coverage, complete local debt bounds and contract reuse permissions are not."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
+        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
+        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
+        "https://docs.pareto.credit/developer/security/audits.md",
+        "https://www.falconx.io/terms-of-agreement",
+        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
+      ],
+      "rationale": "Whole-book custody/insolvency protections, local leverage bound and legally permitted capital reuse of the exact Ethereum FalconX claim are undisclosed. Public SPV/first-loss descriptions identify structure, not full custody allocation/security perfection or total SPV liabilities. External holder looping is not wrapper-local leverage. The MLA is not publicly supplied."
+    },
+    {
+      "id": "uw-aa-falconx-mev-capital-80fb365dd61cd371",
+      "assetId": "aa-falconx-mev-capital",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "rehypothecationCorrelation",
+        "pillar": "backing",
+        "requiredDatum": "rehypothecationCorrelation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Published product disclosure",
+          "excerpt": "Master Loan Agreement with clear lender protections and covenants",
+          "assertion": "Issuer identifies the exact Ethereum FalconX vault and a binding MLA, but does not publish the MLA or complete economic terms."
+        },
+        {
+          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Published product disclosure",
+          "excerpt": "The SPV is designed to lend funds to trading firms and hedge funds, utilizing FalconX\u2019s sophisticated (overcollateralized) lending framework and risk assessment engine to ensure robust risk management.",
+          "assertion": "Onward borrower lending and an SPV are disclosed, but custody coverage, complete local debt bounds and contract reuse permissions are not."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
+        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
+        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
+        "https://docs.pareto.credit/developer/security/audits.md",
+        "https://www.falconx.io/terms-of-agreement",
+        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
+      ],
+      "rationale": "Whole-book custody/insolvency protections, local leverage bound and legally permitted capital reuse of the exact Ethereum FalconX claim are undisclosed. Public SPV/first-loss descriptions identify structure, not full custody allocation/security perfection or total SPV liabilities. External holder looping is not wrapper-local leverage. The MLA is not publicly supplied."
+    },
+    {
+      "id": "uw-aa-falconx-mev-capital-1f9d95b7a042aeaa",
+      "assetId": "aa-falconx-mev-capital",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:aa-falconx-mev-capital:stablecoin-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": null,
+          "location": "Published product disclosure",
+          "excerpt": "Before depositing, users are required to sign two agreements:",
+          "assertion": "Onboarding requires product-specific MLA terms; generic queue descriptions and the Optimism schedule do not establish Ethereum exit cost or maximum completion."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
+        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
+        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
+        "https://docs.pareto.credit/developer/security/audits.md",
+        "https://www.falconx.io/terms-of-agreement",
+        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
+      ],
+      "rationale": "The complete exact Ethereum AA_FalconXUSDC redemption fee schedule and maximum full-notional settlement/withdrawal terms are not publicly disclosed. Generic cycle-end queue mechanics and early-exit examples do not bound borrower nonpayment or provide Ethereum-specific MLA charges; the named monthly schedule is Optimism."
+    },
+    {
+      "id": "uw-aa-falconx-mev-capital-487637d875075304",
+      "assetId": "aa-falconx-mev-capital",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:aa-falconx-mev-capital:stablecoin-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": null,
+          "location": "Published product disclosure",
+          "excerpt": "Before depositing, users are required to sign two agreements:",
+          "assertion": "Onboarding requires product-specific MLA terms; generic queue descriptions and the Optimism schedule do not establish Ethereum exit cost or maximum completion."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
+        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
+        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
+        "https://docs.pareto.credit/developer/security/audits.md",
+        "https://www.falconx.io/terms-of-agreement",
+        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
+      ],
+      "rationale": "The complete exact Ethereum AA_FalconXUSDC redemption fee schedule and maximum full-notional settlement/withdrawal terms are not publicly disclosed. Generic cycle-end queue mechanics and early-exit examples do not bound borrower nonpayment or provide Ethereum-specific MLA charges; the named monthly schedule is Optimism."
+    },
+    {
+      "id": "uw-aa-falconx-mev-capital-519504b77c3ee633",
+      "assetId": "aa-falconx-mev-capital",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "withdrawalTerms",
+        "pillar": "backing",
+        "requiredDatum": "withdrawalTerms",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": null,
+          "location": "Published product disclosure",
+          "excerpt": "Before depositing, users are required to sign two agreements:",
+          "assertion": "Onboarding requires product-specific MLA terms; generic queue descriptions and the Optimism schedule do not establish Ethereum exit cost or maximum completion."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
+        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
+        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
+        "https://docs.pareto.credit/developer/security/audits.md",
+        "https://www.falconx.io/terms-of-agreement",
+        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
+      ],
+      "rationale": "The complete exact Ethereum AA_FalconXUSDC redemption fee schedule and maximum full-notional settlement/withdrawal terms are not publicly disclosed. Generic cycle-end queue mechanics and early-exit examples do not bound borrower nonpayment or provide Ethereum-specific MLA charges; the named monthly schedule is Optimism."
+    },
+    {
+      "id": "uw-yousd-yield-optimizer-6b6f122b7fc54510",
+      "assetId": "yousd-yield-optimizer",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:5cae943dc263b0125f41d763",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:23Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://docs.yo.xyz/protocol/risks.md",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": null,
+          "location": "Liquidity and strategy risk",
+          "excerpt": "Most of the time, you can redeem your assets instantly.",
+          "assertion": "Routine user redemption expectation does not disclose a maximum realization horizon covering every deployed strategy position."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.yo.xyz/protocol/risks.md",
+        "https://docs.yo.xyz/protocol/yo-protocol.md",
+        "https://docs.yo.xyz/protocol/yo-v2-security-framework.md",
+        "https://docs.yo.xyz/protocol/contract-addresses.md",
+        "https://docs.yo.xyz/user-guides/how-to-withdraw-from-yo.md",
+        "https://api.yo.xyz/api/v1/vault/base/0x0000000f2eb9f69274678c76222b35eec7588a65",
+        "https://risk.yo.xyz/api/v1/public/vault/base/0x0000000f2eb9f69274678c76222b35eec7588a65/exposure",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xc84a6e01bff58996540f1abc22355a9dfe0d78dc"
+      ],
+      "rationale": "The maximum asset-realization liquidityHorizon of the complete deployed yoUSD strategy slice is undisclosed. The 24-hour user-withdrawal description is not a bound on all strategy realizations during chain/bridge outages or illiquid pools. Verified fulfillRedeem depends on operator liquidity; neither API publishes per-position enforceable maximum release terms."
+    },
+    {
+      "id": "uw-doc-money-on-chain-cd4e119ecfbbfdc7",
+      "assetId": "doc-money-on-chain",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:doc-money-on-chain:collateral-redeem"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:56:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://docs.moneyonchain.com/main-rbtc-contract/integration-with-moc-platform/fees-calculation.md",
+          "observedAt": "2026-10-03T22:55:23Z",
+          "datumAsOf": null,
+          "location": "Fees calculation: redemption in RBTC",
+          "excerpt": "btcReceived = totalBtc - totalBtc * CommissionReturnStruct.btcCommission - totalBtc * CommissionReturnStruct.btcMarkup - interests",
+          "assertion": "W15: applicable account/vendor/fee-token formula is public, but the Pharos route does not evaluate calculateCommissionsWithPrices and current MoCInrate/vendor inputs for the stress notional."
+        }
+      ]
+    },
+    {
+      "id": "uw-fiusd-sygnum-be5090dcc822f82e",
+      "assetId": "fiusd-sygnum",
+      "scope": {
+        "componentKey": "control:mint-meta:fiusd-sygnum:199dcf2d2ac7c4452660",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:fiusd-sygnum:199dcf2d2ac7c4452660",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
+      "sources": [
+        {
+          "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+          "observedAt": "2026-10-03T23:17:28Z",
+          "datumAsOf": "2025-03-20",
+          "location": "H.5 tokenization application/AWS access safeguards",
+          "excerpt": "Sygnum assigns different access levels to internal users such as administrators, operators, etc.",
+          "assertion": "MFA, VPN, personal whitelisted wallets and AWS four-eye access review are disclosed, but do not map independent key custody/beneficial signer identities to the exact two registries, admin EOA or Safe."
+        },
+        {
+          "url": "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
+          "observedAt": "2026-10-03T23:18:22Z",
+          "datumAsOf": "2026-06-15",
+          "location": "Custody FAQ, updated June 2026",
+          "excerpt": "critical key material stored in Switzerland",
+          "assertion": "General custody architecture and an annual ISAE audit are disclosed, not a per-FIUSD privileged-control signing policy or independently held signer keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+        "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
+        "https://www.sygnum.com/help/custody/how-are-wallets-secured-at-sygnum/",
+        "https://github.com/sygnumbank/solidity-equity-token-contracts",
+        "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xbf9060880363a61e7462039aa8a4aa98fe486067",
+        "https://zksync2-mainnet-explorer.zksync.io/contract_verification/info/0x159d8a100d5a869edda532626fde7737056c06c5",
+        "https://mainnet.era.zksync.io",
+        "https://arb1.arbitrum.io/rpc"
+      ],
+      "rationale": "Exact privileged-control key custody, beneficial human independence and signing/recovery policy remain undisclosed for both named operator registries, the Arbitrum proxy-admin EOA and zkSync 3-of-6 Safe. Public onchain rosters prove addresses/quorum only; general custody HSM/MPC, ISAE, client-wallet and AWS safeguards do not prove these specific issuer/admin keys are independently held. No favorable key-hardening inference is made."
+    },
+    {
+      "id": "uw-fiusd-sygnum-f5ec73be6ff0e44d",
+      "assetId": "fiusd-sygnum",
+      "scope": {
+        "componentKey": "control:mint-meta:fiusd-sygnum:494929369feac8fc23ef",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:fiusd-sygnum:494929369feac8fc23ef",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
+      "sources": [
+        {
+          "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+          "observedAt": "2026-10-03T23:17:28Z",
+          "datumAsOf": "2025-03-20",
+          "location": "H.5 tokenization application/AWS access safeguards",
+          "excerpt": "Sygnum assigns different access levels to internal users such as administrators, operators, etc.",
+          "assertion": "MFA, VPN, personal whitelisted wallets and AWS four-eye access review are disclosed, but do not map independent key custody/beneficial signer identities to the exact two registries, admin EOA or Safe."
+        },
+        {
+          "url": "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
+          "observedAt": "2026-10-03T23:18:22Z",
+          "datumAsOf": "2026-06-15",
+          "location": "Custody FAQ, updated June 2026",
+          "excerpt": "critical key material stored in Switzerland",
+          "assertion": "General custody architecture and an annual ISAE audit are disclosed, not a per-FIUSD privileged-control signing policy or independently held signer keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+        "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
+        "https://www.sygnum.com/help/custody/how-are-wallets-secured-at-sygnum/",
+        "https://github.com/sygnumbank/solidity-equity-token-contracts",
+        "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xbf9060880363a61e7462039aa8a4aa98fe486067",
+        "https://zksync2-mainnet-explorer.zksync.io/contract_verification/info/0x159d8a100d5a869edda532626fde7737056c06c5",
+        "https://mainnet.era.zksync.io",
+        "https://arb1.arbitrum.io/rpc"
+      ],
+      "rationale": "Exact privileged-control key custody, beneficial human independence and signing/recovery policy remain undisclosed for both named operator registries, the Arbitrum proxy-admin EOA and zkSync 3-of-6 Safe. Public onchain rosters prove addresses/quorum only; general custody HSM/MPC, ISAE, client-wallet and AWS safeguards do not prove these specific issuer/admin keys are independently held. No favorable key-hardening inference is made."
+    },
+    {
+      "id": "uw-fiusd-sygnum-71f1cae4d191e4ad",
+      "assetId": "fiusd-sygnum",
+      "scope": {
+        "componentKey": "control:mint-meta:fiusd-sygnum:505e5a6b88cfec593817",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:fiusd-sygnum:505e5a6b88cfec593817",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
+      "sources": [
+        {
+          "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+          "observedAt": "2026-10-03T23:17:28Z",
+          "datumAsOf": "2025-03-20",
+          "location": "H.5 tokenization application/AWS access safeguards",
+          "excerpt": "Sygnum assigns different access levels to internal users such as administrators, operators, etc.",
+          "assertion": "MFA, VPN, personal whitelisted wallets and AWS four-eye access review are disclosed, but do not map independent key custody/beneficial signer identities to the exact two registries, admin EOA or Safe."
+        },
+        {
+          "url": "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
+          "observedAt": "2026-10-03T23:18:22Z",
+          "datumAsOf": "2026-06-15",
+          "location": "Custody FAQ, updated June 2026",
+          "excerpt": "critical key material stored in Switzerland",
+          "assertion": "General custody architecture and an annual ISAE audit are disclosed, not a per-FIUSD privileged-control signing policy or independently held signer keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+        "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
+        "https://www.sygnum.com/help/custody/how-are-wallets-secured-at-sygnum/",
+        "https://github.com/sygnumbank/solidity-equity-token-contracts",
+        "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xbf9060880363a61e7462039aa8a4aa98fe486067",
+        "https://zksync2-mainnet-explorer.zksync.io/contract_verification/info/0x159d8a100d5a869edda532626fde7737056c06c5",
+        "https://mainnet.era.zksync.io",
+        "https://arb1.arbitrum.io/rpc"
+      ],
+      "rationale": "Exact privileged-control key custody, beneficial human independence and signing/recovery policy remain undisclosed for both named operator registries, the Arbitrum proxy-admin EOA and zkSync 3-of-6 Safe. Public onchain rosters prove addresses/quorum only; general custody HSM/MPC, ISAE, client-wallet and AWS safeguards do not prove these specific issuer/admin keys are independently held. No favorable key-hardening inference is made."
+    },
+    {
+      "id": "uw-fiusd-sygnum-539cbb7afe7802e8",
+      "assetId": "fiusd-sygnum",
+      "scope": {
+        "componentKey": "control:mint-meta:fiusd-sygnum:524d35c52371ad977ac2",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:fiusd-sygnum:524d35c52371ad977ac2",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
+      "sources": [
+        {
+          "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+          "observedAt": "2026-10-03T23:17:28Z",
+          "datumAsOf": "2025-03-20",
+          "location": "H.5 tokenization application/AWS access safeguards",
+          "excerpt": "Sygnum assigns different access levels to internal users such as administrators, operators, etc.",
+          "assertion": "MFA, VPN, personal whitelisted wallets and AWS four-eye access review are disclosed, but do not map independent key custody/beneficial signer identities to the exact two registries, admin EOA or Safe."
+        },
+        {
+          "url": "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
+          "observedAt": "2026-10-03T23:18:22Z",
+          "datumAsOf": "2026-06-15",
+          "location": "Custody FAQ, updated June 2026",
+          "excerpt": "critical key material stored in Switzerland",
+          "assertion": "General custody architecture and an annual ISAE audit are disclosed, not a per-FIUSD privileged-control signing policy or independently held signer keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+        "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
+        "https://www.sygnum.com/help/custody/how-are-wallets-secured-at-sygnum/",
+        "https://github.com/sygnumbank/solidity-equity-token-contracts",
+        "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xbf9060880363a61e7462039aa8a4aa98fe486067",
+        "https://zksync2-mainnet-explorer.zksync.io/contract_verification/info/0x159d8a100d5a869edda532626fde7737056c06c5",
+        "https://mainnet.era.zksync.io",
+        "https://arb1.arbitrum.io/rpc"
+      ],
+      "rationale": "Exact privileged-control key custody, beneficial human independence and signing/recovery policy remain undisclosed for both named operator registries, the Arbitrum proxy-admin EOA and zkSync 3-of-6 Safe. Public onchain rosters prove addresses/quorum only; general custody HSM/MPC, ISAE, client-wallet and AWS safeguards do not prove these specific issuer/admin keys are independently held. No favorable key-hardening inference is made."
+    },
+    {
+      "id": "uw-xgz-goldzip-f88fa709e1414227",
+      "assetId": "xgz-goldzip",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
+      "sources": [
+        {
+          "url": "https://goldzip.info/transparency/",
+          "observedAt": "2026-10-03T23:18:23Z",
+          "datumAsOf": null,
+          "location": "Transparency report downloads",
+          "excerpt": "Full Report Download (Coming Soon)",
+          "assertion": "The public report archive offers no dated auditor-signed gold-to-token reconciliation or current independently specified full reserve inventory/valuation denominator."
+        },
+        {
+          "url": "https://goldzip.info/faq/",
+          "observedAt": "2026-10-03T23:18:25Z",
+          "datumAsOf": null,
+          "location": "Gold backing FAQ",
+          "excerpt": "1 gram",
+          "assertion": "The public FAQ gives gold-unit backing claims but no dated full reserve schedule or independently signed reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://goldzip.info/transparency/",
+        "https://goldzip.info/faq/",
+        "https://goldzip.info/",
+        "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf",
+        "https://goldzip.info/news/",
+        "https://sourcify.dev/server/v2/contract/1/0x29ed41cb1013a4df63d87b82346b384847db7511?fields=sources,abi",
+        "https://etherscan.io/token/0x69af64f409c08e9076bf7f3ed9db3a7409717161",
+        "https://acd.mlaw.gov.sg/regulated-dealers/regulation-coverage/"
+      ],
+      "rationale": "A dated complete XGZ reserve inventory/valuation denominator and independently signed gold-to-token liability reconciliation are not published in the issuer site, FAQ, litepaper or transparency archive. Allocation lookup and downloadable reports are explicitly coming soon. Undated 39kg/39000-token marketing totals and regular-audit claims are not a dated complete reserve attestation; public mint/burn source proves token accounting, not physical inventory."
+    },
+    {
+      "id": "uw-xgz-goldzip-b8b339aefef12c3b",
+      "assetId": "xgz-goldzip",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
+      "sources": [
+        {
+          "url": "https://goldzip.info/transparency/",
+          "observedAt": "2026-10-03T23:18:23Z",
+          "datumAsOf": null,
+          "location": "Transparency report downloads",
+          "excerpt": "Full Report Download (Coming Soon)",
+          "assertion": "The public report archive offers no dated auditor-signed gold-to-token reconciliation or current independently specified full reserve inventory/valuation denominator."
+        },
+        {
+          "url": "https://goldzip.info/faq/",
+          "observedAt": "2026-10-03T23:18:25Z",
+          "datumAsOf": null,
+          "location": "Gold backing FAQ",
+          "excerpt": "1 gram",
+          "assertion": "The public FAQ gives gold-unit backing claims but no dated full reserve schedule or independently signed reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://goldzip.info/transparency/",
+        "https://goldzip.info/faq/",
+        "https://goldzip.info/",
+        "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf",
+        "https://goldzip.info/news/",
+        "https://sourcify.dev/server/v2/contract/1/0x29ed41cb1013a4df63d87b82346b384847db7511?fields=sources,abi",
+        "https://etherscan.io/token/0x69af64f409c08e9076bf7f3ed9db3a7409717161",
+        "https://acd.mlaw.gov.sg/regulated-dealers/regulation-coverage/"
+      ],
+      "rationale": "A dated complete XGZ reserve inventory/valuation denominator and independently signed gold-to-token liability reconciliation are not published in the issuer site, FAQ, litepaper or transparency archive. Allocation lookup and downloadable reports are explicitly coming soon. Undated 39kg/39000-token marketing totals and regular-audit claims are not a dated complete reserve attestation; public mint/burn source proves token accounting, not physical inventory."
+    },
+    {
+      "id": "uw-usp-pikudao-dbfc5d0186db7a37",
+      "assetId": "usp-pikudao",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
+      "sources": [
+        {
+          "url": "https://piku.co/blog/pikup-vol14",
+          "observedAt": "2026-10-03T23:18:28Z",
+          "datumAsOf": "2026-05-07",
+          "location": "BMMF Proof of Solvency: Live On-Chain",
+          "excerpt": "Every USP holder can now confirm in real time that the largest single piece of their backing is solvent and properly collateralized.",
+          "assertion": "This is solvency verification for one BMMF allocation, not independent reconciliation of all USP backing against circulating USP liabilities."
+        },
+        {
+          "url": "https://docs.piku.co/piku/piku-finance/security-and-risks/audits.md",
+          "observedAt": "2026-10-03T23:18:28Z",
+          "datumAsOf": null,
+          "location": "Reports / Omega Security",
+          "excerpt": "Token, Oracle, Funding, and Payment Processor Upgrades",
+          "assertion": "Published audits are contract-security reviews rather than signed financial assurance reconciling the whole USP reserve book and token liabilities."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.piku.co/piku/llms.txt",
+        "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-vault/reserve-backing.md",
+        "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-vault/usp-backing-wallets.md",
+        "https://docs.piku.co/piku/piku-finance/security-and-risks/audits.md",
+        "https://docs.piku.co/piku/terms-of-use.md",
+        "https://piku.co/blog",
+        "https://piku.co/blog/pikup-vol14",
+        "https://dune.com/piku_dao/pikudao-usp-analytics",
+        "https://public-api.piku.co/v1/tokens/usp"
+      ],
+      "rationale": "Exact independently signed whole-USP asset/liability reconciliation, its financial-assurance scope and cadence are not disclosed. Official terms/docs, wallets, newsletters and Dune publish strategies, wallets, NAV, token supply and TVL; the independently verified BMMF proof is one strategy only, while published Piku audits are contract security scope. Neither substitutes for assurance covering the whole USP backing denominator."
+    },
+    {
+      "id": "uw-krusdc-keyrock-230b3a57a35af04a",
+      "assetId": "krusdc-keyrock",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:f0352c3f9d025c8040c4af93",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
+      "sources": [
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T23:18:29Z",
+          "datumAsOf": null,
+          "location": "In-Kind Redemptions with forceDeallocate",
+          "excerpt": "It does not withdraw assets out of the Morpho protocol; instead, it shifts the user\u2019s exposure from the vault to the underlying positions, even when those positions are illiquid.",
+          "assertion": "Docs disclose liquidity-dependent cash exits and emergency in-kind positions, but no finite maximum cash realization horizon for the lender position."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://app.morpho.org/arc/vault/0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode",
+        "https://sourcify.dev/server/v2/contract/8453/0x812b71c33ae5eafebae967c5670e37eca3cab0ac?fields=sources,compilation,runtimeBytecode",
+        "https://rpc.mainnet.arc.io",
+        "https://docs.morpho.org/learn/resources/risks/"
+      ],
+      "rationale": "The exact protocol-position slice has no published bounded maximum cash liquidity horizon. Ordinary cash withdrawal depends on available USDC in the active Morpho market; borrower demand/repayment is open-ended and full source contains no contractual cash-settlement deadline. forceDeallocate can obtain an underlying position, not a cash-realization SLA. A current liquidity reading cannot be converted to a fixed maximum horizon."
     }
   ]
 }
