@@ -23,7 +23,7 @@ export const V9_MINT_POSTURE_BANDS: Record<V9MintPostureBand, { label: string; d
   },
   governed: {
     label: "Governed",
-    detail: "A partially bounded administrator, or unbounded issuance held only by delayed on-chain token governance.",
+    detail: "A partially bounded administrator, or unbounded issuance protected by delayed token governance or public minority veto.",
   },
   managed: {
     label: "Managed",
@@ -48,13 +48,14 @@ export const V9_MINT_POSTURE_BAND_ORDER = [
   "exposed",
 ] as const satisfies readonly V9MintPostureBand[];
 
-// D29 (v10.02): governed unbounded issuance reuses the governed public band;
+// D29/D30 governance process rungs reuse the governed public band;
 // filter values and screener URLs remain unchanged.
 const POSTURE_BANDS: Record<V9MintPosture, V9MintPostureBand | null> = {
   "none-resolved": "hardened",
   "bounded-admin": "hardened",
   "partially-bounded-admin": "governed",
   "unbounded-governed": "governed",
+  "unbounded-veto-guarded": "governed",
   "unbounded-reconciled": "managed",
   "concentrated-admin": "concentrated",
   "collateral-gated": "concentrated",
@@ -109,7 +110,7 @@ export function curatedMintPostureBand(posture: MintAuthorityPosture | null | un
  * so a vocabulary addition is handled once instead of falling through unnamed
  * literal comparisons at each call site. The vocabulary has grown repeatedly
  * (`unbounded-reconciled`, `none-resolved-mint`, the 9.32 ladder values, and
- * D29's governed issuance), so explicit membership must preserve each
+ * D29's governed issuance and D30's minority veto), so explicit membership must preserve each
  * consumer's economic meaning across classification refinements.
  *
  * The predicates take `string | null | undefined` rather than
@@ -149,6 +150,7 @@ const FRAGILE_MINT_POSTURES: ReadonlySet<string> = new Set<MintAuthorityPosture>
   "collateral-gated",
   "unbounded-reconciled",
   "unbounded-governed",
+  "unbounded-veto-guarded",
   "unbounded-reconciliation-unknown",
   "unbounded-unreconciled",
   "compromised",
@@ -162,6 +164,7 @@ const FRAGILE_MINT_POSTURES: ReadonlySet<string> = new Set<MintAuthorityPosture>
 const UNBOUNDED_MINT_POSTURES: ReadonlySet<string> = new Set<MintAuthorityPosture>([
   "unbounded-reconciled",
   "unbounded-governed",
+  "unbounded-veto-guarded",
   "unbounded-reconciliation-unknown",
   "unbounded-unreconciled",
   "compromised",

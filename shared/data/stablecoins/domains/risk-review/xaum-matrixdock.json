@@ -176,25 +176,33 @@
         "id": "stellar:CC2RBGYNCFBCVENIDL5BFBWPH4OUZM2UA3OD2K2N54GLMWCC4KWPVAGO",
         "destinationChain": "stellar",
         "contractAddress": "CC2RBGYNCFBCVENIDL5BFBWPH4OUZM2UA3OD2K2N54GLMWCC4KWPVAGO",
-        "protocol": "Matrixdock Soroban token; issuance route unresolved",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Issuer documentation and Soroban ledger 64710820 identify the deployed XAUM contract, not a classic Stellar issuer account. Contract-instance metadata reports Matrixdock Gold, XAUM and 9 decimals. Storage identifies owner and operator accounts, but native-versus-bridge issuance and mint/upgrade capabilities remain unverified; the prior issuer-account/native-route rationale cannot establish this Soroban route.",
+        "protocol": "Matrixdock native Soroban issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At ledger 64756409 the contract instance uses WASM 2f91a70d1a90673e280644e0489923858d135dab330fb5ef8e32e64029ecabdd, independently source-verified against Matrixdock-RWA/RWA-Contracts commit fb52c83020ef15ebfed343ea7074a2f2ebb08933. The complete token entrypoints implement issuer-operator mint_to and operator-controlled change_mint_budget, not a messenger/escrow/bridge-receive path. Owner upgrades remain unbounded and are retained with the operator in the native mint-authority inventory. Instance and both account signing states were fetched together at one ledger; no bridge supply share is inferred.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-01",
-        "observedBlock": 64710820,
+        "observedAt": "2026-10-03",
+        "observedBlock": 64756409,
         "sources": [
           {
             "label": "Matrixdock official XAUm Stellar contract address",
             "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/smart-contract/contract-address"
           },
           {
-            "label": "Stellar mainnet Soroban RPC: contract instance at ledger 64710820",
+            "label": "Stellar mainnet Soroban RPC: contract and authority accounts at ledger 64756409",
             "url": "https://soroban-rpc.mainnet.stellar.gateway.fm"
+          },
+          {
+            "label": "Verified current Stellar WASM and source correspondence",
+            "url": "https://api.stellar.expert/explorer/public/contract/CC2RBGYNCFBCVENIDL5BFBWPH4OUZM2UA3OD2K2N54GLMWCC4KWPVAGO"
+          },
+          {
+            "label": "Matrixdock exact source-verified Soroban native mint and upgrade implementation",
+            "url": "https://github.com/Matrixdock-RWA/RWA-Contracts/blob/fb52c83020ef15ebfed343ea7074a2f2ebb08933/xaum-stellar/contracts/xaum/src/contract.rs"
           }
         ]
       },

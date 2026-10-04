@@ -181,6 +181,8 @@ Triage by the registry's typed `workType`:
 | `ORACLE_BRANCH`, `ORACLE_PROFILE`, `PEG_INPUT` | Configured branch, source freshness, runtime availability, and fail-closed behavior. |
 | `PARENT_RATEABILITY` | Canonical parent/dependency identity and proof that the score projection consumes it. |
 | `CHAIN_SUPPLY` | Provider identity, price path, contracts and chain coverage for a current score-eligible circulating-USD observation; use `getCirculatingRaw()` and never add manual/on-chain/CMC/DEX supply overrides. |
+| `OPERATIONAL_RESILIENCE` | Exact-asset overlay in `operational-resilience-overlays-v1.json`, review window, typed source confidence; live history is eligibility-only and unestablished performance stays null/not-reviewed. |
+| `WRAPPER_ALLOCATION`, `WRAPPER_CONTROL_FACTS`, `WRAPPER_EXIT_FACTS` | Wrapper contract identity, then the factor's upstream surface: whole-allocation proof or custody profile, wrapper mint/upgrade/oracle/control review, or redemption terms and fresh exact unwind capacity. |
 | `ASSET_COMPILATION` | Find the `safety_score_v9_asset_quarantined` replay warning and its `metadata.message`; repair the producer/adapter or curated data identity defect at its source, never curate around the quarantine, and confirm a fresh exact replay compiles the asset. |
 | `IMPLEMENTATION_DATE` | Launch date of the currently scored mechanism boundary; conservative range end for fuzzy dates, cited source, and no predecessor launch when the mechanism was materially replaced. |
 

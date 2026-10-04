@@ -95,7 +95,41 @@ describe("Safety Score v9 methodology policy", () => {
     const policy = candidateClone();
     expect(() => loadV9MethodologyPolicy({
       ...policy,
-      semantic: { ...policy.semantic, control: { ...policy.semantic.control, governedIssuance } },
+      semantic: { ...policy.semantic, control: { ...policy.semantic.control, governedIssuance: { ...policy.semantic.control.governedIssuance, ...governedIssuance } } },
+    })).toThrow();
+  });
+
+  it.each([
+    { minVetoWindowSec: 0 }, { minVetoWindowSec: -1 }, { minVetoWindowSec: 1209600.5 },
+    { maxVetoQuorumBps: 0 }, { maxVetoQuorumBps: 10001 }, { maxVetoQuorumBps: 200.5 },
+    { admissibleVotingPower: [] }, { admissibleVotingPower: ["live-balance"] }, { admissibleVotingPower: ["unknown"] },
+    { admissibleOverride: [] }, { admissibleOverride: ["unknown"] }, { admissibleOverride: ["majority"] },
+    { restructureMinEquityMultiple: 0 }, { restructureMinEquityMultiple: -1 }, { restructureMinEquityMultiple: 1.5 },
+    { bypass: true },
+  ])("rejects inadmissible minority veto policy %j", (change) => {
+    const policy = candidateClone();
+    const governed = policy.semantic.control.governedIssuance;
+    expect(() => loadV9MethodologyPolicy({
+      ...policy,
+      semantic: { ...policy.semantic, control: { ...policy.semantic.control, governedIssuance: {
+        ...governed, minorityVeto: { ...governed.minorityVeto, ...change },
+      } } },
+    })).toThrow();
+  });
+
+  it.each([
+    { minRateChangeDelaySec: -1 }, { minRateChangeDelaySec: 172800.5 },
+    { admissibleRateChangeRules: [] }, { admissibleRateChangeRules: ["unrestricted"] },
+    { admissibleRateChangeRules: ["unknown"] }, { bypass: true },
+  ])("rejects inadmissible monetary-policy gates %j", (change) => {
+    const policy = candidateClone();
+    const veto = policy.semantic.control.governedIssuance.minorityVeto;
+    expect(() => loadV9MethodologyPolicy({
+      ...policy,
+      semantic: { ...policy.semantic, control: { ...policy.semantic.control, governedIssuance: {
+        ...policy.semantic.control.governedIssuance,
+        minorityVeto: { ...veto, monetaryPolicy: { ...veto.monetaryPolicy, ...change } },
+      } } },
     })).toThrow();
   });
 
@@ -108,6 +142,13 @@ describe("Safety Score v9 methodology policy", () => {
     ["seasoned credit ceiling", (policy) => { policy.semantic.control.mintPostureGrading.adverseSeasonedCreditCeiling = 40; }],
     ["governed issuance delay", (policy) => { policy.semantic.control.governedIssuance.minUnavoidableDelaySec += 1; }],
     ["governed issuance voting power", (policy) => { policy.semantic.control.governedIssuance.admissibleVotingPower = ["lock-escrowed"]; }],
+    ["veto posture quality", (policy) => { policy.semantic.control.mintPostureQuality["unbounded-veto-guarded"] = 71; }],
+    ["veto window", (policy) => { policy.semantic.control.governedIssuance.minorityVeto.minVetoWindowSec += 1; }],
+    ["veto quorum", (policy) => { policy.semantic.control.governedIssuance.minorityVeto.maxVetoQuorumBps += 1; }],
+    ["veto voting power", (policy) => { policy.semantic.control.governedIssuance.minorityVeto.admissibleVotingPower = ["holding-period-weighted"]; }],
+    ["veto override", (policy) => { policy.semantic.control.governedIssuance.minorityVeto.admissibleOverride = ["none"]; }],
+    ["monetary-policy delay", (policy) => { policy.semantic.control.governedIssuance.minorityVeto.monetaryPolicy.minRateChangeDelaySec += 1; }],
+    ["restructure equity margin", (policy) => { policy.semantic.control.governedIssuance.minorityVeto.restructureMinEquityMultiple += 1; }],
     ["allocation required scope", (policy) => { policy.semantic.formula.wrapperAllocationScope.requiredScopes.privateCredit.leverage.push("immediate-custodian"); }],
     ["allocation leverage assessment", (policy) => { policy.semantic.formula.wrapperAllocationScope.leverageAssessments["bounded-up-to-1.5x"] = "high"; }],
     ["allocation custody assessment", (policy) => { policy.semantic.formula.wrapperAllocationScope.custodyAssessments["unsegregated"] = "critical"; }],
@@ -172,6 +213,9 @@ describe("Safety Score v9 methodology policy", () => {
     reordered.semantic.backing.archetypes.cdp.serialComponentKeys.reverse();
     reordered.semantic.formula.assetPremiums[0]!.requiredOperationalComponents.reverse();
     reordered.semantic.formula.danger.withholdCentralizedMintSeverities.reverse();
+    reordered.semantic.control.governedIssuance.admissibleVotingPower.reverse();
+    reordered.semantic.control.governedIssuance.minorityVeto.admissibleVotingPower.reverse();
+    reordered.semantic.control.governedIssuance.minorityVeto.admissibleOverride.reverse();
 
     const loaded = loadV9MethodologyPolicy(reordered);
     expect(loaded.semanticDigest).toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
@@ -358,6 +402,11 @@ describe("Safety Score v9 methodology policy", () => {
     expect(quality["collateral-gated"]).toBeLessThan(signalLimits.moderate!);
     expect(quality["concentrated-admin"]).toBeLessThan(quality["unbounded-governed"]);
     expect(quality["unbounded-governed"]).toBeLessThan(quality["partially-bounded-admin"]);
+    expect(quality["unbounded-governed"]).toBeLessThan(quality["unbounded-veto-guarded"]);
+    expect(quality["unbounded-veto-guarded"]).toBeLessThan(
+      V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintPostureGrading.prudentialReconciled,
+    );
+    expect(quality["unbounded-veto-guarded"]).toBeLessThan(signalLimits.low!);
     expect(quality["unbounded-governed"]).toBeLessThan(signalLimits.moderate!);
   });
 });

@@ -60,8 +60,8 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-08-08",
-    "reviewer": "PoR verification sweep 2026-08 (M0 GraphQL API unreachable this pass; retained prior live capture)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Pharos unknown-wave W2R17 legal custody and reuse review",
     "confidence": "probable",
     "sources": [
       {
@@ -73,6 +73,6 @@
         "url": "https://www.moonpay.com/legal/stablecoin_terms"
       }
     ],
-    "uncertainty": "MoonPay requires reserve assets to be segregated from corporate funds and held for stablecoin holders. The terms do not identify XO's providers or shares, establish statutory bankruptcy remoteness, or state a rehypothecation prohibition."
+    "uncertainty": "MoonPay Stablecoin Terms section 5.1 requires reserve segregation for holders and permits changes to the reserve-management program. The reviewed terms do not identify XO-specific providers, their complete coverage or shares, statutory insolvency protection, or a local reserve-encumbrance and reuse policy. No unknown-exposure percentage or rehypothecation prohibition is inferred. These legal disclosures do not certify the exact XO Solana extension's whole allocation: its mexteGy program remains unverified by the executable-verification service, and the current M0 technical docs identify a different framework deployment. Parent M custody and segregation cannot establish local executable equivalence or an absence of other reachable allocation paths."
   }
 }

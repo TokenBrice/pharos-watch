@@ -69,7 +69,7 @@
       "name": "Insurance fund",
       "pct": 0.7,
       "risk": "medium",
-      "assetClass": "other",
+      "assetClass": "stablecoin",
       "issuerOrObligor": "Falcon Finance insurance fund custody accounts",
       "riskFactors": [
         "counterparty",
@@ -96,10 +96,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Kimi data review",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W2R06 insurance-fund classification-only observation; historical composition retained",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Falcon insurance fund canonical wallet disclosure",
+        "url": "https://docs.falcon.finance/resources/insurance-fund.md"
+      },
+      {
+        "label": "Complete explorer inventory: 10 million USD1 and 1256 USDf",
+        "url": "https://eth.blockscout.com/api/v2/addresses/0x432CDcc4516B21302985b639Ef9a7853727A4e49/token-balances"
+      },
+      {
+        "label": "Pinned Ethereum balanceOf insurance wallet at block 26115225",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
       {
         "label": "Falcon transparency dashboard",
         "url": "https://app.falcon.finance/transparency"
@@ -109,7 +121,7 @@
         "url": "https://api.falcon.finance/api/v1/transparency"
       }
     ],
-    "rationale": "Rebuilt from the issuer transparency API's per-asset USD breakdown at snapshot 2026-08-07T10:33:01Z. The live adapter now collapses issuer-reported long-tail altcoins into a single Other crypto / tokenized assets bucket; BTC, ETH/liquid-staking, USDC, USDT, and the issuer-reported insurance fund remain separate. All rows are identified by name and value.",
+    "rationale": "Historical weights remain from the issuer transparency API snapshot 2026-08-07T10:33:01Z; this review does not renew that book. Insurance-fund classification reviewed 2026-10-03: issuer links wallet 0x432CDcc4516B21302985b639Ef9a7853727A4e49, complete explorer inventory lists 10 million USD1 plus 1256 USDf, and pinned Ethereum block 26115225 confirms USD1.balanceOf(wallet)=10000000000000000000000000. This reconciles the API's $10m insurance amount to stablecoin principal, unlike the earlier three-token-only census which omitted USD1. No scalar maturity zero or liquidity guarantee is inferred.",
     "compositionBasis": "Falcon transparency API per-asset USD breakdown at snapshot 2026-08-07T10:33:01Z",
     "compositionAsOf": "2026-08-07",
     "scope": "full-composition",

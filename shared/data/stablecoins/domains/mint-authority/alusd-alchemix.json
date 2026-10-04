@@ -934,6 +934,24 @@
     "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
+    "mintIncidents": [
+      {
+        "date": "2021-12-14",
+        "status": "resolved",
+        "resolvedAt": "2021-12-14",
+        "summary": "The issuer reported a V1 Alchemist credit-accounting bug affecting users' ability to mint accrued credit. Affected users were reimbursed and the UI added prevention warnings; the immutable V1 contract bug was not upgraded away. This records disclosed historical mitigation, not incident-free current controls.",
+        "sources": [
+          {
+            "label": "Alchemix Credit Accounting Bug Report, 14 December 2021",
+            "url": "https://forum.alchemix.fi/public/d/258-alchemix-credit-accounting-bug-report"
+          },
+          {
+            "label": "Alchemix issuer newsletter confirms affected users compensated",
+            "url": "https://alchemixfi.substack.com/p/the-year-in-review"
+          }
+        ]
+      }
+    ],
     "review": {
       "evidence": "Re-reviewed 2026-10-01: the issuer states that all V2 borrower positions migrated to V3 in April 2026. Current V3 Alchemist and MYT addresses on Ethereum, Arbitrum and Optimism were checked at pinned blocks, confirming canonical debt tokens, USDC underlyings, token whitelist entries, and mutable proxy paths. The historical V2 and token-admin observations are retained as legacy permission evidence, not a current portfolio or borrower-mechanism description. V3 proxy owner identities are recorded in the new controls; the legacy aggregate upgradeability envelope has not yet been remapped to those V3 paths. Metis and LayerZero/xERC20 representation powers stay in Bridge Risk.",
       "reviewer": "Sol curation pass 2026-10-01 (CurB01USDU)",

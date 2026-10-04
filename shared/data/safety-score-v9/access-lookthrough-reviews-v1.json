@@ -14,12 +14,13 @@
             "claimAddress": "0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f"
           },
           "assetId": "nusd-nexus",
-          "noCurrentReach": false,
+          "noCurrentReach": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "reviewedAt": "2026-10-03T23:08:20Z",
             "sources": [
-              "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655",
-              "https://eth.blockscout.com/address/0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f"
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x6c8c6e68604e78b549c96907bfe9ebdaac04e3b3",
+              "https://ethereum-rpc.publicnode.com",
+              "https://etherscan.io/block/26114990"
             ],
             "responsibility": "integration-missing"
           }
@@ -47,11 +48,13 @@
             "claimAddress": "0x6b175474e89094c44da98b954eedeac495271d0f"
           },
           "assetId": "dai-makerdao",
-          "noCurrentReach": false,
+          "noCurrentReach": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "reviewedAt": "2026-10-03T23:08:20Z",
             "sources": [
-              "https://eth.blockscout.com/api/v2/smart-contracts/0x6b175474e89094c44da98b954eedeac495271d0f"
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x6b175474e89094c44da98b954eedeac495271d0f",
+              "https://ethereum-rpc.publicnode.com",
+              "https://etherscan.io/block/26114990"
             ],
             "responsibility": "integration-missing"
           }
@@ -314,6 +317,32 @@
             ],
             "responsibility": "measured-adverse"
           }
+        },
+        {
+          "authorityKey": "nexus-pool-owner-pause",
+          "nodeKey": "nexus-pool",
+          "actingDeployment": {
+            "chainId": "ethereum",
+            "claimAddress": "0x1116898dda4015ed8ddefb84b6e8bc24528af2d8"
+          },
+          "controllerKey": "ethereum:0x67f60b0891ebd842ebe55e4ccca1098d7aac1a55",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "chain",
+              "key": "ethereum"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-03T23:08:20Z",
+            "sources": [
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655",
+              "https://ethereum-rpc.publicnode.com",
+              "https://etherscan.io/block/26114990"
+            ],
+            "responsibility": "measured-adverse"
+          }
         }
       ],
       "partitions": [
@@ -384,19 +413,6 @@
             ],
             "responsibility": "integration-missing"
           }
-        },
-        {
-          "branchKey": "pool-local-controls",
-          "nodeKey": "nexus-pool",
-          "reason": "research-incomplete",
-          "responsibility": "integration-missing",
-          "review": {
-            "reviewedAt": "2026-10-01T23:23:18.811Z",
-            "sources": [
-              "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
-            ],
-            "responsibility": "integration-missing"
-          }
         }
       ]
     },
@@ -412,12 +428,12 @@
             "claimAddress": "0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
           },
           "assetId": "nxusd-nereus",
-          "noCurrentReach": false,
+          "noCurrentReach": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-03T23:12:47Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://sourcify.dev/server/v2/contract/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387?fields=abi,sources",
+              "https://api.avax.network/ext/bc/C/rpc"
             ],
             "responsibility": "integration-missing"
           }
@@ -499,10 +515,11 @@
           "assetId": null,
           "noCurrentReach": false,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-03T23:12:47Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xba2a995bd4ab9e605454ccef88169352cd5f75a6",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7",
+              "https://api.avax.network/ext/bc/C/rpc"
             ],
             "responsibility": "integration-missing"
           }
@@ -567,10 +584,11 @@
           "assetId": null,
           "noCurrentReach": false,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-03T23:12:47Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x30dfe0469803bce76f8f62ac24b18d33d3d6ffe6",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+              "https://api.avax.network/ext/bc/C/rpc"
             ],
             "responsibility": "integration-missing"
           }
@@ -718,12 +736,12 @@
             "claimAddress": "0x05d9043936b55a55016af79363912169835b7a33"
           },
           "assetId": null,
-          "noCurrentReach": false,
+          "noCurrentReach": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-03T23:12:47Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x05d9043936b55a55016af79363912169835b7a33",
+              "https://api.avax.network/ext/bc/C/rpc"
             ],
             "responsibility": "integration-missing"
           }
@@ -1109,7 +1127,112 @@
           }
         }
       ],
-      "authorities": [],
+      "authorities": [
+        {
+          "authorityKey": "usdc:freeze",
+          "nodeKey": "underlying:0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+          "actingDeployment": {
+            "chainId": "avalanche",
+            "claimAddress": "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e"
+          },
+          "controllerKey": "avalanche:0x00fec99ef111911f4c84e8a3c0bba93f3891d572",
+          "capability": "freeze",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "reserve-issuer",
+              "key": "circle"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-03T23:12:47Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x30dfe0469803bce76f8f62ac24b18d33d3d6ffe6",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+              "https://api.avax.network/ext/bc/C/rpc"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "authorityKey": "usdc:pause",
+          "nodeKey": "underlying:0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+          "actingDeployment": {
+            "chainId": "avalanche",
+            "claimAddress": "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e"
+          },
+          "controllerKey": "avalanche:0x303f2f7d963d13c12ba3a03fdadbb88277b106dd",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "reserve-issuer",
+              "key": "circle"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-03T23:12:47Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x30dfe0469803bce76f8f62ac24b18d33d3d6ffe6",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+              "https://api.avax.network/ext/bc/C/rpc"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "authorityKey": "usdt:freeze",
+          "nodeKey": "underlying:0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7",
+          "actingDeployment": {
+            "chainId": "avalanche",
+            "claimAddress": "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7"
+          },
+          "controllerKey": "avalanche:0xd83d5c96bfb9e5f890e8be48165b13ddb0ecd2aa",
+          "capability": "freeze",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "reserve-issuer",
+              "key": "tether"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-03T23:12:47Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xba2a995bd4ab9e605454ccef88169352cd5f75a6",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7",
+              "https://api.avax.network/ext/bc/C/rpc"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "authorityKey": "usdt:seize",
+          "nodeKey": "underlying:0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7",
+          "actingDeployment": {
+            "chainId": "avalanche",
+            "claimAddress": "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7"
+          },
+          "controllerKey": "avalanche:0xd83d5c96bfb9e5f890e8be48165b13ddb0ecd2aa",
+          "capability": "seize",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "reserve-issuer",
+              "key": "tether"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-03T23:12:47Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xba2a995bd4ab9e605454ccef88169352cd5f75a6",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7",
+              "https://api.avax.network/ext/bc/C/rpc"
+            ],
+            "responsibility": "integration-missing"
+          }
+        }
+      ],
       "partitions": [
         {
           "partitionKey": "selected:nxusd-avalanche",
@@ -1310,64 +1433,8 @@
       ],
       "unresolved": [
         {
-          "branchKey": "authority:aavausdt",
-          "nodeKey": "underlying:0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7",
-          "reason": "research-incomplete",
-          "responsibility": "integration-missing",
-          "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
-            "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
-            ],
-            "responsibility": "integration-missing"
-          }
-        },
-        {
-          "branchKey": "authority:aavausdc",
-          "nodeKey": "underlying:0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
-          "reason": "research-incomplete",
-          "responsibility": "integration-missing",
-          "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
-            "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
-            ],
-            "responsibility": "integration-missing"
-          }
-        },
-        {
           "branchKey": "authority:aavadai",
           "nodeKey": "underlying:0xd586e7f844cea2f87f50152665bcbc2c279d8d70",
-          "reason": "research-incomplete",
-          "responsibility": "integration-missing",
-          "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
-            "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
-            ],
-            "responsibility": "integration-missing"
-          }
-        },
-        {
-          "branchKey": "authority:qiusdcn",
-          "nodeKey": "underlying:0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
-          "reason": "research-incomplete",
-          "responsibility": "integration-missing",
-          "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
-            "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
-            ],
-            "responsibility": "integration-missing"
-          }
-        },
-        {
-          "branchKey": "nrs-access",
-          "nodeKey": "collateral:nrs",
           "reason": "research-incomplete",
           "responsibility": "integration-missing",
           "review": {
@@ -1423,14 +1490,12 @@
           "assetId": "syzusd-yuzu",
           "noCurrentReach": false,
           "review": {
-            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "reviewedAt": "2026-10-03T22:57:32Z",
             "sources": [
               "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses.md",
-              "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd.md",
-              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e",
               "https://rpc.plasma.to"
             ],
-            "responsibility": "integration-missing"
+            "responsibility": "measured-adverse"
           }
         },
         {
@@ -1442,13 +1507,12 @@
           "assetId": "yzusd-yuzu",
           "noCurrentReach": false,
           "review": {
-            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "reviewedAt": "2026-10-03T22:57:32Z",
             "sources": [
               "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses.md",
-              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
               "https://rpc.plasma.to"
             ],
-            "responsibility": "integration-missing"
+            "responsibility": "measured-adverse"
           }
         }
       ],
@@ -1469,17 +1533,134 @@
           "reachesHeldClaim": true,
           "enabled": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "reviewedAt": "2026-10-03T22:57:32Z",
             "sources": [
               "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd.md",
               "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e",
               "https://rpc.plasma.to"
             ],
-            "responsibility": "integration-missing"
+            "responsibility": "measured-adverse"
           }
         }
       ],
-      "authorities": [],
+      "authorities": [
+        {
+          "authorityKey": "syzusd-native-pauser",
+          "nodeKey": "plasma-syzusd",
+          "actingDeployment": {
+            "chainId": "plasma",
+            "claimAddress": "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
+          },
+          "controllerKey": "plasma:0xe61ad2de346db42879b6ee3c7cf0c6a2cdc0530d",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "chain",
+              "key": "plasma"
+            },
+            {
+              "kind": "reserve-issuer",
+              "key": "yuzu"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-03T22:57:32Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e",
+              "https://rpc.plasma.to"
+            ],
+            "responsibility": "measured-adverse"
+          }
+        },
+        {
+          "authorityKey": "syzusd-native-secondary-pauser",
+          "nodeKey": "plasma-syzusd",
+          "actingDeployment": {
+            "chainId": "plasma",
+            "claimAddress": "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
+          },
+          "controllerKey": "plasma:0x6b7c65cfd456453aaf495c2d0f9536c308a75030",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "chain",
+              "key": "plasma"
+            },
+            {
+              "kind": "reserve-issuer",
+              "key": "yuzu"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-03T22:57:32Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e",
+              "https://rpc.plasma.to"
+            ],
+            "responsibility": "measured-adverse"
+          }
+        },
+        {
+          "authorityKey": "yzusd-native-pauser",
+          "nodeKey": "plasma-yzusd",
+          "actingDeployment": {
+            "chainId": "plasma",
+            "claimAddress": "0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+          },
+          "controllerKey": "plasma:0xe61ad2de346db42879b6ee3c7cf0c6a2cdc0530d",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "chain",
+              "key": "plasma"
+            },
+            {
+              "kind": "reserve-issuer",
+              "key": "yuzu"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-03T22:57:32Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
+              "https://rpc.plasma.to"
+            ],
+            "responsibility": "measured-adverse"
+          }
+        },
+        {
+          "authorityKey": "yzusd-native-secondary-pauser",
+          "nodeKey": "plasma-yzusd",
+          "actingDeployment": {
+            "chainId": "plasma",
+            "claimAddress": "0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+          },
+          "controllerKey": "plasma:0x6b7c65cfd456453aaf495c2d0f9536c308a75030",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "chain",
+              "key": "plasma"
+            },
+            {
+              "kind": "reserve-issuer",
+              "key": "yuzu"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-03T22:57:32Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
+              "https://rpc.plasma.to"
+            ],
+            "responsibility": "measured-adverse"
+          }
+        }
+      ],
       "partitions": [
         {
           "partitionKey": "plasma-syzusd-native-claim",
@@ -1487,31 +1668,16 @@
           "disjoint": true,
           "complete": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "reviewedAt": "2026-10-03T22:57:32Z",
             "sources": [
               "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd.md",
-              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e",
               "https://rpc.plasma.to"
             ],
-            "responsibility": "integration-missing"
+            "responsibility": "measured-adverse"
           }
         }
       ],
       "unresolved": [
-        {
-          "branchKey": "syzusd-native-access",
-          "nodeKey": "plasma-syzusd",
-          "reason": "research-incomplete",
-          "responsibility": "integration-missing",
-          "review": {
-            "reviewedAt": "2026-10-01T23:22:36.860Z",
-            "sources": [
-              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e",
-              "https://rpc.plasma.to"
-            ],
-            "responsibility": "integration-missing"
-          }
-        },
         {
           "branchKey": "syzusd-satellite-materiality",
           "nodeKey": "plasma-syzusd",
@@ -1527,29 +1693,15 @@
           }
         },
         {
-          "branchKey": "yzusd-originating-access",
-          "nodeKey": "plasma-yzusd",
-          "reason": "research-incomplete",
-          "responsibility": "integration-missing",
-          "review": {
-            "reviewedAt": "2026-10-01T23:22:36.860Z",
-            "sources": [
-              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
-              "https://yuzu-money.gitbook.io/yuzu-money/security-infrastructure/hypernative-sentinel"
-            ],
-            "responsibility": "integration-missing"
-          }
-        },
-        {
           "branchKey": "yzusd-underlying-strategy-claims",
           "nodeKey": "plasma-yzusd",
           "reason": "issuer-undisclosed",
           "responsibility": "issuer-undisclosed",
           "review": {
-            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "reviewedAt": "2026-10-03T22:57:32Z",
             "sources": [
               "https://cache.accountable.capital/dashboard/yuzu",
-              "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies"
+              "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies.md"
             ],
             "responsibility": "issuer-undisclosed"
           }
@@ -1570,44 +1722,88 @@
           "assetId": "yzusd-yuzu",
           "noCurrentReach": false,
           "review": {
-            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "reviewedAt": "2026-10-03T22:57:32Z",
             "sources": [
               "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses.md",
-              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
               "https://rpc.plasma.to"
             ],
-            "responsibility": "integration-missing"
+            "responsibility": "measured-adverse"
           }
         }
       ],
       "edges": [],
-      "authorities": [],
-      "partitions": [],
-      "unresolved": [
+      "authorities": [
         {
-          "branchKey": "yzusd-originating-access",
+          "authorityKey": "yzusd-native-pauser",
           "nodeKey": "plasma-yzusd",
-          "reason": "research-incomplete",
-          "responsibility": "integration-missing",
+          "actingDeployment": {
+            "chainId": "plasma",
+            "claimAddress": "0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+          },
+          "controllerKey": "plasma:0xe61ad2de346db42879b6ee3c7cf0c6a2cdc0530d",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "chain",
+              "key": "plasma"
+            },
+            {
+              "kind": "reserve-issuer",
+              "key": "yuzu"
+            }
+          ],
           "review": {
-            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "reviewedAt": "2026-10-03T22:57:32Z",
             "sources": [
               "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
-              "https://yuzu-money.gitbook.io/yuzu-money/security-infrastructure/hypernative-sentinel"
+              "https://rpc.plasma.to"
             ],
-            "responsibility": "integration-missing"
+            "responsibility": "measured-adverse"
           }
         },
+        {
+          "authorityKey": "yzusd-native-secondary-pauser",
+          "nodeKey": "plasma-yzusd",
+          "actingDeployment": {
+            "chainId": "plasma",
+            "claimAddress": "0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+          },
+          "controllerKey": "plasma:0x6b7c65cfd456453aaf495c2d0f9536c308a75030",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "chain",
+              "key": "plasma"
+            },
+            {
+              "kind": "reserve-issuer",
+              "key": "yuzu"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-03T22:57:32Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
+              "https://rpc.plasma.to"
+            ],
+            "responsibility": "measured-adverse"
+          }
+        }
+      ],
+      "partitions": [],
+      "unresolved": [
         {
           "branchKey": "yzusd-underlying-strategy-claims",
           "nodeKey": "plasma-yzusd",
           "reason": "issuer-undisclosed",
           "responsibility": "issuer-undisclosed",
           "review": {
-            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "reviewedAt": "2026-10-03T22:57:32Z",
             "sources": [
               "https://cache.accountable.capital/dashboard/yuzu",
-              "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies"
+              "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies.md"
             ],
             "responsibility": "issuer-undisclosed"
           }

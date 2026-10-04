@@ -22,17 +22,18 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency-map evidence review",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Unknown-wave W2R19 XPYUSD identity correction",
     "confidence": "probable",
     "sources": [
       {"label": "XPR treasury XUSDC balance and xtokens account authority, head block 406113096 (accessed 2026-09-30)", "url": "https://proton.eosusa.io/v1/chain/get_currency_balance"},
       {"label": "XPR Network Antelope API - xmd.treasury token balances (get_currency_balance, head block 399093779)", "url": "https://proton.eosusa.io/v1/chain/get_currency_balance"},
       {"label": "XPR Network explorer - xmd.treasury", "url": "https://explorer.xprnetwork.org/account/xmd.treasury"},
       {"label": "XPR Network Metal Dollar overview", "url": "https://help.xprnetwork.org/hc/en-us/articles/26897441891735-What-is-Metal-Dollar-XMD"},
-      {"label": "Metallicus Metal Dollar product page", "url": "https://www.metallicus.com/metal-dollar"}
+      {"label": "Metallicus Metal Dollar product page", "url": "https://www.metallicus.com/metal-dollar"},
+      {"label": "XPR get_currency_stats POST code=xtokens symbol=XPYUSD: issuer xtokens (observed 2026-10-03)", "url": "https://proton.eosusa.io/v1/chain/get_currency_stats"}
     ],
-    "rationale": "The dated 2026-08-20 treasury composition is retained as a fallback, not refreshed to today's weights. On 2026-09-30, the XPR API at head block 406113096 returned 2,797,236.513852 XUSDC in xmd.treasury and xtokens authority delegated to swapscold. These observations prove local token holdings and operator authority, but do not identify a canonical USDC escrow or reconcile its balance against outstanding XUSDC. The former USDC link is withheld until that bridge backing is independently verified. MPD remains an untracked Metallicus-issued token. No canonical USDC exposure is asserted from the XUSDC symbol alone.",
+    "rationale": "The dated 2026-08-20 treasury composition is retained as a fallback, not refreshed to today's weights. On 2026-09-30, the XPR API at head block 406113096 returned 2,797,236.513852 XUSDC in xmd.treasury and xtokens authority delegated to swapscold. These observations prove local token holdings and operator authority, but do not identify a canonical USDC escrow or reconcile its balance against outstanding XUSDC. The former USDC link is withheld until that bridge backing is independently verified. MPD remains an untracked Metallicus-issued token. A 2026-10-03 get_currency_stats response directly identifies xtokens as the local XPYUSD wrapper issuer; it does not establish the XPYUSD weight in this historical book. XPYUSD metadata integration is deferred pending a stable live-adapter sourceKey and keyed zero-percent metadata join. No upstream Paxos claim, bridge coverage or liquidity horizon is asserted.",
     "compositionBasis": "On-chain xmd.treasury token balances read via the XPR Network Antelope API at head block 399093779 (2026-08-20)",
     "compositionAsOf": "2026-08-20",
     "scope": "full-composition",

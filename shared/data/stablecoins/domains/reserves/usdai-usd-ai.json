@@ -2,7 +2,7 @@
   "id": "usdai-usd-ai",
   "reserves": [
     {
-      "name": "PYUSD held by the canonical USDai contract",
+      "name": "PYUSD held by the canonical USDai hub",
       "pct": 100,
       "risk": "low",
       "coinId": "pyusd-paypal",

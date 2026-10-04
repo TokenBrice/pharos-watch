@@ -24,7 +24,6 @@ describe("handleStablecoinReserves", () => {
       displayUrl: "https://usd.ai/usdai",
       reserves: [
         {
-          name: "PYUSD held by the canonical USDai contract",
           coinId: "pyusd-paypal",
           pct: 100,
           risk: "low",

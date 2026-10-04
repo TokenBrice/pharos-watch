@@ -23,9 +23,9 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "confidence": "probable",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "PilotVaults exact-vault reserve denominator review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Exact Galaxy USDC Quality Morpho Vault V2 deployment",
@@ -36,7 +36,7 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x91600e31fbedc72433d4a57f16639cfe661be7d8"
       },
       {
-        "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+        "label": "Ethereum RPC pinned block 26114818, observed 2026-10-03T22:32:06Z; whole adapter and idle-asset accounting",
         "url": "https://eth-mainnet.g.alchemy.com"
       },
       {
@@ -52,9 +52,9 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7df529c92b5744b13be10f06e0c0846186a24f79"
       }
     ],
-    "rationale": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=10004999210318959713616421 raw 18-decimal shares and totalAssets()=10191951404573 raw 6-decimal USDC. One adapter 0x7df529c92b5744b13be10f06e0c0846186a24f79 enumerates 4 current market IDs; summed expectedSupplyAssets=10191682371355, idle underlying=269033218; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. The 100% slice identifies the denomination and standing parent dependency across idle and deployed lending positions; it does not assert that every asset is idle cash or invent borrower-collateral reserve weights.",
-    "compositionBasis": "Pinned full adapter census and underlying-asset denomination",
-    "compositionAsOf": "2026-10-02",
+    "rationale": "At Ethereum block 26114818, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 and totalAssets()=10193155834240 atomic USDC. adaptersLength()=1; adapters(0)=0x7df529c92b5744b13be10f06e0c0846186a24f79. Its realAssets()=10192886801022 plus USDC.balanceOf(vault)=269033218 exactly equals totalAssets(). The unchanged 100% row represents the whole USDC-denominated idle-and-lending-position envelope, not a claim that every unit is deployed or idle, ownership of borrower collateral, or an independently signed financial reconciliation. No borrower collateral weights, borrowing absence, insolvency protection or stressed liquidity are inferred from this denominator check.",
+    "compositionBasis": "Whole USDC-denominated envelope reconciled from the complete adapter roster plus idle underlying at one pinned block",
+    "compositionAsOf": "2026-10-03",
     "scope": "full-composition",
     "knownUnknownExposure": "Parent denomination and current positions are identified. Borrower collateral custody and recovery protections, independent vault financial assurance and legal segregation remain unproven.",
     "knownUnknownExposurePct": 0

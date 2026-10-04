@@ -70,8 +70,8 @@
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "USCC shares are issued natively on Ethereum, Plume and Solana. Superstate documents issuer-mediated EVM source burn/destination reissue; Solana has no ordinary bridge and uses redemption and repurchase instead. Book-entry conversion removes public tokens rather than creating an extra aggregate supply leg.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W1R22 primary issuer cap-reach review",
     "confidence": "manual-review",
     "sources": [
       {
@@ -201,7 +201,7 @@
         "controllerAddress": "0x8abc89d9b56dfd90da18e8e18cfac9111100bdd1",
         "authorityType": "eoa",
         "modulesOrGuardsStatus": "not-applicable",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "observedAt": "2026-10-02",
         "observedBlock": 26107704,
         "sources": [
@@ -218,7 +218,7 @@
             "url": "https://docs.superstate.com/investors/smart-contracts"
           }
         ],
-        "evidence": "Superstate documents bridge() source burn and specified-amount delivery on supported EVM destination networks, plus bridgeToBookEntry. The shared issuer owner controls Ethereum/Plume token and ProxyAdmin contracts. Native subscription minting is a separate capability retained in Mint Authority. No external validator, cryptographic threshold, independent rate limit or timelock is established."
+        "evidence": "Superstate documents bridge() source burn and specified-amount delivery on supported EVM destination networks, plus bridgeToBookEntry. The shared issuer owner controls Ethereum/Plume token and ProxyAdmin contracts. Official documentation expressly states that the contracts are upgradable and all minting is gated by the Superstate Admin Address. The same issuer upgrade/mint reach can therefore replace or bypass a bridge supply ceiling; canRaiseCap is adverse raiseable semantics, not a protective fixed cap. Native subscription minting remains separately inventoried. No external validator, independent rate limit or timelock is established."
       }
     ]
   }

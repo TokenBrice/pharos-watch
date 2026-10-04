@@ -18,14 +18,18 @@
         "market",
         "legal"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W1R11 fixed-block immediate wrapper liquidity review; original composition observation retained",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Ethereum block 26114891: cooldownDuration=0 and complete USDf backing less unvested rewards",
+        "url": "https://etherscan.io/block/26114891"
+      },
       {
         "label": "Falcon Finance savings documentation",
         "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md"
@@ -43,7 +47,7 @@
         "url": "https://etherscan.io/block/26107704"
       }
     ],
-    "rationale": "At Ethereum block 26107704 (2026-10-02T22:44:11Z), asset() is 0xfa2b947eec368f42195f24f36d2af29f7c24cec2; decimals() is 18, totalSupply() is 56876949.092047125101 shares, totalAssets() is 64669136.889719046652 USDf, and balanceOf(vault) is 64670233.223213575780 USDf. convertToAssets(1e18) and previewRedeem(1e18) return 1.137000804756 USDf. The complete local reserve envelope is the named parent token; unvested rewards are excluded from redeemable totalAssets until released. No upstream reserve percentages or financial-assurance claims are assigned to the child.",
+    "rationale": "The original composition at block 26107704 remains dated 2026-10-02. A separate metadata review at Ethereum block 26114891 (2026-10-03T22:45:59Z; hash 0x7215bcdfd4a73605d2bafc27738791d6ec1174694cf33890a23fb81811fc7065) reconfirmed asset()=USDf, implementation 0x0d132bee412e6619a4863aeedad97541bfda3f34, cooldownDuration()=0, silo USDf balance=0, and totalAssets()=USDf.balanceOf(vault)-getUnvestedAmount(). Verified withdraw/redeem executes the ERC4626 underlying transfer in the same transaction when cooldown is off, for unrestricted callers, owners and recipients; no strategy realization or offchain settlement is required for the immediate USDf position. The immediate horizon concerns delivery of parent USDf only, not its dollar realization. Restriction/admin/upgrade and future cooldown risks remain separately recorded.",
     "compositionBasis": "Official single-asset vault documentation, verified accounting source and fixed-block Ethereum reads at 26107704",
     "compositionAsOf": "2026-10-02",
     "scope": "full-composition",

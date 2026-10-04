@@ -132,7 +132,9 @@ const TOKEN_DISPLAY: Record<string, TokenDisplayConfig> = {
   frxUSD: { label: "frxUSD", risk: getCanonicalReserveAssetRisk("FRXUSD") ?? "low", coinId: "frxusd-frax" },
   lzfrxETH: { label: "lzfrxETH", risk: "medium" },
   lzsfrxETH: { label: "lzsfrxETH", risk: "medium" },
-  reUSD: { label: "reUSD", risk: "medium", coinId: "reusd-re-protocol" },
+  // Resupply reUSD: the balance sheet reports token 0x57aB1E0003F623289CD798B1824Be09a793e4Bec
+  // (Convex sfrxUSD/reUSD), not Re Protocol's same-symbol reUSD.
+  reUSD: { label: "reUSD", risk: "medium", coinId: "reusd-resupply" },
   sDAI: { label: "sDAI", risk: "low", coinId: "dai-makerdao" },
   sFRAX: { label: "sFRAX", risk: "medium", coinId: "frax-frax" },
   sfrxETH: { label: "sfrxETH", risk: getCanonicalReserveAssetRisk("SFRXETH") ?? "low" },

@@ -2552,7 +2552,7 @@
     {
       "assetId": "eurcv-societe-generale-forge",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-15",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "SG-FORGE CoinVertible product disclosure (reserve composition and bankruptcy-remoteness claim)",
@@ -2561,15 +2561,22 @@
         {
           "label": "SG-FORGE EURCV MiCA whitepaper (EEA holder claim, redemption, safeguarding, and same-group custody risk)",
           "url": "https://www.sgforge.com/wp-content/uploads/2025/10/EURCV-WP-Ethereum-Solana_XRPL_Stellar_2025.10.14.pdf"
+        },
+        {
+          "label": "EURCV September 2026 whitepaper: D.10 daily aggregate outstanding-supply Collateral Test",
+          "url": "https://www.sgforge.com/wp-content/uploads/2026/09/EURCV-WP-Ethereum_Solana_XRPL_Stellar_Canton_2026-09-30.pdf"
         }
       ],
-      "notes": "EURCV is a MiCA e-money token issued by ACPR-licensed electronic-money institution SG-FORGE. Its whitepaper gives EEA-resident permitted holders an Article 49 MiCA issuer claim and par redemption right and documents safeguarded segregated accounts; the product disclosure reports bankruptcy remoteness. That regulator-supervised structure supports strong claim and segregation within the disclosed EEA and permitted-holder scope, not universal direct redemption. The whitepaper names Societe Generale, SG-FORGE's parent, as initial custodian, discloses the same-group conflict, and the July 14 disclosure places 100% of EUR reserves there. Because this is self-reported, concentrated same-group custody without a live alternate provider or independent current reconciliation, custody continuity is limited. Failover mechanics and concentration limits were not established.",
+      "notes": "EURCV is a MiCA e-money token issued by ACPR-licensed electronic-money institution SG-FORGE. Its whitepaper gives EEA-resident permitted holders an Article 49 MiCA issuer claim and par redemption right and documents safeguarded segregated accounts; the product disclosure reports bankruptcy remoteness. That regulator-supervised structure supports strong claim and segregation within the disclosed EEA and permitted-holder scope, not universal direct redemption. The whitepaper names Societe Generale, SG-FORGE's parent, as initial custodian, discloses the same-group conflict, and the July 14 disclosure places 100% of EUR reserves there. Because this is self-reported, concentrated same-group custody without a live alternate provider or independent current reconciliation, custody continuity is limited. Failover mechanics and concentration limits were not established. Research 2026-10-03: D.10 documents daily custodian information and Business-Day reconciliation of aggregate outstanding EURCV to collateral. This is an issuer-reported reconciliation procedure with named segregated-account agreement and custodian, supporting limited assuranceAndReconciliation, not an independent audit or examination. The rolling dashboard does not independently establish the historical October 3 snapshot.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
           "quality": "strong"
         },
         "custodyContinuity": {
+          "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
           "quality": "limited"
         }
       }
@@ -3364,7 +3371,7 @@
     {
       "assetId": "audm-macropod",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-15",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "Macropod financial-services guide and PDS (AUDM Trust, beneficial interest, and insolvency insulation)",
@@ -3377,9 +3384,17 @@
         {
           "label": "Macropod AUDM reserve report for July 1, 2026",
           "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a4c45fc27ad45b67c2b0d4f_260701%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%201st%20July%202026.pdf"
+        },
+        {
+          "label": "Macropod current September 30, 2026 complete reserve and chain-liability reconciliation",
+          "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6abf4aae214c978251192bb2_261001%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%2030th%20Sept%202026.pdf"
+        },
+        {
+          "label": "Macropod January 2026 named issuer and AUDM service agreement",
+          "url": "https://cdn.prod.website-files.com/689be6f8cea5ca69d2deb530/69cb4b412e40a2f45b5e8607_combined-legal-agreement-for-the-macropod-platform-audm-token.pdf"
         }
       ],
-      "notes": "Macropod's effective December 2025 PDS identifies AFSL 566313, defines each AUDM as a unit and beneficial interest in the AUDM Trust, and states that trust reserves are insulated from issuer insolvency. Hall Chadwick's March 2026 agreed-upon-procedures report identifies Westpac and Australian Settlements Limited/Banking Circle trust accounts and reports no encumbrances, pledges, or third-party claims; the July issuer report names the same accounts. This supports adequate claim and segregation and adequate custody continuity. The verification expressly provides no assurance conclusion or independence representation, and no substitute-custodian succession clause was established, so neither component is strong.",
+      "notes": "Macropod's effective December 2025 PDS identifies AFSL 566313, defines each AUDM as a unit and beneficial interest in the AUDM Trust, and states that trust reserves are insulated from issuer insolvency. Hall Chadwick's March 2026 agreed-upon-procedures report identifies Westpac and Australian Settlements Limited/Banking Circle trust accounts and reports no encumbrances, pledges, or third-party claims; the July issuer report names the same accounts. This supports adequate claim and segregation and adequate custody continuity. The verification expressly provides no assurance conclusion or independence representation, and no substitute-custodian succession clause was established, so neither component is strong. Research update 2026-10-03: the September 30 issuer verification itemizes Westpac AUDM Trust Class A Reserve AUD 3,322,783.88 and AUDM 3,322,070.88 across Ethereum, Redbelly, Solana and Base at the same date. It describes bank-statement/transaction review, exact issuing contract addresses and reserve-to-blockchain transaction reconciliation. The named Catena Digital service agreement and exact chain identity anchor support limited issuer-reported assuranceAndReconciliation. This is not an independent assurance opinion; stronger quality is not asserted and the older claim/custody conclusions are unchanged.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -3387,6 +3402,9 @@
         },
         "custodyContinuity": {
           "quality": "adequate"
+        },
+        "assuranceAndReconciliation": {
+          "quality": "limited"
         }
       }
     },
@@ -3608,30 +3626,22 @@
     {
       "assetId": "brlv-crown",
       "archetype": "tbill",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
-          "label": "Crown PT Platform Terms of Service, updated April 27, 2026 (bankruptcy-remote SPV, fiduciary assignment, security agent, and custody structure)",
-          "url": "https://dfg4lo8c2lfcn.cloudfront.net/Crown_PT_Platform_Terms_of_Service_f8e2317fef.pdf"
+          "label": "Binding Crown platform terms updated September 18 2026: reserve/SPV/security-agent claim, default triggers, limitations and pro-rata distribution; pp.9-13 and Annex I",
+          "url": "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf"
         },
         {
-          "label": "Crown BRLV product disclosure",
-          "url": "https://www.crown-brlv.com/en/"
+          "label": "Current BRLV September 30 2026 Fact Finance reserve/liability report",
+          "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf"
         },
         {
-          "label": "Crown BRLV transparency disclosure (daily independent reserve attestation index)",
-          "url": "https://www.crown-brlv.com/transparencia/"
-        },
-        {
-          "label": "Fact Finance BRLV reserve report for May 2026 (100.20% collateralization, asset-class composition)",
-          "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_5_2026_79d38795ea.pdf"
-        },
-        {
-          "label": "Crown BRLV whitepaper, March 2026 (LFT-only reserve policy, 1:1 Guarantee Ratio, 24/7 instant redemption)",
+          "label": "Crown BRLV reserve/mechanism whitepaper, March 2026",
           "url": "https://docs.crown-brlv.com/whitepaper"
         }
       ],
-      "notes": "Prior findings stand: binding Crown terms name bankruptcy-remote Luxembourg SPV Krona Two S.a r.l., Dutch stichting ownership with independent directors, fiduciary assignment for the collective benefit of holders, Vortx Servicos Fiduciarios as security agent with enforcement authority, Banco Genial custody, and a September 12, 2025 fiduciary-assignment agreement registered through SELIC/B3, and the May 2026 Fact Finance report independently reconciles R$372,522,515 of tokens to R$373,280,737.59 of reserves (100.20% collateralization, 99.99% Brazilian Treasury bonds), together supporting adequate fund claim and seniority; the referenced security agreement remains non-public and final regulator-supervised status was not established. New on 2026-07-20: the March 2026 whitepaper establishes the reserve policy — reserves exclusively in Letras Financeiras do Tesouro (Tesouro Selic floating-rate bonds), Tesouro Selic ETFs, and cash in segregated accounts with no private-credit or foreign-exchange exposure, 1:1 redemption at all times with 24/7 instant institutional subscription and redemption, and a 1:1 Guarantee Ratio requiring the fair market value of reserve assets to equal or exceed outstanding BRLY, monitored continuously by the security agent and verified daily by independent auditors — supporting limited duration and liquidity and limited NAV valuation. Duration and liquidity is limited because no WAM, maturity ladder, or holdings-level bond identity is published (the Fact Finance report gives only asset-class totals with no maturity breakdown) and the LFT-only composition is a policy claim corroborated only at category level. NAV valuation is limited because BRLV is a fixed R$1.00 par claim with no fund NAV; the reserve valuation mechanism is daily independent reconciliation by Fact Finance, a niche attestor performing balance comparison rather than an examination, and the bond pricing sources are undisclosed. Not established: maturity/WAM table, LFT-versus-LTN split at holdings level, redemption service-level terms beyond marketing, and any regulator-supervised examination.",
+      "notes": "Existing fundClaimAndSeniority adequate, navValuation limited and durationAndLiquidity limited findings are preserved, not independently promoted by this update. Current binding September 18 2026 terms name Krona Two reserve SPV, Banco Genial custody and Vortx independent security agent; Annex I identifies the September 12 2025 fiduciary-assignment agreement. Sections IV-V define insolvency/default/regulatory-intervention triggers, fifteen-business-day redemption-default cure, written holder/KYC and wallet-ownership proof, two-day acknowledgment/ten-day eligibility review, and ordered pro-rata BRL distribution from assigned reserves rather than Crown equity. This structured loss/default procedure plus the named executed service-agreement anchor supports limited lossRecoveryDesign only. Market loss, private-key loss, smart-contract exploits, regulatory blocks and force majeure are excluded. No insurance, externally funded recapitalization, independently demonstrated stressed recovery amounts or stronger whole-component recovery quality is inferred. September 30 report separately reconciles circulating BRLV and itemized reserve values; a normal T+3 business-day redemption target does not establish stressed recovery timing or an unconditional liquidation ceiling.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
@@ -3641,6 +3651,9 @@
           "quality": "limited"
         },
         "durationAndLiquidity": {
+          "quality": "limited"
+        },
+        "lossRecoveryDesign": {
           "quality": "limited"
         }
       }

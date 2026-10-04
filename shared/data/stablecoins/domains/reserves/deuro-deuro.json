@@ -22,7 +22,7 @@
       "pct": 13.8,
       "risk": "medium",
       "assetClass": "cryptoasset",
-      "issuerOrObligor": "BitGo WBTC",
+      "issuerOrObligor": "WBTC / BitGo and BiT Global custody joint venture",
       "riskFactors": [
         "market",
         "custody",
@@ -30,7 +30,7 @@
         "liquidity",
         "smart-contract"
       ],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "unknown"
     },
     {
       "sourceKey": "collateral-positions-api:other",
@@ -49,8 +49,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos Dependency Map WS1.D reserve-scope review",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Unknown wave W2R37 keyed collateral classification review",
     "confidence": "verified",
     "sources": [
       {
@@ -76,12 +76,20 @@
       {
         "label": "Blockscout verified WFPS wrapper contract",
         "url": "https://eth.blockscout.com/address/0x5052D3Cc819f53116641e89B96ff4cD1Ee80B182"
+      },
+      {
+        "label": "WBTC issuer custody identity and tokenized Bitcoin description (accessed 2026-10-03)",
+        "url": "https://wbtc.network/about"
+      },
+      {
+        "label": "Exact verified FPSWrapper and Equity holding restrictions (accessed 2026-10-03)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5052d3cc819f53116641e89b96ff4cd1ee80b182"
       }
     ],
-    "rationale": "The production collateral-positions adapter snapshot fetched on 2026-08-12T04:13:17Z emits three normalized slices: 85.0% WFPS, 13.8% WBTC, and 1.2% Other collateral. The first-party positions and price-mapping APIs support those exact live identities and weights; the 2026-08-11 on-chain review independently anchors WFPS and WBTC identity and itemizes the residual as cbBTC, kBTC, and WETH positions below the adapter's 2% display threshold. The API price dimension remains issuer-provided.",
-    "compositionBasis": "Historical CDP-only collateral composition; fresh issuer reserve/positions evidence reviewed 2026-09-30 establishes omitted bridge issuance but not a combined checkpoint",
+    "rationale": "Classification-only metadata for the exact collateral-positions-api:wfps and collateral-positions-api:wbtc live keys. The issuer price mapping identifies the WBTC and WFPS contracts; verified FPSWrapper source binds WFPS to Frankencoin Equity, with a 90-day average holding restriction and a qualified-holder mechanism that can prevent unwrapAndSell. WBTC liquidity has no supported whole-position realization bound and remains unknown. Historical authored percentages are unchanged. This review does not certify the CDP-only book as the full dEURO economic reserve denominator, which also includes bridge stablecoins, minter loans and pool equity.",
+    "compositionBasis": "Keyed live collateral classification only; historical authored weights and composition date are retained without asserting whole-asset reserve completeness",
     "compositionAsOf": "2026-08-12",
-    "scope": "selected-slices",
+    "scope": "classification-only",
     "knownUnknownExposure": "NC-098: reserve documentation accessed 2026-09-30 includes bridge stablecoins, loans to minters and reserve-pool equity; borrower collateral stays outside that balance sheet. The supplied September 29 census at block 26085926 was independently refreshed at block 26088296 (timestamp 1790747207): canonical supply 1,314,941.465169323021901347, EURC inventory 265,235.974361 and minted 265,235.97424847865, EURE minted 80.68352239443757, EURI 0.12107894811773151, EURS 0.51 and EURA 0.013878229134009315; the other four bridges have zero inventory and minted. These measured issuance claims cannot be appended to the old 100% gross CDP denominator. The fresh positions API is not pinned to the bridge checkpoint, and reserve/pool versus borrower-debt attribution remains unreconciled. Publication is blocked on a combined producer envelope. Next evidence: capture position debt/collateral/prices, bridge minted/inventory, reserve-pool balances and canonical supply at one checkpoint; reconcile non-bridge issuance, scale the CDP branch and emit keyed bridge rows. The 1.2% field below describes only the historical CDP display residual, not the omitted bridge envelope.",
     "knownUnknownExposurePct": 1.2,
     "nonLinkDispositions": [

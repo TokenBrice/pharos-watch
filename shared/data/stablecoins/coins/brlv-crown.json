@@ -68,6 +68,11 @@
       "chain": "ethereum",
       "address": "0xd7ca0e2c36d647446b782d1b72308e598373e2f5",
       "decimals": 18
+    },
+    {
+      "chain": "tempo",
+      "address": "0x20c000000000000000000000f4371867ae9754ce",
+      "decimals": 6
     }
   ],
   "collateralQuality": "rwa",

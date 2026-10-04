@@ -329,12 +329,20 @@
     },
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
-    "supervision": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
           "label": "MoonPay PYUSDx holder and counterparty terms",
           "url": "https://www.moonpay.com/legal/pyusdx_terms"
+        },
+        {
+          "label": "MoonPay Enterprise PYUSDx regulatory disclosure",
+          "url": "https://dev.enterprise.moonpay.com/issuance/pyusdx"
+        },
+        {
+          "label": "MoonPay licensed entity roster",
+          "url": "https://www.moonpay.com/legal/licenses"
         },
         {
           "label": "M0 exact PYUSDx mainnet deployments",
@@ -369,8 +377,8 @@
           "url": "https://chainscan.0g.ai/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
         }
       ],
-      "evidence": "Independent 2026-10-03 RPC census at Ethereum 26110185, Arbitrum 511230133 and Monad 110115415: complete token RoleGranted/RoleRevoked history from block zero returned 17 events per chain; applying grants and revokes leaves sole DEFAULT_ADMIN_ROLE and RATE_LIMIT_MANAGER_ROLE=0x314160525f5ea6677d3908112ff9bd885f3bb78e and exactly two ISSUER_ROLE members, IssuerGateway 0x693cc3305342b02ac1549b509a704ff944cd9499 and Portal 0xaad1466fe33d373189fb9dcc47270e608feee8a7. earnerManager() and token ProxyAdmin.owner() independently return the issuer address on each chain. EIP-1967 implementations resolve respectively to 0x0568d0a74145fd557b3541897bc6878f5c6e9c8c, 0x8dfb7c8ce5e67ace965520b134b4aca8fd71c5e0 and 0x411d482be645a807823bcc5f4e762d9c24c6966a; the structured upgrade inventory now covers all three exact deployments. Gateway delay remains distinct from reward and upgrade issuance. Financial reserve reconciliation and issuer key-custody safeguards are not established by this complete on-chain role census.",
-      "reviewer": "Sol refinement Refine03",
+      "evidence": "Independent 2026-10-03 RPC census at Ethereum 26110185, Arbitrum 511230133 and Monad 110115415: complete token RoleGranted/RoleRevoked history from block zero returned 17 events per chain; applying grants and revokes leaves sole DEFAULT_ADMIN_ROLE and RATE_LIMIT_MANAGER_ROLE=0x314160525f5ea6677d3908112ff9bd885f3bb78e and exactly two ISSUER_ROLE members, IssuerGateway 0x693cc3305342b02ac1549b509a704ff944cd9499 and Portal 0xaad1466fe33d373189fb9dcc47270e608feee8a7. earnerManager() and token ProxyAdmin.owner() independently return the issuer address on each chain. EIP-1967 implementations resolve respectively to 0x0568d0a74145fd557b3541897bc6878f5c6e9c8c, 0x8dfb7c8ce5e67ace965520b134b4aca8fd71c5e0 and 0x411d482be645a807823bcc5f4e762d9c24c6966a; the structured upgrade inventory now covers all three exact deployments. Gateway delay remains distinct from reward and upgrade issuance. Financial reserve reconciliation and issuer key-custody safeguards are not established by this complete on-chain role census. W1R50 supervision research on 2026-10-03: PYUSDx terms section 13 expressly state that issuance is not regulated and regulatory protections applicable to regulated stablecoins are unavailable. MoonPay Enterprise likewise says PYUSDx is not a regulated stablecoin. The BVI issuer is MoonPay Digital Assets Limited, not the separately licensed UK/US/EEA/Jersey entities in MoonPay's licence roster; Paxos supervision is not supervision of this local issuance.",
+      "reviewer": "Sol refinement Refine03; W1R50 supervision research",
       "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
       "unresolvedQuestions": [],

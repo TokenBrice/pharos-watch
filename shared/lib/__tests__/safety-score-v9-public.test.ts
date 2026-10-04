@@ -23,7 +23,7 @@ import {
 } from "../../types/safety-score-v9-public";
 import { V9_WRAPPER_LOCAL_FACT_KEYS } from "../../types/safety-score-v9-wrapper";
 import { makeDeploymentControl } from "./safety-score-v9-fixtures.test-support";
-import { weightedQuorum } from "./safety-score-v9-control-scope.test-support";
+import { reviewedScope, weightedQuorum } from "./safety-score-v9-control-scope.test-support";
 import supplyAttributionReviews from "../../data/safety-score-v9/supply-attribution-reviews-v1.json";
 import { ReviewedProviderRowExclusionSchema } from "../../types/safety-score-v9-supply-attribution";
 
@@ -475,6 +475,50 @@ describe("Safety Score v9 public projection", () => {
     expect(details().minimumCryptographicSignatures).toBe(1);
     control.authority!.weightedQuorum = { ...weighted, regularKey: { state: "unknown" } };
     expect(details().minimumCryptographicSignatures).toBeNull();
+  });
+  it("publishes only the owning execution path on each path-scoped control component", () => {
+    const project = (pathCount: number) => {
+      const input = fixture("alpha", { score: 70, grade: "B" });
+      const path = reviewedScope().paths[0]!;
+      const scope = reviewedScope({
+        paths: Array.from({ length: pathCount }, (_, index) => ({ ...path, id: `path-${String(index).padStart(2, "0")}` })),
+      });
+      const controls = scope.paths.map((executionPath) => Object.assign(
+        makeDeploymentControl(`control:mint:path:${executionPath.id}`, "mint", { executionScope: scope, executionScopeComplete: true }),
+        { executionPathId: executionPath.id },
+      ));
+      input.control = {
+        ...input.control!,
+        components: controls.map((control) => ({
+          ...input.control!.components[0]!, componentKey: control.controlKey, controlKeys: [control.controlKey],
+        })),
+        controlFacts: controls,
+      };
+      return SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9Card(input).card).breakdowns!.control.components;
+    };
+    const small = project(2);
+    const large = project(40);
+    for (const component of large) {
+      expect(component.controlDetails![0]!.executionPaths).toEqual([{
+        id: component.key.split(":path:")[1], targetDeployment: reviewedScope().controllerDeployment,
+        entrypointKind: "evm-selector", entrypoints: ["0x40c10f19"], activation: "active", reach: "root", capabilities: ["mint"],
+      }]);
+    }
+    expect(JSON.stringify(large[0])).toBe(JSON.stringify(small[0]));
+    expect(JSON.stringify(large[1])).toBe(JSON.stringify(small[1]));
+  });
+  it("preserves certificate and contributor paths for controls without a path scope", () => {
+    const input = fixture("alpha", { score: 70, grade: "B" });
+    const scope = reviewedScope();
+    const contributor = reviewedScope({ paths: [{ ...scope.paths[0]!, id: "upgrade", capabilities: ["upgrade"] }] });
+    const control = makeDeploymentControl("control:mint", "mint", {
+      executionScope: scope, executionScopeContributors: [{ authorityKey: contributor.controllerDeployment, scope: contributor }],
+    });
+    input.control = { ...input.control!, components: [{ ...input.control!.components[0]!, controlKeys: [control.controlKey] }], controlFacts: [control] };
+    const details = SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9Card(input).card).breakdowns!.control.components[0]!.controlDetails![0]!;
+    expect(details.executionPaths.map((path) => [path.id, path.capabilities])).toEqual([
+      ["issuance", ["mint"]], ["upgrade", ["upgrade"]],
+    ]);
   });
   it("publishes wrapper forms only on wrapper claims, not sibling mechanism claims", () => {
     const input = fixture("dependent", {

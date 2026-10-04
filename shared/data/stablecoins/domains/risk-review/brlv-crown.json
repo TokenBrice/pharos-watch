@@ -121,6 +121,34 @@
             "url": "https://docs.crown-brlv.com/whitepaper.md"
           }
         ]
+      },
+      {
+        "id": "tempo:0x20c000000000000000000000f4371867ae9754ce",
+        "destinationChain": "tempo",
+        "contractAddress": "0x20c000000000000000000000f4371867ae9754ce",
+        "protocol": "Crown bridgedBRLV TIP-20",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Crown's March 2026 whitepaper identifies this exact Tempo BRLV deployment. At Tempo block 0x2884b0b, name() is bridgedBRLV, symbol() BRLV, decimals() 6 and totalSupply() 48800000. The Base and Ethereum contracts use 18 decimals. Exact TIP-20 mint/role administrators, canonical-gateway domain binding, decimal conversion and in-flight accounting have not been certified; issuer-attestor prose does not make this a native independent liability.",
+        "observedBlock": 42486539,
+        "sources": [
+          {
+            "label": "Crown exact Tempo BRLV address",
+            "url": "https://docs.crown-brlv.com/whitepaper.md"
+          },
+          {
+            "label": "Tempo BRLV token and native TIP-20 precompile",
+            "url": "https://explore.tempo.xyz/address/0x20c000000000000000000000F4371867AE9754ce"
+          },
+          {
+            "label": "Pinned Tempo mainnet identity reads at block 0x2884b0b",
+            "url": "https://rpc.tempo.xyz"
+          }
+        ]
       }
     ],
     "controls": [

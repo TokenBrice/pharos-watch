@@ -153,7 +153,7 @@
       "pct": 1.2,
       "risk": "high",
       "assetClass": "cryptoasset",
-      "issuerOrObligor": "YieldNest liquid-staking protocol and Ethereum validators",
+      "issuerOrObligor": "CIAN stETH Yield Layer protocol and its staking, lending and restaking strategies",
       "riskFactors": [
         "market",
         "liquidity",
@@ -209,8 +209,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Resv16)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W2R05 classification identity review; composition retained from Resv16",
     "confidence": "verified",
     "sources": [
       {
@@ -224,9 +224,17 @@
       {
         "label": "Berachain public RPC observation at block 26483059",
         "url": "https://rpc.berachain.com"
+      },
+      {
+        "label": "CIAN Yield Layer receipt-token identity and withdrawal estimate",
+        "url": "https://docs.cian.app/yieldlayer/for-users-quick-start/core-concepts-and-yield-layer-page-overview.md"
+      },
+      {
+        "label": "Pinned exact Beraborrow collateral identity at block 27028385",
+        "url": "https://berascan.com/address/0x45b3b6b28c77dd23a91acc3bd41da436fa6a61ae"
       }
     ],
-    "rationale": "A direct Berachain read at block 26483059 valued all thirteen configured positive Beraborrow collateral-vault balances and normalized them to 100%. The read used the exact token and DenManager addresses in Beraborrow's contract registry and the source keys emitted by the live liquity-v2-branches adapter. Six legacy branches report shutdown or sunset status, but their positive collateral balances remain part of the full outstanding reserve composition. The pumpBTC DefiLlama quote was unavailable, so the same-block branch oracle price was used; the other branch balances and prices were read through the configured on-chain and DefiLlama paths.",
+    "rationale": "The historical composition remains the September 21 block 26483059 inventory: all thirteen configured positive collateral-vault balances were valued against their exact token/DenManager identities and live liquity-v2-branches source keys. Shutdown/sunset branches retain their positive balances; the pumpBTC quote used its same-block branch oracle when DefiLlama was unavailable. This October 3 review changes classification provenance only, not weights or compositionAsOf. At Berachain block 27028385 (hash 0xc1e8698e0dd085d316fdd73b6ee1b7e8af57f9dea43fd30ef6b990e623d3c738), the exact ylstETH collateral vault asset() is 0xa958090601e21a82e9873042652e35891d945a8c; its name() is CIAN yield layer stETH and symbol() is ylstETH. CIAN's primary documentation identifies ylstETH as its stETH Yield Layer receipt, correcting the former YieldNest obligor attribution. The documented roughly five-day estimate is not a complete Berachain whole-position realization bound, so liquidity remains unknown.",
     "compositionBasis": "All configured positive Beraborrow collateral-vault balances observed on Berachain block 26483059 on 2026-09-21",
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",

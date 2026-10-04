@@ -19,20 +19,28 @@
         "market",
         "legal"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W1R03 pinned wrapper liquidity review",
     "confidence": "verified",
     "sources": [
       {
         "label": "Ethena staking USDe documentation",
         "url": "https://docs.ethena.fi/solution-design/staking-usde"
+      },
+      {
+        "label": "Verified StakedUSDeV2 cooldown and silo source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9d39a5de30e57443bff2a8307a4256c8797a3497"
+      },
+      {
+        "label": "Ethereum block 26114890",
+        "url": "https://eth.blockscout.com/block/26114890"
       }
     ],
-    "rationale": "Ethena documents sUSDe as a staking wrapper: users deposit USDe, receive vault shares, and redeem shares for proportional USDe. The direct reserve envelope is therefore a 100% USDe wrapper dependency.",
+    "rationale": "Ethena documents proportional USDe share redemption. At Ethereum block 26114890 (2026-10-03), asset() is USDe, cooldownDuration() is 86400 seconds and totalAssets plus unvested rewards reconciles exactly to the vault's USDe balance. cooldownShares burns shares and transfers their USDe to the immutable silo; unstake releases those assets after the recorded cooldown. The one-day liquidity classification describes current native USDe realization for unrestricted holders, not dollar sale or guaranteed future policy: administrators may change future-request cooldowns up to 90 days and blacklist powers remain. The historic composition date and 100% parent dependency are unchanged.",
     "compositionBasis": "Ethena sUSDe staking documentation and the exact live ERC-4626 single-asset row",
     "compositionAsOf": "2026-07-15",
     "scope": "full-composition",

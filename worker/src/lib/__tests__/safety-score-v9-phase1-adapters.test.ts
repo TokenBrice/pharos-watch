@@ -36,7 +36,7 @@ import {
 
 const CLOCK_SEC = Date.UTC(2026, 6, 17) / 1_000;
 const CURATION_CLOCK_SEC = Date.UTC(2026, 7, 9, 12) / 1_000;
-const XSGD_CURATED_CLOCK_SEC = Date.UTC(2026, 8, 30, 12) / 1_000;
+const XSGD_CURATED_CLOCK_SEC = Date.UTC(2026, 9, 3) / 1_000;
 const WINDOW_SEC = Math.ceil(3 * 365.25 * 86_400);
 
 function eligibleReserveMeta(overrides: Partial<V9ExtensionRegistryMeta> = {}): V9ExtensionRegistryMeta {

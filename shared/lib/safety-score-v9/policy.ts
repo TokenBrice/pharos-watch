@@ -159,6 +159,19 @@ function semanticPayload(policy: V9MethodologyPolicy): V9MethodologySemanticPayl
       },
       control: {
         ...controlSemantics,
+        governedIssuance: {
+          ...controlSemantics.governedIssuance,
+          admissibleVotingPower: uniqueSorted(controlSemantics.governedIssuance.admissibleVotingPower),
+          minorityVeto: {
+            ...controlSemantics.governedIssuance.minorityVeto,
+            admissibleVotingPower: uniqueSorted(controlSemantics.governedIssuance.minorityVeto.admissibleVotingPower),
+            admissibleOverride: uniqueSorted(controlSemantics.governedIssuance.minorityVeto.admissibleOverride),
+            monetaryPolicy: {
+              ...controlSemantics.governedIssuance.minorityVeto.monetaryPolicy,
+              admissibleRateChangeRules: uniqueSorted(controlSemantics.governedIssuance.minorityVeto.monetaryPolicy.admissibleRateChangeRules),
+            },
+          },
+        },
         exactScope: {
           ...controlSemantics.exactScope,
           activationStates: uniqueSorted(controlSemantics.exactScope.activationStates),

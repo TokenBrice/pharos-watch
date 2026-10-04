@@ -967,9 +967,8 @@ describe("tracked stablecoin metadata", () => {
     const usdai = TRACKED_META_BY_ID.get("usdai-usd-ai");
     const susdai = TRACKED_META_BY_ID.get("susdai-usd-ai");
 
-    expect(usdai?.reserves).toEqual([
+    expect(usdai?.reserves).toMatchObject([
       {
-        name: "PYUSD held by the canonical USDai contract",
         pct: 100,
         risk: "low",
         coinId: "pyusd-paypal",

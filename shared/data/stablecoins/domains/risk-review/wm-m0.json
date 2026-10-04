@@ -1565,7 +1565,7 @@
           "contract:monad:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
           "account:monad:0xf2f1acbe0ba726fee8d75f3e32900526874740bb"
         ],
-        "authorityType": "unknown",
+        "authorityType": "contract",
         "modulesOrGuardsStatus": "unknown",
         "capDescription": "The addressed Portal OPERATOR can change supported adapter/path settings and the PAUSER can stop send/receive. Adapter OPERATOR can alter peers; no independent quorum or immutable limit is claimed.",
         "canRaiseCap": "unknown",
@@ -1584,9 +1584,13 @@
           {
             "label": "Pinned monad JSON-RPC (2026-10-02)",
             "url": "https://api-monad-mainnet-full.n.dwellir.com"
+          },
+          {
+            "label": "Monad delegated controller implementation (verified EIP7702StatelessDeleGator)",
+            "url": "https://monadscan.com/address/0x63c0c19a282a1b52b07dd5a65b58948a07dae32b#code"
           }
         ],
-        "evidence": "Pinned block 109840715: hasRole(OPERATOR_ROLE,0xf2f1acbe0ba726fee8d75f3e32900526874740bb) and hasRole(PAUSER_ROLE,0xf2f1acbe0ba726fee8d75f3e32900526874740bb) were true on Portal; adapter OPERATOR_ROLE also true. Controller runtime code was 0xef010063c0c19a282a1b52b07dd5a65b58948a07dae32b. EIP-7702 delegated code is present; no EOA-only execution or delegation-controller protection is inferred."
+        "evidence": "Pinned block 109840715: hasRole(OPERATOR_ROLE,0xf2f1acbe0ba726fee8d75f3e32900526874740bb) and hasRole(PAUSER_ROLE,0xf2f1acbe0ba726fee8d75f3e32900526874740bb) were true on Portal; adapter OPERATOR_ROLE also true. Controller runtime code was 0xef010063c0c19a282a1b52b07dd5a65b58948a07dae32b. Rechecked 2026-10-03 at Monad block 0x69345a7 (hash 0x32cfeffaa1226da69b6feea190b33773d01037e14e09d5c38d5ffb0481373a2c): the delegation designation is unchanged; entryPoint() returned 0x0000000071727de22e5e9d8baf0edac6f37da032 and delegationManager() returned 0xdb9b1e94b5b69df7e401ddbede43491141047db3. The addressed authority is therefore contract-mediated, not an ordinary EOA or an independently evidenced quorum. Signed off-chain permission contexts and mutable EIP-7702 redelegation are not exhaustively certified; no favorable execution restriction is inferred."
       }
     ]
   }

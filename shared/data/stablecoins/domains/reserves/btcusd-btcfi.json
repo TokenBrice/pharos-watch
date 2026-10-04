@@ -34,10 +34,14 @@
       "liquidityHorizon": "seven-days"
     },
     {
-      "sourceKey": "btcfi:unknown",
-      "name": "Unmapped collateral handler 5",
+      "sourceKey": "btcfi:jpyc",
+      "name": "Unified JPYC (Bifrost JPYC representation)",
       "pct": 13.53,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Bifrost bridge / JPYC Inc.",
+      "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity", "market"],
+      "liquidityHorizon": "unknown"
     },
     {
       "sourceKey": "btcfi:cbbtc",
@@ -73,8 +77,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-04",
-    "reviewer": "Kimi ACCESS-FREEZE AF06 (verified FV-A)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W2R25 exact-handler pinned RPC and issuer bridge-pair review",
     "confidence": "verified",
     "sources": [
       {
@@ -92,14 +96,26 @@
       {
         "label": "BTCB BNB Chain contract",
         "url": "https://bscscan.com/token/0x7130d2a12b9bcBFAe4f2634d864A1Ee1Ce3Ead9c"
+      },
+      {
+        "label": "BTCFi underlying public call-proxy: handler 5 address",
+        "url": "https://biholder-view.thebifrost.io/chains/bfc/btcfi/call-proxy/user?user_address=0x0000000000000000000000000000000000000000"
+      },
+      {
+        "label": "Official Bifrost JPYC bridge pairs and underlying token deployments",
+        "url": "https://www.btcfi.one/api/getAvailablePairs?isTestnet=false"
+      },
+      {
+        "label": "Bifrost mainnet pinned block 39083783: handler getERC20Addr and held token identity",
+        "url": "https://explorer.mainnet.bifrostnetwork.com/address/0x6894ae31cae97f228590f6dc7bbea7449f4db980"
       }
     ],
-    "rationale": "The configured BTCFi producer reports collateral through positive deposit_value. BTC, BTCB, cbBTC, and WBTC have supported-handler identities; handler 5 remains unidentified because the supported-handler registry contains only IDs 0 through 4. Its identity must not be inferred from symbol-only producer labeling or assumed to be a BTC variant.",
-    "compositionBasis": "BTCFi current market API positive deposit_value across handlers, captured 2026-09-04 and normalized over the $8,917,531.02 positive-deposit total; handler 5 is retained as an unknown bucket because the supported-handler registry has no row for it.",
+    "rationale": "Historical weights and composition date are unchanged. New classification research resolves handler 5 through the issuer frontend's underlying call-proxy (0x6894ae31cae97f228590f6dc7bbea7449f4db980). At Bifrost block 39083783, both getERC20Addr() and getErc20Addr() return 0x84122a4a75bfe65ef455dba5f6d43d61359ca77e; its name is Unified JPYC. Official bridge pairs bind that token to Ethereum/Polygon 0xe7c3d8c9a439fede00d2600032d5db0be71c3c29. The sidecar sourceKey now matches captured btcfi:jpyc through independently verified handler identity. This technical identity establishes neither exact legal redemption rights nor a requirement for a tracked dependency link. No fiat-realization SLA or bridge custody guarantee is inferred.",
+    "compositionBasis": "BTCFi current market API positive deposit_value across handlers, captured 2026-09-04 and normalized over the $8,917,531.02 positive-deposit total; the historical handler 5 weight is preserved while its previously unknown identity is classified separately.",
     "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
-    "knownUnknownExposure": "The BTCFi market API returned positive deposit_value for handler 5, but the supported-handler registry has no row identifying it; it is retained as an explicitly unknown bucket until independently identified. BTC, BTCB, cbBTC, and WBTC are identified wrapper/native assets with structured risk factors.",
-    "knownUnknownExposurePct": 13.53,
+    "knownUnknownExposure": "All historical collateral categories now have exact technical identities. Unified JPYC remains exposed to Bifrost representation custody, unestablished exact-address legal redemption rights and an unestablished whole-position USD liquidity horizon. Metadata research does not refresh historical weights or establish full-book assurance.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
@@ -117,10 +133,10 @@
       },
       {
         "reserveIndex": 2,
-        "reserveName": "Unmapped collateral handler 5",
+        "reserveName": "Unified JPYC (Bifrost JPYC representation)",
         "pct": 13.53,
-        "disposition": "insufficient-evidence",
-        "rationale": "BTCFi handler 5 is exposed in the market API but has no corresponding supported-handler registry row or independently verified identity."
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Exact held technical identity is Bifrost Unified JPYC, bound by official bridge pairs to Ethereum/Polygon 0xe7c3d8c9a439fede00d2600032d5db0be71c3c29. An issuer source binding legal redemption rights to that exact underlying address is not established; no tracked dependency link is asserted from technical identity alone."
       },
       {
         "reserveIndex": 3,

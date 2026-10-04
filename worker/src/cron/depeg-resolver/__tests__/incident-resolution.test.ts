@@ -150,6 +150,7 @@ describe("toStructural", () => {
   it.each([
     ["bounded-admin", "unbounded-unreconciled", "unbounded-unreconciled"],
     ["bounded-admin", "unbounded-governed", "unbounded-governed"],
+    ["bounded-admin", "unbounded-veto-guarded", "unbounded-veto-guarded"],
     ["bounded-admin", "compromised", "compromised"],
     ["partially-bounded-admin", "concentrated-admin", "concentrated-admin"],
     ["none-resolved-mint", "none-resolved", "none-resolved-mint"],

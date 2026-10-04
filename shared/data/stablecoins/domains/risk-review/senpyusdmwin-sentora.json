@@ -110,14 +110,22 @@
     ]
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
+    "tier": "single-source-or-laggy",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
-    "summary": "Pinned block 26107706: 1 funded Morpho markets have exact oracle/LLTV identities and all six BASE/QUOTE feed/vault getter values. Vault accounting is verified price-feed-independent; borrower liquidation pricing remains applicable. Upstream feed administrator, heartbeat and mutable NAV-controller closure remain incomplete, so no standard-external or redundant tier is asserted.",
+    "summary": "Exact MorphoChainlinkOracleV2 has a single composite pricing path with no fallback; its verified ChainlinkDataFeedLib ignores updatedAt and does not reject stale answers. At block 26114898 the configured mWIN BASE_FEED_1 and PYUSD QUOTE_FEED_1 matched the earlier inventory. Sentora discloses business-day mWIN NAV and weekend staleness. This establishes single-source/laggy topology, not feed-administrator or custody closure.",
     "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
-    "confidence": "probable",
+    "reviewer": "Unknown resolver W1R33",
+    "confidence": "verified",
     "sources": [
+      {
+        "label": "Sentora mWIN NAV and weekend-staleness risk disclosure",
+        "url": "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment"
+      },
+      {
+        "label": "Pinned feed configuration block 26114898",
+        "url": "https://etherscan.io/block/26114898"
+      },
       {
         "label": "Exact Sentora vault",
         "url": "https://app.morpho.org/ethereum/vault/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57"
@@ -272,7 +280,7 @@
       {
         "id": "0xeecbfa4b6caa83c5000ce68a77808c80504e2ff56e81095c7742a615ecd9c774",
         "label": "Morpho market 0xeecbfa4b6caa83c5000ce68a77808c80504e2ff56e81095c7742a615ecd9c774",
-        "tier": "opaque-or-unknown",
+        "tier": "single-source-or-laggy",
         "summary": "Exact market oracle 0x4e24e266fd7836fd8edf8f5ddb5578e4b7bf4d20: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0x1725a66d810c0775f6b3b0fd85646d371da19517\",\"BASE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_FEED_1\":\"0x8f1df6d7f2db73eece86a18b4381f4707b918fb1\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
         "collateralAssets": [
           "0x4e72025984424e52838cf8953e2863eff036b67a"

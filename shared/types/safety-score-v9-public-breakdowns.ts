@@ -438,6 +438,7 @@ const SafetyScoreV9ControlBreakdownSchema = z
             executionScopeComplete: z.boolean().nullable(),
             moduleImpact: V9ExactControlPolicySchema.shape.moduleImpactStates.element,
             diagnostics: z.array(z.string()),
+            // Component-local paths for split facts; unsplit controls retain their certificate/contributor census.
             executionPaths: z.array(V9ControlExecutionScopeSchema.shape.paths.element.pick({
               id: true, targetDeployment: true, entrypointKind: true, entrypoints: true,
               activation: true, reach: true, capabilities: true,

@@ -710,8 +710,9 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "usd0-usual": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
     outputAssets: ["asset:usyc", "asset:m", "asset:ustbl"],
     outputAssetType: "mixed-collateral",
-    costModel: documentedVariableFee(
-      "Redeemable 1:1 for underlying RWA assets via DaoCollateral contract; minting accepts USYC or USDC via gateway",
+    costModel: fixedFee(
+      5,
+      "USD0's live DaoCollateral (0xde6e1F680C4816446C8D515989E2358636A38b04) returned redeemFee()=5 bps at Ethereum block 26114898 (2026-10-03), superseding the February factsheet zero and older 10 bps metadata; the fee is governance-mutable and network gas applies",
     ),
     docs: [
       sourceRef(
@@ -723,6 +724,16 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
         "Usual USD0 DaoCollateral",
         "https://tech.usual.money/smart-contracts/protocol-contracts/usd0/usd0-daocollateral",
         ["route", "fees"],
+      ),
+      sourceRef(
+        "Usual contract deployments (reviewed 2026-10-03)",
+        "https://tech.usual.money/smart-contracts/contract-deployments",
+        ["route", "fees"],
+      ),
+      sourceRef(
+        "USD0 DaoCollateral contract (reviewed 2026-10-03)",
+        "https://eth.blockscout.com/address/0xde6e1F680C4816446C8D515989E2358636A38b04?tab=contract",
+        ["fees"],
       ),
     ],
   }),
@@ -1023,8 +1034,9 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "xdai-gnosis": defineReviewedStablecoinRedeemConfig(REVIEWED_MAY_BATCH_AT, {
     outputAssetType: "stable-basket",
     outputAssets: ["dai-makerdao", "usds-sky"],
-    costModel: undisclosedReviewedFee(
-      "Gnosis bridge docs describe xDAI/DAI bridge exits; public docs reviewed do not publish a separate fixed xDAI redemption fee",
+    costModel: fixedFee(
+      0,
+      "The canonical xDAI native Home Bridge has feeManagerContract() at the zero address at Gnosis block 48574355 (2026-10-03), and the Foreign Bridge transfers the full signed amount in USDS or swaps to the same DAI amount; the general OmniBridge 0.1% fee does not apply to this rail, while network gas and validator delay remain",
     ),
     docs: [
       sourceRef("Gnosis xDAI bridge", "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge", [
@@ -1032,6 +1044,16 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
         "capacity",
         "settlement",
       ]),
+      sourceRef(
+        "xDAI Home Bridge implementation verified source (reviewed 2026-10-03)",
+        "https://gnosis.blockscout.com/address/0xe6998b0c03d3cb9ee8c04f266e573c7fa8782846?tab=contract",
+        ["fees"],
+      ),
+      sourceRef(
+        "xDAI Foreign Bridge implementation verified source (reviewed 2026-10-03)",
+        "https://eth.blockscout.com/address/0x257bdd093cab1bd39ebf837dcb60f33d031d7d49?tab=contract",
+        ["fees"],
+      ),
     ],
     notes: [
       "Modeled as a bridge-backed stablecoin redemption route into DAI rather than an independent fiat issuer rail",
@@ -1139,11 +1161,17 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     executionModel: "deterministic-onchain",
     capacityModel: { kind: "reserve-sync-metadata" },
     reviewedAt: REVIEWED_EXIT_CREDIT_AT,
-    costModel: undisclosedReviewedFee(
-      "Circle xReserve docs describe 1:1 USDCx burn/release against USDC; public materials reviewed do not publish a separate fixed redemption fee",
-    ),
+    costModel: {
+      ...documentedVariableFee(
+        "Circle's xReserve fee reference lists destination-specific withdrawal charges: Ethereum has no protocol fee plus a 1 USDC gas charge, with optional forwarding adding 0.20 USDC plus 0.80 USDC gas; other destinations list up to 2 protocol bps plus 2 USDC gas. The bounds below are the published ceiling across destinations; remote-chain execution gas is separate",
+      ),
+      feeBpsMin: 0,
+      feeBpsMax: 2,
+      gasOrBridgeCostUsd: 2,
+    },
     docs: [
       sourceRefFull("Circle xReserve", "https://www.circle.com/xreserve"),
+      sourceRef("Circle xReserve fees (reviewed 2026-10-03)", "https://developers.circle.com/xreserve/references/fees", ["fees"]),
       sourceRefRouteCapacityAccess(
         "Movement USDCx announcement",
         "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin",

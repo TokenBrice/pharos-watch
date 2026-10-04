@@ -729,9 +729,48 @@ export const MintAuthorityProfileSchema = z
     economicCapSemantics: z.enum(MINT_AUTHORITY_ECONOMIC_CAP_SEMANTICS_VALUES).optional(),
     governedIssuance: z
       .object({
+        decisionRule: z.enum(["affirmative-vote", "minority-veto"]),
         governorControlRef: z.string().regex(/^[a-z0-9][a-z0-9-]*:0x[0-9a-f]{40}$/, "Expected a chain:lowercase EVM address governor reference"),
-        votingPower: z.enum(["lock-escrowed", "past-block-checkpoint", "live-balance", "unknown"]),
+        votingPower: z.enum(["holding-period-weighted", "lock-escrowed", "past-block-checkpoint", "live-balance", "unknown"]),
         votingPowerEvidence: z.string().trim().min(40),
+        veto: z
+          .object({
+            quorumBps: z.number().int().min(1).max(10000),
+            entrypoints: z.array(z.string().regex(/^0x[0-9a-f]{8}$/)).min(1),
+            override: z.enum(["none", "symmetric-vote-destruction", "insolvency-gated-restructure", "unknown"]),
+            restructure: z
+              .object({
+                entrypoints: z.array(z.string().regex(/^0x[0-9a-f]{8}$/)).min(1),
+                equityThresholdUnits: z.number().finite().positive(),
+                observedEquityUnits: z.number().finite().nonnegative(),
+                dependentPaths: z.array(z.object({
+                  controlRef: z.string().regex(/^[a-z0-9][a-z0-9-]*:0x[0-9a-f]{40}$/),
+                  pathId: z.string().min(1),
+                }).strict()),
+                evidence: z.string().trim().min(80),
+              })
+              .strict()
+              .optional(),
+            evidence: z.string().trim().min(80),
+          })
+          .strict()
+          .superRefine((veto, ctx) => {
+            if ((veto.override === "insolvency-gated-restructure") !== (veto.restructure !== undefined)) {
+              ctx.addIssue({
+                code: "custom", path: ["restructure"],
+                message: "restructure must be present if and only if override is insolvency-gated-restructure",
+              });
+            }
+          })
+          .optional(),
+        monetaryPolicyPaths: z.array(z.object({
+          controlRef: z.string().regex(/^[a-z0-9][a-z0-9-]*:0x[0-9a-f]{40}$/),
+          pathId: z.string().min(1),
+          rateCapPpm: z.number().int().positive(),
+          rateChangeDelaySec: z.number().int().nonnegative(),
+          rateChangeRule: z.enum(["minority-replaceable", "unrestricted", "unknown"]),
+          evidence: z.string().trim().min(80),
+        }).strict()).optional(),
         enumerability: z
           .object({
             authorizationEvents: z.array(z.string().min(1)).min(1),

@@ -13,7 +13,24 @@
   ],
   "collateral": "The direct onchain backing is M held by the ctUSD extension on Citrea. Citrea describes the underlying reserves as cash and short-term U.S. Treasury bills; MoonPay's stablecoin terms provide for reserve assets held for token holders in segregated accounts apart from corporate funds. These sources do not establish a ctUSD-specific SPV or a token-specific GENIUS authorization.",
   "pegMechanism": "1:1 fiat-backed mint and redemption via MoonPay using M0 Protocol infrastructure; reserves cryptographically attested on-chain by independent M0 Validators before minting; fiat on/off ramp via Visa, Mastercard, Apple Pay, Google Pay, and PayPal through MoonPay's 30M+ verified user base",
-  "mechanismArchetype": "tbill",
+  "mechanismArchetype": "fiat-cash",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Unknown-wave W1R67 exact holder-claim review",
+    "rationale": "Citrea defines ctUSD as a fixed 1:1 dollar stablecoin issued by MoonPay, not a variable-NAV investment fund share. MoonPay terms 1.2 state that holders receive no returns or appreciation; 3.2 specifies one-for-one USD redemption. Its direct M wrapper dependency and the parent's Treasury backing remain recorded separately and are not a fund-share right of ctUSD holders.",
+    "sources": [
+      {
+        "label": "Exact ctUSD issuer and fixed dollar denomination",
+        "url": "https://docs.citrea.xyz/developer-documentation/citrea-usd-ctusd"
+      },
+      {
+        "label": "MoonPay stablecoin terms 1.2 and 3.2",
+        "url": "https://www.moonpay.com/legal/stablecoin_terms"
+      }
+    ]
+  },
   "variantOf": "m-m0",
   "variantKind": "pure-wrapper",
   "pegReferenceId": "m-m0",

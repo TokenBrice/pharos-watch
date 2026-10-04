@@ -157,14 +157,26 @@
         {
           "label": "Current DebtToken verification metadata (partial, not full)",
           "url": "https://filecoin.blockscout.com/api/v2/smart-contracts/0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b"
+        },
+        {
+          "label": "Sourcify executable runtime match and deployed DebtToken source",
+          "url": "https://sourcify.dev/server/v2/contract/314/0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b?fields=compilation,sources,proxyResolution"
+        },
+        {
+          "label": "Sourcify match excludes metadata differences, not executable logic",
+          "url": "https://docs.sourcify.dev/docs/exact-match-vs-match/"
+        },
+        {
+          "label": "Secured Finance live underlying-strategy incident warning",
+          "url": "https://vaults.secured.finance/"
         }
       ],
-      "evidence": "Token owner(), Safe getThreshold() and getOwners() were independently re-read at Filecoin block 6423483 on 2026-10-03: the same 2-of-3 Safe controls token ownership. Published September 2026 upgrade-history transactions demonstrate exercised Safe upgrade authority. Three dated Hexens/Decurity code audits cover core and token-authorization logic, not financial reserves or signer independence. Safe signer independence remains unverified. Current implementation Blockscout metadata explicitly has is_partially_verified=true and is_fully_verified=false; the audit links do not close exact executable correspondence. No enforceable upgrade timelock is established, so collateral-gated economic semantics would overstate the mutable mint path. Financial reserve reconciliation is not applicable to native FIL collateral.",
-      "reviewer": "Sol refinement Refine03",
+      "evidence": "At Filecoin block 6425379 on 2026-10-03, the token EIP-1967 implementation remains 0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b; token owner() and ProxyAdmin owner() both return the same recorded 2-of-3 Safe, whose threshold and three owners were re-read at that pin. Sourcify match 11586794 verifies the deployed implementation's executable runtime against DebtToken.sol compiled with solc 0.7.6, optimizer 100; runtimeMatch is match, not an exact metadata match. Its mint() invokes _requireCallerIsBorrowerOperations(), which requires msg.sender == borrowerOperationsAddress. This resolves the earlier source-to-executable correspondence question without claiming identical compiler metadata. Published September 2026 upgrades demonstrate exercised Safe authority; code audits do not establish signer independence or financial reserve reconciliation. The live SF Yield Vault warns of an investigation into underlying strategies and lists a USDFC vault. This is not proof that core USDFC mint/Trove contracts were exploited; incident impact on those exact controls remains unresolved, so no incident-free fact is inferred. Financial reserve reconciliation is not applicable to native FIL collateral.",
+      "reviewer": "Unknown resolver W1R08 primary-source review",
       "reviewedAt": "2026-10-03",
       "disposition": "unresolved",
       "unresolvedQuestions": [
-        "Does the exact current DebtToken implementation 0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b runtime match the reviewed mint-authorizer source that restricts mint() to the identified BorrowerOperations contract? Blockscout reports partial rather than full verification, and no proof that deployed runtime equals a verified reference is established; exact mint-path source-to-runtime-bytecode equivalence remains unproved."
+        "What impact, if any, does Secured Finance's currently disclosed underlying-strategy security incident have on the exact USDFC BorrowerOperations mint path and owner/ProxyAdmin-owner Safe? The primary live warning does not identify affected contracts or resolve core USDFC control impact; no incident-free state is inferred from separate core code audits or the now-established executable source match."
       ],
       "scopedQuestions": [
         {

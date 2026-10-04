@@ -381,15 +381,16 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       // non-adverse measured posture with >= seasonedCreditMinMonths of track
       // record earns seasonedCreditPoints, capped at the next rung of the merged
       // posture/grading ladder — longevity can close the gap to the next rung
-      // but never leapfrog it. D29 governed issuance uses that ordinary ladder;
-      // the unreconciled adverse rung keeps its dedicated ceiling, and active
-      // compromise never earns credit.
+      // but never leapfrog it. D29 governance and D30 minority-veto issuance use
+      // that ordinary ladder; the unreconciled adverse rung keeps its dedicated
+      // ceiling, and active compromise never earns credit.
       const mintPostureScore = (() => {
         const grading = policy.control.mintPostureGrading;
         const postureSeasonedEligible =
           posture === "unbounded-unreconciled" ||
           posture === "unbounded-reconciliation-unknown" ||
-          posture === "unbounded-governed";
+          posture === "unbounded-governed" ||
+          posture === "unbounded-veto-guarded";
         if (
           grading.seasonedCreditPoints <= 0 ||
           args.trackRecordMonths === undefined ||
@@ -435,13 +436,13 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       if (isUnboundedMintPosture(posture)) {
         // R3 keeps reconciled mint risk inside the control pillar for prudential
         // issuers and emits a low diagnostic for attestation-only reconciliation.
-        // D29 also makes delayed governance a low diagnostic, without treating
-        // its economically unbounded issuance as bounded.
+        // D29/D30 governance processes are low diagnostics, without treating
+        // their economically unbounded issuance as bounded.
         const prudentiallySupervised = posture === "unbounded-reconciled" && mint.supervision === "prudential";
         const severity: V9Severity | null =
           posture === "compromised"
             ? "critical"
-            : posture === "unbounded-governed"
+            : posture === "unbounded-governed" || posture === "unbounded-veto-guarded"
               ? "low"
               : posture === "unbounded-unreconciled" || posture === "unbounded-reconciliation-unknown"
                 ? "high"
@@ -458,11 +459,13 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
             reason:
               posture === "compromised"
                 ? "Minting authority is under an active incident."
-                : posture === "unbounded-governed"
-                  ? "Minting is economically unbounded but held only by delayed on-chain governance."
-                  : posture === "unbounded-unreconciled"
-                    ? "Economically effective minting is unbounded and unreconciled."
-                    : "Minting is economically unbounded.",
+                : posture === "unbounded-veto-guarded"
+                  ? "Minting is economically unbounded but every new issuer faces a public minority-veto window."
+                  : posture === "unbounded-governed"
+                    ? "Minting is economically unbounded but held only by delayed on-chain governance."
+                    : posture === "unbounded-unreconciled"
+                      ? "Economically effective minting is unbounded and unreconciled."
+                      : "Minting is economically unbounded.",
             materialSharePct:
               mintControl?.materialSupplyShare == null
                 ? null

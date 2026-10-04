@@ -102,6 +102,44 @@
         "observedAt": "2026-10-01",
         "observedBlock": 26095797,
         "evidence": "At Ethereum block 25295020: eth_getCode on 0xb573c94260582f0715FC477928B04A2708dd36D7 returned 0x (EOA confirmed). This EOA controls setOperator() and reserve accounting. Same address owns both XAGm and XAUm MToken contracts."
+      },
+      {
+        "chain": "stellar",
+        "address": "GBH4OGIIVUICGD6NNUNE27OWRMGCEUOJAGSD6M7H5MLBHWP23BUXILN4",
+        "deploymentRefs": ["stellar:CC2RBGYNCFBCVENIDL5BFBWPH4OUZM2UA3OD2K2N54GLMWCC4KWPVAGO"],
+        "label": "XAUm Soroban operator and budget administrator",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "timelockDelaySec": 14400,
+        "observedAt": "2026-10-03",
+        "observedBlock": 64756409,
+        "sources": [
+          {"label": "Source-verified Soroban issuance implementation", "url": "https://github.com/Matrixdock-RWA/RWA-Contracts/blob/fb52c83020ef15ebfed343ea7074a2f2ebb08933/xaum-stellar/contracts/xaum/src/contract.rs"},
+          {"label": "Contract instance and account state at one ledger", "url": "https://soroban-rpc.mainnet.stellar.gateway.fm"}
+        ],
+        "evidence": "Single getLedgerEntries response at ledger 64756409 binds current WASM 2f91a70d1a90673e280644e0489923858d135dab330fb5ef8e32e64029ecabdd and operator/revoker GBH4OGIIVUICGD6NNUNE27OWRMGCEUOJAGSD6M7H5MLBHWP23BUXILN4. Its account thresholds bytes are 01000000 with no additional signers: one active master key. Source-verified change_mint_budget requires operator authorization and can increase the budget without a collateral transfer or reserve oracle check. mint_to spends that mutable budget after the observed 14400-second delay. Budget zero is not absence of issuance power. No human/key-custody independence is asserted."
+      },
+      {
+        "chain": "stellar",
+        "address": "GDOHHMOKYZGMNIMWZLPGEA4P6CRDJ2I73IWYTOJCUAF5XJI7ITJD6V72",
+        "deploymentRefs": ["stellar:CC2RBGYNCFBCVENIDL5BFBWPH4OUZM2UA3OD2K2N54GLMWCC4KWPVAGO"],
+        "label": "XAUm Soroban owner and WASM upgrader",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "timelockDelaySec": 14400,
+        "observedAt": "2026-10-03",
+        "observedBlock": 64756409,
+        "sources": [
+          {"label": "Source-verified Soroban owner replacement and upgrade implementation", "url": "https://github.com/Matrixdock-RWA/RWA-Contracts/blob/fb52c83020ef15ebfed343ea7074a2f2ebb08933/xaum-stellar/contracts/xaum/src/contract.rs"},
+          {"label": "Contract instance and account state at one ledger", "url": "https://soroban-rpc.mainnet.stellar.gateway.fm"}
+        ],
+        "evidence": "At ledger 64756409 the contract owner is GDOHHMOKYZGMNIMWZLPGEA4P6CRDJ2I73IWYTOJCUAF5XJI7ITJD6V72, with account thresholds bytes 01000000 and no additional signers. Verified request_upgrade/upgrade can replace current WASM after Delay (14400 seconds); set_operator can replace the mint/budget administrator after the same delay. Owner transfer uses GovDelay (86400 seconds). forced_transfer is owner-authorized. These native issuance/admin powers are retained rather than erased when correcting the deployment from unknown bridge representation to issuer-native Soroban issuance."
       }
     ],
     "economicCapSemantics": "unbounded",

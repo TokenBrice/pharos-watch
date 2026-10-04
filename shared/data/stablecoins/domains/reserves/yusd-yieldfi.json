@@ -66,17 +66,21 @@
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurM13YUSD)",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W1R45 primary yUSD contractual capital-reuse review",
     "confidence": "verified",
     "sources": [
       {
         "label": "YieldFi yUSD token terms",
         "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
+      },
+      {
+        "label": "YieldFi Flow of Funds: deposited Series assets deployed into DeFi and exchange strategy accounts",
+        "url": "https://docs.yield.fi/due-diligence-questionaire/flow-of-funds"
       }
     ],
-    "uncertainty": "The terms name an MPC/custody service provider, not a current allocation or an independently verified legal custodian. Provider shares, legal segregation, bankruptcy treatment, and rehypothecation restrictions remain unverified.",
+    "uncertainty": "yUSD token terms expressly permit borrowing and leverage looping, private LP deals, hedged carry and basis strategies; the documented fund flow deploys deposited Series assets into DeFi or exchange strategy accounts. Capital reuse is permitted, not prohibited. This is a contractual permission finding, not a measured allocation or assertion of actual current leverage. ForDeFi is named as an MPC provider; provider shares, enforceable segregation and insolvency treatment across the entire strategy book remain unverified.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -2,13 +2,13 @@
   "id": "cngn-compliant-naira",
   "name": "Compliant Naira",
   "symbol": "cNGN",
-  "oneLiner": "cNGN is a centralized Nigerian naira stablecoin backed 1:1 by NGN deposits at designated Nigerian commercial banks under the cNGN issuer consortium.",
+  "oneLiner": "cNGN is a centralized Nigerian naira stablecoin backed by naira-denominated money-market funds, Treasury bills, bank deposits and fixed-term investments.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "NGN",
     "governance": "centralized"
   },
-  "collateral": "Naira reserves are stated to back cNGN 1:1 in accounts at licensed Nigerian commercial banks. The issuer states that it conducts monthly reserve audits, but no dated reserve attestation or itemized allocation is currently published.",
+  "collateral": "The August 31, 2026 Bala Isah Garba and Company ISAE 3000 examination reports NGN3,550,845,048.39 of reserves against NGN3,329,961,223.91 of circulating cNGN: rounded 54% money-market funds, 13% Treasury bills, 23% bank deposits and 10% fixed-term investments. The report's public-release date is not established.",
   "pegMechanism": "Issuer-managed mint and redemption path designed to maintain 1 cNGN = 1 NGN through naira reserves and compliant transfer rails",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
@@ -31,12 +31,26 @@
   "geckoId": "compliant-naira",
   "cmcSlug": "consortium-naira",
   "proofOfReserves": {
-    "type": "self-reported",
-    "url": "https://cngn.co/transparency",
-    "provider": "cNGN transparency page (monthly reserve audits are claimed, but linked documents are smart-contract security audits; its zero-valued metrics dated September 21, 2026 are trading volumes and transaction counts, not reserve balances. No dated reserve attestation is linked. The historical Bala Isah Garba & Company ISAE 3000 engagement and October 2025 report reference remain secondary, unverified claims.)",
-    "attestorTier": "undisclosed",
-    "cadence": "undisclosed",
-    "attestorJurisdiction": "Nigeria"
+    "type": "attestation",
+    "url": "https://www.cngn.co/transparency",
+    "provider": "Bala Isah Garba and Company (Chartered Accountants), ISAE 3000 examination of cNGN reserve assets and circulating liabilities as of August 31, 2026 at 21:45 WAT; published-release date not established.",
+    "attestorTier": "niche",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Nigeria",
+    "latestReport": {
+      "periodEnd": "2026-08-31",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Unknown wave W1R57",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Bala Isah Garba and Company August 2026 cNGN examination; full report and signed management assertion",
+          "url": "https://drive.google.com/file/d/1Hw3aKTD29QxEqawYQjpRmGtVuK1_lV92/view?usp=drive_link"
+        }
+      ]
+    }
   },
   "links": [
     {

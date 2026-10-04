@@ -394,6 +394,42 @@
     ],
     "controls": [
       {
+        "id": "syrupusdc-arc-burn-mint-token-pool",
+        "label": "syrupUSDC Arc BurnMintTokenPool MINTER",
+        "routeRefs": [
+          "arc:0x0dc6b79f3c3854e4d74514fd4d29be6c96beee39"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "arc",
+        "controllerAddress": "0x6be14e674f741faa78da2fecf00870c8b753a0bb",
+        "authorityType": "contract",
+        "canRaiseCap": true,
+        "capDescription": "The exact CCIP pool holds MINTER_ROLE on a BurnMintERC20 whose immutable maxSupply is zero (unlimited); this is not a bounded numeric supply cap.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 24123045,
+        "sources": [
+          {
+            "label": "Chainlink exact syrupUSDC Arc pool identity",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDC"
+          },
+          {
+            "label": "Verified Arc BurnMintERC20 source",
+            "url": "https://explorer.arc.io/api/v2/smart-contracts/0x0dc6b79f3c3854e4d74514fd4d29be6c96beee39"
+          },
+          {
+            "label": "Arc pinned read-only RPC",
+            "url": "https://api-arc-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Arc observation block and timestamp",
+            "url": "https://explorer.arc.io/api/v2/blocks/24123045"
+          }
+        ],
+        "evidence": "At Arc block 24123045 (2026-10-03T22:48:02Z), token hasRole(MINTER_ROLE,0x6be14e674f741faa78da2fecf00870c8b753a0bb)=true, pool getToken()=0x0dc6b79f3c3854e4d74514fd4d29be6c96beee39, token maxSupply()=0, and pool eth_getCode was nonempty. Verified source gates mint by MINTER_ROLE and treats maxSupply zero as unlimited. This identifies the direct representation mint contract only; no claim of complete administrative execution census or measured liability share."
+      },
+      {
         "id": "syrupusdc-ethereum-ccip-receiver-admin",
         "label": "Maple Ethereum MapleCCIPReceiver DEFAULT_ADMIN Safe",
         "routeRefs": [

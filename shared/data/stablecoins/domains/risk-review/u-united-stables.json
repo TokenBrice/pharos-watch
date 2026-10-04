@@ -18,9 +18,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "U is natively issued on Ethereum, BSC, and Tron. Each deployment has its own issuer-controlled token and mint authority rather than a third-party bridge representation.",
-    "reviewedAt": "2026-07-13",
-    "reviewer": "Codex Safety Score V9 data research",
+    "summary": "U is natively issued on Ethereum, BSC, Tron, and Robinhood Chain. Each deployment has its own issuer-controlled token and mint authority rather than a third-party bridge representation. The Robinhood proxy resolves to StablecoinV2 at block 79456324; both owner and autoOwner are 0x59f94ade4f881f21ea608ad4448bf70b78e37187. Verified mint/autoMint paths create the issuer token locally without a bridge-verifier or lockbox claim.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Unknown wave W1R10 pinned deployment and source review",
     "confidence": "verified",
     "protocols": [
       {
@@ -39,6 +39,18 @@
       {
         "label": "United Stables BNB launch",
         "url": "https://www.bnbchain.org/en/blog/united-stables-launches-u-as-a-native-stablecoin-on-bnb-chain"
+      },
+      {
+        "label": "United Stables four-network deployment census",
+        "url": "https://www.u.tech/ecosystem/multichain/"
+      },
+      {
+        "label": "Robinhood current StablecoinV2 and imported Stablecoin.sol verified source",
+        "url": "https://robinhoodchain.blockscout.com/api?module=contract&action=getsourcecode&address=0x261c4ee7e337852f919b90372e2518d6bff7ea4c"
+      },
+      {
+        "label": "Pinned Robinhood deployment block 79456324",
+        "url": "https://robinhoodchain.blockscout.com/block/79456324"
       }
     ],
     "routes": [
@@ -114,6 +126,35 @@
           {
             "label": "Tron U token proxy",
             "url": "https://tronscan.org/#/contract/TFNirp6PbqYE1ZTtWuCMUKJWLNZkoCoeFJ/code"
+          }
+        ]
+      },
+      {
+        "id": "robinhood:0xce24439f2d9c6a2289f741120fe202248b666666",
+        "destinationChain": "robinhood",
+        "contractAddress": "0xce24439f2d9c6a2289f741120fe202248b666666",
+        "protocol": "United Stables",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-03",
+        "observedBlock": 79456324,
+        "sources": [
+          {
+            "label": "Issuer four-network deployment census",
+            "url": "https://www.u.tech/ecosystem/multichain/"
+          },
+          {
+            "label": "Verified implementation source, owner-only mint and owner-set autoOwner mint",
+            "url": "https://robinhoodchain.blockscout.com/api?module=contract&action=getsourcecode&address=0x261c4ee7e337852f919b90372e2518d6bff7ea4c"
+          },
+          {
+            "label": "Pinned source-equivalent runtime and authority block",
+            "url": "https://robinhoodchain.blockscout.com/block/79456324"
           }
         ]
       }

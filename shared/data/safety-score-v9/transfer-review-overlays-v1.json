@@ -2665,27 +2665,23 @@
     },
     {
       "assetId": "susds-sky",
-      "reviewedAt": "2026-10-01",
-      "reviewer": "Sol curation pass 2026-10-01 (R2WSky)",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "W1R02 all-deployment transfer review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
           "scope": "canonical",
-          "posture": "restrictable",
-          "evidence": "At ethereum block 26098752, the EIP-1967 implementation slot remains 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0. The current verified SUsds source exposes ordinary holder transfers and auth-gated UUPS upgrades. Pause Proxy remains an active canonical token ward with a 172800-second Pause delay. A privileged replacement can restrict holder transfers; retain restrictable rather than infer permissionlessness from the current open transfer functions. Runtime materiality remains a separate prerequisite.",
+          "posture": "permissionless",
+          "evidence": "Pinned current implementation 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0 contains unrestricted holder transfer/transferFrom subject only to balance, allowance and invalid-address checks; no transfer blacklist, whitelist, pause or administrative hook. Upgrade/mint/burn authorities and parent reserve freezing remain separate risks.",
           "sources": [
             {
-              "label": "Sourcify verified ethereum SUsds implementation",
-              "url": "https://sourcify.dev/server/v2/contract/1/0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0?fields=sources,compilation"
-            },
-            {
-              "label": "susds-sky proxy on explorer",
-              "url": "https://etherscan.io/address/0xa3931d71877c0e7a3148cb7eb4463524fec27fbd#code"
-            },
-            {
-              "label": "Current Blockscout verified implementation, re-fetched 2026-10-01",
+              "label": "Exact verified current implementation",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0"
+            },
+            {
+              "label": "Pinned deployment RPC",
+              "url": "https://ethereum-rpc.publicnode.com"
             }
           ]
         },
@@ -2693,20 +2689,16 @@
           "chainId": "base",
           "contractOrTokenId": "0x5875eee11cf8398102fdad704c9e96607675467a",
           "scope": "material-bridge",
-          "posture": "restrictable",
-          "evidence": "At base block 52041934, the EIP-1967 implementation slot remains 0x982f2df63fe38ab8d55f4b1464e8cfdc8ea5dec8. The current verified SUsds source exposes ordinary holder transfers and auth-gated UUPS upgrades. Both the destination bridge/gateway and the chain-local governance relay remain active token wards. A privileged replacement can restrict holder transfers; retain restrictable rather than infer permissionlessness from the current open transfer functions. Runtime materiality remains a separate prerequisite.",
+          "posture": "permissionless",
+          "evidence": "Pinned current implementation 0x982f2df63fe38ab8d55f4b1464e8cfdc8ea5dec8 contains unrestricted holder transfer/transferFrom subject only to balance, allowance and invalid-address checks; no transfer blacklist, whitelist, pause or administrative hook. Upgrade/mint/burn authorities and parent reserve freezing remain separate risks.",
           "sources": [
             {
-              "label": "Sourcify verified base SUsds implementation",
-              "url": "https://sourcify.dev/server/v2/contract/8453/0x982f2df63fe38ab8d55f4b1464e8cfdc8ea5dec8?fields=sources,compilation"
-            },
-            {
-              "label": "susds-sky proxy on explorer",
-              "url": "https://basescan.org/address/0x5875eee11cf8398102fdad704c9e96607675467a#code"
-            },
-            {
-              "label": "Current Blockscout verified implementation, re-fetched 2026-10-01",
+              "label": "Exact verified current implementation",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0x982f2df63fe38ab8d55f4b1464e8cfdc8ea5dec8"
+            },
+            {
+              "label": "Pinned deployment RPC",
+              "url": "https://base-rpc.publicnode.com"
             }
           ]
         },
@@ -2714,20 +2706,16 @@
           "chainId": "optimism",
           "contractOrTokenId": "0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0",
           "scope": "material-bridge",
-          "posture": "restrictable",
-          "evidence": "At optimism block 157637219, the EIP-1967 implementation slot remains 0x6f0888dda6a5e35451d5be0fabb20171715788b3. The current verified SUsds source exposes ordinary holder transfers and auth-gated UUPS upgrades. Both the destination bridge/gateway and the chain-local governance relay remain active token wards. A privileged replacement can restrict holder transfers; retain restrictable rather than infer permissionlessness from the current open transfer functions. Runtime materiality remains a separate prerequisite.",
+          "posture": "permissionless",
+          "evidence": "Pinned current implementation 0x6f0888dda6a5e35451d5be0fabb20171715788b3 contains unrestricted holder transfer/transferFrom subject only to balance, allowance and invalid-address checks; no transfer blacklist, whitelist, pause or administrative hook. Upgrade/mint/burn authorities and parent reserve freezing remain separate risks.",
           "sources": [
             {
-              "label": "Sourcify verified optimism SUsds implementation",
-              "url": "https://sourcify.dev/server/v2/contract/10/0x6f0888dda6a5e35451d5be0fabb20171715788b3?fields=sources,compilation"
-            },
-            {
-              "label": "susds-sky proxy on explorer",
-              "url": "https://optimistic.etherscan.io/address/0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0#code"
-            },
-            {
-              "label": "Current Blockscout verified implementation, re-fetched 2026-10-01",
+              "label": "Exact verified current implementation",
               "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0x6f0888dda6a5e35451d5be0fabb20171715788b3"
+            },
+            {
+              "label": "Pinned deployment RPC",
+              "url": "https://optimism-rpc.publicnode.com"
             }
           ]
         },
@@ -2735,20 +2723,16 @@
           "chainId": "arbitrum",
           "contractOrTokenId": "0xddb46999f8891663a8f2828d25298f70416d7610",
           "scope": "material-bridge",
-          "posture": "restrictable",
-          "evidence": "At arbitrum block 510719484, the EIP-1967 implementation slot remains 0x5aee6b37d6e31860804575aee3e2f368a0a428e7. The current verified SUsds source exposes ordinary holder transfers and auth-gated UUPS upgrades. Both the destination bridge/gateway and the chain-local governance relay remain active token wards. A privileged replacement can restrict holder transfers; retain restrictable rather than infer permissionlessness from the current open transfer functions. Runtime materiality remains a separate prerequisite.",
+          "posture": "permissionless",
+          "evidence": "Pinned current implementation 0x5aee6b37d6e31860804575aee3e2f368a0a428e7 contains unrestricted holder transfer/transferFrom subject only to balance, allowance and invalid-address checks; no transfer blacklist, whitelist, pause or administrative hook. Upgrade/mint/burn authorities and parent reserve freezing remain separate risks.",
           "sources": [
             {
-              "label": "Sourcify verified arbitrum SUsds implementation",
-              "url": "https://sourcify.dev/server/v2/contract/42161/0x5aee6b37d6e31860804575aee3e2f368a0a428e7?fields=sources,compilation"
-            },
-            {
-              "label": "susds-sky proxy on explorer",
-              "url": "https://arbiscan.io/address/0xddb46999f8891663a8f2828d25298f70416d7610#code"
-            },
-            {
-              "label": "Current Blockscout verified implementation, re-fetched 2026-10-01",
+              "label": "Exact verified current implementation",
               "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x5aee6b37d6e31860804575aee3e2f368a0a428e7"
+            },
+            {
+              "label": "Pinned deployment RPC",
+              "url": "https://arbitrum-one-rpc.publicnode.com"
             }
           ]
         }
@@ -3108,34 +3092,15 @@
     },
     {
       "assetId": "kgst-kyrgyz-som",
-      "transferScopeAttestation": {
-        "kind": "single-deployment-attribution",
-        "version": 1,
-        "reviewedAt": "2026-09-21",
-        "expiresAt": "2027-09-21",
-        "reviewer": "Claude curation campaign 2026-09-21 (ChainSupplyAttribution)",
-        "deploymentKey": "bsc:0x94be0bba8e1e303fe998c9360b57b826f1a4f828",
-        "exhaustiveLiability": true,
-        "sources": [
-          {
-            "label": "Pinned contract code, totalSupply and decimals at block 123182997 (0xb520fcf3f617ba3023f7f15c6b9cd30435e3b7945b993eb07866cf3e3496a1ac); reviewed sole registry liability deployment, no representation routes",
-            "url": "https://bsc-rpc.publicnode.com"
-          },
-          {
-            "label": "Exact deployed liability token",
-            "url": "https://bscscan.com/address/0x94be0bba8e1e303fe998c9360b57b826f1a4f828"
-          }
-        ]
-      },
-      "reviewedAt": "2026-07-30",
-      "reviewer": "Grok T28 safety-v9 unknown-reduction w2",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "W2R34 exact TRON executable and BSC source review",
       "deployments": [
         {
           "chainId": "bsc",
           "contractOrTokenId": "0x94be0bba8e1e303fe998c9360b57b826f1a4f828",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At BSC block 113079584, EIP-1967 implementation=0xa903a6c1c3bd45927542823528a6fa73a2a410e2 and admin=0xcb628ce396f8f6ffbfae48721fe02a668a9a718b; owner()=2/5 Safe 0xb94f9247bd181fc9aca4d8694fb3774ed99be5d5. Sourcify-exact Stablecoin implementation overrides _transfer with whenNotPaused + notFrozen(from/to); freeze/unfreeze and pause/unpause are onlyOwner. paused() was false. Denylist (not default-deny allowlist) ⇒ restrictable rather than permissioned.",
+          "evidence": "Existing BSC observation retained: block113079584 implementation0xa903a6c1c3bd45927542823528a6fa73a2a410e2, admin0xcb628ce396f8f6ffbfae48721fe02a668a9a718b; owner2/5 Safe0xb94f9247bd181fc9aca4d8694fb3774ed99be5d5. Exact Stablecoin source enforces pause and sender/recipient frozen guards in _transfer. This deployment is not an exhaustive single liability because TRON also exists.",
           "sources": [
             {
               "label": "Sourcify KGST Stablecoin implementation",
@@ -3150,8 +3115,29 @@
               "url": "https://bscscan.com/address/0xb94f9247bd181fc9aca4d8694fb3774ed99be5d5"
             },
             {
-              "label": "BSC block 113079584",
+              "label": "BSC block113079584",
               "url": "https://bscscan.com/block/113079584"
+            }
+          ]
+        },
+        {
+          "chainId": "tron",
+          "contractOrTokenId": "TN3cfcFhLrdNZhMdHZVZ4z2XFWb7uB9CXg",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "TronScan proxy metadata fetched2026-10-03 binds KGST proxy to Stablecoin implementationTR9KpxsZ2F94ZnbwHR148d7U5mrFneKMtt. Returned verified creation bytecode copies runtime from offset0xec. Runtime selector0xa9059cbb dispatches to0x1603: pause guard0x1fa3, sender and recipient frozen mapping slot0x66 checks reverting FrozenAddress, then transfer0x2052. freezeAccount0xf26c159f dispatches0x1d64 and pause0x8456cb59 dispatches0x1392; both call owner guard0x1f71. This is executable denylist/pause enforcement, not an inference from function names. Route's native-versus-representation liability semantics and authoritative material-supply accounting remain unresolved; material-bridge scope ensures it is not discarded as additional.",
+          "sources": [
+            {
+              "label": "Exact KGST TRON proxy/implementation binding",
+              "url": "https://apilist.tronscanapi.com/api/contract?contract=TN3cfcFhLrdNZhMdHZVZ4z2XFWb7uB9CXg"
+            },
+            {
+              "label": "Exact Stablecoin implementation verified bytecode and ABI",
+              "url": "https://apilist.tronscanapi.com/api/contracts/code?contract=TR9KpxsZ2F94ZnbwHR148d7U5mrFneKMtt"
+            },
+            {
+              "label": "NAVA TRON integration notice",
+              "url": "https://www.nava.gov.kg/articles/20260502-binance-KGST-TRON-NEWS"
             }
           ]
         }
@@ -3717,27 +3703,8 @@
     },
     {
       "assetId": "scrvusd-curve",
-      "transferScopeAttestation": {
-        "kind": "single-deployment-attribution",
-        "version": 1,
-        "reviewedAt": "2026-09-21",
-        "expiresAt": "2027-09-21",
-        "reviewer": "Claude curation campaign 2026-09-21 (ChainSupplyAttribution)",
-        "deploymentKey": "ethereum:0x0655977feb2f289a4ab78af67bab0d17aab84367",
-        "exhaustiveLiability": true,
-        "sources": [
-          {
-            "label": "Pinned contract code, totalSupply and decimals at block 26025950 (0x802cead23edbf6891cc98d260b56b35c3d7164a5b0e390a0807a67a56cb495ce); reviewed sole registry liability deployment, no representation routes",
-            "url": "https://ethereum-rpc.publicnode.com"
-          },
-          {
-            "label": "Exact deployed liability token",
-            "url": "https://etherscan.io/address/0x0655977feb2f289a4ab78af67bab0d17aab84367"
-          }
-        ]
-      },
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACC-B TRANSFER-FACT",
+      "reviewedAt": "2026-10-04",
+      "reviewer": "W2R32 complete material deployment transfer review",
       "deployments": [
         {
           "chainId": "ethereum",
@@ -3753,6 +3720,151 @@
             {
               "label": "Ethereum public RPC used for the block 25575172 bytecode read",
               "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "chainId": "optimism",
+          "contractOrTokenId": "0x289f635106d5b822a505b39ac237a0ae9189335b",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "Verified immutable satellite has balance/allowance-based ordinary transfers, but BRIDGE-only burn(_from,_amount) can burn arbitrary holder balances without allowance. At optimism block 157736365, BRIDGE is the upgradeable 0x4200000000000000000000000000000000000010, its admin is 0x4200000000000000000000000000000000000018, and exact-match administrator implementation permits replacement and arbitrary initialization. Thus ordinary bridge checks are not a permanent no-seizure protection: the reachable upgrade-and-call can invoke privileged burn against any holder. Source/runtime correspondence was verified; this is restrictable, not holder whitelisting.",
+          "sources": [
+            {
+              "label": "Verified satellite mint/burn/transfer code",
+              "url": "https://sourcify.dev/server/v2/contract/10/0x289f635106d5b822a505b39ac237a0ae9189335b?fields=all"
+            },
+            {
+              "label": "Pinned bridge proxy/admin permissions and current source correspondence",
+              "url": "https://mainnet.optimism.io"
+            },
+            {
+              "label": "Exact current ProxyAdmin implementation",
+              "url": "https://sourcify.dev/server/v2/contract/10/0x893c2ceeb71d38514daf67728d3ff1b213fc4b5f?fields=all"
+            }
+          ]
+        },
+        {
+          "chainId": "base",
+          "contractOrTokenId": "0x646a737b9b6024e49f5908762b3ff73e65b5160c",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "Verified immutable satellite has balance/allowance-based ordinary transfers, but BRIDGE-only burn(_from,_amount) can burn arbitrary holder balances without allowance. At base block 52141103, BRIDGE is the upgradeable 0x4200000000000000000000000000000000000010, its admin is 0x4200000000000000000000000000000000000018, and exact-match administrator implementation permits replacement and arbitrary initialization. Thus ordinary bridge checks are not a permanent no-seizure protection: the reachable upgrade-and-call can invoke privileged burn against any holder. Source/runtime correspondence was verified; this is restrictable, not holder whitelisting.",
+          "sources": [
+            {
+              "label": "Verified satellite mint/burn/transfer code",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x646a737b9b6024e49f5908762b3ff73e65b5160c?fields=all"
+            },
+            {
+              "label": "Pinned bridge proxy/admin permissions and current source correspondence",
+              "url": "https://base-rpc.publicnode.com"
+            },
+            {
+              "label": "Exact current ProxyAdmin implementation",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0xc0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d30018?fields=all"
+            }
+          ]
+        },
+        {
+          "chainId": "fraxtal",
+          "contractOrTokenId": "0xaB94C721040b33aA8b0b4D159Da9878e2a836Ed0",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "Verified immutable satellite has balance/allowance-based ordinary transfers, but BRIDGE-only burn(_from,_amount) can burn arbitrary holder balances without allowance. At fraxtal block 42130421, BRIDGE is the upgradeable 0x4200000000000000000000000000000000000010, its admin is 0x4200000000000000000000000000000000000018, and exact-match administrator implementation permits replacement and arbitrary initialization. Thus ordinary bridge checks are not a permanent no-seizure protection: the reachable upgrade-and-call can invoke privileged burn against any holder. Source/runtime correspondence was verified; this is restrictable, not holder whitelisting.",
+          "sources": [
+            {
+              "label": "Verified satellite mint/burn/transfer code",
+              "url": "https://fraxscan.com/address/0xaB94C721040b33aA8b0b4D159Da9878e2a836Ed0#code"
+            },
+            {
+              "label": "Pinned bridge proxy/admin permissions and current source correspondence",
+              "url": "https://fraxtal.drpc.org"
+            },
+            {
+              "label": "Exact current ProxyAdmin implementation",
+              "url": "https://sourcify.dev/server/v2/contract/252/0xc0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d30018?fields=all"
+            }
+          ]
+        },
+        {
+          "chainId": "fantom",
+          "contractOrTokenId": "0x5191946500e75f0A74476F146dF7d386e52961d9",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At Fantom block 123541859 (0x000570db00002f75111a404518393c2f60ba9901a2eb76917063daec14e6b1c8), all 1538 Token.vy executable instructions and 16 dispatch targets match exact-source BSC Token.vy after PC/data-offset resolution and PUSH1-zero/PUSH0 normalization. Only chain ID/domain separator immutables differ. Full nonproxy token has ordinary transfer/allowance paths, allowance-checked burnFrom, self burn, and no holder freeze, seizure, whitelist or upgrade hook. Arbitrary minter grants dilute shares but cannot debit holder balances. Complete correspondence artifact is recorded in W2R32 staging.",
+          "sources": [
+            {
+              "label": "Exact-match reference Token.vy with complete pinned Fantom executable correspondence",
+              "url": "https://sourcify.dev/server/v2/contract/56/0x0094ad026643994c8fb2136ec912d508b15fe0e5?fields=all"
+            },
+            {
+              "label": "Fantom pinned runtime and exact token identity",
+              "url": "https://rpcapi.fantom.network"
+            }
+          ]
+        },
+        {
+          "chainId": "bsc",
+          "contractOrTokenId": "0x0094Ad026643994c8fB2136ec912D508B15fe0E5",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "Exact verified Token.vy source (identical to the exact-match BSC source) is a full nonproxy token with ordinary balance/allowance transfers, allowance-checked burnFrom and self burn. No whitelist, blacklist, pause, holder seizure, transfer hook or implementation-upgrade selector exists. set_minter changes issuance permission only and cannot debit holder balances. This exact issuer-manifest deployment is covered regardless of its current receipt supply; it is not excluded as zero.",
+          "sources": [
+            {
+              "label": "Exact satellite verified Token.vy source",
+              "url": "https://sourcify.dev/server/v2/contract/56/0x0094Ad026643994c8fB2136ec912D508B15fe0E5?fields=all"
+            }
+          ]
+        },
+        {
+          "chainId": "avalanche",
+          "contractOrTokenId": "0xA3ea433509F7941df3e33857D9c9f212Ad4A4e64",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "Exact verified Token.vy source (identical to the exact-match BSC source) is a full nonproxy token with ordinary balance/allowance transfers, allowance-checked burnFrom and self burn. No whitelist, blacklist, pause, holder seizure, transfer hook or implementation-upgrade selector exists. set_minter changes issuance permission only and cannot debit holder balances. This exact issuer-manifest deployment is covered regardless of its current receipt supply; it is not excluded as zero.",
+          "sources": [
+            {
+              "label": "Exact satellite verified Token.vy source",
+              "url": "https://snowscan.xyz/address/0xa3ea433509f7941df3e33857d9c9f212ad4a4e64#code"
+            }
+          ]
+        },
+        {
+          "chainId": "xdc",
+          "contractOrTokenId": "0x3d8eadb739d1ef95dd53d718e4810721837c69c1",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "Exact verified Token.vy source (identical to the exact-match BSC source) is a full nonproxy token with ordinary balance/allowance transfers, allowance-checked burnFrom and self burn. No whitelist, blacklist, pause, holder seizure, transfer hook or implementation-upgrade selector exists. set_minter changes issuance permission only and cannot debit holder balances. This exact issuer-manifest deployment is covered regardless of its current receipt supply; it is not excluded as zero.",
+          "sources": [
+            {
+              "label": "Exact satellite verified Token.vy source",
+              "url": "https://xdcscan.com/address/0x3d8eadb739d1ef95dd53d718e4810721837c69c1#code"
+            }
+          ]
+        },
+        {
+          "chainId": "sonic",
+          "contractOrTokenId": "0x8fb3ec8f2d1dc089e70cd61f1e49496d443b2124",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "Exact verified Token.vy source (identical to the exact-match BSC source) is a full nonproxy token with ordinary balance/allowance transfers, allowance-checked burnFrom and self burn. No whitelist, blacklist, pause, holder seizure, transfer hook or implementation-upgrade selector exists. set_minter changes issuance permission only and cannot debit holder balances. This exact issuer-manifest deployment is covered regardless of its current receipt supply; it is not excluded as zero.",
+          "sources": [
+            {
+              "label": "Exact satellite verified Token.vy source",
+              "url": "https://sonicscan.org/address/0x8fb3ec8f2d1dc089e70cd61f1e49496d443b2124#code"
+            }
+          ]
+        },
+        {
+          "chainId": "etherlink",
+          "contractOrTokenId": "0xe35a879e5efb4f1bb7f70dcf3250f2e19f096bd8",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "Exact verified Token.vy source (identical to the exact-match BSC source) is a full nonproxy token with ordinary balance/allowance transfers, allowance-checked burnFrom and self burn. No whitelist, blacklist, pause, holder seizure, transfer hook or implementation-upgrade selector exists. set_minter changes issuance permission only and cannot debit holder balances. This exact issuer-manifest deployment is covered regardless of its current receipt supply; it is not excluded as zero.",
+          "sources": [
+            {
+              "label": "Exact satellite verified Token.vy source",
+              "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0xe35a879e5efb4f1bb7f70dcf3250f2e19f096bd8"
             }
           ]
         }
@@ -3915,40 +4027,40 @@
     },
     {
       "assetId": "susdd-tron-dao-reserve",
-      "reviewedAt": "2026-08-08",
-      "reviewer": "OpenAI Codex C02 control review",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Unknown resolver W1R08 exact deployed-source transfer review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0xc5d6a7b61d18afa11435a889557b068bb9f29930",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "Sourcify exact-matches this direct deployment as SavingsUsdd, and at Ethereum block 25712115 its EIP-1967 implementation slot remained zero. transfer rejects only the zero address and the contract itself, transferFrom enforces holder allowance, and share burns occur only in allowance-checked withdraw/redeem. The verified source has no owner, ward, pause, blacklist, freeze, seizure, or arbitrary-holder burn path.",
+          "evidence": "Official USDD collateral-contract census identifies this savings share deployment. Sourcify verifies exact creation and runtime matches for direct, non-proxy SavingsUsdd. transfer() and transferFrom() only check nonzero/non-self destination, balance and allowance, then move share balances; they invoke no authorization hook, blacklist, pause, role or external contract. Deposit/withdraw strategy authority does not restrict ordinary share transfers.",
           "sources": [
             {
-              "label": "Sourcify verified SavingsUsdd source (chain 1)",
-              "url": "https://sourcify.dev/server/v2/contract/1/0xc5d6a7b61d18afa11435a889557b068bb9f29930"
+              "label": "Official savings-share deployment census",
+              "url": "https://docs.usdd.io/introduction/collateral-asset-contract-addresses.md"
             },
             {
-              "label": "Ethereum PublicNode RPC used for the block 25712115 reads",
-              "url": "https://ethereum-rpc.publicnode.com"
+              "label": "Exact deployed SavingsUsdd source and direct-contract verification",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xc5d6a7b61d18afa11435a889557b068bb9f29930?fields=compilation,sources,proxyResolution"
             }
           ]
         },
         {
           "chainId": "bsc",
           "contractOrTokenId": "0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d",
-          "scope": "material-bridge",
+          "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "Sourcify exact-matches the BSC deployment to the same SavingsUsdd source as Ethereum, and at BSC block 114787010 its EIP-1967 implementation slot remained zero. Holder transfer and allowance-gated transferFrom carry no pause, blacklist, freeze, seizure, or privileged burn path.",
+          "evidence": "Official USDD collateral-contract census identifies this savings share deployment. Sourcify verifies exact creation and runtime matches for direct, non-proxy SavingsUsdd. transfer() and transferFrom() only check nonzero/non-self destination, balance and allowance, then move share balances; they invoke no authorization hook, blacklist, pause, role or external contract. Deposit/withdraw strategy authority does not restrict ordinary share transfers.",
           "sources": [
             {
-              "label": "Sourcify verified SavingsUsdd source (chain 56)",
-              "url": "https://sourcify.dev/server/v2/contract/56/0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d"
+              "label": "Official savings-share deployment census",
+              "url": "https://docs.usdd.io/introduction/collateral-asset-contract-addresses.md"
             },
             {
-              "label": "BSC public RPC used for the block 114787010 reads",
-              "url": "https://bsc-dataseed.binance.org"
+              "label": "Exact deployed SavingsUsdd source and direct-contract verification",
+              "url": "https://sourcify.dev/server/v2/contract/56/0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d?fields=compilation,sources,proxyResolution"
             }
           ]
         }
@@ -5090,31 +5202,44 @@
     },
     {
       "assetId": "eearn-ember",
-      "reviewedAt": "2026-07-22",
-      "reviewer": "GPT SOL-TRANSFER wave6",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Unknown wave W1R71 verified Ethereum and Sui transfer review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x9be9294722f8aad37b11a9792be2c782182cafa2",
           "scope": "canonical",
-          "posture": "restrictable",
-          "evidence": "At Ethereum block 25590384, the EIP-1967 implementation was 0xab222201c5bd8a18dc6b340ba78a709589e01781, owner() was CTGOneGovernance Timelock 0x12917e06b55995e7a5d73681ce491774c73b7c6a, and getMinDelay() returned 86400 seconds. UPGRADE_INTERFACE_VERSION() returned 5.0.0 and a state-simulated upgradeToAndCall from the timelock succeeded. Although current EmberVault code leaves ordinary secondary transfers open, the timelock can replace the transfer implementation, so the deployment is restrictable.",
+          "posture": "permissionless",
+          "evidence": "EIP-1967 implementation slot pinned at Ethereum block 0x18e7be1 resolves to verified EmberVault implementation 0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e. EmberVault inherits OpenZeppelin ERC20/4626 without overriding the ordinary _update/_transfer path. Blacklist/protocol-pause gates apply to deposit, queued redemption and bridgeBurn, not ordinary ERC20 transfer/transferFrom. Owner upgrade authority is not a present transfer allowlist.",
           "sources": [
             {
-              "label": "Etherscan eEARN proxy",
-              "url": "https://etherscan.io/address/0x9be9294722f8aad37b11a9792be2c782182cafa2#code"
+              "label": "Exact eEARN Ethereum proxy and current verified implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9be9294722f8aad37b11a9792be2c782182cafa2"
             },
             {
-              "label": "Etherscan current EmberVault implementation",
-              "url": "https://etherscan.io/address/0xab222201c5bd8a18dc6b340ba78a709589e01781#code"
+              "label": "Full verified current EmberVault source and inherited ERC20",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e"
             },
             {
-              "label": "Etherscan governance timelock",
-              "url": "https://etherscan.io/address/0x12917e06b55995e7a5d73681ce491774c73b7c6a#code"
+              "label": "Pinned EIP-1967 storage read provider, block 0x18e7be1",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "chainId": "sui",
+          "contractOrTokenId": "0x34469c8accdd673df02600265cbbad3688577f0e716866e257f88d448d463492::eearn::EEARN",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "Canonical GraphQL package disassembly was fetched 2026-10-03T23:16:45Z. Exact eearn module has only EEARN witness and init: it calls coin::create_currency<EEARN>, shares CoinMetadata, and transfers TreasuryCap to publisher. It does not create a regulated coin, DenyCap, or a custom holder-transfer module. Standard Coin<EEARN> objects therefore retain Sui public transfer behavior; TreasuryCap mint authority is not holder-transfer permissioning.",
+          "sources": [
+            {
+              "label": "Sui canonical package disassembly via GraphQL Query.package/module",
+              "url": "https://graphql.mainnet.sui.io/graphql"
             },
             {
-              "label": "Ethereum observation block 25590384",
-              "url": "https://etherscan.io/block/25590384"
+              "label": "Exact eEARN Sui package identifier",
+              "url": "https://suiscan.xyz/mainnet/object/0x34469c8accdd673df02600265cbbad3688577f0e716866e257f88d448d463492"
             }
           ]
         }
@@ -7731,7 +7856,7 @@
     {
       "assetId": "strusd-tori",
       "reviewedAt": "2026-10-03",
-      "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+      "reviewer": "W2R33 exact three-deployment transfer census; native evidence retained",
       "deployments": [
         {
           "chainId": "ethereum",
@@ -7767,6 +7892,56 @@
             {
               "label": "Current native implementation and role-census pin",
               "url": "https://etherscan.io/block/26110187"
+            }
+          ]
+        },
+        {
+          "chainId": "monad",
+          "contractOrTokenId": "0x683fb58ee77172626d5b49087ddac71ef7825d20",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "Exact deployed StakedTrUSDL2 runtime is byte-for-byte identical across Monad and Pharos: SHA-256 a402a4efbc97d54c3890b0f36157cd5786019bcb0c4ca95722d237a982375eb6 (7007 bytes). Monad runtime is pinned at block 0x6934f59; Pharos explorer profile supplies deployed_code and explicitly reports nonproxy. Verified Monad StakedTrUSDL2 source hooks every transfer/mint/burn with sender and recipient blackList checks. Owner can appoint blackLister, while owner-only redistributeBlackListedFunds pulls restricted balances to the owner. Pharos explorer additionally records live Set Black Lister and Add To Black List Batch transactions. These are restrictive representations, not permissionless unmodified Chainlink tokens.",
+          "sources": [
+            {
+              "label": "Verified exact Monad StakedTrUSDL2 source",
+              "url": "https://monadscan.com/address/0x683fb58ee77172626D5B49087DdAc71eF7825d20#code"
+            },
+            {
+              "label": "Pinned Monad runtime at block 0x6934f59",
+              "url": "https://rpc.monad.xyz"
+            },
+            {
+              "label": "Pharos exact deployed bytecode, nonproxy identity and deployment transaction",
+              "url": "https://api.socialscan.io/pharos-mainnet/v1/explorer/address/0x25419e949b485d481bed4ea0c5a0496f6c7f7c63/profile"
+            },
+            {
+              "label": "Exhaustive issuer native and CCIP liability census",
+              "url": "https://docs.tori.finance/resources/contracts.md"
+            }
+          ]
+        },
+        {
+          "chainId": "pharos",
+          "contractOrTokenId": "0x25419e949b485d481bed4ea0c5a0496f6c7f7c63",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "Exact deployed StakedTrUSDL2 runtime is byte-for-byte identical across Monad and Pharos: SHA-256 a402a4efbc97d54c3890b0f36157cd5786019bcb0c4ca95722d237a982375eb6 (7007 bytes). Monad runtime is pinned at block 0x6934f59; Pharos explorer profile supplies deployed_code and explicitly reports nonproxy. Verified Monad StakedTrUSDL2 source hooks every transfer/mint/burn with sender and recipient blackList checks. Owner can appoint blackLister, while owner-only redistributeBlackListedFunds pulls restricted balances to the owner. Pharos explorer additionally records live Set Black Lister and Add To Black List Batch transactions. These are restrictive representations, not permissionless unmodified Chainlink tokens.",
+          "sources": [
+            {
+              "label": "Verified exact Monad StakedTrUSDL2 source",
+              "url": "https://monadscan.com/address/0x683fb58ee77172626D5B49087DdAc71eF7825d20#code"
+            },
+            {
+              "label": "Pinned Monad runtime at block 0x6934f59",
+              "url": "https://rpc.monad.xyz"
+            },
+            {
+              "label": "Pharos exact deployed bytecode, nonproxy identity and deployment transaction",
+              "url": "https://api.socialscan.io/pharos-mainnet/v1/explorer/address/0x25419e949b485d481bed4ea0c5a0496f6c7f7c63/profile"
+            },
+            {
+              "label": "Exhaustive issuer native and CCIP liability census",
+              "url": "https://docs.tori.finance/resources/contracts.md"
             }
           ]
         }
@@ -8219,23 +8394,23 @@
     },
     {
       "assetId": "chfsafo-spiko",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Refine05 primary-source and pinned-RPC review; partial native-deployment coverage",
+      "reviewedAt": "2026-10-04",
+      "reviewer": "Unknown-wave W2R12 complete eight-register issuer transfer-policy review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x18b5c15e5196a38a162b1787875295b76e4313fb",
           "scope": "canonical",
           "posture": "permissioned",
-          "evidence": "Exact CHF issuer API binds this native EVM fund register. Spiko's ERC20 PermissionManager design permits only KYC-allowlisted holders. At block 26110192 its authority() binds the live PermissionManager and current ADMIN Safe. This is positive holder-policy evidence, not full cross-register control or liability closure; the unreviewed Stellar/Starknet transfer implementations remain outside this partial review.",
+          "evidence": "Issuer API binds exact CHF share class FR0014015LG6 to this native register. SICAV prospectus requires shares to be held and transferred only between investors with an Allowlisted address. This establishes legal holder transfer policy, not complete administrator, liability or material-supply closure.",
           "sources": [
             {
-              "label": "Exact CHF register roster",
+              "label": "Exact CHF share class and native token roster",
               "url": "https://public-api.spiko.io/share-classes/chfSAFO"
             },
             {
-              "label": "Spiko EVM allowlisted holder architecture",
-              "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+              "label": "SICAV September 2026 prospectus, common share rules p.10 and registers p.8",
+              "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
             }
           ]
         },
@@ -8244,15 +8419,32 @@
           "contractOrTokenId": "0x9de2b2dcdcf43540e47143f28484b6d15118f089",
           "scope": "canonical",
           "posture": "permissioned",
-          "evidence": "Exact CHF issuer API binds this native EVM fund register. Spiko's ERC20 holder design is KYC allowlisted, separate from mint permissions. At block 94870785 authority() binds chain-local PermissionManager; native transfer policy is not a bridge escape. No complete eight-register transfer or liability attestation is asserted.",
+          "evidence": "Issuer API binds exact CHF share class FR0014015LG6 to this native register. SICAV prospectus requires shares to be held and transferred only between investors with an Allowlisted address. This establishes legal holder transfer policy, not complete administrator, liability or material-supply closure.",
           "sources": [
             {
-              "label": "Exact CHF register roster",
+              "label": "Exact CHF share class and native token roster",
               "url": "https://public-api.spiko.io/share-classes/chfSAFO"
             },
             {
-              "label": "Spiko EVM allowlisted holder architecture",
-              "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+              "label": "SICAV September 2026 prospectus, common share rules p.10 and registers p.8",
+              "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+            }
+          ]
+        },
+        {
+          "chainId": "starknet",
+          "contractOrTokenId": "0x06723dcb428eddb160c5adfc2d0a5e5adc184bf6a7298780c3cbf3fa764f709b",
+          "scope": "canonical",
+          "posture": "permissioned",
+          "evidence": "Issuer API binds exact CHF share class FR0014015LG6 to this native register. SICAV prospectus requires shares to be held and transferred only between investors with an Allowlisted address. This establishes legal holder transfer policy, not complete administrator, liability or material-supply closure.",
+          "sources": [
+            {
+              "label": "Exact CHF share class and native token roster",
+              "url": "https://public-api.spiko.io/share-classes/chfSAFO"
+            },
+            {
+              "label": "SICAV September 2026 prospectus, common share rules p.10 and registers p.8",
+              "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
             }
           ]
         },
@@ -8261,32 +8453,15 @@
           "contractOrTokenId": "0x97e7962bcd091e7ecfb583fc96289b1e1553ac6e",
           "scope": "canonical",
           "posture": "permissioned",
-          "evidence": "Exact CHF issuer API binds this native EVM fund register and the issuer ERC20 architecture requires KYC-allowlisted holders. At block 511230438 authority() binds chain-local PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a. This row does not establish cross-register transfer or liability closure.",
+          "evidence": "Issuer API binds exact CHF share class FR0014015LG6 to this native register. SICAV prospectus requires shares to be held and transferred only between investors with an Allowlisted address. This establishes legal holder transfer policy, not complete administrator, liability or material-supply closure.",
           "sources": [
             {
-              "label": "Exact CHF register roster",
+              "label": "Exact CHF share class and native token roster",
               "url": "https://public-api.spiko.io/share-classes/chfSAFO"
             },
             {
-              "label": "Spiko EVM allowlisted holder architecture",
-              "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
-            }
-          ]
-        },
-        {
-          "chainId": "base",
-          "contractOrTokenId": "0xd9aa2300e126869182dfb6ecf54984e4c687f36b",
-          "scope": "canonical",
-          "posture": "permissioned",
-          "evidence": "Exact CHF issuer API binds this native EVM fund register, governed by Spiko's documented KYC-allowlisted ERC20 holder design. At block 52110837 authority() confirms its PermissionManager. This partial transfer review grants no complete eight-register signer or liability coverage.",
-          "sources": [
-            {
-              "label": "Exact CHF register roster",
-              "url": "https://public-api.spiko.io/share-classes/chfSAFO"
-            },
-            {
-              "label": "Spiko EVM allowlisted holder architecture",
-              "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+              "label": "SICAV September 2026 prospectus, common share rules p.10 and registers p.8",
+              "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
             }
           ]
         },
@@ -8295,15 +8470,49 @@
           "contractOrTokenId": "0xef53e7d17822b641c6481837238a64a688709301",
           "scope": "canonical",
           "posture": "permissioned",
-          "evidence": "Exact CHF issuer API binds this native EVM fund register, governed by Spiko's documented KYC-allowlisted ERC20 holder design. At block 54814446 authority() confirms its PermissionManager. This is not an independently permissionless bridge representation or complete liability attestation.",
+          "evidence": "Issuer API binds exact CHF share class FR0014015LG6 to this native register. SICAV prospectus requires shares to be held and transferred only between investors with an Allowlisted address. This establishes legal holder transfer policy, not complete administrator, liability or material-supply closure.",
           "sources": [
             {
-              "label": "Exact CHF register roster",
+              "label": "Exact CHF share class and native token roster",
               "url": "https://public-api.spiko.io/share-classes/chfSAFO"
             },
             {
-              "label": "Spiko EVM allowlisted holder architecture",
-              "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+              "label": "SICAV September 2026 prospectus, common share rules p.10 and registers p.8",
+              "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+            }
+          ]
+        },
+        {
+          "chainId": "base",
+          "contractOrTokenId": "0xd9aa2300e126869182dfb6ecf54984e4c687f36b",
+          "scope": "canonical",
+          "posture": "permissioned",
+          "evidence": "Issuer API binds exact CHF share class FR0014015LG6 to this native register. SICAV prospectus requires shares to be held and transferred only between investors with an Allowlisted address. This establishes legal holder transfer policy, not complete administrator, liability or material-supply closure.",
+          "sources": [
+            {
+              "label": "Exact CHF share class and native token roster",
+              "url": "https://public-api.spiko.io/share-classes/chfSAFO"
+            },
+            {
+              "label": "SICAV September 2026 prospectus, common share rules p.10 and registers p.8",
+              "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+            }
+          ]
+        },
+        {
+          "chainId": "stellar",
+          "contractOrTokenId": "CAJD2IBSP7VO2VYJQUYJSOGPJINTUYV7MQITINXVPTIH3CCLCUENNMW4",
+          "scope": "canonical",
+          "posture": "permissioned",
+          "evidence": "Issuer API binds exact CHF share class FR0014015LG6 to this native register. SICAV prospectus requires shares to be held and transferred only between investors with an Allowlisted address. This establishes legal holder transfer policy, not complete administrator, liability or material-supply closure.",
+          "sources": [
+            {
+              "label": "Exact CHF share class and native token roster",
+              "url": "https://public-api.spiko.io/share-classes/chfSAFO"
+            },
+            {
+              "label": "SICAV September 2026 prospectus, common share rules p.10 and registers p.8",
+              "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
             }
           ]
         },
@@ -8312,15 +8521,15 @@
           "contractOrTokenId": "6Gst8o3L5uNtkUvhEg23HpDLpYRdNQTgdn1Bc7jnCM5c",
           "scope": "canonical",
           "posture": "permissioned",
-          "evidence": "Finalized slot 452864978 exact mint read identifies Token-2022 default frozen accounts, live freeze authority 9Sf6f8r63A86FEzbzkY4MXNjCX17B49fVizduLrZ7DyG, permanent delegate EeJqADE9Xqkqoyjid6H1GmbwDZ4Bz1qyC7ySpmFq849m and pausable authority 3wVzYmWt79gBpPtWBK8GHvRfii1SARpP8SKqEKuzJsDY. Zero current supply is not renunciation or permissionless transfer. Upstream issuer key/program closure remains unresolved; Stellar and Starknet are omitted rather than invented.",
+          "evidence": "Issuer API binds exact CHF share class FR0014015LG6 to this native register. SICAV prospectus requires shares to be held and transferred only between investors with an Allowlisted address. This establishes legal holder transfer policy, not complete administrator, liability or material-supply closure.",
           "sources": [
             {
-              "label": "Finalized exact CHF Solana mint",
-              "url": "https://api.mainnet-beta.solana.com"
+              "label": "Exact CHF share class and native token roster",
+              "url": "https://public-api.spiko.io/share-classes/chfSAFO"
             },
             {
-              "label": "Exact CHF issuer native roster",
-              "url": "https://public-api.spiko.io/share-classes/chfSAFO"
+              "label": "SICAV September 2026 prospectus, common share rules p.10 and registers p.8",
+              "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
             }
           ]
         }
@@ -8436,30 +8645,41 @@
     {
       "assetId": "filqa-fidelity-international",
       "reviewedAt": "2026-10-03",
-      "reviewer": "Refine04 exact holder-transfer evidence",
+      "reviewer": "Pharos unknown-wave W1R70",
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-10-03",
+        "expiresAt": "2027-10-03",
+        "reviewer": "Pharos unknown-wave W1R70",
+        "deploymentKey": "ethereum:0x54a4fc78431f9201824643e99bec891bb7462a1d",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Exact Class 1 ACC factsheet: Networks Available Ethereum; ISIN KYG3R61G1088",
+            "url": "https://www.fidelityinternational.com/legal/documents/en/hffs.en.xx.6470869.pdf"
+          },
+          {
+            "label": "Governing prospectus: direct class share liability, not wrapped fund exposure",
+            "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+          }
+        ]
+      },
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x54a4fc78431f9201824643e99bec891bb7462a1d",
           "scope": "canonical",
           "posture": "permissioned",
-          "evidence": "At Ethereum block 26107703 the exact deployment points to verified SygToken implementation 0x7030fe438be6ed196b8886616bbf5a245c267339. Source implements blacklistTokenUser, forcedTransfer and pause under permission-manager authorization. Prospectus gives compulsory-redemption and registry correction powers and prohibits token transfers for on-chain investors. The prospectus explicitly rejects secondary token transfers for on-chain investors in the shareholder register; authorized holder exit is TA/distributor redemption. Native blacklistTokenUser,forcedTransfer and pause implement additional restrictions.",
+          "evidence": "Prospectus 14 September 2026 requires TA-approved wallets and expressly prohibits on-chain token transfer orders; the exact SygToken implementation supports whitelisted recipients and authorized forced transfers. This is restrictive holder-transfer posture, not a claim of redemption availability or immutable restrictions.",
           "sources": [
             {
-              "label": "Fidelity September 14, 2026 fund prospectus",
+              "label": "Governing prospectus token transfer and registry terms",
               "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
             },
             {
-              "label": "Retrieved Fidelity prospectus text",
-              "url": "https://r.jina.ai/https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
-            },
-            {
-              "label": "Verified deployed token implementation",
+              "label": "Exact verified SygToken implementation",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7030fe438be6ed196b8886616bbf5a245c267339"
-            },
-            {
-              "label": "Ethereum token deployment",
-              "url": "https://etherscan.io/address/0x54a4fc78431f9201824643e99bec891bb7462a1d#code"
             }
           ]
         }
@@ -9206,14 +9426,14 @@
     {
       "assetId": "usdfr-forest-road",
       "reviewedAt": "2026-10-03",
-      "reviewer": "Refine05 primary-source and pinned-RPC review",
+      "reviewer": "W1R61 current complete Ethereum deployment-roster attribution",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0xcc07e7c4e5e35affd47b351e420a22c667d7f83d",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "Exact Ethereum-only USDfr permits holding and transfers without the primary mint/redemption KYC allowlist, but ComplianceRegistry sanctions/jurisdiction blocklisting is checked on holder transfers and pause controls remain. Official mainnet roles explicitly distinguish primary KYC from transfer sanctions. No exhaustive liability attribution certificate or permissionless-hardened posture is asserted.",
+          "evidence": "Exact Ethereum-only USDfr permits holding and transfers without the primary mint/redemption KYC allowlist, but ComplianceRegistry sanctions/jurisdiction blocklisting is checked on holder transfers and pause controls remain. Official mainnet roles explicitly distinguish primary KYC from transfer sanctions. The official exhaustive 21-contract Ethereum mainnet roster identifies exactly one USDfr holder token and no cross-chain USDfr wrappers; sUSDfr and GROVE are distinct instruments. The scoped single-deployment certificate attributes USDfr liability to this canonical token, not permissionless-hardened posture.",
           "sources": [
             {
               "label": "Exact live USDfr roster and transfer/KYC distinction",
@@ -9229,7 +9449,26 @@
             }
           ]
         }
-      ]
+      ],
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-10-03",
+        "expiresAt": "2027-10-03",
+        "reviewer": "W1R61",
+        "deploymentKey": "ethereum:0xcc07e7c4e5e35affd47b351e420a22c667d7f83d",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Every contract: complete live Ethereum mainnet application roster, exact USDfr token and separate sUSDfr/GROVE instruments",
+            "url": "https://forestroadvault.com/docs/addresses"
+          },
+          {
+            "label": "Official Ethereum-only mainnet deployment status",
+            "url": "https://forestroadvault.com/docs/status"
+          }
+        ]
+      }
     },
     {
       "assetId": "usdr-rise",
@@ -9358,21 +9597,21 @@
     {
       "assetId": "xgld-unitas",
       "reviewedAt": "2026-10-03",
-      "reviewer": "Refine06 exact-source transfer review",
+      "reviewer": "W1R69 exact verified source review",
       "deployments": [
         {
           "chainId": "bsc",
           "contractOrTokenId": "0xe60106a5cab7e7c64830919d36ab20caaf50ac91",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "Exact verified XGLDToken/OFT/ERC20 source has no holder-transfer allowlist, blacklist, freeze, pause or custom _update hook. Native mint whitelisting does not gate ERC20 transfer/transferFrom; burner can burn only its own balance. Upstream XAUt restriction risk remains inherited in the asset blacklistability review. This exact-source posture does not provide an economic deployment partition or issuer redemption access.",
+          "evidence": "Exact Sourcify runtime-verified XGLDToken inherits OFT and standard ERC20; complete source has no transfer override, whitelist, pause, freeze or seizure hook. ERC20 _update only applies balances and zero-address mint/burn semantics. XGLD native burn consumes msg.sender balance, not arbitrary holders. Mint/redemption whitelisting and upstream XAUt restrictions do not censor local holder transfers.",
           "sources": [
             {
-              "label": "Exact bsc XGLDToken and inherited OFT/ERC20 source",
-              "url": "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=sources,abi"
+              "label": "Exact runtime-verified XGLDToken plus OFT/ERC20 source",
+              "url": "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=sources,abi,proxyResolution"
             },
             {
-              "label": "XGLD secondary-holder versus native mint/redeem access",
+              "label": "Issuer exact deployment census and primary-access distinction",
               "url": "https://docs.unitas.so/overview/xgld.md"
             }
           ]
@@ -9382,14 +9621,14 @@
           "contractOrTokenId": "0xea953ea6634d55dac6697c436b1e81a679db5882",
           "scope": "material-bridge",
           "posture": "permissionless",
-          "evidence": "Exact verified XGLDToken/OFT/ERC20 source has no holder-transfer allowlist, blacklist, freeze, pause or custom _update hook. Native mint whitelisting does not gate ERC20 transfer/transferFrom; burner can burn only its own balance. Upstream XAUt restriction risk remains inherited in the asset blacklistability review. This exact-source posture does not provide an economic deployment partition or issuer redemption access.",
+          "evidence": "Exact Sourcify runtime-verified XGLDToken inherits OFT and standard ERC20; complete source has no transfer override, whitelist, pause, freeze or seizure hook. ERC20 _update only applies balances and zero-address mint/burn semantics. XGLD native burn consumes msg.sender balance, not arbitrary holders. Mint/redemption whitelisting and upstream XAUt restrictions do not censor local holder transfers.",
           "sources": [
             {
-              "label": "Exact base XGLDToken and inherited OFT/ERC20 source",
+              "label": "Exact runtime-verified XGLDToken plus OFT/ERC20 source",
               "url": "https://sourcify.dev/server/v2/contract/8453/0xea953ea6634d55dac6697c436b1e81a679db5882?fields=sources,abi"
             },
             {
-              "label": "XGLD secondary-holder versus native mint/redeem access",
+              "label": "Issuer exact deployment census and primary-access distinction",
               "url": "https://docs.unitas.so/overview/xgld.md"
             }
           ]
@@ -9399,22 +9638,49 @@
     {
       "assetId": "xgz-goldzip",
       "reviewedAt": "2026-10-03",
-      "reviewer": "Refine06 exact-source and pinned RPC review",
+      "reviewer": "W1R65 exact verified implementation and proxy slot review",
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-10-03",
+        "expiresAt": "2026-11-03",
+        "reviewer": "W1R65 current issuer exhaustive canonical liability review",
+        "deploymentKey": "ethereum:0x69af64f409c08e9076bf7f3ed9db3a7409717161",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Issuer Product Facts identifies current Ethereum ERC-20 deployment and supply",
+            "url": "https://goldzip.info/"
+          },
+          {
+            "label": "Issuer transparency deployment and gold-token liability scope",
+            "url": "https://goldzip.info/transparency/"
+          },
+          {
+            "label": "Issuer litepaper technical and gold liability definition",
+            "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+          }
+        ]
+      },
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x69af64f409c08e9076bf7f3ed9db3a7409717161",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "Exact HKGXToken _update rejects frozen sender/recipient, and all transfers are whenNotPaused; privileged roles expose freezeAccount/unfreezeAccount/forceBurn and owner can pause. At Ethereum block 26110184 paused()=false and getFeeRate()=1 basis point. Current unpaused state and nominal transfer permission do not remove restriction authority; issuer physical-delivery AML and Hong Kong residency gates are separate.",
+          "evidence": "Ethereum block 26114996 EIP-1967 implementation slot points to verified HKGXToken 0x29ed41cb1013a4df63d87b82346b384847db7511. Full _update rejects frozen sender and recipient; whenNotPaused blocks transfers; freezeAccount requires FREEZE_ROLE; pause is owner-only. Exact owner=0xd173e69192b9ff22069aa913ef6e6e94b19f0778. Current official issuer site identifies only canonical Ethereum ERC-20 issuance.",
           "sources": [
             {
-              "label": "Exact verified HKGXToken transfer restrictions",
+              "label": "Exact HKGXToken full verified implementation",
               "url": "https://sourcify.dev/server/v2/contract/1/0x29ed41cb1013a4df63d87b82346b384847db7511?fields=sources,abi"
             },
             {
-              "label": "Exact holder token deployment",
-              "url": "https://etherscan.io/address/0x69af64f409c08e9076bf7f3ed9db3a7409717161"
+              "label": "Current issuer canonical Ethereum identity",
+              "url": "https://goldzip.info/"
+            },
+            {
+              "label": "Pinned proxy implementation slot and owner reads",
+              "url": "https://ethereum-rpc.publicnode.com"
             }
           ]
         }
@@ -9550,6 +9816,49 @@
           ]
         }
       ]
+    },
+    {
+      "assetId": "steakusdc-steakhouse",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "W1R38 exact deployment access review",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0xbeef088055857739c12cd3765f20b7679def0f51",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "Exact matched VaultV2 bytecode at block 26114886 checks canSendShares/canReceiveShares in transfer and transferFrom. Current share gates are zero; curator can configure gates through the timelocked setters. Zero present gates do not establish permanently permissionless shares. Catalog and reviewed Morpho exact-vault scope contain this single canonical liability deployment. Exact shares are a contract-local ERC-4626 residual claim with local balanceOf/totalSupply mint and burn accounting; the Base Prime product is a separate vault address and liability, not another deployment of these Ethereum shares. Issuer directory identifies the exact Ethereum vault independently.",
+          "sources": [
+            {
+              "label": "Exact verified VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef088055857739c12cd3765f20b7679def0f51"
+            },
+            {
+              "label": "Morpho gate mechanics",
+              "url": "https://docs.morpho.org/curate/concepts/gates.md"
+            }
+          ]
+        }
+      ],
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-10-03",
+        "expiresAt": "2027-10-02",
+        "reviewer": "W1R38 exact ERC-4626 liability scope review",
+        "deploymentKey": "ethereum:0xbeef088055857739c12cd3765f20b7679def0f51",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Issuer product directory separates Ethereum and Base vault contracts",
+            "url": "https://www.steakhouse.financial/docs/products/vault-products/current/prime-instant"
+          },
+          {
+            "label": "Exact ERC-4626 mint/burn and local totalSupply accounting",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef088055857739c12cd3765f20b7679def0f51"
+          }
+        ]
+      }
     }
   ]
 }

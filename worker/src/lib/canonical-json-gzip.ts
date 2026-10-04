@@ -112,10 +112,12 @@ export async function gzipCanonicalJson(
     }
   } catch (error) {
     await reader.cancel(error).catch(() => undefined);
-    throw error;
-  } finally {
     reader.releaseLock();
+    throw error;
   }
+  // A drained reader is not released: Node's release of a closed stream builds an
+  // internal error whose eagerly formatted stack materializes line tables for the
+  // whole bundled script (~5 MB at the V9 publication bundle size).
   const compressed = new Uint8Array(compressedBytes);
   let compressedOffset = 0;
   for (const chunk of chunks) {
@@ -192,9 +194,8 @@ export async function gunzipBytesBounded(
     }
   } catch (error) {
     await reader.cancel(error).catch(() => undefined);
-    throw error;
-  } finally {
     reader.releaseLock();
+    throw error;
   }
   if (expectedUncompressedBytes != null && uncompressedBytes !== expectedUncompressedBytes) {
     throw new Error(`${label} payload length mismatch`);

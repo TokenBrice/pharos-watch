@@ -18,9 +18,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "ACRDX uses Centrifuge V3's native burn-and-mint share bridge over external messaging. Ethereum is the native issuance hub; the Ethereum Spoke, Root, and ProtocolGuardian are also canonical-side bridge identities only for messaging and route administration, while Base, Plume, Monad, Optimism, and Solana are representations.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "GPT SOL-NR-A wave6; Codex V9 runtime supply audit; Claude V9 bridge-deployment materiality wave3",
+    "summary": "ACRDX's EVM share deployments use Centrifuge V3 native burn-and-mint messaging. Ethereum is the issuance hub. The separately listed Solana Token-2022 liability has a live nonprogram mint authority; its transport, conservation and offchain authorization semantics remain unresolved and are not certified as the EVM share bridge.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W2R46 Solana authority/transport followthrough; existing EVM deployment review retained",
     "confidence": "verified",
     "protocols": [
       {
@@ -209,24 +209,28 @@
         "destinationChain": "solana",
         "canonicalChain": "ethereum",
         "contractAddress": "ACDR3LGFrMuDZSDRyJjncFCzo5c8xkQxhWx4im4Vmq8G",
-        "protocol": "Centrifuge V3 native share bridge",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "external-validated-network",
-        "semantics": "burn-mint",
-        "scope": "peripheral",
+        "protocol": "Centrifuge Solana liability; transport undisclosed",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
         "controllerChain": "solana",
         "controllerAddress": "3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb",
-        "reviewDisposition": "reviewed",
-        "reviewNote": "The exact Solana Token-2022 mint and authorities are on-chain verified, but current Centrifuge bridge documentation expressly limits share-token bridging to EVM networks. No current issuer source establishing the Ethereum-to-Solana burn/mint transfer semantics was found; the historical route attribution requires owner adjudication.",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "The historical account-state claim at W2R46 finalized slot 453087623 is unverifiable without archival proof; ordinary RPC cannot replay that account state. Separately, the independent verifier's fresh finalized getMultipleAccounts observation at slot 453101550 on 2026-10-04 confirms the exact Token-2022 mint, 6 decimals and active mint/freeze/permanent-delegate authority 3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb. System-owned, nonexecutable authority; signer derivation and token-specific bridge authorization are not established by this account read. The official deployment registry identifies this mint, while the share bridge guide expressly excludes Solana destinations. No token-specific public offchain authorization, burn/release conservation or bridge operator terms establish its transport model; preserve the unresolved liability, not the unsupported historical burn-mint assertion.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-24",
-        "observedBlock": 434941163,
+        "observedAt": "2026-10-04",
+        "observedBlock": 453101550,
         "failureDomainKeys": [
           "protocol:centrifuge-v3",
           "authority:solana:3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb"
         ],
         "sources": [
+          {
+            "label": "Independent verifier fresh finalized Solana getMultipleAccounts observation, slot 453101550; historical slot 453087623 account state not replayed",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
           {
             "label": "Centrifuge protocol deployments",
             "url": "https://docs.centrifuge.io/developer/protocol/deployments/"

@@ -22,7 +22,7 @@ const SIGNAL_ROWS = [
       signal: "Derived posture",
       effect: "Sets the base",
       meaning:
-        "Cap semantics, claim impairment, reconciliation cadence, supervisory regime, and qualified governance place the mint on a posture rung. The ladder distinguishes collateral-gated issuance, governance-delayed unbounded issuance, unbounded minting with unknown reconciliation, and a confirmed absence of reconciliation.",
+        "Cap semantics, claim impairment, reconciliation cadence, supervisory regime, and qualified governance place the mint on a posture rung. The ladder distinguishes collateral-gated issuance, minority-veto and governance-delayed unbounded issuance, unbounded minting with unknown reconciliation, and a confirmed absence of reconciliation.",
     },
   },
   {
@@ -40,7 +40,7 @@ const SIGNAL_ROWS = [
       signal: "Seasoned track record",
       effect: "Bounded credit",
       meaning:
-        "After 60 months, eligible postures earn 10 points without crossing the next rung. Unbounded, governance-delayed issuance follows this ordinary ladder. Unbounded minting with unknown reconciliation has a 55-point base; seasoned and positive merged-signal credits from a 55-point base stop at 59, below the governed rung of 60. Unbounded, unreconciled issuance has a dedicated ceiling of 39. An active incident is ineligible.",
+        "After 60 months, eligible postures earn 10 points without crossing the next rung. Minority-veto issuance starts at 70 and clips at 79 below prudential reconciliation at 80, just like partially bounded administration. Governance-delayed issuance starts at 60 and clips at 69. Unbounded minting with unknown reconciliation has a 55-point base; seasoned and positive merged-signal credits from a 55-point base stop at 59. Unbounded, unreconciled issuance has a dedicated ceiling of 39. An active incident is ineligible.",
     },
   },
   {
@@ -91,7 +91,7 @@ const BAND_ROWS = [
     id: "governed",
     cells: {
       band: V9_MINT_POSTURE_BANDS.governed.label,
-      posture: "Partially bounded admin (70), or unbounded, governance-delayed (60)",
+      posture: "Partially bounded admin or unbounded, veto-guarded (70), or unbounded, governance-delayed (60)",
       meaning: V9_MINT_POSTURE_BANDS.governed.detail,
     },
   },
@@ -176,6 +176,57 @@ export function MintAuthorityScoreMethodologySection() {
         issuance paths are governance-controlled and enforce an unavoidable delay of at least 48 hours. Qualifying
         issuance starts at 60 and publishes in the Governed band.
       </p>
+      <p>
+        Safety Score v10.03 adds minority-veto due process (D30): when any holder or delegation group of at most 2%
+        of flash-resistant votes can block a new issuer during an unavoidable public window of at least 14 days,
+        admission is protected against majority capture. Qualifying issuance derives &quot;Unbounded, veto-guarded&quot;
+        at 70 in the Governed band, above affirmative governance at 60. The economic power stays unbounded (D14);
+        neither process changes DDR&apos;s fragile or unbounded membership.
+      </p>
+      <MethodologyDetails summary="Minority-veto issuance: gates V1–V7 (Safety Score v10.03)">
+        <ul className="list-disc space-y-2 pl-5">
+          <li>V1: complete runtime/signer-bound execution-scope certificates on every authored mint control,
+            a fresh closed review, no scoped question, and no active incident.</li>
+          <li>V2: an explicit minority-veto decision rule and a minimum, never summed, unavoidable public window
+            of 1,209,600 seconds across every reachable unbounded issuance path.</li>
+          <li>V3: a unilateral veto quorum at most 200 bps of total flash-resistant holding-period-weighted,
+            lock-escrowed, or past-block-checkpoint votes; any override is none, symmetric vote destruction
+            costing the caller an equal number of its own votes, or insolvency-gated restructure only while pinned
+            equity is at least twice the threshold, retaining staleness headroom (D30-R).</li>
+          <li>V4: every unbounded path is rooted in the veto governor by structured signer identity naming only
+            authored contract execution hops, with no multisig, threshold, or signature phrasing. The governor
+            itself carries no unbounded path. Only certified disabled-reactivatable restructure-dependent paths
+            are excluded while restructure is unreachable.</li>
+          <li>V5: each guarded issuance controller is targeted by a certified active parameter-change veto path
+            containing every declared exact selector; a dormant veto cannot qualify.</li>
+          <li>V6: issuance is enumerable through authorization events and capacity reads.</li>
+          <li>V7: formula-bound interest (deposits × rate × time) is bounded-impairment monetary policy only with
+            a hard-coded annual-ppm rate cap, an exact reviewed control/path inventory, and minority-replaceable
+            rate changes delayed at least 172,800 seconds (D30-S). Any qualified holder at or below the veto quorum
+            can replace/reset a pending change. Such paths reuse raiseable with null bound and bounded impairment,
+            outside the fourteen-day window; uncertified interest or loss-coverage remains unbounded.</li>
+        </ul>
+        <p>
+          Holding-period-weighted votes equal balance × holding duration: newly received or flash-borrowed shares
+          carry zero votes. Unknown evidence fails closed. Graded prudential or attestation-only reconciliation
+          still takes precedence; a failed minority-veto profile cannot fall back to affirmative governance.
+          Qualifying veto-guarded issuance emits only a low centralized-mint signal (cap 83):
+          &quot;Minting is economically unbounded but every new issuer faces a public minority-veto window.&quot;
+        </p>
+        <p>
+          Restructure below the twice-threshold equity margin fails closed, and its selectors must bind to a
+          reachable governor-certificate path. Every dependent path must be dormant and reachable only through
+          restructure; ordinary redemption cannot reduce governance-share supply to zero. Equity is in whole
+          asset-token units, veto quorum in bps of pinned votes, and rate caps in annual ppm. Plain equal-cost
+          kamikaze remains symmetric vote destruction; cross-certificate reactivation causality remains an
+          evidence-backed residual risk.
+        </p>
+        <p>
+          The admission path carries the public veto window; already-admitted minters never inherit that delay.
+          Their issuance paths carry their actual economic bound and exercise delay, often zero for an unbounded
+          path, which fails the fourteen-day gate.
+        </p>
+      </MethodologyDetails>
       <WorkedExample summary="Worked example: a resolved mint incident on a reconciled issuer">
         <p>
           An issuer whose minting is economically unbounded but reconciled against reserves under attestation sits on

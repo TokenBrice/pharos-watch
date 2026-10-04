@@ -18,12 +18,12 @@
         "legal",
         "smart-contract"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "SOL-III Safety Score V9 reserve review; W1R23 share-liquidity classification",
     "confidence": "verified",
     "sources": [
       {
@@ -39,7 +39,7 @@
         "url": "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le"
       }
     ],
-    "rationale": "The independent Chainlink producer measures the current JAAA fund-share NAV, not a durable 95/5 holdings split. The exact direct reserve is therefore one Janus Henderson Anemoy AAA CLO Fund share exposure with credit, custody, liquidity, legal, and concentration risks retained.",
+    "rationale": "The independent Chainlink producer measures the current JAAA fund-share NAV, not a durable 95/5 holdings split. The exact direct reserve is therefore one Janus Henderson Anemoy AAA CLO Fund share exposure with credit, custody, liquidity, legal, and concentration risks retained. The exact June 2026 JAAA tokenized BVI fund factsheet discloses daily subscriptions and redemptions, settlement usually T+1, establishing the ordinary one-day share-liquidity horizon only. This is not a guaranteed maximum or an underlying CLO maturity; investor eligibility, potential exceptional delays and stressed execution remain distinct limitations.",
     "compositionBasis": "Exact live Chainlink JAAA NAV row and issuer fund disclosure",
     "compositionAsOf": "2026-07-15",
     "scope": "full-composition",

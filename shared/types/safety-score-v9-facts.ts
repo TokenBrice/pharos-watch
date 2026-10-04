@@ -773,13 +773,25 @@ const V9IssuanceGovernanceSchema = z
     coverage: z.enum(["complete", "incomplete"]),
     incompleteReasons: CanonicalStringArraySchema,
     governorAuthorityKey: CanonicalTextSchema,
+    decisionRule: z.enum(["affirmative-vote", "minority-veto"]),
     minUnavoidableDelaySec: z.number().finite().int().nonnegative().nullable(),
-    votingPower: z.enum(["lock-escrowed", "past-block-checkpoint", "live-balance", "unknown"]),
+    votingPower: z.enum(["holding-period-weighted", "lock-escrowed", "past-block-checkpoint", "live-balance", "unknown"]),
+    vetoQuorumBps: z.number().int().min(1).max(10000).nullable(),
+    vetoOverride: z.enum(["none", "symmetric-vote-destruction", "insolvency-gated-restructure", "unknown"]).nullable(),
     enumerable: z.boolean(),
     nonGovernorUnboundedPathKeys: CanonicalStringArraySchema,
   })
   .strict()
   .superRefine((governance, ctx) => {
+    for (const field of ["vetoQuorumBps", "vetoOverride"] as const) {
+      if ((governance.decisionRule === "affirmative-vote") !== (governance[field] === null)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `${field} must be null if and only if decisionRule is affirmative-vote`,
+          path: [field],
+        });
+      }
+    }
     if ((governance.coverage === "complete") !== (governance.incompleteReasons.length === 0)) {
       ctx.addIssue({
         code: "custom",
@@ -820,6 +832,8 @@ export const V9DeploymentControlFactBaseSchema = z
     keyCustody: V9KeyCustodySchema,
     modulesOrGuards: V9ModulesOrGuardsSchema,
     executionScope: V9ControlExecutionScopeSchema.optional(),
+    /** Selected path on an execution-complete split fact; the full certificate still owns closure. */
+    executionPathId: CanonicalTextSchema.optional(),
     executionScopeContributors: z.array(z.object({ authorityKey: CanonicalTextSchema, scope: V9ControlExecutionScopeSchema.optional() }).strict()).min(1).optional(),
     executionScopeComplete: z.boolean().optional(),
     scopeDiagnostics: CanonicalStringArraySchema.optional(),

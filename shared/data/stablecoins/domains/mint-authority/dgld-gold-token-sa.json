@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "Gold Token SA's Mint Authority review covers independent native deployments on Ethereum, Base and Solana. On Ethereum the MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by issuer EOA 0xb1c1bc081e49b8f4bb4e1960c2f7d9cd9dff8b9d, which also owns the Ethereum ProxyAdmin; on Base the corresponding roles and ProxyAdmin ownership are held by issuer EOA 0xe003a81a40803fedb701870c589c0a96d14544a0. Neither EVM native deployment has a contract-enforced aggregate supply ceiling or execution delay. The Solana Token-2022 mint names a separate mint-authority public key whose signing and custody arrangements are unresolved. Issuance remains subject to issuer-operated gold backing and reconciliation.",
+    "summary": "Gold Token SA's Mint Authority review covers independent native deployments on Ethereum, Base and Solana. On Ethereum the MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by issuer EOA 0xb1c1bc081e49b8f4bb4e1960c2f7d9cd9dff8b9d, which also owns the Ethereum ProxyAdmin; on Base the corresponding roles and ProxyAdmin ownership are held by issuer EOA 0xe003a81a40803fedb701870c589c0a96d14544a0. Neither EVM native deployment has a contract-enforced aggregate supply ceiling or execution delay. The Solana Token-2022 mint authority is the mint_authority PDA of the issuer's permissioned DGLD program, independently derived and matched to finalized mint state. This identifies the immediate program authority, not the independence or quorum of its operational MPC/Squads administrators. Issuance remains subject to issuer-operated gold backing and reconciliation.",
     "controls": [
       {
         "label": "Gold Token SA issuance backend",
@@ -134,21 +134,33 @@
         "address": "6pxf2QMUHRSMyRnso6RyEMgSTkafjA6ptpxFVy3rWzVv",
         "label": "DGLD Solana Token-2022 mint authority",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "contract",
         "directMintAbility": "direct",
         "deploymentRefs": [
           "solana:dg1dmo6NZNagkwB6EAfUeaco6CFXFLRhb1KCrsqXTVz"
         ],
         "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-10-01",
-        "observedBlock": 452214879,
+        "observedAt": "2026-10-04",
+        "observedBlock": 453098798,
         "sources": [
           {
             "label": "DGLD Solana mint",
             "url": "https://solscan.io/token/dg1dmo6NZNagkwB6EAfUeaco6CFXFLRhb1KCrsqXTVz"
+          },
+          {
+            "label": "Issuer-published Adevar Solana audit, July 22 2026",
+            "url": "https://files.dgld.ch/audits/Adevar_DGLD_Solana_AuditJul2026.pdf"
+          },
+          {
+            "label": "DGLD official Solana program inventory",
+            "url": "https://dgld.ch/audits"
+          },
+          {
+            "label": "Independently fetched finalized paired Solana RPC, context slot 453098798; block time 2026-10-04T00:46:06Z",
+            "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "Finalized Solana getAccountInfo observation at context slot 452214879 on 2026-10-01 identifies Token-2022 mint dg1dmo6NZNagkwB6EAfUeaco6CFXFLRhb1KCrsqXTVz with 9 decimals and mintAuthority 6pxf2QMUHRSMyRnso6RyEMgSTkafjA6ptpxFVy3rWzVv. A follow-up getMultipleAccounts read at finalized slot 452214956 returned null for that authority account; this does not establish its key custody, signer threshold or controlling entity. Authority type therefore remains unknown."
+        "evidence": "Independent verification fetched a finalized paired getMultipleAccounts response at context slot 453098798: the Token-2022 mint's mintAuthority was 6pxf2QMUHRSMyRnso6RyEMgSTkafjA6ptpxFVy3rWzVv and the authority account was null. getBlockTime returned 1791074766 (2026-10-04T00:46:06Z), establishing the October 4 observation date. Historical account state at slot 453082618 was not replayed; its block time alone does not reproduce that state. The issuer's audits page identifies program w7bpdM4Kbz936jJEcLpdGrraDd9qTFkjRQ5a5mkisZh. Adevar's July 22 audit, pages 6 and 11, identifies the mint_authority PDA signing issuance. Solana findProgramAddress derivation with seed bytes mint_authority, bump 255 and that program yields exactly the observed authority; its off-curve address is a program signer, not an EOA. This establishes the immediate contract authority only. The audited operational issuer/admin roles, Utila MPC/Squads custody and upgrade reach are not asserted to be completely closed."
       }
     ],
     "upgradeability": {

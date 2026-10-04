@@ -46,13 +46,13 @@
     ]
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
+    "tier": "single-source-or-laggy",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
-    "summary": "Pinned sole-adapter inventory contains 9 borrower markets and an internal VaultV2 NAV path. Borrower oracle/LLTV identities are matched to engine state, with complete paths and loss mechanisms. The exact current feed-owner, operational heartbeat and independent fallback census remains incomplete; no oracleless lending exemption or redundant-feed credit is asserted.",
+    "summary": "Complete current sole-adapter inventory at ethereum block 26114896: 9 funded borrower markets, with the prior emptied sirloin branch retained diagnostically. Exact pricing roots are immutable Morpho arithmetic or source-resolved EIP-1167 MetaOracle clones. Consumer pricing does not enforce feed timestamp freshness; no redundant-provider credit is asserted. Single-source-or-laggy reflects the proved absence of consumer timestamp validation, not an assumed issuer heartbeat or a redundant provider set.",
     "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
-    "confidence": "probable",
+    "reviewer": "Unknown wave W1R15 exact pricing-path review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Morpho full exact VaultV2 adapter and market inventory",
@@ -69,13 +69,29 @@
       {
         "label": "Exact Ethereum lending-engine source: bad debt reduces totalSupplyAssets",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+      },
+      {
+        "label": "Exact source-matched arithmetic and immutable input layout",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0x182e072f2c9c58c6f19f144c97986f7496c6a109?fields=all"
+      },
+      {
+        "label": "Exact current sole-adapter executable",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x5e3aca36fe2361e1866752ad74cb429f64cdcf1a?fields=all"
+      },
+      {
+        "label": "Pinned ethereum block 26114896 state",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      },
+      {
+        "label": "Exact MetaOracle clone implementation and fallback source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b4655239e91dc9e1f7599bb88fba41b4542de5b"
       }
     ],
     "branchApplicability": {
       "disposition": "branches-required",
       "reviewedAt": "2026-10-03",
       "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
-      "rationale": "Every sole-adapter market has a collateral-price/LLTV liquidation branch. The internal share-NAV path is reviewed separately and does not exempt borrower branches. Adapter and position pagination countTotal confirms complete current inventory.",
+      "rationale": "Current complete marketIds/expectedSupplyAssets census at ethereum block 26114896 and exact Morpho idToMarketParams prove all borrower-price paths. NAV remains loan-unit accounting; no oracleless lending exemption is claimed.",
       "sources": [
         {
           "label": "Morpho full exact VaultV2 adapter and market inventory",
@@ -464,8 +480,8 @@
       {
         "id": "market-f135feb27b5f2bd2d54f344fd38dbb5161ff7f0ef4494901fb23f2fe8e58145a",
         "label": "steakUSDC / steakEURCV borrower market",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact engine idToMarketParams matches collateral, oracle and LLTV from the complete adapter inventory. Getter inputs are pinned; source-verified composition does not establish independent fallback, feed-admin closure or heartbeat. Exact executable feed/fallback and feed-owner/freshness policy remains unverified; opaque topology is nondisclosure, not a proven price-manipulation event.",
+        "tier": "single-source-or-laggy",
+        "summary": "At ethereum block 26114896, exact market parameters identify pricing root 0x74ec54c1fe39a7a2299c77dd0f2d3cb458bb44c2. EIP-1167 clone delegates to 0x9b4655239e91dc9e1f7599bb88fba41b4542de5b; primary=0xed621dd43e0eebfe9ddc10bd2815b861734beb0c, backup=0xdc90fb5c08fb373279672728ad2d8c3988dbef16, current=0xed621dd43e0eebfe9ddc10bd2815b861734beb0c, deviation=5000000000000000/1e18, challenge=28800s, healing=86400s. price() catches selected-oracle reverts and calls the other; persistent deviation switches require the permissionless challenge/heal timelock. No independent-provider or timestamp-freshness guarantee follows.",
         "collateralAssets": [
           "steakUSDC"
         ],
@@ -474,17 +490,73 @@
         ],
         "feeds": [
           {
-            "provider": "Morpho immutable market oracle",
-            "path": "IOracle.price for market 0xf135feb27b5f2bd2d54f344fd38dbb5161ff7f0ef4494901fb23f2fe8e58145a",
+            "provider": "MetaOracleDeviationTimelock EIP-1167 clone",
+            "path": "price() / currentOracle()",
             "address": "0x74ec54c1fe39a7a2299c77dd0f2d3cb458bb44c2",
             "chain": "ethereum",
             "observedAt": "2026-10-03",
-            "observedBlock": 26110187
+            "observedBlock": 26114896
+          },
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "primaryOracle()",
+            "address": "0xed621dd43e0eebfe9ddc10bd2815b861734beb0c",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114896
+          },
+          {
+            "provider": "Pinned single feed or ERC-4626 rate input; no independent heartbeat guarantee asserted",
+            "path": "primaryOracle() / QUOTE_FEED_1()",
+            "address": "0xb49f677943bc038e9857d61e7d053caa2c1734c1",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114896
+          },
+          {
+            "provider": "Pinned single feed or ERC-4626 rate input; no independent heartbeat guarantee asserted",
+            "path": "primaryOracle() / BASE_VAULT()",
+            "address": "0xbeef088055857739c12cd3765f20b7679def0f51",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114896
+          },
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "backupOracle()",
+            "address": "0xdc90fb5c08fb373279672728ad2d8c3988dbef16",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114896
+          },
+          {
+            "provider": "Pinned single feed or ERC-4626 rate input; no independent heartbeat guarantee asserted",
+            "path": "backupOracle() / BASE_FEED_1()",
+            "address": "0x37be050e75c7f0a80f0e8abbfc2c4ff826728caa",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114896
+          },
+          {
+            "provider": "Pinned single feed or ERC-4626 rate input; no independent heartbeat guarantee asserted",
+            "path": "backupOracle() / QUOTE_FEED_1()",
+            "address": "0xb49f677943bc038e9857d61e7d053caa2c1734c1",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114896
+          },
+          {
+            "provider": "Pinned single feed or ERC-4626 rate input; no independent heartbeat guarantee asserted",
+            "path": "backupOracle() / BASE_VAULT()",
+            "address": "0xbeef088055857739c12cd3765f20b7679def0f51",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114896
           }
         ],
-        "fallbackBehavior": "The exact oracle fallback/freshness and replacement policy was not publicly source-verified; no failover or staleness credit is asserted. Morpho documents that price() reverts can block liquidation.",
+        "fallbackBehavior": "EIP-1167 clone delegates to 0x9b4655239e91dc9e1f7599bb88fba41b4542de5b; primary=0xed621dd43e0eebfe9ddc10bd2815b861734beb0c, backup=0xdc90fb5c08fb373279672728ad2d8c3988dbef16, current=0xed621dd43e0eebfe9ddc10bd2815b861734beb0c, deviation=5000000000000000/1e18, challenge=28800s, healing=86400s. price() catches selected-oracle reverts and calls the other; persistent deviation switches require the permissionless challenge/heal timelock. No independent-provider or timestamp-freshness guarantee follows.",
         "observedAt": "2026-10-03",
-        "observedBlock": 26110187,
+        "observedBlock": 26114896,
         "collateralParameters": [
           {
             "asset": "steakUSDC",
@@ -515,6 +587,22 @@
           {
             "label": "Exact oracle deployment source response",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x74ec54c1fe39a7a2299c77dd0f2d3cb458bb44c2"
+          },
+          {
+            "label": "Exact source-matched arithmetic and immutable input layout",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x182e072f2c9c58c6f19f144c97986f7496c6a109?fields=all"
+          },
+          {
+            "label": "Exact current sole-adapter executable",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x5e3aca36fe2361e1866752ad74cb429f64cdcf1a?fields=all"
+          },
+          {
+            "label": "Pinned ethereum block 26114896 state",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "Exact MetaOracle clone implementation and fallback source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b4655239e91dc9e1f7599bb88fba41b4542de5b"
           }
         ]
       },
@@ -602,8 +690,8 @@
       {
         "id": "market-80c97dd236bafc6c5e41e84797efea2853511455f189525a8df70826a38cb282",
         "label": "WBTC / steakEURCV borrower market",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact engine idToMarketParams matches collateral, oracle and LLTV from the complete adapter inventory. Getter inputs are pinned; source-verified composition does not establish independent fallback, feed-admin closure or heartbeat. Exact executable feed/fallback and feed-owner/freshness policy remains unverified; opaque topology is nondisclosure, not a proven price-manipulation event.",
+        "tier": "single-source-or-laggy",
+        "summary": "At ethereum block 26114896, exact market parameters identify pricing root 0xd9547692d9a01cb10d9cf4bf41381355a6570415. EIP-1167 clone delegates to 0x9b4655239e91dc9e1f7599bb88fba41b4542de5b; primary=0x63fb75cc9c48ce6b5113fffccc4fafe368c5ee59, backup=0xd122315bd4e89386045f51f6e65a6eedb0dd31b9, current=0x63fb75cc9c48ce6b5113fffccc4fafe368c5ee59, deviation=20000000000000000/1e18, challenge=7200s, healing=28800s. price() catches selected-oracle reverts and calls the other; persistent deviation switches require the permissionless challenge/heal timelock. No independent-provider or timestamp-freshness guarantee follows.",
         "collateralAssets": [
           "WBTC"
         ],
@@ -612,17 +700,73 @@
         ],
         "feeds": [
           {
-            "provider": "Morpho immutable market oracle",
-            "path": "IOracle.price for market 0x80c97dd236bafc6c5e41e84797efea2853511455f189525a8df70826a38cb282",
+            "provider": "MetaOracleDeviationTimelock EIP-1167 clone",
+            "path": "price() / currentOracle()",
             "address": "0xd9547692d9a01cb10d9cf4bf41381355a6570415",
             "chain": "ethereum",
             "observedAt": "2026-10-03",
-            "observedBlock": 26110187
+            "observedBlock": 26114896
+          },
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "primaryOracle()",
+            "address": "0x63fb75cc9c48ce6b5113fffccc4fafe368c5ee59",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114896
+          },
+          {
+            "provider": "Pinned single feed or ERC-4626 rate input; no independent heartbeat guarantee asserted",
+            "path": "primaryOracle() / BASE_FEED_1()",
+            "address": "0x91d32e6f01d6473b596f54c6e304e06d774f86b2",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114896
+          },
+          {
+            "provider": "Pinned single feed or ERC-4626 rate input; no independent heartbeat guarantee asserted",
+            "path": "primaryOracle() / QUOTE_FEED_1()",
+            "address": "0xb49f677943bc038e9857d61e7d053caa2c1734c1",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114896
+          },
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "backupOracle()",
+            "address": "0xd122315bd4e89386045f51f6e65a6eedb0dd31b9",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114896
+          },
+          {
+            "provider": "Pinned single feed or ERC-4626 rate input; no independent heartbeat guarantee asserted",
+            "path": "backupOracle() / BASE_FEED_1()",
+            "address": "0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114896
+          },
+          {
+            "provider": "Pinned single feed or ERC-4626 rate input; no independent heartbeat guarantee asserted",
+            "path": "backupOracle() / BASE_FEED_2()",
+            "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114896
+          },
+          {
+            "provider": "Pinned single feed or ERC-4626 rate input; no independent heartbeat guarantee asserted",
+            "path": "backupOracle() / QUOTE_FEED_1()",
+            "address": "0xb49f677943bc038e9857d61e7d053caa2c1734c1",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114896
           }
         ],
-        "fallbackBehavior": "The exact oracle fallback/freshness and replacement policy was not publicly source-verified; no failover or staleness credit is asserted. Morpho documents that price() reverts can block liquidation.",
+        "fallbackBehavior": "EIP-1167 clone delegates to 0x9b4655239e91dc9e1f7599bb88fba41b4542de5b; primary=0x63fb75cc9c48ce6b5113fffccc4fafe368c5ee59, backup=0xd122315bd4e89386045f51f6e65a6eedb0dd31b9, current=0x63fb75cc9c48ce6b5113fffccc4fafe368c5ee59, deviation=20000000000000000/1e18, challenge=7200s, healing=28800s. price() catches selected-oracle reverts and calls the other; persistent deviation switches require the permissionless challenge/heal timelock. No independent-provider or timestamp-freshness guarantee follows.",
         "observedAt": "2026-10-03",
-        "observedBlock": 26110187,
+        "observedBlock": 26114896,
         "collateralParameters": [
           {
             "asset": "WBTC",
@@ -653,14 +797,30 @@
           {
             "label": "Exact oracle deployment source response",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd9547692d9a01cb10d9cf4bf41381355a6570415"
+          },
+          {
+            "label": "Exact source-matched arithmetic and immutable input layout",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x182e072f2c9c58c6f19f144c97986f7496c6a109?fields=all"
+          },
+          {
+            "label": "Exact current sole-adapter executable",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x5e3aca36fe2361e1866752ad74cb429f64cdcf1a?fields=all"
+          },
+          {
+            "label": "Pinned ethereum block 26114896 state",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "Exact MetaOracle clone implementation and fallback source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b4655239e91dc9e1f7599bb88fba41b4542de5b"
           }
         ]
       },
       {
         "id": "market-b5f8d5554d85b782d7080314bba3544983755a75eb5c432f5eae1c47c6af4da4",
         "label": "cbBTC / steakEURCV borrower market",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact engine idToMarketParams matches collateral, oracle and LLTV from the complete adapter inventory. Getter inputs are pinned; source-verified composition does not establish independent fallback, feed-admin closure or heartbeat. Exact executable feed/fallback and feed-owner/freshness policy remains unverified; opaque topology is nondisclosure, not a proven price-manipulation event.",
+        "tier": "single-source-or-laggy",
+        "summary": "At ethereum block 26114896, exact market parameters identify pricing root 0xd08d519d6e91575c4e7ae1e49bd54da369521c0e. EIP-1167 clone delegates to 0x9b4655239e91dc9e1f7599bb88fba41b4542de5b; primary=0x63fb75cc9c48ce6b5113fffccc4fafe368c5ee59, backup=0x5aea8f818f9c8c1d73d3d805bfe0e6602d23d017, current=0x63fb75cc9c48ce6b5113fffccc4fafe368c5ee59, deviation=20000000000000000/1e18, challenge=7200s, healing=28800s. price() catches selected-oracle reverts and calls the other; persistent deviation switches require the permissionless challenge/heal timelock. No independent-provider or timestamp-freshness guarantee follows.",
         "collateralAssets": [
           "cbBTC"
         ],
@@ -669,17 +829,65 @@
         ],
         "feeds": [
           {
-            "provider": "Morpho immutable market oracle",
-            "path": "IOracle.price for market 0xb5f8d5554d85b782d7080314bba3544983755a75eb5c432f5eae1c47c6af4da4",
+            "provider": "MetaOracleDeviationTimelock EIP-1167 clone",
+            "path": "price() / currentOracle()",
             "address": "0xd08d519d6e91575c4e7ae1e49bd54da369521c0e",
             "chain": "ethereum",
             "observedAt": "2026-10-03",
-            "observedBlock": 26110187
+            "observedBlock": 26114896
+          },
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "primaryOracle()",
+            "address": "0x63fb75cc9c48ce6b5113fffccc4fafe368c5ee59",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114896
+          },
+          {
+            "provider": "Pinned single feed or ERC-4626 rate input; no independent heartbeat guarantee asserted",
+            "path": "primaryOracle() / BASE_FEED_1()",
+            "address": "0x91d32e6f01d6473b596f54c6e304e06d774f86b2",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114896
+          },
+          {
+            "provider": "Pinned single feed or ERC-4626 rate input; no independent heartbeat guarantee asserted",
+            "path": "primaryOracle() / QUOTE_FEED_1()",
+            "address": "0xb49f677943bc038e9857d61e7d053caa2c1734c1",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114896
+          },
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "backupOracle()",
+            "address": "0x5aea8f818f9c8c1d73d3d805bfe0e6602d23d017",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114896
+          },
+          {
+            "provider": "Pinned single feed or ERC-4626 rate input; no independent heartbeat guarantee asserted",
+            "path": "backupOracle() / BASE_FEED_1()",
+            "address": "0x2665701293fcbeb223d11a08d826563edcce423a",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114896
+          },
+          {
+            "provider": "Pinned single feed or ERC-4626 rate input; no independent heartbeat guarantee asserted",
+            "path": "backupOracle() / QUOTE_FEED_1()",
+            "address": "0xb49f677943bc038e9857d61e7d053caa2c1734c1",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114896
           }
         ],
-        "fallbackBehavior": "The exact oracle fallback/freshness and replacement policy was not publicly source-verified; no failover or staleness credit is asserted. Morpho documents that price() reverts can block liquidation.",
+        "fallbackBehavior": "EIP-1167 clone delegates to 0x9b4655239e91dc9e1f7599bb88fba41b4542de5b; primary=0x63fb75cc9c48ce6b5113fffccc4fafe368c5ee59, backup=0x5aea8f818f9c8c1d73d3d805bfe0e6602d23d017, current=0x63fb75cc9c48ce6b5113fffccc4fafe368c5ee59, deviation=20000000000000000/1e18, challenge=7200s, healing=28800s. price() catches selected-oracle reverts and calls the other; persistent deviation switches require the permissionless challenge/heal timelock. No independent-provider or timestamp-freshness guarantee follows.",
         "observedAt": "2026-10-03",
-        "observedBlock": 26110187,
+        "observedBlock": 26114896,
         "collateralParameters": [
           {
             "asset": "cbBTC",
@@ -710,6 +918,22 @@
           {
             "label": "Exact oracle deployment source response",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd08d519d6e91575c4e7ae1e49bd54da369521c0e"
+          },
+          {
+            "label": "Exact source-matched arithmetic and immutable input layout",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x182e072f2c9c58c6f19f144c97986f7496c6a109?fields=all"
+          },
+          {
+            "label": "Exact current sole-adapter executable",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x5e3aca36fe2361e1866752ad74cb429f64cdcf1a?fields=all"
+          },
+          {
+            "label": "Pinned ethereum block 26114896 state",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "Exact MetaOracle clone implementation and fallback source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b4655239e91dc9e1f7599bb88fba41b4542de5b"
           }
         ]
       }

@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice1Finish)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W1R96 primary-source CHFm collateral review",
     "confidence": "verified",
     "sources": [
       {
@@ -49,9 +49,9 @@
         "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
       }
     ],
-    "rationale": "Mento's pinned analytics configuration and current reserve API identify CHFm as a CDP whose sole direct collateral is the tracked USDm stablecoin. Mento Protocol and the shared Mento Reserve are the direct protocol and upstream reserve failure domains; USDm's underlying basket remains owned by cusd-celo and is not duplicated here.",
-    "compositionBasis": "Mento CHFm CDP collateral configuration and live reserve dashboard",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "The issuer API observed 2026-10-03 reports an active CHFm trove on Celo with USDm collateral, matching the exact CHFm backing configuration (including the Monad lockbox representation). The sole direct collateral category is USDm, so the whole direct-collateral denominator remains one USDm slice. This is an issuer-reported category composition, not independent collateral solvency assurance, immediate realizability, or a measurement of USDm's upstream reserves.",
+    "compositionBasis": "Issuer reserve API observation 2026-10-03: cdp_troves.troves CHFm entry names collateral_token USDm and active Celo TroveManager 0x4E105FEF015db26320C077427BD605AceAd9262E; pinned CHFm backing config identifies USDm as sole collateral across Celo and its Monad lockbox representation. One permitted direct collateral category owns 100% of the direct-collateral denominator; no reserve basket weights are inferred.",
+    "compositionAsOf": "2026-10-03",
     "scope": "full-composition",
     "knownUnknownExposure": "CHFm's sole direct collateral category is USDm; USDm's own reserve composition is reviewed separately on cusd-celo.",
     "knownUnknownExposurePct": 0

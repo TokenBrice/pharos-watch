@@ -926,6 +926,7 @@ const V9ControlPolicySchema = z
         "bounded-admin": ScoreSchema,
         "partially-bounded-admin": ScoreSchema,
         "unbounded-governed": ScoreSchema,
+        "unbounded-veto-guarded": ScoreSchema,
         "concentrated-admin": ScoreSchema,
         // MINT-LADDER 9.32 (2026-08-21): collateral is a real economic bound,
         // but the privileged administrator surface remains concentrated.
@@ -942,6 +943,21 @@ const V9ControlPolicySchema = z
       .object({
         minUnavoidableDelaySec: z.number().int().positive(),
         admissibleVotingPower: z.array(z.enum(["lock-escrowed", "past-block-checkpoint"])).min(1),
+        minorityVeto: z
+          .object({
+            minVetoWindowSec: z.number().int().positive(),
+            maxVetoQuorumBps: z.number().int().min(1).max(10000),
+            admissibleVotingPower: z.array(z.enum(["holding-period-weighted", "lock-escrowed", "past-block-checkpoint"])).min(1),
+            admissibleOverride: z.array(z.enum(["none", "symmetric-vote-destruction", "insolvency-gated-restructure"])).min(1),
+            restructureMinEquityMultiple: z.number().int().positive(),
+            monetaryPolicy: z
+              .object({
+                minRateChangeDelaySec: z.number().int().nonnegative(),
+                admissibleRateChangeRules: z.array(z.enum(["minority-replaceable"])).min(1),
+              })
+              .strict(),
+          })
+          .strict(),
       })
       .strict(),
     mintPostureGrading: z

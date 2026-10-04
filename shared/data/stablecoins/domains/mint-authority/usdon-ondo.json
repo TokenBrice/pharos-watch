@@ -304,7 +304,7 @@
       {
         "label": "Ondo Global Markets Solana BPF upgrade authority",
         "role": "minter-admin",
-        "authorityType": "eoa",
+        "authorityType": "multisig",
         "directMintAbility": "can-authorize",
         "deploymentRefs": [
           "solana:ZPFtoCe7WWqG4N3ZFRccS8T9SMBeHsd1Vmgv2i7ondo"
@@ -313,11 +313,14 @@
         "address": "9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "threshold": 4,
+        "signerCount": 7,
+        "timelockDelaySec": 7200,
         "bypassSurfaces": [
           "Can replace Ondo Global Markets program logic and alter role, mint, pause, or configuration checks"
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 439720621,
+        "observedAt": "2026-10-03",
+        "observedBlock": 453074463,
         "sources": [
           {
             "label": "Ondo Solana role-operation source",
@@ -330,9 +333,21 @@
           {
             "label": "Solana RPC",
             "url": "https://solana.publicnode.com"
+          },
+          {
+            "label": "Solana finalized getMultipleAccounts",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Squads v4 account and vault derivation specification",
+            "url": "https://docs.squads.so/main/development/reference/accounts"
+          },
+          {
+            "label": "Exact controlling multisig account",
+            "url": "https://solscan.io/account/EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr"
           }
         ],
-        "evidence": "At Solana context slot 439720621, the Ondo Global Markets program XzTT4XB8m7sLD2xi6snefSasaswsKCxx5Tifjondogm resolved to ProgramData F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU, whose upgrade_authority_address was 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM. The authority account was a non-executable System-owned account. Verified source constrains generic grant_role and revoke_role to the current BPF upgrade authority, so this authority can replace program logic and establish or revoke role accounts."
+        "evidence": "At finalized slot 453074463, one getMultipleAccounts observation binds the issuer GM program to program-data F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU and upgrade authority 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM. Exact Squads v4 PDA derivation binds that off-curve authority to vault index 0 of multisig EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr (bump 254). Decoded Multisig state has threshold 4, seven permission-mask-7 members, configured time_lock 7200 and zero config_authority. Finalized transaction 5XVxqQtnB44vcJXtMBfobzBzufc6ryVa7YGx4Mf2xNi2GJcMYFpqMq328KMWvxVy8fz8eUCYvNA9XLU2tnVRY8Zp independently executes GM role operations through this Squads vault. This authority can replace program logic and establish or revoke role accounts; bare system ownership did not prove EOA. Current topology/delay are established; full spending-limit, reconfiguration and Squads upgrade/bypass closure and human independence are not. EVM modules/guards do not apply."
       }
     ],
     "reconciliation": "periodic",

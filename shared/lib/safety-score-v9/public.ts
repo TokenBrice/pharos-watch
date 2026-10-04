@@ -84,7 +84,8 @@ export interface BuildSafetyScoreV9ResponseArgs {
   policyVersion: string;
   publicationGenerationId: string;
   publishedAtSec: number;
-  results: readonly V9PublicCardProjectionInput[];
+  /** A producer function hands the builder sole ownership of the returned array. */
+  results: readonly V9PublicCardProjectionInput[] | (() => V9PublicCardProjectionInput[]);
   commonModeGroups?: readonly V9CommonModeGroup[];
 }
 
@@ -485,8 +486,10 @@ function projectControlBreakdown(
             executionScopeComplete: fact.executionScopeComplete ?? null,
             moduleImpact: fact.moduleImpact ?? "unresolved",
             diagnostics: fact.scopeDiagnostics ?? [],
-            executionPaths: [ ...(fact.executionScope?.paths ?? []), ...(fact.executionScopeContributors ?? []).flatMap((entry) => entry.scope?.paths ?? []) ]
-              .map((path) => ({ id: path.id, targetDeployment: path.targetDeployment, entrypointKind: path.entrypointKind, entrypoints: path.entrypoints, activation: path.activation, reach: path.reach, capabilities: path.capabilities })),
+            executionPaths: [
+              ...(fact.executionScope?.paths.filter((path) => fact.executionPathId === undefined || path.id === fact.executionPathId) ?? []),
+              ...(fact.executionScopeContributors ?? []).flatMap((entry) => entry.scope?.paths.filter((path) => fact.executionPathId === undefined || path.id === fact.executionPathId) ?? []),
+            ].map((path) => ({ id: path.id, targetDeployment: path.targetDeployment, entrypointKind: path.entrypointKind, entrypoints: path.entrypoints, activation: path.activation, reach: path.reach, capabilities: path.capabilities })),
           })) } : {}),
       })),
     adjustments: projectPillarAdjustments(input, "control", evaluatedScore),
@@ -1029,7 +1032,7 @@ function assertConsistentResultIdentity(results: readonly V9PublicCardProjection
 /** Pure publication projection: never regrades a group or reruns the scorer. */
 export function projectSafetyScoreV9CommonModeGroups(
   groups: readonly V9CommonModeGroup[],
-  results: readonly V9PublicCardProjectionInput[],
+  results: readonly Pick<V9PublicCardProjectionInput, "trace">[],
   cards: readonly SafetyScoreV9CurrentCard[],
 ): SafetyScoreV9CommonModeGroups {
   const resultById = new Map(results.map((result) => [result.trace.assetId, result]));
@@ -1081,35 +1084,75 @@ export function projectSafetyScoreV9CommonModeGroups(
   }).sort((left, right) => compareText(left.id, right.id));
 }
 
+export interface V9PublicCardProjectionFailure {
+  assetId: string;
+  issues: z.core.$ZodIssue[];
+}
+
+/**
+ * Per-card public-contract violations, attributed to their assets so the
+ * producer can quarantine them and publish the rest (R8) instead of failing
+ * the cohort. Issue paths are response-relative (`cards.<index>...`).
+ */
+export class V9PublicCardProjectionError extends Error {
+  readonly failures: readonly V9PublicCardProjectionFailure[];
+
+  constructor(failures: readonly V9PublicCardProjectionFailure[]) {
+    const issue = failures[0]!.issues[0];
+    super(`Safety Score v9 public card projection failed for ${failures.map((failure) => failure.assetId).join(", ")}` +
+      (issue ? ` at ${issue.path.join(".")}: ${issue.message}` : ""));
+    this.name = "V9PublicCardProjectionError";
+    this.failures = failures;
+  }
+
+  /** Asset-local quarantine message naming that card's first failing public field. */
+  messageFor(assetId: string): string {
+    const issue = this.failures.find((failure) => failure.assetId === assetId)?.issues[0];
+    return `Safety Score v9 asset ${assetId} public card projection failed` +
+      (issue ? ` at ${issue.path.slice(2).join(".")}: ${issue.message}` : "");
+  }
+}
+
 export function buildSafetyScoreV9Response(args: BuildSafetyScoreV9ResponseArgs): SafetyScoreV9CurrentResponse {
-  assertConsistentResultIdentity(args.results);
-  const ordered = [...args.results].sort((left, right) => compareText(left.trace.assetId, right.trace.assetId));
-  const traces = ordered.map((result) => result.trace);
+  // A producer transfers sole ownership of its array, so each result's graph is
+  // released as soon as its card is projected; arrays stay caller-owned.
+  const ordered: (V9PublicCardProjectionInput | undefined)[] =
+    typeof args.results === "function" ? args.results() : [...args.results];
+  args = { ...args, results: [] };
+  assertConsistentResultIdentity(ordered as V9PublicCardProjectionInput[]);
+  ordered.sort((left, right) => compareText(left!.trace.assetId, right!.trace.assetId));
+  const traces = ordered.map((result) => result!.trace);
   const first = traces[0]!;
-  const { cards, foreignCauseGaps } = finalizeV9PublicCauseGaps(ordered.map((result, index) => {
+  const drafts = [];
+  const failures: V9PublicCardProjectionFailure[] = [];
+  for (let index = 0; index < ordered.length; index++) {
+    const result = ordered[index]!;
+    ordered[index] = undefined;
     try {
       const { card, foreignCauseGaps: foreign } = projectSafetyScoreV9Card(result);
       const { foreignCauseGapRefs: _localRefs, ...draft } = card;
-      return { ...draft, foreignCauseGaps: foreign };
+      drafts.push({ ...draft, foreignCauseGaps: foreign });
     } catch (error) {
       if (!(error instanceof z.ZodError)) throw error;
-      throw new z.ZodError(error.issues.map((issue) => ({
+      failures.push({ assetId: result.trace.assetId, issues: error.issues.map((issue) => ({
         ...issue,
         path: ["cards", index, ...issue.path],
-      })));
+      })) });
     }
-  }));
+  }
+  if (failures.length > 0) throw new V9PublicCardProjectionError(failures);
+  ordered.length = 0;
+  const { cards, foreignCauseGaps } = finalizeV9PublicCauseGaps(drafts);
+  drafts.length = 0;
   const notRatedIds = cards.filter((card) => card.ratingStatus === "not-rated").map((card) => card.id);
   const pipelineGapIds = cards.filter((card) => card.ratingStatus === "pipeline-gap").map((card) => card.id);
   const commonModeGroups = args.commonModeGroups === undefined
     ? undefined
-    : projectSafetyScoreV9CommonModeGroups(args.commonModeGroups, ordered, cards);
+    : projectSafetyScoreV9CommonModeGroups(args.commonModeGroups, traces.map((trace) => ({ trace })), cards);
   const resultDigest = computeV9ResultDigest(traces);
   // Projection and identity are complete. Release our working references
   // without mutating the caller's results or argument object.
-  ordered.length = 0;
   traces.length = 0;
-  args = { ...args, results: [] };
   // Each card passed the full single-card schema before the deterministic
   // publication-wide foreign-reference remap. Admit those owned identities
   // without cloning the complete graph again; envelope refinements still

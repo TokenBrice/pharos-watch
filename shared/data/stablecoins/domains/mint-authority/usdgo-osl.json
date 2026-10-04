@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
-    "summary": "USDGO is a Solana Token-2022 issuer token. C2QJ... is the externally signable mint and permanent-delegate authority; a finalized mint transaction confirms it as the sole on-chain signer. Separate configuration, pause, freeze, and fee-withdrawal EOAs cannot mint. The shared Token-2022 program remains upgradeable through a 4/6 Squads V3 multisig with no enforced delay.",
+    "summary": "USDGO has issuer-native Solana, Ethereum and Morph deployments. Historical Solana Token-2022 mint/permanent-delegate and shared-program upgrade authorities remain recorded. Pinned EVM reads identify a cap-limited native minter, unrestricted limit manager, operational role administrator and UUPS upgrader on each chain; these EOAs and upgrade paths prevent treating configurable mint limits as immutable economic ceilings.",
     "upgradeability": {
       "model": "custom",
       "deploymentRefs": ["solana:72puLt71H93Z9CzHuBRTwFpL4TG3WZUhnoCC7p8gxigu"],
@@ -191,6 +191,119 @@
         ],
         "evidence": "The live Token-2022 transfer-fee configuration named this system-owned, on-curve address as the withheld-fee withdrawal authority; it cannot mint."
       }
+      ,
+      {
+        "label": "USDGO Ethereum native minter",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "chain": "ethereum",
+        "address": "0x364366a7164fb518eafaa42af0c86eddab78e6f3",
+        "deploymentRefs": ["ethereum:0x4cf5920df52f5b1f246e2e38e1786ae1cf03ecf5"],
+        "observedAt": "2026-10-03",
+        "observedBlock": 26114898,
+        "sources": [{"label":"AnchorageTokenV2 verified implementation","url":"https://eth.blockscout.com/address/0xd8e25d31606e3f5b722396a936c76c028a8a72ab?tab=contract"},{"label":"Ethereum pinned RPC","url":"https://ethereum-rpc.publicnode.com"}],
+        "evidence": "Pinned role enumeration returned exactly this EOA for MINTER_BURNER_ROLE. Native mint accepts an arbitrary recipient, subject to manager-raiseable per-minter and per-transaction limits; no escrow or cross-chain proof is checked. The separately recorded manager and upgrader can change this ceiling or implementation."
+      },
+      {
+        "label": "USDGO Ethereum mint-limit manager",
+        "role": "cap-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "chain": "ethereum",
+        "address": "0x42eed212815cbbbae09517cb13e6823a890da771",
+        "deploymentRefs": ["ethereum:0x4cf5920df52f5b1f246e2e38e1786ae1cf03ecf5"],
+        "observedAt": "2026-10-03",
+        "observedBlock": 26114898,
+        "sources": [{"label":"AnchorageTokenV2 verified implementation","url":"https://eth.blockscout.com/address/0xd8e25d31606e3f5b722396a936c76c028a8a72ab?tab=contract"},{"label":"Ethereum pinned RPC","url":"https://ethereum-rpc.publicnode.com"}],
+        "evidence": "Exactly one MINTER_MANAGER_ROLE member, with empty account bytecode. Verified incrementMintLimit, setMintWindow and setMaxMintBurn permit raising and reconfiguring limits without a collateral check."
+      },
+      {
+        "label": "USDGO Ethereum native role administrator",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "chain": "ethereum",
+        "address": "0xd93826bb299765c87d13aeba2a7e5d9b27a03956",
+        "deploymentRefs": ["ethereum:0x4cf5920df52f5b1f246e2e38e1786ae1cf03ecf5"],
+        "observedAt": "2026-10-03",
+        "observedBlock": 26114898,
+        "sources": [{"label":"AnchorageTokenV2 verified implementation","url":"https://eth.blockscout.com/address/0xd8e25d31606e3f5b722396a936c76c028a8a72ab?tab=contract"},{"label":"Ethereum pinned RPC","url":"https://ethereum-rpc.publicnode.com"}],
+        "evidence": "defaultAdmin returned this empty-code EOA. AccessControl permits granting operational roles, including minter manager and upgrader. The initial seven-day default-admin transfer delay is not a delay on operational grants or minting."
+      },
+      {
+        "label": "USDGO Ethereum native implementation upgrader",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "chain": "ethereum",
+        "address": "0x9341dc035608c77b3ace68662c0ef1bf8b568ff8",
+        "deploymentRefs": ["ethereum:0x4cf5920df52f5b1f246e2e38e1786ae1cf03ecf5"],
+        "observedAt": "2026-10-03",
+        "observedBlock": 26114898,
+        "sources": [{"label":"AnchorageTokenV2 verified implementation","url":"https://eth.blockscout.com/address/0xd8e25d31606e3f5b722396a936c76c028a8a72ab?tab=contract"},{"label":"Ethereum pinned RPC","url":"https://ethereum-rpc.publicnode.com"}],
+        "evidence": "Exactly one UPGRADER_ROLE member, with empty bytecode. UUPS _authorizeUpgrade checks this role and imposes no timelock; arbitrary replacement can change mint-critical logic."
+      },
+      {
+        "label": "USDGO Morph native minter",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "chain": "morph-l2",
+        "address": "0x364366a7164fb518eafaa42af0c86eddab78e6f3",
+        "deploymentRefs": ["morph-l2:0x4cf5920df52f5b1f246e2e38e1786ae1cf03ecf5"],
+        "observedAt": "2026-10-03",
+        "observedBlock": 27764553,
+        "sources": [{"label":"AnchorageTokenV2 verified implementation","url":"https://eth.blockscout.com/address/0xd8e25d31606e3f5b722396a936c76c028a8a72ab?tab=contract"},{"label":"Morph pinned RPC","url":"https://rpc.morphl2.io"}],
+        "evidence": "Pinned role enumeration returned exactly this EOA for MINTER_BURNER_ROLE. Implementation bytecode exactly matched the verified Ethereum implementation. Native arbitrary-recipient mint checks manager-raiseable limits, not escrow or cross-chain proof."
+      },
+      {
+        "label": "USDGO Morph mint-limit manager",
+        "role": "cap-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "chain": "morph-l2",
+        "address": "0x42eed212815cbbbae09517cb13e6823a890da771",
+        "deploymentRefs": ["morph-l2:0x4cf5920df52f5b1f246e2e38e1786ae1cf03ecf5"],
+        "observedAt": "2026-10-03",
+        "observedBlock": 27764553,
+        "sources": [{"label":"AnchorageTokenV2 verified implementation","url":"https://eth.blockscout.com/address/0xd8e25d31606e3f5b722396a936c76c028a8a72ab?tab=contract"},{"label":"Morph pinned RPC","url":"https://rpc.morphl2.io"}],
+        "evidence": "Exactly one MINTER_MANAGER_ROLE member, with empty bytecode. Verified matching implementation permits increasing minter limits and maximum transaction mint/burn amounts without reserve enforcement."
+      },
+      {
+        "label": "USDGO Morph native role administrator",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "chain": "morph-l2",
+        "address": "0xd93826bb299765c87d13aeba2a7e5d9b27a03956",
+        "deploymentRefs": ["morph-l2:0x4cf5920df52f5b1f246e2e38e1786ae1cf03ecf5"],
+        "observedAt": "2026-10-03",
+        "observedBlock": 27764553,
+        "sources": [{"label":"AnchorageTokenV2 verified implementation","url":"https://eth.blockscout.com/address/0xd8e25d31606e3f5b722396a936c76c028a8a72ab?tab=contract"},{"label":"Morph pinned RPC","url":"https://rpc.morphl2.io"}],
+        "evidence": "defaultAdmin returned this empty-code EOA. AccessControl permits granting minter, manager and upgrader roles. Admin-transfer delay does not constrain operational role grants."
+      },
+      {
+        "label": "USDGO Morph native implementation upgrader",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "chain": "morph-l2",
+        "address": "0x9341dc035608c77b3ace68662c0ef1bf8b568ff8",
+        "deploymentRefs": ["morph-l2:0x4cf5920df52f5b1f246e2e38e1786ae1cf03ecf5"],
+        "observedAt": "2026-10-03",
+        "observedBlock": 27764553,
+        "sources": [{"label":"AnchorageTokenV2 verified implementation","url":"https://eth.blockscout.com/address/0xd8e25d31606e3f5b722396a936c76c028a8a72ab?tab=contract"},{"label":"Morph pinned RPC","url":"https://rpc.morphl2.io"}],
+        "evidence": "Exactly one UPGRADER_ROLE member, with empty bytecode. The bytecode-matched UUPS implementation grants unrestricted replacement without an enforced delay."
+      }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
@@ -241,10 +354,16 @@
           "label": "Token-2022 Neodyme audit",
           "url": "https://neodyme.io/reports/Token%202022%20-%202024.pdf"
         }
+        ,
+        {"label":"USDGO current issuer deployment census","url":"https://www.usdgo.com/en/transparency"},
+        {"label":"AnchorageTokenV2 verified implementation","url":"https://eth.blockscout.com/address/0xd8e25d31606e3f5b722396a936c76c028a8a72ab?tab=contract"},
+        {"label":"Ethereum RPC block 26114898","url":"https://ethereum-rpc.publicnode.com"},
+        {"label":"Morph RPC block 27764553","url":"https://rpc.morphl2.io"},
+        {"label":"Anchorage USDGO reserve archive and issuer notices","url":"https://www.anchorage.com/platform/usdgo-reserve-attestations"}
       ],
-      "evidence": "At finalized slot 432729217, Solana Token-2022 account decoding identified the exact mint/permanent-delegate, configuration, pause, freeze, and fee-withdrawal authorities. A successful mintToChecked transaction at slot 432714040 proved the mint authority was the transaction's only signer. Token-2022 ProgramData resolved the shared program upgrade authority to a 4/6 Squads V3 multisig; the latest upgrade executed with four approvals and no enforced timelock. Off-chain MPC/HSM custody remains unclaimed because no address-bound attestation was found.",
-      "reviewer": "Codex Safety Score V9 data research / SOL-IV calibration",
-      "reviewedAt": "2026-07-15",
+      "evidence": "Historical Solana signer and shared-program observations remain unchanged. On 2026-10-03, pinned Ethereum block 26114898/hash 0xacfd1635574095212e3ce1303b8b9d563339a7df9d9e22e32a1d08d80a248aaf and Morph block 27764553/hash 0xe046966c8da6ebdd8b98eb0d0407f3a2f92ec96584dffdca2a8151ddca1ef640 established matching verified AnchorageTokenV2 runtime and complete minter, manager and upgrader role enumeration, plus default administrator. All four authority addresses have empty code on both chains. Native EVM mint powers are retained here rather than misclassified as unknown representation controls. Existing independent monthly reserve examinations compare reserve assets with redeemable native USDGO liabilities; covered-stablecoin terms require daily aggregate backing. The 2026-02-10 through 2026-10-03 public incident review searched Anchorage/OSL announcements, reserve archive, OCC records and Rekt/SlowMist cross-checks alongside the exact current implementation/role inventory; no publicly reported USDGO mint/control compromise was located. This is reviewed public-history absence, not an undisclosed-incident guarantee or independent key-custody attestation.",
+      "reviewer": "Unknown wave W1R09 native EVM and scoped public-incident review",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable"
     }
   }

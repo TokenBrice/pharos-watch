@@ -161,6 +161,7 @@ function governedMintAuthority() {
       executionScope,
     }],
     governedIssuance: {
+      decisionRule: "affirmative-vote",
       governorControlRef: SCOPE_CONTROLLER,
       votingPower: "lock-escrowed",
       votingPowerEvidence: "Voting weight is escrowed for the entire voting and execution interval.",
@@ -225,7 +226,7 @@ describe("Mint authority D14/D29 evidence admission", () => {
     }));
   });
 
-  it.each(["lock-escrowed", "past-block-checkpoint"] as const)(
+  it.each(["holding-period-weighted", "lock-escrowed", "past-block-checkpoint"] as const)(
     "rejects signer-quorum claims on a %s governor", (votingPower) => {
       const profile = governedMintAuthority();
       const governor = profile.controls![0]!;
@@ -324,6 +325,140 @@ describe("Mint authority D14/D29 evidence admission", () => {
     expect(MintAuthorityProfileSchema.parse({
       ...profile, authorityPosture: "unbounded-unreconciled", governedIssuance: undefined,
     }).authorityPosture).toBe("unbounded-unreconciled");
+  });
+
+  it("requires an explicit decision rule with no legacy default", () => {
+    const profile = governedMintAuthority();
+    expect(MintAuthorityProfileSchema.safeParse({
+      ...profile, governedIssuance: { ...profile.governedIssuance!, decisionRule: undefined },
+    }).error?.issues).toContainEqual(expect.objectContaining({ path: ["governedIssuance", "decisionRule"] }));
+  });
+
+  const veto = {
+    quorumBps: 200, entrypoints: ["0x12345678"], override: "symmetric-vote-destruction",
+    evidence: "The pinned governor veto rejects admission during the entire public window; canceling a veto destroys the caller's equal voting power.",
+  } as const;
+
+  it.each([
+    ["affirmative-vote", veto], ["minority-veto", undefined],
+  ] as const)("requires veto evidence iff the decision rule is %s", (decisionRule, vetoEvidence) => {
+    const profile = governedMintAuthority();
+    expect(MintAuthorityProfileSchema.safeParse({
+      ...profile, authorityPosture: "unbounded-unreconciled",
+      governedIssuance: { ...profile.governedIssuance!, decisionRule, veto: vetoEvidence },
+    }).error?.issues).toContainEqual(expect.objectContaining({ path: ["governedIssuance", "veto"] }));
+  });
+
+  it.each([
+    ["unbounded-governed", "minority-veto"],
+    ["unbounded-veto-guarded", "affirmative-vote"],
+    ["unbounded-veto-guarded", undefined],
+  ] as const)("rejects %s without its matching process evidence (%s)", (authorityPosture, decisionRule) => {
+    const profile = governedMintAuthority();
+    expect(MintAuthorityProfileSchema.safeParse({
+      ...profile, authorityPosture,
+      governedIssuance: decisionRule ? { ...profile.governedIssuance!, decisionRule,
+        veto: decisionRule === "minority-veto" ? veto : undefined } : undefined,
+    }).error?.issues).toContainEqual(expect.objectContaining({
+      path: decisionRule ? ["governedIssuance", "decisionRule"] : ["governedIssuance"],
+    }));
+  });
+
+  it.each([
+    { quorumBps: 0 }, { quorumBps: 10001 }, { quorumBps: 200.5 },
+    { entrypoints: [] }, { entrypoints: ["veto(address)"] }, { entrypoints: ["0x1234567A"] },
+    { override: "majority" }, { evidence: "x".repeat(79) }, { unexpected: true },
+  ])("rejects malformed veto evidence %j", (change) => {
+    const profile = governedMintAuthority();
+    expect(MintAuthorityProfileSchema.safeParse({
+      ...profile, authorityPosture: "unbounded-veto-guarded",
+      governedIssuance: { ...profile.governedIssuance!, decisionRule: "minority-veto", veto: { ...veto, ...change } },
+    }).success).toBe(false);
+  });
+
+  it.each(["none", "symmetric-vote-destruction", "unknown"] as const)(
+    "preserves the reviewed %s veto override without assuming qualification", (override) => {
+      const profile = governedMintAuthority();
+      const parsed = MintAuthorityProfileSchema.parse({
+        ...profile, authorityPosture: "unbounded-veto-guarded",
+        governedIssuance: { ...profile.governedIssuance!, decisionRule: "minority-veto",
+          votingPower: "holding-period-weighted", veto: { ...veto, override } },
+      });
+      expect(parsed.governedIssuance).toMatchObject({ decisionRule: "minority-veto", veto: { override } });
+    },
+  );
+
+  const monetaryPath = {
+    controlRef: SCOPE_CONTROLLER, pathId: "issuance", rateCapPpm: 100000,
+    rateChangeDelaySec: 172800, rateChangeRule: "minority-replaceable",
+    evidence: "The pinned mint path is limited to deposits times a hard-capped rate times elapsed time; every rate change is minority-blockable for two days.",
+  };
+
+  it.each([
+    { controlRef: "ethereum:0x2222222222222222222222222222222222222222" },
+    { pathId: "missing-path" },
+  ])("rejects unresolved monetary-policy path references %j (R-l)", (change) => {
+    const profile = governedMintAuthority();
+    expect(MintAuthorityProfileSchema.safeParse({
+      ...profile, authorityPosture: "unbounded-veto-guarded", governedIssuance: {
+        ...profile.governedIssuance!, decisionRule: "minority-veto", veto,
+        monetaryPolicyPaths: [{ ...monetaryPath, ...change }],
+      },
+    }).error?.issues).toContainEqual(expect.objectContaining({ path: ["governedIssuance", "monetaryPolicyPaths", 0] }));
+  });
+
+  it.each([
+    { rateCapPpm: 0 }, { rateCapPpm: 1.5 }, { rateChangeDelaySec: -1 }, { rateChangeDelaySec: 0.5 },
+    { rateChangeRule: "majority" }, { evidence: "x".repeat(79) }, { unexpected: true },
+  ])("rejects malformed monetary-policy evidence %j", (change) => {
+    const profile = governedMintAuthority();
+    expect(MintAuthorityProfileSchema.safeParse({
+      ...profile, authorityPosture: "unbounded-veto-guarded", governedIssuance: {
+        ...profile.governedIssuance!, decisionRule: "minority-veto", veto,
+        monetaryPolicyPaths: [{ ...monetaryPath, ...change }],
+      },
+    }).success).toBe(false);
+  });
+
+  it.each([{ monetaryPolicyPaths: [] }, { monetaryPolicyPaths: [monetaryPath] }])(
+    "forbids a monetary-policy inventory on affirmative voting", ({ monetaryPolicyPaths }) => {
+      const profile = governedMintAuthority();
+      expect(MintAuthorityProfileSchema.safeParse({
+        ...profile, governedIssuance: { ...profile.governedIssuance!, monetaryPolicyPaths },
+      }).error?.issues).toContainEqual(expect.objectContaining({ path: ["governedIssuance", "monetaryPolicyPaths"] }));
+    },
+  );
+
+  const restructure = {
+    entrypoints: ["0xabcdef01"], equityThresholdUnits: 1000, observedEquityUnits: 1001,
+    dependentPaths: [],
+    evidence: "Pinned equity is above the insolvency threshold; only the gated restructure can wipe share supply to zero, and ordinary redemption retains a share.",
+  };
+
+  it.each([
+    ["insolvency-gated-restructure", undefined], ["none", restructure], ["symmetric-vote-destruction", restructure],
+  ] as const)("requires restructure evidence iff override is %s", (override, evidence) => {
+    const profile = governedMintAuthority();
+    expect(MintAuthorityProfileSchema.safeParse({
+      ...profile, authorityPosture: "unbounded-veto-guarded", governedIssuance: {
+        ...profile.governedIssuance!, decisionRule: "minority-veto", veto: { ...veto, override, restructure: evidence },
+      },
+    }).error?.issues).toContainEqual(expect.objectContaining({ path: ["governedIssuance", "veto", "restructure"] }));
+  });
+
+  it.each([
+    { equityThresholdUnits: 0 }, { observedEquityUnits: -1 }, { entrypoints: [] },
+    { entrypoints: ["0xABCDE001"] }, { evidence: "x".repeat(79) },
+    { dependentPaths: [{ controlRef: SCOPE_CONTROLLER, pathId: "issuance", unexpected: true }] },
+    { unexpected: true },
+  ])("rejects malformed restructure evidence %j", (change) => {
+    const profile = governedMintAuthority();
+    expect(MintAuthorityProfileSchema.safeParse({
+      ...profile, authorityPosture: "unbounded-veto-guarded", governedIssuance: {
+        ...profile.governedIssuance!, decisionRule: "minority-veto",
+        veto: { ...veto, override: "insolvency-gated-restructure", restructure: { ...restructure, ...change } },
+      },
+    }).success).toBe(false);
   });
 
   it.each(["raiseable", "bounded", "collateral-gated"] as const)(
@@ -441,6 +576,9 @@ describe("Compiled issuance governance contract", () => {
     votingPower: "past-block-checkpoint",
     enumerable: true,
     nonGovernorUnboundedPathKeys: [],
+    decisionRule: "affirmative-vote",
+    vetoQuorumBps: null,
+    vetoOverride: null,
   };
 
   it("preserves absent evidence and a nullable minimum without inventing completeness", () => {

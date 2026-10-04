@@ -16,14 +16,26 @@
         "market",
         "counterparty"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB43scrvUSD)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Unknown wave W1R36 primary-source and pinned liquidity review",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Curve savings-vault idle funds and immediate redemption documentation",
+        "url": "https://docs.curve.finance/developer/scrvusd/overview/"
+      },
+      {
+        "label": "Exact-match Yearn V3 vault withdrawal implementation",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xd8063123bba3b480569244ae66bfe72b6c84b00d?fields=sources,abi"
+      },
+      {
+        "label": "Pinned Ethereum liquidity observation, block 26114893",
+        "url": "https://etherscan.io/block/26114893"
+      },
       {
         "label": "Curve Savings crvUSD repository",
         "url": "https://github.com/curvefi/scrvusd"
@@ -37,7 +49,7 @@
         "url": "https://docs.curve.finance/developer/crvusd/overview"
       }
     ],
-    "rationale": "scrvUSD is a vault-share claim on crvUSD. At Ethereum block 26095892, asset() identifies the tracked crvUSD parent, totalDebt() is zero, the default strategy queue is empty, and totalIdle() equals totalAssets(). Curve's savings-vault documentation confirms deposited crvUSD sits idle and is not rehypothecated. The parent collateral and controller risks remain inherited through the tracked wrapper dependency.",
+    "rationale": "The existing 2026-10-01 composition remains unchanged. Liquidity metadata was independently reviewed on 2026-10-03 at Ethereum block 26114893 (0xe34d12ddb9802b856a1e54db7968aa664b572660f10ad43c7878be4d327e746f): asset() is crvUSD, totalDebt()=0, totalIdle()=totalAssets(), and withdraw_limit_module() is the zero address. Exact-match Yearn V3 source returns the full owner's asset entitlement when idle assets suffice and no withdrawal module exists; Curve states deposited funds remain idle and always available for redemption. Immediate means local share-to-crvUSD availability, not guaranteed USD liquidation or parent collateral realization. Parent risks remain inherited; no maturity maximum is asserted.",
     "compositionBasis": "Canonical Ethereum ERC-4626 vault accounting pinned at block 26095892 and Curve savings-vault documentation; direct single-asset wrapper structure",
     "compositionAsOf": "2026-10-01",
     "scope": "full-composition",

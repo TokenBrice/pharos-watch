@@ -7,7 +7,7 @@
       "risk": "low",
       "coinId": "cusdo-openeden",
       "depType": "collateral",
-      "assetClass": "tokenized-security",
+      "assetClass": "stablecoin",
       "issuerOrObligor": "OpenEden Digital Ltd (cUSDO issuer); underlying U.S. Treasury obligations managed by Adam Eve Capital",
       "riskFactors": [
         "credit",
@@ -21,8 +21,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Resv08)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv08); Pharos W1R27 claim-classification review 2026-10-03",
     "confidence": "verified",
     "sources": [
       {
@@ -40,9 +40,13 @@
       {
         "label": "OpenEden USDO FAQ (reserve and SAC structure)",
         "url": "https://docs.openeden.com/usdo/faq"
+      },
+      {
+        "label": "OpenEden cUSDO token: wrapped USDO claim, not a directly held Treasury security",
+        "url": "https://docs.openeden.com/usdo/cusdo-token"
       }
     ],
-    "rationale": "Solayer's sUSD product page published 2026-09-21 states that sUSD is fully collateralized by tokenized U.S. Treasury bills. Solayer's RFQ stakeholder disclosure identifies cUSDO as the exclusive reserve instrument after the 2025-11-02 migration, states that prior Solana TBILL positions were upgraded to cUSDO, and names OpenEden Digital Ltd as issuer with Adam Eve Capital managing the Treasury investments. OpenEden's cUSDO launch disclosure and USDO FAQ support the tokenized-Treasury backing and segregated-account issuer structure. The exact Treasury-fund mix and QLP balances remain undisclosed, but the complete direct reserve asset and obligor are identified.",
+    "rationale": "Solayer's sUSD product page published 2026-09-21 states that sUSD is fully collateralized by tokenized U.S. Treasury bills. Solayer's RFQ stakeholder disclosure identifies cUSDO as the exclusive reserve instrument after the 2025-11-02 migration, states that prior Solana TBILL positions were upgraded to cUSDO, and names OpenEden Digital Ltd as issuer with Adam Eve Capital managing the Treasury investments. OpenEden's cUSDO launch disclosure and USDO FAQ support the tokenized-Treasury backing and segregated-account issuer structure. The exact Treasury-fund mix and QLP balances remain undisclosed, but the complete direct reserve asset and obligor are identified. W1R27 classification-only research on 2026-10-03 confirms the direct cUSDO reserve claim is a wrapped USDO stablecoin, not a Treasury security held directly by sUSD. OpenEden documents cUSDO as a compounding wrapper of USDO and permits conversion between the two; underlying Treasury maturities must not be assigned to the wrapped stablecoin claim. Historical composition weights and composition date are unchanged.",
     "compositionBasis": "Solayer sUSD product disclosure published 2026-09-21 and RFQ stakeholder cUSDO transition disclosure, cross-checked against OpenEden cUSDO reserve and custody disclosures",
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",

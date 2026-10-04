@@ -172,13 +172,17 @@
       {
         "label": "GLDon Solana GM program upgrade authority",
         "role": "proxy-admin",
-        "authorityType": "unknown",
+        "authorityType": "multisig",
         "directMintAbility": "upgrade-only",
         "chain": "solana",
         "address": "9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM",
         "deploymentRefs": ["solana:hWfiw4mcxT8rnNFkk6fsCQSxoxgZ9yVhB6tyeVcondo"],
+        "threshold": 4,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "not-applicable",
+        "timelockDelaySec": 7200,
         "observedAt": "2026-10-03",
-        "observedBlock": 452861844,
+        "observedBlock": 453074463,
         "sources": [
           {
             "label": "Issuer-published Solana GM program",
@@ -187,9 +191,25 @@
           {
             "label": "Exact GM program-data upgrade authority account",
             "url": "https://solscan.io/account/F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU"
+          },
+          {
+            "label": "Exact Squads v4 controlling multisig",
+            "url": "https://solscan.io/account/EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr"
+          },
+          {
+            "label": "Squads execution invoking the GM program with this vault",
+            "url": "https://solscan.io/tx/5XVxqQtnB44vcJXtMBfobzBzufc6ryVa7YGx4Mf2xNi2GJcMYFpqMq328KMWvxVy8fz8eUCYvNA9XLU2tnVRY8Zp"
+          },
+          {
+            "label": "Squads v4 account and vault derivation specification",
+            "url": "https://docs.squads.so/main/development/reference/accounts"
+          },
+          {
+            "label": "Solana finalized getMultipleAccounts",
+            "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "Finalized slot 452861844 getAccountInfo(jsonParsed) binds program XzTT4XB8m7sLD2xi6snefSasaswsKCxx5Tifjondogm to program-data F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU and this non-null upgrade authority; last upgrade slot 429073863. The authority account is system-program-owned. Its executable signing policy/PDA authority provenance is not publicly resolved, so no EOA, Squads quorum or immutable-program claim is inferred."
+        "evidence": "At finalized slot 453074463, one getMultipleAccounts observation binds the issuer GM program to program-data F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU, its upgrade authority 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM, and Squads-v4-owned Multisig EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr. The Multisig discriminator matches account:Multisig; decoded threshold=4, members=7 (each permission mask 7), time_lock=7200, config_authority=11111111111111111111111111111111, transaction_index=69 and stale_transaction_index=67. Deriving the multisig from create_key BhW6Tsx43Q6bi9nfP3a7tekDExi1k3bEGkKC19CyShwm gives EfMUAS..., bump 254; its vault index 0 derives exactly this off-curve upgrade authority, bump 254. Finalized transaction 5XVxqQtn... at slot 444346793 independently shows Squads VaultTransactionExecute invoking the GM program with that vault. This establishes current uniform topology and the configured delay, not exhaustive execution/bypass closure, absence of spending limits, Squads program immutability or human key independence. EVM modules/guards do not apply."
       }
     ],
     "upgradeability": {
@@ -351,9 +371,9 @@
         },
         {
           "controlRef": "GLDon Solana GM program upgrade authority",
-          "question": "Upgrade authority 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM is identified and off-curve, but its controlling program and executable program-signing authorization paths remain unverified. System-program account ownership alone does not establish an externally signed EOA; no whole-chain census gap is inferred.",
+          "question": "The upgrade authority is now bound to Squads v4 vault index 0 of EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr, with current 4-of-7 quorum and 7200-second configured delay. Complete spending-limit, reconfiguration and Squads-program upgrade/bypass reach plus human key independence remain unverified; the topology observation is not a full execution certificate.",
           "reviewedAt": "2026-10-03",
-          "reviewer": "Refine06 mint-authority calibration",
+          "reviewer": "W1R54 primary-source and finalized account review",
           "sources": [{
             "label": "Exact GM program-data upgrade-authority account",
             "url": "https://solscan.io/account/F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU"

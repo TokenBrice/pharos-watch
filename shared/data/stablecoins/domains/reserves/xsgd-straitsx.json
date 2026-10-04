@@ -28,12 +28,13 @@
         "liquidity",
         "custody"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "maturityDaysMax": 92
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos reserve research",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Pharos reserve research; W1R40 maximum-maturity review",
     "confidence": "verified",
     "sources": [
       {
@@ -45,7 +46,7 @@
         "url": "https://www.straitsx.com/legal/risk-warnings-regulatory-notices-disclosures"
       }
     ],
-    "rationale": "KK Yap & Associates SSAE 3000 (Revised) reasonable-assurance examination as of 31 August 2026 11:59 PM Singapore time, signed 28 September 2026: SGD11,621,981 cash and SGD10,583,870 short-dated MAS/government instruments or eligible overnight reverse repos, totaling SGD22,205,851 against SGD22,194,718 XSGD in circulation. All eleven chain supplies, including 5 XSGD on XLAYER, reconcile exactly. The government/repo category and safeguarding institution remain undisaggregated.",
+    "rationale": "KK Yap & Associates SSAE 3000 (Revised) reasonable-assurance examination as of 31 August 2026 11:59 PM Singapore time, signed 28 September 2026: SGD11,621,981 cash and SGD10,583,870 short-dated MAS/government instruments or eligible overnight reverse repos, totaling SGD22,205,851 against SGD22,194,718 XSGD in circulation. All eleven chain supplies, including 5 XSGD on XLAYER, reconcile exactly. Page 5 limits every bond/note to no more than three months residual maturity and every reverse-repo agreement to overnight; 92 days is the conservative maximum length of three calendar months, not WAM. The government/repo category and safeguarding institution remain undisaggregated. This metadata review does not renew the composition date or establish a whole-slice liquidation horizon.",
     "compositionBasis": "KK Yap & Associates independent examination as of 31 August 2026",
     "compositionAsOf": "2026-08-31",
     "scope": "full-composition",

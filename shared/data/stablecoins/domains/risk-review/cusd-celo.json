@@ -307,7 +307,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "USDm has one canonical native issuance route on Celo. The Celo-to-Monad Wormhole NTT route is an external validated burn-mint representation; NEAR Allbridge, Ethereum Moss, and Solana Allbridge are external representation routes. The legacy Klaytn oCUSD route is now re-read through Kaia's replacement public RPC, but its Orbit controller and route-state authority remain unresolved.",
+    "summary": "USDm has one canonical native issuance route on Celo. The Celo-to-Monad Wormhole NTT route is an external validated burn-mint representation; NEAR Allbridge, Ethereum Moss, and Solana Allbridge are external representation routes. The legacy Klaytn oCUSD route has a directly identified minter contract at Kaia block 228867105, while its governance execution reach and route-state semantics remain unresolved.",
     "reviewedAt": "2026-09-04",
     "reviewer": "Codex Kaia oCUSD route-controller refresh",
     "confidence": "verified",
@@ -566,17 +566,19 @@
         "destinationChain": "klaytn",
         "canonicalChain": "celo",
         "contractAddress": "0x08745bee17026ed2e0e39a98f81189b9e14ab1b3",
-        "protocol": "Orbit Bridge oCUSD (authority unresolved)",
+        "protocol": "Orbit Bridge oCUSD (minter identified; route semantics unresolved)",
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Re-read at Kaia block 226318240 on 2026-09-04 through the official replacement RPC for the discontinued Klaytn endpoint. The legacy Orbit representation 0x08745bee17026ed2e0e39a98f81189b9e14ab1b3 returned name()='Orbit Bridge Klaytn CUSD', symbol()='oCUSD', decimals()=18, and totalSupply()=5.52022037288. owner(), minter(), paused(), isMinter(address), admin(), and masterMinter() all reverted; Orbit Bridge has been defunct since its December 2023 exploit. The current token identity and residual supply are therefore evidenced, but no controller, route-liability boundary, or admissible delisting/zero-supply fact is established, so no controller is inferred by analogy.",
+        "reviewNote": "W1R87 re-read exact token at Kaia block 228867105, hash 0x2c522358b9f3f1bfde9343f256aa1bed2e6e9fca5f71104fd15af7968251fd0f, on 2026-10-03. Verified KIP7 source exposes _minter() rather than minter(): selector 0x578ec33f returned 0x979cd0826c2bf62703ef62221a4fea1f23da3777, whose nonempty runtime is an upgradeable bridge proxy. _owner() selector 0xb2bdfa7b returned governance contract 0xe665028e06cab79928d8e607e0de99ffd7eb76a7. The owner can replace the minter; minter can mint through transferFrom with no token-level economic cap. The bridge proxy implementation() returned 0xca0105f978739bc313ff0236595823ea611a2163. Official Orbit API documentation independently maps exact oCUSD to this minter. Governance and implementation source/reach remain unverified, and no route-specific Celo-vault incident/remediation conclusion is established. Only exact contract authority is identified; route remains unresolved and no zero-supply, bounded-cap or incident-free assertion is made.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
-        "observedBlock": 226318240,
+        "observedAt": "2026-10-03",
+        "observedBlock": 228867105,
+        "controllerChain": "klaytn",
+        "controllerAddress": "0x979cd0826c2bf62703ef62221a4fea1f23da3777",
         "sources": [
           {
             "label": "Kaia public JSON-RPC endpoint documentation",
@@ -593,6 +595,14 @@
           {
             "label": "DefiLlama celo-dollar adapter (archived pre-consolidation revision)",
             "url": "https://raw.githubusercontent.com/DefiLlama/peggedassets-server/cfb73336f802f6c30de5f91c6510a005ba040e5b/src/adapters/peggedAssets/celo-dollar/index.ts"
+          },
+          {
+            "label": "Verified exact Orbit oCUSD KIP7 source and ABI",
+            "url": "https://sourcify.dev/server/v2/contract/8217/0x08745bee17026ed2e0e39a98f81189b9e14ab1b3?fields=sources,abi"
+          },
+          {
+            "label": "Official Orbit API exact cUSD vault and Klaytn minter mapping",
+            "url": "https://documenter.getpostman.com/view/5070734/2s83zdxSAn"
           }
         ]
       }

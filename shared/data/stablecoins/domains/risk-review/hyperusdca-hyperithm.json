@@ -642,7 +642,7 @@
             "observedBlock": 110117695
           }
         ],
-        "fallbackBehavior": "Morpho core invokes the configured market oracle price(); no alternate core oracle is selected. Any fallback or staleness rejection inside this exact oracle remains unverified.",
+        "fallbackBehavior": "At Monad block 110315364, MetaOracleDeviationTimelock primaryOracle/currentOracle were 0x67cd0fc83d3eb39808bd3e686d18324dd269ed6c and backupOracle was 0x313c14e7262b59a9366b59692a4e0b140427a723. The exact-verified primary MorphoChainlinkOracleV2 reads BASE_FEED_1 0x5346c2c152e471daad390224491acd8f6b860977. The exact-verified backup OracleRouter currently points to that same primary; owner 0x9bec4dbade98251cc20d3c15c27bfdaa45434d4a can replace its oracle. Independent backup pricing is therefore not established. Feed administration, freshness and full receipt valuation remain unresolved; no whole-portfolio tier promotion is inferred.",
         "collateralParameters": [
           {
             "asset": "PT-USDat-14JAN2027",
@@ -670,6 +670,18 @@
           {
             "label": "monad idToMarketParams and exact price() archive calls at block 110117695, read 2026-10-03; credentials omitted",
             "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "Exact-verified custom path primary MorphoChainlinkOracleV2",
+            "url": "https://monadscan.com/address/0x67cd0fc83d3eb39808bd3e686d18324dd269ed6c#code"
+          },
+          {
+            "label": "Exact-verified owner-mutable backup OracleRouter",
+            "url": "https://monadscan.com/address/0x313c14e7262b59a9366b59692a4e0b140427a723#code"
+          },
+          {
+            "label": "W2R03 primary, backup, current selection and router owner/oracle reads at Monad block 110315364",
+            "url": "https://monadscan.com/block/110315364"
           }
         ],
         "observedAt": "2026-10-03",

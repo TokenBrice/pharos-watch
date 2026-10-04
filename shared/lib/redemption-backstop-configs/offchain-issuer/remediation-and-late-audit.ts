@@ -325,12 +325,14 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
     outputAssetType: "stable-basket",
     outputAssets: ["usdc-circle", "usdt-tether"],
     capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "documented-bound" },
-    costModel: undisclosedReviewedFee(
-      "Delta-neutral hedging on centralized exchanges; 1:1 USDT/USDC redemption; public fee schedule not disclosed",
+    costModel: fixedFee(
+      10,
+      "StandX User Terms: the redemption pricing quote includes a 10 bps reimbursement charge covering hedge execution and blockchain gas; the product FAQ agrees that redeeming DUSD incurs a 0.1% fee",
     ),
     reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
     docs: [
-      sourceRef("StandX payout FAQ (reviewed 2026-09-30)", "https://docs.standx.com/docs/dusd-overview/product-faq", ["route"]),
+      sourceRef("StandX payout FAQ (reviewed 2026-09-30; fee re-read 2026-10-03)", "https://docs.standx.com/docs/dusd-overview/product-faq", ["route", "fees"]),
+      sourceRef("StandX user terms and conditions (reviewed 2026-10-03)", "https://docs.standx.com/docs/resources/user-terms-conditions", ["fees"]),
       sourceRefRouteCapacity("StandX docs", "https://docs.standx.com/"),
       sourceRef("StandX website", "https://www.standx.com/", ["route"]),
     ],
@@ -338,6 +340,7 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
       "Payout identity reviewed 2026-09-30: StandX's product FAQ says holders get back USDT/USDC after redemption; the multi-output route retains conservative stable-basket semantics.",
       "Tracked metadata describes 1:1 USDT and USDC redemption from a delta-neutral strategy wrapper",
       "The reviewed 5% bound matches the tracked stability-reserve stablecoin fund rather than assuming the full hedged book is instantly withdrawable",
+      "Fee reviewed 2026-10-03: the governing User Terms fix the redemption reimbursement charge at 10 bps and the product FAQ agrees; separate product redemption prose describing a market-variable fee is inconsistent with both and is not given precedence over the legal terms.",
     ],
   },
   "brla-brla-digital": {
@@ -369,13 +372,15 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   "ctusd-citrea": {
     ...issuerBase,
     capacityModel: { kind: "reserve-sync-metadata" },
-    costModel: undisclosedReviewedFee(
-      "Citrea documents 1:1 fiat mint and redemption via MoonPay using M0 Protocol infrastructure; MoonPay fiat-ramp fees apply while public docs reviewed do not publish a separate Citrea protocol redemption fee",
+    costModel: fixedFee(
+      0,
+      "MoonPay Stablecoin Terms section 4.1: MoonPay does not currently charge fees for redeeming Stablecoins. This is the issuer fee only; bank, processor, network, and ecosystem charges may still apply",
     ),
     reviewedAt: "2026-08-31",
     docs: [
       sourceRefRouteCapacity("Citrea", "https://citrea.xyz/"),
       sourceRef("Citrea documentation", "https://docs.citrea.xyz/", ["route"]),
+      sourceRef("MoonPay Stablecoin Terms (reviewed 2026-10-03)", "https://www.moonpay.com/legal/stablecoin_terms", ["fees"]),
     ],
     notes: [
       "Fiat-backed via MoonPay; reserves cryptographically attested on-chain by M0 Validators before minting",

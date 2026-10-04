@@ -26,7 +26,7 @@
     "rwa": true
   },
   "collateral": "Issuer documentation identifies USYC, M by M0 and Spiko USTBL as eligible direct RWA collateral and USDC as an indirect minting route; technical documentation also describes the UsualUSDtb wrapper. Eligibility and wrapper availability do not establish current holdings or allocation.",
-  "pegMechanism": "1:1 minting by depositing approved RWA tokens (e.g. USYC) directly, or depositing USDC via a gateway; direct redemption returns underlying RWA assets via DaoCollateral, with a documented 0.10% DAO Treasury redemption fee; arbitrageurs enforce the peg",
+  "pegMechanism": "1:1 minting by depositing approved RWA tokens (e.g. USYC) directly, or depositing USDC via a gateway; direct redemption returns underlying RWA assets via DaoCollateral with a governance-set redemption fee (redeemFee() was 5 bps at Ethereum block 26114898 on 2026-10-03); arbitrageurs enforce the peg",
   "llamaId": "195",
   "detailProvider": "defillama",
   "geckoId": "usual-usd",

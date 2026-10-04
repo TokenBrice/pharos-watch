@@ -24,7 +24,7 @@
       "name": "US Treasury Bills",
       "pct": 9.9,
       "risk": "very-low",
-      "assetClass": "tokenized-security",
+      "assetClass": "stablecoin",
       "issuerOrObligor": "Dinari (USD+ tokenized Treasury-bill position held in Noon's EOA 0x4fD04553468610e5a88a2cffA38E057C954312Da; underlying bills held at Alpaca Securities)",
       "riskFactors": [
         "duration",
@@ -58,6 +58,7 @@
       "pct": 13.4,
       "risk": "high",
       "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Hyperliquid HYPE spot and HYPE/USDC perpetual market counterparties",
       "riskFactors": [
         "basis",
         "market",
@@ -115,10 +116,14 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency-map review 2026-09-30",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Unknown wave W2R09 USD+ classification correction; W1R66 reserve identity evidence preserved",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Noon HYPE funding-rate arbitrage: Hyperliquid spot and HYPE/USDC perpetual",
+        "url": "https://docs.noon.capital/3.-the-yield-engine/yield-strategies/funding-rate-arbitrage-perps"
+      },
       {
         "label": "Noon CLO strategy: Janus Henderson JAAA ETF and Dinari deployment (accessed 2026-09-30)",
         "url": "https://docs.noon.capital/3.-the-yield-engine/yield-strategies/clos.md"
@@ -164,8 +169,8 @@
         "url": "https://etherscan.io/token/0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
       },
       {
-        "label": "Dinari USD+ product documentation",
-        "url": "https://usd.dinari.com/"
+        "label": "Dinari USD+ explicitly classified as yield-bearing stablecoin (classification checked 2026-10-03; no portfolio refresh)",
+        "url": "https://docs.dinari.com/docs/what-is-usd.md"
       },
       {
         "label": "Noon Collateral 1 Safe 0x365bd6fb4200e422a2b1f7b9Dfb1C00471E6D089 on Etherscan",
@@ -180,7 +185,7 @@
     "compositionBasis": "Accountable Noon deployment snapshot at data timestamp 1790109063926, normalized by the current one-decimal Accountable deployment adapter, with custodian attribution taken from the same payload's reserves_split",
     "compositionAsOf": "2026-09-22",
     "scope": "full-composition",
-    "knownUnknownExposure": "FTAC borrower identities, terms, seniority and the fund's own custody arrangements; Morpho and Euler vault addresses, current pool weights and borrowers; HYPE execution venues, hedge notional, margin and tri-party settlement counterparties; and the specific ForDefi wallets behind the Undeployed bucket, which does not reconcile with the two published collateral wallets, all remain undisclosed. The $1.02 Funding Rate Arb (BTC) balance is below the adapter's one-decimal emission threshold and is not a separate static row. A second Dinari USD+ contract 0x98C6616F1CC0D3E938A16200830DD55663dd7DD3, holding 7,718,967.41 units and dormant since 2026-01-28, maps to no Accountable bucket and is not counted in this composition.",
+    "knownUnknownExposure": "FTAC borrower identities, terms, seniority and the fund's own custody arrangements; Morpho and Euler vault addresses, current pool weights and borrowers; HYPE hedge notional, margin and settlement counterparties beyond the disclosed Hyperliquid HYPE spot and HYPE/USDC perpetual markets; and the specific ForDefi wallets behind the Undeployed bucket, which does not reconcile with the two published collateral wallets, remain undisclosed. The $1.02 Funding Rate Arb (BTC) balance is below the adapter's one-decimal emission threshold and is not a separate static row. A second Dinari USD+ contract 0x98C6616F1CC0D3E938A16200830DD55663dd7DD3, holding 7,718,967.41 units and dormant since 2026-01-28, maps to no Accountable bucket and is not counted in this composition.",
     "knownUnknownExposurePct": 85.6,
     "nonLinkDispositions": [
       {
@@ -195,7 +200,7 @@
         "reserveName": "US Treasury Bills",
         "pct": 9.9,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The row is a Dinari USD+ position in token 0xc9e3df3d230980b45adc623c81c3df4a73a5350f rather than direct Treasury-bill ownership. Dinari USD+ is not a tracked Pharos asset, and this instance does not appear in Dinari's public deployment list, so the slice stays an exogenous token claim on Dinari instead of a dependency link."
+        "rationale": "The row is a Dinari USD+ position in token 0xc9e3df3d230980b45adc623c81c3df4a73a5350f rather than direct Treasury-bill ownership. Dinari's product documentation explicitly calls USD+ a yield-bearing stablecoin; classification reviewed 2026-10-03 without changing the measured book or compositionAsOf. Dinari USD+ is not a tracked Pharos asset, and this instance does not appear in Dinari's public deployment list, so the slice stays an exogenous stablecoin claim on Dinari instead of a dependency link. Scalar maturity is structurally inapplicable."
       },
       {
         "reserveIndex": 2,
@@ -209,7 +214,7 @@
         "reserveName": "Funding Rate Arb (HYPE)",
         "pct": 13.4,
         "disposition": "insufficient-evidence",
-        "rationale": "Accountable identifies the HYPE funding-arbitrage strategy and attributes its collateral to the ForDefi bucket, and Noon documents the generic cash-and-carry structure, but current venues, hedge notional, margin, and tri-party settlement counterparties are not published."
+        "rationale": "Accountable identifies the HYPE funding-arbitrage strategy and attributes its collateral to the ForDefi bucket. Noon's current strategy page identifies Hyperliquid HYPE spot and HYPE/USDC perpetual markets, but current hedge notional, margin and any additional settlement counterparties are not published."
       },
       {
         "reserveIndex": 4,

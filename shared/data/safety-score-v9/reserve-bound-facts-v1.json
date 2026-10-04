@@ -388,6 +388,170 @@
           }
         ]
       }
+    ],
+    "kag-kinesis": [
+      {
+        "factKey": "kag-kinesis:native-token-reserve:maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "chainlink-por:feed:0x3f0543aa057bcaea152fe9462cb3ffab305a6f8d"
+        },
+        "asOfSec": 1791071391,
+        "publisher": "KMS Labs S.A.",
+        "sourceUrls": [
+          "https://kmslabs.money/kms-labs-tcs/",
+          "https://kmslabs.money/"
+        ],
+        "assertion": "Sections 3, 5 and 8 identify the entire immediate reserve as native Kinesis tokens held for 1:1 discretionary redemption. This is a continuing token claim, with no debt principal or fixed contractual repayment date. Maturity is not applicable to this claim; this does not establish immediate liquidity or directly allocated bullion ownership.",
+        "contentDigest": "8da1b93d6c8f932242e329b33a06d2285eacd3a8ebf548efa6f723d01d05161c",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos unknown-wave W2R17",
+          "confidence": "high"
+        },
+        "kind": "maturity-applicability",
+        "claimId": "kag-kinesis:kms-native-reserve-claim",
+        "conclusion": "not-applicable",
+        "governingInstrument": "KMS Labs KAU and KAG Terms and Conditions, sections 3, 5 and 8; section 2(j) gives these terms precedence",
+        "allInScope": true
+      }
+    ],
+    "kau-kinesis": [
+      {
+        "factKey": "kau-kinesis:native-token-reserve:maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "chainlink-por:feed:0xab5dd7dd7669072a1ef27c0ba241120a27a1aec3"
+        },
+        "asOfSec": 1791071391,
+        "publisher": "KMS Labs S.A.",
+        "sourceUrls": [
+          "https://kmslabs.money/kms-labs-tcs/",
+          "https://kmslabs.money/"
+        ],
+        "assertion": "Sections 3, 5 and 8 identify the entire immediate reserve as native Kinesis tokens held for 1:1 discretionary redemption. This is a continuing token claim, with no debt principal or fixed contractual repayment date. Maturity is not applicable to this claim; this does not establish immediate liquidity or directly allocated bullion ownership.",
+        "contentDigest": "8da1b93d6c8f932242e329b33a06d2285eacd3a8ebf548efa6f723d01d05161c",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos unknown-wave W2R17",
+          "confidence": "high"
+        },
+        "kind": "maturity-applicability",
+        "claimId": "kau-kinesis:kms-native-reserve-claim",
+        "conclusion": "not-applicable",
+        "governingInstrument": "KMS Labs KAU and KAG Terms and Conditions, sections 3, 5 and 8; section 2(j) gives these terms precedence",
+        "allInScope": true
+      }
+    ],
+    "hbd-hive": [
+      {
+        "factKey": "hbd-hive:endogenous-hive-conversion:maturity-not-applicable",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "hive-hbd-protocol:hive"
+        },
+        "asOfSec": 1791071378,
+        "publisher": "Hive protocol",
+        "sourceUrls": [
+          "https://hive.io/hbd/"
+        ],
+        "assertion": "HBD backing is the native protocol conversion creating HIVE at the median witness price, subject to the haircut rule. The entire named endogenous-conversion exposure is not a dated debt instrument or an external reserve portfolio; its 3.5-day conversion delay is settlement, not contractual instrument maturity.",
+        "contentDigest": "4b203bcff0191015035a69f2978ec5dc92e64e5b7a4e0db2ec90b52952e953d9",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "W2R27 primary-source maturity applicability review",
+          "confidence": "high"
+        },
+        "claimId": "hive-native-hbd-to-hive-conversion",
+        "conclusion": "not-applicable",
+        "governingInstrument": "Hive native consensus HBD-to-HIVE conversion and debt haircut rule",
+        "allInScope": true
+      }
+    ],
+    "usdt-tether": [
+      {
+        "factKey": "w2r01-usdt-physical-gold-maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:1b2583bf4492894b18779c24"
+        },
+        "asOfSec": 1782863940,
+        "publisher": "Tether International, S.A. de C.V.",
+        "sourceUrls": [
+          "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"
+        ],
+        "assertion": "Report page 9 footnote 9 identifies the entire Precious Metals category as LBMA-standard physical gold bars owned by the Company. The direct physical inventory is not a dated debt or receipt claim and has no contractual maturity; this does not establish any liquidity bound.",
+        "contentDigest": "aa7322474c671beb4d02e2052dce36f4c0dc4482851021f782bf44ab7aba5ea1",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "W2R01 primary-source maturity applicability review",
+          "confidence": "high"
+        },
+        "kind": "maturity-applicability",
+        "claimId": "usdt-tether:precious-metals:physical-gold-inventory",
+        "conclusion": "not-applicable",
+        "governingInstrument": "Tether June 30 2026 Financial Figures and Reserves Report, Assets table and footnote 9",
+        "allInScope": true
+      }
+    ],
+    "zchf-frankencoin": [
+      {
+        "factKey": "zchf-boss-equity-maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "collateral-positions-api:boss"
+        },
+        "asOfSec": 1791071541,
+        "publisher": "Boss Info AG",
+        "sourceUrls": [
+          "https://www.bossinfo.com/wp-content/uploads/Boss_Info_AG-Registration_Regulations-CMTA_compatible_220524_signiert-1.pdf",
+          "https://api.frankencoin.com/ecosystem/collateral/positions/details"
+        ],
+        "assertion": "BOSS is exact 0x2e880962a9609aa3eab4def919fe9e917e99073b registered-share instrument in the inventory and agreement. Corporate equity rights have no dated debt repayment maturity. Borrower-position expiry is not share maturity.",
+        "contentDigest": "9f886b9b006a736c097ac4688bee79129f3a3cc37edb77be8e0180a1a2186489",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "W2R45 governing-instrument review",
+          "confidence": "high"
+        },
+        "kind": "maturity-applicability",
+        "claimId": "ethereum:0x2e880962a9609aa3eab4def919fe9e917e99073b",
+        "conclusion": "not-applicable",
+        "governingInstrument": "Boss Info AG Tokenization and Registration Regulations V2.0, 2022-05-24, sections 1 and 2.1",
+        "allInScope": true
+      },
+      {
+        "factKey": "zchf-realu-equity-maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "collateral-positions-api:realu"
+        },
+        "asOfSec": 1791071541,
+        "publisher": "RealUnit Schweiz AG",
+        "sourceUrls": [
+          "https://realunit.ch/wp-content/uploads/2023/10/230929_RegV-EN-RealUnit-Schweiz-AG_final.pdf",
+          "https://api.frankencoin.com/ecosystem/collateral/positions/details"
+        ],
+        "assertion": "REALU is exact 0x553c7f9c780316fc1d34b8e14ac2465ab22a090b registered-share instrument in the inventory and agreement. Corporate equity has no debt repayment maturity. Position expiry and investment horizon are different facts.",
+        "contentDigest": "d94644fea4087a74f10501dbf2eb7d2d50bee20bcda0ba5712f9222351ef1dc5",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "W2R45 governing-instrument review",
+          "confidence": "high"
+        },
+        "kind": "maturity-applicability",
+        "claimId": "ethereum:0x553c7f9c780316fc1d34b8e14ac2465ab22a090b",
+        "conclusion": "not-applicable",
+        "governingInstrument": "RealUnit Schweiz AG Registration Agreement, September 29 2023, sections 1 and 3",
+        "allInScope": true
+      }
     ]
   }
 }

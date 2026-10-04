@@ -95,7 +95,7 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "internal-ledger",
     "supervision": "prudential",
     "review": {
       "reviewedAt": "2026-10-03",
@@ -117,12 +117,12 @@
         {
           "label": "Monad mainnet JSON-RPC",
           "url": "https://rpc.monad.xyz"
-        }
+        },
+        {"label": "MonadScan exact-match verified current EURW Stablecoin source", "url": "https://monadscan.com/address/0x52778511bec5ff87f9b52c7a2434631edcc157f4#code"},
+        {"label": "Newrails public product and security/legal document archive reviewed 2026-10-03", "url": "https://www.newrails.xyz/en/download-centre"},
+        {"label": "Alchemy Monad full-history eth_getLogs, pinned block 110309152", "url": "https://www.alchemy.com/docs/chains/monad/monad-api-endpoints/eth-get-logs"}
       ],
-      "evidence": "Monad role logs from genesis through block 110115443 close the current ADMIN/MINTER/MINTER_APPROVER roster and establish that no UPGRADER_ROLE grant exists; current role-admin reads retain the administrator's reactivation path. The proxy first has runtime code at block 61584206 (2026-03-15), in transaction 0x3fb231fb1a9045f86604727f233e9ff8885cdc6dec1e9f4f0567fa3f03592f47, and no code at 61584205. The Bank of Lithuania register and exact-token whitepaper support prudential supervision, not independent reserve assurance. Current remaining allowance is observed, not a permanent supply bound. Audited source was not publicly retrievable from the linked repository, so exact source/runtime correspondence and offchain key custody remain qualified. Independent human/key-custody arrangements for the three issuance EOAs and current exact-token financial reserve-to-liability reconciliation remain unverified; these are key-custody and Backing qualifications, not gaps in the identified signer census.",
-      "unresolvedQuestions": [
-        "The current EURW proxy implementation has not been independently bound to the audited source or proven byte-for-byte equal to a verified reference. The administrator can immediately activate an upgrade authority, so exact current mint/grant/upgrade-path runtime semantics remain unverified despite the closed role roster."
-      ],
+      "evidence": "The proxy first has runtime code at block 61584206 (2026-03-15), transaction 0x3fb231fb1a9045f86604727f233e9ff8885cdc6dec1e9f4f0567fa3f03592f47, and no code at 61584205. Prior pinned role-admin and allowance reads at block 110115443 identify ADMIN/MINTER/MINTER_APPROVER as separate EOAs with administrator reactivation of immediate upgrades; the 320,170.16 EURW remaining allowance is a historical snapshot, not an immutable cap. The Bank of Lithuania register supports prudential supervision, not independent reserve assurance. W1R72 re-read whitepaper D.1 Current-runtime closure on 2026-10-03: issuance follows settled euro deposits, tokens are minted to a Newrails omnibus wallet, and entitlements recorded in its internal ledger. This supports internal-ledger issuance accounting only, not a verified continuous/periodic whole-supply reserve reconciliation or independent financial assurance.  on 2026-10-03: MonadScan publishes exact-match verified source for implementation 0x52778511bec5ff87f9b52c7a2434631edcc157f4. At pinned Monad block 110309152 (hash 0x5ac75e4589c6e9f230c456ebedc109f2b34bc1c64b906c728424e138d36883f4), EIP-1967 storage still names that implementation. The complete verified Stablecoin source exposes only allowance-consuming MINTER_ROLE issuance; ADMIN_ROLE administers all privileged roles, MINTER_APPROVER_ROLE replaces quotas, and UPGRADER_ROLE authorizes undelayed UUPS upgrades. This independently establishes current runtime semantics without claiming equivalence to the inaccessible audited repository commit. Genesis-to-pin archive event queries returned four RoleGranted events, no revocations, only the initial implementation event, and 541 Mint events, all naming the identified sole minter 0x259b74273f2a371f88cbc2cd8ca3339066600757. Incident review covers EURW issuance from public offer 2026-02-10 through 2026-10-03: issuer product/security audit/whitepaper/redemption policy/download archive, Bank of Lithuania participant and enforcement notices, exact token and issuer exploit-report searches, and canonical role/upgrade/mint history. No known relevant mint/control incident was located; accepted audit vulnerabilities are design findings, not evidence of an exploited incident. This does not prove that undisclosed compromise never occurred or independently reconcile fiat backing. Controller-specific human/key-custody questions remain unresolved and are retained.",
       "scopedQuestions": [
         {
           "controlRef": "Newrails EURW ADMIN_ROLE EOA",

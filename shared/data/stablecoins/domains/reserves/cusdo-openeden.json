@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB19spUSD)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W1R32 primary-source wrapper liquidity review",
     "confidence": "verified",
     "sources": [
       {
@@ -37,10 +37,10 @@
         "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
       }
     ],
-    "rationale": "OpenEden documents cUSDO as the non-rebasing wrapped form of USDO and states that users can convert between the two at any time through the wrapper smart contract. Its direct reserve dependency is therefore 100% USDO; the tokenized Treasury portfolio is inherited through USDO rather than duplicated as cUSDO's direct backing.",
+    "rationale": "OpenEden documents cUSDO as the non-rebasing wrapped form of USDO and states that users can convert between the two at any time through the wrapper smart contract. This classification-only review applies immediate liquidity to the direct held USDO wrapper position, not to sale of USDO for dollars or to inherited Treasury portfolio settlement. It does not refresh producer allocation weights or observations.",
     "compositionBasis": "OpenEden documented USDO-to-cUSDO wrapper relationship",
     "compositionAsOf": "2026-10-01",
-    "scope": "dependency-relationships",
+    "scope": "classification-only",
     "knownUnknownExposure": "Current USDO reserve-asset weights and custodian shares are inherited from USDO and are not required to establish the direct 100% wrapper relationship.",
     "knownUnknownExposurePct": 0
   },

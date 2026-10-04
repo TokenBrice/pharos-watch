@@ -8,6 +8,7 @@ import {
   V9AssetEvaluationError,
 } from "@shared/lib/safety-score-v9/evaluate-set";
 import * as evaluateSetModule from "@shared/lib/safety-score-v9/evaluate-set";
+import * as publicModule from "@shared/lib/safety-score-v9/public";
 import {
   loadV9CandidateMethodologyPolicy,
   loadV9MethodologyPolicy,
@@ -82,15 +83,7 @@ function exactFixedInput(
 function reviewedExtension(fixedInput = exactFixedInput("alpha")): SafetyScoreV9FactSetExtensionV2 {
   const extension = structuredClone(
     buildSafetyScoreV9BaselineExtension(fixedInput, {
-      metaById: new Map([
-        [
-          "alpha",
-          {
-            id: "alpha",
-            mechanismArchetype: "fiat-cash",
-          },
-        ],
-      ]),
+      metaById: new Map(fixedInput.activeAssetIds.map((id) => [id, { id, mechanismArchetype: "fiat-cash" }])),
     }),
   );
   const asset = extension.assets[0]!;
@@ -210,6 +203,64 @@ function reviewedExtension(fixedInput = exactFixedInput("alpha")): SafetyScoreV9
     failureDomains: [],
   };
   return extension;
+}
+
+function reserveParentCascadeFixture() {
+  const inputs = ["alpha", "beta", "gamma"].map((id) => exactFixedInput(id));
+  const fixedInput = inputs[0]!;
+  fixedInput.activeAssetIds = ["alpha", "beta", "gamma"];
+  for (const other of inputs.slice(1)) {
+    for (const key of ["dexLiqMap", "pegDataById", "liveReserveMap", "liveReserveProvenanceMap",
+      "chainCirculatingById", "aggregateCirculatingById", "resolvedBlacklistStatuses"] as const) {
+      Object.assign(fixedInput[key], other[key]);
+    }
+  }
+  fixedInput.liveReserveMap.alpha = [{
+    ...FIXTURE_RESERVES[0]!, name: "Beta claim", assetClass: "stablecoin", coinId: "beta", depType: "wrapper",
+  }];
+  fixedInput.liveReserveMap.gamma = [{
+    ...FIXTURE_RESERVES[0]!, name: "Alpha holding", assetClass: "stablecoin", coinId: "alpha", depType: "collateral",
+  }];
+  const dex = fixedInput.dexLiqMap.alpha!;
+  dex.exitRouteObservations = [];
+  dex.exitRouteObservationCoverage = {
+    status: "populated", capabilityMatrixVersion: "p4a.4", retainedPoolCount: 0,
+    observationCount: 0, scoreEligibleObservationCount: 0, scoreEligiblePoolCount: 0,
+    scoreEligibleCapabilityPoolCount: 0, unsupportedPoolCount: 0, evidenceCounts: {}, unsupportedReasons: {},
+  };
+  fixedInput.dexDeploymentSupplyCoverageById.alpha = {
+    totalSupplyUsd: 10_000_000, observedSupplyUsd: 0, verifiedNoPoolsSupplyUsd: 10_000_000,
+    providerInaccessibleSupplyUsd: 0, unknownSupplyUsd: 0, observedSupplyRatio: 0,
+    verifiedNoPoolsSupplyRatio: 1, providerInaccessibleSupplyRatio: 0, unknownSupplyRatio: 0, unknownChains: [],
+  };
+  fixedInput.dexPayloadFingerprint = computeDexLiquidityPayloadFingerprint(fixedInput.dexLiqMap, fixedInput.dexGenerationId);
+  fixedInput.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixedInput);
+  const extension = reviewedExtension(fixedInput);
+  const reviewedAssets = inputs.map((input) => reviewedExtension(input).assets[0]!);
+  extension.assets = extension.assets.map((asset, index) => ({
+    ...reviewedAssets[index]!, reserveClassifications: asset.reserveClassifications,
+  }));
+  const alpha = extension.assets.find((asset) => asset.assetId === "alpha")!;
+  alpha.routeReviews = [];
+  const review = alpha.mechanismRiskReview;
+  if (review?.archetype !== "fiat-cash") throw new Error("Cascade fixture requires a fiat-cash review");
+  review.claimAndSegregation = { ...review.claimAndSegregation, status: status("missing"), quality: null };
+  for (const [id, upstream, role] of [
+    ["alpha", "beta", "serial-claim"], ["gamma", "alpha", "basket-exposure"],
+  ] as const) {
+    const asset = extension.assets.find((row) => row.assetId === id)!;
+    asset.dependencies = {
+      source: "manual", baseSource: "manual", dependencyFromLive: false,
+      mappedLiveReserveWeight: null, fallbackReason: null,
+      edges: [{
+        upstreamAssetId: upstream,
+        dependencyType: role === "serial-claim" ? "wrapper" : "collateral", economicRole: role,
+        weight: 1, failureDomains: [],
+      }],
+      diagnostics: { graphState: "valid", issueCodes: [], sccMemberAssetIds: [] },
+    };
+  }
+  return { fixedInput, extension, publishedAtSec: PUBLISHED_AT_SEC };
 }
 
 const V9_EVALUATION_TEST_TIMEOUT_MS = 30_000;
@@ -432,6 +483,97 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       expect.objectContaining({ id: "alpha", ratingStatus: "pipeline-gap", grade: null, score: null }),
     ]);
     evaluate.mockRestore();
+  });
+
+  it("quarantines an asset whose public card violates its contract instead of failing the publication", () => {
+    const fixedInput = exactFixedInput("alpha");
+    const build = vi
+      .spyOn(publicModule, "buildSafetyScoreV9Response")
+      .mockImplementationOnce(() => {
+        throw new publicModule.V9PublicCardProjectionError([{ assetId: "alpha", issues: [{
+          code: "custom", input: undefined, message: "Scoring disposition must agree with controlling cause",
+          path: ["cards", 0, "breakdowns", "backing", "components", 4],
+        }] }]);
+      });
+
+    const result = buildSafetyScoreV9Candidate({
+      fixedInput,
+      extension: reviewedExtension(fixedInput),
+      publishedAtSec: PUBLISHED_AT_SEC,
+    });
+
+    expect(build).toHaveBeenCalledTimes(2);
+    expect(result.quarantines).toEqual([
+      expect.objectContaining({
+        assetId: "alpha",
+        code: "evaluation-failed",
+        message: expect.stringContaining("breakdowns.backing.components.4: Scoring disposition must agree with controlling cause"),
+      }),
+    ]);
+    expect(result.candidate.cards).toEqual([
+      expect.objectContaining({ id: "alpha", ratingStatus: "pipeline-gap", grade: null, score: null }),
+    ]);
+    build.mockRestore();
+  });
+
+  it.each(["alpha", "gamma"])("publishes %s through a quarantined reserve parent without cascading public-contract failures", (assetId) => {
+    const input = reserveParentCascadeFixture();
+    const baseline = buildSafetyScoreV9Candidate(input);
+    expect(baseline.quarantines).toEqual([]);
+    const ordinaryAlpha = baseline.candidate.cards.find((card) => card.id === "alpha")!;
+    expect(ordinaryAlpha.pillars.exit.score).toBe(0);
+    expect(ordinaryAlpha.scoreTrace.adverseAttribution.items).toContainEqual(expect.objectContaining({
+      source: "reason", path: "exit:no-viable-exit-path", responsibility: "measured-adverse",
+    }));
+    const ordinaryGamma = baseline.candidate.cards.find((card) => card.id === "gamma")!;
+    const ordinaryHolding = ordinaryGamma.breakdowns!.backing.components.find((row) => row.source === "reserve-exposure")!;
+    expect(ordinaryHolding.cause ?? null).toBeNull();
+    expect(ordinaryHolding.score).toBeGreaterThan(0);
+    const build = vi.spyOn(publicModule, "buildSafetyScoreV9Response").mockImplementationOnce(() => {
+      throw new publicModule.V9PublicCardProjectionError([{ assetId: "beta", issues: [{
+        code: "custom", message: "Captured parent projection failure", path: ["cards", 1, "breakdowns", "backing"],
+      }] }]);
+    });
+    try {
+      const result = buildSafetyScoreV9Candidate(input);
+      expect(result.quarantines.map((quarantine) => quarantine.assetId)).toEqual(["beta"]);
+      const card = result.candidate.cards.find((row) => row.id === assetId)!;
+      expect(card.partialEvidence?.causes).toEqual(["A"]);
+      expect(SafetyScoreV9ResponseSchema.parse(result.candidate)).toEqual(result.candidate);
+      if (assetId === "alpha") {
+        expect(card).toMatchObject({ ratingStatus: "pipeline-gap", grade: null, score: null });
+        expect(card.pillars.exit.score).toBeNull();
+        expect(card.scoreTrace.adverseAttribution.items.some((item) =>
+          item.path === "exit:no-viable-exit-path" || item.path.startsWith("pillar:exit:"),
+        )).toBe(false);
+      } else {
+        expect(card.breakdowns!.backing.components.find((row) => row.source === "reserve-exposure"))
+          .toMatchObject({ score: null, cause: "A", scoringDisposition: "excluded-pipeline" });
+        const unavailable = [...iterateEvidenceResponsibilityFacts(card.scoreTrace.evidenceResponsibility)]
+          .find((fact) => fact[0] === "material-dependency-unavailable");
+        expect(unavailable).toMatchObject({ 3: "producer-failed", 4: false, 5: "A" });
+        expect(unavailable![6].map((ref) => resolveCauseGapId(result.candidate, card, ref)))
+          .toContain("beta:gap:asset-compilation");
+      }
+    } finally {
+      build.mockRestore();
+    }
+  });
+
+  it("fails immediately when a compilation-quarantined stub violates its public contract", () => {
+    const fixedInput = exactFixedInput("alpha");
+    const extension = reviewedExtension(fixedInput);
+    extension.assets[0]!.launchedAtSec = -1;
+    const failure = new publicModule.V9PublicCardProjectionError([{ assetId: "alpha", issues: [{
+      code: "custom", message: "Stub projection failure", path: ["cards", 0, "scoreTrace"],
+    }] }]);
+    const build = vi.spyOn(publicModule, "buildSafetyScoreV9Response").mockImplementationOnce(() => { throw failure; });
+    try {
+      expect(() => buildSafetyScoreV9Candidate({ fixedInput, extension, publishedAtSec: PUBLISHED_AT_SEC })).toThrow(failure);
+      expect(build).toHaveBeenCalledTimes(1);
+    } finally {
+      build.mockRestore();
+    }
   });
 
   it("keeps strict, trusted, full, and compact paths identical with provenance guards", () => {

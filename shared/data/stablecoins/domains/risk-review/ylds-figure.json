@@ -18,11 +18,15 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "The verified Figure YLDS identities retained in the catalog are native Provenance uylds.fcc and Stellar YLDS issued by Figure Certificate Company. The previously cataloged Solana mint and Ethereum contract are Hastra wYLDS, a distinct holder instrument whose backing may include Democratized Prime lender interests, not interchangeable FCC certificates. Those misattributed deployments and their wrapper controls were removed in this identity review; native issuance controls remain in Mint Authority. This review does not establish a complete roster for every blockchain approved in FCC's prospectus.",
+    "summary": "Figure's current developer inventory explicitly lists exactly two live YLDS chains: Provenance and Stellar, both permissioned FCC certificates. The June 30, 2026 prospectus supplement permits other chains on request; approval is not a live deployment. The two exact native identities below cover the published live inventory. FCC's transfer agent conserves the official certificate ownership record across issuer-controlled burn-or-vault/mint moves; this is not an independently validated third-party bridge. Hastra wYLDS remains a distinct instrument.",
     "reviewedAt": "2026-10-03",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewer": "W2R21 official live-native inventory review",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Figure current developer inventory: Where YLDS lives today lists only Provenance and Stellar as Live, accessed 2026-10-03",
+        "url": "https://www.ylds.com/developers-and-ecosystems/"
+      },
       {
         "label": "YLDS website",
         "url": "https://www.ylds.com/"

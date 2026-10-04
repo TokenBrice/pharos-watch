@@ -125,18 +125,22 @@
         "address": "9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM",
         "label": "Ondo GM Solana program upgrade authority",
         "role": "proxy-admin",
-        "authorityType": "eoa",
+        "authorityType": "multisig",
         "directMintAbility": "upgrade-only",
         "deploymentRefs": [
           "solana:M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo"
         ],
         "canRaiseCap": true,
-        "observedAt": "2026-10-01",
-        "observedBlock": 452214196,
+        "threshold": 4,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "not-applicable",
+        "timelockDelaySec": 7200,
+        "observedAt": "2026-10-03",
+        "observedBlock": 453074463,
         "failureDomainKeys": [
           "contract:solana:9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM"
         ],
-        "evidence": "At finalized Solana slot 452214196 on 2026-10-01, program-data account F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU recorded upgrade authority 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM and last deployment slot 429073863. The authority account was non-executable, system-program-owned, had zero data space, and held 13188309921 lamports. This is a bare system-account authority; single-key, HSM, or MPC custody remains unverifiable on-chain.",
+        "evidence": "At finalized slot 453074463, one getMultipleAccounts observation binds the issuer GM program to program-data F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU and upgrade authority 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM. Exact Squads v4 PDA derivation binds that off-curve authority to vault index 0 of multisig EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr (bump 254). Decoded Multisig state has threshold 4, seven permission-mask-7 members, configured time_lock 7200 and zero config_authority. Finalized transaction 5XVxqQtnB44vcJXtMBfobzBzufc6ryVa7YGx4Mf2xNi2GJcMYFpqMq328KMWvxVy8fz8eUCYvNA9XLU2tnVRY8Zp independently executes GM role operations through this Squads vault. Bare system ownership did not prove EOA. Current topology/delay are established; full spending-limit, reconfiguration and Squads upgrade/bypass closure and human independence are not. EVM modules/guards do not apply.",
         "sources": [
           {
             "label": "Ondo GM Solana program",
@@ -145,6 +149,14 @@
           {
             "label": "Solana mainnet RPC",
             "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Exact Squads v4 controlling multisig and account schema",
+            "url": "https://docs.squads.so/main/development/reference/accounts"
+          },
+          {
+            "label": "Exact controlling multisig account",
+            "url": "https://solscan.io/account/EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr"
           }
         ]
       }
@@ -190,7 +202,7 @@
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "Current review evidence separates native issuance from bridge representations. Ethereum block 25770668 and BSC block 116353763 show GMTokenManager as a native IAUon minter alongside the separate OndoOFT bridge overlay; the native token beacon owners are two-hour timelocks. At finalized Solana slot 439728907, Token-2022 mint M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo is controlled by the Ondo GM program PDA 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD, and at slot 439729018 its program data reports upgrade authority 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM; that bare system account has no on-chain custody or quorum proof. HyperEVM is a LayerZero bridge representation and its beacon upgrade path is recorded in bridgeRouteRisk. The corrected native control set therefore retains unbounded, periodically reconciled, attestation-only economics and probable confidence.",
+      "evidence": "Current review evidence separates native issuance from bridge representations. Ethereum block 25770668 and BSC block 116353763 show GMTokenManager as a native IAUon minter alongside the separate OndoOFT bridge overlay; the native token beacon owners are two-hour timelocks. At finalized Solana slot 439728907, Token-2022 mint M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo is controlled by the Ondo GM program PDA 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD, and at slot 439729018 its program data reports upgrade authority 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM. At finalized slot 453074463, exact Squads v4 account decoding and vault derivation establish this authority as a 4-of-7 Squads vault with configured 7200-second delay, superseding the earlier bare-system-account EOA inference; full execution/bypass closure and human key independence remain unverified. HyperEVM is a LayerZero bridge representation and its beacon upgrade path is recorded in bridgeRouteRisk. The corrected native control set therefore retains unbounded, periodically reconciled, attestation-only economics and probable confidence.",
       "reviewer": "Claude Phase 0c continuation; OpenAI Codex NR-recovery correction; Kimi data review; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-16",
       "disposition": "scoreable",

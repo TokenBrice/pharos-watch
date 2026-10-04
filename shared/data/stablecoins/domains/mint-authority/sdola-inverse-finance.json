@@ -6,6 +6,7 @@
     "confidence": "verified",
     "summary": "sDOLA is an ERC-4626 savings wrapper over DOLA; wrapper minting is deposit/share accounting while durable DOLA mint authority is inherited from reviewed parent DOLA.",
     "inheritedFrom": "dola-inverse-finance",
+    "supervision": "none",
     "upgradeability": {
       "model": "immutable",
       "implementationAddresses": [
@@ -62,11 +63,15 @@
         {
           "label": "Inverse dola-savings source (pinned commit)",
           "url": "https://github.com/InverseFinance/dola-savings/blob/f9467b932c4cce460dc1267c6bc280327cf66a72/src/sDola.sol"
+        },
+        {
+          "label": "Inverse protocol legal disclaimer",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/about/disclaimer"
         }
       ],
-      "evidence": "At Ethereum block 25534205, the sDOLA asset() is DOLA 0x865377367054516e17014CcdED1e7d814EDC9ce4 and both EIP-1967 slots are zero. The verified implementation and pinned source show an immutable ERC-4626 wrapper: deposits create receipt shares but do not mint DOLA. Timelock governance can operate configured wrapper functions but cannot replace the deployed mint/share-accounting logic; durable mint authority remains inherited from reviewed parent DOLA.",
-      "reviewer": "Codex Safety Score V9 data research",
-      "reviewedAt": "2026-07-15"
+      "evidence": "The existing July 15 pinned implementation review establishes the immutable sDOLA ERC-4626 accounting over DOLA and is not re-dated as a new chain observation. On October 3, 2026, the issuer disclaimer expressly describes Inverse as a decentralized open-source protocol not affiliated with any central authority or organization, provides products as-is, and places risk on users. The organization page identifies DAO/working-group oversight, not prudential or independent financial-attestation oversight of the local sDOLA share issuance. Local supervision is therefore reviewed none; parent DOLA issuance risk remains inherited.",
+      "reviewer": "W1R58 unknown-wave local supervision review",
+      "reviewedAt": "2026-10-03"
     }
   }
 }

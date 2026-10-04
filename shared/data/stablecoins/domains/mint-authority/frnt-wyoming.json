@@ -1086,7 +1086,7 @@
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
-    "supervision": "unknown",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -1104,15 +1104,19 @@
         {
           "label": "Frontier holder trust and reserve rules",
           "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+        },
+        {
+          "label": "TNF FRNT daily examination process, published report index and supplemental-data disclaimer",
+          "url": "https://dashboard.ledgerlens.io/c/wystc"
         }
       ],
-      "evidence": "Complete RoleGranted/RoleRevoked history from genesis to pinned October 3 blocks was retrieved for Ethereum 26110208, Avalanche 96655718, Base 52110947, Polygon 94870735, Arbitrum 511231213 and Optimism 157706232. All six have sole DEFAULT_ADMIN_ROLE 0x5e3372f9a1c04e789ef86df9ec35f87e000bb15b, sole UPGRADER_ROLE 0x7f6cc8151ac948429911dab959d9e305501079ba and direct issuer MINTER_ROLE 0x83465b1bac70dc63c0d6b72e9f012af4a1e7138a, plus one chain-local CCIP pool minter. Admin/upgrader membership was corroborated by hasRole on each pinned block. Verified ERC20F._authorizeUpgrade is UPGRADER_ROLE-only with no contract delay. Hedera's whole-history RPC query was rejected by the seven-day window limit, so no all-chain completeness claim is made. Solana authority remains the earlier finalized read. The public October 2 signed TNF report API returned 403 Missing verification token on October 3; supplemental dashboard observations do not establish independent financial assurance or reserve-gated Secure Mint activation. HSM signing quorum, operator independence and recovery policies remain unestablished and receive no independent key-custody credit; these record-keeping questions are scoped to each identified controller. The named Solana mint authority's program upgrade/recovery closure remains incomplete and is an umbrella mint-path question under calibration v2, alongside Hedera's whole-deployment role census gap. Reconciliation and supervision both remain unknown: self-reported dashboard/PoR cadence, Commission status and Fireblocks HSM custody are not independently reviewed financial reconciliation or prudential stablecoin supervision.",
-      "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
+      "evidence": "Complete RoleGranted/RoleRevoked history from genesis to pinned October 3 blocks was retrieved for Ethereum 26110208, Avalanche 96655718, Base 52110947, Polygon 94870735, Arbitrum 511231213 and Optimism 157706232. All six have sole DEFAULT_ADMIN_ROLE 0x5e3372f9a1c04e789ef86df9ec35f87e000bb15b, sole UPGRADER_ROLE 0x7f6cc8151ac948429911dab959d9e305501079ba and direct issuer MINTER_ROLE 0x83465b1bac70dc63c0d6b72e9f012af4a1e7138a, plus one chain-local CCIP pool minter. Admin/upgrader membership was corroborated by hasRole on each pinned block. Verified ERC20F._authorizeUpgrade is UPGRADER_ROLE-only with no contract delay. Wave-2 research retrieved all 85 Hedera token logs from deployment through Unix second 1791071400 from the public mirror node with links.next=null. Event reconstruction identifies the same sole issuer minter, administrator and upgrader, plus additional current MINTER_ROLE member 0xb9e7e53ad3f4bbc352a55c33db7bcf25e0da3f03 whose current native-versus-transfer reach remains unreviewed. At finalized Solana slot 453086221, the named mint authority is a Token-2022 multisig requiring one of two signer addresses, not an executable custom program; one signer account is absent and the other is a nonexecutable system account. Backend custody and recovery authorization remain undisclosed. No controller identities are removed or incident-free assertion made. TNF's own FRNT dashboard explicitly identifies issued AT-C 205 examinations, a dated daily report archive through October 3, and a process independently collecting circulating token balances and daily Fiduciary Trust custodian statements. This establishes attestation-only oversight of the exact Commission issuer, not prudential licensing, a reviewed report opinion or financial assurance over supplemental dashboard figures. Signed report downloads remained behind human verification; reconciliation remains unknown. The CISO's September 14 key-management disclosure and the reported contrary claim that only a scaled-display authority was affected do not establish a resolved mint incident or justify incidentState none.",
+      "reviewer": "W2R23 primary-source oversight and authority census review",
       "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
       "unresolvedQuestions": [
-        "Hedera full historical issuer/admin/upgrader role census remains unresolved; the six other EVM deployment role censuses are complete.",
-        "What is the complete program upgrade/recovery governance behind named Solana mint authority DsRa7mCpCfcTxdNJvaTzbRe73FuBbrs8U8NEAxFunWnr? Its finalized address is known, but executable program and recovery authorization closure remain incomplete."
+        "Hedera event census is complete through Unix second 1791071400, but additional MINTER_ROLE holder 0xb9e7e53ad3f4bbc352a55c33db7bcf25e0da3f03 still requires executable identity and native-versus-transfer liability reach review.",
+        "Solana mint authority is a Token-2022 one-of-two multisig at finalized slot 453086221, not a custom executable program. Which independently evidenced operator and recovery policies govern signer keys 7VhCbqKQEz3RNLSuAuiRmBVEVWdgcFqGHMiVPPo2KjHy and G15NrcKeqQoPG5ERcTLN1SNWZWv7BqbjvnnyQ1vJyAKf?"
       ],
       "scopedQuestions": [
         {"controlRef": "FRNT ethereum native minter", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter?", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},

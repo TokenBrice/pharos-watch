@@ -110,14 +110,22 @@
     ]
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
+    "tier": "single-source-or-laggy",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
-    "summary": "Pinned block 26107706: 1 funded Morpho markets have exact oracle/LLTV identities and all six BASE/QUOTE feed/vault getter values. Vault accounting is verified price-feed-independent; borrower liquidation pricing remains applicable. Upstream feed administrator, heartbeat and mutable NAV-controller closure remain incomplete, so no standard-external or redundant tier is asserted.",
+    "summary": "Exact MorphoChainlinkOracleV2 has one composite pricing path, not redundant alternative feeds, and no fallback; its verified ChainlinkDataFeedLib ignores updatedAt and does not reject stale answers. At block 26114898 all configured BASE/QUOTE feed addresses matched the earlier inventory. Sentora discloses internal PST valuation and unevidenced staleness circuit-breakers. Single-source/laggy topology is known; upstream feed administration remains unclosed.",
     "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
-    "confidence": "probable",
+    "reviewer": "Unknown resolver W1R33",
+    "confidence": "verified",
     "sources": [
+      {
+        "label": "Sentora PST internal valuation and staleness disclosure",
+        "url": "https://sentora.com/asset-risk-reviews/huma"
+      },
+      {
+        "label": "Pinned feed configuration block 26114898",
+        "url": "https://etherscan.io/block/26114898"
+      },
       {
         "label": "Exact Sentora vault",
         "url": "https://app.morpho.org/ethereum/vault/0x8381a156958711e230f325428b5eb4b6555c75d9"
@@ -272,7 +280,7 @@
       {
         "id": "0xb4977179610abfecfc8b76255a002c16b33f46d077beb86e5911e1fe9ee6e512",
         "label": "Morpho market 0xb4977179610abfecfc8b76255a002c16b33f46d077beb86e5911e1fe9ee6e512",
-        "tier": "opaque-or-unknown",
+        "tier": "single-source-or-laggy",
         "summary": "Exact market oracle 0x39228d120b999e6f6918df162cef928beb954448: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0x4be50be32db1510240d542f77c5b36ca0d0965e6\",\"BASE_FEED_2\":\"0x8fffffd4afb6115b954bd326cbe7b4ba576818f6\",\"QUOTE_FEED_1\":\"0x8f1df6d7f2db73eece86a18b4381f4707b918fb1\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
         "collateralAssets": [
           "0x22ae3d9a738471f405169af055d31c687087d4c7"

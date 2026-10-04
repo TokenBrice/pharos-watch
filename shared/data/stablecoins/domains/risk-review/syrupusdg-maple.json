@@ -480,24 +480,26 @@
         "controllerChain": "solana",
         "controllerAddress": "Di9oiB9DRXG7vrvUKapLeXmiZX2GebRXDAsZ6tWmEcrE",
         "label": "syrupUSDG Solana SPL mint authority",
-        "authorityType": "unknown",
+        "authorityType": "multisig",
+        "threshold": 1,
+        "signerCount": 2,
         "modulesOrGuardsStatus": "unknown",
         "failureDomainKeys": [
           "bridge:chainlink-ccip"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 452748856,
+        "observedAt": "2026-10-03",
+        "observedBlock": 453072541,
         "sources": [
           {
             "label": "Chainlink exact syrupUSDG deployments and pools",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
           },
           {
-            "label": "Finalized Solana mint supply and authorities at slot 452748856",
+            "label": "Finalized atomic Solana mint and controller accounts at slot 453072541",
             "url": "https://solana-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "evidence": "At finalized slot 452748856, getAccountInfo(jsonParsed) returned this non-null SPL mintAuthority for the exact directory-listed BurnMint representation. getTokenSupply returned zero and decimals 6. Mint authority remains active despite zero circulation; PDA/program execution and full administrative census are not established."
+        "evidence": "Atomic finalized getMultipleAccounts at slot 453072541 identified the exact syrupUSDG SPL mint (supply zero, decimals 6) with mintAuthority Di9oiB9DRXG7vrvUKapLeXmiZX2GebRXDAsZ6tWmEcrE. That Tokenkeg-owned account parses as an SPL multisig: numRequiredSigners=1, numValidSigners=2, signers BAusSkCwqvpS598vn9dxxnotvngeqavcumYnKVnach9c and 76QpxAGtsrbwP5nmdCVHyQe2AHVML7cqhxF9FpBxLJjp. This is a direct 1-of-2 threshold, not proof of independence or complete PDA/program execution reach."
       },
       {
         "id": "solana-syrupusdg-freeze-authority",
@@ -510,24 +512,24 @@
         "controllerChain": "solana",
         "controllerAddress": "76QpxAGtsrbwP5nmdCVHyQe2AHVML7cqhxF9FpBxLJjp",
         "label": "syrupUSDG Solana SPL holder-freeze authority",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "modulesOrGuardsStatus": "unknown",
         "failureDomainKeys": [
           "authority:solana:76QpxAGtsrbwP5nmdCVHyQe2AHVML7cqhxF9FpBxLJjp"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 452748856,
+        "observedAt": "2026-10-03",
+        "observedBlock": 453072541,
         "sources": [
           {
             "label": "Chainlink exact syrupUSDG deployments and pools",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
           },
           {
-            "label": "Finalized Solana mint supply and authorities at slot 452748856",
+            "label": "Finalized atomic Solana mint and controller accounts at slot 453072541",
             "url": "https://solana-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "evidence": "At finalized slot 452748856, the exact SPL mint has this non-null freezeAuthority. It can authorize account freezing, a direct holder-restriction surface separate from the bridge mint authority. No actual historical freeze or controller execution/quorum census is inferred."
+        "evidence": "Atomic finalized getMultipleAccounts at slot 453072541 returned freezeAuthority 76QpxAGtsrbwP5nmdCVHyQe2AHVML7cqhxF9FpBxLJjp for the exact syrupUSDG SPL mint. The authority itself returned null (no allocated account), and its base58 public key is a valid Ed25519 curve point, establishing a key-signing rather than SPL multisig/program authority. This is direct holder-freeze power; key custody, signer independence and historical freezes are not inferred."
       }
     ],
     "scopedQuestions": [

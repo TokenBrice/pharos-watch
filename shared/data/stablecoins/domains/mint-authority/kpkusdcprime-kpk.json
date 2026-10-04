@@ -595,9 +595,9 @@
         },
         {
           "controlRef": "ethereum:0xb11fabcf8024a1961bde291a4ddd128bb3a8ae60",
-          "question": "For this identified KPK USDC Prime Zodiac MORPHO_REBALANCER_AGENT controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "question": "Issuer signer architecture establishes that MORPHO_REBALANCER_AGENT automation keys are generated and held in a dedicated ETH signer vault and are not manually accessible to team members; this is a service EOA, not an independent human signer. The exact service-operator/recovery authority and current Zodiac permission-condition/unwrap execution closure remain unestablished.",
           "reviewedAt": "2026-10-03",
-          "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+          "reviewer": "W2R16 current signer-service documentation and executable-control review",
           "sources": [
             {
               "label": "Exact Zodiac Roles complete public grant log (34 records; pagination end) and current module-member census, reviewed 2026-10-03",
@@ -610,14 +610,19 @@
             {
               "label": "Exact VaultV2 ABI/source for role-granted selectors",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6"
+            }
+            ,
+            {
+              "label": "Issuer automated EOA custody: dedicated ETH signer vault, no manual team key access; reviewed 2026-10-03",
+              "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md"
             }
           ]
         },
         {
           "controlRef": "ethereum:0xc9efbf808c8d1e853c6671a13a06826543d3d94c",
-          "question": "For this identified KPK USDC Prime Zodiac MORPHO_SHUTDOWN_AGENT controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "question": "Issuer signer architecture establishes that MORPHO_SHUTDOWN_AGENT automation keys are generated and held in a dedicated ETH signer vault and are not manually accessible to team members; this is a service EOA, not an independent human signer. The exact service-operator/recovery authority and current Zodiac permission-condition/unwrap execution closure remain unestablished.",
           "reviewedAt": "2026-10-03",
-          "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+          "reviewer": "W2R16 current signer-service documentation and executable-control review",
           "sources": [
             {
               "label": "Exact Zodiac Roles complete public grant log (34 records; pagination end) and current module-member census, reviewed 2026-10-03",
@@ -631,13 +636,18 @@
               "label": "Exact VaultV2 ABI/source for role-granted selectors",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6"
             }
+            ,
+            {
+              "label": "Issuer automated EOA custody: dedicated ETH signer vault, no manual team key access; reviewed 2026-10-03",
+              "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md"
+            }
           ]
         },
         {
           "controlRef": "ethereum:0x3e1c3f4bef3b61ebb497e333c540b0ae19f97935",
-          "question": "For this identified KPK USDC Prime Zodiac MORPHO_MONITORING_AGENT controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "question": "Issuer signer architecture establishes that MORPHO_MONITORING_AGENT automation keys are generated and held in a dedicated ETH signer vault and are not manually accessible to team members; this is a service EOA, not an independent human signer. The exact service-operator/recovery authority and current Zodiac permission-condition/unwrap execution closure remain unestablished.",
           "reviewedAt": "2026-10-03",
-          "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+          "reviewer": "W2R16 current signer-service documentation and executable-control review",
           "sources": [
             {
               "label": "Exact Zodiac Roles complete public grant log (34 records; pagination end) and current module-member census, reviewed 2026-10-03",
@@ -650,6 +660,11 @@
             {
               "label": "Exact VaultV2 ABI/source for role-granted selectors",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6"
+            }
+            ,
+            {
+              "label": "Issuer automated EOA custody: dedicated ETH signer vault, no manual team key access; reviewed 2026-10-03",
+              "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md"
             }
           ]
         }

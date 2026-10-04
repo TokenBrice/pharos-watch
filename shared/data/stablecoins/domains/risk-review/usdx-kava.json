@@ -271,10 +271,10 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "USDX has a native Kava x/cdp issuance surface observed on-chain and one authored Osmosis ICS-20 IBC representation. The observed native Kava issuance cannot currently be authored in the catalog: CHAIN_META.kava is type \"evm\" and both contracts[] and tradedContracts require a 0x...40 EVM address, so only the reviewed Osmosis voucher is represented as an authored deployment. At Kava height 22415285 on 2026-09-04, standard ICS-20 derivation for transfer/channel-1 yields kava1kq2rzz6fq2q7fsu75a9g7cpzjeanmk685s3zdn; its bank balance is 707,818,078 usdx base units, exactly matching the 707,818,078-base-unit Osmosis voucher supply at height 69885664. The source escrow and voucher reconcile 1:1 at these observations; remove the zero-balance and unresolved-accounting claim.",
-    "reviewedAt": "2026-09-04",
-    "reviewer": "Codex bridge route review; migration FIX2-14",
+    "tier": "external-validated-network",
+    "summary": "USDX is native Cosmos bank-denom usdx issued by Kava x/cdp, with a separate Osmosis ICS-20 representation. Native Kava denomination identity is directly disclosed, but the catalog's EVM-only Kava address guard prevents an authored kava:usdx deployment and leaves its chain-supply route unmatched. At Kava height 22861203 on 2026-10-03, transfer/channel-1 was OPEN to transfer/channel-143; connection-1 identifies Tendermint client 07-tendermint-2 for osmosis-1. The representation depends on cross-chain validator/light-client authentication, not native issuer burn/mint. Earlier 2026-09-04 escrow/voucher balance observations remain historical; this review does not renew those amounts, prove current packet conservation, or establish economic supply shares.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Unknown-wave W1R90 primary-source and height-pinned review",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -315,6 +315,18 @@
       {
         "label": "Kava CDP module documentation",
         "url": "https://docs.kava.io/docs/cosmos/modules/cdp/"
+      },
+      {
+        "label": "Kava CDP parameters, request height 22861203",
+        "url": "https://api.data.kava.io/kava/cdp/v1beta1/params"
+      },
+      {
+        "label": "Kava channel-1 connection and Tendermint client, proof height 22861203",
+        "url": "https://api.data.kava.io/ibc/core/client/v1/client_states/07-tendermint-2"
+      },
+      {
+        "label": "IBC Classic light-client authentication",
+        "url": "https://docs.cosmos.network/ibc/latest/intro"
       }
     ],
     "routes": [
@@ -327,7 +339,7 @@
         "protocol": "Cosmos IBC/ICS-20 (Kava transfer/channel-1 to Osmosis transfer/channel-143)",
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
-        "riskTier": "opaque-or-unknown",
+        "riskTier": "external-validated-network",
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
@@ -343,6 +355,18 @@
         "observedAt": "2026-09-04",
         "observedBlock": 69885664,
         "sources": [
+          {
+            "label": "Kava channel-1 to Osmosis channel-143, proof height 22861203",
+            "url": "https://api.data.kava.io/ibc/core/channel/v1/channels/channel-1/ports/transfer"
+          },
+          {
+            "label": "Kava connection-1 Tendermint client, proof height 22861203",
+            "url": "https://api.data.kava.io/ibc/core/connection/v1/connections/connection-1"
+          },
+          {
+            "label": "IBC Classic authentication uses counterparty light clients",
+            "url": "https://docs.cosmos.network/ibc/latest/intro"
+          },
           {
             "label": "Osmosis IBC denom trace",
             "url": "https://lcd.osmosis.zone/ibc/apps/transfer/v1/denom_traces/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE"

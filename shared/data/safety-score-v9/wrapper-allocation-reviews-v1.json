@@ -538,41 +538,45 @@
     {
       "assetId": "bbqusdc-steakhouse",
       "scopeKind": "whole-allocation",
-      "reviewedAt": "2026-08-23",
-      "expiresAt": "2026-09-23",
-      "reviewer": "Safety Score V9 tranche 2 wrapper allocation review",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R38 pinned allocation and complete source review",
       "custody": "fully-onchain-no-offchain-custodian",
       "localLeverage": "no-borrowing-surface",
       "capitalReuse": "long-tail-overcollateralized-lending",
-      "rationale": "The vault does not borrow, but its funded Morpho inventory materially extends beyond blue-chip collateral into PT-reUSD, FalconX AA credit, mF-ONE, USCC, tokenized TSLA, and FLHYon markets. Reuse is therefore high-risk and correlated with long-tail collateral.",
+      "rationale": "Complete current vault-local allocation is onchain lending, not an offchain custody mandate. Exact deployed bytes match explorer source. Root code has no borrow surface or arbitrary target delegatecall; V2 self-multicall is limited to its own code, and its sole listed immutable Morpho adapter only supplies/withdraws underlying. V1 only supplies/withdraws Morpho markets. Complete current market roster is recorded; every vault/adapter position has zero borrow shares. V2 sum of expected market assets equals totalAssets with zero idle. This proves vault-local no borrowing, not absence of borrower credit losses, legal parent custody risk, or future allocation controls. Lending is capital reuse; collateral roster is heterogeneous, and Smokehouse expressly admits exotic collateral.",
       "observations": [
         {
           "chain": "ethereum",
           "address": "0xbeefff209270748ddd194831b3fa287a5386f5bc",
-          "function": "supplyQueueLength()/withdrawQueueLength()",
-          "value": "supplyQueueLength=20; withdrawQueueLength=23",
-          "block": 25819441
+          "function": "asset()/totalAssets()/totalSupply()/complete allocation census",
+          "value": "asset=0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; totalAssets=13192275206578; totalSupply=11668858307016065141174237; exact vault bytes match explorer deployed_bytecode",
+          "block": 26114886
         },
         {
           "chain": "ethereum",
-          "address": "0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb",
-          "function": "idToMarketParams(bytes32)/position(bytes32,0xbeefff209270748ddd194831b3fa287a5386f5bc)",
-          "value": "15 funded markets; collateral includes cbBTC,LBTC,WBTC,WETH,wstETH,weETH,PT-reUSD-10DEC2026,AA_FalconXUSDC,mF-ONE,USCC,TSLAon,FLHYon; LLTV range 62.5%-91.5%; every vault position borrowShares=0",
-          "block": 25819441
+          "address": "0xbeefff209270748ddd194831b3fa287a5386f5bc",
+          "function": "withdrawQueue(i)/supplyQueue(i)/Morpho.position()/market()",
+          "value": "complete withdrawQueue=0xe4cfbee9af4ad713b41bf79f009ca02b17c001a0c0e7bd2e6a89b1111b3d3f08,0xeb17955ea422baeddbfb0b8d8c9086c5be7a9cfdefb292119a102e981a30062e,0xbf02d6c6852fa0b8247d5514d0c91e6c1fbde9a168ac3fd2033028b5ee5ce6d0,0x54efdee08e272e929034a8f26f7ca34b1ebe364b275391169b28c6d7db24dbc8,0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64,0x85252bb8485c99bba46fe149c7dd2aad83672640f53c630890673cf1848ba16e,0xef2c308b5abecf5c8750a1aa82b47c558005feb7a03f4f8e1ad682d71ac8d0ba,0x2a0b893471c785a1f0fda00df7fca578b703eef7ae7186d2429c2824b5212467,0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed,0x94b823e6bd8ea533b4e33fbc307faea0b307301bc48763acc4d4aa4def7636cd,0x61765602144e91e5ac9f9e98b8584eae308f9951596fd7f5e0f59f21cd2bf664,0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64,0x22fe4c688161863c73571a2b8db65cc11a4a6bceee4f0dea4aa83e4b784f1bd9,0x7e585a933ffe8443c371b4f8cfeb4430f5f6a14c2f32a898c26662c67a1cb8b8,0xc498f4bfdda99e60ea8eb04c1e145654a70bc59da76ef9c6ed54a1314d78e5b5,0xe83d72fa5b00dcd46d9e0e860d95aa540d5ec106da5833108a9f826f21f36f52,0x09dc9e7eb5d8fc54b2bc41d1135fd4e99057a580f680321faeb90c7a21e631c1,0xbc99de6a88904cd0e69042ad6f266e63182801f030c636507c3caf590ffd84fe,0x34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd,0x85c7f4374f3a403b36d54cc284983b2b02bbd8581ee0f3c36494447b87d9fcab,0xeffa583f87a425f68b8ba0c62408b2afe5c30dac436c680fbd2ee3836f037e1d,0xfb8d92086861bae6fb778917afd1de5dbbc4ec70edfb636fed48238e225e7e3d,0x1a9ccaca2dba9469cd9cba3d077466761b05f465c412d2bf2c71614c4963dd84,0x2412afc9614939a5d994397fe0b94a4f6fb8bc02bfc139e1a5956a865e2efe26; all 24 positions borrowShares=0; totalAssets code sums expected-accrued supplied assets across this complete queue; supplyQueue=0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64,0x85252bb8485c99bba46fe149c7dd2aad83672640f53c630890673cf1848ba16e,0xef2c308b5abecf5c8750a1aa82b47c558005feb7a03f4f8e1ad682d71ac8d0ba,0x2a0b893471c785a1f0fda00df7fca578b703eef7ae7186d2429c2824b5212467,0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed,0x94b823e6bd8ea533b4e33fbc307faea0b307301bc48763acc4d4aa4def7636cd,0x61765602144e91e5ac9f9e98b8584eae308f9951596fd7f5e0f59f21cd2bf664,0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64,0x22fe4c688161863c73571a2b8db65cc11a4a6bceee4f0dea4aa83e4b784f1bd9,0x7e585a933ffe8443c371b4f8cfeb4430f5f6a14c2f32a898c26662c67a1cb8b8,0xc498f4bfdda99e60ea8eb04c1e145654a70bc59da76ef9c6ed54a1314d78e5b5,0xe83d72fa5b00dcd46d9e0e860d95aa540d5ec106da5833108a9f826f21f36f52,0x09dc9e7eb5d8fc54b2bc41d1135fd4e99057a580f680321faeb90c7a21e631c1,0xbc99de6a88904cd0e69042ad6f266e63182801f030c636507c3caf590ffd84fe,0x34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd,0x85c7f4374f3a403b36d54cc284983b2b02bbd8581ee0f3c36494447b87d9fcab,0xeffa583f87a425f68b8ba0c62408b2afe5c30dac436c680fbd2ee3836f037e1d,0xfb8d92086861bae6fb778917afd1de5dbbc4ec70edfb636fed48238e225e7e3d,0x1a9ccaca2dba9469cd9cba3d077466761b05f465c412d2bf2c71614c4963dd84,0x2412afc9614939a5d994397fe0b94a4f6fb8bc02bfc139e1a5956a865e2efe26,0x54efdee08e272e929034a8f26f7ca34b1ebe364b275391169b28c6d7db24dbc8",
+          "block": 26114886
         }
       ],
       "sources": [
         {
-          "label": "Morpho MetaMorpho allocation contract",
-          "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+          "label": "Exact deployed verified vault source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeefff209270748ddd194831b3fa287a5386f5bc"
         },
         {
-          "label": "Smokehouse USDC vault",
-          "url": "https://app.morpho.org/ethereum/vault/0xbeefff209270748ddd194831b3fa287a5386f5bc"
+          "label": "Ethereum pinned block",
+          "url": "https://eth.blockscout.com/block/26114886"
         },
         {
-          "label": "Ethereum PublicNode RPC",
-          "url": "https://ethereum-rpc.publicnode.com"
+          "label": "Steakhouse governing noncustodial vault terms",
+          "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+        },
+        {
+          "label": "Issuer Smokehouse launch and exotic collateral mandate",
+          "url": "https://forum.morpho.org/t/introducing-the-smokehouse-product-line-bbqusdc-and-bbqdai/1182.json"
         }
       ]
     },
@@ -801,41 +805,45 @@
     {
       "assetId": "stusds-sky",
       "scopeKind": "whole-allocation",
-      "reviewedAt": "2026-08-23",
-      "expiresAt": "2026-09-23",
-      "reviewer": "Safety Score V9 tranche 2 wrapper allocation review",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R28 pinned full-allocation review",
       "custody": "fully-onchain-no-offchain-custodian",
       "localLeverage": "no-borrowing-surface",
-      "capitalReuse": "single-borrower-risk-capital",
-      "rationale": "stUSDS does not borrow, but its capital backs one SKY-collateralized Lockstake debt branch and absorbs auction shortfall through cut(). The single correlated borrower branch is high reuse risk; its emergency-control integration remains a separate unresolved fact.",
+      "capitalReuse": "liquidation-loss-absorption",
+      "rationale": "Pinned UUPS implementation slot and deployed runtime match verified StUsds. Whole local book is USDS plus accrued surplus-funded savings yield; _drip realizes accrual through Vat.suck and USDSJoin.exit. StUsds exposes no strategy borrower/leverage or arbitrary call surface in the observed implementation. It supplies risk capital for LSEV2-SKY-A: borrower debt and Clip.Due encumber withdrawals and wards-gated cut transfers assets to Vow while reducing chi. This is liquidation-loss absorption, not no-reuse. Upgrade/governance risk remains charged independently.",
       "observations": [
         {
           "chain": "ethereum",
           "address": "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
-          "function": "line()/cap()/ilk()/vat()/clip()",
-          "value": "line=189000000000000000000000000000000000000000000000000000; cap=213000000000000000000000000; ilk=LSEV2-SKY-A; vat=0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b; clip=0x836f56750517b1528b5078cba4ac4b94fbe4a399",
-          "block": 25819547
+          "function": "asset()/totalAssets()/totalSupply()",
+          "value": "asset=0xdc035d45d973e3ec169d2276ddab16f1e407384f; totalAssets()=189549725188352126297158725; totalSupply()=176002698945266351655427664",
+          "block": 26114886
         },
         {
           "chain": "ethereum",
-          "address": "0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b",
-          "function": "ilks(bytes32 LSEV2-SKY-A)",
-          "value": "Art=135215821179892010625922545; rate=1165747510585314018304438768; line=189000000000000000000000000000000000000000000000000000; clip.stopped()=3",
-          "block": 25819547
+          "address": "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
+          "function": "USDS.balanceOf(wrapper)/Vat.ilks(ilk)/Clip.Due()",
+          "value": "USDS balance=189548191317376532566284006; ilk=0x4c534556322d534b592d41000000000000000000000000000000000000000000; Vat tuple=0x00000000000000000000000000000000000000000070c1b21dc2448498f099fd000000000000000000000000000000000000000003cafc93fa6c766bba95f63e000000000000000000000000000000000000000000113ba14354580144d5555500000000000000000001fa9e22ad1323b3ab3a9b919e272dec5fcff8d603c71000000000000000000000001486de8697abeb8f25a134c318e99e000000000000; Clip.Due=0; implementation=0x7A61B7adCFD493f7CF0F86dFCECB94b72c227F22",
+          "block": 26114886
         }
       ],
       "sources": [
         {
-          "label": "Sky stUSDS implementation",
-          "url": "https://github.com/sky-ecosystem/stusds/blob/master/src/StUsds.sol"
+          "label": "Exact verified wrapper source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9"
         },
         {
-          "label": "Sky stUSDS documentation",
-          "url": "https://developers.skyeco.com/protocol/tokens/stusds/"
+          "label": "Pinned Ethereum research block",
+          "url": "https://etherscan.io/block/26114886"
         },
         {
-          "label": "Ethereum PublicNode RPC",
+          "label": "Ethereum PublicNode pinned RPC",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Pinned verified current StUsds implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7A61B7adCFD493f7CF0F86dFCECB94b72c227F22"
         }
       ]
     },
@@ -3097,146 +3105,47 @@
       ]
     },
     {
-      "scopeKind": "per-dimension",
       "assetId": "senpyusdprimev2-sentora",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "rationale": "Exact contract lender positions are identified, but the precedent fully-onchain-no-offchain-custodian whole-book exemption cannot be claimed for this mixed or residential-credit collateral book. Unknown legal-layer custody and borrowing remain bounded.",
-      "claims": [
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "Unknown wave W1R24 pinned exact-source review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "long-tail-overcollateralized-lending",
+      "rationale": "Exact pinned block 26114894, hash 0x41c1bba8d166f0293e51d435a4c76d26de77842bf66aa9ac007b35dc283c1d2f. Entire wrapper asset book is idle underlying plus one immutable adapter holding 1 Morpho lender positions. Both runtime bytecodes exactly match verified deployed_bytecode. Adapter allocate/deallocate expose supply/withdraw only; no borrow, supplyCollateral, arbitrary target calls or delegatecall surface. All lender positions have zero borrow shares and collateral. No contract-local borrowing surface in the currently enabled allocation. Collateral includes non-bluechip claims, so reuse is long-tail, not none. Fully-onchain custody describes the wrapper held idle token and lender positions only; it does not attest collateral issuer segregation, insolvency priority or parent-token custody. Future curator-approved adapters can change the allocation, and unresolved registry/signer control questions remain.",
+      "observations": [
         {
-          "claimKey": "senpyusdprimev2-sentora-underlying-custodyescrow",
-          "dimension": "custodyEscrow",
-          "layer": "borrower-spv",
-          "target": {
-            "kind": "reserve-leg",
-            "sourceKey": "erc4626-single-asset:ethereum:0xc21b08c16458202593d4d9b26b9984ee67b38bbd:deployed",
-            "providerOrEntity": "Sentora-curated Morpho borrowers",
-            "applicability": "conditional",
-            "conditions": "Applies to underlying borrower/collateral legal layers while this deployed strategy exposure remains allocated."
-          },
-          "coverage": {
-            "kind": "conditional",
-            "condition": "While the reviewed deployed lending exposure remains allocated; no complete current legal-layer denominator is asserted.",
-            "shareFraction": null
-          },
-          "disposition": "issuer-undisclosed",
-          "statement": "legal-scope-undisclosed",
-          "rationale": "Pinned current vault/adapter lender positions do not establish ultimate collateral custody, all borrower/SPV borrowing authority or complete latent authorization closure. No favorable whole-book exemption is asserted.",
-          "reviewedAt": "2026-10-02",
-          "observedAtSec": 1790981027,
-          "expiresAtSec": 1793573027,
-          "sources": [
-            {
-              "label": "Sentora PRIME Main exact vault",
-              "url": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
-            },
-            {
-              "label": "Exact verified VaultV2 source",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
-            },
-            {
-              "label": "Exact current MorphoMarketV1AdapterV2 source",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89"
-            },
-            {
-              "label": "Morpho Vault V2 accounting and redemption mechanics",
-              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
-            },
-            {
-              "label": "Ethereum RPC, pinned block 26107702",
-              "url": "https://ethereum-rpc.publicnode.com"
-            },
-            {
-              "label": "Morpho exact-vault portfolio API",
-              "url": "https://api.morpho.org/graphql"
-            },
-            {
-              "label": "Sentora PRIME residential-credit case study",
-              "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
-            },
-            {
-              "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
-              "url": "https://sentora.com/legal/terms-of-use"
-            },
-            {
-              "label": "Morpho Vault V2 and MarketV1AdapterV2 security audits; no financial assurance",
-              "url": "https://docs.morpho.org/get-started/resources/audits/"
-            }
-          ],
-          "observations": [
-            {
-              "sourceUrl": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
-              "observedAtSec": 1790981027,
-              "description": "Exact current lending adapter 0x93d6393e66b56449b7926b9abfeb37606732de89; 1 lender positions with zero local borrow shares and posted collateral at block 26107702, without proof of every underlying legal layer."
-            }
-          ]
+          "chain": "ethereum",
+          "address": "0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
+          "function": "asset()/totalAssets()/adaptersLength()/adapters(0)/underlying.balanceOf(vault)",
+          "value": "asset=0x6c3ea9036406852006290770bedfcaba0e23a0e8; totalAssets=220608647973249; adaptersLength=1; adapters(0)=0x93d6393e66b56449b7926b9abfeb37606732de89; idleUnderlying=10598647229702; idle+realAssets=220608647973249",
+          "block": 26114894
         },
         {
-          "claimKey": "senpyusdprimev2-sentora-underlying-leverage",
-          "dimension": "leverage",
-          "layer": "borrower-spv",
-          "target": {
-            "kind": "reserve-leg",
-            "sourceKey": "erc4626-single-asset:ethereum:0xc21b08c16458202593d4d9b26b9984ee67b38bbd:deployed",
-            "providerOrEntity": "Sentora-curated Morpho borrowers",
-            "applicability": "conditional",
-            "conditions": "Applies to underlying borrower/collateral legal layers while this deployed strategy exposure remains allocated."
-          },
-          "coverage": {
-            "kind": "conditional",
-            "condition": "While the reviewed deployed lending exposure remains allocated; no complete current legal-layer denominator is asserted.",
-            "shareFraction": null
-          },
-          "disposition": "issuer-undisclosed",
-          "statement": "legal-scope-undisclosed",
-          "rationale": "Pinned current vault/adapter lender positions do not establish ultimate collateral custody, all borrower/SPV borrowing authority or complete latent authorization closure. No favorable whole-book exemption is asserted.",
-          "reviewedAt": "2026-10-02",
-          "observedAtSec": 1790981027,
-          "expiresAtSec": 1793573027,
-          "sources": [
-            {
-              "label": "Sentora PRIME Main exact vault",
-              "url": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
-            },
-            {
-              "label": "Exact verified VaultV2 source",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
-            },
-            {
-              "label": "Exact current MorphoMarketV1AdapterV2 source",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89"
-            },
-            {
-              "label": "Morpho Vault V2 accounting and redemption mechanics",
-              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
-            },
-            {
-              "label": "Ethereum RPC, pinned block 26107702",
-              "url": "https://ethereum-rpc.publicnode.com"
-            },
-            {
-              "label": "Morpho exact-vault portfolio API",
-              "url": "https://api.morpho.org/graphql"
-            },
-            {
-              "label": "Sentora PRIME residential-credit case study",
-              "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
-            },
-            {
-              "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
-              "url": "https://sentora.com/legal/terms-of-use"
-            },
-            {
-              "label": "Morpho Vault V2 and MarketV1AdapterV2 security audits; no financial assurance",
-              "url": "https://docs.morpho.org/get-started/resources/audits/"
-            }
-          ],
-          "observations": [
-            {
-              "sourceUrl": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
-              "observedAtSec": 1790981027,
-              "description": "Exact current lending adapter 0x93d6393e66b56449b7926b9abfeb37606732de89; 1 lender positions with zero local borrow shares and posted collateral at block 26107702, without proof of every underlying legal layer."
-            }
-          ]
+          "chain": "ethereum",
+          "address": "0x93d6393e66b56449b7926b9abfeb37606732de89",
+          "function": "parentVault()/realAssets()/marketIdsLength()/marketIds(i)/Morpho.position(id,adapter)/deployed bytecode",
+          "value": "parentVault=0xc21b08c16458202593d4d9b26b9984ee67b38bbd; realAssets=210010000743547; marketIdsLength=1; complete roster examined; every position borrowShares=0,collateral=0; adapter supplies are exactly supplyShares(id); source-matched runtime; no borrowing selector or generic-call reach.",
+          "block": 26114894
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact bytecode-matched VaultV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+        },
+        {
+          "label": "Exact bytecode-matched sole MorphoMarketV1AdapterV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89"
+        },
+        {
+          "label": "Morpho Vault V2 documented adapters and role architecture",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Ethereum observed block 26114894",
+          "url": "https://etherscan.io/block/26114894"
         }
       ]
     },
@@ -3377,138 +3286,47 @@
       ]
     },
     {
-      "scopeKind": "per-dimension",
       "assetId": "senrlusdv2-sentora",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "rationale": "Exact contract lender positions are identified, but the precedent fully-onchain-no-offchain-custodian whole-book exemption cannot be claimed for this mixed or residential-credit collateral book. Unknown legal-layer custody and borrowing remain bounded.",
-      "claims": [
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "Unknown wave W1R24 pinned exact-source review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "long-tail-overcollateralized-lending",
+      "rationale": "Exact pinned block 26114894, hash 0x41c1bba8d166f0293e51d435a4c76d26de77842bf66aa9ac007b35dc283c1d2f. Entire wrapper asset book is idle underlying plus one immutable adapter holding 10 Morpho lender positions. Both runtime bytecodes exactly match verified deployed_bytecode. Adapter allocate/deallocate expose supply/withdraw only; no borrow, supplyCollateral, arbitrary target calls or delegatecall surface. All lender positions have zero borrow shares and collateral. No contract-local borrowing surface in the currently enabled allocation. Collateral includes non-bluechip claims, so reuse is long-tail, not none. Fully-onchain custody describes the wrapper held idle token and lender positions only; it does not attest collateral issuer segregation, insolvency priority or parent-token custody. Future curator-approved adapters can change the allocation, and unresolved registry/signer control questions remain.",
+      "observations": [
         {
-          "claimKey": "senrlusdv2-sentora-underlying-custodyescrow",
-          "dimension": "custodyEscrow",
-          "layer": "borrower-spv",
-          "target": {
-            "kind": "reserve-leg",
-            "sourceKey": "erc4626-single-asset:ethereum:0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf:deployed",
-            "providerOrEntity": "Sentora-curated Morpho borrowers",
-            "applicability": "conditional",
-            "conditions": "Applies to underlying borrower/collateral legal layers while this deployed strategy exposure remains allocated."
-          },
-          "coverage": {
-            "kind": "conditional",
-            "condition": "While the reviewed deployed lending exposure remains allocated; no complete current legal-layer denominator is asserted.",
-            "shareFraction": null
-          },
-          "disposition": "issuer-undisclosed",
-          "statement": "legal-scope-undisclosed",
-          "rationale": "Pinned current vault/adapter lender positions do not establish ultimate collateral custody, all borrower/SPV borrowing authority or complete latent authorization closure. No favorable whole-book exemption is asserted.",
-          "reviewedAt": "2026-10-02",
-          "observedAtSec": 1790981027,
-          "expiresAtSec": 1793573027,
-          "sources": [
-            {
-              "label": "Sentora RLUSD Main exact vault",
-              "url": "https://app.morpho.org/ethereum/vault/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
-            },
-            {
-              "label": "Exact verified VaultV2 source",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
-            },
-            {
-              "label": "Exact current MorphoMarketV1AdapterV2 source",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff"
-            },
-            {
-              "label": "Morpho Vault V2 accounting and redemption mechanics",
-              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
-            },
-            {
-              "label": "Ethereum RPC, pinned block 26107702",
-              "url": "https://ethereum-rpc.publicnode.com"
-            },
-            {
-              "label": "Morpho exact-vault portfolio API",
-              "url": "https://api.morpho.org/graphql"
-            },
-            {
-              "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
-              "url": "https://sentora.com/legal/terms-of-use"
-            },
-            {
-              "label": "Morpho Vault V2 and MarketV1AdapterV2 security audits; no financial assurance",
-              "url": "https://docs.morpho.org/get-started/resources/audits/"
-            }
-          ],
-          "observations": [
-            {
-              "sourceUrl": "https://app.morpho.org/ethereum/vault/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
-              "observedAtSec": 1790981027,
-              "description": "Exact current lending adapter 0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff; 10 lender positions with zero local borrow shares and posted collateral at block 26107702, without proof of every underlying legal layer."
-            }
-          ]
+          "chain": "ethereum",
+          "address": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+          "function": "asset()/totalAssets()/adaptersLength()/adapters(0)/underlying.balanceOf(vault)",
+          "value": "asset=0x8292bb45bf1ee4d140127049757c2e0ff06317ed; totalAssets=465103167785840553231594669; adaptersLength=1; adapters(0)=0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff; idleUnderlying=61716649789222071285272547; idle+realAssets=465103167785840553231594669",
+          "block": 26114894
         },
         {
-          "claimKey": "senrlusdv2-sentora-underlying-leverage",
-          "dimension": "leverage",
-          "layer": "borrower-spv",
-          "target": {
-            "kind": "reserve-leg",
-            "sourceKey": "erc4626-single-asset:ethereum:0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf:deployed",
-            "providerOrEntity": "Sentora-curated Morpho borrowers",
-            "applicability": "conditional",
-            "conditions": "Applies to underlying borrower/collateral legal layers while this deployed strategy exposure remains allocated."
-          },
-          "coverage": {
-            "kind": "conditional",
-            "condition": "While the reviewed deployed lending exposure remains allocated; no complete current legal-layer denominator is asserted.",
-            "shareFraction": null
-          },
-          "disposition": "issuer-undisclosed",
-          "statement": "legal-scope-undisclosed",
-          "rationale": "Pinned current vault/adapter lender positions do not establish ultimate collateral custody, all borrower/SPV borrowing authority or complete latent authorization closure. No favorable whole-book exemption is asserted.",
-          "reviewedAt": "2026-10-02",
-          "observedAtSec": 1790981027,
-          "expiresAtSec": 1793573027,
-          "sources": [
-            {
-              "label": "Sentora RLUSD Main exact vault",
-              "url": "https://app.morpho.org/ethereum/vault/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
-            },
-            {
-              "label": "Exact verified VaultV2 source",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
-            },
-            {
-              "label": "Exact current MorphoMarketV1AdapterV2 source",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff"
-            },
-            {
-              "label": "Morpho Vault V2 accounting and redemption mechanics",
-              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
-            },
-            {
-              "label": "Ethereum RPC, pinned block 26107702",
-              "url": "https://ethereum-rpc.publicnode.com"
-            },
-            {
-              "label": "Morpho exact-vault portfolio API",
-              "url": "https://api.morpho.org/graphql"
-            },
-            {
-              "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
-              "url": "https://sentora.com/legal/terms-of-use"
-            },
-            {
-              "label": "Morpho Vault V2 and MarketV1AdapterV2 security audits; no financial assurance",
-              "url": "https://docs.morpho.org/get-started/resources/audits/"
-            }
-          ],
-          "observations": [
-            {
-              "sourceUrl": "https://app.morpho.org/ethereum/vault/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
-              "observedAtSec": 1790981027,
-              "description": "Exact current lending adapter 0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff; 10 lender positions with zero local borrow shares and posted collateral at block 26107702, without proof of every underlying legal layer."
-            }
-          ]
+          "chain": "ethereum",
+          "address": "0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff",
+          "function": "parentVault()/realAssets()/marketIdsLength()/marketIds(i)/Morpho.position(id,adapter)/deployed bytecode",
+          "value": "parentVault=0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf; realAssets=403386517996618481946322122; marketIdsLength=10; complete roster examined; every position borrowShares=0,collateral=0; adapter supplies are exactly supplyShares(id); source-matched runtime; no borrowing selector or generic-call reach.",
+          "block": 26114894
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact bytecode-matched VaultV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
+        },
+        {
+          "label": "Exact bytecode-matched sole MorphoMarketV1AdapterV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff"
+        },
+        {
+          "label": "Morpho Vault V2 documented adapters and role architecture",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Ethereum observed block 26114894",
+          "url": "https://etherscan.io/block/26114894"
         }
       ]
     },
@@ -3747,6 +3565,1238 @@
         {
           "label": "Exact adapter partial source with matching deployed bytecode",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2f362079dbc570a6df5bd04ad91002d17c0db9a"
+        }
+      ]
+    },
+    {
+      "assetId": "steakusdt-steakhouse",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R38 pinned allocation and complete source review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "mixed-overcollateralized-lending",
+      "rationale": "Complete current vault-local allocation is onchain lending, not an offchain custody mandate. Exact deployed bytes match explorer source. Root code has no borrow surface or arbitrary target delegatecall; V2 self-multicall is limited to its own code, and its sole listed immutable Morpho adapter only supplies/withdraws underlying. V1 only supplies/withdraws Morpho markets. Complete current market roster is recorded; every vault/adapter position has zero borrow shares. V2 sum of expected market assets equals totalAssets with zero idle. This proves vault-local no borrowing, not absence of borrower credit losses, legal parent custody risk, or future allocation controls. Lending is capital reuse; collateral roster is heterogeneous, and Smokehouse expressly admits exotic collateral.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9",
+          "function": "asset()/totalAssets()/totalSupply()/complete allocation census",
+          "value": "asset=0x000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7; totalAssets=64163916223804; totalSupply=62437641998567457116447165; exact vault bytes match explorer deployed_bytecode",
+          "block": 26114886
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x1c87feac33e2ad0a81a250fa63db4b1c2687bb05",
+          "function": "marketIdsLength()/marketIds(i)/expectedSupplyAssets()/realAssets()/Morpho.position()",
+          "value": "complete sole adapter=0x1c87feac33e2ad0a81a250fa63db4b1c2687bb05; idle=0; realAssets=64163916223804; totalAssets=64163916223804; marketId/expectedSupplyAssets/borrowShares=0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b/2389140441851/0,0xa921ef34e2fc7a27ccc50ae7e4b154e16c9799d3387076c421423ef52ac4df99/26433947866472/0,0x45671fb8d5dea1c4fbca0b8548ad742f6643300eeb8dbd34ad64a658b2b05bca/18/0,0x3c5a244b778095e1e1b2e44b7c2ecc9bf4fda9cd85cc22740e09205a7a4bf510/1454961379390/0,0xe7e9694b754c4d4f7e21faf7223f6fa71abaeb10296a4c43a54a7977149687d2/29945770103898/0,0x4fe72543c5c95cd6b5f3cb516cd235ba882e2e705fe3424db6f99dfe5811d0d3/3449021012178/0,0x6a57d77b9a173c5ed10d432e7009dd1ee9a97fac62a7bc970b4bd715e2fff5c8/491075419997/0",
+          "block": 26114886
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact deployed verified vault source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9"
+        },
+        {
+          "label": "Ethereum pinned block",
+          "url": "https://eth.blockscout.com/block/26114886"
+        },
+        {
+          "label": "Steakhouse governing noncustodial vault terms",
+          "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+        },
+        {
+          "label": "Exact current sole lending adapter source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1c87feac33e2ad0a81a250fa63db4b1c2687bb05"
+        }
+      ]
+    },
+    {
+      "assetId": "steakusdc-steakhouse",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R38 pinned allocation and complete source review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "mixed-overcollateralized-lending",
+      "rationale": "Complete current vault-local allocation is onchain lending, not an offchain custody mandate. Exact deployed bytes match explorer source. Root code has no borrow surface or arbitrary target delegatecall; V2 self-multicall is limited to its own code, and its sole listed immutable Morpho adapter only supplies/withdraws underlying. V1 only supplies/withdraws Morpho markets. Complete current market roster is recorded; every vault/adapter position has zero borrow shares. V2 sum of expected market assets equals totalAssets with zero idle. This proves vault-local no borrowing, not absence of borrower credit losses, legal parent custody risk, or future allocation controls. Lending is capital reuse; collateral roster is heterogeneous, and Smokehouse expressly admits exotic collateral.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xbeef088055857739c12cd3765f20b7679def0f51",
+          "function": "asset()/totalAssets()/totalSupply()/complete allocation census",
+          "value": "asset=0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; totalAssets=105291182387812; totalSupply=101806603942093407863358629; exact vault bytes match explorer deployed_bytecode",
+          "block": 26114886
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x2b9681015a1fa2225d1fc8ae40538d3d64c58290",
+          "function": "marketIdsLength()/marketIds(i)/expectedSupplyAssets()/realAssets()/Morpho.position()",
+          "value": "complete sole adapter=0x2b9681015a1fa2225d1fc8ae40538d3d64c58290; idle=0; realAssets=105291182387812; totalAssets=105291182387812; marketId/expectedSupplyAssets/borrowShares=0x85252bb8485c99bba46fe149c7dd2aad83672640f53c630890673cf1848ba16e/18018882220293/0,0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64/74274897318084/0,0x7e585a933ffe8443c371b4f8cfeb4430f5f6a14c2f32a898c26662c67a1cb8b8/5826268852247/0,0x09dc9e7eb5d8fc54b2bc41d1135fd4e99057a580f680321faeb90c7a21e631c1/1241979391954/0,0x34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd/304726465371/0,0x94b823e6bd8ea533b4e33fbc307faea0b307301bc48763acc4d4aa4def7636cd/1436687182441/0,0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc/3532682091756/0,0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49/655058865666/0",
+          "block": 26114886
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact deployed verified vault source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef088055857739c12cd3765f20b7679def0f51"
+        },
+        {
+          "label": "Ethereum pinned block",
+          "url": "https://eth.blockscout.com/block/26114886"
+        },
+        {
+          "label": "Steakhouse governing noncustodial vault terms",
+          "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+        },
+        {
+          "label": "Exact current sole lending adapter source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b9681015a1fa2225d1fc8ae40538d3d64c58290"
+        }
+      ]
+    },
+    {
+      "assetId": "susde-ethena",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2027-01-01",
+      "reviewer": "W1R03 exact-source and pinned accounting review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "Wrapper-local scope only: verified nonproxy StakedUSDeV2 and inherited StakedUSDe/USDeSilo contain no strategy, borrowing or lending dispatch. The vault holds USDe; totalAssets equals USDe.balanceOf(vault) minus unvested rewards exactly at the pin. Cooldown burns shares and transfers USDe into the immutable silo, whose sole external path transfers USDe under vault authorization. rescueTokens excludes USDe. Blacklist/reallocation powers remain separately scored. Offchain reserve custody and hedge/reuse risk belongs to serial USDe parent and is not waived.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+          "function": "asset()/totalAssets()/getUnvestedAmount()/USDe.balanceOf(vault)/silo()/cooldownDuration()",
+          "value": "asset=0x4c9edd5852cd905f086c759e8383e09bff1e68b3; totalAssets=1246532460963512692646677486; unvested=28038918298611111111111; balance=1246560499881811303757788597; silo=0x7fc7c91d556b400afa565013e3f32055a0713425; cooldownDuration=86400; blockHash=0xdd2174d94eaf019f321208133cdb3c7869dad76d5dfa4429b9bdf03c0c5c33aa; runtimeSha256=4ef7631314ff56c84fc45b5bbff1d2ee56a6ce1746d9f494bad8939822ecb0e7",
+          "block": 26114890
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x7fc7c91d556b400afa565013e3f32055a0713425",
+          "function": "USDe.balanceOf(silo)",
+          "value": "15978297426974948572565045",
+          "block": 26114890
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact verified staking source and inherited dependencies",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9d39a5de30e57443bff2a8307a4256c8797a3497"
+        },
+        {
+          "label": "Ethena staking mechanics",
+          "url": "https://docs.ethena.fi/technical-design/staking-usde"
+        },
+        {
+          "label": "Pinned Ethereum RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    {
+      "assetId": "apyusd-apyx",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2027-01-01",
+      "reviewer": "W1R18 pinned local allocation research",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "Canonical apyUSD local accounting is exclusively direct apxUSD plus vested apxUSD in LinearVestV0. At block 26114892 the sum reconciles exactly to totalAssets; vesting asset and beneficiary match. Verified ApyUSD and LinearVestV0 implementations contain no lending or borrowing execution surface: deposits hold apxUSD, vested yield pulls to the beneficiary, and exits move apxUSD to the onchain receipt escrow. Offchain preferred equity custody and lending are serial apxUSD-parent risks, not local reuse. Mutable receipt/vesting/upgrader controls remain separately scored and no perpetual immutability or measured unwind is asserted.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+          "function": "asset()/totalAssets()/vesting()/EIP1967 implementation",
+          "value": "asset=0x98a878b1cd98131b271883b390f68d2c90674665; totalAssets=167068592127186067869968066; balance=167060053044003315602394370; vestedAmount=8539083182752267573696; implementation=0xfd616567ecc1607f61073951a1e822f7315bb112; blockHash=0x3c4cb16d268cdacd17ca9573141f2bfef51b85d50d2c8ea2daa6b140bbff6d91",
+          "block": 26114892
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x0d62b4cc02b4b51ed19ddf41d7a7979cf394c99f",
+          "function": "asset()/beneficiary()/vestedAmount()/apxUSD.balanceOf",
+          "value": "asset=apxUSD; beneficiary=0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a; vestedAmount=8539083182752267573696; balance=544100234959608843538031",
+          "block": 26114892
+        }
+      ],
+      "sources": [
+        {
+          "label": "Verified ApyUSD implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfd616567ecc1607f61073951a1e822f7315bb112"
+        },
+        {
+          "label": "Verified LinearVestV0 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d62b4cc02b4b51ed19ddf41d7a7979cf394c99f"
+        },
+        {
+          "label": "Apyx local accounting and escrow explanation",
+          "url": "https://docs.apyx.fi/technical-overview/unlocking.md"
+        },
+        {
+          "label": "Pinned Ethereum RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    {
+      "assetId": "srusde-strata",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2027-01-01",
+      "reviewer": "W1R18 pinned exact-wrapper allocation research",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "The deployed sUSDeStrategy owns only sUSDe/USDe collateral and configured onchain cooldown escrows. At block 26114892 its sUSDe balance previewRedeem equals totalAssets exactly: 25463524261946908442735214 USDe base units; accounting allocates disjoint junior, senior and reserve claims over this pool. srtVault matches srUSDe and accounting's senior output matches srUSDe.totalAssets. Verified MetaVault, CDO, strategy and inherited AccessControlled code contain no local borrowing or lending/repledge surface. Junior-first-loss redistribution is tranche accounting, not duplicate lending of senior collateral. Ethena's custody/hedging remain serial parent risks; no liquidation guarantee or measured unwind is asserted. Current upgradability and governance remain separately scored.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xdbf4fb6c310c1c85d0b41b5dbca06096f2e7099f",
+          "function": "totalAssets()/sUSDe()/USDe()/EIP1967 implementation",
+          "value": "totalAssets=25463524261946908442735214; sUSDe.balanceOf strategy previewRedeem equals totalAssets; implementation=0x2b9796606c8480312a572742c00f606ef4adb107",
+          "block": 26114892
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x908b3921aae4fc17191d382bb61020f2ee6c0e20",
+          "function": "srtVault()/strategy()/accounting()",
+          "value": "srtVault=0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003; strategy=0xdbf4fb6c310c1c85d0b41b5dbca06096f2e7099f; accounting=0xa436c5dd1ba62c55d112c10cd10e988bb3355102; blockHash=0x3c4cb16d268cdacd17ca9573141f2bfef51b85d50d2c8ea2daa6b140bbff6d91",
+          "block": 26114892
+        }
+      ],
+      "sources": [
+        {
+          "label": "Verified deployed sUSDeStrategy",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b9796606c8480312a572742c00f606ef4adb107"
+        },
+        {
+          "label": "Verified StrataCDO",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb3d4f2c2123f8c3ca85ae7a6d48aa2ef049c79ba"
+        },
+        {
+          "label": "Verified srUSDe MetaVault",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe894055ca1c73648927e225f3ca38ed48e30210b"
+        },
+        {
+          "label": "Issuer allocation model",
+          "url": "https://docs.strata.markets/technical-documentation/protocol-overview.md"
+        }
+      ]
+    },
+    {
+      "assetId": "sdai-sky",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R28 pinned full-allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "Verified nonproxy SavingsDai bytecode matches pinned deployed code. Its sole balance sleeve is Pot.pie(wrapper), exactly equal to totalSupply; shares unwind through Pot.exit and DaiJoin.exit. No local lender, borrower, arbitrary call/delegatecall or offchain custodian exists. Parent DAI risk and peripheral canonical bridge controls remain separate; this proof covers the Ethereum savings module allocation, not legal protection of parent reserves.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0x83f20f44975d03b1b09e64809b757c47f942beea",
+          "function": "asset()/totalAssets()/totalSupply()",
+          "value": "asset=0x6b175474e89094c44da98b954eedeac495271d0f; totalAssets()=164357824486734461038312451; totalSupply()=139133179488910975653182654",
+          "block": 26114886
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x197e90f9fad81970ba7976f33cbd77088e5d7cf7",
+          "function": "pie(address)",
+          "value": "pie(sDAI)=139133179488910975653182654 equals sDAI totalSupply",
+          "block": 26114886
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact verified wrapper source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x83f20f44975d03b1b09e64809b757c47f942beea"
+        },
+        {
+          "label": "Pinned Ethereum research block",
+          "url": "https://etherscan.io/block/26114886"
+        },
+        {
+          "label": "Ethereum PublicNode pinned RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    {
+      "assetId": "skymoneyusdsflagship-sky",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R28 pinned full-allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "mixed-overcollateralized-lending",
+      "rationale": "Pinned verified VaultV2 and the entire one-adapter roster match deployed bytecode. Idle underlying plus adapter realAssets equals totalAssets exactly. Complete marketIds census and expectedSupplyAssets reconcile exactly to adapter realAssets; every position has zero borrow shares and collateral. Exact adapter code can only supply/withdraw the fixed Morpho loan asset and has no borrow/arbitrary execution function. Current local book has no borrowing surface; assets are reused as overcollateralized lender claims, not idle-only passthrough. Mutable adapter additions, gates, fees, oracle/default risks and parent risks are not waived.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xe15fcc81118895b67b6647bbd393182df44e11e0",
+          "function": "asset()/totalAssets()/totalSupply()",
+          "value": "asset=0xdc035d45d973e3ec169d2276ddab16f1e407384f; totalAssets()=38213599026573218178783248; totalSupply()=38091361478750457653753995",
+          "block": 26114886
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xe15fcc81118895b67b6647bbd393182df44e11e0",
+          "function": "adaptersLength()/adapters(0)/underlying.balanceOf(vault)/adapter.realAssets()",
+          "value": "adaptersLength=1; adapter=0xf94be39e8863183ff41194b5923627c90a34039d; idle=30571285843373344486080079; adapter realAssets=7642313183199873692703169; sum=totalAssets",
+          "block": 26114886
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xf94be39e8863183ff41194b5923627c90a34039d",
+          "function": "marketIds(i)/expectedSupplyAssets(bytes32)/Morpho.position(bytes32,address)/idToMarketParams(bytes32)",
+          "value": "id=0x9a8dab6de1059e6dc66c34b358764b70effb289e514e237f3161ffb09eaaf24f; expectedSupplyAssets=2779541448017231497872407; position=0x0000000000000000000000000000000000000022d6e3a48a2a87489847de2d3100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000; marketParams=0x000000000000000000000000dc035d45d973e3ec169d2276ddab16f1e407384f000000000000000000000000dc169abe56461a2e0c034da431ac2a3ebf596094000000000000000000000000da5901ef31ecafa6561b2e56b4997fadd3db4646000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000cb2bba6f17b8000",
+          "block": 26114886
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xf94be39e8863183ff41194b5923627c90a34039d",
+          "function": "marketIds(i)/expectedSupplyAssets(bytes32)/Morpho.position(bytes32,address)/idToMarketParams(bytes32)",
+          "value": "id=0xb374528d44b6ab6e0cecc87e0481f45d892f38baec90c1d318851969ec14ea5f; expectedSupplyAssets=1323609490246916865092700; position=0x000000000000000000000000000000000000001070b1da539e4ce9a2bb3ba2c500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000; marketParams=0x000000000000000000000000dc035d45d973e3ec169d2276ddab16f1e407384f0000000000000000000000007f39c581f595b53c5cb19bd0b3f8da6c935e2ca0000000000000000000000000c9a9440d1545047b2ce3624db425410cf2eae292000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000bef55718ad60000",
+          "block": 26114886
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xf94be39e8863183ff41194b5923627c90a34039d",
+          "function": "marketIds(i)/expectedSupplyAssets(bytes32)/Morpho.position(bytes32,address)/idToMarketParams(bytes32)",
+          "value": "id=0x2f4ea313fb7df23a82c19d95e8b90acc8179bd053e0d9ef745cdf28d6a49499c; expectedSupplyAssets=3539162244935725329738062; position=0x000000000000000000000000000000000000002c148e94d57e1a354f3fd7a0c400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000; marketParams=0x000000000000000000000000dc035d45d973e3ec169d2276ddab16f1e407384f000000000000000000000000cbb7c0000ab88b473b1f5afd9ef808440eed33bf000000000000000000000000a5aeb90f9f122989fe69ae6224ed923a0caf33b4000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000bef55718ad60000",
+          "block": 26114886
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact verified wrapper source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0"
+        },
+        {
+          "label": "Pinned Ethereum research block",
+          "url": "https://etherscan.io/block/26114886"
+        },
+        {
+          "label": "Ethereum PublicNode pinned RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Exact entire adapter verified source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf94be39e8863183ff41194b5923627c90a34039d"
+        },
+        {
+          "label": "Sky curated vault disclosure",
+          "url": "https://sky.money/vaults"
+        }
+      ]
+    },
+    {
+      "assetId": "skymoneyusdtsavings-sky",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R28 pinned full-allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "bluechip-overcollateralized-lending",
+      "rationale": "Pinned verified VaultV2 and the entire one-adapter roster match deployed bytecode. Idle underlying plus adapter realAssets equals totalAssets exactly. Complete marketIds census and expectedSupplyAssets reconcile exactly to adapter realAssets; every position has zero borrow shares and collateral. Exact adapter code can only supply/withdraw the fixed Morpho loan asset and has no borrow/arbitrary execution function. Current local book has no borrowing surface; assets are reused as overcollateralized lender claims, not idle-only passthrough. Mutable adapter additions, gates, fees, oracle/default risks and parent risks are not waived.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11",
+          "function": "asset()/totalAssets()/totalSupply()",
+          "value": "asset=0xdac17f958d2ee523a2206206994597c13d831ec7; totalAssets()=60889457006333; totalSupply()=59869901743422803862964856",
+          "block": 26114886
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11",
+          "function": "adaptersLength()/adapters(0)/underlying.balanceOf(vault)/adapter.realAssets()",
+          "value": "adaptersLength=1; adapter=0x6c5d5d47a39fe9f8ca14731a9a42bd31d64fb40d; idle=0; adapter realAssets=60889457006333; sum=totalAssets",
+          "block": 26114886
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x6c5d5d47a39fe9f8ca14731a9a42bd31d64fb40d",
+          "function": "marketIds(i)/expectedSupplyAssets(bytes32)/Morpho.position(bytes32,address)/idToMarketParams(bytes32)",
+          "value": "id=0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b; expectedSupplyAssets=20554; position=0x0000000000000000000000000000000000000000000000000000000475e65e0200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000; marketParams=0x000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7000000000000000000000000a3931d71877c0e7a3148cb7eb4463524fec27fbd0000000000000000000000000c426d174fc88b7a25d59945ab2f7274bf7b4c79000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000d645e6320408000",
+          "block": 26114886
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x6c5d5d47a39fe9f8ca14731a9a42bd31d64fb40d",
+          "function": "marketIds(i)/expectedSupplyAssets(bytes32)/Morpho.position(bytes32,address)/idToMarketParams(bytes32)",
+          "value": "id=0x26b178d49895f80ca3c39b2745efc4cd9adcddfcc73dae93e531e86977ec4d96; expectedSupplyAssets=60889456985779; position=0x00000000000000000000000000000000000000000000000348a34773b2730e7500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000; marketParams=0x000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7000000000000000000000000a3931d71877c0e7a3148cb7eb4463524fec27fbd0000000000000000000000001c7dbd66df93594ba08af8e72c75ba2004d92f9c000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000d645e6320408000",
+          "block": 26114886
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact verified wrapper source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11"
+        },
+        {
+          "label": "Pinned Ethereum research block",
+          "url": "https://etherscan.io/block/26114886"
+        },
+        {
+          "label": "Ethereum PublicNode pinned RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Exact entire adapter verified source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6c5d5d47a39fe9f8ca14731a9a42bd31d64fb40d"
+        },
+        {
+          "label": "Sky curated vault disclosure",
+          "url": "https://sky.money/vaults"
+        }
+      ]
+    },
+    {
+      "assetId": "susdc-spark-v1",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-02",
+      "reviewer": "W1R44 exact Legacy UsdcVault allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "Ethereum block 26114892: exact UUPS implementation matches verified UsdcVault source. Local positions are sUSDS receipts plus USDC idle and USDS rounding dust. sUSDS.balanceOf(vault)=160854789721919923392586423 equals totalSupply; native totalAssets=178806448434865 values those shares only. Local source has deposit/mint, withdraw/redeem and exit(sUSDS), no loan, pledge or strategy allocation surface. Parent Sky lending and offchain RWA risks are not local custody/reuse absence claims, and remain upstream. Upgrade powers are separately reviewed, not immutable allocation guarantees.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe",
+          "function": "ERC1967 implementation / susds / totalSupply / totalAssets / sUSDS.balanceOf / USDC.balanceOf / USDS.balanceOf / runtime bytecode",
+          "value": "implementation=0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba; runtime matches verified source; susds=0xa3931d71877c0e7a3148cb7eb4463524fec27fbd; totalSupply=sUSDS.balanceOf=160854789721919923392586423; totalAssets=178806448434865; idleUSDC=1004961; USDSdust=2683592584333002",
+          "block": 26114892
+        }
+      ],
+      "sources": [
+        {
+          "label": "Verified exact Legacy UsdcVault implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba"
+        },
+        {
+          "label": "Spark documentation distinguishing V1 and V2",
+          "url": "https://docs.spark.finance/products/spark-savings"
+        },
+        {
+          "label": "Block-pinned Ethereum RPC observation",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    {
+      "assetId": "susds-sky",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2027-01-01",
+      "reviewer": "W1R02 pinned Ethereum allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "The exact sUSDS implementation holds deposited USDS and realizes projected SSR accrual by Vat.suck/UsdsJoin.exit. It has no strategy allocation, lending of held USDS, external borrower, or wrapper-local offchain custodian. The small totalAssets-minus-balance difference is unrealized SSR accrual, not deployed strategy assets. This is wrapper-local scope only; USDS parent collateral, governance and bridge controls retain their risks.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+          "function": "asset()/getImplementation()/totalAssets()/USDS.balanceOf(sUSDS)",
+          "value": "asset=0xdc035d45d973e3ec169d2276ddab16f1e407384f; implementation=0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0; totalAssets=4659153353426782025580729182; balance=4659152350194337155508102921; blockHash=0x7215bcdfd4a73605d2bafc27738791d6ec1174694cf33890a23fb81811fc7065",
+          "block": 26114891
+        }
+      ],
+      "sources": [
+        {
+          "label": "Pinned SUsds implementation",
+          "url": "https://raw.githubusercontent.com/sky-ecosystem/sdai/dfc7f41cb7599afcb0f0eb1ddaadbf9dd4015dce/src/SUsds.sol"
+        },
+        {
+          "label": "Exact implementation verified source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0"
+        },
+        {
+          "label": "Pinned Ethereum RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Sky savings mechanics",
+          "url": "https://developers.skyeco.com/protocol/tokens/susds/"
+        }
+      ]
+    },
+    {
+      "assetId": "sreusd-resupply",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-02",
+      "reviewer": "W1R23 unknown-wave",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "Verified native Ethereum SavingsReUSD and both ERC4626 bases hold only immutable reUSD. The full source exposes deposits, withdrawals, rewards and OFT share escrow, not asset lending, borrowing, arbitrary asset calls or allocation management. At the pinned block all redeemable totalAssets are covered by idle reUSD; excess is undistributed rewards. Parent reUSD lending collateral and governance/LayerZero share controls remain upstream/separate risks, not wrapper-local reserve reuse or offchain custody.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0x557ab1e003951a73c12d16f0fea8490e39c33c35",
+          "function": "asset()/totalAssets()/totalSupply()/reUSD.balanceOf(vault)/convertToAssets(1e18)",
+          "value": "asset=500498237864466430089442769161915436460503092204; totalAssets=28221691589077238279605815; totalSupply=27271470302729032016147565; convertToAssets=1034843053044086092; underlyingBalance=28226052220988060148038707",
+          "block": 26114896
+        }
+      ],
+      "sources": [
+        {
+          "label": "Verified SavingsReUSD with complete LinearRewardsErc4626 and ERC4626 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x557ab1e003951a73c12d16f0fea8490e39c33c35"
+        },
+        {
+          "label": "Resupply savings terms",
+          "url": "https://docs.resupply.finance/resupply-protocol/savings-reusd.md"
+        },
+        {
+          "label": "Pinned Ethereum allocation block",
+          "url": "https://etherscan.io/block/26114896"
+        },
+        {
+          "label": "Ethereum publicnode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    {
+      "assetId": "syusd-aegis",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2027-01-02",
+      "reviewer": "W1R26 exact two-chain wrapper allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "At Ethereum block 26114896 and BSC block 125566915, each canonical wrapper asset is chain-local YUSD and totalAssets equals YUSD.balanceOf(wrapper). Verified implementations expose only ERC-4626 deposits, withdrawals, rewards and cooldown silo custody, not strategy allocation, borrowing or reuse; rescue rejects asset(). Silo code restricts withdrawals to its immutable creating wrapper. This is wrapper-local only; YUSD offchain strategy custody and all existing proxy-upgrade powers remain separate risks.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
+          "function": "asset()/totalAssets()/YUSD.balanceOf(wrapper)/silo()",
+          "value": "asset=0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a;totalAssets=balance=11456934692540637269696460;silo=0x39f19a8a9b5075d1400f392d1364cc1a35b807b5;cooldownDuration=604800;INSTANT_UNSTAKING_FEE=50",
+          "block": 26114896
+        },
+        {
+          "chain": "bsc",
+          "address": "0x24db057b19241eefb9b522e8627c293ed8f93af2",
+          "function": "asset()/totalAssets()/YUSD.balanceOf(wrapper)/silo()",
+          "value": "asset=0xab3dbcd9b096c3ff76275038bf58eac10d22c61f;totalAssets=balance=1110687393989725380446;silo=0x72880e2b8c7642c47d8c28d898ed49117ac6a079;cooldownDuration=5",
+          "block": 125566915
+        }
+      ],
+      "sources": [
+        {
+          "label": "Ethereum deployed implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xb0c63bb1667b6e9215aee562af2957739b2676fe?fields=sources,abi"
+        },
+        {
+          "label": "BSC deployed implementation",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x42940c329e2a4d0bd0e828b7815c90111065415e?fields=sources,abi"
+        },
+        {
+          "label": "Ethereum pinned RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "BSC pinned RPC",
+          "url": "https://bsc-rpc.publicnode.com"
+        }
+      ]
+    },
+    {
+      "assetId": "sdai-gnosis",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2027-01-01",
+      "reviewer": "W1R45 exact SavingsXDai source and pinned RPC review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "Exact nonproxy SavingsXDai code fixes WXDAI as the sole asset; inherited totalAssets equals WXDAI.balanceOf(vault). At the pinned block those quantities agree. Deposits transfer WXDAI in; withdrawals burn shares and transfer WXDAI out. The complete source has no borrow, strategy allocation or arbitrary-call surface. This covers only the immediate wrapper; xDAI bridge/Sky reserve risks remain serial parent risks.",
+      "observations": [
+        {
+          "chain": "gnosis",
+          "address": "0xaf204776c7245bf4147c2612bf6e5972ee483701",
+          "function": "asset()/totalAssets()/WXDAI.balanceOf(vault)",
+          "value": "asset=0xe91d153e0b41518a2ce8dd3d7944fa863463a97d; totalAssets=balance=42631254907509954528921547",
+          "block": 48574355
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact verified SavingsXDai and imported ERC4626 source",
+          "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701"
+        },
+        {
+          "label": "Gnosis documented Savings xDAI holder deposit and redemption flow",
+          "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+        },
+        {
+          "label": "Pinned Gnosis RPC observation",
+          "url": "https://rpc.gnosischain.com"
+        }
+      ]
+    },
+    {
+      "assetId": "sfrax-frax",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R48 exact deployed source and pinned allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "At Ethereum block 26114907, StakedFrax asset is legacy FRAX; totalAssets=65181542209162932058274118, FRAX balance=65471813491358408066746865, totalSupply=56157359111526963884410628. The 290271282195476008472747 surplus is undistributed rewards under the exact LinearRewardsErc4626 accounting, not an external strategy. Full verified StakedFrax, LinearRewardsErc4626, Solmate ERC4626/ERC20 and Timelock2Step source review exposes only deposit/mint, redeem/withdraw, rewards synchronization/distribution, reward-rate cap and timelock reassignment: no borrowing, asset deployment, approval-to-strategy, generic call, delegatecall or replacement surface. Pinned eth_getCode equals Blockscout verified deployed bytecode (SHA256 of hex string plus newline 398187323db319ac3539f506a4db9d4923246d0bfa44ed7f1662fe3928eae76a). This is wrapper-local only; no parent custody, legal priority or upstream FRAX reuse protection is asserted.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32",
+          "function": "asset()/totalAssets()/totalSupply()/FRAX.balanceOf(vault)",
+          "value": "asset=0x853d955acef822db058eb8505911ed77f175b99e; totalAssets=65181542209162932058274118; totalSupply=56157359111526963884410628; FRAX.balanceOf(vault)=65471813491358408066746865; blockHash=0x7f33133774074a121916fa9e9ddcede35487abb9e56e39884209aefe8320af6f",
+          "block": 26114907
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact verified StakedFrax and every inherited source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32"
+        },
+        {
+          "label": "sFRAX wrapper mechanics",
+          "url": "https://docs.frax.finance/frax-v3-100-cr-and-more/sfrax"
+        },
+        {
+          "label": "Pinned Ethereum block",
+          "url": "https://etherscan.io/block/26114907"
+        },
+        {
+          "label": "Pinned read provider",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    {
+      "assetId": "susdf-falcon",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R11 pinned source and allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "Immediate wrapper holds only USDf, with totalAssets equal to its USDf balance less unvested rewards. Source has no lending, borrowing, arbitrary external execution or strategy allocation surface; the alternate cooldown silo holds zero at the pin. Offchain reserves and yield strategies are serial USDf parent risks, not an immediate wrapper allocation. Admin upgrades remain separately adverse and can change future code. No legal insolvency or parent reuse protection is asserted.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xc8cf6d7991f15525488b2a83df53468d682ba4b0",
+          "function": "asset()/totalAssets()/getUnvestedAmount()/USDf.balanceOf(vault)/cooldownDuration()/EIP1967 implementation",
+          "value": "asset()=1428219560557373927065207324579117521997385748162; totalAssets()=64539557974853188939861326; totalSupply()=56759550088969071515916994; cooldownDuration()=0; silo()=1342200138100947756833068791604944175888620480487; getUnvestedAmount()=7639802928768888888888; balance=64547197777781957828750214; implementation=0x0d132bee412e6619a4863aeedad97541bfda3f34; siloUSDf=0; blockHash=0x7215bcdfd4a73605d2bafc27738791d6ec1174694cf33890a23fb81811fc7065",
+          "block": 26114891
+        }
+      ],
+      "sources": [
+        {
+          "label": "Verified StakedUSDf complete implementation and ERC4626 dependencies",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d132bee412e6619a4863aeedad97541bfda3f34"
+        },
+        {
+          "label": "Exact block observation",
+          "url": "https://etherscan.io/block/26114891"
+        },
+        {
+          "label": "Falcon exact staking mechanism",
+          "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md"
+        }
+      ]
+    },
+    {
+      "assetId": "sparkusdc-spark",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R14 pinned exact-vault whole-allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "bluechip-overcollateralized-lending",
+      "rationale": "Exact nonproxy MetaMorphoV1_1 deployed runtime matches verified source. All three withdrawal/supply-queue markets are onchain Morpho lender positions; source can supply/withdraw/reallocate, not borrow or pledge collateral. Pinned positions have zero borrow shares and collateral. Expected-accrued supply claims sum exactly to totalAssets; 49154985 donated idle USDC base units are excluded by source totalAssets, not missing offchain backing. Active funded collateral is cbBTC; WETH and the zero-collateral idle market have zero supply claims. All current allocation and local capital reuse is onchain overcollateralized lending; USDC parent issuer custody is inherited, not a local offchain custodian.",
+      "observations": [
+        {
+          "chain": "base",
+          "address": "0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a",
+          "function": "asset()/totalAssets()/complete allocation roster/runtime",
+          "value": "asset=0x000000000000000000000000833589fcd6edb6e08f4c7c32d4f71b54bda02913; totalAssets=330239346876417; underlying idle=49154985; runtime matches explorer deployed bytecode; block hash=0x430c0304d9b7ec31752510fe2b541907e603302caaf0dadfa8a760533d5a1058; roster=[\"0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836\",\"0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda\",\"0x38c846197ac32a752a60c25d4536ebb0c3920c532e9a859c38c91efb7b8c2abb\"]",
+          "block": 52139151
+        },
+        {
+          "chain": "base",
+          "address": "0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb",
+          "function": "complete markets / supply claims / borrow shares / collateral",
+          "value": "Morpho complete withdraw queue: [{\"id\":\"0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836\",\"params\":\"0x000000000000000000000000833589fcd6edb6e08f4c7c32d4f71b54bda02913000000000000000000000000cbb7c0000ab88b473b1f5afd9ef808440eed33bf000000000000000000000000663becd10dae6c4a3dcd89f1d76c1174199639b900000000000000000000000046415998764c29ab2a25cbea6254146d50d226870000000000000000000000000000000000000000000000000bef55718ad60000\",\"position\":\"0x00000000000000000000000000000000000000000000001028afb7e284f64cb500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\",\"expectedAssets\":330239346876417},{\"id\":\"0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda\",\"params\":\"0x000000000000000000000000833589fcd6edb6e08f4c7c32d4f71b54bda029130000000000000000000000004200000000000000000000000000000000000006000000000000000000000000fea2d58cefcb9fcb597723c6bae66ffe4193afe400000000000000000000000046415998764c29ab2a25cbea6254146d50d226870000000000000000000000000000000000000000000000000bef55718ad60000\",\"position\":\"0x000000000000000000000000000000000000000000000000000000000006b49200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\",\"expectedAssets\":0},{\"id\":\"0x38c846197ac32a752a60c25d4536ebb0c3920c532e9a859c38c91efb7b8c2abb\",\"params\":\"0x000000000000000000000000833589fcd6edb6e08f4c7c32d4f71b54bda029130000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\",\"position\":\"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\",\"expectedAssets\":0}]",
+          "block": 52139151
+        }
+      ],
+      "sources": [
+        {
+          "label": "Verified exact immutable vault implementation",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a"
+        },
+        {
+          "label": "Pinned chain read endpoint",
+          "url": "https://mainnet.base.org"
+        },
+        {
+          "label": "Spark isolated-market lending risk architecture",
+          "url": "https://docs.spark.finance/products/isolated-markets"
+        }
+      ]
+    },
+    {
+      "assetId": "sparkusdtbc-spark",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R14 pinned exact-vault whole-allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "bluechip-overcollateralized-lending",
+      "rationale": "Exact immutable VaultV2 and sole adapter deployed runtimes match verified source. Complete adapter marketIds enumerates four lender positions (sUSDS, wstETH, WBTC, cbBTC); each position has zero borrow shares and collateral. Idle USDT is zero; sum of expectedSupplyAssets equals adapter realAssets and vault totalAssets exactly. Vault multicall only delegatecalls itself; allocation calls reviewed adapter which only supplies/withdraws Morpho, with no borrowing/pledging surface. Fee accrual mints formula-derived shares, not debt. This is fully onchain local bluechip overcollateralized lending; underlying USDT issuer custody is inherited. Owner can change adapters/strategy policy, so this 31-day allocation observation is not a guarantee of immutable future allocations.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
+          "function": "asset()/totalAssets()/complete allocation roster/runtime",
+          "value": "asset=0x000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7; totalAssets=86852888030511; underlying idle=0; runtime matches explorer deployed bytecode; block hash=0xacfd1635574095212e3ce1303b8b9d563339a7df9d9e22e32a1d08d80a248aaf; roster=[\"0x000000000000000000000000ef4cb7e87f212f128f0b24cf35861e52b3c78a6a\"]",
+          "block": 26114898
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xef4cb7e87f212f128f0b24cf35861e52b3c78a6a",
+          "function": "complete markets / supply claims / borrow shares / collateral",
+          "value": "Single MorphoMarketV1AdapterV2: [{\"id\":\"0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b\",\"params\":\"0x000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7000000000000000000000000a3931d71877c0e7a3148cb7eb4463524fec27fbd0000000000000000000000000c426d174fc88b7a25d59945ab2f7274bf7b4c79000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000d645e6320408000\",\"position\":\"0x0000000000000000000000000000000000000000000000004bcfae854802d10300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\",\"expectedAssets\":\"0x00000000000000000000000000000000000000000000000000000554a35fe95d\"},{\"id\":\"0xe7e9694b754c4d4f7e21faf7223f6fa71abaeb10296a4c43a54a7977149687d2\",\"params\":\"0x000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec70000000000000000000000007f39c581f595b53c5cb19bd0b3f8da6c935e2ca000000000000000000000000095db30fab9a3754e42423000df27732cb2396992000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000bef55718ad60000\",\"position\":\"0x000000000000000000000000000000000000000000000002b1ef1f1d5c91a18300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\",\"expectedAssets\":\"0x0000000000000000000000000000000000000000000000000000335112e8dda1\"},{\"id\":\"0xa921ef34e2fc7a27ccc50ae7e4b154e16c9799d3387076c421423ef52ac4df99\",\"params\":\"0x000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec70000000000000000000000002260fac5e5542a773aa44fbcfedf7c193bc2c599000000000000000000000000008bf4b1cda0cc9f0e882e0697f036667652e1ef000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000bef55718ad60000\",\"position\":\"0x0000000000000000000000000000000000000000000000012c8eb662bd9b50ed00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\",\"expectedAssets\":\"0x000000000000000000000000000000000000000000000000000016569e812b9e\"},{\"id\":\"0x45671fb8d5dea1c4fbca0b8548ad742f6643300eeb8dbd34ad64a658b2b05bca\",\"params\":\"0x000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7000000000000000000000000cbb7c0000ab88b473b1f5afd9ef808440eed33bf0000000000000000000000000e053750dfa4e809e5f7b119832c799c2aa138ac000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000bef55718ad60000\",\"position\":\"0x0000000000000000000000000000000000000000000000000018f4dfd949613f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\",\"expectedAssets\":\"0x00000000000000000000000000000000000000000000000000000001aebffa93\"}]",
+          "block": 26114898
+        }
+      ],
+      "sources": [
+        {
+          "label": "Verified exact immutable vault implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
+        },
+        {
+          "label": "Pinned chain read endpoint",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Spark isolated-market lending risk architecture",
+          "url": "https://docs.spark.finance/products/isolated-markets"
+        },
+        {
+          "label": "Exact sole reachable Morpho adapter source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xef4cb7e87f212f128f0b24cf35861e52b3c78a6a"
+        }
+      ]
+    },
+    {
+      "assetId": "usdat-saturn",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2027-01-01",
+      "reviewer": "Unknown wave W1R52",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "Canonical USDat holds PYUSDx directly. At Ethereum block 26114896, PYUSDx balance equals totalSupply 91356083161065 (six-decimal units) and MultiMint totalAssets (alternative-asset accounting) is zero. The EIP1967 implementation is verified USDat 0x496a4a33b6181f4536203488d9a05ac1429e702c. Exact USDat/MultiMint/YieldToOne/Extension source wraps funded tokens, keeps collateral at the token, and exposes no borrowing, strategy delegatecall or lending allocation; replaceAsset requires incoming PYUSDx and removes alternative assets. Native token logic disables version pin/unpin; proxy replacement risk remains in its existing upgrade controls. This is local token custody/accounting only: MoonPay/PYUSD/Paxos offchain custody, legal claim, insolvency and reuse risks are not asserted absent. CCIP representations are not additional independent reserve books.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0x23238f20b894f29041f48d88ee91131c395aaa71",
+          "function": "totalSupply()/totalAssets()/EIP1967 implementation",
+          "value": "totalSupply=91356083161065; totalAssets=0; implementation=0x496a4a33b6181f4536203488d9a05ac1429e702c",
+          "block": 26114896
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+          "function": "balanceOf(USDat)",
+          "value": "91356083161065",
+          "block": 26114896
+        }
+      ],
+      "sources": [
+        {
+          "label": "Verified USDat including full MultiMint, YieldToOne and Extension source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x496a4a33b6181f4536203488d9a05ac1429e702c"
+        },
+        {
+          "label": "Pinned Ethereum RPC observation block 26114896",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Saturn backing custody statement",
+          "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits.md"
+        }
+      ]
+    },
+    {
+      "assetId": "fxsave-f-x-protocol",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-02",
+      "reviewer": "W1R46 block-pinned allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "multi-strategy-reuse",
+      "rationale": "At block 26114901 all 81624191680494464837425163 fxSP units in SavingFxUSD.totalAssets equal gauge.balanceOf(the Convex staking vault); idle fxSP and direct gauge balances are zero. The gauge manager is zero, staking vault owner is fxSAVE, and stakingToken/gaugeAddress match fxSP/the gauge. Reviewed SavingFxUSD and inherited source expose deposit, withdrawal, harvesting and locking but no borrowing or arbitrary-call entry point to the staking proxy's owner-only execute. Gauge custody holds fxSP onchain. fxSP combines stability-pool peg arbitrage and liquidation absorption with an active USDC AaveV3CompoundStrategy, so capital reuse is multi-strategy, not none. This local custody conclusion does not assert legal remoteness or erase fxUSD/USDC parent risk, mutable upgrades, loss exposure or measured unwind.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39",
+          "function": "asset()/vault()/gauge()/totalAssets()/EIP1967 implementation",
+          "value": "asset=0x65c9a641afceb9c0e6034e558a319488fa0fa3be; vault=0x4bfc5292da18e32ed2354350e07e417ce4796f9c; gauge=0xed92dde3214c24ae04f5f96927e3be8f8dbc3289; totalAssets=81624191680494464837425163; implementation=0xe4031e271809d20074e4bef1caeefec5f710e8a6",
+          "block": 26114901
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x65c9a641afceb9c0e6034e558a319488fa0fa3be",
+          "function": "balanceOf(fxSAVE)/allocations(fxUSD)/allocations(USDC)/EIP1967 implementation",
+          "value": "idle fxSP=0; fxUSD strategy=0x0000000000000000000000000000000000000000; USDC strategy=0xd023aac0e2d46c93d4c6e8e2a449bf2d4687804f; implementation=0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9",
+          "block": 26114901
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xed92dde3214c24ae04f5f96927e3be8f8dbc3289",
+          "function": "balanceOf(stakingVault)/balanceOf(fxSAVE)/manager()/stakingToken()/EIP1967 implementation",
+          "value": "stakingVault balance=81624191680494464837425163; fxSAVE balance=0; manager=0x0000000000000000000000000000000000000000; stakingToken=0x65c9a641afceb9c0e6034e558a319488fa0fa3be; implementation=0xf62f458d2f6dd2ad074e715655064d7632e136d6",
+          "block": 26114901
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x4bfc5292da18e32ed2354350e07e417ce4796f9c",
+          "function": "owner()/stakingToken()/gaugeAddress()/clone implementation",
+          "value": "owner=fxSAVE; stakingToken=fxSP; gaugeAddress=0xed92dde3214c24ae04f5f96927e3be8f8dbc3289; EIP1167 implementation=0x359c1efd3fc7e3a9b7a043c185fd5d39dec1fc81",
+          "block": 26114901
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xd023aac0e2d46c93d4c6e8e2a449bf2d4687804f",
+          "function": "ASSET()/ATOKEN()/POOL()/operator()/totalSupply()",
+          "value": "ASSET=USDC; ATOKEN=0x98c23e9d8f34fefb1b7bd6a91b7ff122f4e16f5c; POOL=0x87870bca3f3fd6335c3f4ce8392d69350b4fa4e2; operator=fxSP; totalSupply=19336719",
+          "block": 26114901
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact SavingFxUSD implementation and inherited sources",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe4031e271809d20074e4bef1caeefec5f710e8a6"
+        },
+        {
+          "label": "Exact SharedLiquidityGauge implementation and inherited sources",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf62f458d2f6dd2ad074e715655064d7632e136d6"
+        },
+        {
+          "label": "Exact Convex staking proxy implementation and inherited sources",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x359c1efd3fc7e3a9b7a043c185fd5d39dec1fc81"
+        },
+        {
+          "label": "Exact fxSP implementation and AssetManagement source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9"
+        },
+        {
+          "label": "Active USDC Aave strategy and inherited source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd023aac0e2d46c93d4c6e8e2a449bf2d4687804f"
+        },
+        {
+          "label": "f(x) Stability Pool mechanisms and fxSAVE",
+          "url": "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/stability-pool.md"
+        },
+        {
+          "label": "Ethereum block 26114901",
+          "url": "https://eth.blockscout.com/block/26114901"
+        },
+        {
+          "label": "Block-pinned Ethereum RPC reads",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    {
+      "assetId": "strusd-tori",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R10 pinned source and allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "liquidation-loss-absorption",
+      "rationale": "Wrapper-local assets are trUSD in the native vault and immutable cooldown silo; remote shares are CCIP lockbox representations, not new offchain allocation. Exact current implementation bytecode matches verified source. No lending, borrowing or strategy invocation exists in current vault/silo code. Rewarder reportLoss burns backing (up to 5% daily), so local loss absorption is retained rather than claiming no capital reuse. Native UUPS and bridge admin risk remain in control facts; parent institutional reserve custody is inherited, not waived.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0x280839980a7ed0d7717f64125fe241012e5f5815",
+          "function": "asset()/totalAssets()/getUnvestedAmount()/trUSD.balanceOf(vault)/implementation slot",
+          "value": "At block hash 0x41c1bba8d166f0293e51d435a4c76d26de77842bf66aa9ac007b35dc283c1d2f, asset=0xd0580192e98ea6ceb9c7b6191ed2e27560911697; implementation=0x6561272e3ebc9f2e07cdb12b7c474db9132b977a; totalAssets=44531376055240242183014596; unvested=265443134920634920634; balance=44531641498375162817935230; exact equality assets+unvested=balance; deployed implementation code equals verified runtime.",
+          "block": 26114894
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xf7c0d8853e69dcd37ee7599c6280d2632f3360b4",
+          "function": "STAKING_VAULT()/TRUSD()/trUSD.balanceOf(silo)",
+          "value": "stakingVault=0x280839980a7ed0d7717f64125fe241012e5f5815; trUSD=0xd0580192e98ea6ceb9c7b6191ed2e27560911697; balance=8319266235792763720873811; only vault can withdraw; rescue forbids native trUSD. Current source provides no borrowing/lending surface.",
+          "block": 26114894
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact verified vault and included immutable silo source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6561272e3ebc9f2e07cdb12b7c474db9132b977a"
+        },
+        {
+          "label": "Pinned observation block",
+          "url": "https://eth.blockscout.com/block/26114894"
+        },
+        {
+          "label": "Ethereum RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Official canonical and bridge census",
+          "url": "https://docs.tori.finance/resources/contracts.md"
+        }
+      ]
+    },
+    {
+      "assetId": "sirloinusdc-steakhouse",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "Unknown wave W1R15 pinned allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "long-tail-overcollateralized-lending",
+      "rationale": "At base block 52139143, complete sole-adapter census (7 markets) plus idle underlying reconciles real assets exactly with totalAssets. Exact vault and adapter runtime bytecode matches verified source. Core self-delegatecall is confined to the vault; adapter permits supply/withdraw/skim and has no borrow, collateral-posting or arbitrary-call surface. Every adapter market position has zero borrow shares and zero posted collateral. Loan claims constitute capital reuse, not no-reuse. Immediate custody is onchain; parent stablecoin reserve custody and borrower collateral rights are not declared segregated or bankruptcy-remote.",
+      "observations": [
+        {
+          "chain": "base",
+          "address": "0xbeeff2490feffa212fac2f6553682c219e6a8845",
+          "function": "asset()/totalAssets()/totalSupply()/adaptersLength()/adapters(0)/accrueInterestView(); matched eth_getCode",
+          "value": "{\"asset()\":\"0x000000000000000000000000833589fcd6edb6e08f4c7c32d4f71b54bda02913\",\"totalAssets()\":\"0x0000000000000000000000000000000000000000000000000001a16f6f5f7a7c\",\"totalSupply()\":\"0x000000000000000000000000000000000000000001770a9e43b4d19ccf92e83e\",\"adaptersLength()\":\"0x0000000000000000000000000000000000000000000000000000000000000001\",\"liquidityAdapter()\":\"0x0000000000000000000000004a70dc70cef79f51cc7f79c08f863b2841311165\",\"performanceFee()\":\"0x00000000000000000000000000000000000000000000000003782dace9d90000\",\"managementFee()\":\"0x0000000000000000000000000000000000000000000000000000000000000000\",\"receiveAssetsGate()\":\"0x0000000000000000000000000000000000000000000000000000000000000000\",\"sendSharesGate()\":\"0x0000000000000000000000000000000000000000000000000000000000000000\",\"maxRate()\":\"0x0000000000000000000000000000000000000000000000000000000ec41a0ddf\",\"accrueInterestView()\":\"0x0000000000000000000000000000000000000000000000000001a16f6f5f7a7c00000000000000000000000000000000000000000000000044f8d4f06ea428f60000000000000000000000000000000000000000000000000000000000000000\",\"adapters\":[\"0x0000000000000000000000004a70dc70cef79f51cc7f79c08f863b2841311165\"],\"adapter.morpho()\":\"0x000000000000000000000000bbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb\",\"adapter.parentVault()\":\"0x000000000000000000000000beeff2490feffa212fac2f6553682c219e6a8845\",\"adapter.asset()\":\"0x000000000000000000000000833589fcd6edb6e08f4c7c32d4f71b54bda02913\",\"adapter.realAssets()\":\"0x0000000000000000000000000000000000000000000000000001a16f6f5f7a7c\",\"adapter.marketIdsLength()\":\"0x0000000000000000000000000000000000000000000000000000000000000007\",\"idleBalance\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"}",
+          "block": 52139143
+        },
+        {
+          "chain": "base",
+          "address": "0x4a70dc70cef79f51cc7f79c08f863b2841311165",
+          "function": "complete marketIds(i)/expectedSupplyAssets(id); Morpho position(id,adapter); matched eth_getCode",
+          "value": "[{\"marketId\":\"0x29ae7ac08be3a58e11151fed74701fb8e6ffd8e76b1870cf17ad70f332752d0b\",\"expectedSupplyAssets\":32198263044429,\"paramsRaw\":\"0x000000000000000000000000833589fcd6edb6e08f4c7c32d4f71b54bda02913000000000000000000000000fcc9cc1209651ed8867332d6f664cf82743a2584000000000000000000000000182e072f2c9c58c6f19f144c97986f7496c6a10900000000000000000000000046415998764c29ab2a25cbea6254146d50d226870000000000000000000000000000000000000000000000000cb2bba6f17b8000\",\"position\":[31751441127729134225,0,0]},{\"marketId\":\"0x54cf9be57fdfa6457a660991907434ff9d295c465a603a50126ff647d50b7354\",\"expectedSupplyAssets\":389439382883588,\"paramsRaw\":\"0x000000000000000000000000833589fcd6edb6e08f4c7c32d4f71b54bda029130000000000000000000000005d3a1ff2b6bab83b63cd9ad0787074081a52ef34000000000000000000000000f4b17c79492d68775e22e8dd0a2bb22854a39a4700000000000000000000000046415998764c29ab2a25cbea6254146d50d226870000000000000000000000000000000000000000000000000cb2bba6f17b8000\",\"position\":[384672626480220717080,0,0]},{\"marketId\":\"0x76629002c9fdb20fb2092053a4f22c5c65e04a81887218b9546f2a2d82b4c0a8\",\"expectedSupplyAssets\":106525140873,\"paramsRaw\":\"0x000000000000000000000000833589fcd6edb6e08f4c7c32d4f71b54bda02913000000000000000000000000b200000000000000000000451d033a5000cb479e0000000000000000000000007fad8b8de2ddb7b4b415e1aa3613e45eef9e4bff00000000000000000000000046415998764c29ab2a25cbea6254146d50d2268700000000000000000000000000000000000000000000000008ac7230489e8000\",\"position\":[106291828754126277,0,0]},{\"marketId\":\"0xd4a903dc6d949519060c7707f9604fdc9772c046e05c2e3a8fce0bd7196e4109\",\"expectedSupplyAssets\":19748236866038,\"paramsRaw\":\"0x000000000000000000000000833589fcd6edb6e08f4c7c32d4f71b54bda02913000000000000000000000000cb585250f852c6c6bf90434ab21a00f02833a4af000000000000000000000000031b2efc8d70042ac8d9f5c793c4149ec4b60fde00000000000000000000000046415998764c29ab2a25cbea6254146d50d2268700000000000000000000000000000000000000000000000008ac7230489e8000\",\"position\":[18979113808804455924,0,0]},{\"marketId\":\"0xe458a501c1103ca3b256f2bcb45d223263fb34b6349d82675494ce3a94ce1327\",\"expectedSupplyAssets\":792309293374,\"paramsRaw\":\"0x000000000000000000000000833589fcd6edb6e08f4c7c32d4f71b54bda02913000000000000000000000000b2000000000000000000008501b13360000cb2ec000000000000000000000000a3cb2d7204f47a468b82c6fab1ca9675e9f7a27200000000000000000000000046415998764c29ab2a25cbea6254146d50d2268700000000000000000000000000000000000000000000000008ac7230489e8000\",\"position\":[790221694620727892,0,0]},{\"marketId\":\"0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836\",\"expectedSupplyAssets\":16690241452173,\"paramsRaw\":\"0x000000000000000000000000833589fcd6edb6e08f4c7c32d4f71b54bda02913000000000000000000000000cbb7c0000ab88b473b1f5afd9ef808440eed33bf000000000000000000000000663becd10dae6c4a3dcd89f1d76c1174199639b900000000000000000000000046415998764c29ab2a25cbea6254146d50d226870000000000000000000000000000000000000000000000000bef55718ad60000\",\"position\":[15064897043424372016,0,0]},{\"marketId\":\"0x0ca10126f6c94cbd9cf0a48cc9516ae5e3dec5aa68303e6d988ee37c5149bf0d\",\"expectedSupplyAssets\":225,\"paramsRaw\":\"0x000000000000000000000000833589fcd6edb6e08f4c7c32d4f71b54bda029130000000000000000000000002ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec2200000000000000000000000097ff9cbd7e77348b2b8ffbb883bf29452ad1829500000000000000000000000046415998764c29ab2a25cbea6254146d50d226870000000000000000000000000000000000000000000000000aaf96eb9d0d0000\",\"position\":[217663013,0,0]}]",
+          "block": 52139143
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact verified vault executable",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=all"
+        },
+        {
+          "label": "Exact verified sole adapter executable",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x4a70dc70cef79f51cc7f79c08f863b2841311165?fields=all"
+        },
+        {
+          "label": "Pinned archive RPC",
+          "url": "https://api-base-mainnet-archive.n.dwellir.com"
+        },
+        {
+          "label": "Steakhouse DeFi vault terms",
+          "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+        }
+      ]
+    },
+    {
+      "assetId": "steakeurcv-steakhouse",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "Unknown wave W1R15 pinned allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "mixed-overcollateralized-lending",
+      "rationale": "At ethereum block 26114896, complete sole-adapter census (9 markets) plus idle underlying reconciles real assets; EURCV NAV is rate-capped below real assets, not missing allocation. Exact vault and adapter runtime bytecode matches verified source. Core self-delegatecall is confined to the vault; adapter permits supply/withdraw/skim and has no borrow, collateral-posting or arbitrary-call surface. Every adapter market position has zero borrow shares and zero posted collateral. Loan claims constitute capital reuse, not no-reuse. Immediate custody is onchain; parent stablecoin reserve custody and borrower collateral rights are not declared segregated or bankruptcy-remote.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f",
+          "function": "asset()/totalAssets()/totalSupply()/adaptersLength()/adapters(0)/accrueInterestView(); matched eth_getCode",
+          "value": "{\"asset()\":\"0x0000000000000000000000005f7827fdeb7c20b443265fc2f40845b715385ff2\",\"totalAssets()\":\"0x0000000000000000000000000000000000000000006b8fdf0a484d1a2c48f4bb\",\"totalSupply()\":\"0x00000000000000000000000000000000000000000068e4d5acff021bf0ff2fec\",\"adaptersLength()\":\"0x0000000000000000000000000000000000000000000000000000000000000001\",\"liquidityAdapter()\":\"0x0000000000000000000000005e3aca36fe2361e1866752ad74cb429f64cdcf1a\",\"performanceFee()\":\"0x0000000000000000000000000000000000000000000000000000000000000000\",\"managementFee()\":\"0x0000000000000000000000000000000000000000000000000000000000000000\",\"receiveAssetsGate()\":\"0x0000000000000000000000000000000000000000000000000000000000000000\",\"sendSharesGate()\":\"0x0000000000000000000000000000000000000000000000000000000000000000\",\"maxRate()\":\"0x0000000000000000000000000000000000000000000000000000000037de1e10\",\"accrueInterestView()\":\"0x0000000000000000000000000000000000000000006b8fdf0a484d1a2c48f4bb00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\",\"adapters\":[\"0x0000000000000000000000005e3aca36fe2361e1866752ad74cb429f64cdcf1a\"],\"adapter.morpho()\":\"0x000000000000000000000000bbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb\",\"adapter.parentVault()\":\"0x000000000000000000000000beef0c075da5d01112ae5cf34d257074fb5ddb2f\",\"adapter.asset()\":\"0x0000000000000000000000005f7827fdeb7c20b443265fc2f40845b715385ff2\",\"adapter.realAssets()\":\"0x0000000000000000000000000000000000000000001dd47c744eca71ded85079\",\"adapter.marketIdsLength()\":\"0x0000000000000000000000000000000000000000000000000000000000000009\",\"idleBalance\":\"0x0000000000000000000000000000000000000000004dcc45e48a0e3dc4a27f25\"}",
+          "block": 26114896
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x5e3aca36fe2361e1866752ad74cb429f64cdcf1a",
+          "function": "complete marketIds(i)/expectedSupplyAssets(id); Morpho position(id,adapter); matched eth_getCode",
+          "value": "[{\"marketId\":\"0x7a25fb17b8bd83a934ad87d9d1725188fc129992ca816f3145b4ab7f673c98c3\",\"expectedSupplyAssets\":8254220183620799126484608,\"paramsRaw\":\"0x0000000000000000000000005f7827fdeb7c20b443265fc2f40845b715385ff20000000000000000000000007f39c581f595b53c5cb19bd0b3f8da6c935e2ca0000000000000000000000000f13b2929b84fa6da4855942b2ea60e82b080c5a1000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000bef55718ad60000\",\"position\":[8195176200969225432860599485727,0,0]},{\"marketId\":\"0xb5f8d5554d85b782d7080314bba3544983755a75eb5c432f5eae1c47c6af4da4\",\"expectedSupplyAssets\":2952177590093141549976300,\"paramsRaw\":\"0x0000000000000000000000005f7827fdeb7c20b443265fc2f40845b715385ff2000000000000000000000000cbb7c0000ab88b473b1f5afd9ef808440eed33bf000000000000000000000000d08d519d6e91575c4e7ae1e49bd54da369521c0e000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000bef55718ad60000\",\"position\":[2931171660235539737517939569259,0,0]},{\"marketId\":\"0x80c97dd236bafc6c5e41e84797efea2853511455f189525a8df70826a38cb282\",\"expectedSupplyAssets\":1593146539484673581087431,\"paramsRaw\":\"0x0000000000000000000000005f7827fdeb7c20b443265fc2f40845b715385ff20000000000000000000000002260fac5e5542a773aa44fbcfedf7c193bc2c599000000000000000000000000d9547692d9a01cb10d9cf4bf41381355a6570415000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000bef55718ad60000\",\"position\":[1581934907046355784414916161007,0,0]},{\"marketId\":\"0x36da61bf253b8a7e07888cb96dbcde65001508159928801aeca932a5b5548119\",\"expectedSupplyAssets\":532290213515190220675180,\"paramsRaw\":\"0x0000000000000000000000005f7827fdeb7c20b443265fc2f40845b715385ff20000000000000000000000000990b149e915cb08e2143a5c6f669c907eddc8b00000000000000000000000008bb55b19f2ea18d4684b59a3b768a1926ab41409000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000d1d507e40be8000\",\"position\":[530258975767535624567369603010,0,0]},{\"marketId\":\"0xaa7231d6bee28b578efe38b52e801d5d3067023853342fc06ded437d2a80ef98\",\"expectedSupplyAssets\":2628656907151880408011071,\"paramsRaw\":\"0x0000000000000000000000005f7827fdeb7c20b443265fc2f40845b715385ff2000000000000000000000000a0769f7a8fc65e47de93797b4e21c073c117fc80000000000000000000000000f071b0a62ef2a54c1dca791134421ee16c2c43d9000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000d645e6320408000\",\"position\":[2588370058418276224366732642325,0,0]},{\"marketId\":\"0xb7a75cabc2e8eadd0bc661340a9e359d9828bed6d5cbbcd64188bca8c01e399e\",\"expectedSupplyAssets\":4457755561380791943184445,\"paramsRaw\":\"0x0000000000000000000000005f7827fdeb7c20b443265fc2f40845b715385ff20000000000000000000000002260fac5e5542a773aa44fbcfedf7c193bc2c59900000000000000000000000040721232bbd09e15e5fc6c4f1e20a8465be6a8e4000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000bef55718ad60000\",\"position\":[4407678702133155362568356297235,0,0]},{\"marketId\":\"0x0b352b7550acdb1f39fea4b8f9ef8ac2d7953613b92599610b8fbec8a98a51d1\",\"expectedSupplyAssets\":1745881497790586127073714,\"paramsRaw\":\"0x0000000000000000000000005f7827fdeb7c20b443265fc2f40845b715385ff20000000000000000000000007f39c581f595b53c5cb19bd0b3f8da6c935e2ca000000000000000000000000044d6d497fb53294f283983e2931972840eb3dd90000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000bef55718ad60000\",\"position\":[1673583243473151466311094989290,0,0]},{\"marketId\":\"0x82053fe2fc3a3d6cb856458948e9c3589e76f20f3a2079606739b517587267ce\",\"expectedSupplyAssets\":13227829676130958734404118,\"paramsRaw\":\"0x0000000000000000000000005f7827fdeb7c20b443265fc2f40845b715385ff2000000000000000000000000cbb7c0000ab88b473b1f5afd9ef808440eed33bf000000000000000000000000ba75fd248bf33d669d4c5adf25d3e32779656e47000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000bef55718ad60000\",\"position\":[12833187712839429702000653528892,0,0]},{\"marketId\":\"0xf135feb27b5f2bd2d54f344fd38dbb5161ff7f0ef4494901fb23f2fe8e58145a\",\"expectedSupplyAssets\":670328071148276147191446,\"paramsRaw\":\"0x0000000000000000000000005f7827fdeb7c20b443265fc2f40845b715385ff2000000000000000000000000beef088055857739c12cd3765f20b7679def0f5100000000000000000000000074ec54c1fe39a7a2299c77dd0f2d3cb458bb44c2000000000000000000000000870ac11d48b15db9a138cf899d20f13f79ba00bc0000000000000000000000000000000000000000000000000cb2bba6f17b8000\",\"position\":[666451187962725474285029715306,0,0]}]",
+          "block": 26114896
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact verified vault executable",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f?fields=all"
+        },
+        {
+          "label": "Exact verified sole adapter executable",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x5e3aca36fe2361e1866752ad74cb429f64cdcf1a?fields=all"
+        },
+        {
+          "label": "Pinned archive RPC",
+          "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+        },
+        {
+          "label": "Steakhouse DeFi vault terms",
+          "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+        }
+      ]
+    },
+    {
+      "assetId": "steakusdg-steakhouse",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "Unknown wave W1R15 pinned allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "long-tail-overcollateralized-lending",
+      "rationale": "At robinhood block 79450688, complete sole-adapter census (5 markets) plus idle underlying reconciles real assets exactly with totalAssets. Exact vault and adapter runtime bytecode matches verified source. Core self-delegatecall is confined to the vault; adapter permits supply/withdraw/skim and has no borrow, collateral-posting or arbitrary-call surface. Every adapter market position has zero borrow shares and zero posted collateral. Loan claims constitute capital reuse, not no-reuse. Immediate custody is onchain; parent stablecoin reserve custody and borrower collateral rights are not declared segregated or bankruptcy-remote.",
+      "observations": [
+        {
+          "chain": "robinhood",
+          "address": "0xbeeff033f34c046626b8d0a041844c5d1a5409dd",
+          "function": "asset()/totalAssets()/totalSupply()/adaptersLength()/adapters(0)/accrueInterestView(); matched eth_getCode",
+          "value": "{\"asset()\":\"0x0000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d168\",\"totalAssets()\":\"0x0000000000000000000000000000000000000000000000000001e2bc16591dd3\",\"totalSupply()\":\"0x000000000000000000000000000000000000000001b32a4fc839980605a2f629\",\"adaptersLength()\":\"0x0000000000000000000000000000000000000000000000000000000000000001\",\"liquidityAdapter()\":\"0x00000000000000000000000044abc1d6ccff2696d98890b92e2157af242179c2\",\"performanceFee()\":\"0x0000000000000000000000000000000000000000000000000000000000000000\",\"managementFee()\":\"0x0000000000000000000000000000000000000000000000000000000000000000\",\"receiveAssetsGate()\":\"0x0000000000000000000000000000000000000000000000000000000000000000\",\"sendSharesGate()\":\"0x0000000000000000000000000000000000000000000000000000000000000000\",\"maxRate()\":\"0x0000000000000000000000000000000000000000000000000000000ec41a0ddf\",\"accrueInterestView()\":\"0x0000000000000000000000000000000000000000000000000001e2bc16591dd300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\",\"adapters\":[\"0x00000000000000000000000044abc1d6ccff2696d98890b92e2157af242179c2\"],\"adapter.morpho()\":\"0x0000000000000000000000009d53d5e3bd5e8d4cbfa6db1ca238aea02e651010\",\"adapter.parentVault()\":\"0x000000000000000000000000beeff033f34c046626b8d0a041844c5d1a5409dd\",\"adapter.asset()\":\"0x0000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d168\",\"adapter.realAssets()\":\"0x0000000000000000000000000000000000000000000000000001df46dd682b09\",\"adapter.marketIdsLength()\":\"0x0000000000000000000000000000000000000000000000000000000000000005\",\"idleBalance\":\"0x0000000000000000000000000000000000000000000000000000037538f0f2ca\"}",
+          "block": 79450688
+        },
+        {
+          "chain": "robinhood",
+          "address": "0x44abc1d6ccff2696d98890b92e2157af242179c2",
+          "function": "complete marketIds(i)/expectedSupplyAssets(id); Morpho position(id,adapter); matched eth_getCode",
+          "value": "[{\"marketId\":\"0x919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7\",\"expectedSupplyAssets\":132542425053488,\"paramsRaw\":\"0x0000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d16800000000000000000000000040858070814a57fdf33a613ae84fe0a8b4a874f7000000000000000000000000152c638fad68913739ee19ba8ef47faeb09dca910000000000000000000000002bd3d5965b26b51814ac95127b2b80dd6ccc0fa10000000000000000000000000000000000000000000000000cb2bba6f17b8000\",\"position\":[131148250261094259078,0,0]},{\"marketId\":\"0xc845da65a020ddca5f132efa8fea79676d8edfdea504226a4c01e7a9e34cddd6\",\"expectedSupplyAssets\":349027384019934,\"paramsRaw\":\"0x0000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d1680000000000000000000000005d3a1ff2b6bab83b63cd9ad0787074081a52ef34000000000000000000000000e64849bd4ad03dfabbe02bb521de19997a19055f0000000000000000000000002bd3d5965b26b51814ac95127b2b80dd6ccc0fa10000000000000000000000000000000000000000000000000cb2bba6f17b8000\",\"position\":[345554521431502398160,0,0]},{\"marketId\":\"0x0309c02dabf0be02682af1a2bde9a457f4df0f0b6bc889cde3f948e5315e4114\",\"expectedSupplyAssets\":13175547770828,\"paramsRaw\":\"0x0000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d168000000000000000000000000de770c84fe66e063336b31737cfe9790f18c4087000000000000000000000000e694c531f65c4babc88a52d7178476e095e515740000000000000000000000002bd3d5965b26b51814ac95127b2b80dd6ccc0fa10000000000000000000000000000000000000000000000000cb2bba6f17b8000\",\"position\":[13067524354301269893,0,0]},{\"marketId\":\"0x1efd13a2d1dc66a2466e7c25820537028e604791f00454d9c686fdfbf70f404d\",\"expectedSupplyAssets\":32225074929124,\"paramsRaw\":\"0x0000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d168000000000000000000000000fed493f38c1aacb4ea4e6a11f8b9287849ee0096000000000000000000000000cb6edd02fdb9b0f2893e590ebed889214f4df6500000000000000000000000002bd3d5965b26b51814ac95127b2b80dd6ccc0fa10000000000000000000000000000000000000000000000000cb2bba6f17b8000\",\"position\":[32042423761522215645,0,0]},{\"marketId\":\"0x127353ba63e08f74d8e9ce8a1c2b41b5f89c7167135b1c09fbed34a71b4cb06b\",\"expectedSupplyAssets\":233547,\"paramsRaw\":\"0x0000000000000000000000005fc5360d0400a0fd4f2af552add042d716f1d1680000000000000000000000000bd7d308f8e1639fab988df18a8011f41eacad730000000000000000000000005e3645ed6ace5b212ad7cf51c75154897e2f80ad0000000000000000000000002bd3d5965b26b51814ac95127b2b80dd6ccc0fa10000000000000000000000000000000000000000000000000bef55718ad60000\",\"position\":[232241307391,0,0]}]",
+          "block": 79450688
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact verified vault executable",
+          "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all"
+        },
+        {
+          "label": "Exact verified sole adapter executable",
+          "url": "https://sourcify.dev/server/v2/contract/4663/0x44abc1d6ccff2696d98890b92e2157af242179c2?fields=all"
+        },
+        {
+          "label": "Pinned archive RPC",
+          "url": "https://api-robinhood-mainnet-archive.n.dwellir.com"
+        },
+        {
+          "label": "Steakhouse DeFi vault terms",
+          "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+        }
+      ]
+    },
+    {
+      "assetId": "susdx-axis",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2027-01-01",
+      "reviewer": "Unknown wave W1R63",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "At Ethereum block 26114911, the exact V2 proxy resolves to 0x1d8191c20c06c5628f1a977bc6d6afe7dd541cf2 and runtime bytecode matches the verified Blockscout implementation. The complete vault source and ERC4626 inheritance hold USDx locally: no strategy, lending, approval or borrowing surface; funded rewards and pending/claimable redemption buckets remain in-vault. USDx balance equals requiredAssets including every bucket, not totalAssets alone. rescueTokens can move only unrelated tokens or USDx surplus. This is contract-local custody/reuse proof only; USDx offchain venue/hedge custody stays upstream, and upgrade, restriction and privileged servicing risks are retained.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xeb892628d1e58bc475a6dcb7f5dbc4f591632aa4",
+          "function": "asset()/totalAssets()/getVaultState()/USDx.balanceOf(vault)/EIP1967 implementation",
+          "value": "asset=0xa1fa7777974312f7d801a8880714a218f76233f8; implementation=0x1d8191c20c06c5628f1a977bc6d6afe7dd541cf2; totalAssets=39015027241547914633100010; USDx balance=requiredAssets=40738539091023113803933058; pending=1702985576228196866250572; claimable=8898773247002304514680; solvent=true; deployed implementation runtime matches verified source",
+          "block": 26114911
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact verified StakedUSDx implementation and complete inherited sources",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1d8191c20c06c5628f1a977bc6d6afe7dd541cf2"
+        },
+        {
+          "label": "Issuer V2 single-asset and in-vault accounting description",
+          "url": "https://docs.axis.to/reference/staking-contracts.md"
+        },
+        {
+          "label": "Pinned Ethereum state",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Pinned Ethereum block",
+          "url": "https://etherscan.io/block/26114911"
+        }
+      ]
+    },
+    {
+      "assetId": "krusdc-keyrock",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R65 exact-runtime and whole-adapter pinned review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "mixed-overcollateralized-lending",
+      "rationale": "At Arc block 24125299 the complete one-adapter roster holds one cirBTC/USDC Morpho supply position. Idle USDC is zero and adapter realAssets=expectedSupplyAssets=totalAssets=75014198155132. Borrow shares and collateral are zero. Exact vault and adapter executable runtimes match Sourcify recompiled references outside compiler-declared immutable slots and CBOR metadata. Full source has no local borrow/collateral-entry path; lending and underlying collateral/USDC custody risks remain, with mutable future allocation policy not claimed safe or immutable.",
+      "observations": [
+        {
+          "chain": "arc",
+          "address": "0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123",
+          "function": "adaptersLength()/adapters(0)/totalAssets()/USDC.balanceOf(vault)",
+          "value": "1/0x6adc3de83e00c4a74fda9403043828b831d0f5c3; totalAssets=75014198155132; idle=0",
+          "block": 24125299
+        },
+        {
+          "chain": "arc",
+          "address": "0x6adc3de83e00c4a74fda9403043828b831d0f5c3",
+          "function": "parentVault()/marketIdsLength()/realAssets()/expectedSupplyAssets(bytes32)",
+          "value": "parentVault=0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123; markets=1; marketId=0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d; realAssets=expectedSupplyAssets=75014198155132",
+          "block": 24125299
+        },
+        {
+          "chain": "arc",
+          "address": "0x34cd04070dd72b14e241112f6d83812df5af7fcd",
+          "function": "position(bytes32,address)/idToMarketParams(bytes32)",
+          "value": "Adapter position supplyShares=74986583020004418199; borrowShares=0; collateral=0; loan=USDC; collateral=cirBTC; LLTV=860000000000000000",
+          "block": 24125299
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact vault listing",
+          "url": "https://app.morpho.org/arc/vault/0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123"
+        },
+        {
+          "label": "Pinned Arc complete roster/accounting and code reads",
+          "url": "https://rpc.mainnet.arc.io"
+        },
+        {
+          "label": "Verified VaultV2 compiler reference",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
+        },
+        {
+          "label": "Verified Morpho adapter compiler reference",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x812b71c33ae5eafebae967c5670e37eca3cab0ac?fields=sources,compilation,runtimeBytecode"
+        }
+      ]
+    },
+    {
+      "assetId": "ussd-sonic-labs",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R81 pinned Sonic direct-reserve allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "The direct reserve envelope is solely Sonic frxUSD in the native BrandedCustodian. At block 80306692 its totalAssets equals actual idle frxUSD balance and native USSD totalSupply at 970845213627100913413464 base units. Full verified implementation review shows fixed-rate accounting and deposit/burn/transfer paths, with no local borrowing or lending surface. Owner recovery and isolation activation remain adverse claim controls. Parent custody/reuse and remote bridge/issuance risks remain inherited or separately scored.",
+      "observations": [
+        {
+          "chain": "sonic",
+          "address": "0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03",
+          "function": "totalAssets()/custodianTkn()/brandedStablecoin()/isolatedBackingEnabled()/router()/individualCustodian()/mintFee()/redeemFee()/pricePerShare()",
+          "value": "assets=970845213627100913413464; asset=0x80eede496655fb9047dd39d9f418d5483ed600df; token=0x000000000eccff26b795f73fb0a70d48da657fef; isolated=false; router=0; individualCustodian=0; fees=0; pricePerShare=1000000000000000000",
+          "block": 80306692
+        },
+        {
+          "chain": "sonic",
+          "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+          "function": "balanceOf(0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03)",
+          "value": "970845213627100913413464",
+          "block": 80306692
+        },
+        {
+          "chain": "sonic",
+          "address": "0x000000000eccff26b795f73fb0a70d48da657fef",
+          "function": "totalSupply()",
+          "value": "970845213627100913413464",
+          "block": 80306692
+        },
+        {
+          "chain": "sonic",
+          "address": "0x251d07287c12707418a414b2c95436b4216b7bf4",
+          "function": "implementation()",
+          "value": "0xd2478f5db285e7d4f1a260c9f142168124d02370",
+          "block": 80306692
+        }
+      ],
+      "sources": [
+        {
+          "label": "Full verified BrandedCustodian implementation",
+          "url": "https://sonicscan.org/address/0xD2478F5db285e7d4f1a260C9f142168124d02370#code"
+        },
+        {
+          "label": "Native proxy and beacon",
+          "url": "https://sonicscan.org/address/0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03#code"
+        },
+        {
+          "label": "Frax branded custody specification",
+          "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian"
+        },
+        {
+          "label": "Pinned Sonic RPC",
+          "url": "https://rpc.soniclabs.com"
+        }
+      ]
+    },
+    {
+      "assetId": "sgho-aave",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "Unknown-wave W2R15",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "At Ethereum block 26115189 the sGHO implementation slot is 0xff229a0bbb614a284de8ae0e41e5974878fd7c04 and its deployed runtime exactly matches verified sGho source (sha256:e423396300f91cac63610a024c9475f19c840bf5f21f1025807425c13164c190). asset() is canonical GHO; all accrued share liabilities total 169328708290748641117422971 base units and idle GHO balance is 169571243167769586626153497, covering the full claim with surplus. The complete current source has no strategy, borrowing or reuse methods; underlying GHO rescue is prohibited by maxRescue. Funding of accrued yield is onchain idle GHO, not an inferred offchain receivable. Proxy upgrade/role powers remain separately scored; no legal segregation or remoteness is asserted.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xe1753f2e00940cc31213dd92013cf019dfe4ca1d",
+          "function": "ERC1967 implementation/asset()/totalAssets()/GHO.balanceOf(vault)",
+          "value": "implementation=0xff229a0bbb614a284de8ae0e41e5974878fd7c04; asset=0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f; totalAssets=169328708290748641117422971; idleGHO=169571243167769586626153497; blockHash=0x421e3fd830afb34692ec64b834a8cf78e19206dd4c248416e2ebfdadbd94c47a",
+          "block": 26115189
+        }
+      ],
+      "sources": [
+        {
+          "label": "Verified sGho implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xff229a0bbb614a284de8ae0e41e5974878fd7c04"
+        },
+        {
+          "label": "Verified transparent proxy",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe1753f2e00940cc31213dd92013cf019dfe4ca1d"
+        },
+        {
+          "label": "Aave sGHO mechanism",
+          "url": "https://aave.com/docs/ecosystem/gho/sgho"
+        },
+        {
+          "label": "Dwellir Ethereum archive RPC (block 26115189)",
+          "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
         }
       ]
     }

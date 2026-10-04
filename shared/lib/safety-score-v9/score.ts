@@ -598,7 +598,7 @@ export function scoreV9EvaluatedAsset(
     ),
   ]);
   const measuredPillarAdverseAttribution = PILLAR_KEYS.flatMap(
-    (pillar) => input.pillars[pillar].adverseAttribution ?? [],
+    (pillar) => input.pillars[pillar].score === null ? [] : input.pillars[pillar].adverseAttribution ?? [],
   );
   const wrapperAttribution = wrapperLocalAttribution(input.parent.wrapperParentLimit);
   const scoringInput = projectV9ScoringInput(

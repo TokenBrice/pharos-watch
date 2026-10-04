@@ -2,8 +2,8 @@
   "id": "cumiu-chinaamc",
   "reserves": [
     {
-      "name": "Investment-grade money-market securities and certificates of deposit",
-      "pct": 45.3087,
+      "name": "Other Money Market Instrument",
+      "pct": 63.54,
       "risk": "medium",
       "assetClass": "other",
       "riskFactors": [
@@ -16,8 +16,8 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "USD sub-fund time deposits",
-      "pct": 48.3006,
+      "name": "Time Deposit",
+      "pct": 24.71,
       "risk": "low",
       "assetClass": "bank-deposit",
       "riskFactors": [
@@ -28,8 +28,8 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "USD sub-fund cash and bank balances",
-      "pct": 6.0251,
+      "name": "Cash and Cash Equivalent",
+      "pct": 11.75,
       "risk": "low",
       "assetClass": "cash",
       "riskFactors": [
@@ -37,22 +37,11 @@
         "custody"
       ],
       "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Other receivables and prepayments",
-      "pct": 0.3656,
-      "risk": "medium",
-      "assetClass": "other",
-      "riskFactors": [
-        "counterparty",
-        "liquidity"
-      ],
-      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W2R14 primary factsheet correction review",
     "confidence": "verified",
     "sources": [
       {
@@ -72,115 +61,71 @@
         "url": "https://www.chinaamc.com.hk/detail?fundId=USDDMMF&fundName=ChinaAMC-USD-Digital-Money-Market-Fund-%28Tokenized-Unlisted-Class%29&lan=EN"
       }
     ],
-    "rationale": "Weights use the complete USD sub-fund June 30 unaudited asset denominator of USD 603,917,339: financial assets 273,627,114, time deposits 291,695,739, cash/bank 36,386,722, other receivables/prepayments 2,207,764. Rounded percentages total 100. These shared sub-fund assets back Class I alongside other classes; they are not CUMIU token supply or current NAV.",
-    "compositionBasis": "Unaudited June 30 USD sub-fund asset-category balance sheet, not October holdings",
-    "compositionAsOf": "2026-06-30",
+    "rationale": "The issuer's August 31 factsheet page 2 gives the complete asset-class allocation: Other Money Market Instrument 63.54%, Time Deposit 24.71%, Cash and Cash Equivalent 11.75%, totaling 100.00%. These are pooled USD sub-fund category weights backing Class I and other share classes, not token supply or an independently audited Class I-only denominator. Existing June accounts and October top-ten observations remain historical corroboration, not the source of these refreshed weights.",
+    "compositionBasis": "Issuer August 31, 2026 full portfolio asset-class allocation chart",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
     "observations": [
       {
-        "scopeId": "cumiu-usd-subfund-june-2026-portfolio",
+        "scopeId": "cumiu-usd-subfund-august-2026-allocation",
         "liabilityBookKey": "chinaamc-usd-subfund-all-share-classes",
         "deploymentRefs": [
           "ethereum:0x85d38585c3ac08268f598282a84b7c0ddfc0d04f"
         ],
-        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "reviewer": "W2R14 primary factsheet correction review",
         "confidence": "verified",
         "sources": [
           {
-            "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/ChinaAMCDigitalOFC-InterimReport20260630Final(Clean)_cover_1787921459710.pdf",
-            "accessedAtSec": 1790983017,
-            "sha256": "405593172238852d552b317bb365c8bc1e044fb2efc46ffb8b0e2e74444ddaf9"
+            "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/Factsheet_USDDTMMF_20260831_EN_1789617629732.pdf",
+            "accessedAtSec": 1791071248,
+            "sha256": "f164b0559eb5562f46568c23d3f48371445f016eb501f4e92caea159cd74614d"
           }
         ],
-        "reviewedAtSec": 1790983017,
-        "expiresAtSec": 1794266217,
-        "sourceGeneration": "chinaamc-usd-june-2026-interim:405593172238852d552b317bb365c8bc1e044fb2efc46ffb8b0e2e74444ddaf9",
-        "sourceSha256": "405593172238852d552b317bb365c8bc1e044fb2efc46ffb8b0e2e74444ddaf9",
-        "completeness": "partial",
+        "reviewedAtSec": 1791071248,
+        "expiresAtSec": 1794354448,
+        "sourceGeneration": "chinaamc-usd-august-2026-factsheet:f164b0559eb5562f46568c23d3f48371445f016eb501f4e92caea159cd74614d",
+        "sourceSha256": "f164b0559eb5562f46568c23d3f48371445f016eb501f4e92caea159cd74614d",
+        "completeness": "complete",
         "obligations": [
           {
-            "key": "whole-usd-subfund-gross-assets",
+            "key": "whole-subfund-asset-class-allocation",
             "disposition": "included",
-            "reason": "Unaudited June 30 balance sheet discloses all gross asset categories totaling USD 603917339; reported portfolio date remains June 30, not this retrieval date."
-          },
-          {
-            "key": "current-class-i-liability-join",
-            "disposition": "unresolved",
-            "reason": "June whole-subfund assets include multiple share classes and do not establish a current CUMIU-only liability denominator or independent financial assurance."
+            "reason": "Page 2 chart reports the full August 31 pooled USD sub-fund asset-class denominator: Time Deposit 24.71%, Other Money Market Instrument 63.54%, Cash and Cash Equivalent 11.75%, totaling 100.00% without normalization. The factsheet lists Class I USD alongside the other participating classes. This obligation covers category composition only, not constituent look-through or token-to-share financial reconciliation."
           }
         ],
         "kind": "portfolio-observation",
-        "observedAtSec": 1782777600,
+        "observedAtSec": 1788134400,
         "wholeAssetDenominator": {
-          "amount": "603917339",
-          "asOfSec": 1782777600,
-          "unitBasis": "USD gross assets of ChinaAMC USD sub-fund, all share classes",
-          "sourceSha256": "405593172238852d552b317bb365c8bc1e044fb2efc46ffb8b0e2e74444ddaf9"
+          "amount": "564330000",
+          "asOfSec": 1788134400,
+          "unitBasis": "USD pooled sub-fund fund size, all share classes, reported rounded to USD millions",
+          "sourceSha256": "f164b0559eb5562f46568c23d3f48371445f016eb501f4e92caea159cd74614d"
         }
-      },
-      {
-        "scopeId": "cumiu-usd-subfund-october-2026-top-ten",
-        "liabilityBookKey": "chinaamc-usd-subfund-all-share-classes",
-        "deploymentRefs": ["ethereum:0x85d38585c3ac08268f598282a84b7c0ddfc0d04f"],
-        "reviewer": "Refine04 primary-source review",
-        "confidence": "verified",
-        "sources": [{
-          "url": "https://www.chinaamc.com.hk/detail?fundId=USDDMMF&fundName=ChinaAMC-USD-Digital-Money-Market-Fund-%28Tokenized-Unlisted-Class%29&lan=EN",
-          "accessedAtSec": 1791011581,
-          "sha256": "df99652d93088a6aab77a651f2a445e40e5833b370e7c765e7e85b5f03f93982"
-        }],
-        "reviewedAtSec": 1791011581,
-        "expiresAtSec": 1791616381,
-        "sourceGeneration": "chinaamc-rendered-top-ten:df99652d93088a6aab77a651f2a445e40e5833b370e7c765e7e85b5f03f93982",
-        "sourceSha256": "df99652d93088a6aab77a651f2a445e40e5833b370e7c765e7e85b5f03f93982",
-        "completeness": "partial",
-        "obligations": [
-          {
-            "key": "published-top-ten",
-            "disposition": "included",
-            "reason": "Issuer table dated October 2, 2026 reports Credit Agricole CIB 23.85%, Standard Chartered HK bank cash 16.86%, UOB HK 8.71%, United Overseas Bank 5.33%, Huatai International Finance 5.29%, Bocom Leasing 3.51%, CSCIF HK 2.69%, ICBC Singapore 2.36%, China Cinda 2.16% and SMBC HK term deposit 1.79%. Published total is 72.54%; individually rounded rows sum to 72.55%. No normalization or inferred instrument identity is applied."
-          },
-          {
-            "key": "unpublished-portfolio-tail",
-            "disposition": "unresolved",
-            "reason": "The published top-ten total leaves 27.46% unidentified. This partial portfolio observation does not replace the full June balance-sheet composition or establish current Class I liability reconciliation. SHA-256 pins the rendered UTF-8 body text read, with a seven-day observation budget."
-          }
-        ],
-        "kind": "portfolio-observation",
-        "observedAtSec": 1790899200,
-        "wholeAssetDenominator": null
       }
     ],
-    "knownUnknownExposure": "June category weights remain historical. The issuer's October 2 top-ten table covers a stated 72.54%, with 27.46% unidentified; named holdings include 16.86% bank cash and 23.85% Credit Agricole CIB exposure. This partial table does not provide a complete current category composition. August WAM 50.85 days is an average, not maximum tenor. Current complete Class I token-to-fund liability reconciliation and exact distributor custody shares remain unestablished.",
-    "knownUnknownExposurePct": 45.6743,
+    "knownUnknownExposure": "August category weights are complete, but do not identify all obligors or constituent instruments within Other Money Market Instrument (63.54%). The prior June 30 unaudited accounts cover pooled gross assets of USD 603917339, not current token liabilities. The separately dated October 2 top-ten table covers 72.54%, with 27.46% unidentified: Credit Agricole CIB 23.85%, Standard Chartered HK bank cash 16.86%, UOB HK 8.71%, United Overseas Bank 5.33%, Huatai International Finance 5.29%, Bocom Leasing 3.51%, CSCIF HK 2.69%, ICBC Singapore 2.36%, China Cinda 2.16% and SMBC HK term deposit 1.79%. Rounded October rows sum to 72.55%; no normalization, inferred instrument identity or transplantation into August weights is applied. The active composition observation supersedes those historical partial observations only for the category denominator. August WAM 50.85 days is an average, not maximum tenor. Class I token-to-fund liability reconciliation and exact distributor custody shares remain unestablished.",
+    "knownUnknownExposurePct": 63.54,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Investment-grade money-market securities and certificates of deposit",
-        "pct": 45.3087,
+        "reserveName": "Other Money Market Instrument",
+        "pct": 63.54,
         "disposition": "basket-needs-split",
-        "rationale": "Financial statement category lacks current constituent weights."
+        "rationale": "Issuer factsheet category discloses its complete weight but not constituent instrument or obligor weights."
       },
       {
         "reserveIndex": 1,
-        "reserveName": "USD sub-fund time deposits",
-        "pct": 48.3006,
+        "reserveName": "Time Deposit",
+        "pct": 24.71,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Off-chain sub-fund accounting asset category is not a tracked stablecoin."
       },
       {
         "reserveIndex": 2,
-        "reserveName": "USD sub-fund cash and bank balances",
-        "pct": 6.0251,
+        "reserveName": "Cash and Cash Equivalent",
+        "pct": 11.75,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Off-chain sub-fund accounting asset category is not a tracked stablecoin."
-      },
-      {
-        "reserveIndex": 3,
-        "reserveName": "Other receivables and prepayments",
-        "pct": 0.3656,
-        "disposition": "insufficient-evidence",
-        "rationale": "Receivable counterparties and current recoverability are not identified sufficiently to classify this exposure; the historical accounting category alone is not a resolved reserve asset."
       }
     ]
   },

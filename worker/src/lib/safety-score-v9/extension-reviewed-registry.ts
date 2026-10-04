@@ -12,7 +12,12 @@ export class ReviewedRegistryEntryError extends Error {
   }
 }
 
-/** Index only attribution and key collisions; evidence is admitted on the asset's first read. */
+/**
+ * Index only attribution and key collisions; evidence is admitted on the asset's first read.
+ * An admitted row whose parse output is byte-identical (same keys, order, and values) to the
+ * authored row reuses the authored object instead of caching a second, schema-built copy of
+ * every entry for the isolate's lifetime.
+ */
 export function createReviewedAssetRegistry<T>(args: {
   rows: readonly AttributedRow[];
   schema: z.ZodType<T>;
@@ -53,7 +58,7 @@ export function createReviewedAssetRegistry<T>(args: {
         const path = [args.path, index, ...issue.path].join(".");
         throw new ReviewedRegistryEntryError(path, parsed.error.issues.map((failure) => `${[args.path, index, ...failure.path].join(".")}: ${failure.message}`).join("; "));
       }
-      return parsed.data;
+      return JSON.stringify(parsed.data) === JSON.stringify(row) ? row as T : parsed.data;
     });
     validated.set(assetId, rows);
     return rows;

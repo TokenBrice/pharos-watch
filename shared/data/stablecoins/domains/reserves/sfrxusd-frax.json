@@ -64,16 +64,20 @@
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Unknown wave W1R93 primary-source review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Frax sfrxUSD documentation",
         "url": "https://docs.frax.com/protocol/assets/frxusd/sfrxusd"
+      },
+      {
+        "label": "Frax FIP-434 strategy mandate and capital-reuse permissions",
+        "url": "https://gov.frax.finance/t/fip-434-sfrxusd-amo-deployments-future-strategies/3786"
       }
     ],
-    "uncertainty": "The reviewed Frax sfrxUSD documentation lists carry-trade, DeFi, and Treasury venues, but does not disclose current venue allocation or enforceable segregation, bankruptcy-remoteness, or rehypothecation terms for the sfrxUSD strategy-position claim."
+    "uncertainty": "Frax's current sfrxUSD documentation permits allocation of staked frxUSD to DeFi lending venues; FIP-434 explicitly includes borrowing reUSD against lending positions and stablecoins against collateral. Capital reuse is therefore permitted, not absent. This does not measure current use, allocation, or leverage. Current venue-level legal segregation and bankruptcy-remoteness remain unverified; frxUSD issuer terms cannot be inherited as wrapper-local safeguards."
   }
 }

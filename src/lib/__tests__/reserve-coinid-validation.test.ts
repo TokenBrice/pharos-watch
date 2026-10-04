@@ -25,10 +25,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "Untracked Steakhouse USDC Morpho V1 vault shares (0xbeef01735c132ada46aa9aa4c54623caa92a64cb); USDC is the underlying candidate only, and the tracked steakUSDC is the V2 token.",
   ],
   [
-    "spusd-soulpeg::USDC routed through Venus lending markets (via soul-bound sUSDC)::USDC",
-    "D5: bridge/intermediary unverified; withheld as insufficient-evidence (ResearchE, 2026-09-30).",
-  ],
-  [
     "aid-gaib::USDT held by the BNB Chain AID minter contract::USDT",
     "D5: bridge/intermediary unverified; withheld as insufficient-evidence (ResearchE, 2026-09-30).",
   ],

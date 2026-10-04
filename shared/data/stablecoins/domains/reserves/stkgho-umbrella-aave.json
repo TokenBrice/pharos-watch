@@ -7,12 +7,13 @@
       "pct": 100,
       "risk": "high",
       "coinId": "gho-aave",
-      "depType": "wrapper"
+      "depType": "wrapper",
+      "liquidityHorizon": "over-seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB01USDU)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W1R87 exact Umbrella liquidity review",
     "confidence": "verified",
     "sources": [
       {
@@ -30,9 +31,13 @@
       {
         "label": "Verified deployed Umbrella implementation and deficit-slashing controls",
         "url": "https://sourcify.dev/server/v2/contract/1/0x929e21d24d3f2a529621adc248d227012b72646d?fields=sources,abi"
+      },
+      {
+        "label": "Aave Umbrella unstaking: 20-day cooldown and two-day window",
+        "url": "https://www.aave.com/docs/aave-v3/umbrella"
       }
     ],
-    "rationale": "The single-asset GHO wrapper was re-confirmed at Ethereum block 26098749: asset() is canonical GHO, and its GHO balance exactly equals totalAssets(). The deployed implementation has deposit/withdrawal accounting and no borrowing or external lending strategy; underlying-token rescue is limited to balance minus accounted assets and maxRescue(GHO) is zero. The vault owner is Umbrella 0xd400fc38ed4732893174325693a63c30ee3881a8, whose GHO slashing configuration covers the Ethereum Core Pool only. Staked principal is loss-absorption capital: automated deficit slashing can reduce redeemable value. The 100% slice describes underlying identity, not absence of loss risk.",
+    "rationale": "The single-asset GHO wrapper was re-confirmed at Ethereum block 26098749: asset() is canonical GHO, and its GHO balance exactly equals totalAssets(). The deployed implementation has deposit/withdrawal accounting and no borrowing or external lending strategy; underlying-token rescue is limited to balance minus accounted assets and maxRescue(GHO) is zero. The vault owner is Umbrella 0xd400fc38ed4732893174325693a63c30ee3881a8, whose GHO slashing configuration covers the Ethereum Core Pool only. Staked principal is loss-absorption capital: automated deficit slashing can reduce redeemable value. The 100% slice describes underlying identity, not absence of loss risk. W1R87 reviewed the official unstaking terms on 2026-10-03: withdrawal requires a 20-day cooldown followed by a two-day withdrawal window; funds remain slashable and a missed window requires restarting cooldown. The whole staked position therefore has an over-seven-days liquidity horizon, not immediate liquidity or a guaranteed maximum final settlement time. Existing composition and pinned observations are preserved, not refreshed.",
     "compositionBasis": "Standing single-asset ERC-4626 wrapper structure, confirmed by pinned asset() at Ethereum block 26095800",
     "compositionAsOf": "2026-10-01",
     "scope": "full-composition",

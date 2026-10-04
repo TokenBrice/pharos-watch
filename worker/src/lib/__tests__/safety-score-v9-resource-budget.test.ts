@@ -199,6 +199,12 @@ describe("Safety Score V9 canonical publication resource budget", {
       target: "node24",
       tsconfig: join(ROOT, "tsconfig.json"),
       logLevel: "silent",
+      // Mirror the Worker's zod: v4 never JIT-compiles schemas under a Cloudflare userAgent
+      // (zod 4.5.4 src/v4/core/util.ts:411 `allowsEval` returns false; schemas.ts:2272-2275
+      // gate `fastpass` on it), but Node would eval ~12 MiB of fastpass code and closures
+      // that the isolate never holds. Pre-populating zod's global config before any schema
+      // module loads (src/v4/core/core.ts:212-227) disables the same JIT here.
+      banner: { js: "globalThis.__zod_globalConfig = { jitless: true };" },
     });
   });
 

@@ -18,9 +18,11 @@ import { normalizeFixedInput } from "../report-cards-fixed-input";
 import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 
 import type { ReserveSlice } from "@shared/types/reserves";
+import { ReserveBoundedFactSchema, type ReserveBoundedFact } from "@shared/types/reserve-bounded-facts";
 import { evaluateV9ReserveExposures } from "@shared/lib/safety-score-v9/backing";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { V9AssetFactsV3Schema } from "@shared/types/safety-score-v9-facts";
+import { refineV9CauseContribution } from "@shared/types/safety-score-v9-causes";
 vi.mock("@shared/data/safety-score-v9/evidence-gap-classifications-v1.json", () => ({
   default: { schemaVersion: 1, entries: [
     {
@@ -42,6 +44,16 @@ vi.mock("@shared/data/safety-score-v9/evidence-gap-classifications-v1.json", () 
         assertion: "The required itemized composition is not published in the reviewed report." }],
       searchedSurfaces: ["https://example.com/usdt-report"], rationale: "The current report does not itemize the required holdings.",
     },
+    ...[["reserve:d9ea3402f80c2eba4fa0b228", "fixture-uncurated-maturity"], ["reserve:f56e5d5418b2b742f60e9dd0", "fixture-uncurated-mixed-maturity"]]
+      .map(([exposureId, id]) => ({
+        id, assetId: "alpha", cause: "B", assertion: "required-data-public",
+        scope: { pillar: "backing", componentKey: "reserve-exposure", factorKey: "maturity",
+          routeKey: null, exposureId, requiredDatum: "maturityDaysMax" },
+        reviewedAt: "1970-01-01T01:00:00Z", reviewer: "fixture-curator",
+        sources: [{ url: "https://example.com/alpha-maturity", observedAt: "1970-01-01T01:00:00Z",
+          datumAsOf: "1970-01-01T01:00:00Z", location: "holdings maturity table",
+          excerpt: "Every deposit's maximum term is listed.", assertion: "The exact required maturity datum is public." }],
+      })),
   ] },
 }));
 const ASSET_ID = "alpha";
@@ -212,14 +224,17 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
     }
   });
 
-  it("does not hide unknown reserve factors behind a known whole row", () => {
+  function compileSingleReserve(row: Partial<ReserveSlice>) {
     const fixed = makeV9FixedInput({ reserves: [{
-      sourceKey: "fixture:cash", name: "Cash", pct: 100, risk: "very-low", assetClass: "cash",
-      liquidityHorizon: "unknown", issuerOrObligor: "custodian:alpha",
+      sourceKey: "fixture:holding", name: "Holding", pct: 100, risk: "very-low", issuerOrObligor: "custodian:alpha", ...row,
     }] });
-    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, makeV9Extension({
+    return compileSafetyScoreV9FactSetFromFixedInput(fixed, makeV9Extension({
       registryFingerprint: fixed.registryFingerprint,
     })).assets[0]!;
+  }
+
+  it("does not hide unknown reserve factors behind a known whole row", () => {
+    const asset = compileSingleReserve({ assetClass: "bank-deposit", liquidityHorizon: "unknown" });
     const exposure = asset.reserveExposures[0]!;
     expect(exposure.status.observationState).toBe("known");
     for (const [factorKey, requiredDatum] of [["liquidity", "liquidityHorizon"], ["maturity", "maturityDaysMax"]] as const) {
@@ -232,6 +247,140 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
     expect(asset.reserveResiduals).toEqual([]);
     expect(exposure.weight).toBe(1);
   });
+
+  it.each(V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.maturityNotApplicableClasses)(
+    "publishes maturity as not-applicable, not a researchable gap, for admitted %s reserves", (assetClass) => {
+      const asset = compileSingleReserve({ assetClass, liquidityHorizon: "immediate" });
+      const exposure = asset.reserveExposures[0]!;
+      expect(exposure.factorStatuses!.maturity).toMatchObject({
+        observationState: "known", gapIds: [], applicability: { state: "not-applicable" },
+      });
+      expect(asset.gaps.filter((gap) => gap.causeScope?.requiredDatum === "maturityDaysMax")).toEqual([]);
+      expect(V9AssetFactsV3Schema.safeParse(asset).success).toBe(true);
+      // The policy still scores the factor at its best rung, so it remains an included contribution.
+      const backing = evaluateV9ReserveExposures({ ...asset, resolvedUpstreamExposures: [] }, V9_CANDIDATE_POLICY_V1);
+      const factor = backing.contributions.find(entry => entry.componentKey === `reserve:${exposure.exposureKey}`)!
+        .factors!.find(entry => entry.componentKey === `reserve:${exposure.exposureKey}:maturity`)!;
+      expect(factor).toMatchObject({ cause: null, causeGapIds: [], scoringDisposition: "included" });
+      expect(factor.score).toBeGreaterThan(0);
+      expect(factor.effectiveScoringWeight).toBeGreaterThan(0);
+    });
+
+  it.each([
+    { label: "maturity-applicable class", assetClass: "bank-deposit" as const },
+    { label: "unadmitted class", assetClass: undefined },
+  ])("keeps the unknown maturity gap for a $label", ({ assetClass }) => {
+    const asset = compileSingleReserve({ ...(assetClass === undefined ? {} : { assetClass }), liquidityHorizon: "immediate" });
+    const exposure = asset.reserveExposures[0]!;
+    expect(exposure.assetClass).toBe(assetClass ?? null);
+    const status = exposure.factorStatuses!.maturity!;
+    expect(status.applicability.state).toBe("required");
+    const gap = asset.gaps.find((row) => row.gapId === status.gapIds[0])!;
+    expect(gap.causeProof.cause).toBe("U");
+    expect(gap.causeScope).toMatchObject({ factorKey: "maturity", requiredDatum: "maturityDaysMax" });
+  });
+
+  function maturityApplicability(overrides: Record<string, unknown> = {}): ReserveBoundedFact {
+    return ReserveBoundedFactSchema.parse({
+      factKey: "fixture:maturity-applicability", kind: "maturity-applicability",
+      scope: { kind: "exposure", exposureKey: "fixture:holding" }, asOfSec: NO_HISTORY_CLOCK_SEC - 2 * 86_400,
+      publisher: "issuer", sourceUrls: ["https://example.com/prospectus"], assertion: "Open-ended shares have no maturity date",
+      contentDigest: "a".repeat(64), provenance: { kind: "reviewed-research", reviewer: "fixture", reviewedAt: "2026-07-30", confidence: "high" },
+      claimId: "fund-share", conclusion: "not-applicable", governingInstrument: "Fund prospectus", allInScope: true, ...overrides,
+    });
+  }
+  function compileWithMaturityBound(fact: ReserveBoundedFact) {
+    const fixed = makeV9FixedInput({ clockSec: NO_HISTORY_CLOCK_SEC, reserves: [{
+      sourceKey: "fixture:holding", name: "Holding", pct: 100, risk: "low", issuerOrObligor: "fund:alpha",
+      assetClass: "fund-share", liquidityHorizon: "immediate",
+    }] });
+    const extension = makeV9Extension({ clockSec: NO_HISTORY_CLOCK_SEC, registryFingerprint: fixed.registryFingerprint });
+    extension.assets[0]!.reserveBoundFacts = [fact];
+    return compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+  }
+
+  it("publishes maturity as not-applicable when an admitted whole-exposure bound fact concludes so", () => {
+    const asset = compileWithMaturityBound(maturityApplicability());
+    const exposure = asset.reserveExposures[0]!;
+    expect(asset.reserveBoundFacts![0]!.rejectionReason).toBeNull();
+    expect(exposure.factorStatuses!.maturity).toMatchObject({
+      observationState: "known", gapIds: [], applicability: { state: "not-applicable" },
+    });
+    expect(exposure.factorStatuses!.maturity!.evidenceRefIds).toContain("alpha:reserve-bound:fixture:maturity-applicability");
+    expect(asset.gaps.filter((gap) => gap.causeScope?.requiredDatum === "maturityDaysMax")).toEqual([]);
+    expect(V9AssetFactsV3Schema.safeParse(asset).success).toBe(true);
+    // The evaluator still covers the whole factor with the admitted bound at 100.
+    const backing = evaluateV9ReserveExposures({ ...asset, resolvedUpstreamExposures: [], asOfSec: NO_HISTORY_CLOCK_SEC }, V9_CANDIDATE_POLICY_V1);
+    const factors = backing.contributions.find(entry => entry.componentKey === `reserve:${exposure.exposureKey}`)!.factors!
+      .filter(entry => entry.componentKey.startsWith(`reserve:${exposure.exposureKey}:maturity`));
+    expect(factors).toEqual([expect.objectContaining({
+      componentKey: `reserve:${exposure.exposureKey}:maturity:covered`, score: 100, cause: null, scoringDisposition: "included",
+    })]);
+  });
+
+  it.each([
+    { label: "an unelapsed review day", fact: () => maturityApplicability({ provenance: { kind: "reviewed-research", reviewer: "fixture", reviewedAt: "2026-08-01", confidence: "high" } }) },
+    { label: "an expired snapshot", fact: () => maturityApplicability({ asOfSec: NO_HISTORY_CLOCK_SEC - 400 * 86_400 }) },
+    { label: "a partial-scope conclusion", fact: () => maturityApplicability({ allInScope: false }) },
+    { label: "a sub-instrument scope", fact: () => maturityApplicability({ scope: { kind: "sub-instrument", exposureKey: "fixture:holding",
+      instrumentId: "class-a", coveredShare: 0.5, coverageAsOfSec: NO_HISTORY_CLOCK_SEC - 2 * 86_400 } }) },
+    { label: "a non-matching exposure key", fact: () => maturityApplicability({ scope: { kind: "exposure", exposureKey: "fixture:other" } }) },
+  ])("keeps the unknown maturity gap for $label", ({ fact }) => {
+    const asset = compileWithMaturityBound(fact());
+    const status = asset.reserveExposures[0]!.factorStatuses!.maturity!;
+    expect(status.applicability.state).toBe("required");
+    const gap = asset.gaps.find((row) => row.gapId === status.gapIds[0])!;
+    expect(gap.causeProof.cause).toBe("U");
+    expect(gap.causeScope).toMatchObject({ factorKey: "maturity", requiredDatum: "maturityDaysMax" });
+  });
+
+  function scoredContributionIssues(row: Parameters<typeof refineV9CauseContribution>[0]): string[] {
+    const issues: string[] = [];
+    refineV9CauseContribution(row, { addIssue: (issue) => { issues.push(typeof issue === "string" ? issue : String(issue.message)); } });
+    return issues;
+  }
+
+  it("publishes a B reserve factor as excluded-uncurated without failing its row or concentration", () => {
+    const fixed = makeV9FixedInput({ reserves: [
+      { sourceKey: "fixture:uncurated-b", name: "Curated-later deposit", pct: 40, risk: "very-low",
+        assetClass: "bank-deposit", liquidityHorizon: "immediate", issuerOrObligor: "bank:alpha" },
+      { sourceKey: "fixture:uncurated-mixed", name: "Mixed deposit", pct: 35, risk: "very-low",
+        assetClass: "bank-deposit", liquidityHorizon: "unknown", issuerOrObligor: "bank:beta" },
+      { sourceKey: "fixture:unresearched-u", name: "Unresearched deposit", pct: 25, risk: "very-low",
+        assetClass: "bank-deposit", liquidityHorizon: "immediate", maturityDaysMax: 30, issuerOrObligor: "bank:gamma" },
+    ] });
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, makeV9Extension({
+      registryFingerprint: fixed.registryFingerprint,
+    })).assets[0]!;
+    const backing = evaluateV9ReserveExposures({ ...asset, resolvedUpstreamExposures: [] }, V9_CANDIDATE_POLICY_V1);
+    const row = (sourceKey: string) => backing.contributions.find(entry =>
+      entry.componentKey === `reserve:${computeSafetyScoreV9ReserveExposureKey({ sourceKey, name: "x", pct: 1, risk: "low" })}`)!;
+    const reserve = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve;
+    const weights = reserve.factorWeights;
+
+    // B alone: the factor is diagnostic; the row stays scored over its included factors.
+    const uncurated = row("fixture:uncurated-b");
+    expect(uncurated).toMatchObject({ cause: null, scoringDisposition: "included", effectiveScoringWeight: 0.4 });
+    expect(uncurated.score).toBeCloseTo((reserve.assetClassQuality["bank-deposit"] * weights.assetQuality +
+      reserve.liquidityQuality.immediate * weights.liquidity) / (weights.assetQuality + weights.liquidity), 12);
+    expect(uncurated.factors!.find(factor => factor.componentKey.endsWith(":maturity"))).toMatchObject({
+      score: null, cause: "B", scoringDisposition: "excluded-uncurated", effectiveScoringWeight: 0,
+      causeGapIds: [expect.stringContaining(":maturity")],
+    });
+    // B beside U in one row: U controls the scored row, B stays excluded on its factor.
+    const mixed = row("fixture:uncurated-mixed");
+    expect(mixed).toMatchObject({ cause: "U", scoringDisposition: "bounded-uncertainty" });
+    expect(mixed.factors!.map(factor => [factor.componentKey, factor.cause, factor.scoringDisposition]))
+      .toEqual([[`${mixed.componentKey}:assetClass`, null, "included"], [`${mixed.componentKey}:liquidity`, "U", "bounded-uncertainty"],
+        [`${mixed.componentKey}:maturity`, "B", "excluded-uncurated"]]);
+    expect(row("fixture:unresearched-u")).toMatchObject({ cause: null, scoringDisposition: "included" });
+
+    for (const contribution of backing.contributions) {
+      expect(scoredContributionIssues(contribution), contribution.componentKey).toEqual([]);
+      for (const factor of contribution.factors ?? []) expect(scoredContributionIssues(factor), factor.componentKey).toEqual([]);
+    }
+  });
+
   function compileLivePartition(rows: ReserveSlice[]) {
     const fixed = makeV9FixedInput({ assetId: ASSET_ID, clockSec: NO_HISTORY_CLOCK_SEC, reserves: rows });
     const extension = buildSafetyScoreV9BaselineExtension(fixed, {
@@ -280,20 +429,28 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
   });
 
 
-  it("retains a sub-microfraction rounding remainder without erasing identified holdings", () => {
-    const fixed = makeV9FixedInput({ reserves: [{
-      sourceKey: "fixture:cash", name: "Cash", pct: 99.999999, risk: "very-low", assetClass: "cash",
-      liquidityHorizon: "immediate", issuerOrObligor: "custodian:alpha", maturityDaysMax: 0,
-    }] });
-    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, makeV9Extension({
-      registryFingerprint: fixed.registryFingerprint,
-    })).assets[0]!;
-    expect(asset.reserveExposures[0]!.weight).toBeCloseTo(0.99999999, 12);
-    expect(asset.reserveResiduals[0]!.weight).toBeCloseTo(0.00000001, 12);
+  it.each([
+    { pct: 99.9999, remainder: 1e-6 },
+    { pct: 99.999999, remainder: 1e-8 },
+  ])("retains a genuine $remainder rounding remainder without erasing identified holdings", ({ pct, remainder }) => {
+    const asset = compileSingleReserve({ name: "Cash", pct, assetClass: "cash", liquidityHorizon: "immediate", maturityDaysMax: 0 });
+    expect(asset.reserveExposures[0]!.weight).toBeCloseTo(1 - remainder, 12);
+    expect(asset.reserveResiduals[0]!.weight).toBeCloseTo(remainder, 12);
     expect(asset.reserveExposures[0]!.weight + asset.reserveResiduals[0]!.weight).toBe(1);
     const gap = asset.gaps.find((row) => row.gapId === asset.reserveResiduals[0]!.status.gapIds[0])!;
     expect(gap.causeProof.cause).toBe("U");
     expect(gap.causeScope?.requiredDatum).toBe("reserveCompositionRemainder");
+  });
+
+  it("treats a float-accumulation shortfall as a complete composition, not an unidentified remainder", () => {
+    const asset = compileSingleReserve({ name: "Cash", pct: 99.99999999999999, assetClass: "cash", liquidityHorizon: "immediate" });
+    const dust = 1 - asset.reserveExposures[0]!.weight;
+    expect(dust).toBeGreaterThan(0);
+    expect(dust).toBeLessThan(1e-15);
+    expect(asset.reserveResiduals).toEqual([]);
+    expect(asset.gaps.filter((gap) => gap.causeScope?.requiredDatum === "reserveCompositionRemainder")).toEqual([]);
+    expect(asset.reserveStatus).toMatchObject({ observationState: "known", gapIds: [] });
+    expect(V9AssetFactsV3Schema.safeParse(asset).success).toBe(true);
   });
 
   it.each([false, true])("uses only the admitted envelope for an all-unknown tail when live=%s", (withLive) => {

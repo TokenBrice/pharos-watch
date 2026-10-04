@@ -15,7 +15,8 @@
         "counterparty",
         "concentration"
       ],
-      "liquidityHorizon": "over-seven-days"
+      "liquidityHorizon": "over-seven-days",
+      "maturityDaysMax": 969
     },
     {
       "name": "USDC idle redemption reserve",
@@ -34,8 +35,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W1R61 (contractual maximum maturity); existing composition review preserved",
     "confidence": "verified",
     "sources": [
       {
@@ -77,9 +78,17 @@
       {
         "label": "ReserveManager accounting reads at block 26107707",
         "url": "https://etherscan.io/address/0x8317736611b542ddb4a820fe344b621a904bdd48"
+      },
+      {
+        "label": "ClaimBridge totalOriginated=11 and exhaustive facility(1..11) census at Ethereum block 26114921, 2026-10-03T22:51:59Z; all Active, maximum contractual maturity 2029-05-29T00:00:00Z",
+        "url": "https://etherscan.io/address/0x37b71fec40b5dd04f29c5698b4112ef2ad0c980e#readProxyContract"
+      },
+      {
+        "label": "Verified ClaimBridge implementation: totalOriginated is nextId minus one; facility returns contractual maturity and loan state",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc63b7bf5472378abfea171793c06bd0e960b2bb7"
       }
     ],
-    "rationale": "At Ethereum block 26107707, totalBackingValue was $5150523.219270193949, deployedPrincipal $5013731.736653193831, actual ReserveManager USDC custody $136,791.482617 and USDfr supply 5,142,565.55847783. The two accounting categories reconcile; percentages use backing value, not token supply or contractual face. Deployed principal includes accrual and issuer/attester marks, not independently verified credit market value. The earlier same-day pinned 11-facility face census is not relabeled as outstanding-balance WAM.",
+    "rationale": "Existing composition remains the block 26107707 accounting observation: backing $5150523.219270193949, deployed principal $5013731.736653193831, USDC custody $136791.482617 and USDfr supply 5142565.55847783. Weights use backing value, not token supply or contractual face. Separately, at block 26114921 (2026-10-03T22:51:59Z), ClaimBridge totalOriginated=11 and every facility(1..11) is Active; all are nonrenewable. Maximum contractual maturity is 2029-05-29T00:00:00Z, giving a conservatively rounded-up remaining maximum of 969 days. This is a complete contractual maturity ceiling for the observed current facilities, not WAM, expected recovery timing, independent credit valuation or a permanent limit on future originations.",
     "compositionBasis": "Pinned Ethereum ReserveManager totalBackingValue/deployedPrincipal and canonical USDC balance at block 26107707",
     "compositionAsOf": "2026-10-02",
     "scope": "full-composition",
