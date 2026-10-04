@@ -159,7 +159,7 @@ describe("DDR curated-posture set membership — pinned", () => {
       baseLive(),
     ).factors.find((factor) => factor.code === "K1_supply_weaponization") ?? null;
 
-  it.each(["unbounded-reconciled", "unbounded-governed", "unbounded-unreconciled", "compromised"])(
+  it.each(["unbounded-reconciled", "unbounded-governed", "unbounded-veto-guarded", "unbounded-unreconciled", "compromised"])(
     "keeps %s fragile, risky, and severe-surge eligible",
     (posture) => {
       expect(structuralClass(coin({ mechanismArchetype: "fiat-cash", authorityPosture: posture }))).toBe("fragile");

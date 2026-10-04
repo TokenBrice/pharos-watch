@@ -167,6 +167,7 @@ const AUTHORITY_POSTURE_LABELS: Record<string, string> = {
   "partially-bounded-admin": "Partially bounded admin",
   "unbounded-reconciled": "Unbounded, supervised & reconciled",
   "unbounded-governed": "Unbounded, governance-delayed",
+  "unbounded-veto-guarded": "Unbounded, veto-guarded",
   "concentrated-admin": "Concentrated admin",
   "collateral-gated": "Collateral-gated admin",
   "unbounded-reconciliation-unknown": "Unbounded, reconciliation unverified",
@@ -186,6 +187,7 @@ const AUTHORITY_POSTURE_TONES: Record<string, MintAuthorityPostureTone> = {
   // supervision is real, but the minting is still economically unbounded.
   "unbounded-reconciled": "elevated",
   "unbounded-governed": "neutral",
+  "unbounded-veto-guarded": "neutral",
   "concentrated-admin": "elevated",
   "collateral-gated": "elevated",
   "unbounded-reconciliation-unknown": "elevated",

@@ -26,6 +26,7 @@ export type V9MintPosture =
   | "collateral-gated"
   | "unbounded-reconciled"
   | "unbounded-governed"
+  | "unbounded-veto-guarded"
   | "unbounded-reconciliation-unknown"
   | "unbounded-unreconciled"
   | "compromised"
@@ -184,12 +185,37 @@ export function isV9GovernedIssuanceQualified(
   const governance = control.issuanceGovernance;
   const admissibleVotingPower: readonly string[] = policy.admissibleVotingPower;
   return governance !== undefined &&
+    governance.decisionRule === "affirmative-vote" &&
     governance.coverage === "complete" &&
     governance.incompleteReasons.length === 0 &&
     governance.nonGovernorUnboundedPathKeys.length === 0 &&
     governance.minUnavoidableDelaySec !== null &&
     governance.minUnavoidableDelaySec >= policy.minUnavoidableDelaySec &&
     admissibleVotingPower.includes(governance.votingPower) &&
+    governance.enumerable;
+}
+
+/** D30: admit only unavoidable, flash-resistant minority vetoes on every issuer admission. */
+export function isV9VetoGuardedIssuanceQualified(
+  control: V9DeploymentControlFactV2,
+  policy: V9GovernedIssuancePolicy,
+): boolean {
+  const governance = control.issuanceGovernance;
+  const vetoPolicy = policy.minorityVeto;
+  const admissibleVotingPower: readonly string[] = vetoPolicy.admissibleVotingPower;
+  const admissibleOverride: readonly string[] = vetoPolicy.admissibleOverride;
+  return governance !== undefined &&
+    governance.decisionRule === "minority-veto" &&
+    governance.coverage === "complete" &&
+    governance.incompleteReasons.length === 0 &&
+    governance.nonGovernorUnboundedPathKeys.length === 0 &&
+    governance.minUnavoidableDelaySec !== null &&
+    governance.minUnavoidableDelaySec >= vetoPolicy.minVetoWindowSec &&
+    governance.vetoQuorumBps !== null &&
+    governance.vetoQuorumBps <= vetoPolicy.maxVetoQuorumBps &&
+    admissibleVotingPower.includes(governance.votingPower) &&
+    governance.vetoOverride !== null &&
+    admissibleOverride.includes(governance.vetoOverride) &&
     governance.enumerable;
 }
 
@@ -208,9 +234,9 @@ export function deriveV9MintPosture(
     if (reconciled && (mint.supervision === "prudential" || mint.supervision === "attestation-only")) {
       return "unbounded-reconciled";
     }
-    // D29: after independently graded reconciliation, only complete governor-only
-    // issuance with unavoidable delay, flash-resistant voting and enumerability
-    // outranks base reconciliation or an unreconciled / unverified mint process.
+    // D30 minority-veto due process outranks D29 affirmative governance, but
+    // neither process rung displaces independently graded reconciliation.
+    if (isV9VetoGuardedIssuanceQualified(control, governedPolicy)) return "unbounded-veto-guarded";
     if (isV9GovernedIssuanceQualified(control, governedPolicy)) return "unbounded-governed";
     if (reconciled || mint.supervision === "prudential") return "unbounded-reconciled";
     // An internal ledger process resolves the mint-process question, not

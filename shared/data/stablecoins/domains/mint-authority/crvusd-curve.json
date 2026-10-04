@@ -2723,6 +2723,7 @@
     ],
     "economicCapSemantics": "unbounded",
     "governedIssuance": {
+      "decisionRule": "affirmative-vote",
       "governorControlRef": "ethereum:0xe478de485ad2fe566d49342cbd03e49ed7db3356",
       "votingPower": "lock-escrowed",
       "votingPowerEvidence": "Pinned Ownership Voting.token() is veCRV 0x5f3b5dfeb7b28cdbd7faba78963ee202a494e2a2. Bytecode-matched VotingEscrow verified source requires CRV transferFrom into a time lock, rounds lock expiry by week, caps duration at four years and permits withdraw only after expiry. Voting uses totalSupplyAt/balanceOfAt for the block.number-1 snapshot; live transferable or flash-borrowed CRV cannot provide voting power. Current Voting implementation enforces voteTime=604800 before execution even after an absolute majority.",

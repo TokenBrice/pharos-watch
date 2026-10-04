@@ -271,6 +271,31 @@ function validateEconomicControlEvidence({ profile, ctx, profileHasSourceLinks }
 function validateGovernedIssuance({ profile, ctx, controls }: MintAuthorityRefinementState): void {
   const governed = profile.governedIssuance;
   if (governed) {
+    if ((governed.decisionRule === "minority-veto") !== (governed.veto !== undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "governedIssuance.veto must be present if and only if decisionRule is minority-veto",
+        path: ["governedIssuance", "veto"],
+      });
+    }
+    if (governed.decisionRule === "affirmative-vote" && governed.monetaryPolicyPaths !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "monetaryPolicyPaths is forbidden for affirmative-vote issuance",
+        path: ["governedIssuance", "monetaryPolicyPaths"],
+      });
+    }
+    for (const [index, monetaryPath] of (governed.monetaryPolicyPaths ?? []).entries()) {
+      const matching = controls.filter((control) => control.chain != null && control.address != null &&
+        `${control.chain}:${control.address.toLowerCase()}` === monetaryPath.controlRef);
+      if (matching.length !== 1 || !matching[0]!.executionScope?.paths.some((path) => path.id === monetaryPath.pathId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "monetaryPolicyPaths must resolve to an execution-scope path on exactly one authored control",
+          path: ["governedIssuance", "monetaryPolicyPaths", index],
+        });
+      }
+    }
     if (profile.economicCapSemantics !== "unbounded") {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -314,7 +339,8 @@ function validateGovernedIssuance({ profile, ctx, controls }: MintAuthorityRefin
           path: ["governedIssuance", "governorControlRef"],
         });
       }
-      if ((governed.votingPower === "lock-escrowed" || governed.votingPower === "past-block-checkpoint") &&
+      if ((governed.votingPower === "holding-period-weighted" || governed.votingPower === "lock-escrowed" ||
+          governed.votingPower === "past-block-checkpoint") &&
           (governor.weightedQuorum != null || governor.threshold != null || governor.signerCount != null)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -331,11 +357,14 @@ function validateGovernedIssuance({ profile, ctx, controls }: MintAuthorityRefin
       }
     }
   }
-  if (profile.authorityPosture === "unbounded-governed" && !governed) {
+  const requiredDecisionRule = profile.authorityPosture === "unbounded-veto-guarded"
+    ? "minority-veto"
+    : profile.authorityPosture === "unbounded-governed" ? "affirmative-vote" : null;
+  if (requiredDecisionRule !== null && governed?.decisionRule !== requiredDecisionRule) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "authorityPosture unbounded-governed requires governedIssuance",
-      path: ["governedIssuance"],
+      message: `authorityPosture ${profile.authorityPosture} requires governedIssuance.decisionRule ${requiredDecisionRule}`,
+      path: governed ? ["governedIssuance", "decisionRule"] : ["governedIssuance"],
     });
   }
 }

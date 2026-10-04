@@ -2,24 +2,28 @@
   "id": "jusd-juicedollar",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-reconciliation-unknown",
     "confidence": "verified",
-    "summary": "JUSD is an ownerless Frankencoin fork with native issuance on Citrea. owner() reverts and there is no EIP-1967 proxy admin. mint() is gated to registered minters, but an accepted minter can mint an unrestricted amount; qualified JUICE pool-share holders can veto proposed minters during the application period. The four canonical-side StablecoinBridge routes are separately assessed under Bridge Risk: their lock/mint paths are route-capped and supply-conserving, but do not bound the token-level accepted-minter path.",
+    "summary": "JUSD uses 14-day public minter applications and a 2% holding-period-weighted JUICE veto on Citrea, but does not qualify for D30. At the pinned block, Equity can asymmetrically wipe other holders because protocol equity is below 1000 JUSD; five accepted minters have unverified deployed code, and zero-window genesis minters plus the supply-conditional initialize path prevent proving universal unavoidable veto protection. Economically unbounded accepted-minter issuance and unknown whole-supply reconciliation retain the ordinary unbounded-reconciliation-unknown rung. The four canonical StablecoinBridge routes remain separately assessed under Bridge Risk.",
     "upgradeability": {
       "model": "immutable",
       "implementationAddresses": [
         "0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
       ],
       "canChangeMintLogic": false,
-      "observedAt": "2026-07-15",
-      "observedBlock": 9984927,
+      "observedAt": "2026-10-04",
+      "observedBlock": 13496501,
       "sources": [
         {
-          "label": "JuiceDollar token source (pinned commit)",
-          "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/JuiceDollar.sol"
+          "label": "CitreaScan deployed source 0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
         },
         {
-          "label": "Citrea Public RPC",
+          "label": "CitreaScan deployed source 0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4"
+        },
+        {
+          "label": "Citrea public JSON-RPC (chain ID 4114; pinned reads)",
           "url": "https://rpc.mainnet.citrea.xyz"
         }
       ]
@@ -36,24 +40,335 @@
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "There is no numeric per-minter mint cap. After its application period, an accepted minter can call mint() for an unrestricted amount; a candidate is subject to a qualified Equity-holder veto before acceptance.",
-        "observedAt": "2026-07-15",
-        "observedBlock": 9984927,
+        "capDescription": "New suggestions require 1209600 seconds and 1000 JUSD, but accepted minters can invoke mint, registerPosition and reserve-shortfall minting without a numeric token-level cap or a new veto window. Five active minters have unverified runtime and initialize is only supply-conditionally closed.",
+        "observedAt": "2026-10-04",
+        "observedBlock": 13496501,
         "sources": [
           {
-            "label": "JuiceDollar token source (pinned commit)",
-            "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/JuiceDollar.sol"
-          },
-          {
-            "label": "CitreaScan verified JUSD source",
+            "label": "CitreaScan deployed source 0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
             "url": "https://api.citreascan.com/api/v2/smart-contracts/0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
           },
           {
-            "label": "Citrea protocol deployment manifest (pinned commit)",
-            "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/deployments/citrea/protocol.json"
+            "label": "CitreaScan deployed source 0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4",
+            "url": "https://api.citreascan.com/api/v2/smart-contracts/0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4"
+          },
+          {
+            "label": "Citrea public JSON-RPC (chain ID 4114; pinned reads)",
+            "url": "https://rpc.mainnet.citrea.xyz"
+          },
+          {
+            "label": "CitreaScan authorization-event index (deployment-to-pin replay)",
+            "url": "https://api.citreascan.com/api?module=logs&action=getLogs&fromBlock=2650850&toBlock=13496501&address=0x0987d3720d38847ac6dbb9d025b9de892a3ca35c&topic0=0x97326258efdae63280617ca33884e507791c2abeed7b82acd77f1853394ef94b"
+          },
+          {
+            "label": "CitreaScan deployed source 0x1a20b160bf546774246c7920939e6e7ac0f88b8e",
+            "url": "https://api.citreascan.com/api/v2/smart-contracts/0x1a20b160bf546774246c7920939e6e7ac0f88b8e"
+          },
+          {
+            "label": "CitreaScan deployed source 0xc1b97398c06b9c6a49fd9dcfac8907700301e9ac",
+            "url": "https://api.citreascan.com/api/v2/smart-contracts/0xc1b97398c06b9c6a49fd9dcfac8907700301e9ac"
+          },
+          {
+            "label": "CitreaScan deployed source 0x22fe239892ebc8805da8f05ed3bc6af75332b60b",
+            "url": "https://api.citreascan.com/api/v2/smart-contracts/0x22fe239892ebc8805da8f05ed3bc6af75332b60b"
+          },
+          {
+            "label": "CitreaScan deployed source 0x3090a89a1ff5dc99117be655599e5491a0babb92",
+            "url": "https://api.citreascan.com/api/v2/smart-contracts/0x3090a89a1ff5dc99117be655599e5491a0babb92"
+          },
+          {
+            "label": "CitreaScan deployed source 0x51ff8141d731676fb21ae1e5d5a88c04511994dd",
+            "url": "https://api.citreascan.com/api/v2/smart-contracts/0x51ff8141d731676fb21ae1e5d5a88c04511994dd"
+          },
+          {
+            "label": "CitreaScan deployed source 0x920db0adf6fee2d69401e9f68d60319177dca20f",
+            "url": "https://api.citreascan.com/api/v2/smart-contracts/0x920db0adf6fee2d69401e9f68d60319177dca20f"
+          },
+          {
+            "label": "CitreaScan deployed source 0x5cc0e668f8ba61e111b6168e19d17d3c65040614",
+            "url": "https://api.citreascan.com/api/v2/smart-contracts/0x5cc0e668f8ba61e111b6168e19d17d3c65040614"
+          },
+          {
+            "label": "CitreaScan deployed source 0x8d11020286af9ecf7e5d7bd79699c391b224a0bd",
+            "url": "https://api.citreascan.com/api/v2/smart-contracts/0x8d11020286af9ecf7e5d7bd79699c391b224a0bd"
+          },
+          {
+            "label": "CitreaScan deployed source 0x107edf5f030d724bd0c73f88a300bea09ae581e2",
+            "url": "https://api.citreascan.com/api/v2/smart-contracts/0x107edf5f030d724bd0c73f88a300bea09ae581e2"
+          },
+          {
+            "label": "CitreaScan deployed source 0xe8c97614ac1a5ac0e8ab2d0e04b4b315817ecb36",
+            "url": "https://api.citreascan.com/api/v2/smart-contracts/0xe8c97614ac1a5ac0e8ab2d0e04b4b315817ecb36"
           }
         ],
-        "evidence": "The Citrea manifest and CitreaScan verified source identify this deployed JUSD token. Its minters mapping gates mint(), while suggestMinter adds a candidate only for the application period during which Equity can veto it. Once accepted, the deployed mint() function has no numeric amount cap. At Citrea block 9984927, owner() reverted and both EIP-1967 slots were zero."
+        "evidence": "Citrea block 13496501 (0x1430d7dba56a5d5d8fb55680ef4a33465466fcfe0a39b92750664409be31f608), pinned eth_call/eth_getCode and runtime-matched CitreaScan verified source. MIN_APPLICATION_PERIOD()=1209600, MIN_FEE()=1000000000000000000000 and reserve()=0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4. Full-range indexed MinterApplied/MinterDenied replay from deployment block 2650850 through 13496501, cross-checked in disjoint ranges and against all 15 RPC receipts, yields 13 active minters and one denied candidate. Eight genesis admissions had zero window. Known StablecoinBridge, SavingsGateway and FrontendGateway paths are capacity/reserve-gated; MintingHub positions have collateral and family-cap checks, but coverLoss mints reserve shortfalls and interest remains an additional liability. The five unverified active minters prevent a closed executable census. initialize reverts at the pin because both supplies are positive but has no irreversible initialization latch. EIP-1967 implementation/admin slots are zero. V1/V2/V4/V6 fail closed; the partial certificate does not assert complete downstream closure.",
+        "executionScope": {
+          "controllerDeployment": "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
+          "reviewedAt": "2026-10-04",
+          "observedAt": "2026-10-04",
+          "expiresAt": "2027-01-02",
+          "reviewer": "Sol v10.03 D30 cohort (ResearchJUSD)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "CitreaScan deployed source 0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
+              "url": "https://api.citreascan.com/api/v2/smart-contracts/0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+            },
+            {
+              "label": "CitreaScan deployed source 0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4",
+              "url": "https://api.citreascan.com/api/v2/smart-contracts/0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4"
+            },
+            {
+              "label": "Citrea public JSON-RPC (chain ID 4114; pinned reads)",
+              "url": "https://rpc.mainnet.citrea.xyz"
+            },
+            {
+              "label": "CitreaScan authorization-event index (deployment-to-pin replay)",
+              "url": "https://api.citreascan.com/api?module=logs&action=getLogs&fromBlock=2650850&toBlock=13496501&address=0x0987d3720d38847ac6dbb9d025b9de892a3ca35c&topic0=0x97326258efdae63280617ca33884e507791c2abeed7b82acd77f1853394ef94b"
+            },
+            {
+              "label": "CitreaScan deployed source 0x1a20b160bf546774246c7920939e6e7ac0f88b8e",
+              "url": "https://api.citreascan.com/api/v2/smart-contracts/0x1a20b160bf546774246c7920939e6e7ac0f88b8e"
+            },
+            {
+              "label": "CitreaScan deployed source 0xc1b97398c06b9c6a49fd9dcfac8907700301e9ac",
+              "url": "https://api.citreascan.com/api/v2/smart-contracts/0xc1b97398c06b9c6a49fd9dcfac8907700301e9ac"
+            },
+            {
+              "label": "CitreaScan deployed source 0x22fe239892ebc8805da8f05ed3bc6af75332b60b",
+              "url": "https://api.citreascan.com/api/v2/smart-contracts/0x22fe239892ebc8805da8f05ed3bc6af75332b60b"
+            },
+            {
+              "label": "CitreaScan deployed source 0x3090a89a1ff5dc99117be655599e5491a0babb92",
+              "url": "https://api.citreascan.com/api/v2/smart-contracts/0x3090a89a1ff5dc99117be655599e5491a0babb92"
+            },
+            {
+              "label": "CitreaScan deployed source 0x51ff8141d731676fb21ae1e5d5a88c04511994dd",
+              "url": "https://api.citreascan.com/api/v2/smart-contracts/0x51ff8141d731676fb21ae1e5d5a88c04511994dd"
+            },
+            {
+              "label": "CitreaScan deployed source 0x920db0adf6fee2d69401e9f68d60319177dca20f",
+              "url": "https://api.citreascan.com/api/v2/smart-contracts/0x920db0adf6fee2d69401e9f68d60319177dca20f"
+            },
+            {
+              "label": "CitreaScan deployed source 0x5cc0e668f8ba61e111b6168e19d17d3c65040614",
+              "url": "https://api.citreascan.com/api/v2/smart-contracts/0x5cc0e668f8ba61e111b6168e19d17d3c65040614"
+            },
+            {
+              "label": "CitreaScan deployed source 0x8d11020286af9ecf7e5d7bd79699c391b224a0bd",
+              "url": "https://api.citreascan.com/api/v2/smart-contracts/0x8d11020286af9ecf7e5d7bd79699c391b224a0bd"
+            },
+            {
+              "label": "CitreaScan deployed source 0x107edf5f030d724bd0c73f88a300bea09ae581e2",
+              "url": "https://api.citreascan.com/api/v2/smart-contracts/0x107edf5f030d724bd0c73f88a300bea09ae581e2"
+            },
+            {
+              "label": "CitreaScan deployed source 0xe8c97614ac1a5ac0e8ab2d0e04b4b315817ecb36",
+              "url": "https://api.citreascan.com/api/v2/smart-contracts/0xe8c97614ac1a5ac0e8ab2d0e04b4b315817ecb36"
+            }
+          ],
+          "pin": {
+            "position": "citrea:13496501",
+            "hash": "0x1430d7dba56a5d5d8fb55680ef4a33465466fcfe0a39b92750664409be31f608",
+            "runtimeIdentity": "keccak256:0xf822bbd111d9275ce9d4e62bfff5f45932618ab55960e4c8fadfc9d7f0ca4265",
+            "signerIdentity": "Admission veto authority: 0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4. Existing accepted-minter permissions are independently exercisable; downstream execution closure remains unresolved."
+          },
+          "observedState": {
+            "position": "citrea:13496501",
+            "hash": "0x1430d7dba56a5d5d8fb55680ef4a33465466fcfe0a39b92750664409be31f608",
+            "runtimeIdentity": "keccak256:0xf822bbd111d9275ce9d4e62bfff5f45932618ab55960e4c8fadfc9d7f0ca4265",
+            "signerIdentity": "Admission veto authority: 0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4. Existing accepted-minter permissions are independently exercisable; downstream execution closure remains unresolved."
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": true,
+            "mutableTargets": false,
+            "delegateAndFallback": true,
+            "permissions": false,
+            "upgrades": true,
+            "bypasses": false,
+            "liabilityInventory": true
+          },
+          "paths": [
+            {
+              "id": "public-minter-admission",
+              "targetDeployment": "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xd1a15ff1"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 1209600,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "jusd-juicedollar"
+              ],
+              "affectedDeployments": [
+                "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "accepted-minter-issuance",
+              "targetDeployment": "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x40c10f19",
+                "0xb2901db8",
+                "0xd1fa5e98",
+                "0x08b8bb4b",
+                "0xb52c696d"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "jusd-juicedollar"
+              ],
+              "affectedDeployments": [
+                "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "zero-supply-initialize",
+              "targetDeployment": "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xf399e22e"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "disabled-reactivatable",
+              "affectedLiabilityIds": [
+                "jusd-juicedollar"
+              ],
+              "affectedDeployments": [
+                "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "burn-transfer-and-accounting",
+              "targetDeployment": "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x42966c68",
+                "0x79cc6790",
+                "0x315f3e72",
+                "0xc7641866",
+                "0x6ebdb8ee",
+                "0xa9059cbb",
+                "0x23b872dd",
+                "0xe3ee160e",
+                "0xef55bec6",
+                "0x095ea7b3",
+                "0xd505accf",
+                "0x5a049a70"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "burn",
+                "custody-transfer"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "jusd-juicedollar"
+              ],
+              "affectedDeployments": [
+                "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "registry-minority-veto",
+              "targetDeployment": "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x9b404da6"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "jusd-juicedollar"
+              ],
+              "affectedDeployments": [
+                "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
       },
       {
         "chain": "citrea",
@@ -67,61 +382,420 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Qualified JUICE pool-share holders can veto proposed minters during the application period, but the Equity contract cannot mint, set a mint cap, or change mint parameters.",
-        "observedAt": "2026-07-15",
-        "observedBlock": 9984927,
+        "capDescription": "Holding-period-weighted JUICE votes admit a 200-bps unilateral minter veto. Equity cannot mint JUSD and is not a registered minter. kamikaze destroys the caller's votes as its budget, but restructureCapTable can asymmetrically burn other holders whenever JUSD equity is below 1000 JUSD; that condition holds at the pin.",
+        "observedAt": "2026-10-04",
+        "observedBlock": 13496501,
         "sources": [
           {
-            "label": "JuiceDollar Equity source (pinned commit)",
-            "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/Equity.sol"
+            "label": "CitreaScan deployed source 0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
+            "url": "https://api.citreascan.com/api/v2/smart-contracts/0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
           },
           {
-            "label": "Citrea protocol deployment manifest (pinned commit)",
-            "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/deployments/citrea/protocol.json"
+            "label": "CitreaScan deployed source 0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4",
+            "url": "https://api.citreascan.com/api/v2/smart-contracts/0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4"
+          },
+          {
+            "label": "Citrea public JSON-RPC (chain ID 4114; pinned reads)",
+            "url": "https://rpc.mainnet.citrea.xyz"
+          },
+          {
+            "label": "CitreaScan authorization-event index (deployment-to-pin replay)",
+            "url": "https://api.citreascan.com/api?module=logs&action=getLogs&fromBlock=2650850&toBlock=13496501&address=0x0987d3720d38847ac6dbb9d025b9de892a3ca35c&topic0=0x97326258efdae63280617ca33884e507791c2abeed7b82acd77f1853394ef94b"
           }
         ],
-        "evidence": "The Citrea manifest identifies this Equity contract, and JUSD reserve() returned it at block 9984927. Equity's qualified pool-share voting and checkQualified guard supply the veto path for proposed JUSD minters; it does not mint, set a mint cap, or change mint parameters."
+        "evidence": "Citrea block 13496501 (0x1430d7dba56a5d5d8fb55680ef4a33465466fcfe0a39b92750664409be31f608), pinned eth_call/eth_getCode and runtime-matched CitreaScan verified source. JUSD() returns the JUSD deployment; JUSD.reserve() returns this Equity and JUSD.isMinter(Equity)=false. votes(holder)=balanceOf(holder)*((block.timestamp<<20)-voteAnchor[holder]); transfer/mint recipient anchors preserve only prior votes, and checkQualified requires votesDelegated*10000 >= 200*totalVotes. The active denyMinter selector 0x9b404da6 calls checkQualified on Equity. JUSD.equity()=75031618876204840259 (<1000e18), so restructureCapTable([], [0xe5c628a70762ee464673bb1044cb953c621206de]) from 0xc0817456051c7721086f03707e2cca5fe36aa5b0 succeeded in read-only eth_call at the pin, wiping a different holder without burning the caller. Under D30-R, override is insolvency-gated-restructure but fails closed as restructure-reachable. Investment transfers existing JUSD in; redemption burns JUICE shares and transfers existing JUSD out, with same-block protection and a last-share guard. Only restructureCapTable can eliminate the entire JUICE supply and reopen zero-supply initialize.",
+        "executionScope": {
+          "controllerDeployment": "citrea:0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4",
+          "reviewedAt": "2026-10-04",
+          "observedAt": "2026-10-04",
+          "expiresAt": "2027-01-02",
+          "reviewer": "Sol v10.03 D30 cohort (ResearchJUSD)",
+          "confidence": "verified",
+          "sources": [
+            {
+              "label": "CitreaScan deployed source 0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
+              "url": "https://api.citreascan.com/api/v2/smart-contracts/0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+            },
+            {
+              "label": "CitreaScan deployed source 0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4",
+              "url": "https://api.citreascan.com/api/v2/smart-contracts/0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4"
+            },
+            {
+              "label": "Citrea public JSON-RPC (chain ID 4114; pinned reads)",
+              "url": "https://rpc.mainnet.citrea.xyz"
+            },
+            {
+              "label": "CitreaScan authorization-event index (deployment-to-pin replay)",
+              "url": "https://api.citreascan.com/api?module=logs&action=getLogs&fromBlock=2650850&toBlock=13496501&address=0x0987d3720d38847ac6dbb9d025b9de892a3ca35c&topic0=0x97326258efdae63280617ca33884e507791c2abeed7b82acd77f1853394ef94b"
+            }
+          ],
+          "pin": {
+            "position": "citrea:13496501",
+            "hash": "0x1430d7dba56a5d5d8fb55680ef4a33465466fcfe0a39b92750664409be31f608",
+            "runtimeIdentity": "keccak256:0xb0ff7f3b699808b0c024bb9aded47aab10dc13aa4234ce96892eca33968415e5",
+            "signerIdentity": "Holding-period-weighted JUICE holder governance at 0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4."
+          },
+          "observedState": {
+            "position": "citrea:13496501",
+            "hash": "0x1430d7dba56a5d5d8fb55680ef4a33465466fcfe0a39b92750664409be31f608",
+            "runtimeIdentity": "keccak256:0xb0ff7f3b699808b0c024bb9aded47aab10dc13aa4234ce96892eca33968415e5",
+            "signerIdentity": "Holding-period-weighted JUICE holder governance at 0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4."
+          },
+          "inventory": "complete",
+          "closure": {
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
+          },
+          "paths": [
+            {
+              "id": "jusd-minter-veto",
+              "targetDeployment": "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x9b404da6"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "jusd-juicedollar"
+              ],
+              "affectedDeployments": [
+                "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "distressed-cap-table-wipe",
+              "targetDeployment": "citrea:0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x820710af"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "burn",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "jusd-juicedollar"
+              ],
+              "affectedDeployments": [
+                "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "vote-delegation-and-symmetric-destruction",
+              "targetDeployment": "citrea:0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x9823004f",
+                "0x2295abea"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "jusd-juicedollar"
+              ],
+              "affectedDeployments": [
+                "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "equity-funded-investment-and-redemption",
+              "targetDeployment": "citrea:0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xd87aa643",
+                "0xa1c1fb4f",
+                "0x1e9a6950",
+                "0x0e89c370",
+                "0x91ac6f99"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "custody-transfer"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "jusd-juicedollar"
+              ],
+              "affectedDeployments": [
+                "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "equity-share-transfers-and-authorizations",
+              "targetDeployment": "citrea:0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xa9059cbb",
+                "0x23b872dd",
+                "0xe3ee160e",
+                "0xef55bec6",
+                "0x095ea7b3",
+                "0xd505accf",
+                "0x5a049a70"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "jusd-juicedollar"
+              ],
+              "affectedDeployments": [
+                "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
-    "supervision": "none",
-    "review": {
-      "evidence": "The pinned JuiceDollar source and CitreaScan verified deployed source make native minting contingent on the token's registered minters mapping, but an accepted minter's mint() call has no numeric amount cap. Equity-qualified pool-share holders can veto candidates only during minter application. At Citrea block 9984927, the token's owner() call reverted, reserve() returned Equity 0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4, and EIP-1967 implementation and admin slots were zero. The two reviewed control addresses therefore identify the authorization registry and its governance veto, with no proxy upgrade path. The four canonical-side StablecoinBridge contracts are separately reviewed under Bridge Risk: each locks an external Citrea stablecoin before minting JUSD, burns JUSD before releasing that source asset, and has its own immutable limit and horizon; these route-level bounds do not replace or constrain the token-level unrestricted accepted-minter path. Economic-posture fields reviewed 2026-08-16: accepted minters can mint without a numeric bound, and no recurring whole-supply reconciliation or named prudential supervisor covers every minter path. Reconciliation research 2026-08-15: JuiceDollar's official documentation describes on-chain collateralized positions and 1:1 stablecoin bridges, but also exposes a minter-only mint() without reserve; no dated recurring whole-supply liability-to-collateral reconciliation was found, and the official site says protocol control was lost with a new minter becoming active after 2026-08-10.",
-      "reviewer": "Codex Safety Score V9 data research; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-16",
+    "governedIssuance": {
+      "decisionRule": "minority-veto",
+      "governorControlRef": "citrea:0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4",
+      "votingPower": "holding-period-weighted",
+      "votingPowerEvidence": "Citrea block 13496501 (0x1430d7dba56a5d5d8fb55680ef4a33465466fcfe0a39b92750664409be31f608), pinned eth_call/eth_getCode and runtime-matched CitreaScan verified source. votes, holdingDuration, totalVotes, votesDelegated and checkQualified implement balance times holding duration with 20 subsecond-resolution bits. Newly transferred or minted shares add zero immediate votes; recipient-anchor rounding only destroys votes, and outgoing shares destroy their associated duration votes. Sorted unique helpers must delegate to the voter. This proves the voting model, not the admissibility of every override.",
+      "veto": {
+        "quorumBps": 200,
+        "entrypoints": [
+          "0x9b404da6"
+        ],
+        "override": "insolvency-gated-restructure",
+        "restructure": {
+          "entrypoints": [
+            "0x820710af"
+          ],
+          "equityThresholdUnits": 1000,
+          "observedEquityUnits": 75.03161887620484,
+          "dependentPaths": [
+            {
+              "controlRef": "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
+              "pathId": "zero-supply-initialize"
+            }
+          ],
+          "evidence": "Citrea block 13496501 (0x1430d7dba56a5d5d8fb55680ef4a33465466fcfe0a39b92750664409be31f608), eth_call equity() returned 75031618876204840259 raw JUSD, normalized to 75.03161887620484 token units, below the source's 1000-JUSD threshold. Runtime-matched Equity restructureCapTable can burn arbitrary holders after checkQualified without symmetric sacrifice; a pinned cross-holder wipe eth_call succeeded. All normal redeem variants call calculateProceeds, rejecting shares + 1e18 >= totalSupply; ERC20 transfers to zero are rejected, and the only other share-burn call is restructureCapTable. Thus only restructure can reduce JUICE supply to zero. JUSD.initialize requires both supplies zero and currently reverts; its disabled-reactivatable path is dependent on restructure. Because restructure is currently reachable, D30-R does not exclude that path and adds restructure-reachable."
+        },
+        "evidence": "Citrea block 13496501 (0x1430d7dba56a5d5d8fb55680ef4a33465466fcfe0a39b92750664409be31f608), pinned eth_call/eth_getCode and runtime-matched CitreaScan verified source. denyMinter(address,address[],string), selector 0x9b404da6, calls immutable reserve.checkQualified before deleting a candidate during its application period. Runtime-matched Equity declares private constant QUORUM=200 and tests votesDelegated*10000 < QUORUM*totalVotes. kamikaze budgets destruction from the caller's own votes, but restructureCapTable is an additional insolvency-gated asymmetric override. Current equity is below 1000 JUSD and a pinned cross-holder wipe succeeded. Under D30-R its classification is insolvency-gated-restructure, with an explicit restructure-reachable failure; it cannot qualify for D30 while this condition holds."
+      },
+      "enumerability": {
+        "authorizationEvents": [
+          "MinterApplied(address,uint256,uint256,string): deployment 2650850 through Citrea pin 13496501; 14 applications, including eight zero-period initialize admissions",
+          "MinterDenied(address,string): same range; one denial; indexed full-range and disjoint-range results matched, each of 15 logs checked against eth_getTransactionReceipt"
+        ],
+        "capacityReads": [
+          "minters(address), isMinter(address), eth_getCode(address): all 14 distinct candidates at Citrea block 13496501; 13 active, one denied",
+          "StablecoinBridge limit(), horizon(), minted(), stopped(): all four genesis bridge minters at pin; immutable limit 100000000000000000000000000 each",
+          "SavingsGateway currentRatePPM()=0, nextRatePPM()=0, nextChange()=1778836587; live interest payout capped to JUSD.equity()",
+          "JUSD.totalSupply()=10460225449745625670141; Equity.totalSupply()=1424580802349080286795663240; JUSD.equity()=75031618876204840259; minterReserve()=0",
+          "V6 fails closed: five active minters lack verified deployed source, and their capacities and registered descendant execution paths cannot be proven"
+        ]
+      },
+      "observedAt": "2026-10-04",
+      "observedBlock": 13496501,
+      "reviewedAt": "2026-10-04",
+      "reviewer": "Sol v10.03 D30 cohort (ResearchJUSD)",
       "sources": [
         {
-          "label": "JuiceDollar token source (pinned commit)",
-          "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/JuiceDollar.sol"
-        },
-        {
-          "label": "CitreaScan verified JUSD source",
+          "label": "CitreaScan deployed source 0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
           "url": "https://api.citreascan.com/api/v2/smart-contracts/0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
         },
         {
-          "label": "Citrea protocol deployment manifest (pinned commit)",
-          "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/deployments/citrea/protocol.json"
+          "label": "CitreaScan deployed source 0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4"
         },
         {
-          "label": "Citrea Public RPC",
+          "label": "Citrea public JSON-RPC (chain ID 4114; pinned reads)",
           "url": "https://rpc.mainnet.citrea.xyz"
         },
         {
-          "label": "JuiceDollar collateralized minting docs",
-          "url": "https://docs.juicedollar.com/positions"
+          "label": "CitreaScan authorization-event index (deployment-to-pin replay)",
+          "url": "https://api.citreascan.com/api?module=logs&action=getLogs&fromBlock=2650850&toBlock=13496501&address=0x0987d3720d38847ac6dbb9d025b9de892a3ca35c&topic0=0x97326258efdae63280617ca33884e507791c2abeed7b82acd77f1853394ef94b"
         },
         {
-          "label": "JuiceDollar reserve docs",
-          "url": "https://docs.juicedollar.com/reserve"
+          "label": "CitreaScan deployed source 0x1a20b160bf546774246c7920939e6e7ac0f88b8e",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0x1a20b160bf546774246c7920939e6e7ac0f88b8e"
         },
         {
-          "label": "JuiceDollar smart contracts docs",
-          "url": "https://docs.juicedollar.com/smart-contracts"
+          "label": "CitreaScan deployed source 0xc1b97398c06b9c6a49fd9dcfac8907700301e9ac",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0xc1b97398c06b9c6a49fd9dcfac8907700301e9ac"
         },
         {
-          "label": "JuiceDollar shutdown notice",
-          "url": "https://juicedollar.com/"
+          "label": "CitreaScan deployed source 0x22fe239892ebc8805da8f05ed3bc6af75332b60b",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0x22fe239892ebc8805da8f05ed3bc6af75332b60b"
+        },
+        {
+          "label": "CitreaScan deployed source 0x3090a89a1ff5dc99117be655599e5491a0babb92",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0x3090a89a1ff5dc99117be655599e5491a0babb92"
+        },
+        {
+          "label": "CitreaScan deployed source 0x51ff8141d731676fb21ae1e5d5a88c04511994dd",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0x51ff8141d731676fb21ae1e5d5a88c04511994dd"
+        },
+        {
+          "label": "CitreaScan deployed source 0x920db0adf6fee2d69401e9f68d60319177dca20f",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0x920db0adf6fee2d69401e9f68d60319177dca20f"
+        },
+        {
+          "label": "CitreaScan deployed source 0x5cc0e668f8ba61e111b6168e19d17d3c65040614",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0x5cc0e668f8ba61e111b6168e19d17d3c65040614"
+        },
+        {
+          "label": "CitreaScan deployed source 0x8d11020286af9ecf7e5d7bd79699c391b224a0bd",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0x8d11020286af9ecf7e5d7bd79699c391b224a0bd"
+        },
+        {
+          "label": "CitreaScan deployed source 0x107edf5f030d724bd0c73f88a300bea09ae581e2",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0x107edf5f030d724bd0c73f88a300bea09ae581e2"
+        },
+        {
+          "label": "CitreaScan deployed source 0xe8c97614ac1a5ac0e8ab2d0e04b4b315817ecb36",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0xe8c97614ac1a5ac0e8ab2d0e04b4b315817ecb36"
+        }
+      ]
+    },
+    "reconciliation": "unknown",
+    "supervision": "none",
+    "review": {
+      "evidence": "Citrea block 13496501 (0x1430d7dba56a5d5d8fb55680ef4a33465466fcfe0a39b92750664409be31f608), pinned eth_call/eth_getCode and runtime-matched CitreaScan verified source. D30 verdict: V1 fails (registry downstream closure partial); V2 fails (accepted unbounded paths have no new admission delay; eight genesis admissions had no veto window; initialize remains reachable after an insolvency-gated share wipe and zero token supply); V3 fails (200-bps holding-period voting is proven, but insolvency-gated-restructure is currently reachable below 1000 JUSD equity); V4 fails (all accepted minter execution cannot be rooted in continuing Equity veto); V5 passes (active parameter-change veto selector targets the authored JUSD controller); V6 fails closed (authorization census reconstructed, but capacity/code closure missing for five active minters); V7 fails for loss-interest issuance (fixed position rates cannot be minority-counter-proposed and elapsed interest is not capped at expiration). No D30 or D29 fallback credit is authored. Registry and Equity bytecodes match verified deployed source exactly. Savings has a 7-day qualified-holder overwriteable rate proposal with uint24 maximum 16777215 PPM (1677.7215% annually) and current/next zero rates; its earned interest is capped at available equity, so that payout is not native shortfall issuance. Position interest is usable principal times fixedAnnualRatePPM times elapsed time over 365 days; fixedAnnualRatePPM is uint24 with maximum successfully installed total 16777215 PPM (checked addition above that reverts), is only resynchronized on borrower mint, and _calculateInterest does not clamp time to expiration. Hub/position coverLoss can mint reserve shortfalls before principal burns and interest collection, so this path stays unbounded under D30-S rather than being relabeled raiseable/bounded. Reconciliation remains unknown: no newly obtained recurring whole-supply reconciliation establishes continuous/periodic coverage. Prior 2026-08-15 shutdown-notice research is historical evidence, not a refreshed active-incident or recovery verdict; the formerly official domain now resolves to a sale listing. Bridge-route data is untouched.",
+      "reviewer": "Sol v10.03 D30 cohort (ResearchJUSD)",
+      "reviewedAt": "2026-10-04",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "CitreaScan deployed source 0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+        },
+        {
+          "label": "CitreaScan deployed source 0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4"
+        },
+        {
+          "label": "Citrea public JSON-RPC (chain ID 4114; pinned reads)",
+          "url": "https://rpc.mainnet.citrea.xyz"
+        },
+        {
+          "label": "CitreaScan authorization-event index (deployment-to-pin replay)",
+          "url": "https://api.citreascan.com/api?module=logs&action=getLogs&fromBlock=2650850&toBlock=13496501&address=0x0987d3720d38847ac6dbb9d025b9de892a3ca35c&topic0=0x97326258efdae63280617ca33884e507791c2abeed7b82acd77f1853394ef94b"
+        },
+        {
+          "label": "CitreaScan deployed source 0x1a20b160bf546774246c7920939e6e7ac0f88b8e",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0x1a20b160bf546774246c7920939e6e7ac0f88b8e"
+        },
+        {
+          "label": "CitreaScan deployed source 0xc1b97398c06b9c6a49fd9dcfac8907700301e9ac",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0xc1b97398c06b9c6a49fd9dcfac8907700301e9ac"
+        },
+        {
+          "label": "CitreaScan deployed source 0x22fe239892ebc8805da8f05ed3bc6af75332b60b",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0x22fe239892ebc8805da8f05ed3bc6af75332b60b"
+        },
+        {
+          "label": "CitreaScan deployed source 0x3090a89a1ff5dc99117be655599e5491a0babb92",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0x3090a89a1ff5dc99117be655599e5491a0babb92"
+        },
+        {
+          "label": "CitreaScan deployed source 0x51ff8141d731676fb21ae1e5d5a88c04511994dd",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0x51ff8141d731676fb21ae1e5d5a88c04511994dd"
+        },
+        {
+          "label": "CitreaScan deployed source 0x920db0adf6fee2d69401e9f68d60319177dca20f",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0x920db0adf6fee2d69401e9f68d60319177dca20f"
+        },
+        {
+          "label": "CitreaScan deployed source 0x5cc0e668f8ba61e111b6168e19d17d3c65040614",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0x5cc0e668f8ba61e111b6168e19d17d3c65040614"
+        },
+        {
+          "label": "CitreaScan deployed source 0x8d11020286af9ecf7e5d7bd79699c391b224a0bd",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0x8d11020286af9ecf7e5d7bd79699c391b224a0bd"
+        },
+        {
+          "label": "CitreaScan deployed source 0x107edf5f030d724bd0c73f88a300bea09ae581e2",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0x107edf5f030d724bd0c73f88a300bea09ae581e2"
+        },
+        {
+          "label": "CitreaScan deployed source 0xe8c97614ac1a5ac0e8ab2d0e04b4b315817ecb36",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0xe8c97614ac1a5ac0e8ab2d0e04b4b315817ecb36"
         }
       ]
     }

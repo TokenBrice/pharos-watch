@@ -263,6 +263,7 @@
     ],
     "economicCapSemantics": "unbounded",
     "governedIssuance": {
+      "decisionRule": "affirmative-vote",
       "governorControlRef": "ethereum:0xbe8e3e3618f7474f8cb1d074a26affef007e98fb",
       "votingPower": "lock-escrowed",
       "votingPowerEvidence": "Pinned Chief.gov is SKY 0x56072c95faa701256059aa122697b133aded9279. Verified Chief.lock transfers SKY into the Chief and increases deposits/approval weight; vote uses deposits, not the voter's live wallet balance. free removes approval weight and requires block.number > last, while lift sets last, preventing same-block lift-and-release. Chief has no fixed vote duration; liftCooldown=10 constrains repeated lifts and the current unavoidable governance issuance delay is DSPause's 172800 seconds after plot. This is locked approval stake, not time-locked veSKY.",

@@ -1119,6 +1119,7 @@
         "none-resolved": 100,
         "bounded-admin": 85,
         "partially-bounded-admin": 70,
+        "unbounded-veto-guarded": 70,
         "unbounded-governed": 60,
         "concentrated-admin": 55,
         "collateral-gated": 50,
@@ -1130,7 +1131,18 @@
       },
       "governedIssuance": {
         "minUnavoidableDelaySec": 172800,
-        "admissibleVotingPower": ["lock-escrowed", "past-block-checkpoint"]
+        "admissibleVotingPower": ["lock-escrowed", "past-block-checkpoint"],
+        "minorityVeto": {
+          "minVetoWindowSec": 1209600,
+          "maxVetoQuorumBps": 200,
+          "admissibleVotingPower": ["holding-period-weighted", "lock-escrowed", "past-block-checkpoint"],
+          "admissibleOverride": ["none", "symmetric-vote-destruction", "insolvency-gated-restructure"],
+          "restructureMinEquityMultiple": 2,
+          "monetaryPolicy": {
+            "minRateChangeDelaySec": 172800,
+            "admissibleRateChangeRules": ["minority-replaceable"]
+          }
+        }
       },
       "mintPostureGrading": {
         "prudentialReconciled": 80,

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { V9DeploymentControlFactV2, V9FactStatusV2 } from "../../types/safety-score-v9-facts";
+import { V9DeploymentControlFactBaseSchema, type V9DeploymentControlFactV2, type V9FactStatusV2 } from "../../types/safety-score-v9-facts";
 import {
   evaluateV9EconomicControl,
   evaluateV9EconomicControlAssetFacts,
@@ -16,7 +16,7 @@ import type {
   V9MintSupervision,
   V9OracleControlReview,
 } from "../safety-score-v9/control-primitives";
-import { deriveV9MintPosture, isV9GovernedIssuanceQualified } from "../safety-score-v9/control-primitives";
+import { deriveV9MintPosture, isV9GovernedIssuanceQualified, isV9VetoGuardedIssuanceQualified } from "../safety-score-v9/control-primitives";
 import { loadV9MethodologyPolicy, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { scoreV9Input } from "../safety-score-v9/formula";
 import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
@@ -2556,8 +2556,11 @@ describe("D29 governed unbounded issuance", () => {
     coverage: "complete",
     incompleteReasons: [],
     governorAuthorityKey: "ethereum:0x1234567890123456789012345678901234567890",
+    decisionRule: "affirmative-vote",
     minUnavoidableDelaySec: 172_800,
     votingPower: "lock-escrowed",
+    vetoQuorumBps: null,
+    vetoOverride: null,
     enumerable: true,
     nonGovernorUnboundedPathKeys: [],
   };
@@ -2681,5 +2684,117 @@ describe("D29 governed unbounded issuance", () => {
     }));
     expect(result.components.find((component) => component.kind === "mint")).toMatchObject({ posture, score: 25 });
     expect(result.structuralFailures).toContainEqual(expect.objectContaining({ kind: "centralized-mint", severity, reason }));
+  });
+});
+
+describe("D30 minority-veto unbounded issuance", () => {
+  type Governance = NonNullable<V9DeploymentControlFactV2["issuanceGovernance"]>;
+  const governance: Governance = {
+    coverage: "complete", incompleteReasons: [],
+    governorAuthorityKey: "ethereum:0x1234567890123456789012345678901234567890",
+    decisionRule: "minority-veto", minUnavoidableDelaySec: 1_209_600,
+    votingPower: "holding-period-weighted", vetoQuorumBps: 200,
+    vetoOverride: "symmetric-vote-destruction", enumerable: true, nonGovernorUnboundedPathKeys: [],
+  };
+  const governor = control("mint:veto-governor", "mint", {
+    authority: { authorityKey: governance.governorAuthorityKey, model: "governance", threshold: null },
+    capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
+    issuanceGovernance: governance,
+  });
+  const mint = makeReviewedMintInput(governor.controlKey, { reconciliation: "none", supervision: "none" });
+
+  it.each([
+    ["window one second short", { minUnavoidableDelaySec: 1_209_599 }, false],
+    ["window at fourteen days", { minUnavoidableDelaySec: 1_209_600 }, true],
+    ["two-percent quorum", { vetoQuorumBps: 200 }, true],
+    ["quorum one basis point too high", { vetoQuorumBps: 201 }, false],
+    ["holding-duration votes", { votingPower: "holding-period-weighted" }, true],
+    ["escrowed votes", { votingPower: "lock-escrowed" }, true],
+    ["past-block votes", { votingPower: "past-block-checkpoint" }, true],
+    ["transaction-live votes", { votingPower: "live-balance" }, false],
+    ["unknown votes", { votingPower: "unknown" }, false],
+    ["no override", { vetoOverride: "none" }, true],
+    ["unreachable certified restructure", { vetoOverride: "insolvency-gated-restructure" }, true],
+    ["equal-cost vote destruction", { vetoOverride: "symmetric-vote-destruction" }, true],
+    ["unknown override", { vetoOverride: "unknown" }, false],
+    ["unknown window", { minUnavoidableDelaySec: null }, false],
+    ["unknown quorum", { vetoQuorumBps: null }, false],
+    ["missing override", { vetoOverride: null }, false],
+    ["incomplete coverage", { coverage: "incomplete" }, false],
+    ["unclosed review", { incompleteReasons: ["review-incomplete"] }, false],
+    ["independent unbounded minter", { nonGovernorUnboundedPathKeys: ["council:mint"] }, false],
+    ["unobservable admissions", { enumerable: false }, false],
+  ] satisfies [string, Partial<Governance>, boolean][])(
+    "qualifies %s: %s", (_name, overrides, qualified) => {
+      const candidate = { ...governor, issuanceGovernance: { ...governance, ...overrides } };
+      expect(isV9VetoGuardedIssuanceQualified(candidate, CONTROL_POLICY.governedIssuance)).toBe(qualified);
+      expect(isV9GovernedIssuanceQualified(candidate, CONTROL_POLICY.governedIssuance)).toBe(false);
+      expect(deriveV9MintPosture(candidate, mint, false, CONTROL_POLICY.governedIssuance))
+        .toBe(qualified ? "unbounded-veto-guarded" : "unbounded-unreconciled");
+      expect(gradeVerifiedControlAuthority(candidate, CONTROL_POLICY)).toBe(qualified ? 70 : 25);
+    },
+  );
+
+  it("uses policy-owned minority-veto gates without granting an authority exception", () => {
+    for (const change of [
+      { minVetoWindowSec: 1_209_601 }, { maxVetoQuorumBps: 199 },
+      { admissibleVotingPower: ["lock-escrowed"] }, { admissibleOverride: ["none"] },
+    ] satisfies Partial<typeof CONTROL_POLICY.governedIssuance.minorityVeto>[]) {
+      expect(isV9VetoGuardedIssuanceQualified(governor, {
+        ...CONTROL_POLICY.governedIssuance,
+        minorityVeto: { ...CONTROL_POLICY.governedIssuance.minorityVeto, ...change },
+      })).toBe(false);
+    }
+  });
+
+  it("ranks minority veto above affirmative governance and never falls back to it", () => {
+    const candidate = { ...governor, issuanceGovernance: { ...governance, votingPower: "lock-escrowed" as const } };
+    expect(deriveV9MintPosture(candidate, mint, false, CONTROL_POLICY.governedIssuance)).toBe("unbounded-veto-guarded");
+    const affirmative = { ...candidate, issuanceGovernance: {
+      ...candidate.issuanceGovernance, decisionRule: "affirmative-vote" as const, vetoQuorumBps: null, vetoOverride: null,
+    } };
+    expect(deriveV9MintPosture(affirmative, mint, false, CONTROL_POLICY.governedIssuance)).toBe("unbounded-governed");
+    const failedVeto = { ...candidate, issuanceGovernance: { ...candidate.issuanceGovernance, vetoQuorumBps: 201 } };
+    expect(deriveV9MintPosture(failedVeto, mint, false, CONTROL_POLICY.governedIssuance)).toBe("unbounded-unreconciled");
+  });
+
+  it.each([
+    ["continuous", "prudential", "none", "unbounded-reconciled", 80],
+    ["periodic", "attestation-only", "none", "unbounded-reconciled", 70],
+    ["continuous", "none", "none", "unbounded-veto-guarded", 70],
+    ["none", "none", "active", "compromised", 25],
+  ] as const)("preserves %s/%s/%s precedence", (reconciliation, supervision, incidentState, posture, score) => {
+    const candidate = { ...governor, incidentState };
+    const review = makeReviewedMintInput(candidate.controlKey, { reconciliation, supervision });
+    const result = evaluateV9EconomicControl(args({ facts: facts([candidate]), mint: review }));
+    expect(result.components.find((component) => component.kind === "mint")).toMatchObject({ posture, score });
+  });
+
+  it.each([[59, 70], [60, 79], [120, 79]] as const)(
+    "seasons %i months to %i under the unchanged merged-ladder ceiling", (trackRecordMonths, score) => {
+      const result = evaluateV9EconomicControl(args({ facts: facts([governor]), mint, trackRecordMonths }));
+      expect(result.components.find((component) => component.kind === "mint"))
+        .toMatchObject({ posture: "unbounded-veto-guarded", score });
+    },
+  );
+
+  it("emits the low minority-veto signal without treating issuance as bounded", () => {
+    const result = evaluateV9EconomicControl(args({ facts: facts([governor]), mint }));
+    expect(result.structuralFailures).toContainEqual(expect.objectContaining({
+      kind: "centralized-mint", severity: "low", binding: true, controlKeys: [governor.controlKey],
+      reason: "Minting is economically unbounded but every new issuer faces a public minority-veto window.",
+    }));
+  });
+
+  it.each([
+    ["affirmative-vote", 200, null, "vetoQuorumBps"],
+    ["affirmative-vote", null, "none", "vetoOverride"],
+    ["minority-veto", null, "none", "vetoQuorumBps"],
+    ["minority-veto", 200, null, "vetoOverride"],
+  ] as const)("rejects inconsistent compiled %s veto facts", (decisionRule, vetoQuorumBps, vetoOverride, field) => {
+    const parsed = V9DeploymentControlFactBaseSchema.shape.issuanceGovernance.safeParse({
+      ...governance, decisionRule, vetoQuorumBps, vetoOverride,
+    });
+    expect(parsed.error?.issues).toContainEqual(expect.objectContaining({ path: [field] }));
   });
 });

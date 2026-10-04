@@ -420,11 +420,27 @@ function compileMintIssuanceGovernance(
   if (!governor) {
     incompleteReasons.add("governor-control-missing");
   } else if (canonicalAuthorityType(assetId, governor)?.model !== "governance" ||
-      ((governed.votingPower === "lock-escrowed" || governed.votingPower === "past-block-checkpoint") &&
+      ((governed.votingPower === "holding-period-weighted" || governed.votingPower === "lock-escrowed" ||
+        governed.votingPower === "past-block-checkpoint") &&
         (governor.weightedQuorum != null || governor.threshold != null || governor.signerCount != null))) {
     incompleteReasons.add("governor-not-governance");
   }
-  if (governor && projections[governorIndex]!.complete &&
+  if (governed.decisionRule === "minority-veto") {
+    for (const control of authoredControls) {
+      if (!control.executionScope?.paths.some((path) =>
+        path.capSemantics.kind === "unbounded" || path.capSemantics.kind === "unknown" ||
+        path.claimImpairment === "unbounded" || path.claimImpairment === "unknown")) continue;
+      const deployment = control.chain != null && control.address != null
+        ? normalizeDeploymentId(`${control.chain}:${control.address}`) : "";
+      if (!governed.veto || !governor || !projections[governorIndex]!.complete ||
+          !governor.executionScope!.paths.some((path) =>
+            path.activation === "active" && path.capabilities.includes("parameter-change") &&
+            governed.veto!.entrypoints.every((entrypoint) => path.entrypoints.includes(entrypoint)) &&
+            normalizeDeploymentId(path.targetDeployment) === deployment)) {
+        incompleteReasons.add(`governor-without-veto-path:${control.label}`);
+      }
+    }
+  } else if (governor && projections[governorIndex]!.complete &&
       !governor.executionScope!.paths.some((path) => path.activation !== "disabled-final" &&
         path.capabilities.some((capability) => capability === "mint" || capability === "upgrade" || capability === "bridge-mint"))) {
     incompleteReasons.add("governor-without-issuance-path");
@@ -432,6 +448,60 @@ function compileMintIssuanceGovernance(
   const authoredContractAuthorityKeys = new Set(authoredControls.flatMap((control) =>
     control.authorityType === "contract" && control.chain != null && control.address != null
       ? [`${control.chain}:${control.address.toLowerCase()}`] : []));
+  const excludedRestructurePaths = new Set<string>();
+  if (governed.decisionRule === "minority-veto") {
+    if (governor?.executionScope?.paths.some((path) =>
+      path.capSemantics.kind === "unbounded" || path.capSemantics.kind === "unknown" ||
+      path.claimImpairment === "unbounded" || path.claimImpairment === "unknown")) {
+      incompleteReasons.add("governor-carries-unbounded-path");
+    }
+    const monetaryPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.control.governedIssuance.minorityVeto.monetaryPolicy;
+    const admissibleRateChangeRules: readonly string[] = monetaryPolicy.admissibleRateChangeRules;
+    for (const monetaryPath of governed.monetaryPolicyPaths ?? []) {
+      const index = authoredControls.findIndex((control) => control.chain != null && control.address != null &&
+        `${control.chain}:${control.address.toLowerCase()}` === monetaryPath.controlRef);
+      const control = authoredControls[index];
+      const path = projections[index]?.complete
+        ? control?.executionScope?.paths.find((candidate) => candidate.id === monetaryPath.pathId && candidate.activation !== "disabled-final")
+        : undefined;
+      if (!path || path.capSemantics.kind !== "raiseable" || path.claimImpairment !== "bounded" ||
+          monetaryPath.rateChangeDelaySec < monetaryPolicy.minRateChangeDelaySec ||
+          !admissibleRateChangeRules.includes(monetaryPath.rateChangeRule)) {
+        incompleteReasons.add(`monetary-policy-path-inadmissible:${control?.label ?? monetaryPath.controlRef}:${monetaryPath.pathId}`);
+      }
+    }
+    for (const control of authoredControls) {
+      for (const path of control.executionScope?.paths ?? []) {
+        if (path.activation !== "disabled-final" && path.capSemantics.kind === "raiseable" && path.claimImpairment !== "none" &&
+            (path.capabilities.includes("mint") || path.capabilities.includes("bridge-mint")) &&
+            !governed.monetaryPolicyPaths?.some((entry) => entry.pathId === path.id &&
+              entry.controlRef === `${control.chain}:${control.address?.toLowerCase()}`)) {
+          incompleteReasons.add(`monetary-policy-path-unreviewed:${control.label}:${path.id}`);
+        }
+      }
+    }
+    const restructure = governed.veto?.restructure;
+    if (governed.veto?.override === "insolvency-gated-restructure" && restructure) {
+      const multiple = V9_CANDIDATE_POLICY_V1.policy.semantic.control.governedIssuance.minorityVeto.restructureMinEquityMultiple;
+      const unreachable = restructure.observedEquityUnits >= restructure.equityThresholdUnits * multiple;
+      if (!governor?.executionScope?.paths.some((path) => path.activation !== "disabled-final" &&
+          restructure.entrypoints.every((entrypoint) => path.entrypoints.includes(entrypoint)))) {
+        incompleteReasons.add("restructure-path-missing");
+      }
+      if (!unreachable) incompleteReasons.add("restructure-reachable");
+      for (const dependentPath of restructure.dependentPaths) {
+        const index = authoredControls.findIndex((control) => control.chain != null && control.address != null &&
+          `${control.chain}:${control.address.toLowerCase()}` === dependentPath.controlRef);
+        const control = authoredControls[index];
+        const path = control?.executionScope?.paths.find((candidate) => candidate.id === dependentPath.pathId);
+        if (!path || path.activation !== "disabled-reactivatable") {
+          incompleteReasons.add(`restructure-dependent-path-invalid:${control?.label ?? dependentPath.controlRef}:${dependentPath.pathId}`);
+        } else if (unreachable) {
+          excludedRestructurePaths.add(`${index}:${path.id}`);
+        }
+      }
+    }
+  }
   let minUnavoidableDelaySec: number | null = null;
   let hasNullDelay = false;
   const nonGovernorUnboundedPathKeys = new Set<string>();
@@ -444,7 +514,7 @@ function compileMintIssuanceGovernance(
     let governorRooted = index === governorIndex;
     if (!governorRooted && governor != null && control.authorityType === "contract" && control.chain != null) {
       const identity = control.executionScope!.pin.signerIdentity.toLowerCase();
-      if (!/\b\d+\s*(?:of|out\s+of|\/|-of-)\s*\d+\b|\b(?:safes?|multisigs?|multisignature|thresholds?|signers?|owners?|quorum)\b/.test(identity)) {
+      if (!/\b\d+\s*(?:of|out\s+of|\/|-of-)\s*\d+\b|\b(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)(?:\s+|-)(?:of|out\s+of|signatures?\s+(?:of|from))(?:\s+|-)(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|\d+)\b|\b(?:safes?|multisigs?|multisignature|thresholds?|signers?|owners?|quorum|signatures?)\b/.test(identity)) {
         const addresses: readonly string[] = identity.match(/(?<![0-9a-f])0x[0-9a-f]{40}(?![0-9a-f])/g) ?? [];
         const authorityKeys = addresses.map((address) => `${control.chain}:${address}`);
         governorRooted = authorityKeys.includes(governed.governorControlRef) &&
@@ -452,6 +522,7 @@ function compileMintIssuanceGovernance(
       }
     }
     for (const path of projection.paths) {
+      if (excludedRestructurePaths.has(`${index}:${path.id}`)) continue;
       if (!(path.capSemantics.kind === "unbounded" || path.capSemantics.kind === "unknown" ||
             path.claimImpairment === "unbounded" || path.claimImpairment === "unknown")) continue;
       if (path.unavoidableDelaySec === null) {
@@ -468,8 +539,11 @@ function compileMintIssuanceGovernance(
     coverage: incompleteReasons.size === 0 ? "complete" : "incomplete",
     incompleteReasons: [...incompleteReasons].sort(compareText),
     governorAuthorityKey: governed.governorControlRef,
+    decisionRule: governed.decisionRule,
     minUnavoidableDelaySec: hasNullDelay ? null : minUnavoidableDelaySec,
     votingPower: governed.votingPower,
+    vetoQuorumBps: governed.decisionRule === "minority-veto" ? governed.veto?.quorumBps ?? null : null,
+    vetoOverride: governed.decisionRule === "minority-veto" ? governed.veto?.override ?? null : null,
     enumerable: governed.enumerability.authorizationEvents.length > 0 && governed.enumerability.capacityReads.length > 0,
     nonGovernorUnboundedPathKeys: [...nonGovernorUnboundedPathKeys].sort(compareText),
   };
