@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { reviewedScope, SCOPE_CONTROLLER } from "@shared/lib/__tests__/safety-score-v9-control-scope.test-support";
+import { makeCompiledVotingControl, makeOperationalIssuanceProcess } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { buildSafetyScoreV9RetainedRedemptionRoutes, buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
 import { compileSafetyScoreV9FactSetFromFixedInput, compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension, computeSafetyScoreV9ReserveExposureKey, materializeSafetyScoreV9FactSetExtension } from "../safety-score-v9/fact-set";
@@ -62,6 +63,28 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
     const control = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed).assets[0]!.controls[0]!;
     expect(control).toMatchObject({ executionScopeComplete: false, moduleImpact: "unresolved", status: { observationState: "bounded-unknown" } });
     expect(control.scopeDiagnostics).toContain("execution-scope-unreviewed");
+  });
+
+  it("preserves a compiler process failure while rechecking a fresh individual scope", () => {
+    const fixed = exactFixedInput(), reviewed = reviewedUpgradeExtension();
+    const date = new Date((fixed.clockSec - 86400) * 1000).toISOString().slice(0, 10);
+    const diagnostic = { code: "graph-cycle-unclosed" as const, gate: "shared" as const, controlRef: SCOPE_CONTROLLER,
+      pathId: "issuance", classId: null, memberRef: null, field: "authorityGraph.nodes.cycle", evidenceRefIds: ["process-proof"] };
+    const governance = { coverage: "incomplete" as const, incompleteReasons: ["graph-cycle-unclosed"], governorAuthorityKey: SCOPE_CONTROLLER,
+      decisionRule: "affirmative-vote" as const, minUnavoidableDelaySec: 172800, votingPower: "lock-escrowed" as const,
+      vetoQuorumBps: null, vetoOverride: null, enumerable: true, nonGovernorUnboundedPathKeys: [], votingControl: makeCompiledVotingControl(), diagnostics: [diagnostic] };
+    const process = makeOperationalIssuanceProcess({ coverage: "incomplete", authorityCoverage: "incomplete", diagnostics: [diagnostic] });
+    reviewed.assets[0]!.controlReview = { state: "partially-reviewed-controls", rationale: "A source-bound graph cycle denies favorable native process credit.",
+      controls: [localControl({ controlKey: "mint:process", controlKind: "mint", capabilities: ["mint"], authority: { authorityKey: SCOPE_CONTROLLER, model: "governance", threshold: null }, capSemantics: { kind: "unbounded", bound: null },
+        claimImpairment: "unbounded", economicLossScope: "global-claim", executionScope: reviewedScope({ reviewedAt: date, observedAt: date }),
+        executionScopeComplete: false, scopeDiagnostics: ["graph-cycle-unclosed"], issuanceGovernance: governance, issuanceProcess: process, processDiagnostics: [diagnostic] })] };
+    reviewed.assets[0]!.economicControlReview!.mint.controlKey = "mint:process";
+    reviewed.assets[0]!.economicControlReview!.mint.upgrade = { state: "immutable", controlKey: null };
+    const control = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed).assets[0]!.controls[0]!;
+    expect(control).toMatchObject({ executionScopeComplete: false, issuanceProcess: { coverage: "incomplete", authorityCoverage: "incomplete" },
+      issuanceGovernance: { coverage: "incomplete", incompleteReasons: ["graph-cycle-unclosed"] }, capSemantics: { kind: "unbounded" }, claimImpairment: "unbounded" });
+    expect(control.processDiagnostics).toEqual([diagnostic]);
+    expect(control.scopeDiagnostics).toContain("graph-cycle-unclosed");
   });
 
   it("does not charge a legacy-known authority for an incomplete execution census", () => {

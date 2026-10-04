@@ -208,7 +208,9 @@ export function resolveMintAuthorityScoreDisplay(
   const compactLabel = score != null ? `${score} ${bandLabel}` : "NR";
   const detail =
     score != null
-      ? `Mint control posture: ${scoreLabel} (${bandLabel}). ${MINT_AUTHORITY_SCORE_FILTER_CONFIG[bandKey].detail}`
+      ? `Mint control posture: ${scoreLabel} (${bandLabel}). ${mint?.posture === "unbounded-operationally-governed"
+        ? "Discretionary expansion and operational-envelope changes require public token governance; formula interest and activity-bound compensation can execute immediately within reviewed envelopes. Economically unbounded."
+        : MINT_AUTHORITY_SCORE_FILTER_CONFIG[bandKey].detail}`
       : MINT_AUTHORITY_SCORE_FILTER_CONFIG.nr.detail;
 
   return {

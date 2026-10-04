@@ -1,6 +1,7 @@
-import type { V9DeploymentControlFactV2, V9FactGapV3 } from "../../types/safety-score-v9-facts";
-import { isKnownRequired, isV9GovernedIssuanceQualified, isV9VetoGuardedIssuanceQualified, resolveV9StatusCauses, type V9ControlPolicy } from "./control-primitives";
+import type { V9DeploymentControlFactV2, V9FactGapV3, V1005AssetIssuanceFacts } from "../../types/safety-score-v9-facts";
+import { isKnownRequired, isV9GovernedIssuanceQualified, isV9VetoGuardedIssuanceQualified, isV9OperationallyGovernedIssuanceQualified, resolveV9StatusCauses, type V9ControlPolicy } from "./control-primitives";
 import { effectiveAuthoritySignatureRequirement } from "./control-scope";
+import type { V9MethodologySemantic } from "../../types/safety-score-v9";
 
 /**
  * A control row whose authority identity is fully reviewed: it is required-known,
@@ -179,13 +180,15 @@ export function applyMergedMintSignals(
  * which is strictly above this rung, so naming a validation domain can never lift
  * a control into the multisig class.
  */
-export function gradeVerifiedControlAuthority(control: V9DeploymentControlFactV2, controlPolicy: V9ControlPolicy, gaps?: readonly V9FactGapV3[]): number {
+export function gradeVerifiedControlAuthority(control: V9DeploymentControlFactV2, policy: V9MethodologySemantic, gaps?: readonly V9FactGapV3[], issuanceFacts?: V1005AssetIssuanceFacts): number {
+  const controlPolicy = policy.control;
   const quality = controlPolicy.mintPostureQuality;
   if (control.incidentState === "active") return quality.compromised;
   if (control.capSemantics.kind === "unbounded" || control.claimImpairment === "unbounded") {
-    if (isV9VetoGuardedIssuanceQualified(control, controlPolicy.governedIssuance)) return quality["unbounded-veto-guarded"];
-    return isV9GovernedIssuanceQualified(control, controlPolicy.governedIssuance)
-      ? quality["unbounded-governed"]
+    if (isV9VetoGuardedIssuanceQualified(control, controlPolicy.governedIssuance, issuanceFacts)) return quality["unbounded-veto-guarded"];
+    if (isV9GovernedIssuanceQualified(control, controlPolicy.governedIssuance, issuanceFacts)) return quality["unbounded-governed"];
+    return isV9OperationallyGovernedIssuanceQualified(control, policy, issuanceFacts).qualified
+      ? quality["unbounded-operationally-governed"]
       : quality["unbounded-unreconciled"];
   }
   const authority = control.authority;

@@ -2,8 +2,8 @@ import { z } from "zod";
 import { ExitExecutionPublicCertificateSchema, ExitRouteFamilySchema, ExitRouteCapacityEvidenceTierSchema, PhysicalToUsdTraceSchema } from "./exit-route";
 import { RedemptionCapacityScoringHorizonSchema, RedemptionRouteSuspensionSchema } from "./redemption";
 import { V9ReasonCodeSchema } from "./safety-score-v9";
-import { V9DeploymentControlFactBaseSchema } from "./safety-score-v9-facts";
-import { V9ControlExecutionScopeSchema, V9ExactControlPolicySchema } from "./safety-score-v9-control-scope";
+import { V9DeploymentControlFactBaseSchema, V9IssuanceGovernanceObjectSchema, V1005IssuanceProcessObjectSchema, V1005ProcessDiagnosticObjectSchema } from "./safety-score-v9-facts";
+import { V9ControlExecutionScopeSchema, V9ControlExecutionScopeObjectSchema, V9ExactControlPolicySchema } from "./safety-score-v9-control-scope";
 import {
   EXIT_SCORE_TOLERANCE,
   isUniqueSorted,
@@ -417,10 +417,92 @@ export type SafetyScoreV9ExitBreakdown = z.infer<
   typeof SafetyScoreV9ExitBreakdownSchema
 >;
 
+const ProcessCount = z.number().finite().int().nonnegative().safe();
+const SafetyScoreV9VotingControlSummarySchema = z.object({
+  observationState: z.enum(["known", "unknown"]), qualified: z.boolean(),
+  largestSingleControllerShareBps: z.number().int().min(0).max(10000).nullable(),
+  affiliatedAggregateShareBps: z.number().int().min(0).max(10000).nullable(),
+  affiliatedUnilateralRouteCount: ProcessCount,
+  unknownAboveThresholdVoteOwnershipControllerCount: ProcessCount,
+  otherHolderVoteOperatorControllerCount: ProcessCount,
+  privilegedVoteCreation: z.enum(["none", "governor-only", "independent", "unknown"]),
+  forcedDelegation: z.enum(["none", "governor-only", "independent", "unknown"]),
+  censusReconciliationCount: ProcessCount.refine((count) => count > 0), unreconciledCensusCount: ProcessCount,
+}).strict().superRefine((row, ctx) => {
+  if (row.unreconciledCensusCount > row.censusReconciliationCount ||
+      (row.qualified && (row.observationState !== "known" || row.unreconciledCensusCount !== 0 ||
+        row.affiliatedUnilateralRouteCount !== 0 || row.unknownAboveThresholdVoteOwnershipControllerCount !== 0 ||
+        row.otherHolderVoteOperatorControllerCount !== 0 || !["none", "governor-only"].includes(row.privilegedVoteCreation) ||
+        !["none", "governor-only"].includes(row.forcedDelegation)))) {
+    ctx.addIssue({ code: "custom", message: "Voting qualification and census counts must reconcile" });
+  }
+});
+const SafetyScoreV9IssuanceGovernanceSummarySchema = V9IssuanceGovernanceObjectSchema.omit({
+  incompleteReasons: true, nonGovernorUnboundedPathKeys: true, diagnostics: true,
+}).extend({
+  votingControl: SafetyScoreV9VotingControlSummarySchema,
+  incompleteReasonCount: ProcessCount, nonGovernorUnboundedPathCount: ProcessCount, diagnosticCount: ProcessCount,
+  incompleteReasonCounts: z.array(z.object({ code: z.string().min(1), count: ProcessCount.refine((count) => count > 0) }).strict()),
+}).strict().superRefine((row, ctx) => {
+  if ((row.coverage === "complete") !== (row.incompleteReasonCount === 0) ||
+      row.incompleteReasonCounts.reduce((total, reason) => total + reason.count, 0) !== row.incompleteReasonCount ||
+      new Set(row.incompleteReasonCounts.map((reason) => reason.code)).size !== row.incompleteReasonCounts.length ||
+      (row.decisionRule === "affirmative-vote") !== (row.vetoQuorumBps === null) ||
+      (row.decisionRule === "affirmative-vote") !== (row.vetoOverride === null)) {
+    ctx.addIssue({ code: "custom", message: "Governance coverage, reason counts and decision-rule fields must reconcile" });
+  }
+});
+const SafetyScoreV9IssuanceProcessSummarySchema = V1005IssuanceProcessObjectSchema.omit({
+  nonGovernorDiscretionaryPathKeys: true, unclassifiedExpansionPathKeys: true, unknownRecipientPathKeys: true,
+  votingControl: true, diagnostics: true, evidenceRefIds: true,
+}).extend({
+  nonGovernorDiscretionaryPathCount: ProcessCount, unclassifiedExpansionPathCount: ProcessCount,
+  unknownRecipientPathCount: ProcessCount, evidenceRefCount: ProcessCount, diagnosticCount: ProcessCount,
+}).strict().superRefine((row, ctx) => {
+  if (row.matchedMemberCount + row.unknownMemberCount !== row.memberCount ||
+      row.formulaPathCount + row.keeperInitialPathCount + row.keeperRecurringPathCount + row.otherOperationalPathCount !== row.operationalPathCount ||
+      row.fundedKeeperRecurringPathCount > row.keeperRecurringPathCount ||
+      (row.fundedKeeperRecurringPathCount === 0 && row.minKeeperRecurringIntervalSec !== null) ||
+      (row.envelopeTransitionPathCount === 0 && row.minEnvelopeRaisePublicDelaySec !== null)) {
+    ctx.addIssue({ code: "custom", message: "Operational member, path and clock summaries must reconcile" });
+  }
+});
+const SafetyScoreV9ProcessDiagnosticExemplarSchema = V1005ProcessDiagnosticObjectSchema.omit({ issuanceFactsRef: true }).extend({
+  evidenceRefIds: V1005ProcessDiagnosticObjectSchema.shape.evidenceRefIds.max(3),
+  evidenceRefCount: ProcessCount,
+}).strict().superRefine((row, ctx) => {
+  if (row.evidenceRefCount < row.evidenceRefIds.length ||
+      (row.evidenceRefCount === 0) !== (row.evidenceRefIds.length === 0)) {
+    ctx.addIssue({ code: "custom", path: ["evidenceRefCount"], message: "Evidence counts must retain bounded nonempty exemplars" });
+  }
+});
+const SafetyScoreV9ProcessDiagnosticSummarySchema = V1005ProcessDiagnosticObjectSchema.pick({
+  code: true, gate: true, classId: true, field: true,
+}).extend({
+  count: ProcessCount.refine((count) => count > 0),
+  /** Complete sparse control identities; path/member/evidence details are bounded exemplars. */
+  controlRefs: z.array(V1005ProcessDiagnosticObjectSchema.shape.controlRef).min(1),
+  exemplars: z.array(SafetyScoreV9ProcessDiagnosticExemplarSchema).min(1).max(3),
+}).strict().superRefine((row, ctx) => {
+  if (row.count < row.exemplars.length || row.count < row.controlRefs.length ||
+      new Set(row.controlRefs).size !== row.controlRefs.length || row.exemplars.some((exemplar) =>
+    exemplar.code !== row.code || exemplar.gate !== row.gate || !row.controlRefs.includes(exemplar.controlRef) ||
+    exemplar.classId !== row.classId || exemplar.field !== row.field)) {
+    ctx.addIssue({ code: "custom", path: ["exemplars"], message: "Diagnostic counts and sampled identities must match their group" });
+  }
+});
+export const SafetyScoreV9IssuanceSummarySchema = z.object({
+  governance: SafetyScoreV9IssuanceGovernanceSummarySchema.optional(),
+  process: SafetyScoreV9IssuanceProcessSummarySchema.optional(),
+  diagnostics: z.array(SafetyScoreV9ProcessDiagnosticSummarySchema),
+}).strict();
+export type SafetyScoreV9IssuanceSummary = z.output<typeof SafetyScoreV9IssuanceSummarySchema>;
+
 const SafetyScoreV9ControlBreakdownSchema = z
   .object({
     ...SafetyScoreV9BreakdownPillarBaseShape,
     method: z.literal("minimum-binding-component"),
+    issuanceSummary: SafetyScoreV9IssuanceSummarySchema.optional(),
     components: z.array(
       z
         .object({
@@ -433,6 +515,7 @@ const SafetyScoreV9ControlBreakdownSchema = z
           posture: z.string().min(1).max(120),
           controlDetails: z.array(z.object({
             controlKey: z.string().min(1),
+            controlRef: V9ControlExecutionScopeObjectSchema.shape.controllerDeployment.nullable().optional(),
             authority: V9DeploymentControlFactBaseSchema.shape.authority,
             minimumCryptographicSignatures: z.number().int().positive().nullable(),
             executionScopeComplete: z.boolean().nullable(),

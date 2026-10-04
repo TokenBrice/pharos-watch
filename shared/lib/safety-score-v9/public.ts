@@ -10,14 +10,14 @@ import {
   type SafetyScoreV9CurrentCard,
   type SafetyScoreV9CommonModeGroups,
 } from "../../types/safety-score-v9-public";
-import type { SafetyScoreV9PillarAdjustment } from "../../types/safety-score-v9-public-breakdowns";
+import type { SafetyScoreV9PillarAdjustment, SafetyScoreV9IssuanceSummary } from "../../types/safety-score-v9-public-breakdowns";
 import type {
   V9EvidenceLevel,
   V9QualityPillar,
   V9ReasonCode,
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
-import type { V9EvidenceResponsibility } from "../../types/safety-score-v9-facts";
+import type { V9EvidenceResponsibility, V1005ProcessDiagnostic, V1005AssetIssuanceFacts } from "../../types/safety-score-v9-facts";
 import { projectV9CompactPartialEvidence } from "../../types/safety-score-v9-causes";
 import { projectExitExecutionCertificate } from "./exit-execution";
 import { V9EvidenceResponsibilitySchema } from "../../types/safety-score-v9-fact-primitives";
@@ -33,6 +33,7 @@ import type { V9PillarReason, V9ProductionScoreInput, V9ProductionScoreTrace } f
 import { computeV9ResultDigest } from "./trace";
 import { compareText, uniqueSorted } from "./primitives";
 import { effectiveAuthoritySignatureRequirement } from "./control-scope";
+import { normalizeDeploymentId } from "../../types/deployment-id";
 
 type V9PublicAccessProjectionInput = V9AccessPostureResult & {
   reasons?: readonly V9PillarReason[];
@@ -62,7 +63,7 @@ export interface V9PublicCardProjectionInput {
     | "diversificationBonus"
     | "routes"
   >;
-  control?: Pick<V9EconomicControlResult, "score" | "components" | "controlFacts" | "unresolvedDeploymentAdjustment">;
+  control?: Pick<V9EconomicControlResult, "score" | "components" | "controlFacts" | "unresolvedDeploymentAdjustment" | "processDiagnostics" | "issuanceFacts">;
   display?: {
     labels?: Readonly<Record<string, string>>;
     exitHolderEligibility?: Readonly<Record<string, V9ExitHolderEligibility>>;
@@ -443,6 +444,130 @@ function projectExitBreakdown(
   };
 }
 
+function canonicalProcessDiagnostics(
+  diagnostics: Iterable<V1005ProcessDiagnostic>,
+  issuanceFacts: V1005AssetIssuanceFacts | undefined,
+): V1005ProcessDiagnostic[] {
+  const processEvidence = uniqueSorted(issuanceFacts?.process?.evidenceRefIds ?? []);
+  const processEvidenceSet = new Set(processEvidence);
+  const rows = new Map<string, {
+    diagnostic: V1005ProcessDiagnostic; evidenceRefs: Set<string>; usesProcessEvidence: boolean;
+  }>();
+  for (const diagnostic of diagnostics) {
+    const referenced = diagnostic.issuanceFactsRef !== undefined;
+    const usesProcessEvidence = referenced && diagnostic.issuanceFactsRef === issuanceFacts?.ref && issuanceFacts?.process !== undefined;
+    const key = [diagnostic.gate, diagnostic.code, diagnostic.controlRef, diagnostic.pathId,
+      diagnostic.classId, diagnostic.memberRef, diagnostic.field].join("\u0000");
+    let entry = rows.get(key);
+    if (!entry) {
+      entry = { diagnostic, evidenceRefs: new Set(), usesProcessEvidence: false };
+      rows.set(key, entry);
+    }
+    entry.usesProcessEvidence ||= usesProcessEvidence;
+    if (!referenced) for (const ref of diagnostic.evidenceRefIds) entry.evidenceRefs.add(ref);
+  }
+  return [...rows.entries()].sort(([left], [right]) => compareText(left, right)).map(([, entry]) => {
+    // Reuse the one full evidence table for generated failures; only actual extra refs allocate.
+    let evidenceRefIds = processEvidence;
+    if (!entry.usesProcessEvidence) {
+      evidenceRefIds = [...entry.evidenceRefs].sort(compareText);
+    } else if (entry.evidenceRefs.size > 0) {
+      const extraRefs: string[] = [];
+      for (const ref of entry.evidenceRefs) if (!processEvidenceSet.has(ref)) extraRefs.push(ref);
+      if (extraRefs.length > 0) evidenceRefIds = [...processEvidence, ...extraRefs].sort(compareText);
+    }
+    return { ...entry.diagnostic, evidenceRefIds };
+  });
+}
+
+function projectIssuanceSummary(control: NonNullable<V9PublicCardProjectionInput["control"]>): SafetyScoreV9IssuanceSummary | undefined {
+  const facts = control.controlFacts ?? [];
+  if (!control.issuanceFacts && !control.processDiagnostics?.length && !facts.some((fact) => fact.processDiagnostics?.length)) return undefined;
+  const governance = control.issuanceFacts?.governance;
+  const process = control.issuanceFacts?.process;
+  function* diagnostics(): Iterable<V1005ProcessDiagnostic> {
+    yield* control.processDiagnostics ?? [];
+    yield* control.issuanceFacts?.diagnostics ?? [];
+    yield* governance?.diagnostics ?? [];
+    yield* governance?.votingControl.diagnostics ?? [];
+    yield* process?.diagnostics ?? [];
+    yield* process?.votingControl.diagnostics ?? [];
+    for (const fact of facts) {
+      yield* fact.processDiagnostics ?? [];
+    }
+  }
+  const grouped = new Map<string, {
+    summary: SafetyScoreV9IssuanceSummary["diagnostics"][number];
+    controlRefs: Set<V1005ProcessDiagnostic["controlRef"]>;
+  }>();
+  for (const diagnostic of canonicalProcessDiagnostics(diagnostics(), control.issuanceFacts)) {
+    const key = [diagnostic.gate, diagnostic.code, diagnostic.field, diagnostic.classId].join("\u0000");
+    let group = grouped.get(key);
+    if (!group) {
+      group = {
+        summary: { code: diagnostic.code, gate: diagnostic.gate, field: diagnostic.field,
+          classId: diagnostic.classId, count: 0, controlRefs: [], exemplars: [] },
+        controlRefs: new Set(),
+      };
+      grouped.set(key, group);
+    }
+    group.controlRefs.add(diagnostic.controlRef);
+    group.summary.count++;
+    if (group.summary.exemplars.length < 3) {
+      const { issuanceFactsRef: _ref, ...measurements } = diagnostic;
+      group.summary.exemplars.push({
+        ...measurements, evidenceRefIds: diagnostic.evidenceRefIds.slice(0, 3),
+        evidenceRefCount: diagnostic.evidenceRefIds.length,
+      });
+    }
+  }
+  if (!governance && !process && grouped.size === 0) return undefined;
+  let governanceSummary: SafetyScoreV9IssuanceSummary["governance"];
+  if (governance) {
+    const { incompleteReasons, nonGovernorUnboundedPathKeys, diagnostics: governanceDiagnostics, votingControl, ...measurements } = governance;
+    const incompleteReasonCounts = new Map<string, number>();
+    for (const reason of incompleteReasons) {
+      const separator = reason.indexOf(":");
+      const code = separator < 0 ? reason : reason.slice(0, separator);
+      incompleteReasonCounts.set(code, (incompleteReasonCounts.get(code) ?? 0) + 1);
+    }
+    governanceSummary = {
+      ...measurements, incompleteReasonCount: incompleteReasons.length,
+      incompleteReasonCounts: [...incompleteReasonCounts.entries()].sort(([left], [right]) => compareText(left, right))
+        .map(([code, count]) => ({ code, count })),
+      nonGovernorUnboundedPathCount: nonGovernorUnboundedPathKeys.length, diagnosticCount: governanceDiagnostics.length,
+      votingControl: {
+        observationState: votingControl.observationState, qualified: votingControl.qualified,
+        largestSingleControllerShareBps: votingControl.largestSingleControllerShareBps,
+        affiliatedAggregateShareBps: votingControl.affiliatedAggregateShareBps,
+        affiliatedUnilateralRouteCount: votingControl.affiliatedUnilateralRouteIds.length,
+        unknownAboveThresholdVoteOwnershipControllerCount: votingControl.unknownAboveThresholdVoteOwnershipControllerIds.length,
+        otherHolderVoteOperatorControllerCount: votingControl.otherHolderVoteOperatorControllerIds.length,
+        privilegedVoteCreation: votingControl.privilegedVoteCreation, forcedDelegation: votingControl.forcedDelegation,
+        censusReconciliationCount: votingControl.censusReconciliations.length,
+        unreconciledCensusCount: votingControl.censusReconciliations.filter((row) => row.state === "unreconciled").length,
+      },
+    };
+  }
+  let processSummary: SafetyScoreV9IssuanceSummary["process"];
+  if (process) {
+    const { nonGovernorDiscretionaryPathKeys, unclassifiedExpansionPathKeys, unknownRecipientPathKeys,
+      votingControl: _votingControl, diagnostics: processDiagnostics, evidenceRefIds, ...measurements } = process;
+    processSummary = {
+      ...measurements, nonGovernorDiscretionaryPathCount: nonGovernorDiscretionaryPathKeys.length,
+      unclassifiedExpansionPathCount: unclassifiedExpansionPathKeys.length, unknownRecipientPathCount: unknownRecipientPathKeys.length,
+      evidenceRefCount: evidenceRefIds.length, diagnosticCount: processDiagnostics.length,
+    };
+  }
+  return {
+    ...(governanceSummary ? { governance: governanceSummary } : {}),
+    ...(processSummary ? { process: processSummary } : {}),
+    diagnostics: [...grouped.entries()].sort(([left], [right]) => compareText(left, right)).map(([, group]) => ({
+      ...group.summary, controlRefs: [...group.controlRefs].sort((left, right) => compareText(left ?? "", right ?? "")),
+    })),
+  };
+}
+
 function projectControlBreakdown(
   input: V9PublicCardProjectionInput,
 ): NonNullable<V9UninternedPublicCard["breakdowns"]>["control"] {
@@ -453,12 +578,14 @@ function projectControlBreakdown(
   const excluded = input.scoreInput.pillars.control.aggregationDisposition === "excluded-a-b";
   const evaluatedScore = excluded ? null : control.score;
   const publishedScore = input.scoreInput.pillars.control.score;
+  const issuanceSummary = projectIssuanceSummary(control);
   return {
     evaluatedScore,
     publishedScore,
     ...pillarCauseFields(input, "control"),
     aggregationWeight: aggregationWeight(input, "control"),
     method: "minimum-binding-component",
+    ...(issuanceSummary ? { issuanceSummary } : {}),
     components: [...control.components]
       .sort((left, right) => compareText(left.componentKey, right.componentKey))
       .map((component) => ({
@@ -481,6 +608,7 @@ function projectControlBreakdown(
           .filter((fact) => component.controlKeys.includes(fact.controlKey))
           .map((fact) => ({
             controlKey: fact.controlKey,
+            controlRef: normalizeDeploymentId(fact.authority?.authorityKey ?? "") || null,
             authority: fact.authority,
             minimumCryptographicSignatures: effectiveAuthoritySignatureRequirement(fact.authority),
             executionScopeComplete: fact.executionScopeComplete ?? null,

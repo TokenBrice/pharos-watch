@@ -22,10 +22,12 @@ import {
   SafetyScoreV9PillarSchema,
 } from "../../types/safety-score-v9-public";
 import { V9_WRAPPER_LOCAL_FACT_KEYS } from "../../types/safety-score-v9-wrapper";
-import { makeDeploymentControl } from "./safety-score-v9-fixtures.test-support";
+import { makeDeploymentControl, makeCompiledVotingControl, makeOperationalIssuanceProcess } from "./safety-score-v9-fixtures.test-support";
 import { reviewedScope, weightedQuorum } from "./safety-score-v9-control-scope.test-support";
 import supplyAttributionReviews from "../../data/safety-score-v9/supply-attribution-reviews-v1.json";
 import { ReviewedProviderRowExclusionSchema } from "../../types/safety-score-v9-supply-attribution";
+import { isV9OperationallyGovernedIssuanceQualified } from "../safety-score-v9/control-primitives";
+import type { V1005ProcessDiagnostic } from "../../types/safety-score-v9-facts";
 
 const DIGESTS = {
   policy: "a".repeat(64),
@@ -1242,5 +1244,56 @@ describe("Safety Score v9 public NR cap suppression", () => {
       ...card,
       caps: card.caps.map((entry) => ({ ...entry, binding: true })),
     }).success).toBe(false);
+  });
+});
+
+describe("v10.05 published mint process evidence", () => {
+  it("unions compiler/evaluator failures with exact member/path identity and actual/discretionary clocks", () => {
+    const ref = "ethereum:0x1234567890123456789012345678901234567890";
+    const missing: V1005ProcessDiagnostic = { code: "runtime-unmatched", gate: "H0", controlRef: ref,
+      pathId: "keeper-redo", classId: "keeper-class", memberRef: ref, field: "runtimeHash", evidenceRefIds: ["code-read"] };
+    const issuanceFacts = {
+      ref: "modeled-issuance:process",
+      governance: { coverage: "incomplete" as const, incompleteReasons: ["runtime-unmatched"],
+        governorAuthorityKey: ref, decisionRule: "affirmative-vote" as const, minUnavoidableDelaySec: 0,
+        votingPower: "lock-escrowed" as const, vetoQuorumBps: null, vetoOverride: null, enumerable: true,
+        nonGovernorUnboundedPathKeys: [], votingControl: makeCompiledVotingControl(), diagnostics: [missing] },
+      process: makeOperationalIssuanceProcess({ coverage: "incomplete", diagnostics: [missing], maxAnnualInterestGrowthPpm: 500001,
+        evidenceRefIds: ["code-read", "source-proof", "observed-rate", "observed-native-supply"] }),
+      diagnostics: [{ ...missing, evidenceRefIds: ["source-proof"] }],
+    };
+    const fact = makeDeploymentControl("mint:process", "mint", {
+      authority: { authorityKey: ref, model: "governance", threshold: null },
+      capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
+      issuanceFactsRef: issuanceFacts.ref, scopeDiagnostics: ["runtime-unmatched:keeper-redo"],
+    });
+    const input = fixture("process-fixture", { score: 91, grade: "A+" });
+    input.control = { ...input.control!, controlFacts: [fact], issuanceFacts,
+      components: [{ ...input.control!.components[0]!, controlKeys: [fact.controlKey] }],
+      processDiagnostics: isV9OperationallyGovernedIssuanceQualified(fact, V9_CANDIDATE_POLICY_V1.policy.semantic, issuanceFacts).diagnostics };
+    const control = SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9Card(input).card).breakdowns!.control;
+    const details = control.components[0]!.controlDetails![0]!;
+    expect(details.controlRef).toBe(ref);
+    expect(details.diagnostics).toEqual(["runtime-unmatched:keeper-redo"]);
+    expect(control.issuanceSummary?.governance?.votingControl.largestSingleControllerShareBps).toBe(6000);
+    expect(control.issuanceSummary?.process).toMatchObject({ minOperationalExerciseDelaySec: 0,
+      minDiscretionaryPublicDelaySec: 172800, minEnvelopeRaisePublicDelaySec: 172800, memberCount: 3 });
+    expect(control.issuanceSummary?.diagnostics).toContainEqual(expect.objectContaining({
+      code: "runtime-unmatched", gate: "H0", count: 1, controlRefs: [ref],
+      exemplars: [{ ...missing, evidenceRefIds: ["code-read", "source-proof"], evidenceRefCount: 2 }],
+    }));
+    expect(control.issuanceSummary?.diagnostics).toContainEqual(expect.objectContaining({ code: "operational-screen-failed",
+      gate: "H2", controlRefs: [ref], field: "maxAnnualInterestGrowthPpm" }));
+    const exact = control.issuanceSummary!.diagnostics.find((diagnostic) => diagnostic.field === "maxAnnualInterestGrowthPpm")!.exemplars[0]!;
+    expect(exact.evidenceRefCount).toBe(4);
+    expect(exact.evidenceRefIds).toEqual([...issuanceFacts.process.evidenceRefIds].sort().slice(0, 3));
+    expect(exact).not.toHaveProperty("issuanceFactsRef");
+    const stale = input.control.processDiagnostics!.find((diagnostic) => diagnostic.field === "maxAnnualInterestGrowthPpm")!;
+    input.control.processDiagnostics = [{ ...stale, issuanceFactsRef: "different-book" }];
+    const unmatched = projectSafetyScoreV9Card(input).card.breakdowns!.control.issuanceSummary!.diagnostics
+      .find((diagnostic) => diagnostic.field === "maxAnnualInterestGrowthPpm")!.exemplars[0]!;
+    expect(unmatched.evidenceRefCount).toBe(0);
+    expect(unmatched.evidenceRefIds).toEqual([]);
+    expect(unmatched).not.toHaveProperty("issuanceFactsRef");
   });
 });

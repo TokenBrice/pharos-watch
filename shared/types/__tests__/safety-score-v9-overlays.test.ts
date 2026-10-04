@@ -7,6 +7,8 @@ import type { StablecoinMeta } from "../core";
 import { SafetyScoreV9MechanismReviewOverlayFileSchema } from "../safety-score-v9-mechanism-overlays";
 import { SafetyScoreV9OperationalResilienceOverlayFileSchema } from "../safety-score-v9-operational-resilience-overlays";
 import { SafetyScoreV9ReviewedTransferFileSchema } from "../safety-score-v9-transfer-overlays";
+import { V1005CompiledVotingControlSchema, V1005IssuanceProcessSchema } from "../safety-score-v9-facts";
+import { makeCompiledVotingControl, makeOperationalIssuanceProcess } from "../../lib/__tests__/safety-score-v9-fixtures.test-support";
 
 // The one compiler fallback able to grade a fiat-cash/commodity-claim
 // assuranceAndReconciliation or tbill lossRecoveryDesign component `known`
@@ -28,6 +30,32 @@ const transferFixture = { schemaVersion: 1, note: "Fixture", reviews: [transferO
 const operationalFixture = { schemaVersion: 1, note: "Fixture", overlays: [operationalResilienceOverlays.overlays[0]] };
 
 describe("shared Safety Score V9 overlay boundaries", () => {
+  it("requires conserved source measurements rather than trusting complete compiled process labels", () => {
+    const positive = makeOperationalIssuanceProcess();
+    expect(V1005IssuanceProcessSchema.safeParse(positive).success).toBe(true);
+    for (const changed of [
+      { unknownMemberCount: 1 },
+      { formulaPathCount: 2 },
+      { fundedKeeperRecurringPathCount: 2 },
+      { fundedKeeperRecurringPathCount: 0, minKeeperRecurringIntervalSec: null },
+      { maxKeeperRepeatRewardSupplyPpmPer86400Sec: 0 },
+      { minOperationalExerciseDelaySec: null },
+      { votingControl: makeCompiledVotingControl({ qualified: false }) },
+    ]) expect(V1005IssuanceProcessSchema.safeParse({ ...positive, ...changed }).success).toBe(false);
+    const zero = makeOperationalIssuanceProcess({ fundedKeeperRecurringPathCount: 0, minKeeperRecurringIntervalSec: null,
+      maxKeeperRepeatRewardSupplyPpmPer86400Sec: 0, keeperSupplyScreenBasis: { nativeSupplyRaw: "1000000", maxFixedRewardRaw: "10", maxRepeatRewardRawPer86400Sec: "0", nativeUnits: "native" } });
+    expect(V1005IssuanceProcessSchema.safeParse(zero).success).toBe(true);
+  });
+
+  it("rejects unreconciled voting power even when the compiled label claims qualification", () => {
+    const positive = makeCompiledVotingControl();
+    expect(V1005CompiledVotingControlSchema.safeParse(positive).success).toBe(true);
+    const changed = structuredClone(positive);
+    changed.censusReconciliations[0]!.accountedPowerRaw = "99";
+    expect(V1005CompiledVotingControlSchema.safeParse(changed).success).toBe(false);
+    expect(V1005CompiledVotingControlSchema.safeParse({ ...positive, otherHolderVoteOperatorControllerIds: ["caster"] }).success).toBe(false);
+  });
+
   it.each(["ucits-trs-fund", "shared-reserve", "protocol-position"] as const)(
     "requires charged unknowns rather than applicability or synthetic-metric relief for %s",
     (archetype) => {

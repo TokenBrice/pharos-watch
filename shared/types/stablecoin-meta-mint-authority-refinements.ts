@@ -96,7 +96,7 @@ function validateUpgradeAndSourceEvidence(state: MintAuthorityRefinementState): 
       path: ["review", "sources"],
     });
   }
-  if (PRIVILEGED_MINT_PATHS.has(profile.mintPath) && profile.confidence !== "unknown" && controls.length === 0) {
+  if (PRIVILEGED_MINT_PATHS.has(profile.mintPath) && profile.confidence !== "unknown" && controls.length === 0 && !profile.executionCertificates?.sharedBookRef) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "privileged mintAuthority mintPath requires at least one control when confidence is not unknown",
@@ -270,6 +270,20 @@ function validateEconomicControlEvidence({ profile, ctx, profileHasSourceLinks }
 
 function validateGovernedIssuance({ profile, ctx, controls }: MintAuthorityRefinementState): void {
   const governed = profile.governedIssuance;
+  const operational = profile.operationalIssuance;
+  const declaredOperational = profile.authorityPosture === "unbounded-operationally-governed";
+  const sharedBook = profile.executionCertificates?.sharedBookRef;
+  if (governed || operational || declaredOperational) {
+    for (const field of ["executionCertificates", "authorityGraph"] as const) {
+      if (!profile[field] && !(field === "authorityGraph" && sharedBook)) ctx.addIssue({ code: "custom", path: [field], message: "Issuance process requires execution certificates and typed authority graph" });
+    }
+  }
+  if (operational || declaredOperational) {
+    if (governed?.decisionRule !== "affirmative-vote" && !(sharedBook && !governed)) ctx.addIssue({ code: "custom", path: governed ? ["governedIssuance", "decisionRule"] : ["governedIssuance"], message: "Operational issuance requires affirmative token governance" });
+    if (!operational && !sharedBook) ctx.addIssue({ code: "custom", path: ["operationalIssuance"], message: "Operational posture requires its operational evidence block" });
+    if (profile.economicCapSemantics !== "unbounded") ctx.addIssue({ code: "custom", path: ["economicCapSemantics"], message: "Operational issuance remains economically unbounded" });
+    if (profile.inheritedFrom != null || profile.mintPath === "wrapped-or-variant-inherited") ctx.addIssue({ code: "custom", path: ["operationalIssuance"], message: "Operational issuance requires native non-wrapper evidence" });
+  }
   if (governed) {
     if ((governed.decisionRule === "minority-veto") !== (governed.veto !== undefined)) {
       ctx.addIssue({
@@ -288,7 +302,8 @@ function validateGovernedIssuance({ profile, ctx, controls }: MintAuthorityRefin
     for (const [index, monetaryPath] of (governed.monetaryPolicyPaths ?? []).entries()) {
       const matching = controls.filter((control) => control.chain != null && control.address != null &&
         `${control.chain}:${control.address.toLowerCase()}` === monetaryPath.controlRef);
-      if (matching.length !== 1 || !matching[0]!.executionScope?.paths.some((path) => path.id === monetaryPath.pathId)) {
+      if (matching.length !== 1 || !(matching[0]!.executionScope?.paths ??
+          profile.executionCertificates?.classes.find((entry) => entry.id === matching[0]!.executionClassRef?.classId)?.paths ?? []).some((path) => path.id === monetaryPath.pathId)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "monetaryPolicyPaths must resolve to an execution-scope path on exactly one authored control",
@@ -310,7 +325,8 @@ function validateGovernedIssuance({ profile, ctx, controls }: MintAuthorityRefin
         path: ["governedIssuance"],
       });
     }
-    if (!controls.some((control) => control.executionScope?.paths.some(
+    if (!controls.some((control) => (control.executionScope?.paths ??
+      profile.executionCertificates?.classes.find((entry) => entry.id === control.executionClassRef?.classId)?.paths ?? []).some(
       (path) => path.capSemantics.kind === "unbounded" || path.capSemantics.kind === "unknown" ||
         path.claimImpairment === "unbounded" || path.claimImpairment === "unknown",
     ))) {
@@ -348,7 +364,7 @@ function validateGovernedIssuance({ profile, ctx, controls }: MintAuthorityRefin
           path: ["governedIssuance", "governorControlRef"],
         });
       }
-      if (!governor.executionScope) {
+      if (!governor.executionScope && !governor.executionClassRef) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "governedIssuance governor control requires executionScope",
@@ -359,8 +375,8 @@ function validateGovernedIssuance({ profile, ctx, controls }: MintAuthorityRefin
   }
   const requiredDecisionRule = profile.authorityPosture === "unbounded-veto-guarded"
     ? "minority-veto"
-    : profile.authorityPosture === "unbounded-governed" ? "affirmative-vote" : null;
-  if (requiredDecisionRule !== null && governed?.decisionRule !== requiredDecisionRule) {
+    : profile.authorityPosture === "unbounded-governed" || declaredOperational ? "affirmative-vote" : null;
+  if (requiredDecisionRule !== null && governed?.decisionRule !== requiredDecisionRule && !(sharedBook && !governed)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: `authorityPosture ${profile.authorityPosture} requires governedIssuance.decisionRule ${requiredDecisionRule}`,

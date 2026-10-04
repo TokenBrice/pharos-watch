@@ -5,8 +5,11 @@ import {
   buildV9SafetyTableRows,
   getV9GradeRiskBucket,
   resolveV9ConsumerResponse,
+  readV9CardMintComponent,
+  readV9CardIssuanceSummary,
 } from "@/lib/safety-score-v9-consumers";
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
+import { makePublishedProcessDiagnostic } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
 import {
   makeReportCardsV9Response,
   makeV9Card,
@@ -340,5 +343,22 @@ describe("V9 safety consumer projections", () => {
       status: "unavailable",
       reason: "identity-mismatch",
     });
+  });
+});
+
+describe("published mint diagnostic consumer", () => {
+  it("retains typed failures independently of an NR mint score and never invents missing process evidence", () => {
+    const card = makeV9Card();
+    const component = card.breakdowns!.control.components[0]!;
+    const summary = { diagnostics: [makePublishedProcessDiagnostic({
+      code: "operational-cap-unproved", gate: "H2", controlRef: null, pathId: null,
+      classId: null, memberRef: null, field: "maxAnnualInterestGrowthPpm", evidenceRefIds: [],
+    })] };
+    card.breakdowns!.control.components = [{ ...component, kind: "mint", score: null }];
+    card.breakdowns!.control.issuanceSummary = summary;
+    expect(readV9CardMintComponent(card)).toBeNull();
+    expect(readV9CardIssuanceSummary(card)?.diagnostics[0]).toMatchObject({ code: "operational-cap-unproved", count: 1, controlRefs: [null] });
+    card.breakdowns!.control.issuanceSummary = undefined;
+    expect(readV9CardIssuanceSummary(card)).toBeNull();
   });
 });

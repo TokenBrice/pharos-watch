@@ -22,7 +22,7 @@ import {
   normalizeReviewedFactStatus,
   type AssetBuildContext,
 } from "./fact-set-context";
-import { compileReviewedControlScope, weightedReviewIsCurrent } from "@shared/lib/safety-score-v9/control-scope";
+import { compileReviewedControlScope, weightedReviewIsCurrent, sortV1005ProcessDiagnostics } from "@shared/lib/safety-score-v9/control-scope";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { DEPLOYMENT_MATERIAL_SHARE_THRESHOLD } from "./extension-shared";
 import { v9AccessClaimGraphStatuses } from "@shared/types/safety-score-v9-access-lookthrough";
@@ -66,7 +66,7 @@ export function buildControls(context: AssetBuildContext): {
   }
   // Each authority's own certificate is checked; a friendly sibling's proof
   // cannot close an unreviewed contributor on the same deployment.
-  review.controls = review.controls.map((control) => {
+  const reviewedControls = review.controls.map((control) => {
     if (!control.executionScope && !control.executionScopeContributors && !control.authority?.weightedQuorum) return control;
     const projections = control.executionScopeContributors
       ? control.executionScopeContributors.map((entry) => compileReviewedControlScope(entry.scope, entry.authorityKey, context.asset.assetId, context.fixedInput.clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC))
@@ -74,17 +74,21 @@ export function buildControls(context: AssetBuildContext): {
     return {
       ...control,
       ...(control.executionScope || control.executionScopeContributors ? {
-        executionScopeComplete: projections.every((projection) => projection.complete),
+        executionScopeComplete: control.executionScopeComplete !== false && projections.every((projection) => projection.complete),
         moduleImpact: projections.some((projection) => projection.moduleImpact === "relevant") ? "relevant" as const
           : projections.every((projection) => projection.moduleImpact === "verified-noninterfering" || projection.moduleImpact === "not-applicable") ? "verified-noninterfering" as const : "unresolved" as const,
-        scopeDiagnostics: [...new Set(projections.flatMap((projection) => projection.diagnostics))].sort(),
+        scopeDiagnostics: [...new Set([...(control.scopeDiagnostics ?? []), ...projections.flatMap((projection) => projection.diagnostics)])].sort(),
+      } : {}),
+      ...((control.issuanceGovernance || control.issuanceProcess || control.processDiagnostics) ? {
+        processDiagnostics: sortV1005ProcessDiagnostics([...(control.processDiagnostics ?? []),
+          ...(control.issuanceGovernance?.diagnostics ?? []), ...(control.issuanceProcess?.diagnostics ?? [])]),
       } : {}),
       ...(control.authority?.weightedQuorum && !weightedReviewIsCurrent(control.authority.weightedQuorum, context.fixedInput.clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC)
         ? { authority: { ...control.authority, weightedQuorum: { ...control.authority.weightedQuorum, status: "unknown" as const } } } : {}),
     };
   });
   // unresolved control without one keeps the hard reason.
-  const unresolvedControls = review.controls.filter((control) => !controlCanCarryKnownStatus(control));
+  const unresolvedControls = reviewedControls.filter((control) => !controlCanCarryKnownStatus(control));
   const allUnresolvedScoped =
     unresolvedControls.length > 0 &&
     unresolvedControls.every((control) => control.scopedQuestionFresh === true);
@@ -105,13 +109,13 @@ export function buildControls(context: AssetBuildContext): {
           observationState: "bounded-unknown",
           evidenceRefIds: evidenceIds,
         }).status;
-  const hasKnownControl = review.controls.some(controlCanCarryKnownStatus);
+  const hasKnownControl = reviewedControls.some(controlCanCarryKnownStatus);
   if (review.state === "reviewed-controls" || hasKnownControl) {
     assertKnownComponentEvidenceCurrent(context, "control", evidenceIds);
   }
   return {
     controlStatus: status,
-    controls: review.controls.map((control) => {
+    controls: reviewedControls.map((control) => {
       // Materiality bounds the charge, not our knowledge of the authority.
       const controlStatus = (!controlHasExactAuthorityReview(control) && control.economicLossScope === "access-only") || controlSemanticsAreKnown(control)
         ? createV9FactStatus({

@@ -62,6 +62,55 @@ function ControlMeta({ label, value }: { label: string; value: string | null }) 
   );
 }
 
+function MintProcessDetails({
+  diagnostics = [], metrics, available = true,
+}: {
+  diagnostics?: MintAuthorityDetailViewModel["processDiagnostics"];
+  metrics?: MintAuthorityDetailViewModel["processMetrics"];
+  available?: boolean;
+}) {
+  if (!available) return <p className="mt-2 text-xs text-muted-foreground">Published process diagnostics are unavailable.</p>;
+  if (diagnostics.length === 0 && !metrics?.length) return null;
+  const diagnosticCount = diagnostics.reduce((sum, diagnostic) => sum + diagnostic.count, 0);
+  return (
+    <details className="mt-2 rounded-lg border border-border/60 px-3 py-2 text-xs">
+      <summary className="pharos-focus-ring cursor-pointer font-medium">Issuance process evidence ({diagnosticCount} total diagnostics; {diagnostics.length} groups)</summary>
+      {metrics?.length ? (
+        <dl className="mt-2 space-y-1">
+          {metrics.map((metric) => <div key={metric.label}><dt className="inline text-muted-foreground">{metric.label}: </dt><dd className="inline">{metric.value}</dd></div>)}
+        </dl>
+      ) : null}
+      {diagnostics.length > 0 ? (
+        <ul className="mt-2 space-y-2">
+          {diagnostics.map((diagnostic) => (
+            <li key={diagnostic.key}>
+              <p><strong>{diagnostic.statusLabel}</strong> · Gate {diagnostic.gate} · {diagnostic.code}</p>
+              <p className="break-all text-muted-foreground">
+                {diagnostic.classId ? `Class ${diagnostic.classId} / ` : ""}{`field ${diagnostic.field}`}
+              </p>
+              <p className="text-muted-foreground">
+                Group total: {diagnostic.count} across {diagnostic.controlRefs.length} control references.
+                {" "}Showing {diagnostic.exemplars.length} sampled exemplars, not an exhaustive member list.
+              </p>
+              <ul className="mt-1 space-y-1">
+                {diagnostic.exemplars.map((exemplar) => (
+                  <li key={JSON.stringify([exemplar.controlRef, exemplar.pathId, exemplar.memberRef])} className="break-all text-muted-foreground">
+                    {exemplar.controlRef ?? "Process-level"}{exemplar.pathId ? ` / path ${exemplar.pathId}` : ""}
+                    {exemplar.memberRef ? ` / member ${exemplar.memberRef}` : ""}
+                    {exemplar.evidenceRefCount > 0 ? (
+                      <p>Evidence: {exemplar.evidenceRefIds.join(", ")} ({exemplar.evidenceRefIds.length} sampled / {exemplar.evidenceRefCount} total references)</p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </details>
+  );
+}
+
 function MintAuthorityControlRow({ control }: { control: MintAuthorityDetailControlViewModel }) {
   const locationClassName =
     "max-w-full rounded-md border border-border/60 bg-background/70 px-2 py-1 font-mono text-[11px] text-muted-foreground";
@@ -109,6 +158,7 @@ function MintAuthorityControlRow({ control }: { control: MintAuthorityDetailCont
         <ControlMeta label="Safe modules/guard" value={control.modulesOrGuardsLabel} />
       </div>
       {control.capDescription ? <p className="mt-2 text-xs text-muted-foreground">{control.capDescription}</p> : null}
+      <MintProcessDetails diagnostics={control.processDiagnostics} />
     </li>
   );
 }
@@ -213,6 +263,7 @@ export function MintAuthoritySection({
         </div>
       </CardHeader>
       <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
+        <MintProcessDetails diagnostics={profile.processDiagnostics} metrics={profile.processMetrics} available={profile.processEvidenceAvailable ?? false} />
         {!isReviewed ? (
           <>
             <div className="flex flex-wrap gap-1.5">

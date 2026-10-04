@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "10.04",
+  "releaseVersion": "10.05",
   "semantic": {
     "accessLookthrough": {
       "edgeKinds": ["reserve-position", "receipt", "bridge-representation"],
@@ -1121,6 +1121,7 @@
         "partially-bounded-admin": 70,
         "unbounded-veto-guarded": 70,
         "unbounded-governed": 60,
+        "unbounded-operationally-governed": 55,
         "concentrated-admin": 55,
         "collateral-gated": 50,
         "unbounded-reconciled": 55,
@@ -1132,6 +1133,26 @@
       "governedIssuance": {
         "minUnavoidableDelaySec": 172800,
         "admissibleVotingPower": ["lock-escrowed", "past-block-checkpoint"],
+        "operationalFlow": {
+          "annualWindowSec": 31536000,
+          "keeperWindowSec": 86400,
+          "maxAnnualOperationalRatePpm": 500000,
+          "maxKeeperProportionalRewardPpm": 1000,
+          "maxKeeperFixedRewardSupplyPpm": 10,
+          "minKeeperRepeatSec": 3600,
+          "requiresLifetimeBudget": false
+        },
+        "votingControl": {
+          "doctrine": "no-issuer-council-unilateral-vote-control",
+          "affiliatedKinds": ["issuer", "council", "team"],
+          "maxAffiliatedUnilateralRouteCount": 0,
+          "admissiblePrivilegedVoteCreation": ["none", "governor-only"],
+          "admissibleForcedDelegation": ["none", "governor-only"],
+          "unknownBeneficialAffiliation": "diagnostic-only",
+          "unknownVoteOwnershipAboveUnilateralThreshold": "deny",
+          "ownLockedVotesAboveThreshold": "admit-unless-positive-affiliation",
+          "otherHolderKeyVotesAboveThreshold": "deny"
+        },
         "minorityVeto": {
           "minVetoWindowSec": 1209600,
           "maxVetoQuorumBps": 200,

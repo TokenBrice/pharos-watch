@@ -305,7 +305,7 @@ function structuralSignalFromControl(
     (failure.kind === "centralized-mint" || failure.kind === "active-control-incident") &&
     controls.length > 0 && controls.length === failure.controlKeys.length &&
     controls.every((control) => {
-      const posture = deriveV9MintPosture(control, asset.economicControlReview.mint, false, policy.policy.semantic.control.governedIssuance);
+      const posture = deriveV9MintPosture(control, asset.economicControlReview.mint, false, policy.policy.semantic, asset.issuanceFacts);
       return control.controlKind !== "bridge" &&
         control.status.applicability.state !== "not-applicable" &&
         control.status.evidenceRefIds.length > 0 &&

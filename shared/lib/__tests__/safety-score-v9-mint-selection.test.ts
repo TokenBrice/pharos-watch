@@ -6,6 +6,8 @@ import {
   makeEconomicControlFacts as facts,
   makeReviewedMintInput,
   boundedUnknown,
+  makeOperationalIssuanceProcess,
+  makeCompiledVotingControl,
 } from "./safety-score-v9-fixtures.test-support";
 
 describe("V9 mint inventory selection", () => {
@@ -74,5 +76,33 @@ describe("V9 mint inventory selection", () => {
     expect(evaluate([minter, bridge]).components.find((row) => row.kind === "mint"))
       .toEqual(evaluate([minter]).components.find((row) => row.kind === "mint"));
     expect(evaluate([minter, bridge]).score).toBe(evaluate([minter]).score);
+  });
+});
+
+describe("H mint inventory selection", () => {
+  it("does not let a qualified operational-flow row hide a worse native chosen-recipient path", () => {
+    const ref = "ethereum:0x1234567890123456789012345678901234567890";
+    const operational = control("mint:operational", "mint", {
+      authority: { authorityKey: ref, model: "governance", threshold: null },
+      capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
+      issuanceProcess: makeOperationalIssuanceProcess(),
+      issuanceGovernance: { coverage: "complete", incompleteReasons: [], governorAuthorityKey: ref,
+        decisionRule: "affirmative-vote", minUnavoidableDelaySec: 0, votingPower: "lock-escrowed",
+        vetoQuorumBps: null, vetoOverride: null, enumerable: true, nonGovernorUnboundedPathKeys: ["operational#interest"],
+        votingControl: makeCompiledVotingControl(), diagnostics: [] },
+    });
+    const mint = makeReviewedMintInput(operational.controlKey, { reconciliation: "none", supervision: "none" });
+    const positive = evaluateV9EconomicControl(args({ facts: facts([operational]), mint }));
+    expect(positive.components.find((component) => component.kind === "mint")).toMatchObject({ posture: "unbounded-operationally-governed", score: 55 });
+    const discretionary = { ...operational, controlKey: "mint:council", issuanceProcess: undefined, issuanceGovernance: undefined };
+    for (const controls of [[operational, discretionary], [discretionary, operational]]) {
+      const result = evaluateV9EconomicControl(args({ facts: facts(controls), mint }));
+      expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
+        posture: "unbounded-unreconciled", score: 25, controlKeys: [discretionary.controlKey],
+      });
+      expect(result.structuralFailures).toContainEqual(expect.objectContaining({
+        kind: "centralized-mint", severity: "high", controlKeys: [discretionary.controlKey],
+      }));
+    }
   });
 });

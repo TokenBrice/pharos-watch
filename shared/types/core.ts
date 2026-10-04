@@ -213,6 +213,7 @@ export const MINT_AUTHORITY_POSTURE_VALUES = [
   "unbounded-reconciled",
   "unbounded-governed",
   "unbounded-veto-guarded",
+  "unbounded-operationally-governed",
   "concentrated-admin",
   "collateral-gated",
   "unbounded-reconciliation-unknown",

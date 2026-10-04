@@ -17,6 +17,7 @@ import { projectV9CompactPartialEvidence } from "../safety-score-v9-causes";
 import { resolveCauseGapId } from "../safety-score-v9-public-cause-gaps";
 import { iterateEvidenceResponsibilityFacts } from "../safety-score-v9-public-evidence-facts";
 import { resolveV9EffectiveScoringWeight } from "../safety-score-v9-public-causes";
+import { makePublishedIssuanceSummary, makePublishedProcessDiagnostic } from "../../lib/__tests__/safety-score-v9-fixtures.test-support";
 
 describe("Compact public cause contracts", () => {
   it.each([-1, 0.5, 1])("rejects out-of-range/noninteger cause references %s before resolution", (ref) => {
@@ -702,5 +703,24 @@ describe("public reserve-access look-through", () => {
     const summary = evaluateV9AccessLookthrough(makeAccessGraph());
     expect(SafetyScoreV9AccessPostureSchema.safeParse({ ...posture, freezeLookthrough: { ...summary, unresolvedCoverageShare: 0.2 } }).success).toBe(false);
     expect(SafetyScoreV9AccessPostureSchema.safeParse({ ...posture, freezeLookthrough: { ...summary, knownAdverseReachShare: null, reviewedNoCurrentReachShare: null, unresolvedCoverageShare: null } }).success).toBe(false);
+  });
+});
+
+describe("v10.05 public compiled process boundary", () => {
+  it("retains neutral measurements, rejects inconsistent diagnostic samples, and preserves absent legacy evidence", () => {
+    const value = breakdowns();
+    value.control.components[0]!.posture = "unbounded-operationally-governed";
+    value.control.issuanceSummary = makePublishedIssuanceSummary({ maxAnnualInterestGrowthPpm: 500001 }, [
+      makePublishedProcessDiagnostic({ code: "operational-screen-failed", gate: "H2", controlRef: null, pathId: null,
+        classId: null, memberRef: null, field: "maxAnnualInterestGrowthPpm", evidenceRefIds: ["process-proof"] }),
+    ]);
+    const parsed = SafetyScoreV9BreakdownsSchema.parse(value);
+    expect(parsed.control.issuanceSummary?.process).toMatchObject({
+      coverage: "complete", minOperationalExerciseDelaySec: 0, maxAnnualInterestGrowthPpm: 500001,
+    });
+    value.control.issuanceSummary.diagnostics[0]!.exemplars[0]!.evidenceRefCount = 0;
+    expect(SafetyScoreV9BreakdownsSchema.safeParse(value).success).toBe(false);
+    const legacy = SafetyScoreV9BreakdownsSchema.parse(breakdowns());
+    expect(legacy.control.issuanceSummary).toBeUndefined();
   });
 });

@@ -410,3 +410,72 @@ describe("Safety Score v9 methodology policy", () => {
     expect(quality["unbounded-governed"]).toBeLessThan(signalLimits.moderate!);
   });
 });
+
+describe("v10.05 operational governance policy", () => {
+  it.each([
+    "maxAnnualOperationalRatePpm", "maxKeeperProportionalRewardPpm",
+    "maxKeeperFixedRewardSupplyPpm", "minKeeperRepeatSec",
+  ] as const)("digests every mutable H screen %s", (field) => {
+    const changed = candidateClone();
+    changed.semantic.control.governedIssuance.operationalFlow[field]++;
+    expect(loadV9MethodologyPolicy(changed).semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+    const missing = candidateClone();
+    const flow = missing.semantic.control.governedIssuance.operationalFlow as Partial<typeof missing.semantic.control.governedIssuance.operationalFlow>;
+    delete flow[field];
+    expect(() => loadV9MethodologyPolicy(missing)).toThrow();
+  });
+
+  it("pins H units and the single55-to60 credit ladder without duplicate exposure/delay/ceiling keys", () => {
+    expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBe("10.05");
+    for (const field of ["annualWindowSec", "keeperWindowSec", "requiresLifetimeBudget"] as const) {
+      const changed = candidateClone();
+      const flow = changed.semantic.control.governedIssuance.operationalFlow;
+      Object.assign(flow, { [field]: field === "requiresLifetimeBudget" ? true : flow[field] + 1 });
+      expect(() => loadV9MethodologyPolicy(changed)).toThrow();
+    }
+    for (const [field, value] of [["unbounded-operationally-governed", 56], ["unbounded-governed", 61],
+      ["concentrated-admin", 56]] as const) {
+      const changed = candidateClone();
+      changed.semantic.control.mintPostureQuality[field] = value;
+      expect(() => loadV9MethodologyPolicy(changed)).toThrow();
+    }
+    const duplicate = candidateClone();
+    Object.assign(duplicate.semantic.control.governedIssuance.operationalFlow, { maxAggregateKeeperRepeatRewardSupplyPpmPer86400Sec: 1000 });
+    expect(() => loadV9MethodologyPolicy(duplicate)).toThrow();
+  });
+
+  it("accepts the annual-window exposure anchor equality and rejects one second above it", () => {
+    const changed = candidateClone();
+    const governed = changed.semantic.control.governedIssuance;
+    governed.minUnavoidableDelaySec = governed.operationalFlow.annualWindowSec;
+    expect(loadV9MethodologyPolicy(changed).policy.semantic.control.governedIssuance.minUnavoidableDelaySec)
+      .toBe(governed.operationalFlow.annualWindowSec);
+    governed.minUnavoidableDelaySec++;
+    expect(() => loadV9MethodologyPolicy(changed)).toThrow();
+  });
+
+  it("canonicalizes doctrine lists but rejects any weakening or duplicate", () => {
+    const reordered = candidateClone();
+    const doctrine = reordered.semantic.control.governedIssuance.votingControl;
+    doctrine.affiliatedKinds.reverse();
+    doctrine.admissiblePrivilegedVoteCreation.reverse();
+    doctrine.admissibleForcedDelegation.reverse();
+    expect(loadV9MethodologyPolicy(reordered).semanticDigest).toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+    for (const field of Object.keys(doctrine)) {
+      const missing = candidateClone();
+      const altered = missing.semantic.control.governedIssuance.votingControl as Record<string, unknown>;
+      delete altered[field];
+      expect(() => loadV9MethodologyPolicy(missing)).toThrow();
+    }
+    for (const change of [
+      { affiliatedKinds: ["issuer", "council"] }, { affiliatedKinds: ["issuer", "council", "team", "team"] },
+      { admissiblePrivilegedVoteCreation: ["none", "independent"] }, { admissibleForcedDelegation: ["none"] },
+      { maxAffiliatedUnilateralRouteCount: 1 }, { unknownBeneficialAffiliation: "deny" },
+      { ownLockedVotesAboveThreshold: "deny" }, { otherHolderKeyVotesAboveThreshold: "admit" },
+    ]) {
+      const changed = candidateClone();
+      Object.assign(changed.semantic.control.governedIssuance.votingControl, change);
+      expect(() => loadV9MethodologyPolicy(changed)).toThrow();
+    }
+  });
+});

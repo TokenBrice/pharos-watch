@@ -1,4 +1,4 @@
-import type { V9DeploymentControlFactV2, V9FactStatusV2 } from "../../types/safety-score-v9-facts";
+import type { V9DeploymentControlFactV2, V9FactStatusV2, V1005ProcessDiagnostic } from "../../types/safety-score-v9-facts";
 import type {
   V9ReasonCode,
   V9Severity,
@@ -34,6 +34,7 @@ import {
   hasFreshScopedQuestion,
   isControlEconomicallyRelevant,
   isKnownRequired,
+  isV9OperationallyGovernedIssuanceQualified,
   mappedControlStatusReason,
   resolveV9StatusCauses,
   v9ScoringDisposition,
@@ -76,6 +77,7 @@ export function projectV9EconomicControlEvaluation(
       archetype: asset.archetype,
       controlStatus: asset.controlStatus,
       controls: [...asset.controls].sort((left, right) => compareText(left.controlKey, right.controlKey)),
+      ...(asset.issuanceFacts ? { issuanceFacts: asset.issuanceFacts } : {}),
       ...(asset.gaps ? { gaps: asset.gaps } : {}),
       supply: {
         status: asset.supply.status,
@@ -132,6 +134,9 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     );
   const controls = [...args.facts.controls].sort((left, right) => compareText(left.controlKey, right.controlKey));
   const controlsByKey = new Map(controls.map((control) => [control.controlKey, control]));
+  const issuanceFacts = args.facts.issuanceFacts;
+  const processDiagnostics: V1005ProcessDiagnostic[] = controls.flatMap((control) =>
+    isV9OperationallyGovernedIssuanceQualified(control, policy, issuanceFacts).diagnostics);
   const components: (Omit<V9ControlComponent, "cause" | "causeGapIds" | "scoringDisposition" | "effectiveScoringWeight"> &
     { causeStatuses?: readonly (V9FactStatusV2 | undefined)[] })[] = [];
   const reasons = new Map<string, V9CompactControlReason>();
@@ -272,7 +277,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
             !isControlEconomicallyRelevant(control) ||
             (!control.capabilities.includes("mint") && control.controlKey !== mint.controlKey)
           ) return false;
-          const posture = deriveV9MintPosture(control, mint, false, policy.control.governedIssuance);
+          const posture = deriveV9MintPosture(control, mint, false, policy, issuanceFacts);
           return posture === "unknown" ||
             (control.status.evidenceRefIds.length > 0 && isUnboundedMintPosture(posture));
         })
@@ -355,7 +360,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         addReason("mint-control-question", "local-component", "mint:reconciliation", mintControl.controlKey);
       }
 
-      const posture = deriveV9MintPosture(mintControl, mint, immutableMechanism, policy.control.governedIssuance);
+      const posture = deriveV9MintPosture(mintControl, mint, immutableMechanism, policy, issuanceFacts);
       const componentControlKeys = uniqueSorted(
         [mintControl?.controlKey, upgradeControl?.controlKey].filter((value): value is string => value !== undefined),
       );
@@ -390,7 +395,8 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
           posture === "unbounded-unreconciled" ||
           posture === "unbounded-reconciliation-unknown" ||
           posture === "unbounded-governed" ||
-          posture === "unbounded-veto-guarded";
+          posture === "unbounded-veto-guarded" ||
+          posture === "unbounded-operationally-governed";
         if (
           grading.seasonedCreditPoints <= 0 ||
           args.trackRecordMonths === undefined ||
@@ -442,15 +448,17 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         const severity: V9Severity | null =
           posture === "compromised"
             ? "critical"
-            : posture === "unbounded-governed" || posture === "unbounded-veto-guarded"
-              ? "low"
-              : posture === "unbounded-unreconciled" || posture === "unbounded-reconciliation-unknown"
-                ? "high"
-                : prudentiallySupervised
-                  ? null
-                  : mint.supervision === "attestation-only"
-                    ? "low"
-                    : "high";
+            : posture === "unbounded-operationally-governed"
+              ? "moderate"
+              : posture === "unbounded-governed" || posture === "unbounded-veto-guarded"
+                ? "low"
+                : posture === "unbounded-unreconciled" || posture === "unbounded-reconciliation-unknown"
+                  ? "high"
+                  : prudentiallySupervised
+                    ? null
+                    : mint.supervision === "attestation-only"
+                      ? "low"
+                      : "high";
         if (severity !== null) {
           addStructuralFailure({
             kind: "centralized-mint",
@@ -459,13 +467,15 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
             reason:
               posture === "compromised"
                 ? "Minting authority is under an active incident."
-                : posture === "unbounded-veto-guarded"
-                  ? "Minting is economically unbounded but every new issuer faces a public minority-veto window."
-                  : posture === "unbounded-governed"
-                    ? "Minting is economically unbounded but held only by delayed on-chain governance."
-                    : posture === "unbounded-unreconciled"
-                      ? "Economically effective minting is unbounded and unreconciled."
-                      : "Minting is economically unbounded.",
+                : posture === "unbounded-operationally-governed"
+                  ? "Discretionary expansion and operational-envelope changes require public token governance; formula interest and activity-bound compensation can execute immediately within reviewed envelopes. Economically unbounded."
+                  : posture === "unbounded-veto-guarded"
+                    ? "Minting is economically unbounded but every new issuer faces a public minority-veto window."
+                    : posture === "unbounded-governed"
+                      ? "Minting is economically unbounded but held only by delayed on-chain governance."
+                      : posture === "unbounded-unreconciled"
+                        ? "Economically effective minting is unbounded and unreconciled."
+                        : "Minting is economically unbounded.",
             materialSharePct:
               mintControl?.materialSupplyShare == null
                 ? null
@@ -868,7 +878,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     const score = gradeable
       ? Math.min(
           ...gradedControlKeys.map((controlKey) =>
-            gradeVerifiedControlAuthority(controlsByKey.get(controlKey)!, policy.control, args.facts.gaps),
+            gradeVerifiedControlAuthority(controlsByKey.get(controlKey)!, policy, args.facts.gaps, issuanceFacts),
           ),
         )
       : fallback.kind === "mint" ? policy.control.mintPostureQuality.unknown : policy.control.boundedUnknownQuality;
@@ -1054,6 +1064,8 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     oracleApplicability: oracle.status.applicability.state,
     components: normalizedComponents,
     controlFacts: controls,
+    processDiagnostics,
+    ...(issuanceFacts ? { issuanceFacts } : {}),
     reasons: normalizedReasons,
     structuralFailures: normalizedStructuralFailures,
     failureDomains,

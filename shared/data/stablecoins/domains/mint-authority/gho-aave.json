@@ -4,7 +4,7 @@
     "mintPath": "facilitator-bucket-mint",
     "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
-    "summary": "GHO has economically unbounded native issuance authority: the DAO executor can add arbitrary EOA facilitators without a collateral check, and the independent 2-of-3 Risk Council can raise the mainnet direct facilitator bucket and mint to any recipient without a deposit. Current buckets are numeric limits, not economic backing constraints. Governance V3 uses past-block storage proofs and a delayed ordinary execution path, but the Council path prevents governance-only qualification; no active mint compromise is alleged.",
+    "summary": "GHO has economically unbounded native issuance authority. Core/Lido/Horizon mintAndSupply prefunds a fixed first-hop pool on behalf of the minter, not a caller-chosen recipient; downstream lending/configuration/upgrade reach is not fully closed. The independent 2-of-3 Risk Council retains deposit-free, chosen-recipient GSMs Mainnet mint and maximum 2x Bucket Steward increases per facilitator after strictly more than 86400 seconds. That repeat cooldown is not public notice or a finite lifetime budget: the Council route remains zero-delay and independent of governance. The reviewed ordinary Level-1 payload-visible lower bound is 345603 seconds (1 + 259201 + 86401); global closure and D32 voting census remain incomplete. GHO retains its adverse mint posture; no active mint compromise is alleged. Removing the Council's chosen-recipient mint permission, restricting that mint to the reserve, or imposing a finite aggregate token-governed budget would let ordinary D29 assess GHO, subject to complete execution, authority and D32 voting evidence. None of these changes is established by this review.",
     "upgradeability": {
       "model": "immutable",
       "implementationAddresses": [
@@ -121,7 +121,7 @@
               },
               "claimImpairment": "unbounded",
               "economicLossScope": "global-claim",
-              "unavoidableDelaySec": 432003,
+              "unavoidableDelaySec": 345603,
               "activation": "active",
               "affectedLiabilityIds": [
                 "gho-aave"
@@ -138,7 +138,7 @@
             }
           ]
         },
-        "evidence": "At Ethereum block 26095800, hasRole() returned true for this executor under DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, and BUCKET_MANAGER_ROLE. getFacilitatorsList() returned eight facilitator contracts."
+        "evidence": "At Ethereum block 26095800, hasRole() returned true for this executor under DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, and BUCKET_MANAGER_ROLE. getFacilitatorsList() returned eight facilitator contracts. O0 ordinary-route timing correction at Ethereum block 26118754 (hash 0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10, 2026-10-04T11:41:11Z): reviewed Level-1 payload-visible lower bound 345603 seconds = 1 + 259201 + 86401, excluding pre-payload proposal cooldown. Governance.getVotingConfig(1) 0x1c84e321 / COOLDOWN_PERIOD() 0x6e99d52f at 0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7 and PayloadsController.getExecutorSettingsByAccessControl(1) 0xf80281fb at 0xdabad81af85554e9ae636395611c58f7ec1aaec5, with byte-matched implementations and strict source inequalities, are recorded in executionCertificates proof gho-ordinary-route; 04-gho-paths.md section 4 / 07-gho-factcheck.md section 5 historically corroborate at 26118181. This is not complete upstream/bypass certification and does not alter independent zero-delay Council paths."
       },
       {
         "chain": "ethereum",
@@ -150,7 +150,7 @@
         "role": "facilitator",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "capDescription": "250M GHO bucket observed",
+        "capDescription": "250M GHO bucket observed; mintAndSupply selects amount only and supplies to fixed POOL 0x87870bca3f3fd6335c3f4ce8392d69350b4fa4e2 on behalf of the minter; downstream reach remains incompletely certified",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-10-01",
@@ -159,6 +159,10 @@
           {
             "label": "GHO token contract",
             "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
+          },
+          {
+            "label": "Fixed-pool source refreshed at Ethereum 26118754; mintAndSupply 0x749b1e8b",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe4c958de49303c9be571e00582cf9454586de76f"
           }
         ],
         "executionScope": {
@@ -235,7 +239,7 @@
             }
           ]
         },
-        "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 250,000,000 GHO capacity and 135,000,000 GHO level."
+        "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 250,000,000 GHO capacity and 135,000,000 GHO level. O0 refresh at Ethereum block 26118754 (hash 0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10, 2026-10-04T11:41:11Z): POOL() 0x7535d246 is 0x87870bca3f3fd6335c3f4ce8392d69350b4fa4e2, owner() 0x8da5cb5b is the executor and guardian() 0x452a9320 is the Council. Pinned EIP-1967 implementation/runtime correspondence and verified mintAndSupply(uint256) 0x749b1e8b establish mint-to-self then fixed-pool supply-to-self, not a caller-chosen recipient. withdrawAndBurn burns withdrawn principal; excess aTokens transfer to fixed COLLECTOR. Downstream borrowing/configuration/proxy/Collector closure remains open, not reserve-backed by inference. Inline citations: executionCertificates proofs gho-fixed-pool-core and gho-pool-reach-core; historical corroboration 04-gho-paths.md sections 2/6 and 07-gho-factcheck.md section 2, pin 26118181."
       },
       {
         "chain": "ethereum",
@@ -412,7 +416,7 @@
               },
               "claimImpairment": "unbounded",
               "economicLossScope": "global-claim",
-              "unavoidableDelaySec": 432003,
+              "unavoidableDelaySec": 345603,
               "activation": "active",
               "affectedLiabilityIds": [
                 "gho-aave"
@@ -429,7 +433,7 @@
             }
           ]
         },
-        "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 50,000,000 GHO capacity and 50,000,000 GHO level."
+        "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 50,000,000 GHO capacity and 50,000,000 GHO level. O0 ordinary-route timing correction at Ethereum block 26118754 (hash 0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10, 2026-10-04T11:41:11Z): reviewed Level-1 payload-visible lower bound 345603 seconds = 1 + 259201 + 86401, excluding pre-payload proposal cooldown. Governance.getVotingConfig(1) 0x1c84e321 / COOLDOWN_PERIOD() 0x6e99d52f at 0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7 and PayloadsController.getExecutorSettingsByAccessControl(1) 0xf80281fb at 0xdabad81af85554e9ae636395611c58f7ec1aaec5, with byte-matched implementations and strict source inequalities, are recorded in executionCertificates proof gho-ordinary-route; 04-gho-paths.md section 4 / 07-gho-factcheck.md section 5 historically corroborate at 26118181. This is not complete upstream/bypass certification and does not alter independent zero-delay Council paths."
       },
       {
         "chain": "ethereum",
@@ -530,7 +534,7 @@
             }
           ]
         },
-        "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 310,000,000 GHO capacity and 310,000,000 GHO level."
+        "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 310,000,000 GHO capacity and 310,000,000 GHO level. Campaign adverse-path refresh at Ethereum block 26118754 (hash 0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10, 2026-10-04T11:41:11Z): 0xe9ac5231faecb633da0fe85fcb2785b8363427d2 hasRole(MINTER_ROLE,Council) 0x91d14854 and verified mint(account,amount) 0x40c10f19 retain a chosen-recipient, deposit-free path independent of ordinary governance. 0x46aa1063e5265b43663e81329333b47c517a5409 updateFacilitatorBucketCapacity(address,uint128) 0x5e107b9c remains Council-only, maximum 2x capacity per already-eligible update with per-facilitator elapsed time strictly >86400 seconds. This limits repeat growth, not prospective notice or lifetime stock; Council route delay remains zero. See executionCertificates proofs gho-council-gsm-mint / gho-council-bucket-growth and their pinned raw reads/source locations."
       },
       {
         "chain": "ethereum",
@@ -542,7 +546,7 @@
         "role": "facilitator",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "capDescription": "175M GHO bucket observed",
+        "capDescription": "175M GHO bucket observed; mintAndSupply selects amount only and supplies to fixed POOL 0x4e033931ad43597d96d6bcc25c280717730b58b1 on behalf of the minter; downstream reach remains incompletely certified",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-10-01",
@@ -551,6 +555,10 @@
           {
             "label": "GHO token contract",
             "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
+          },
+          {
+            "label": "Fixed-pool source refreshed at Ethereum 26118754; mintAndSupply 0x749b1e8b",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc718786a7e45353835de634897385b3371a749f0"
           }
         ],
         "executionScope": {
@@ -627,7 +635,7 @@
             }
           ]
         },
-        "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 175,000,000 GHO capacity and 45,000,000 GHO level."
+        "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 175,000,000 GHO capacity and 45,000,000 GHO level. O0 refresh at Ethereum block 26118754 (hash 0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10, 2026-10-04T11:41:11Z): POOL() 0x7535d246 is 0x4e033931ad43597d96d6bcc25c280717730b58b1, owner() 0x8da5cb5b is the executor and guardian() 0x452a9320 is the Council. Pinned EIP-1967 implementation/runtime correspondence and verified mintAndSupply(uint256) 0x749b1e8b establish mint-to-self then fixed-pool supply-to-self, not a caller-chosen recipient. withdrawAndBurn burns withdrawn principal; excess aTokens transfer to fixed COLLECTOR. Downstream borrowing/configuration/proxy/Collector closure remains open, not reserve-backed by inference. Inline citations: executionCertificates proofs gho-fixed-pool-lido and gho-pool-reach-lido; historical corroboration 04-gho-paths.md sections 2/6 and 07-gho-factcheck.md section 2, pin 26118181."
       },
       {
         "chain": "ethereum",
@@ -639,7 +647,7 @@
         "role": "facilitator",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "capDescription": "80M GHO bucket observed",
+        "capDescription": "80M GHO bucket observed; mintAndSupply selects amount only and supplies to fixed POOL 0xae05cd22df81871bc7cc2a04becfb516bfe332c8 on behalf of the minter; downstream reach remains incompletely certified",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-10-01",
@@ -648,6 +656,10 @@
           {
             "label": "GHO token contract",
             "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
+          },
+          {
+            "label": "Fixed-pool source refreshed at Ethereum 26118754; mintAndSupply 0x749b1e8b",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x68807d04df1f1bb74bb7498b1e832d2ce356cd18"
           }
         ],
         "executionScope": {
@@ -724,7 +736,7 @@
             }
           ]
         },
-        "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 80,000,000 GHO capacity and 59,000,000 GHO level."
+        "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 80,000,000 GHO capacity and 59,000,000 GHO level. O0 refresh at Ethereum block 26118754 (hash 0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10, 2026-10-04T11:41:11Z): POOL() 0x7535d246 is 0xae05cd22df81871bc7cc2a04becfb516bfe332c8, owner() 0x8da5cb5b is the executor and guardian() 0x452a9320 is the Council. Pinned EIP-1967 implementation/runtime correspondence and verified mintAndSupply(uint256) 0x749b1e8b establish mint-to-self then fixed-pool supply-to-self, not a caller-chosen recipient. withdrawAndBurn burns withdrawn principal; excess aTokens transfer to fixed COLLECTOR. Downstream borrowing/configuration/proxy/Collector closure remains open, not reserve-backed by inference. Inline citations: executionCertificates proofs gho-fixed-pool-horizon and gho-pool-reach-horizon; historical corroboration 04-gho-paths.md sections 2/6 and 07-gho-factcheck.md section 2, pin 26118181."
       },
       {
         "chain": "ethereum",
@@ -804,7 +816,7 @@
               },
               "claimImpairment": "unbounded",
               "economicLossScope": "global-claim",
-              "unavoidableDelaySec": 432003,
+              "unavoidableDelaySec": 345603,
               "activation": "active",
               "affectedLiabilityIds": [
                 "gho-aave"
@@ -821,7 +833,7 @@
             }
           ]
         },
-        "evidence": "At Ethereum block 26095800, getFacilitatorsList() included this Ethereum address, getFacilitator() returned the label GhoDirectFacilitator GSM Arbitrum, and getFacilitatorBucket() returned 50,000,000 GHO capacity and 50,000,000 GHO level. This control records native Ethereum bucket issuance, not the remote bridge capabilities."
+        "evidence": "At Ethereum block 26095800, getFacilitatorsList() included this Ethereum address, getFacilitator() returned the label GhoDirectFacilitator GSM Arbitrum, and getFacilitatorBucket() returned 50,000,000 GHO capacity and 50,000,000 GHO level. This control records native Ethereum bucket issuance, not the remote bridge capabilities. O0 ordinary-route timing correction at Ethereum block 26118754 (hash 0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10, 2026-10-04T11:41:11Z): reviewed Level-1 payload-visible lower bound 345603 seconds = 1 + 259201 + 86401, excluding pre-payload proposal cooldown. Governance.getVotingConfig(1) 0x1c84e321 / COOLDOWN_PERIOD() 0x6e99d52f at 0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7 and PayloadsController.getExecutorSettingsByAccessControl(1) 0xf80281fb at 0xdabad81af85554e9ae636395611c58f7ec1aaec5, with byte-matched implementations and strict source inequalities, are recorded in executionCertificates proof gho-ordinary-route; 04-gho-paths.md section 4 / 07-gho-factcheck.md section 5 historically corroborate at 26118181. This is not complete upstream/bypass certification and does not alter independent zero-delay Council paths."
       },
       {
         "chain": "ethereum",
@@ -901,7 +913,7 @@
               },
               "claimImpairment": "unbounded",
               "economicLossScope": "global-claim",
-              "unavoidableDelaySec": 432003,
+              "unavoidableDelaySec": 345603,
               "activation": "active",
               "affectedLiabilityIds": [
                 "gho-aave"
@@ -918,7 +930,7 @@
             }
           ]
         },
-        "evidence": "At Ethereum block 26095800, getFacilitatorsList() included this Ethereum address, getFacilitator() returned the label GhoDirectFacilitator GSM Monad, and getFacilitatorBucket() returned 50,000,000 GHO capacity and 50,000,000 GHO level. This control records native Ethereum bucket issuance, not the remote bridge capabilities."
+        "evidence": "At Ethereum block 26095800, getFacilitatorsList() included this Ethereum address, getFacilitator() returned the label GhoDirectFacilitator GSM Monad, and getFacilitatorBucket() returned 50,000,000 GHO capacity and 50,000,000 GHO level. This control records native Ethereum bucket issuance, not the remote bridge capabilities. O0 ordinary-route timing correction at Ethereum block 26118754 (hash 0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10, 2026-10-04T11:41:11Z): reviewed Level-1 payload-visible lower bound 345603 seconds = 1 + 259201 + 86401, excluding pre-payload proposal cooldown. Governance.getVotingConfig(1) 0x1c84e321 / COOLDOWN_PERIOD() 0x6e99d52f at 0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7 and PayloadsController.getExecutorSettingsByAccessControl(1) 0xf80281fb at 0xdabad81af85554e9ae636395611c58f7ec1aaec5, with byte-matched implementations and strict source inequalities, are recorded in executionCertificates proof gho-ordinary-route; 04-gho-paths.md section 4 / 07-gho-factcheck.md section 5 historically corroborate at 26118181. This is not complete upstream/bypass certification and does not alter independent zero-delay Council paths."
       },
       {
         "chain": "ethereum",
@@ -1036,7 +1048,7 @@
               },
               "claimImpairment": "unbounded",
               "economicLossScope": "global-claim",
-              "unavoidableDelaySec": 432003,
+              "unavoidableDelaySec": 345603,
               "activation": "active",
               "affectedLiabilityIds": [
                 "gho-aave"
@@ -1053,7 +1065,7 @@
             }
           ]
         },
-        "evidence": "At Ethereum block 26095800, canonical GHO hasRole(BUCKET_MANAGER_ROLE, steward) returned true and hasRole(FACILITATOR_MANAGER_ROLE, steward) returned false. The steward's bytecode matched its verified source, GHO_TOKEN() returned canonical GHO, owner() returned 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a, and RISK_COUNCIL() returned 0x8513e6f37dbc52de87b166980fa3f50639694b60. getControlledFacilitators() returned Core, Horizon, mainnet GSM and Lido facilitators; MINIMUM_DELAY() returned 86400."
+        "evidence": "At Ethereum block 26095800, canonical GHO hasRole(BUCKET_MANAGER_ROLE, steward) returned true and hasRole(FACILITATOR_MANAGER_ROLE, steward) returned false. The steward's bytecode matched its verified source, GHO_TOKEN() returned canonical GHO, owner() returned 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a, and RISK_COUNCIL() returned 0x8513e6f37dbc52de87b166980fa3f50639694b60. getControlledFacilitators() returned Core, Horizon, mainnet GSM and Lido facilitators; MINIMUM_DELAY() returned 86400. O0 ordinary-route timing correction at Ethereum block 26118754 (hash 0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10, 2026-10-04T11:41:11Z): reviewed Level-1 payload-visible lower bound 345603 seconds = 1 + 259201 + 86401, excluding pre-payload proposal cooldown. Governance.getVotingConfig(1) 0x1c84e321 / COOLDOWN_PERIOD() 0x6e99d52f at 0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7 and PayloadsController.getExecutorSettingsByAccessControl(1) 0xf80281fb at 0xdabad81af85554e9ae636395611c58f7ec1aaec5, with byte-matched implementations and strict source inequalities, are recorded in executionCertificates proof gho-ordinary-route; 04-gho-paths.md section 4 / 07-gho-factcheck.md section 5 historically corroborate at 26118181. This is not complete upstream/bypass certification and does not alter independent zero-delay Council paths. Campaign adverse-path refresh at Ethereum block 26118754 (hash 0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10, 2026-10-04T11:41:11Z): 0xe9ac5231faecb633da0fe85fcb2785b8363427d2 hasRole(MINTER_ROLE,Council) 0x91d14854 and verified mint(account,amount) 0x40c10f19 retain a chosen-recipient, deposit-free path independent of ordinary governance. 0x46aa1063e5265b43663e81329333b47c517a5409 updateFacilitatorBucketCapacity(address,uint128) 0x5e107b9c remains Council-only, maximum 2x capacity per already-eligible update with per-facilitator elapsed time strictly >86400 seconds. This limits repeat growth, not prospective notice or lifetime stock; Council route delay remains zero. See executionCertificates proofs gho-council-gsm-mint / gho-council-bucket-growth and their pinned raw reads/source locations."
       },
       {
         "chain": "ethereum",
@@ -1223,7 +1235,7 @@
             }
           ]
         },
-        "evidence": "At Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a), full RoleGranted/RoleRevoked reconstruction and hasRole(MINTER_ROLE,council) identify this independent live minter at mainnet GhoDirectFacilitator 0xe9ac5231faecb633da0fe85fcb2785b8363427d2. Verified bytecode-matched mint(account,amount) checks only MINTER_ROLE before calling GHO_TOKEN.mint; it requires no asset deposit. getThreshold() is 2, getOwners() returns three owners, VERSION() is 1.4.1, the pinned singleton is 0x41675c099f32341bf84bfc5382af534df5c7461a, module pagination terminates empty and guard/module-guard slots are zero. Pinned eth_call from this Council to Bucket Steward.updateFacilitatorBucketCapacity(mainnetGSM,311000000e18) succeeded against the current 310000000e18 capacity. This is a positive non-governor unbacked issuance route, not an allegation of compromise. The partial executionScope does not certify the entire Safe/upstream closure."
+        "evidence": "At Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a), full RoleGranted/RoleRevoked reconstruction and hasRole(MINTER_ROLE,council) identify this independent live minter at mainnet GhoDirectFacilitator 0xe9ac5231faecb633da0fe85fcb2785b8363427d2. Verified bytecode-matched mint(account,amount) checks only MINTER_ROLE before calling GHO_TOKEN.mint; it requires no asset deposit. getThreshold() is 2, getOwners() returns three owners, VERSION() is 1.4.1, the pinned singleton is 0x41675c099f32341bf84bfc5382af534df5c7461a, module pagination terminates empty and guard/module-guard slots are zero. Pinned eth_call from this Council to Bucket Steward.updateFacilitatorBucketCapacity(mainnetGSM,311000000e18) succeeded against the current 310000000e18 capacity. This is a positive non-governor unbacked issuance route, not an allegation of compromise. The partial executionScope does not certify the entire Safe/upstream closure. Campaign adverse-path refresh at Ethereum block 26118754 (hash 0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10, 2026-10-04T11:41:11Z): 0xe9ac5231faecb633da0fe85fcb2785b8363427d2 hasRole(MINTER_ROLE,Council) 0x91d14854 and verified mint(account,amount) 0x40c10f19 retain a chosen-recipient, deposit-free path independent of ordinary governance. 0x46aa1063e5265b43663e81329333b47c517a5409 updateFacilitatorBucketCapacity(address,uint128) 0x5e107b9c remains Council-only, maximum 2x capacity per already-eligible update with per-facilitator elapsed time strictly >86400 seconds. This limits repeat growth, not prospective notice or lifetime stock; Council route delay remains zero. See executionCertificates proofs gho-council-gsm-mint / gho-council-bucket-growth and their pinned raw reads/source locations."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -1231,7 +1243,7 @@
       "decisionRule": "affirmative-vote",
       "governorControlRef": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
       "votingPower": "past-block-checkpoint",
-      "votingPowerEvidence": "GovernanceCore.activateVoting snapshots blockhash(block.number - 1), stores proposal.snapshotBlockHash and forwards that hash to the selected VotingMachine. VotingMachineWithProofs validates voting-asset storage proofs against the proposal block hash before VotingStrategy.getVotingPower; balances and delegations are historical Ethereum snapshot state, not transaction-live balances. This voting-power condition is met, but the independently authorized Risk Council mint path and incomplete execution closure make this governed attempt ineligible.",
+      "votingPowerEvidence": "At Ethereum block 26118754 (hash 0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10, 2026-10-04T11:41:11Z), the live Governance 0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7 EIP-1967 slot points to byte-matched implementation 0x58bcb647c4beff253b4b6996c62f737b783f2cdd; GovernanceCore.activateVoting snapshots blockhash(block.number - 1). Source-defined voting assets and strict ordinary L1 approval thresholds are recorded in executionCertificates proofs gho-governor-snapshot, gho-voting-assets and gho-voting-threshold-l1. This establishes historical snapshot selection, not complete actual selected cross-chain VotingMachine storage-proof/delivery enforcement. The latter remains open (04-gho-paths.md section 4 and 07-gho-factcheck.md section 5, historical Ethereum pin 26118181); voting denominator, controller/own-versus-other-holder provenance, residual and privileged-vote/delegation closure remain null/unknown in votingControl. The independent Council chosen-recipient mint path separately prevents process credit.",
       "enumerability": {
         "authorizationEvents": [
           "FacilitatorAdded(address,bytes32,uint256)",
@@ -1247,10 +1259,10 @@
           "hasRole(bytes32,address)"
         ]
       },
-      "observedAt": "2026-10-03",
-      "observedBlock": 26112822,
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+      "observedAt": "2026-10-04",
+      "observedBlock": 26118754,
+      "reviewedAt": "2026-10-04",
+      "reviewer": "Sol v10.05 operational-governance campaign (GhoData)",
       "sources": [
         {
           "label": "Verified deployed source",
@@ -1267,8 +1279,173 @@
         {
           "label": "Aave Governance V3 historical storage-proof snapshots",
           "url": "https://aave.com/docs/ecosystem/governance"
+        },
+        {
+          "label": "Live Governance V3 proxy and pinned configuration",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7"
+        },
+        {
+          "label": "Live PayloadsController proxy; payload-visible timing",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdabad81af85554e9ae636395611c58f7ec1aaec5"
+        },
+        {
+          "label": "Voting-power strategy and three voting assets",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa198fac58e02a5c5f8f7e877895d50cfa9ad1e04"
+        },
+        {
+          "label": "Campaign Ethereum block 26118754",
+          "url": "https://etherscan.io/block/26118754"
         }
-      ]
+      ],
+      "votingControl": {
+        "id": "gho-aave-voting-control",
+        "governorNodeId": "aave-token-governor",
+        "review": {
+          "observedAt": "2026-10-04",
+          "reviewedAt": "2026-10-04",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.05 operational-governance campaign (GhoData)",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          }
+        },
+        "votingToken": "ethereum:0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+        "totalVotingPowerRaw": null,
+        "pinnedVotingSupply": {
+          "deployment": "ethereum:0xa198fac58e02a5c5f8f7e877895d50cfa9ad1e04",
+          "function": "Source-defined historical AAVE + stkAAVE + aAAVE voting-power denominator; no aggregate getter/census established",
+          "raw": null,
+          "proofRef": "gho-voting-supply-unknown"
+        },
+        "controllerCensusProofRef": "gho-controller-census-unknown",
+        "controllers": [],
+        "holderCensus": [],
+        "routes": [
+          {
+            "id": "aave-l1-unopposed-1",
+            "path": {
+              "controlRef": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+              "pathId": "ordinary-governance-facilitator-authorization"
+            },
+            "kind": "affirmative-approval",
+            "holderCensusRef": "holderCensus",
+            "totalVotingPowerRaw": null,
+            "unilateralThresholdRaw": "320000000000000000000000",
+            "thresholdComparator": "gt",
+            "thresholdProofRef": "gho-voting-threshold-l1",
+            "controllerPowers": [],
+            "residualUpperRaw": null,
+            "residualProofRef": "gho-controller-census-unknown",
+            "affiliatedControllerIds": [],
+            "affiliatedAggregatePowerRaw": null,
+            "affiliatedAggregateUnilateralThresholdRaw": null,
+            "affiliatedAggregateThresholdComparator": "gt",
+            "affiliatedAggregateThresholdProofRef": "gho-controller-census-unknown",
+            "minorityProtectionProofRef": null
+          },
+          {
+            "id": "aave-l1-unopposed-2",
+            "path": {
+              "controlRef": "ethereum:0x2bd010ab5393ab51b601b99c4b33ba148d9466e9",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            "kind": "affirmative-approval",
+            "holderCensusRef": "holderCensus",
+            "totalVotingPowerRaw": null,
+            "unilateralThresholdRaw": "320000000000000000000000",
+            "thresholdComparator": "gt",
+            "thresholdProofRef": "gho-voting-threshold-l1",
+            "controllerPowers": [],
+            "residualUpperRaw": null,
+            "residualProofRef": "gho-controller-census-unknown",
+            "affiliatedControllerIds": [],
+            "affiliatedAggregatePowerRaw": null,
+            "affiliatedAggregateUnilateralThresholdRaw": null,
+            "affiliatedAggregateThresholdComparator": "gt",
+            "affiliatedAggregateThresholdProofRef": "gho-controller-census-unknown",
+            "minorityProtectionProofRef": null
+          },
+          {
+            "id": "aave-l1-unopposed-3",
+            "path": {
+              "controlRef": "ethereum:0x436dccc028322afc355f608cf582b7d7f19fdfed",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            "kind": "affirmative-approval",
+            "holderCensusRef": "holderCensus",
+            "totalVotingPowerRaw": null,
+            "unilateralThresholdRaw": "320000000000000000000000",
+            "thresholdComparator": "gt",
+            "thresholdProofRef": "gho-voting-threshold-l1",
+            "controllerPowers": [],
+            "residualUpperRaw": null,
+            "residualProofRef": "gho-controller-census-unknown",
+            "affiliatedControllerIds": [],
+            "affiliatedAggregatePowerRaw": null,
+            "affiliatedAggregateUnilateralThresholdRaw": null,
+            "affiliatedAggregateThresholdComparator": "gt",
+            "affiliatedAggregateThresholdProofRef": "gho-controller-census-unknown",
+            "minorityProtectionProofRef": null
+          },
+          {
+            "id": "aave-l1-unopposed-4",
+            "path": {
+              "controlRef": "ethereum:0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            "kind": "affirmative-approval",
+            "holderCensusRef": "holderCensus",
+            "totalVotingPowerRaw": null,
+            "unilateralThresholdRaw": "320000000000000000000000",
+            "thresholdComparator": "gt",
+            "thresholdProofRef": "gho-voting-threshold-l1",
+            "controllerPowers": [],
+            "residualUpperRaw": null,
+            "residualProofRef": "gho-controller-census-unknown",
+            "affiliatedControllerIds": [],
+            "affiliatedAggregatePowerRaw": null,
+            "affiliatedAggregateUnilateralThresholdRaw": null,
+            "affiliatedAggregateThresholdComparator": "gt",
+            "affiliatedAggregateThresholdProofRef": "gho-controller-census-unknown",
+            "minorityProtectionProofRef": null
+          },
+          {
+            "id": "aave-l1-unopposed-5",
+            "path": {
+              "controlRef": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+              "pathId": "governor-controls-facilitator-allowlist"
+            },
+            "kind": "affirmative-approval",
+            "holderCensusRef": "holderCensus",
+            "totalVotingPowerRaw": null,
+            "unilateralThresholdRaw": "320000000000000000000000",
+            "thresholdComparator": "gt",
+            "thresholdProofRef": "gho-voting-threshold-l1",
+            "controllerPowers": [],
+            "residualUpperRaw": null,
+            "residualProofRef": "gho-controller-census-unknown",
+            "affiliatedControllerIds": [],
+            "affiliatedAggregatePowerRaw": null,
+            "affiliatedAggregateUnilateralThresholdRaw": null,
+            "affiliatedAggregateThresholdComparator": "gt",
+            "affiliatedAggregateThresholdProofRef": "gho-controller-census-unknown",
+            "minorityProtectionProofRef": null
+          }
+        ],
+        "privilegedVoteCreation": {
+          "state": "unknown",
+          "pathRefs": [],
+          "proofRef": "gho-voting-privileges-unknown"
+        },
+        "forcedDelegation": {
+          "state": "unknown",
+          "pathRefs": [],
+          "proofRef": "gho-voting-privileges-unknown"
+        }
+      }
     },
     "reconciliation": "not-applicable",
     "supervision": "none",
@@ -1301,11 +1478,2756 @@
         {
           "label": "Pinned Ethereum block 26112822",
           "url": "https://etherscan.io/block/26112822"
+        },
+        {
+          "label": "Campaign read pin; raw calls, implementation slots and source/runtime linkage recorded inline",
+          "url": "https://etherscan.io/block/26118754"
         }
       ],
-      "evidence": "At Ethereum block 26095800 (2026-10-01), canonical GHO bytecode matched the verified GhoToken deployment and its EIP-1967 implementation and correct admin slots were zero. The ACL Admin executor retained DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, and BUCKET_MANAGER_ROLE. getFacilitatorsList() returned eight registered facilitators and totalSupply() returned 699,000,000 GHO; the Arbitrum and Monad GSM facilitators each had 50,000,000 GHO capacity and level. The token's verified mint function enforces each facilitator's bucket capacity, while DAO-authorized administration can add facilitators or raise capacities. The separately verified GHO Bucket Steward also holds BUCKET_MANAGER_ROLE and can increase approved native facilitator capacities under its own Risk Council and debounce checks. Contract-governed issuance has no off-chain reserve reconciliation requirement; no prudential supervision of this native mint boundary is evidenced in the reviewed protocol disclosures. D14/D29 review on 2026-10-03 reuses the successful executor addFacilitator(0x000000000000000000000000000000000000dead,\"parity\",uint128.max) simulation at Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a). GhoToken.mint checks facilitator bucket capacity/level, not collateral or code identity, so the economic cap is unbounded. At the same pin, getFacilitatorsList and every getFacilitatorBucket confirm all eight existing capacities/levels. Bucket Steward.getControlledFacilitators returns Core 0x5513224daaeabca31af5280727878d52097afa05, Horizon 0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea, mainnet GSMs 0xe9ac5231faecb633da0fe85fcb2785b8363427d2 and Lido 0x2ce01c87fec1b71a9041c52caed46fc5f4807285. Pinned EIP-1967 slots and exact source/runtime matches bind the three pool minters to their verified GhoDirectMinter implementations; mintAndSupply mints first and deposits the newly minted GHO into the pool, rather than checking a new borrower collateral deposit at this boundary. Their owner is the executor and guardian is the Risk Council. Critically, mainnet GSMs is verified GhoDirectFacilitator, not a deposit-checking GSM contract: mint(account,amount) checks only MINTER_ROLE. Full grant/revoke history plus hasRole reads identify both executor and Risk Council as live MINTER_ROLE holders there. Council is a 2/3 Safe; its pinned eth_call raising that bucket from 310M to 311M succeeds immediately. Thus Council can increase capacity and cause durable arbitrary-recipient issuance without collateral, defeating the delegated-collateral-only and governor-only gates. Its one-day debounce limits repeat updates, not the unavoidable delay before an eligible new update; the Council issuance path minimum is 0 seconds. Ordinary Level-1 governance at this pin has coolDownBeforeVotingStart=86400, votingDuration=259200, COOLDOWN_PERIOD=0 and payload delay=86400. Sequential activation (>86400), queueing (>259200 after activation) and payload execution (>86400 after its queue) impose an integer-timestamp lower bound of 432003 seconds; the zero core cooldown adds nothing, and no overlapping clocks are summed. Cross-chain transport may add latency but is not a certified lower-bound component. Past-block storage-proof voting and facilitator/capacity enumeration are evidenced, yet all authored scopes remain partial because global infrastructure, mutable permission/upgrade/bypass and downstream liability closure are not certified; Council is explicitly independent, not governor-rooted. The curated fallback is unbounded-unreconciled: reconciliation remains not-applicable and supervision none. No active mint incident is evidenced.",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
-      "reviewedAt": "2026-10-03"
+      "evidence": "At Ethereum block 26095800 (2026-10-01), canonical GHO bytecode matched the verified GhoToken deployment and its EIP-1967 implementation and correct admin slots were zero. The ACL Admin executor retained DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, and BUCKET_MANAGER_ROLE. getFacilitatorsList() returned eight registered facilitators and totalSupply() returned 699,000,000 GHO; the Arbitrum and Monad GSM facilitators each had 50,000,000 GHO capacity and level. The token's verified mint function enforces each facilitator's bucket capacity, while DAO-authorized administration can add facilitators or raise capacities. The separately verified GHO Bucket Steward also holds BUCKET_MANAGER_ROLE and can increase approved native facilitator capacities under its own Risk Council and debounce checks. Contract-governed issuance has no off-chain reserve reconciliation requirement; no prudential supervision of this native mint boundary is evidenced in the reviewed protocol disclosures. D14/D29 review on 2026-10-03 reuses the successful executor addFacilitator(0x000000000000000000000000000000000000dead,\"parity\",uint128.max) simulation at Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a). GhoToken.mint checks facilitator bucket capacity/level, not collateral or code identity, so the economic cap is unbounded. At the same pin, getFacilitatorsList and every getFacilitatorBucket confirm all eight existing capacities/levels. Bucket Steward.getControlledFacilitators returns Core 0x5513224daaeabca31af5280727878d52097afa05, Horizon 0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea, mainnet GSMs 0xe9ac5231faecb633da0fe85fcb2785b8363427d2 and Lido 0x2ce01c87fec1b71a9041c52caed46fc5f4807285. Pinned EIP-1967 slots and exact source/runtime matches bind the three pool minters to their verified GhoDirectMinter implementations; mintAndSupply mints first and deposits the newly minted GHO into the pool, rather than checking a new borrower collateral deposit at this boundary. Their owner is the executor and guardian is the Risk Council. Critically, mainnet GSMs is verified GhoDirectFacilitator, not a deposit-checking GSM contract: mint(account,amount) checks only MINTER_ROLE. Full grant/revoke history plus hasRole reads identify both executor and Risk Council as live MINTER_ROLE holders there. Council is a 2/3 Safe; its pinned eth_call raising that bucket from 310M to 311M succeeds immediately. Thus Council can increase capacity and cause durable arbitrary-recipient issuance without collateral, defeating the delegated-collateral-only and governor-only gates. Its one-day debounce limits repeat updates, not the unavoidable delay before an eligible new update; the Council issuance path minimum is 0 seconds. O0 source/state refresh at Ethereum block 26118754 (hash 0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10, 2026-10-04T11:41:11Z) corrects ordinary Level-1 public payload visibility to 345603 seconds: 1 second publication-to-activation, 259201 seconds activation-to-accepted-result, and 86401 seconds queued-payload-to-execution. Pre-payload proposal cooldown is excluded; COOLDOWN_PERIOD is zero. Exact pinned selectors/source inequalities are cited in executionCertificates proof gho-ordinary-route. Cross-chain transport may add latency but is not a certified lower-bound component. Historical snapshot selection and facilitator/capacity enumeration are evidenced; actual selected cross-chain voting-machine proof enforcement remains uncertified (04-gho-paths.md section 4 / 07-gho-factcheck.md section 5, historical pin 26118181). All authored scopes remain partial because global infrastructure, mutable permission/upgrade/bypass and downstream liability closure are not certified; Council is explicitly independent, not governor-rooted. The curated fallback is unbounded-unreconciled: reconciliation remains not-applicable and supervision none. No active mint incident is evidenced. v10.05 campaign review at Ethereum block 26118754 (hash 0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10, 2026-10-04T11:41:11Z): new schema-shaped executionCertificates, authorityGraph and votingControl record exact local reads/source proofs but do not grant complete certificates or H. The typed graph distinguishes actual token-voting Governor 0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7 from the ordinary ACL Admin executor 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a and explicitly retains Council and unresolved authority/vote-origin alternatives. O0 fixed-pool proofs gho-fixed-pool-core/lido/horizon establish the configured first hops; each gho-pool-reach proof leaves downstream reach open, not favorable by default. D32 totalVotingPowerRaw/pinnedVotingSupply.raw, controller ownership powers, residual and affiliated aggregate are unmeasured (null), with unknown controller census, forced delegation and privileged vote creation. Strict unopposed L1 yes threshold >320000e18 and >80000e18 yes/no differential are source-established, not a full voting-control certificate. The local eight-facilitator registry census is complete, not the whole native-liability/upgrade/transport census. Existing partial scope observations at block 26112822 retain their dates and have not been cosmetically refreshed. Known Council chosen-recipient mint and repeatable capacity growth retain zero prospective delay and unbounded economics. Removing the Council's chosen-recipient mint permission, restricting that mint to the reserve, or imposing a finite aggregate token-governed budget would let ordinary D29 assess GHO, subject to complete execution, authority and D32 voting evidence. None of these changes is established by this review.",
+      "reviewer": "Sol v10.05 operational-governance campaign (GhoData)",
+      "reviewedAt": "2026-10-04"
+    },
+    "executionCertificates": {
+      "schemaVersion": 1,
+      "liabilityBookId": "gho-aave",
+      "evidence": [
+        {
+          "id": "gho-pin-call-1",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x5513224daaeabca31af5280727878d52097afa05",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "POOL",
+          "selector": "0x7535d246",
+          "calldata": "0x7535d246",
+          "rawResult": "0x00000000000000000000000087870bca3f3fd6335c3f4ce8392d69350b4fa4e2",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[3]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0x5513224daaeabca31af5280727878d52097afa05 POOL selector 0x7535d246 returned the recorded raw bytes; historical call discovery: path-reads.json:record[3].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-2",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x5513224daaeabca31af5280727878d52097afa05",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "guardian",
+          "selector": "0x452a9320",
+          "calldata": "0x452a9320",
+          "rawResult": "0x0000000000000000000000008513e6f37dbc52de87b166980fa3f50639694b60",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[5]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0x5513224daaeabca31af5280727878d52097afa05 guardian selector 0x452a9320 returned the recorded raw bytes; historical call discovery: path-reads.json:record[5].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-3",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x5513224daaeabca31af5280727878d52097afa05",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "owner",
+          "selector": "0x8da5cb5b",
+          "calldata": "0x8da5cb5b",
+          "rawResult": "0x0000000000000000000000005300a1a15135ea4dc7ad5a167152c01efc9b192a",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[6]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0x5513224daaeabca31af5280727878d52097afa05 owner selector 0x8da5cb5b returned the recorded raw bytes; historical call discovery: path-reads.json:record[6].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-4",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "MINTER_ROLE",
+          "selector": "0xd5391393",
+          "calldata": "0xd5391393",
+          "rawResult": "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[22]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0xe9ac5231faecb633da0fe85fcb2785b8363427d2 MINTER_ROLE selector 0xd5391393 returned the recorded raw bytes; historical call discovery: path-reads.json:record[22].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-5",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "hasRole",
+          "selector": "0x91d14854",
+          "calldata": "0x91d1485400000000000000000000000000000000000000000000000000000000000000000000000000000000000000005300a1a15135ea4dc7ad5a167152c01efc9b192a",
+          "rawResult": "0x0000000000000000000000000000000000000000000000000000000000000001",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[23]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0xe9ac5231faecb633da0fe85fcb2785b8363427d2 hasRole selector 0x91d14854 returned the recorded raw bytes; historical call discovery: path-reads.json:record[23].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-6",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "hasRole",
+          "selector": "0x91d14854",
+          "calldata": "0x91d148549f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a60000000000000000000000005300a1a15135ea4dc7ad5a167152c01efc9b192a",
+          "rawResult": "0x0000000000000000000000000000000000000000000000000000000000000001",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[24]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0xe9ac5231faecb633da0fe85fcb2785b8363427d2 hasRole selector 0x91d14854 returned the recorded raw bytes; historical call discovery: path-reads.json:record[24].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-7",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "hasRole",
+          "selector": "0x91d14854",
+          "calldata": "0x91d148549f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a60000000000000000000000008513e6f37dbc52de87b166980fa3f50639694b60",
+          "rawResult": "0x0000000000000000000000000000000000000000000000000000000000000001",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[25]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0xe9ac5231faecb633da0fe85fcb2785b8363427d2 hasRole selector 0x91d14854 returned the recorded raw bytes; historical call discovery: path-reads.json:record[25].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-8",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "hasRole",
+          "selector": "0x91d14854",
+          "calldata": "0x91d148543c11d16cbaffd01df69ce1c404f6340ee057498f5f00246190ea54220576a8480000000000000000000000005300a1a15135ea4dc7ad5a167152c01efc9b192a",
+          "rawResult": "0x0000000000000000000000000000000000000000000000000000000000000001",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[26]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0xe9ac5231faecb633da0fe85fcb2785b8363427d2 hasRole selector 0x91d14854 returned the recorded raw bytes; historical call discovery: path-reads.json:record[26].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-9",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x2ce01c87fec1b71a9041c52caed46fc5f4807285",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "POOL",
+          "selector": "0x7535d246",
+          "calldata": "0x7535d246",
+          "rawResult": "0x0000000000000000000000004e033931ad43597d96d6bcc25c280717730b58b1",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[30]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0x2ce01c87fec1b71a9041c52caed46fc5f4807285 POOL selector 0x7535d246 returned the recorded raw bytes; historical call discovery: path-reads.json:record[30].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-10",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x2ce01c87fec1b71a9041c52caed46fc5f4807285",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "guardian",
+          "selector": "0x452a9320",
+          "calldata": "0x452a9320",
+          "rawResult": "0x0000000000000000000000008513e6f37dbc52de87b166980fa3f50639694b60",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[32]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0x2ce01c87fec1b71a9041c52caed46fc5f4807285 guardian selector 0x452a9320 returned the recorded raw bytes; historical call discovery: path-reads.json:record[32].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-11",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x2ce01c87fec1b71a9041c52caed46fc5f4807285",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "owner",
+          "selector": "0x8da5cb5b",
+          "calldata": "0x8da5cb5b",
+          "rawResult": "0x0000000000000000000000005300a1a15135ea4dc7ad5a167152c01efc9b192a",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[33]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0x2ce01c87fec1b71a9041c52caed46fc5f4807285 owner selector 0x8da5cb5b returned the recorded raw bytes; historical call discovery: path-reads.json:record[33].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-12",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "POOL",
+          "selector": "0x7535d246",
+          "calldata": "0x7535d246",
+          "rawResult": "0x000000000000000000000000ae05cd22df81871bc7cc2a04becfb516bfe332c8",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[37]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea POOL selector 0x7535d246 returned the recorded raw bytes; historical call discovery: path-reads.json:record[37].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-13",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "guardian",
+          "selector": "0x452a9320",
+          "calldata": "0x452a9320",
+          "rawResult": "0x0000000000000000000000008513e6f37dbc52de87b166980fa3f50639694b60",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[39]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea guardian selector 0x452a9320 returned the recorded raw bytes; historical call discovery: path-reads.json:record[39].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-14",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "owner",
+          "selector": "0x8da5cb5b",
+          "calldata": "0x8da5cb5b",
+          "rawResult": "0x0000000000000000000000005300a1a15135ea4dc7ad5a167152c01efc9b192a",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[40]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea owner selector 0x8da5cb5b returned the recorded raw bytes; historical call discovery: path-reads.json:record[40].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-15",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "MINIMUM_DELAY",
+          "selector": "0xb1b43ae5",
+          "calldata": "0xb1b43ae5",
+          "rawResult": "0x0000000000000000000000000000000000000000000000000000000000015180",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[56]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0x46aa1063e5265b43663e81329333b47c517a5409 MINIMUM_DELAY selector 0xb1b43ae5 returned the recorded raw bytes; historical call discovery: path-reads.json:record[56].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-16",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "RISK_COUNCIL",
+          "selector": "0x11aa1670",
+          "calldata": "0x11aa1670",
+          "rawResult": "0x0000000000000000000000008513e6f37dbc52de87b166980fa3f50639694b60",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[57]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0x46aa1063e5265b43663e81329333b47c517a5409 RISK_COUNCIL selector 0x11aa1670 returned the recorded raw bytes; historical call discovery: path-reads.json:record[57].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-17",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "getControlledFacilitators",
+          "selector": "0x153d9212",
+          "calldata": "0x153d9212",
+          "rawResult": "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000040000000000000000000000005513224daaeabca31af5280727878d52097afa05000000000000000000000000e10c78a3ac7f016ed2de1a89c5479b1039eab9ea000000000000000000000000e9ac5231faecb633da0fe85fcb2785b8363427d20000000000000000000000002ce01c87fec1b71a9041c52caed46fc5f4807285",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[58]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0x46aa1063e5265b43663e81329333b47c517a5409 getControlledFacilitators selector 0x153d9212 returned the recorded raw bytes; historical call discovery: path-reads.json:record[58].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-18",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "owner",
+          "selector": "0x8da5cb5b",
+          "calldata": "0x8da5cb5b",
+          "rawResult": "0x0000000000000000000000005300a1a15135ea4dc7ad5a167152c01efc9b192a",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[59]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0x46aa1063e5265b43663e81329333b47c517a5409 owner selector 0x8da5cb5b returned the recorded raw bytes; historical call discovery: path-reads.json:record[59].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-19",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "owner",
+          "selector": "0x8da5cb5b",
+          "calldata": "0x8da5cb5b",
+          "rawResult": "0x000000000000000000000000dabad81af85554e9ae636395611c58f7ec1aaec5",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[86]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a owner selector 0x8da5cb5b returned the recorded raw bytes; historical call discovery: path-reads.json:record[86].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-20",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xdabad81af85554e9ae636395611c58f7ec1aaec5",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "guardian",
+          "selector": "0x452a9320",
+          "calldata": "0x452a9320",
+          "rawResult": "0x000000000000000000000000ce52ab41c40575b072a18c9700091ccbe4a06710",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[95]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0xdabad81af85554e9ae636395611c58f7ec1aaec5 guardian selector 0x452a9320 returned the recorded raw bytes; historical call discovery: path-reads.json:record[95].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-21",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xdabad81af85554e9ae636395611c58f7ec1aaec5",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "owner",
+          "selector": "0x8da5cb5b",
+          "calldata": "0x8da5cb5b",
+          "rawResult": "0x0000000000000000000000005300a1a15135ea4dc7ad5a167152c01efc9b192a",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[96]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0xdabad81af85554e9ae636395611c58f7ec1aaec5 owner selector 0x8da5cb5b returned the recorded raw bytes; historical call discovery: path-reads.json:record[96].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-22",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x8513e6f37dbc52de87b166980fa3f50639694b60",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "getOwners",
+          "selector": "0xa0e67e2b",
+          "calldata": "0xa0e67e2b",
+          "rawResult": "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000030000000000000000000000004b752551fc6345a7de82f76fd7a5015ca16d1a74000000000000000000000000b291232f480f41c75802c4a60f1d2ac03404afef0000000000000000000000009de1d45e2786b03498289959203f25b29b4d1193",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[101]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0x8513e6f37dbc52de87b166980fa3f50639694b60 getOwners selector 0xa0e67e2b returned the recorded raw bytes; historical call discovery: path-reads.json:record[101].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-23",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x8513e6f37dbc52de87b166980fa3f50639694b60",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "getThreshold",
+          "selector": "0xe75235b8",
+          "calldata": "0xe75235b8",
+          "rawResult": "0x0000000000000000000000000000000000000000000000000000000000000002",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "path-reads.json:record[102]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0x8513e6f37dbc52de87b166980fa3f50639694b60 getThreshold selector 0xe75235b8 returned the recorded raw bytes; historical call discovery: path-reads.json:record[102].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-24",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "COOLDOWN_PERIOD",
+          "selector": "0x6e99d52f",
+          "calldata": "0x6e99d52f",
+          "rawResult": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "extended-reads.json:record[2]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7 COOLDOWN_PERIOD selector 0x6e99d52f returned the recorded raw bytes; historical call discovery: extended-reads.json:record[2].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-25",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "getVotingConfig",
+          "selector": "0x1c84e321",
+          "calldata": "0x1c84e3210000000000000000000000000000000000000000000000000000000000000001",
+          "rawResult": "0x0000000000000000000000000000000000000000000000000000000000015180000000000000000000000000000000000000000000000000000000000003f480000000000000000000000000000000000000000000000000000000000004e20000000000000000000000000000000000000000000000000000000000000138800000000000000000000000000000000000000000000000000000000000013880",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "extended-reads.json:record[15]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7 getVotingConfig selector 0x1c84e321 returned the recorded raw bytes; historical call discovery: extended-reads.json:record[15].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-26",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "getVotingConfig",
+          "selector": "0x1c84e321",
+          "calldata": "0x1c84e3210000000000000000000000000000000000000000000000000000000000000002",
+          "rawResult": "0x000000000000000000000000000000000000000000000000000000000001518000000000000000000000000000000000000000000000000000000000000d2f0000000000000000000000000000000000000000000000000000000000000fde8000000000000000000000000000000000000000000000000000000000000fde800000000000000000000000000000000000000000000000000000000000030d40",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "extended-reads.json:record[16]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7 getVotingConfig selector 0x1c84e321 returned the recorded raw bytes; historical call discovery: extended-reads.json:record[16].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-27",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xdabad81af85554e9ae636395611c58f7ec1aaec5",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "getExecutorSettingsByAccessControl",
+          "selector": "0xf80281fb",
+          "calldata": "0xf80281fb0000000000000000000000000000000000000000000000000000000000000001",
+          "rawResult": "0x0000000000000000000000005300a1a15135ea4dc7ad5a167152c01efc9b192a0000000000000000000000000000000000000000000000000000000000015180",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "extended-reads.json:record[133]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0xdabad81af85554e9ae636395611c58f7ec1aaec5 getExecutorSettingsByAccessControl selector 0xf80281fb returned the recorded raw bytes; historical call discovery: extended-reads.json:record[133].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-28",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "getFacilitatorBucketCapacityTimelock",
+          "selector": "0x37a0fdcb",
+          "calldata": "0x37a0fdcb0000000000000000000000005513224daaeabca31af5280727878d52097afa05",
+          "rawResult": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "extended-reads.json:record[134]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0x46aa1063e5265b43663e81329333b47c517a5409 getFacilitatorBucketCapacityTimelock selector 0x37a0fdcb returned the recorded raw bytes; historical call discovery: extended-reads.json:record[134].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-29",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "getFacilitatorBucketCapacityTimelock",
+          "selector": "0x37a0fdcb",
+          "calldata": "0x37a0fdcb000000000000000000000000e10c78a3ac7f016ed2de1a89c5479b1039eab9ea",
+          "rawResult": "0x00000000000000000000000000000000000000000000000000000000690e0627",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "extended-reads.json:record[135]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0x46aa1063e5265b43663e81329333b47c517a5409 getFacilitatorBucketCapacityTimelock selector 0x37a0fdcb returned the recorded raw bytes; historical call discovery: extended-reads.json:record[135].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-30",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "getFacilitatorBucketCapacityTimelock",
+          "selector": "0x37a0fdcb",
+          "calldata": "0x37a0fdcb000000000000000000000000e9ac5231faecb633da0fe85fcb2785b8363427d2",
+          "rawResult": "0x000000000000000000000000000000000000000000000000000000006a291eb3",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "extended-reads.json:record[136]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0x46aa1063e5265b43663e81329333b47c517a5409 getFacilitatorBucketCapacityTimelock selector 0x37a0fdcb returned the recorded raw bytes; historical call discovery: extended-reads.json:record[136].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-31",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "getFacilitatorBucketCapacityTimelock",
+          "selector": "0x37a0fdcb",
+          "calldata": "0x37a0fdcb0000000000000000000000002ce01c87fec1b71a9041c52caed46fc5f4807285",
+          "rawResult": "0x0000000000000000000000000000000000000000000000000000000068d3a1b7",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "extended-reads.json:record[137]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0x46aa1063e5265b43663e81329333b47c517a5409 getFacilitatorBucketCapacityTimelock selector 0x37a0fdcb returned the recorded raw bytes; historical call discovery: extended-reads.json:record[137].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-32",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "getFacilitatorsList",
+          "selector": "0x1ec90f2e",
+          "calldata": "0x1ec90f2e",
+          "rawResult": null,
+          "rawResultHash": "0xe7fe7c007d72229824f33626d641a723901bed1939fae820964438a8bb6fc67d",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "inventory-reads.json:record[0]; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f getFacilitatorsList selector 0x1ec90f2e returned eight facilitators: 0x5513224daaeabca31af5280727878d52097afa05, 0xb639d208bcf0589d54fac24e655c79ec529762b8, 0x2bd010ab5393ab51b601b99c4b33ba148d9466e9, 0xe9ac5231faecb633da0fe85fcb2785b8363427d2, 0x2ce01c87fec1b71a9041c52caed46fc5f4807285, 0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea, 0x436dccc028322afc355f608cf582b7d7f19fdfed, 0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134. rawResultHash is keccak256 of the 320 returned bytes; historical call discovery: inventory-reads.json:record[0].",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-33",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "getPowerStrategy",
+          "selector": "0x0f3424bb",
+          "calldata": "0x0f3424bb",
+          "rawResult": "0x000000000000000000000000a198fac58e02a5c5f8f7e877895d50cfa9ad1e04",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "extended-reads.json:getPowerStrategy; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7 getPowerStrategy selector 0x0f3424bb returned the recorded raw bytes; historical call discovery: extended-reads.json:getPowerStrategy.",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-34",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xa198fac58e02a5c5f8f7e877895d50cfa9ad1e04",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "AAVE",
+          "selector": "0x48ccda3c",
+          "calldata": "0x48ccda3c",
+          "rawResult": "0x0000000000000000000000007fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "fresh campaign read; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0xa198fac58e02a5c5f8f7e877895d50cfa9ad1e04 AAVE selector 0x48ccda3c returned the recorded raw bytes; historical call discovery: fresh campaign read.",
+          "artificial": false
+        },
+        {
+          "id": "gho-pin-call-35",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xa198fac58e02a5c5f8f7e877895d50cfa9ad1e04",
+          "kind": "onchain-read",
+          "readType": "evm-call",
+          "function": "getVotingAssetList",
+          "selector": "0x69098bd7",
+          "calldata": "0x69098bd7",
+          "rawResult": "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000030000000000000000000000007fc66500c84a76ad7e9c93437bfc5ac33e2ddae90000000000000000000000004da27a545c0c5b758a6ba100e3a049001de870f5000000000000000000000000a700b4eb416be35b2911fd5dee80678ff64ff6c9",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "fresh campaign read; refreshed read recorded inline at executionCertificates.evidence",
+          "statement": "Ethereum 26118754: 0xa198fac58e02a5c5f8f7e877895d50cfa9ad1e04 getVotingAssetList selector 0x69098bd7 returned the recorded raw bytes; historical call discovery: fresh campaign read.",
+          "artificial": false
+        },
+        {
+          "id": "gho-implementation-5513224d",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x5513224daaeabca31af5280727878d52097afa05",
+          "kind": "onchain-read",
+          "readType": "storage",
+          "function": "eth_getStorageAt",
+          "selector": null,
+          "calldata": null,
+          "rawResult": "0x000000000000000000000000e4c958de49303c9be571e00582cf9454586de76f",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "fresh pinned eth_getStorageAt; slot 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
+          "statement": "Ethereum 26118754 EIP-1967 implementation slot 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc returns 0x000000000000000000000000e4c958de49303c9be571e00582cf9454586de76f; the implementation address is the low 20 bytes.",
+          "artificial": false
+        },
+        {
+          "id": "gho-implementation-2ce01c87",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x2ce01c87fec1b71a9041c52caed46fc5f4807285",
+          "kind": "onchain-read",
+          "readType": "storage",
+          "function": "eth_getStorageAt",
+          "selector": null,
+          "calldata": null,
+          "rawResult": "0x000000000000000000000000c718786a7e45353835de634897385b3371a749f0",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "fresh pinned eth_getStorageAt; slot 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
+          "statement": "Ethereum 26118754 EIP-1967 implementation slot 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc returns 0x000000000000000000000000c718786a7e45353835de634897385b3371a749f0; the implementation address is the low 20 bytes.",
+          "artificial": false
+        },
+        {
+          "id": "gho-implementation-e10c78a3",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea",
+          "kind": "onchain-read",
+          "readType": "storage",
+          "function": "eth_getStorageAt",
+          "selector": null,
+          "calldata": null,
+          "rawResult": "0x00000000000000000000000068807d04df1f1bb74bb7498b1e832d2ce356cd18",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "fresh pinned eth_getStorageAt; slot 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
+          "statement": "Ethereum 26118754 EIP-1967 implementation slot 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc returns 0x00000000000000000000000068807d04df1f1bb74bb7498b1e832d2ce356cd18; the implementation address is the low 20 bytes.",
+          "artificial": false
+        },
+        {
+          "id": "gho-implementation-9aee0b04",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7",
+          "kind": "onchain-read",
+          "readType": "storage",
+          "function": "eth_getStorageAt",
+          "selector": null,
+          "calldata": null,
+          "rawResult": "0x00000000000000000000000058bcb647c4beff253b4b6996c62f737b783f2cdd",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "fresh pinned eth_getStorageAt; slot 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
+          "statement": "Ethereum 26118754 EIP-1967 implementation slot 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc returns 0x00000000000000000000000058bcb647c4beff253b4b6996c62f737b783f2cdd; the implementation address is the low 20 bytes.",
+          "artificial": false
+        },
+        {
+          "id": "gho-implementation-dabad81a",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xdabad81af85554e9ae636395611c58f7ec1aaec5",
+          "kind": "onchain-read",
+          "readType": "storage",
+          "function": "eth_getStorageAt",
+          "selector": null,
+          "calldata": null,
+          "rawResult": "0x0000000000000000000000007222182cb9c5320587b5148bf03eee107ad64578",
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "fresh pinned eth_getStorageAt; slot 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
+          "statement": "Ethereum 26118754 EIP-1967 implementation slot 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc returns 0x0000000000000000000000007222182cb9c5320587b5148bf03eee107ad64578; the implementation address is the low 20 bytes.",
+          "artificial": false
+        },
+        {
+          "id": "gho-runtime-e4c958de",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xe4c958de49303c9be571e00582cf9454586de76f",
+          "kind": "onchain-read",
+          "readType": "code",
+          "function": "eth_getCode",
+          "selector": null,
+          "calldata": null,
+          "rawResult": null,
+          "codeHash": "0x6c16ad944ef8574a2a490416920afb32617f42cbe815c2f52bb6092c6d0b3456",
+          "codeSize": 3926,
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "gho-evidence/text-0xe4c958de49303c9be571e00582cf9454586de76f.sol:26-43,53-74; fresh eth_getCode at campaign pin",
+          "statement": "Ethereum 26118754 runtime has SHA-256 0xbf23554839e3f633fbf56eb76f978370b787c13346191745fd3d9c2711604fef; exact byte equality to Blockscout deployed_bytecode was observed. No normalization was used. This observation does not close every descendant or proxy administrator.",
+          "artificial": false
+        },
+        {
+          "id": "gho-source-e4c958de",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xe4c958de49303c9be571e00582cf9454586de76f",
+          "kind": "verified-source",
+          "readType": null,
+          "function": "GhoDirectMinter",
+          "selector": null,
+          "calldata": null,
+          "rawResult": "0xbf23554839e3f633fbf56eb76f978370b787c13346191745fd3d9c2711604fef",
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0xe4c958de49303c9be571e00582cf9454586de76f",
+          "sourceLocation": "gho-evidence/text-0xe4c958de49303c9be571e00582cf9454586de76f.sol:26-43,53-74",
+          "statement": "Verified GhoDirectMinter source is associated with deployed_bytecode exactly equal to the runtime read at Ethereum 26118754, SHA-256 0xbf23554839e3f633fbf56eb76f978370b787c13346191745fd3d9c2711604fef. Function-level conclusions are stated in the individually referenced proofs; no class certificate or complete liability closure is inferred.",
+          "artificial": false
+        },
+        {
+          "id": "gho-runtime-c718786a",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xc718786a7e45353835de634897385b3371a749f0",
+          "kind": "onchain-read",
+          "readType": "code",
+          "function": "eth_getCode",
+          "selector": null,
+          "calldata": null,
+          "rawResult": null,
+          "codeHash": "0xc2489a652bb339a82383779aa8e34d5f0c9d3ccd111c4eec758c3e336e03799c",
+          "codeSize": 4550,
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "gho-evidence/text-0xc718786a7e45353835de634897385b3371a749f0.sol:27-44,54-75; fresh eth_getCode at campaign pin",
+          "statement": "Ethereum 26118754 runtime has SHA-256 0x3a6723c10cac95f1a4a1043cad069e9ae9d6eae884b27cdf63b6c5a2b30b3e95; exact byte equality to Blockscout deployed_bytecode was observed. No normalization was used. This observation does not close every descendant or proxy administrator.",
+          "artificial": false
+        },
+        {
+          "id": "gho-source-c718786a",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xc718786a7e45353835de634897385b3371a749f0",
+          "kind": "verified-source",
+          "readType": null,
+          "function": "GhoDirectMinter",
+          "selector": null,
+          "calldata": null,
+          "rawResult": "0x3a6723c10cac95f1a4a1043cad069e9ae9d6eae884b27cdf63b6c5a2b30b3e95",
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0xc718786a7e45353835de634897385b3371a749f0",
+          "sourceLocation": "gho-evidence/text-0xc718786a7e45353835de634897385b3371a749f0.sol:27-44,54-75",
+          "statement": "Verified GhoDirectMinter source is associated with deployed_bytecode exactly equal to the runtime read at Ethereum 26118754, SHA-256 0x3a6723c10cac95f1a4a1043cad069e9ae9d6eae884b27cdf63b6c5a2b30b3e95. Function-level conclusions are stated in the individually referenced proofs; no class certificate or complete liability closure is inferred.",
+          "artificial": false
+        },
+        {
+          "id": "gho-runtime-68807d04",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x68807d04df1f1bb74bb7498b1e832d2ce356cd18",
+          "kind": "onchain-read",
+          "readType": "code",
+          "function": "eth_getCode",
+          "selector": null,
+          "calldata": null,
+          "rawResult": null,
+          "codeHash": "0x156aeaa5327d8da6b830db655ad96a54172d67467b91340fec2bd5e119470619",
+          "codeSize": 3926,
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "gho-evidence/text-0x68807d04df1f1bb74bb7498b1e832d2ce356cd18.sol:26-43,53-74; fresh eth_getCode at campaign pin",
+          "statement": "Ethereum 26118754 runtime has SHA-256 0x4c777ea06dd7f5de15924eef965975c3b36b15697863f0d53c5b33b8fdc382b8; exact byte equality to Blockscout deployed_bytecode was observed. No normalization was used. This observation does not close every descendant or proxy administrator.",
+          "artificial": false
+        },
+        {
+          "id": "gho-source-68807d04",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x68807d04df1f1bb74bb7498b1e832d2ce356cd18",
+          "kind": "verified-source",
+          "readType": null,
+          "function": "GhoDirectMinter",
+          "selector": null,
+          "calldata": null,
+          "rawResult": "0x4c777ea06dd7f5de15924eef965975c3b36b15697863f0d53c5b33b8fdc382b8",
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0x68807d04df1f1bb74bb7498b1e832d2ce356cd18",
+          "sourceLocation": "gho-evidence/text-0x68807d04df1f1bb74bb7498b1e832d2ce356cd18.sol:26-43,53-74",
+          "statement": "Verified GhoDirectMinter source is associated with deployed_bytecode exactly equal to the runtime read at Ethereum 26118754, SHA-256 0x4c777ea06dd7f5de15924eef965975c3b36b15697863f0d53c5b33b8fdc382b8. Function-level conclusions are stated in the individually referenced proofs; no class certificate or complete liability closure is inferred.",
+          "artificial": false
+        },
+        {
+          "id": "gho-runtime-58bcb647",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x58bcb647c4beff253b4b6996c62f737b783f2cdd",
+          "kind": "onchain-read",
+          "readType": "code",
+          "function": "eth_getCode",
+          "selector": null,
+          "calldata": null,
+          "rawResult": null,
+          "codeHash": "0x990c8db02aab6f4c171053e7802920e8788d8e1538b112e6eb9d1d6ccaaf4e09",
+          "codeSize": 17658,
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "gho-evidence/text-0x58bcb647c4beff253b4b6996c62f737b783f2cdd.sol:2879-3050,3306-3344; fresh eth_getCode at campaign pin",
+          "statement": "Ethereum 26118754 runtime has SHA-256 0xf78f7ba4e2c27cd4936c1e2826ab2713f33b666d6eba7a6483f7183e5d77d049; exact byte equality to Blockscout deployed_bytecode was observed. No normalization was used. This observation does not close every descendant or proxy administrator.",
+          "artificial": false
+        },
+        {
+          "id": "gho-source-58bcb647",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x58bcb647c4beff253b4b6996c62f737b783f2cdd",
+          "kind": "verified-source",
+          "readType": null,
+          "function": "Governance",
+          "selector": null,
+          "calldata": null,
+          "rawResult": "0xf78f7ba4e2c27cd4936c1e2826ab2713f33b666d6eba7a6483f7183e5d77d049",
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0x58bcb647c4beff253b4b6996c62f737b783f2cdd",
+          "sourceLocation": "gho-evidence/text-0x58bcb647c4beff253b4b6996c62f737b783f2cdd.sol:2879-3050,3306-3344",
+          "statement": "Verified Governance source is associated with deployed_bytecode exactly equal to the runtime read at Ethereum 26118754, SHA-256 0xf78f7ba4e2c27cd4936c1e2826ab2713f33b666d6eba7a6483f7183e5d77d049. Function-level conclusions are stated in the individually referenced proofs; no class certificate or complete liability closure is inferred.",
+          "artificial": false
+        },
+        {
+          "id": "gho-runtime-7222182c",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x7222182cb9c5320587b5148bf03eee107ad64578",
+          "kind": "onchain-read",
+          "readType": "code",
+          "function": "eth_getCode",
+          "selector": null,
+          "calldata": null,
+          "rawResult": null,
+          "codeHash": "0x282836f1aa6bfdb06847ea137de01119c770afca23146340801a3c096372c1ec",
+          "codeSize": 15245,
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "gho-evidence/text-0x7222182cb9c5320587b5148bf03eee107ad64578.sol:2386-2463,2565-2590; fresh eth_getCode at campaign pin",
+          "statement": "Ethereum 26118754 runtime has SHA-256 0x4b62e0e128543be3274ae3e6dff2d6f75f2f9f6acd20591231a149ca922e5166; exact byte equality to Blockscout deployed_bytecode was observed. No normalization was used. This observation does not close every descendant or proxy administrator.",
+          "artificial": false
+        },
+        {
+          "id": "gho-source-7222182c",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x7222182cb9c5320587b5148bf03eee107ad64578",
+          "kind": "verified-source",
+          "readType": null,
+          "function": "PayloadsController",
+          "selector": null,
+          "calldata": null,
+          "rawResult": "0x4b62e0e128543be3274ae3e6dff2d6f75f2f9f6acd20591231a149ca922e5166",
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0x7222182cb9c5320587b5148bf03eee107ad64578",
+          "sourceLocation": "gho-evidence/text-0x7222182cb9c5320587b5148bf03eee107ad64578.sol:2386-2463,2565-2590",
+          "statement": "Verified PayloadsController source is associated with deployed_bytecode exactly equal to the runtime read at Ethereum 26118754, SHA-256 0x4b62e0e128543be3274ae3e6dff2d6f75f2f9f6acd20591231a149ca922e5166. Function-level conclusions are stated in the individually referenced proofs; no class certificate or complete liability closure is inferred.",
+          "artificial": false
+        },
+        {
+          "id": "gho-runtime-46aa1063",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+          "kind": "onchain-read",
+          "readType": "code",
+          "function": "eth_getCode",
+          "selector": null,
+          "calldata": null,
+          "rawResult": null,
+          "codeHash": "0x159650eaa57104a0ccf8b033a7bdfcfd0ee6cc2ad12c84e082b90893e3ed6d16",
+          "codeSize": 3118,
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "gho-evidence/text-0x46aa1063e5265b43663e81329333b47c517a5409.sol:21-37,59-89,120-126; fresh eth_getCode at campaign pin",
+          "statement": "Ethereum 26118754 runtime has SHA-256 0xc0a49993c08c34c75dac3b2fc005a98c5a527937eb45f8e505ef38142e4b1efa; exact byte equality to Blockscout deployed_bytecode was observed. No normalization was used. This observation does not close every descendant or proxy administrator.",
+          "artificial": false
+        },
+        {
+          "id": "gho-source-46aa1063",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+          "kind": "verified-source",
+          "readType": null,
+          "function": "GhoBucketSteward",
+          "selector": null,
+          "calldata": null,
+          "rawResult": "0xc0a49993c08c34c75dac3b2fc005a98c5a527937eb45f8e505ef38142e4b1efa",
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0x46aa1063e5265b43663e81329333b47c517a5409",
+          "sourceLocation": "gho-evidence/text-0x46aa1063e5265b43663e81329333b47c517a5409.sol:21-37,59-89,120-126",
+          "statement": "Verified GhoBucketSteward source is associated with deployed_bytecode exactly equal to the runtime read at Ethereum 26118754, SHA-256 0xc0a49993c08c34c75dac3b2fc005a98c5a527937eb45f8e505ef38142e4b1efa. Function-level conclusions are stated in the individually referenced proofs; no class certificate or complete liability closure is inferred.",
+          "artificial": false
+        },
+        {
+          "id": "gho-runtime-e9ac5231",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
+          "kind": "onchain-read",
+          "readType": "code",
+          "function": "eth_getCode",
+          "selector": null,
+          "calldata": null,
+          "rawResult": null,
+          "codeHash": "0x8ff6477668f8bc958f62221551ff4134471015e560ea42d735dc38e8da686e67",
+          "codeSize": 2491,
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "gho-evidence/text-0xe9ac5231faecb633da0fe85fcb2785b8363427d2.sol:13-46; fresh eth_getCode at campaign pin",
+          "statement": "Ethereum 26118754 runtime has SHA-256 0x8ae4454d78278df2c1db9f6f9ed0fa8dde5e81b1c63e1e9e85118f38b93db8db; exact byte equality to Blockscout deployed_bytecode was observed. No normalization was used. This observation does not close every descendant or proxy administrator.",
+          "artificial": false
+        },
+        {
+          "id": "gho-source-e9ac5231",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
+          "kind": "verified-source",
+          "readType": null,
+          "function": "GhoDirectFacilitator",
+          "selector": null,
+          "calldata": null,
+          "rawResult": "0x8ae4454d78278df2c1db9f6f9ed0fa8dde5e81b1c63e1e9e85118f38b93db8db",
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
+          "sourceLocation": "gho-evidence/text-0xe9ac5231faecb633da0fe85fcb2785b8363427d2.sol:13-46",
+          "statement": "Verified GhoDirectFacilitator source is associated with deployed_bytecode exactly equal to the runtime read at Ethereum 26118754, SHA-256 0x8ae4454d78278df2c1db9f6f9ed0fa8dde5e81b1c63e1e9e85118f38b93db8db. Function-level conclusions are stated in the individually referenced proofs; no class certificate or complete liability closure is inferred.",
+          "artificial": false
+        },
+        {
+          "id": "gho-runtime-5300a1a1",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+          "kind": "onchain-read",
+          "readType": "code",
+          "function": "eth_getCode",
+          "selector": null,
+          "calldata": null,
+          "rawResult": null,
+          "codeHash": "0xdefb0e3b776d1a954884a2b1748f2734ef603abf95af0e517d072638fa01eb69",
+          "codeSize": 1808,
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "gho-evidence/text-0x5300a1a15135ea4dc7ad5a167152c01efc9b192a.sol:16-44; fresh eth_getCode at campaign pin",
+          "statement": "Ethereum 26118754 runtime has SHA-256 0x8c604a38d041e5836c3eb1960ee826eca38582abae736bd27684984cea506216; exact byte equality to Blockscout deployed_bytecode was observed. No normalization was used. This observation does not close every descendant or proxy administrator.",
+          "artificial": false
+        },
+        {
+          "id": "gho-source-5300a1a1",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+          "kind": "verified-source",
+          "readType": null,
+          "function": "Executor",
+          "selector": null,
+          "calldata": null,
+          "rawResult": "0x8c604a38d041e5836c3eb1960ee826eca38582abae736bd27684984cea506216",
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+          "sourceLocation": "gho-evidence/text-0x5300a1a15135ea4dc7ad5a167152c01efc9b192a.sol:16-44",
+          "statement": "Verified Executor source is associated with deployed_bytecode exactly equal to the runtime read at Ethereum 26118754, SHA-256 0x8c604a38d041e5836c3eb1960ee826eca38582abae736bd27684984cea506216. Function-level conclusions are stated in the individually referenced proofs; no class certificate or complete liability closure is inferred.",
+          "artificial": false
+        },
+        {
+          "id": "gho-runtime-40d16fc0",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
+          "kind": "onchain-read",
+          "readType": "code",
+          "function": "eth_getCode",
+          "selector": null,
+          "calldata": null,
+          "rawResult": null,
+          "codeHash": "0xdd51428dd1ef13362e52bfc1689ed8e011730e6c6d5b50aaf96165ccd7bf0172",
+          "codeSize": 8046,
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "gho-evidence/text-0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f.sol:34-45,63-128; fresh eth_getCode at campaign pin",
+          "statement": "Ethereum 26118754 runtime has SHA-256 0x54e9b1d932685aff37d0efcd7b31bc045c63ddb0a21faf08cc4b7758928a9aff; exact byte equality to Blockscout deployed_bytecode was observed. No normalization was used. This observation does not close every descendant or proxy administrator.",
+          "artificial": false
+        },
+        {
+          "id": "gho-source-40d16fc0",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
+          "kind": "verified-source",
+          "readType": null,
+          "function": "GhoToken",
+          "selector": null,
+          "calldata": null,
+          "rawResult": "0x54e9b1d932685aff37d0efcd7b31bc045c63ddb0a21faf08cc4b7758928a9aff",
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
+          "sourceLocation": "gho-evidence/text-0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f.sol:34-45,63-128",
+          "statement": "Verified GhoToken source is associated with deployed_bytecode exactly equal to the runtime read at Ethereum 26118754, SHA-256 0x54e9b1d932685aff37d0efcd7b31bc045c63ddb0a21faf08cc4b7758928a9aff. Function-level conclusions are stated in the individually referenced proofs; no class certificate or complete liability closure is inferred.",
+          "artificial": false
+        },
+        {
+          "id": "gho-runtime-a198fac5",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xa198fac58e02a5c5f8f7e877895d50cfa9ad1e04",
+          "kind": "onchain-read",
+          "readType": "code",
+          "function": "eth_getCode",
+          "selector": null,
+          "calldata": null,
+          "rawResult": null,
+          "codeHash": "0x4729e82c357039fe63602d80e1813543049494aadef712b2d0d5274da3767b22",
+          "codeSize": 1907,
+          "sourceUrl": "https://etherscan.io/block/26118754",
+          "sourceLocation": "Blockscout GovernancePowerStrategy.sol:_getFullPowerByType; BaseVotingStrategy.sol:getVotingAssetList; fresh eth_getCode at campaign pin",
+          "statement": "Ethereum 26118754 runtime has SHA-256 0xc4b14d38643c3fc34207b3aba1736569c97a7d781f7dd2ad2ba0d3a9980b372a; exact byte equality to Blockscout deployed_bytecode was observed. No normalization was used. This observation does not close every descendant or proxy administrator.",
+          "artificial": false
+        },
+        {
+          "id": "gho-source-a198fac5",
+          "pin": {
+            "chain": "ethereum",
+            "position": "26118754",
+            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+            "timestamp": "2026-10-04T11:41:11Z"
+          },
+          "deployment": "ethereum:0xa198fac58e02a5c5f8f7e877895d50cfa9ad1e04",
+          "kind": "verified-source",
+          "readType": null,
+          "function": "GovernancePowerStrategy",
+          "selector": null,
+          "calldata": null,
+          "rawResult": "0xc4b14d38643c3fc34207b3aba1736569c97a7d781f7dd2ad2ba0d3a9980b372a",
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0xa198fac58e02a5c5f8f7e877895d50cfa9ad1e04",
+          "sourceLocation": "Blockscout GovernancePowerStrategy.sol:_getFullPowerByType; BaseVotingStrategy.sol:getVotingAssetList",
+          "statement": "Verified GovernancePowerStrategy source is associated with deployed_bytecode exactly equal to the runtime read at Ethereum 26118754, SHA-256 0xc4b14d38643c3fc34207b3aba1736569c97a7d781f7dd2ad2ba0d3a9980b372a. Function-level conclusions are stated in the individually referenced proofs; no class certificate or complete liability closure is inferred.",
+          "artificial": false
+        }
+      ],
+      "proofs": [
+        {
+          "id": "gho-facilitator-census",
+          "conclusion": "closed",
+          "statement": "GhoToken.getFacilitatorsList() 0x1ec90f2e at Ethereum 26118754 exhaustively enumerates the eight current token-local facilitators. This is not a census of every downstream pool, permission, remote issuance or upgrade alternative.",
+          "evidenceRefIds": [
+            "gho-pin-call-32",
+            "gho-source-40d16fc0"
+          ]
+        },
+        {
+          "id": "gho-execution-certificates-open",
+          "conclusion": "open",
+          "statement": "All eleven existing individual execution scopes remain partial. No class/member execution certificate is granted: full native liability, runtime/permission, pool configuration, proxy upgrade and cross-chain transport closure is not established at the campaign pin.",
+          "evidenceRefIds": [
+            "gho-source-40d16fc0",
+            "gho-source-58bcb647",
+            "gho-source-7222182c"
+          ]
+        },
+        {
+          "id": "gho-executor-owner",
+          "conclusion": "closed",
+          "statement": "Executor.owner() 0x8da5cb5b at Ethereum 26118754 names the live PayloadsController proxy. The verified onlyOwner executeTransaction path is an execution hop, not the token-voting decision system.",
+          "evidenceRefIds": [
+            "gho-pin-call-19",
+            "gho-source-5300a1a1"
+          ]
+        },
+        {
+          "id": "gho-ordinary-route",
+          "conclusion": "closed",
+          "statement": "For the reviewed ordinary Level-1 route, live Governance.getVotingConfig(1) 0x1c84e321 gives cooldown 86400 and duration 259200; COOLDOWN_PERIOD() 0x6e99d52f is zero; live PayloadsController.getExecutorSettingsByAccessControl(1) 0xf80281fb gives delay 86400 at Ethereum 26118754. Source createPayload/_queuePayload and queueProposal/executePayload inequalities give the payload-visible integer-second lower bound 1 + 259201 + 86401 = 345603. Pre-payload proposal cooldown is not public payload notice. Actual slots/transport may add latency; this is not global bypass/target-code closure.",
+          "evidenceRefIds": [
+            "gho-pin-call-25",
+            "gho-pin-call-26",
+            "gho-pin-call-24",
+            "gho-pin-call-27",
+            "gho-source-58bcb647",
+            "gho-source-7222182c"
+          ]
+        },
+        {
+          "id": "gho-governor-snapshot",
+          "conclusion": "closed",
+          "statement": "At Ethereum 26118754 the live Governance proxy implementation slot points to the byte-matched Governance implementation. GovernanceCore.activateVoting stores blockhash(block.number - 1). This confirms historical snapshot selection, not complete proof enforcement in the selected cross-chain voting machine.",
+          "evidenceRefIds": [
+            "gho-implementation-9aee0b04",
+            "gho-source-58bcb647"
+          ]
+        },
+        {
+          "id": "gho-voting-threshold-l1",
+          "conclusion": "closed",
+          "statement": "Ethereum 26118754 Governance.getVotingConfig(1) 0x1c84e321 returns yesThreshold 320000, yesNoDifferential 80000 and minPropositionPower 80000. Source PRECISION_DIVIDER is 1e18; _isPassingYesThreshold requires forVotes > 320000e18 and _isPassingYesNoDifferential requires forVotes - againstVotes > 80000e18. In the unopposed ordinary Level-1 scenario the unilateral voting threshold is strictly greater than 320000000000000000000000 raw AAVE-equivalent votes; proposition power must independently exceed 80000e18. Opposition scenarios, controller provenance and machine/delivery alternatives remain unclosed.",
+          "evidenceRefIds": [
+            "gho-pin-call-25",
+            "gho-pin-call-26",
+            "gho-source-58bcb647"
+          ]
+        },
+        {
+          "id": "gho-voting-assets",
+          "conclusion": "closed",
+          "statement": "Ethereum 26118754 Governance.getPowerStrategy() 0x0f3424bb names 0xa198fac58e02a5c5f8f7e877895d50cfa9ad1e04; its AAVE() 0x48ccda3c and getVotingAssetList() 0x69098bd7 identify AAVE 0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9, stkAAVE 0x4da27a545c0c5b758a6ba100e3a049001de870f5 and aAAVE 0xa700b4eb416be35b2911fd5dee80678ff64ff6c9. Source sums asset voting power, so ERC20 AAVE.totalSupply alone is not a reconciled voting denominator.",
+          "evidenceRefIds": [
+            "gho-pin-call-33",
+            "gho-pin-call-34",
+            "gho-pin-call-35",
+            "gho-source-a198fac5"
+          ]
+        },
+        {
+          "id": "gho-voting-supply-unknown",
+          "conclusion": "unknown",
+          "statement": "The exact source-defined snapshot voting denominator across AAVE, stkAAVE and aAAVE has not been read/reconciled at Ethereum 26118754. pinnedVotingSupply.raw and totalVotingPowerRaw remain null; voting-census-unreconciled is an evidence gap, not a zero-power observation.",
+          "evidenceRefIds": [
+            "gho-source-58bcb647",
+            "gho-source-7222182c",
+            "gho-source-a198fac5",
+            "gho-source-40d16fc0"
+          ]
+        },
+        {
+          "id": "gho-controller-census-unknown",
+          "conclusion": "unknown",
+          "statement": "No complete holder/delegate/controller voting-position census, own-versus-other-holder split, affiliated aggregate or defensible residual power partition has been established at Ethereum 26118754. controllers is empty only to express missing discovery; residualUpperRaw is null, not zero. No controller identity or D32 qualification is inferred.",
+          "evidenceRefIds": [
+            "gho-source-58bcb647",
+            "gho-source-7222182c",
+            "gho-source-a198fac5",
+            "gho-source-40d16fc0"
+          ]
+        },
+        {
+          "id": "gho-voting-privileges-unknown",
+          "conclusion": "unknown",
+          "statement": "Privileged vote creation, forced delegation and vote-caster/replacement alternatives are not closed across all accepted voting assets and the actual selected machine at Ethereum 26118754. Both states remain unknown; missing ownership or operator evidence denies process credit.",
+          "evidenceRefIds": [
+            "gho-source-58bcb647",
+            "gho-source-7222182c",
+            "gho-source-a198fac5",
+            "gho-source-40d16fc0"
+          ]
+        },
+        {
+          "id": "gho-authority-closure-open",
+          "conclusion": "open",
+          "statement": "Typed graph enumerates proven local alternatives plus explicit unresolved pool, upgrade, guardian, voting-machine and cross-chain delivery reach. Global authority and economic closure remain open; governor labels, signer prose, fixed first hops and successful local reads cannot establish governor exclusivity.",
+          "evidenceRefIds": [
+            "gho-source-58bcb647",
+            "gho-source-7222182c",
+            "gho-source-a198fac5",
+            "gho-source-40d16fc0"
+          ]
+        },
+        {
+          "id": "gho-council-identity",
+          "conclusion": "closed",
+          "statement": "Ethereum 26118754 Safe.getThreshold() 0xe75235b8 returns 2 and getOwners() 0xa0e67e2b returns three owners. The Council is a separate multisig authority; these reads do not close its module, fallback, owner-change or upstream custody alternatives.",
+          "evidenceRefIds": [
+            "gho-pin-call-23",
+            "gho-pin-call-22"
+          ]
+        },
+        {
+          "id": "gho-council-gsm-mint",
+          "conclusion": "closed",
+          "statement": "Ethereum 26118754 GSMs Mainnet GhoDirectFacilitator.hasRole(bytes32,address) 0x91d14854 confirms Council MINTER_ROLE. Verified mint(address,uint256) 0x40c10f19 forwards the caller-chosen account and amount to GhoToken.mint without a deposit, matched burn, collateral or reserve-destination requirement. The Council path is independent of ordinary token governance and has zero prospective public delay; instantaneous bucket capacity remains enforced.",
+          "evidenceRefIds": [
+            "gho-pin-call-4",
+            "gho-pin-call-5",
+            "gho-pin-call-6",
+            "gho-pin-call-7",
+            "gho-pin-call-8",
+            "gho-source-e9ac5231",
+            "gho-source-40d16fc0"
+          ]
+        },
+        {
+          "id": "gho-council-bucket-growth",
+          "conclusion": "closed",
+          "statement": "Ethereum 26118754 BucketSteward.RISK_COUNCIL() identifies the Council, MINIMUM_DELAY() is 86400 and getControlledFacilitators() lists Core/Horizon/GSMs Mainnet/Lido. updateFacilitatorBucketCapacity(address,uint128) 0x5e107b9c is onlyRiskCouncil, permits an increase of at most the current capacity (maximum 2x), and enforces elapsed time strictly >86400 seconds per facilitator. Pinned timer reads leave all four already eligible. This repeat cooldown is not prospective notice, a finite lifetime budget or governance approval: the adverse GSM mint/growth route retains delay zero.",
+          "evidenceRefIds": [
+            "gho-pin-call-16",
+            "gho-pin-call-15",
+            "gho-pin-call-17",
+            "gho-pin-call-28",
+            "gho-pin-call-29",
+            "gho-pin-call-30",
+            "gho-pin-call-31",
+            "gho-source-46aa1063"
+          ]
+        },
+        {
+          "id": "gho-steward-owner",
+          "conclusion": "closed",
+          "statement": "Ethereum 26118754 BucketSteward.owner() 0x8da5cb5b identifies the ordinary executor. Source setControlledFacilitator is onlyOwner; changing this allowlist is separate from the Council update path and uses the reviewed ordinary payload-visible timing lower bound of 345603 seconds, without claiming complete upstream bypass closure.",
+          "evidenceRefIds": [
+            "gho-pin-call-18",
+            "gho-source-46aa1063",
+            "gho-source-5300a1a1",
+            "gho-source-58bcb647",
+            "gho-source-7222182c"
+          ]
+        },
+        {
+          "id": "gho-fixed-pool-core",
+          "conclusion": "closed",
+          "statement": "Ethereum 26118754 Core GhoDirectMinter 0x5513224daaeabca31af5280727878d52097afa05 POOL() 0x7535d246 returns 0x87870bca3f3fd6335c3f4ce8392d69350b4fa4e2; owner() 0x8da5cb5b is the executor and guardian() 0x452a9320 is the Council. Its pinned EIP-1967 implementation is 0xe4c958de49303c9be571e00582cf9454586de76f, exactly matched to verified runtime. mintAndSupply(uint256) 0x749b1e8b chooses only amount: mint to itself then supply into immutable POOL on behalf of itself; no caller-chosen recipient/pool or external deposit check at prefunding. withdrawAndBurn withdraws to itself and burns principal; aToken excess transfers to fixed COLLECTOR. This fixed first hop does not certify downstream lending/configuration/upgrade closure.",
+          "evidenceRefIds": [
+            "gho-pin-call-1",
+            "gho-pin-call-3",
+            "gho-pin-call-2",
+            "gho-implementation-5513224d",
+            "gho-source-e4c958de"
+          ]
+        },
+        {
+          "id": "gho-pool-reach-core",
+          "conclusion": "open",
+          "statement": "Core fixed-pool first hop is established at Ethereum 26118754, but complete downstream borrower, collateral, configuration, withdrawal, Collector and proxy/admin reach is not closed. Core collateral validation is historically source-established (04-gho-paths.md section 2; 07-gho-factcheck.md section 2, pin 26118181); Lido/Horizon full borrowing closure remains unknown. No reserve-backed or terminal-safe classification is inferred; claimImpairment stays unknown.",
+          "evidenceRefIds": [
+            "gho-pin-call-1",
+            "gho-source-e4c958de"
+          ]
+        },
+        {
+          "id": "gho-fixed-pool-lido",
+          "conclusion": "closed",
+          "statement": "Ethereum 26118754 Lido GhoDirectMinter 0x2ce01c87fec1b71a9041c52caed46fc5f4807285 POOL() 0x7535d246 returns 0x4e033931ad43597d96d6bcc25c280717730b58b1; owner() 0x8da5cb5b is the executor and guardian() 0x452a9320 is the Council. Its pinned EIP-1967 implementation is 0xc718786a7e45353835de634897385b3371a749f0, exactly matched to verified runtime. mintAndSupply(uint256) 0x749b1e8b chooses only amount: mint to itself then supply into immutable POOL on behalf of itself; no caller-chosen recipient/pool or external deposit check at prefunding. withdrawAndBurn withdraws to itself and burns principal; aToken excess transfers to fixed COLLECTOR. This fixed first hop does not certify downstream lending/configuration/upgrade closure.",
+          "evidenceRefIds": [
+            "gho-pin-call-9",
+            "gho-pin-call-11",
+            "gho-pin-call-10",
+            "gho-implementation-2ce01c87",
+            "gho-source-c718786a"
+          ]
+        },
+        {
+          "id": "gho-pool-reach-lido",
+          "conclusion": "open",
+          "statement": "Lido fixed-pool first hop is established at Ethereum 26118754, but complete downstream borrower, collateral, configuration, withdrawal, Collector and proxy/admin reach is not closed. Core collateral validation is historically source-established (04-gho-paths.md section 2; 07-gho-factcheck.md section 2, pin 26118181); Lido/Horizon full borrowing closure remains unknown. No reserve-backed or terminal-safe classification is inferred; claimImpairment stays unknown.",
+          "evidenceRefIds": [
+            "gho-pin-call-9",
+            "gho-source-c718786a"
+          ]
+        },
+        {
+          "id": "gho-fixed-pool-horizon",
+          "conclusion": "closed",
+          "statement": "Ethereum 26118754 Horizon GhoDirectMinter 0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea POOL() 0x7535d246 returns 0xae05cd22df81871bc7cc2a04becfb516bfe332c8; owner() 0x8da5cb5b is the executor and guardian() 0x452a9320 is the Council. Its pinned EIP-1967 implementation is 0x68807d04df1f1bb74bb7498b1e832d2ce356cd18, exactly matched to verified runtime. mintAndSupply(uint256) 0x749b1e8b chooses only amount: mint to itself then supply into immutable POOL on behalf of itself; no caller-chosen recipient/pool or external deposit check at prefunding. withdrawAndBurn withdraws to itself and burns principal; aToken excess transfers to fixed COLLECTOR. This fixed first hop does not certify downstream lending/configuration/upgrade closure.",
+          "evidenceRefIds": [
+            "gho-pin-call-12",
+            "gho-pin-call-14",
+            "gho-pin-call-13",
+            "gho-implementation-e10c78a3",
+            "gho-source-68807d04"
+          ]
+        },
+        {
+          "id": "gho-pool-reach-horizon",
+          "conclusion": "open",
+          "statement": "Horizon fixed-pool first hop is established at Ethereum 26118754, but complete downstream borrower, collateral, configuration, withdrawal, Collector and proxy/admin reach is not closed. Core collateral validation is historically source-established (04-gho-paths.md section 2; 07-gho-factcheck.md section 2, pin 26118181); Lido/Horizon full borrowing closure remains unknown. No reserve-backed or terminal-safe classification is inferred; claimImpairment stays unknown.",
+          "evidenceRefIds": [
+            "gho-pin-call-12",
+            "gho-source-68807d04"
+          ]
+        }
+      ],
+      "censuses": [
+        {
+          "id": "gho-token-local-facilitators",
+          "review": {
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2027-01-01",
+            "reviewer": "Sol v10.05 operational-governance campaign (GhoData)",
+            "pin": {
+              "chain": "ethereum",
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
+            }
+          },
+          "targetDeployment": "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
+          "kind": "facilitator",
+          "role": "GhoToken current facilitator registry; downstream/native-liability closure remains open",
+          "coverage": "complete",
+          "authoritativeMembers": [
+            "ethereum:0x5513224daaeabca31af5280727878d52097afa05",
+            "ethereum:0xb639d208bcf0589d54fac24e655c79ec529762b8",
+            "ethereum:0x2bd010ab5393ab51b601b99c4b33ba148d9466e9",
+            "ethereum:0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
+            "ethereum:0x2ce01c87fec1b71a9041c52caed46fc5f4807285",
+            "ethereum:0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea",
+            "ethereum:0x436dccc028322afc355f608cf582b7d7f19fdfed",
+            "ethereum:0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134"
+          ],
+          "discovery": {
+            "kind": "exhaustive-getter",
+            "fromPosition": "0",
+            "throughPosition": "26118754",
+            "paginationEnd": "getFacilitatorsList complete array, length 8",
+            "proofRef": "gho-facilitator-census"
+          },
+          "observations": [
+            {
+              "memberRef": "ethereum:0x5513224daaeabca31af5280727878d52097afa05",
+              "authorized": true,
+              "evidenceRefIds": [
+                "gho-pin-call-32"
+              ]
+            },
+            {
+              "memberRef": "ethereum:0xb639d208bcf0589d54fac24e655c79ec529762b8",
+              "authorized": true,
+              "evidenceRefIds": [
+                "gho-pin-call-32"
+              ]
+            },
+            {
+              "memberRef": "ethereum:0x2bd010ab5393ab51b601b99c4b33ba148d9466e9",
+              "authorized": true,
+              "evidenceRefIds": [
+                "gho-pin-call-32"
+              ]
+            },
+            {
+              "memberRef": "ethereum:0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
+              "authorized": true,
+              "evidenceRefIds": [
+                "gho-pin-call-32"
+              ]
+            },
+            {
+              "memberRef": "ethereum:0x2ce01c87fec1b71a9041c52caed46fc5f4807285",
+              "authorized": true,
+              "evidenceRefIds": [
+                "gho-pin-call-32"
+              ]
+            },
+            {
+              "memberRef": "ethereum:0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea",
+              "authorized": true,
+              "evidenceRefIds": [
+                "gho-pin-call-32"
+              ]
+            },
+            {
+              "memberRef": "ethereum:0x436dccc028322afc355f608cf582b7d7f19fdfed",
+              "authorized": true,
+              "evidenceRefIds": [
+                "gho-pin-call-32"
+              ]
+            },
+            {
+              "memberRef": "ethereum:0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134",
+              "authorized": true,
+              "evidenceRefIds": [
+                "gho-pin-call-32"
+              ]
+            }
+          ],
+          "completenessProofRef": "gho-facilitator-census"
+        }
+      ],
+      "classes": [],
+      "members": []
+    },
+    "authorityGraph": {
+      "id": "gho-v1005-authority",
+      "review": {
+        "observedAt": "2026-10-04",
+        "reviewedAt": "2026-10-04",
+        "expiresAt": "2027-01-01",
+        "reviewer": "Sol v10.05 operational-governance campaign (GhoData)",
+        "pin": {
+          "chain": "ethereum",
+          "position": "26118754",
+          "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+          "timestamp": "2026-10-04T11:41:11Z"
+        }
+      },
+      "liabilityBookId": "gho-aave",
+      "governorNodeId": "aave-token-governor",
+      "nodes": [
+        {
+          "id": "aave-token-governor",
+          "deployment": "ethereum:0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7",
+          "kind": "token-governor",
+          "terminal": true,
+          "authorityCensusIds": [],
+          "runtime": null,
+          "proofRef": "gho-governor-snapshot"
+        },
+        {
+          "id": "aave-payload-controller",
+          "deployment": "ethereum:0xdabad81af85554e9ae636395611c58f7ec1aaec5",
+          "kind": "timelock",
+          "terminal": false,
+          "authorityCensusIds": [],
+          "runtime": null,
+          "proofRef": "gho-ordinary-route"
+        },
+        {
+          "id": "aave-executor",
+          "deployment": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+          "kind": "contract",
+          "terminal": false,
+          "authorityCensusIds": [],
+          "runtime": null,
+          "proofRef": "gho-executor-owner"
+        },
+        {
+          "id": "gho-risk-council",
+          "deployment": "ethereum:0x8513e6f37dbc52de87b166980fa3f50639694b60",
+          "kind": "multisig",
+          "terminal": true,
+          "authorityCensusIds": [],
+          "runtime": null,
+          "proofRef": "gho-council-identity"
+        },
+        {
+          "id": "gho-bucket-steward",
+          "deployment": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+          "kind": "contract",
+          "terminal": false,
+          "authorityCensusIds": [],
+          "runtime": null,
+          "proofRef": "gho-council-bucket-growth"
+        },
+        {
+          "id": "gho-gsm-mainnet",
+          "deployment": "ethereum:0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
+          "kind": "contract",
+          "terminal": false,
+          "authorityCensusIds": [
+            "gho-token-local-facilitators"
+          ],
+          "runtime": null,
+          "proofRef": "gho-council-gsm-mint"
+        },
+        {
+          "id": "unclosed-authority-alternatives",
+          "deployment": null,
+          "kind": "unknown",
+          "terminal": false,
+          "authorityCensusIds": [],
+          "runtime": null,
+          "proofRef": "gho-authority-closure-open"
+        },
+        {
+          "id": "unclosed-vote-origin",
+          "deployment": null,
+          "kind": "unknown",
+          "terminal": false,
+          "authorityCensusIds": [],
+          "runtime": null,
+          "proofRef": "gho-controller-census-unknown"
+        },
+        {
+          "id": "aave-voting-power-strategy",
+          "deployment": "ethereum:0xa198fac58e02a5c5f8f7e877895d50cfa9ad1e04",
+          "kind": "contract",
+          "terminal": false,
+          "authorityCensusIds": [],
+          "runtime": null,
+          "proofRef": "gho-voting-assets"
+        },
+        {
+          "id": "aave-governance-token",
+          "deployment": "ethereum:0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+          "kind": "contract",
+          "terminal": false,
+          "authorityCensusIds": [],
+          "runtime": null,
+          "proofRef": "gho-voting-assets"
+        },
+        {
+          "id": "gho-control-5513224d",
+          "deployment": "ethereum:0x5513224daaeabca31af5280727878d52097afa05",
+          "kind": "contract",
+          "terminal": false,
+          "authorityCensusIds": [
+            "gho-token-local-facilitators"
+          ],
+          "runtime": null,
+          "proofRef": "gho-fixed-pool-core"
+        },
+        {
+          "id": "gho-fixed-pool-core",
+          "deployment": "ethereum:0x87870bca3f3fd6335c3f4ce8392d69350b4fa4e2",
+          "kind": "contract",
+          "terminal": false,
+          "authorityCensusIds": [],
+          "runtime": null,
+          "proofRef": "gho-pool-reach-core"
+        },
+        {
+          "id": "gho-control-b639d208",
+          "deployment": "ethereum:0xb639d208bcf0589d54fac24e655c79ec529762b8",
+          "kind": "contract",
+          "terminal": false,
+          "authorityCensusIds": [
+            "gho-token-local-facilitators"
+          ],
+          "runtime": null,
+          "proofRef": "gho-execution-certificates-open"
+        },
+        {
+          "id": "gho-control-2bd010ab",
+          "deployment": "ethereum:0x2bd010ab5393ab51b601b99c4b33ba148d9466e9",
+          "kind": "contract",
+          "terminal": false,
+          "authorityCensusIds": [
+            "gho-token-local-facilitators"
+          ],
+          "runtime": null,
+          "proofRef": "gho-execution-certificates-open"
+        },
+        {
+          "id": "gho-control-2ce01c87",
+          "deployment": "ethereum:0x2ce01c87fec1b71a9041c52caed46fc5f4807285",
+          "kind": "contract",
+          "terminal": false,
+          "authorityCensusIds": [
+            "gho-token-local-facilitators"
+          ],
+          "runtime": null,
+          "proofRef": "gho-fixed-pool-lido"
+        },
+        {
+          "id": "gho-fixed-pool-lido",
+          "deployment": "ethereum:0x4e033931ad43597d96d6bcc25c280717730b58b1",
+          "kind": "contract",
+          "terminal": false,
+          "authorityCensusIds": [],
+          "runtime": null,
+          "proofRef": "gho-pool-reach-lido"
+        },
+        {
+          "id": "gho-control-e10c78a3",
+          "deployment": "ethereum:0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea",
+          "kind": "contract",
+          "terminal": false,
+          "authorityCensusIds": [
+            "gho-token-local-facilitators"
+          ],
+          "runtime": null,
+          "proofRef": "gho-fixed-pool-horizon"
+        },
+        {
+          "id": "gho-fixed-pool-horizon",
+          "deployment": "ethereum:0xae05cd22df81871bc7cc2a04becfb516bfe332c8",
+          "kind": "contract",
+          "terminal": false,
+          "authorityCensusIds": [],
+          "runtime": null,
+          "proofRef": "gho-pool-reach-horizon"
+        },
+        {
+          "id": "gho-control-436dccc0",
+          "deployment": "ethereum:0x436dccc028322afc355f608cf582b7d7f19fdfed",
+          "kind": "contract",
+          "terminal": false,
+          "authorityCensusIds": [
+            "gho-token-local-facilitators"
+          ],
+          "runtime": null,
+          "proofRef": "gho-execution-certificates-open"
+        },
+        {
+          "id": "gho-control-0cb7c2a2",
+          "deployment": "ethereum:0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134",
+          "kind": "contract",
+          "terminal": false,
+          "authorityCensusIds": [
+            "gho-token-local-facilitators"
+          ],
+          "runtime": null,
+          "proofRef": "gho-execution-certificates-open"
+        }
+      ],
+      "edges": [
+        {
+          "id": "executor-owner-controller",
+          "from": "aave-executor",
+          "to": "aave-payload-controller",
+          "kind": "owner",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+              "pathId": "ordinary-governance-facilitator-authorization"
+            },
+            {
+              "controlRef": "ethereum:0x2bd010ab5393ab51b601b99c4b33ba148d9466e9",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x436dccc028322afc355f608cf582b7d7f19fdfed",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+              "pathId": "governor-controls-facilitator-allowlist"
+            }
+          ],
+          "selectors": [
+            "0x025d36a9"
+          ],
+          "role": "onlyOwner",
+          "activation": "active",
+          "publicDelaySec": 86401,
+          "calldataBound": true,
+          "proofRef": "gho-executor-owner"
+        },
+        {
+          "id": "controller-ordinary-token-decision",
+          "from": "aave-payload-controller",
+          "to": "aave-token-governor",
+          "kind": "execution-hop",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+              "pathId": "ordinary-governance-facilitator-authorization"
+            },
+            {
+              "controlRef": "ethereum:0x2bd010ab5393ab51b601b99c4b33ba148d9466e9",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x436dccc028322afc355f608cf582b7d7f19fdfed",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+              "pathId": "governor-controls-facilitator-allowlist"
+            }
+          ],
+          "selectors": [],
+          "role": "ordinary Level-1 approved proposal delivery; transport alternatives unclosed",
+          "activation": "active",
+          "publicDelaySec": 259202,
+          "calldataBound": true,
+          "proofRef": "gho-ordinary-route"
+        },
+        {
+          "id": "governor-power-strategy",
+          "from": "aave-token-governor",
+          "to": "aave-voting-power-strategy",
+          "kind": "vote-origin",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+              "pathId": "ordinary-governance-facilitator-authorization"
+            },
+            {
+              "controlRef": "ethereum:0x2bd010ab5393ab51b601b99c4b33ba148d9466e9",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x436dccc028322afc355f608cf582b7d7f19fdfed",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+              "pathId": "governor-controls-facilitator-allowlist"
+            }
+          ],
+          "selectors": [
+            "0x0f3424bb"
+          ],
+          "role": null,
+          "activation": "active",
+          "publicDelaySec": null,
+          "calldataBound": "unknown",
+          "proofRef": "gho-voting-assets"
+        },
+        {
+          "id": "strategy-voting-assets",
+          "from": "aave-voting-power-strategy",
+          "to": "aave-governance-token",
+          "kind": "vote-origin",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+              "pathId": "ordinary-governance-facilitator-authorization"
+            },
+            {
+              "controlRef": "ethereum:0x2bd010ab5393ab51b601b99c4b33ba148d9466e9",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x436dccc028322afc355f608cf582b7d7f19fdfed",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+              "pathId": "governor-controls-facilitator-allowlist"
+            }
+          ],
+          "selectors": [
+            "0x69098bd7"
+          ],
+          "role": null,
+          "activation": "active",
+          "publicDelaySec": null,
+          "calldataBound": "unknown",
+          "proofRef": "gho-voting-assets"
+        },
+        {
+          "id": "vote-ownership-unclosed",
+          "from": "aave-governance-token",
+          "to": "unclosed-vote-origin",
+          "kind": "vote-origin",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+              "pathId": "ordinary-governance-facilitator-authorization"
+            },
+            {
+              "controlRef": "ethereum:0x2bd010ab5393ab51b601b99c4b33ba148d9466e9",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x436dccc028322afc355f608cf582b7d7f19fdfed",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+              "pathId": "governor-controls-facilitator-allowlist"
+            }
+          ],
+          "selectors": [],
+          "role": null,
+          "activation": "active",
+          "publicDelaySec": null,
+          "calldataBound": "unknown",
+          "proofRef": "gho-controller-census-unknown"
+        },
+        {
+          "id": "aave-token-governor-unclosed-alternatives",
+          "from": "aave-token-governor",
+          "to": "unclosed-authority-alternatives",
+          "kind": "upgrade",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+              "pathId": "ordinary-governance-facilitator-authorization"
+            },
+            {
+              "controlRef": "ethereum:0x2bd010ab5393ab51b601b99c4b33ba148d9466e9",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x436dccc028322afc355f608cf582b7d7f19fdfed",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+              "pathId": "governor-controls-facilitator-allowlist"
+            }
+          ],
+          "selectors": [],
+          "role": null,
+          "activation": "active",
+          "publicDelaySec": null,
+          "calldataBound": "unknown",
+          "proofRef": "gho-authority-closure-open"
+        },
+        {
+          "id": "aave-payload-controller-unclosed-alternatives",
+          "from": "aave-payload-controller",
+          "to": "unclosed-authority-alternatives",
+          "kind": "upgrade",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+              "pathId": "ordinary-governance-facilitator-authorization"
+            },
+            {
+              "controlRef": "ethereum:0x2bd010ab5393ab51b601b99c4b33ba148d9466e9",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x436dccc028322afc355f608cf582b7d7f19fdfed",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+              "pathId": "governor-controls-facilitator-allowlist"
+            }
+          ],
+          "selectors": [],
+          "role": null,
+          "activation": "active",
+          "publicDelaySec": null,
+          "calldataBound": "unknown",
+          "proofRef": "gho-authority-closure-open"
+        },
+        {
+          "id": "aave-voting-power-strategy-unclosed-alternatives",
+          "from": "aave-voting-power-strategy",
+          "to": "unclosed-authority-alternatives",
+          "kind": "upgrade",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+              "pathId": "ordinary-governance-facilitator-authorization"
+            },
+            {
+              "controlRef": "ethereum:0x2bd010ab5393ab51b601b99c4b33ba148d9466e9",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x436dccc028322afc355f608cf582b7d7f19fdfed",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            },
+            {
+              "controlRef": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+              "pathId": "governor-controls-facilitator-allowlist"
+            }
+          ],
+          "selectors": [],
+          "role": null,
+          "activation": "active",
+          "publicDelaySec": null,
+          "calldataBound": "unknown",
+          "proofRef": "gho-authority-closure-open"
+        },
+        {
+          "id": "aave-executor-unclosed-reach",
+          "from": "aave-executor",
+          "to": "unclosed-authority-alternatives",
+          "kind": "permission-change",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+              "pathId": "ordinary-governance-facilitator-authorization"
+            }
+          ],
+          "selectors": [],
+          "role": null,
+          "activation": "active",
+          "publicDelaySec": null,
+          "calldataBound": "unknown",
+          "proofRef": "gho-execution-certificates-open"
+        },
+        {
+          "id": "gho-control-5513224d-unclosed-reach",
+          "from": "gho-control-5513224d",
+          "to": "unclosed-authority-alternatives",
+          "kind": "permission-change",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x5513224daaeabca31af5280727878d52097afa05",
+              "pathId": "council-or-owner-pool-prefunding"
+            }
+          ],
+          "selectors": [],
+          "role": null,
+          "activation": "active",
+          "publicDelaySec": null,
+          "calldataBound": "unknown",
+          "proofRef": "gho-execution-certificates-open"
+        },
+        {
+          "id": "gho-control-5513224d-owner",
+          "from": "gho-control-5513224d",
+          "to": "aave-executor",
+          "kind": "owner",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x5513224daaeabca31af5280727878d52097afa05",
+              "pathId": "council-or-owner-pool-prefunding"
+            }
+          ],
+          "selectors": [
+            "0x749b1e8b"
+          ],
+          "role": "onlyOwnerOrGuardian: owner alternative",
+          "activation": "active",
+          "publicDelaySec": 345603,
+          "calldataBound": true,
+          "proofRef": "gho-fixed-pool-core"
+        },
+        {
+          "id": "gho-control-5513224d-guardian",
+          "from": "gho-control-5513224d",
+          "to": "gho-risk-council",
+          "kind": "role",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x5513224daaeabca31af5280727878d52097afa05",
+              "pathId": "council-or-owner-pool-prefunding"
+            }
+          ],
+          "selectors": [
+            "0x749b1e8b"
+          ],
+          "role": "onlyOwnerOrGuardian: guardian alternative",
+          "activation": "active",
+          "publicDelaySec": 0,
+          "calldataBound": false,
+          "proofRef": "gho-fixed-pool-core"
+        },
+        {
+          "id": "gho-control-5513224d-fixed-first-hop",
+          "from": "gho-control-5513224d",
+          "to": "gho-fixed-pool-core",
+          "kind": "recipient-hop",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x5513224daaeabca31af5280727878d52097afa05",
+              "pathId": "council-or-owner-pool-prefunding"
+            }
+          ],
+          "selectors": [
+            "0x749b1e8b"
+          ],
+          "role": "immutable POOL; supplied on behalf of minter itself",
+          "activation": "active",
+          "publicDelaySec": 0,
+          "calldataBound": false,
+          "proofRef": "gho-fixed-pool-core"
+        },
+        {
+          "id": "gho-fixed-pool-core-downstream",
+          "from": "gho-fixed-pool-core",
+          "to": "unclosed-authority-alternatives",
+          "kind": "claim-transfer",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x5513224daaeabca31af5280727878d52097afa05",
+              "pathId": "council-or-owner-pool-prefunding"
+            }
+          ],
+          "selectors": [],
+          "role": null,
+          "activation": "active",
+          "publicDelaySec": null,
+          "calldataBound": "unknown",
+          "proofRef": "gho-pool-reach-core"
+        },
+        {
+          "id": "gho-control-b639d208-unclosed-reach",
+          "from": "gho-control-b639d208",
+          "to": "unclosed-authority-alternatives",
+          "kind": "permission-change",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0xb639d208bcf0589d54fac24e655c79ec529762b8",
+              "pathId": "atomic-flash-mint"
+            }
+          ],
+          "selectors": [],
+          "role": null,
+          "activation": "active",
+          "publicDelaySec": null,
+          "calldataBound": "unknown",
+          "proofRef": "gho-execution-certificates-open"
+        },
+        {
+          "id": "gho-control-2bd010ab-unclosed-reach",
+          "from": "gho-control-2bd010ab",
+          "to": "unclosed-authority-alternatives",
+          "kind": "permission-change",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x2bd010ab5393ab51b601b99c4b33ba148d9466e9",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            }
+          ],
+          "selectors": [],
+          "role": null,
+          "activation": "active",
+          "publicDelaySec": null,
+          "calldataBound": "unknown",
+          "proofRef": "gho-execution-certificates-open"
+        },
+        {
+          "id": "gho-gsm-mainnet-unclosed-reach",
+          "from": "gho-gsm-mainnet",
+          "to": "unclosed-authority-alternatives",
+          "kind": "permission-change",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            }
+          ],
+          "selectors": [],
+          "role": null,
+          "activation": "active",
+          "publicDelaySec": null,
+          "calldataBound": "unknown",
+          "proofRef": "gho-execution-certificates-open"
+        },
+        {
+          "id": "gsm-minter-council",
+          "from": "gho-gsm-mainnet",
+          "to": "gho-risk-council",
+          "kind": "role",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            }
+          ],
+          "selectors": [
+            "0x40c10f19"
+          ],
+          "role": "MINTER_ROLE independent Council alternative",
+          "activation": "active",
+          "publicDelaySec": 0,
+          "calldataBound": false,
+          "proofRef": "gho-council-gsm-mint"
+        },
+        {
+          "id": "gsm-minter-executor",
+          "from": "gho-gsm-mainnet",
+          "to": "aave-executor",
+          "kind": "role",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            }
+          ],
+          "selectors": [
+            "0x40c10f19"
+          ],
+          "role": "MINTER_ROLE ordinary executor alternative",
+          "activation": "active",
+          "publicDelaySec": 345603,
+          "calldataBound": true,
+          "proofRef": "gho-council-gsm-mint"
+        },
+        {
+          "id": "gsm-bucket-steward",
+          "from": "gho-gsm-mainnet",
+          "to": "gho-bucket-steward",
+          "kind": "envelope-raise",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            }
+          ],
+          "selectors": [
+            "0x5e107b9c"
+          ],
+          "role": "independent Council capacity increase",
+          "activation": "active",
+          "publicDelaySec": 0,
+          "calldataBound": false,
+          "proofRef": "gho-council-bucket-growth"
+        },
+        {
+          "id": "gho-control-2ce01c87-unclosed-reach",
+          "from": "gho-control-2ce01c87",
+          "to": "unclosed-authority-alternatives",
+          "kind": "permission-change",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x2ce01c87fec1b71a9041c52caed46fc5f4807285",
+              "pathId": "council-or-owner-pool-prefunding"
+            }
+          ],
+          "selectors": [],
+          "role": null,
+          "activation": "active",
+          "publicDelaySec": null,
+          "calldataBound": "unknown",
+          "proofRef": "gho-execution-certificates-open"
+        },
+        {
+          "id": "gho-control-2ce01c87-owner",
+          "from": "gho-control-2ce01c87",
+          "to": "aave-executor",
+          "kind": "owner",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x2ce01c87fec1b71a9041c52caed46fc5f4807285",
+              "pathId": "council-or-owner-pool-prefunding"
+            }
+          ],
+          "selectors": [
+            "0x749b1e8b"
+          ],
+          "role": "onlyOwnerOrGuardian: owner alternative",
+          "activation": "active",
+          "publicDelaySec": 345603,
+          "calldataBound": true,
+          "proofRef": "gho-fixed-pool-lido"
+        },
+        {
+          "id": "gho-control-2ce01c87-guardian",
+          "from": "gho-control-2ce01c87",
+          "to": "gho-risk-council",
+          "kind": "role",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x2ce01c87fec1b71a9041c52caed46fc5f4807285",
+              "pathId": "council-or-owner-pool-prefunding"
+            }
+          ],
+          "selectors": [
+            "0x749b1e8b"
+          ],
+          "role": "onlyOwnerOrGuardian: guardian alternative",
+          "activation": "active",
+          "publicDelaySec": 0,
+          "calldataBound": false,
+          "proofRef": "gho-fixed-pool-lido"
+        },
+        {
+          "id": "gho-control-2ce01c87-fixed-first-hop",
+          "from": "gho-control-2ce01c87",
+          "to": "gho-fixed-pool-lido",
+          "kind": "recipient-hop",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x2ce01c87fec1b71a9041c52caed46fc5f4807285",
+              "pathId": "council-or-owner-pool-prefunding"
+            }
+          ],
+          "selectors": [
+            "0x749b1e8b"
+          ],
+          "role": "immutable POOL; supplied on behalf of minter itself",
+          "activation": "active",
+          "publicDelaySec": 0,
+          "calldataBound": false,
+          "proofRef": "gho-fixed-pool-lido"
+        },
+        {
+          "id": "gho-fixed-pool-lido-downstream",
+          "from": "gho-fixed-pool-lido",
+          "to": "unclosed-authority-alternatives",
+          "kind": "claim-transfer",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x2ce01c87fec1b71a9041c52caed46fc5f4807285",
+              "pathId": "council-or-owner-pool-prefunding"
+            }
+          ],
+          "selectors": [],
+          "role": null,
+          "activation": "active",
+          "publicDelaySec": null,
+          "calldataBound": "unknown",
+          "proofRef": "gho-pool-reach-lido"
+        },
+        {
+          "id": "gho-control-e10c78a3-unclosed-reach",
+          "from": "gho-control-e10c78a3",
+          "to": "unclosed-authority-alternatives",
+          "kind": "permission-change",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea",
+              "pathId": "council-or-owner-pool-prefunding"
+            }
+          ],
+          "selectors": [],
+          "role": null,
+          "activation": "active",
+          "publicDelaySec": null,
+          "calldataBound": "unknown",
+          "proofRef": "gho-execution-certificates-open"
+        },
+        {
+          "id": "gho-control-e10c78a3-owner",
+          "from": "gho-control-e10c78a3",
+          "to": "aave-executor",
+          "kind": "owner",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea",
+              "pathId": "council-or-owner-pool-prefunding"
+            }
+          ],
+          "selectors": [
+            "0x749b1e8b"
+          ],
+          "role": "onlyOwnerOrGuardian: owner alternative",
+          "activation": "active",
+          "publicDelaySec": 345603,
+          "calldataBound": true,
+          "proofRef": "gho-fixed-pool-horizon"
+        },
+        {
+          "id": "gho-control-e10c78a3-guardian",
+          "from": "gho-control-e10c78a3",
+          "to": "gho-risk-council",
+          "kind": "role",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea",
+              "pathId": "council-or-owner-pool-prefunding"
+            }
+          ],
+          "selectors": [
+            "0x749b1e8b"
+          ],
+          "role": "onlyOwnerOrGuardian: guardian alternative",
+          "activation": "active",
+          "publicDelaySec": 0,
+          "calldataBound": false,
+          "proofRef": "gho-fixed-pool-horizon"
+        },
+        {
+          "id": "gho-control-e10c78a3-fixed-first-hop",
+          "from": "gho-control-e10c78a3",
+          "to": "gho-fixed-pool-horizon",
+          "kind": "recipient-hop",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea",
+              "pathId": "council-or-owner-pool-prefunding"
+            }
+          ],
+          "selectors": [
+            "0x749b1e8b"
+          ],
+          "role": "immutable POOL; supplied on behalf of minter itself",
+          "activation": "active",
+          "publicDelaySec": 0,
+          "calldataBound": false,
+          "proofRef": "gho-fixed-pool-horizon"
+        },
+        {
+          "id": "gho-fixed-pool-horizon-downstream",
+          "from": "gho-fixed-pool-horizon",
+          "to": "unclosed-authority-alternatives",
+          "kind": "claim-transfer",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea",
+              "pathId": "council-or-owner-pool-prefunding"
+            }
+          ],
+          "selectors": [],
+          "role": null,
+          "activation": "active",
+          "publicDelaySec": null,
+          "calldataBound": "unknown",
+          "proofRef": "gho-pool-reach-horizon"
+        },
+        {
+          "id": "gho-control-436dccc0-unclosed-reach",
+          "from": "gho-control-436dccc0",
+          "to": "unclosed-authority-alternatives",
+          "kind": "permission-change",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x436dccc028322afc355f608cf582b7d7f19fdfed",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            }
+          ],
+          "selectors": [],
+          "role": null,
+          "activation": "active",
+          "publicDelaySec": null,
+          "calldataBound": "unknown",
+          "proofRef": "gho-execution-certificates-open"
+        },
+        {
+          "id": "gho-control-0cb7c2a2-unclosed-reach",
+          "from": "gho-control-0cb7c2a2",
+          "to": "unclosed-authority-alternatives",
+          "kind": "permission-change",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134",
+              "pathId": "role-authorized-arbitrary-recipient-mint"
+            }
+          ],
+          "selectors": [],
+          "role": null,
+          "activation": "active",
+          "publicDelaySec": null,
+          "calldataBound": "unknown",
+          "proofRef": "gho-execution-certificates-open"
+        },
+        {
+          "id": "gho-bucket-steward-unclosed-reach",
+          "from": "gho-bucket-steward",
+          "to": "unclosed-authority-alternatives",
+          "kind": "permission-change",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+              "pathId": "council-raises-noncollateral-gsm-mint-capacity"
+            },
+            {
+              "controlRef": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+              "pathId": "governor-controls-facilitator-allowlist"
+            }
+          ],
+          "selectors": [],
+          "role": null,
+          "activation": "active",
+          "publicDelaySec": null,
+          "calldataBound": "unknown",
+          "proofRef": "gho-execution-certificates-open"
+        },
+        {
+          "id": "steward-risk-council",
+          "from": "gho-bucket-steward",
+          "to": "gho-risk-council",
+          "kind": "role",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+              "pathId": "council-raises-noncollateral-gsm-mint-capacity"
+            }
+          ],
+          "selectors": [
+            "0x5e107b9c"
+          ],
+          "role": "onlyRiskCouncil",
+          "activation": "active",
+          "publicDelaySec": 0,
+          "calldataBound": false,
+          "proofRef": "gho-council-bucket-growth"
+        },
+        {
+          "id": "steward-owner-allowlist",
+          "from": "gho-bucket-steward",
+          "to": "aave-executor",
+          "kind": "owner",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+              "pathId": "governor-controls-facilitator-allowlist"
+            }
+          ],
+          "selectors": [],
+          "role": "onlyOwner: controlled facilitator allowlist",
+          "activation": "active",
+          "publicDelaySec": 345603,
+          "calldataBound": true,
+          "proofRef": "gho-steward-owner"
+        },
+        {
+          "id": "gho-risk-council-unclosed-reach",
+          "from": "gho-risk-council",
+          "to": "unclosed-authority-alternatives",
+          "kind": "permission-change",
+          "pathRefs": [
+            {
+              "controlRef": "ethereum:0x8513e6f37dbc52de87b166980fa3f50639694b60",
+              "pathId": "council-arbitrary-recipient-gsm-mint"
+            },
+            {
+              "controlRef": "ethereum:0x8513e6f37dbc52de87b166980fa3f50639694b60",
+              "pathId": "council-enables-capacity-growth"
+            }
+          ],
+          "selectors": [],
+          "role": null,
+          "activation": "active",
+          "publicDelaySec": null,
+          "calldataBound": "unknown",
+          "proofRef": "gho-execution-certificates-open"
+        }
+      ],
+      "pathBindings": [
+        {
+          "path": {
+            "controlRef": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+            "pathId": "ordinary-governance-facilitator-authorization"
+          },
+          "authorityNodeIds": [
+            "aave-executor"
+          ],
+          "provenanceNodeIds": [],
+          "closureProofRef": "gho-authority-closure-open"
+        },
+        {
+          "path": {
+            "controlRef": "ethereum:0x5513224daaeabca31af5280727878d52097afa05",
+            "pathId": "council-or-owner-pool-prefunding"
+          },
+          "authorityNodeIds": [
+            "gho-control-5513224d"
+          ],
+          "provenanceNodeIds": [
+            "gho-fixed-pool-core"
+          ],
+          "closureProofRef": "gho-pool-reach-core"
+        },
+        {
+          "path": {
+            "controlRef": "ethereum:0xb639d208bcf0589d54fac24e655c79ec529762b8",
+            "pathId": "atomic-flash-mint"
+          },
+          "authorityNodeIds": [
+            "gho-control-b639d208"
+          ],
+          "provenanceNodeIds": [],
+          "closureProofRef": "gho-authority-closure-open"
+        },
+        {
+          "path": {
+            "controlRef": "ethereum:0x2bd010ab5393ab51b601b99c4b33ba148d9466e9",
+            "pathId": "role-authorized-arbitrary-recipient-mint"
+          },
+          "authorityNodeIds": [
+            "gho-control-2bd010ab"
+          ],
+          "provenanceNodeIds": [],
+          "closureProofRef": "gho-authority-closure-open"
+        },
+        {
+          "path": {
+            "controlRef": "ethereum:0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
+            "pathId": "role-authorized-arbitrary-recipient-mint"
+          },
+          "authorityNodeIds": [
+            "gho-gsm-mainnet"
+          ],
+          "provenanceNodeIds": [],
+          "closureProofRef": "gho-authority-closure-open"
+        },
+        {
+          "path": {
+            "controlRef": "ethereum:0x2ce01c87fec1b71a9041c52caed46fc5f4807285",
+            "pathId": "council-or-owner-pool-prefunding"
+          },
+          "authorityNodeIds": [
+            "gho-control-2ce01c87"
+          ],
+          "provenanceNodeIds": [
+            "gho-fixed-pool-lido"
+          ],
+          "closureProofRef": "gho-pool-reach-lido"
+        },
+        {
+          "path": {
+            "controlRef": "ethereum:0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea",
+            "pathId": "council-or-owner-pool-prefunding"
+          },
+          "authorityNodeIds": [
+            "gho-control-e10c78a3"
+          ],
+          "provenanceNodeIds": [
+            "gho-fixed-pool-horizon"
+          ],
+          "closureProofRef": "gho-pool-reach-horizon"
+        },
+        {
+          "path": {
+            "controlRef": "ethereum:0x436dccc028322afc355f608cf582b7d7f19fdfed",
+            "pathId": "role-authorized-arbitrary-recipient-mint"
+          },
+          "authorityNodeIds": [
+            "gho-control-436dccc0"
+          ],
+          "provenanceNodeIds": [],
+          "closureProofRef": "gho-authority-closure-open"
+        },
+        {
+          "path": {
+            "controlRef": "ethereum:0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134",
+            "pathId": "role-authorized-arbitrary-recipient-mint"
+          },
+          "authorityNodeIds": [
+            "gho-control-0cb7c2a2"
+          ],
+          "provenanceNodeIds": [],
+          "closureProofRef": "gho-authority-closure-open"
+        },
+        {
+          "path": {
+            "controlRef": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+            "pathId": "council-raises-noncollateral-gsm-mint-capacity"
+          },
+          "authorityNodeIds": [
+            "gho-bucket-steward"
+          ],
+          "provenanceNodeIds": [],
+          "closureProofRef": "gho-authority-closure-open"
+        },
+        {
+          "path": {
+            "controlRef": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
+            "pathId": "governor-controls-facilitator-allowlist"
+          },
+          "authorityNodeIds": [
+            "gho-bucket-steward"
+          ],
+          "provenanceNodeIds": [],
+          "closureProofRef": "gho-authority-closure-open"
+        },
+        {
+          "path": {
+            "controlRef": "ethereum:0x8513e6f37dbc52de87b166980fa3f50639694b60",
+            "pathId": "council-arbitrary-recipient-gsm-mint"
+          },
+          "authorityNodeIds": [
+            "gho-risk-council"
+          ],
+          "provenanceNodeIds": [],
+          "closureProofRef": "gho-authority-closure-open"
+        },
+        {
+          "path": {
+            "controlRef": "ethereum:0x8513e6f37dbc52de87b166980fa3f50639694b60",
+            "pathId": "council-enables-capacity-growth"
+          },
+          "authorityNodeIds": [
+            "gho-risk-council"
+          ],
+          "provenanceNodeIds": [],
+          "closureProofRef": "gho-authority-closure-open"
+        }
+      ],
+      "closureProofRef": "gho-authority-closure-open"
     }
   }
 }

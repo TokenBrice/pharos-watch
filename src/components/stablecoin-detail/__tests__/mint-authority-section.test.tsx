@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MintAuthoritySection } from "../mint-authority-section";
 import type { MintAuthorityDetailViewModel } from "@/lib/stablecoin-detail-mint-authority-view-model";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
+import { makePublishedProcessDiagnostic } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
 
 const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
   status: "reviewed",
@@ -34,6 +35,7 @@ const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
       capDescription: "Facilitator bucket capacity limits minting.",
       modulesOrGuardsLabel: "No modules or guards detected",
       custodyLabel: null,
+      processDiagnostics: [],
     },
   ],
   sources: [
@@ -58,6 +60,7 @@ const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
   mintIncidents: [],
   sourceFreeRationale: null,
   unresolvedQuestions: [],
+  processEvidenceAvailable: false, processDiagnostics: [], processMetrics: [],
 };
 
 describe("MintAuthoritySection", () => {
@@ -88,6 +91,7 @@ describe("MintAuthoritySection", () => {
           mintIncidents: [],
           sourceFreeRationale: null,
           unresolvedQuestions: [],
+          processEvidenceAvailable: false, processDiagnostics: [], processMetrics: [],
         }}
       />,
     );
@@ -95,6 +99,28 @@ describe("MintAuthoritySection", () => {
     expect(html).toContain("Not reviewed by Pharos");
     expect(html).toContain("Mint control posture: NR");
     expect(html).toContain("Unknown does not mean no privileged mint authority.");
+  });
+
+  it("renders unavailable process evidence at NR when a legacy profile lacks the issuance summary fields", () => {
+    const profile = {
+      ...REVIEWED_PROFILE,
+      score: null,
+      controls: REVIEWED_PROFILE.controls.map((control) => ({ ...control })),
+    };
+    // Pre-10.05 publications and their projections lack the additive process fields.
+    for (const field of ["processEvidenceAvailable", "processDiagnostics", "processMetrics"]) {
+      Reflect.deleteProperty(profile, field);
+    }
+    for (const control of profile.controls) {
+      Reflect.deleteProperty(control, "processDiagnostics");
+    }
+
+    const html = renderToStaticMarkup(<MintAuthoritySection profile={profile} />);
+
+    expect(html).toContain(">NR<");
+    expect(html).toContain("Aave Ethereum Governance");
+    expect(html.match(/Published process diagnostics are unavailable\./g)).toHaveLength(1);
+    expect(html).not.toContain("Issuance process evidence (");
   });
 
   it("renders control and source link destinations with the V9 methodology stamp", () => {
@@ -234,5 +260,34 @@ describe("MintAuthoritySection", () => {
     );
 
     expect(html).toContain("Verification gaps");
+  });
+});
+
+describe("mint process diagnostic disclosure", () => {
+  it("renders native accessible expandable evidence and distinguishes missing proof from a failed screen at NR", () => {
+    const base = { ...makePublishedProcessDiagnostic({
+      code: "operational-cap-unproved", gate: "H2", controlRef: null, pathId: "redo", classId: "keeper-class", memberRef: null,
+      field: "maxKeeperFixedRewardSupplyPpm", evidenceRefIds: ["read-code", "proof-2", "proof-3", "proof-4"],
+    }, { count: 4 }), key: "process-missing", statusLabel: "Missing evidence" as const };
+    const failed = { ...makePublishedProcessDiagnostic({
+      code: "operational-screen-failed", gate: "H3", controlRef: null, pathId: null, classId: null, memberRef: null,
+      field: "operationalExposurePpm", evidenceRefIds: [],
+    }), key: "failed-exposure", statusLabel: "Failed screen" as const };
+    const html = renderToStaticMarkup(<MintAuthoritySection profile={{ ...REVIEWED_PROFILE, score: null,
+      processEvidenceAvailable: true, processMetrics: [{ label: "Actual operational exercise delay", value: "0 s" }],
+      processDiagnostics: [base, failed],
+    }} />);
+    expect(html).toContain("<details");
+    expect(html).toContain("<summary");
+    expect(html).toContain("Missing evidence");
+    expect(html).toContain("Failed screen");
+    expect(html).toContain("Gate H3");
+    expect(html).toContain("Class keeper-class");
+    expect(html).toContain("operationalExposurePpm");
+    expect(html).toContain("Group total: 4");
+    expect(html).toContain("sampled exemplars, not an exhaustive member list");
+    expect(html).toContain("3 sampled / 4 total references");
+    expect(html).toContain("0 s");
+    expect(html).toContain("NR");
   });
 });

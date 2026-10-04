@@ -10,6 +10,7 @@ import { V9DeploymentControlFactBaseSchema } from "../../../types/safety-score-v
 import { reviewedScope, SCOPE_CONTROLLER } from "../../__tests__/safety-score-v9-control-scope.test-support";
 import { CANONICAL_STABLECOIN_FLAGS, makeRawStablecoinMeta as makeCoin } from "./test-support";
 import { makeSafeControl } from "./schema.test-support";
+import { makeCompiledVotingControl } from "../../__tests__/safety-score-v9-fixtures.test-support";
 
 const baseFlags = CANONICAL_STABLECOIN_FLAGS;
 
@@ -148,6 +149,9 @@ function makeMintAuthority(overrides: Record<string, unknown> = {}): Record<stri
 function governedMintAuthority() {
   const executionScope = reviewedScope();
   executionScope.paths[0]!.capSemantics = { kind: "unbounded", bound: null };
+  const pin = { chain: "ethereum", position: "100", hash: `0x${"ab".repeat(32)}`, timestamp: "2026-10-01T00:00:00Z" };
+  const review = { observedAt: "2026-10-01", reviewedAt: "2026-10-01", expiresAt: "2026-10-31", reviewer: "Fixture Reviewer", pin };
+  const proofRef = "fixture-source-unknown";
   return MintAuthorityProfileSchema.parse(makeMintAuthority({
     authorityPosture: "unbounded-governed",
     economicCapSemantics: "unbounded",
@@ -160,11 +164,30 @@ function governedMintAuthority() {
       directMintAbility: "can-authorize",
       executionScope,
     }],
+    executionCertificates: { schemaVersion: 1, liabilityBookId: "fixture-book",
+      evidence: [{ id: proofRef, pin, deployment: SCOPE_CONTROLLER, kind: "verified-source", readType: null,
+        function: "modeled governor source", selector: null, calldata: null, rawResult: null, sourceUrl: mintAuthoritySource.url,
+        sourceLocation: "modeled authoring boundary", statement: "This authoring fixture identifies the source but deliberately leaves the state census unknown.", artificial: false }],
+      proofs: [{ id: proofRef, conclusion: "unknown", statement: "The authoring fixture does not assert a closed voting census or a positive process score.", evidenceRefIds: [proofRef] }],
+      censuses: [{ id: "fixture-census", review, targetDeployment: SCOPE_CONTROLLER, kind: "ward", role: "mint", coverage: "unknown",
+        authoritativeMembers: [], observations: [], discovery: { kind: "source-fixed-set", fromPosition: "0", throughPosition: "100", paginationEnd: null, proofRef }, completenessProofRef: proofRef }],
+      classes: [], members: [] },
+    authorityGraph: { id: "fixture-graph", review, liabilityBookId: "fixture-book", governorNodeId: "governor",
+      nodes: [{ id: "governor", deployment: SCOPE_CONTROLLER, kind: "token-governor", terminal: true, authorityCensusIds: ["fixture-census"], runtime: null, proofRef }],
+      edges: [], pathBindings: [{ path: { controlRef: SCOPE_CONTROLLER, pathId: "issuance" }, authorityNodeIds: ["governor"], provenanceNodeIds: [], closureProofRef: proofRef }], closureProofRef: proofRef },
     governedIssuance: {
       decisionRule: "affirmative-vote",
       governorControlRef: SCOPE_CONTROLLER,
       votingPower: "lock-escrowed",
       votingPowerEvidence: "Voting weight is escrowed for the entire voting and execution interval.",
+      votingControl: { id: "fixture-voting", governorNodeId: "governor", review, votingToken: SCOPE_CONTROLLER, totalVotingPowerRaw: null,
+        pinnedVotingSupply: { deployment: SCOPE_CONTROLLER, function: "totalSupply()", raw: null, proofRef }, controllerCensusProofRef: proofRef,
+        holderCensus: [], controllers: [], routes: [{ id: "fixture-approval", path: { controlRef: SCOPE_CONTROLLER, pathId: "issuance" },
+          kind: "affirmative-approval", totalVotingPowerRaw: null, unilateralThresholdRaw: null, thresholdComparator: "gt", thresholdProofRef: proofRef,
+          holderCensusRef: "holderCensus", controllerPowers: [], residualUpperRaw: null, residualProofRef: proofRef, affiliatedControllerIds: [],
+          affiliatedAggregatePowerRaw: null, affiliatedAggregateUnilateralThresholdRaw: null, affiliatedAggregateThresholdComparator: "gt",
+          affiliatedAggregateThresholdProofRef: proofRef, minorityProtectionProofRef: null }],
+        privilegedVoteCreation: { state: "unknown", pathRefs: [], proofRef }, forcedDelegation: { state: "unknown", pathRefs: [], proofRef } },
       enumerability: { authorizationEvents: ["MinterAuthorized(address)"], capacityReads: ["mintCapacity(address)"] },
       observedAt: "2026-10-01",
       observedBlock: 100,
@@ -579,6 +602,8 @@ describe("Compiled issuance governance contract", () => {
     decisionRule: "affirmative-vote",
     vetoQuorumBps: null,
     vetoOverride: null,
+    votingControl: makeCompiledVotingControl(),
+    diagnostics: [],
   };
 
   it("preserves absent evidence and a nullable minimum without inventing completeness", () => {

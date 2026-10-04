@@ -10,6 +10,8 @@ import {
   type MintAuthorityDetailControlViewModel,
 } from "../stablecoin-detail-mint-authority-view-model";
 import { buildStablecoinDetailClientCoin, type StablecoinDetailCoinMeta } from "../stablecoin-detail-client-coin";
+import { makePublishedIssuanceSummary, makePublishedProcessDiagnostic } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
+import type { V1005ProcessDiagnostic } from "@shared/types/safety-score-v9-facts";
 
 function makeMintAuthorityCoin(
   summary: MintAuthorityClientSummary,
@@ -240,5 +242,81 @@ describe("mint-authority detail view-model builder", () => {
     expect(viewModel.mintIncidents[1]?.sources).toEqual([
       { label: "Postmortem", url: "https://example.com/postmortem" },
     ]);
+  });
+});
+
+describe("published operational-governance detail", () => {
+  it("renders an explicitly unbounded neutral H label with the published Governed55 score", () => {
+    const coin = makeMintAuthorityCoin({ mintPath: "user-collateralized-governed",
+      authorityPosture: "unbounded-operationally-governed", confidence: "verified", summary: "Reviewed operational envelopes." });
+    const view = buildMintAuthorityDetailViewModel(coin, {
+      mint: { score: 55, posture: "unbounded-operationally-governed" }, caps: [],
+    });
+    expect(view).toMatchObject({ authorityPostureLabel: "Unbounded, operationally governed",
+      authorityPostureTone: "neutral", score: { score: 55, bandLabel: "Governed" }, processEvidenceAvailable: false });
+  });
+
+  it("matches normalized control identity rather than labels/index and keeps null/unmatched failures visible at NR", () => {
+    const address = `0x${"a".repeat(40)}`;
+    const ref = `ethereum:${address}`;
+    const missing: V1005ProcessDiagnostic = { code: "runtime-unmatched", gate: "H0", controlRef: ref,
+      pathId: "redo", classId: "keeper-class", memberRef: ref, field: "runtimeHash", evidenceRefIds: ["code-read"] };
+    const failed: V1005ProcessDiagnostic = { ...missing, code: "operational-screen-failed", gate: "H3",
+      controlRef: null, pathId: null, classId: null, memberRef: null, field: "operationalExposurePpm" };
+    const orphanRef = `ethereum:0x${"b".repeat(40)}`;
+    const unsampledRef = `ethereum:0x${"d".repeat(40)}`;
+    const missingGroup = makePublishedProcessDiagnostic(missing, { count: 4, controlRefs: [ref, orphanRef, unsampledRef] });
+    const failedGroup = makePublishedProcessDiagnostic(failed);
+    const coin = makeMintAuthorityCoin({ mintPath: "user-collateralized-governed", authorityPosture: "unknown",
+      confidence: "manual-review", summary: "Incomplete process evidence.", controls: [
+        { label: "Same label", role: "direct-minter", authorityType: "contract", directMintAbility: "direct",
+          chain: "ethereum", address: `0x${"c".repeat(40)}` },
+        { label: "Same label", role: "direct-minter", authorityType: "contract", directMintAbility: "direct",
+          chain: "ethereum", address: address.toUpperCase().replace("0X", "0x") },
+        { label: "Same label", role: "direct-minter", authorityType: "contract", directMintAbility: "direct",
+          chain: "ethereum", address: `0x${"d".repeat(40)}` },
+      ] });
+    const view = buildMintAuthorityDetailViewModel(coin, { mint: null, caps: [],
+      issuanceSummary: makePublishedIssuanceSummary({}, [missingGroup, failedGroup]) });
+    expect(view.score?.score).toBeNull();
+    expect(view.controls[0]!.processDiagnostics).toEqual([]);
+    expect(view.controls[1]!.processDiagnostics).toEqual([expect.objectContaining({ ...missingGroup, statusLabel: "Missing evidence" })]);
+    expect(view.controls[2]!.processDiagnostics).toEqual([expect.objectContaining({ ...missingGroup, statusLabel: "Missing evidence" })]);
+    expect(view.processMetrics).toContainEqual({ label: "Actual operational exercise delay", value: "0 s" });
+    expect(view.processDiagnostics).toEqual([
+      expect.objectContaining({ ...missingGroup, statusLabel: "Missing evidence" }),
+      expect.objectContaining({ ...failedGroup, statusLabel: "Failed screen" }),
+    ]);
+    expect(view.processMetrics).toContainEqual({ label: "Discretionary public delay", value: "172800 s" });
+    expect(view.processMetrics).toContainEqual({ label: "Max annual interest growth", value: "500000 ppm / year" });
+    expect(view.processEvidenceAvailable).toBe(true);
+  });
+
+  it("distinguishes proved absence of envelope transitions from a missing public-delay measurement", () => {
+    const coin = makeMintAuthorityCoin({ mintPath: "user-collateralized-governed", authorityPosture: "unknown",
+      confidence: "manual-review", summary: "Reviewed path inventory." });
+    const absent = buildMintAuthorityDetailViewModel(coin, { mint: null, caps: [],
+      issuanceSummary: makePublishedIssuanceSummary({ envelopeTransitionPathCount: 0, minEnvelopeRaisePublicDelaySec: null }) });
+    expect(absent.processMetrics).toContainEqual({ label: "Envelope-raise public delay", value: "Not applicable (no envelope-transition paths)" });
+    const unknown = buildMintAuthorityDetailViewModel(coin, { mint: null, caps: [],
+      issuanceSummary: makePublishedIssuanceSummary({ envelopeTransitionPathCount: 1, minEnvelopeRaisePublicDelaySec: null }) });
+    expect(unknown.processMetrics).toContainEqual({ label: "Envelope-raise public delay", value: "Unproved" });
+    expect(unknown.score?.score).toBeNull();
+  });
+
+  it("shows the measured interval as inapplicable only when no recurring path is funded", () => {
+    const coin = makeMintAuthorityCoin({ mintPath: "user-collateralized-governed", authorityPosture: "unknown",
+      confidence: "manual-review", summary: "Reviewed recurring funding." });
+    const summary = makePublishedIssuanceSummary({ fundedKeeperRecurringPathCount: 0,
+      minKeeperRecurringIntervalSec: null, maxKeeperRepeatRewardSupplyPpmPer86400Sec: 0,
+      keeperSupplyScreenBasis: { nativeSupplyRaw: "1000000", maxFixedRewardRaw: "10",
+        maxRepeatRewardRawPer86400Sec: "0", nativeUnits: "native" } });
+    const unfunded = buildMintAuthorityDetailViewModel(coin, { mint: null, caps: [], issuanceSummary: summary });
+    expect(unfunded.processMetrics).toContainEqual({ label: "Funded recurring keeper paths", value: "0 / 1" });
+    expect(unfunded.processMetrics).toContainEqual({ label: "Minimum recurring keeper interval", value: "Not applicable (no funded recurring paths)" });
+    const funded = buildMintAuthorityDetailViewModel(coin, { mint: null, caps: [],
+      issuanceSummary: makePublishedIssuanceSummary({ minKeeperRecurringIntervalSec: null }) });
+    expect(funded.processMetrics).toContainEqual({ label: "Minimum recurring keeper interval", value: "Unproved" });
+    expect(funded.score?.score).toBeNull();
   });
 });

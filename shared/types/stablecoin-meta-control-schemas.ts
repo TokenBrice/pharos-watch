@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { V9ControlExecutionScopeSchema, V9WeightedQuorumSchema } from "./safety-score-v9-control-scope";
+import { V9ControlExecutionScopeSchema, V9WeightedQuorumSchema, V1005ExecutionClassRefSchema, V1005ExecutionCertificatesSchema, V1005AuthorityGraphSchema, V1005VotingControlSchema, V1005OperationalIssuanceSchema } from "./safety-score-v9-control-scope";
 import { normalizeDeploymentId } from "./deployment-id";
 import {
   BRIDGE_ROUTE_CLASS_VALUES,
@@ -602,10 +602,13 @@ const MintAuthorityControlSchema = z
     role: z.enum(MINT_AUTHORITY_CONTROL_ROLE_VALUES),
     directMintAbility: z.enum(MINT_AUTHORITY_DIRECT_MINT_ABILITY_VALUES),
     ...AuthorityControlFields,
+    executionClassRef: V1005ExecutionClassRefSchema.optional(),
   })
   .strict()
   .superRefine((control, ctx) => {
     validateExactAuthority(control, control.chain, control.address, ctx);
+    if (control.executionScope && control.executionClassRef) ctx.addIssue({ code: "custom", path: ["executionClassRef"], message: "Individual scope and class reference are mutually exclusive" });
+    if (control.executionClassRef && normalizeDeploymentId(`${control.chain ?? ""}:${control.address ?? ""}`) !== control.executionClassRef.memberRef) ctx.addIssue({ code: "custom", path: ["executionClassRef", "memberRef"], message: "Execution class must bind the exact controller" });
     if (control.threshold != null && control.signerCount != null && control.threshold > control.signerCount) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -727,12 +730,16 @@ export const MintAuthorityProfileSchema = z
     mintIncidents: z.array(MintAuthorityIncidentSchema).min(1).optional(),
     controls: z.array(MintAuthorityControlSchema).optional(),
     economicCapSemantics: z.enum(MINT_AUTHORITY_ECONOMIC_CAP_SEMANTICS_VALUES).optional(),
+    executionCertificates: V1005ExecutionCertificatesSchema.optional(),
+    authorityGraph: V1005AuthorityGraphSchema.optional(),
+    operationalIssuance: V1005OperationalIssuanceSchema.optional(),
     governedIssuance: z
       .object({
         decisionRule: z.enum(["affirmative-vote", "minority-veto"]),
         governorControlRef: z.string().regex(/^[a-z0-9][a-z0-9-]*:0x[0-9a-f]{40}$/, "Expected a chain:lowercase EVM address governor reference"),
         votingPower: z.enum(["holding-period-weighted", "lock-escrowed", "past-block-checkpoint", "live-balance", "unknown"]),
         votingPowerEvidence: z.string().trim().min(40),
+        votingControl: V1005VotingControlSchema,
         veto: z
           .object({
             quorumBps: z.number().int().min(1).max(10000),
