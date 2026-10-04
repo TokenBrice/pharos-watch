@@ -519,13 +519,17 @@ function compileMintVotingControl(profile: MintAuthorityProfile, clockSec: numbe
         if (!node || !closed(node.proofRef)) { unresolved = true; return; }
         if (["eoa", "multisig", "issuer-backend"].includes(node.kind)) keyAlternative = true;
         visiting.add(id);
+        let hasAuthorityEdge = false;
         for (const edge of graph?.edges ?? []) if (edge.from === id && edge.activation !== "disabled-final" &&
             edge.pathRefs.some((ref) => ref.controlRef === route.path.controlRef && ref.pathId === route.path.pathId) &&
-            ["owner", "admin", "upgrade", "operator", "delegate", "vote-cast", "vote-replacement", "vote-origin"].includes(edge.kind) &&
+            ["owner", "ward", "role", "admin", "upgrade", "delegatecall", "execution-hop", "permission-change", "envelope-raise",
+              "operator", "delegate", "vote-cast", "vote-replacement", "vote-origin", "reactivation"].includes(edge.kind) &&
             !(id === voting.governorNodeId && node.kind === "token-governor" && (edge.kind === "vote-origin" || edge.kind === "vote-cast"))) {
+          hasAuthorityEdge = true;
           if (!closed(edge.proofRef) || edge.activation === "unknown") unresolved = true;
           visitVoteAuthority(edge.to);
         }
+        if (!hasAuthorityEdge && (!node.terminal || node.kind === "unknown")) unresolved = true;
         visiting.delete(id); visited.add(id);
       };
       for (const id of controller.voteAuthorityNodeIds) visitVoteAuthority(id);

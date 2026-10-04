@@ -452,6 +452,7 @@ export function compileReviewedMintControlScopes(profile: MintAuthorityProfile, 
         runtime.implementationIdentityRef === member.immutables.original);
       const runtimeProofRef = variant?.matchProofRef ?? cloneVariant?.matchProofRef;
       if (member.codeHash === null || !codeRead || !runtimeProofRef || !proofClosed(runtimeProofRef, klass.review.pin)) add("runtime-unmatched", "compactMembers.codeHash", ref?.controlRef ?? null, ref?.pathId ?? null, klass.id, member.deployment, member.evidenceRefIds);
+      else if (variant && !v1005RuntimeIsMatched(variant, certificates, klass.review.pin)) add(variant.proxyKind === "none" ? "runtime-unmatched" : "implementation-unmatched", variant.proxyKind === "none" ? "compactMembers.codeHash" : "compactMembers.implementation", ref?.controlRef ?? null, ref?.pathId ?? null, klass.id, member.deployment, member.evidenceRefIds);
       else if (!variant && cloneVariant && !matchedCloneVariants.has(cloneVariant)) add("implementation-unmatched", "compactMembers.implementation", ref?.controlRef ?? null, ref?.pathId ?? null, klass.id, member.deployment, member.evidenceRefIds);
       if (bindings.length !== 1 || !bindings[0]?.projection.complete) add("authority-census-incomplete", "compactMembers.sourcePathRefs", ref?.controlRef ?? null, ref?.pathId ?? null, klass.id, member.deployment, member.evidenceRefIds);
       if (bindings.length === 1) {

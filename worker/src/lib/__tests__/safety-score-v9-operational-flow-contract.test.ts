@@ -1054,8 +1054,9 @@ describe("authority clock, cycle, and compact runtime admission", () => {
     expect(positive.process?.diagnostics).toEqual([]);
     expect(deriveV9MintPosture(positive.rows[0]!, makeReviewedMintInput(positive.rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, positive.asset.issuanceFacts)).toBe("unbounded-operationally-governed");
     if (failure === "wrong-clone-hash") {
-      klass.compactMembers[0]!.codeHash = `0x${"ef".repeat(32)}`;
-      codeRead.codeHash = klass.compactMembers[0]!.codeHash;
+      const wrongHash: `0x${string}` = `0x${"ef".repeat(32)}`;
+      klass.compactMembers[0]!.codeHash = wrongHash;
+      codeRead.codeHash = wrongHash;
     } else if (failure === "unreviewed-implementation") failProof(profile, "implementation-source");
     else if (failure === "wrong-implementation") klass.compactMembers[0]!.immutables.original = HOLDER;
     else failProof(profile, "clone-template");
@@ -1067,5 +1068,114 @@ describe("authority clock, cycle, and compact runtime admission", () => {
       controlRef: PROGRAM, pathId: "interest", memberRef: clone,
     }));
     expect(deriveV9MintPosture(denied.rows[0]!, makeReviewedMintInput(denied.rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, denied.asset.issuanceFacts)).toBe("unbounded-adverse");
+  });
+});
+
+describe("D32 vote-caster and replacement authority traversal", () => {
+  const controlKinds = ["owner", "ward", "role", "admin", "upgrade", "delegatecall", "execution-hop", "permission-change",
+    "envelope-raise", "operator", "delegate", "vote-cast", "vote-replacement", "vote-origin", "reactivation"] as const;
+
+  function votingProfile(family: "D29" | "D30" | "H"): MintAuthorityProfile {
+    const profile = family === "D30" ? modeledVetoProfile() : modeledProfile();
+    if (family === "D29") {
+      delete profile.operationalIssuance; profile.authorityPosture = "unbounded-governed";
+      profile.controls![1]!.executionScope!.paths.forEach((path) => { path.unavoidableDelaySec = 172800; });
+      profile.authorityGraph!.pathBindings.forEach((binding) => { binding.authorityNodeIds = ["governor"]; });
+    }
+    const voting = profile.governedIssuance!.votingControl;
+    profile.authorityGraph!.nodes.push({ ...profile.authorityGraph!.nodes[1]!, id: "vote-program" });
+    voting.controllers[0]!.voteAuthorityNodeIds = ["vote-program"];
+    voting.controllers[0]!.voteReplacementApproval = "onchain-token-holder-approval";
+    voting.routes[0]!.controllerPowers = [{ controllerId: "dominant-own-holder", ownHolderRowIds: ["own-position"],
+      otherHolderRowIds: ["small-position"], unknownProvenanceHolderRowIds: [],
+      unilateralThresholdRaw: "50", thresholdComparator: "gt", thresholdProofRef: "closed" }];
+    restamp(profile);
+    return profile;
+  }
+
+  function posture(asset: V9AssetFactsV3) {
+    const control = asset.controls.find((row) => row.capSemantics.kind === "unbounded" && row.capabilities.includes("mint"))!;
+    return deriveV9MintPosture(control, makeReviewedMintInput(control.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, asset.issuanceFacts);
+  }
+
+  describe.each(["D29", "D30", "H"] as const)("%s other-holder authority", (family) => {
+    const qualifiedPosture = family === "D29" ? "unbounded-governed" : family === "D30" ? "unbounded-veto-guarded" : "unbounded-operationally-governed";
+
+    it.each(controlKinds)("denies the single active %s control edge even when own stake alone passes", (kind) => {
+      const profile = votingProfile(family), graph = profile.authorityGraph!, voting = profile.governedIssuance!.votingControl;
+      const edge: V1005AuthorityGraph["edges"][number] = { id: "vote-program-key", from: "vote-program", to: "holder", kind,
+        pathRefs: [voting.routes[0]!.path], selectors: [], role: "vote-program-admin", activation: "disabled-final",
+        publicDelaySec: 0, calldataBound: true, proofRef: "closed" };
+      graph.edges.push(edge); restamp(profile);
+      const positive = compile(profile);
+      expect(positive.governance.votingControl).toMatchObject({ qualified: true, largestSingleControllerShareBps: 10000,
+        unknownAboveThresholdVoteOwnershipControllerIds: [], otherHolderVoteOperatorControllerIds: [], diagnostics: [],
+        censusReconciliations: [{ state: "reconciled", accountedPowerRaw: "100" }] });
+      expect(posture(positive.asset)).toBe(qualifiedPosture);
+      if (family === "H") expect(positive.process?.coverage).toBe("complete");
+
+      edge.activation = "active"; restamp(profile);
+      const denied = compile(profile);
+      expect(denied.governance.votingControl).toMatchObject({ qualified: false, largestSingleControllerShareBps: 10000,
+        unknownAboveThresholdVoteOwnershipControllerIds: [], otherHolderVoteOperatorControllerIds: ["dominant-own-holder"],
+        censusReconciliations: [{ state: "reconciled", accountedPowerRaw: "100" }] });
+      expect(denied.governance.votingControl!.diagnostics).toEqual([expect.objectContaining({ code: "voting-other-holder-operator",
+        gate: "D32", field: "controllers.dominant-own-holder.otherHoldersPowerRaw" })]);
+      expect(posture(denied.asset)).toBe("unbounded-adverse");
+      if (family === "H") expect(denied.process?.coverage).toBe("incomplete");
+    });
+
+    it.each(["unknown-terminal", "unknown-nonterminal", "unclosed-nonterminal"] as const)("denies the single %s vote-authority leaf gate", (failure) => {
+      const profile = votingProfile(family), node = profile.authorityGraph!.nodes.find((row) => row.id === "vote-program")!;
+      const positive = compile(profile);
+      expect(positive.governance.votingControl).toMatchObject({ qualified: true, diagnostics: [] });
+      expect(posture(positive.asset)).toBe(qualifiedPosture);
+
+      if (failure !== "unclosed-nonterminal") node.kind = "unknown";
+      if (failure !== "unknown-terminal") node.terminal = false;
+      restamp(profile);
+      const denied = compile(profile);
+      expect(denied.governance.votingControl).toMatchObject({ qualified: false, largestSingleControllerShareBps: 10000,
+        unknownAboveThresholdVoteOwnershipControllerIds: ["dominant-own-holder"], otherHolderVoteOperatorControllerIds: [],
+        censusReconciliations: [{ state: "reconciled", accountedPowerRaw: "100" }] });
+      expect(denied.governance.votingControl!.diagnostics).toEqual([expect.objectContaining({ code: "voting-control-unproved",
+        gate: "D32", field: "controllers.dominant-own-holder.voteAuthority" })]);
+      expect(posture(denied.asset)).toBe("unbounded-adverse");
+      if (family === "H") expect(denied.process?.coverage).toBe("incomplete");
+    });
+
+    it("follows replacement control through intermediate nonterminal contracts", () => {
+      const profile = votingProfile(family), graph = profile.authorityGraph!, path = profile.governedIssuance!.votingControl.routes[0]!.path;
+      graph.nodes.push({ ...graph.nodes[1]!, id: "vote-replacer", kind: "contract", terminal: false },
+        { ...graph.nodes[1]!, id: "vote-admin", kind: "contract", terminal: false });
+      graph.edges.push({ id: "caster-replacement", from: "vote-program", to: "vote-replacer", kind: "vote-replacement",
+        pathRefs: [path], selectors: [], role: null, activation: "active", publicDelaySec: 0, calldataBound: true, proofRef: "closed" },
+      { id: "replacement-hop", from: "vote-replacer", to: "vote-admin", kind: "execution-hop",
+        pathRefs: [path], selectors: [], role: null, activation: "active", publicDelaySec: 0, calldataBound: true, proofRef: "closed" },
+      { id: "replacement-role", from: "vote-admin", to: "holder", kind: "role",
+        pathRefs: [path], selectors: [], role: "replacement-admin", activation: "active", publicDelaySec: 0, calldataBound: true, proofRef: "closed" });
+      restamp(profile);
+      const denied = compile(profile);
+      expect(denied.governance.votingControl).toMatchObject({ qualified: false, unknownAboveThresholdVoteOwnershipControllerIds: [],
+        otherHolderVoteOperatorControllerIds: ["dominant-own-holder"] });
+      expect(denied.governance.votingControl!.diagnostics).toEqual([expect.objectContaining({ code: "voting-other-holder-operator", gate: "D32" })]);
+      expect(posture(denied.asset)).toBe("unbounded-adverse");
+    });
+
+    it("retains a qualifying key-controlled controller voting only its own proved stake", () => {
+      const profile = votingProfile(family), graph = profile.authorityGraph!, voting = profile.governedIssuance!.votingControl;
+      voting.routes[0]!.controllerPowers = [];
+      voting.controllers[0]!.voteReplacementApproval = "unknown";
+      graph.edges.push({ id: "own-vote-role", from: "vote-program", to: "holder", kind: "role",
+        pathRefs: [voting.routes[0]!.path], selectors: [], role: "own-vote-admin", activation: "active",
+        publicDelaySec: 0, calldataBound: true, proofRef: "closed" });
+      restamp(profile);
+      const positive = compile(profile);
+      expect(positive.governance.votingControl).toMatchObject({ qualified: true, largestSingleControllerShareBps: 6000,
+        unknownAboveThresholdVoteOwnershipControllerIds: [], otherHolderVoteOperatorControllerIds: [], diagnostics: [],
+        censusReconciliations: [{ state: "reconciled", accountedPowerRaw: "100" }] });
+      expect(posture(positive.asset)).toBe(qualifiedPosture);
+      if (family === "H") expect(positive.process?.coverage).toBe("complete");
+    });
   });
 });

@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { compileReviewedControlScope, computeV1005AuthorityStateHash, effectiveAuthoritySignatureRequirement, minimumWeightedSignatures, partialControlScopeSemantics, reviewedControlScopeSemantics } from "../safety-score-v9/control-scope";
+import { compileReviewedControlScope, compileReviewedMintControlScopes, computeV1005AuthorityStateHash, effectiveAuthoritySignatureRequirement, minimumWeightedSignatures, partialControlScopeSemantics, reviewedControlScopeSemantics, v1005ProofIsClosed } from "../safety-score-v9/control-scope";
 import { applyMergedMintSignals } from "../safety-score-v9/control-mint-grade";
 import { evaluateV9EconomicControl } from "../safety-score-v9/control";
 import { deriveV9MintPosture } from "../safety-score-v9/control-primitives";
 import { V9ControlExecutionScopeSchema, V9InProcessControlExecutionScopeSchema, admitV9ControlExecutionScopeBatch, isV9AdmittedControlExecutionScope, V9WeightedQuorumSchema, type V9ControlExecutionScope } from "../../types/safety-score-v9-control-scope";
+import type { MintAuthorityProfile } from "../../types/core";
+import type { V1005ExecutionCertificates } from "../../types/safety-score-v9-control-scope";
 import { V9_CANDIDATE_POLICY_V1, loadV9MethodologyPolicy } from "../safety-score-v9/policy";
 import { buildV9DependencyEvaluationPlan } from "../safety-score-v9/dependencies";
 import { minimalAsset } from "./safety-score-v9-facts.fixture-support";
@@ -318,4 +320,90 @@ describe("v10.05 canonical authority state", () => {
     expect(computeV1005AuthorityStateHash(reordered)).toBe(computeV1005AuthorityStateHash(graph));
     expect(computeV1005AuthorityStateHash({ ...graph, nodes: [{ ...graph.nodes[0]!, kind: "multisig" }] })).not.toBe(computeV1005AuthorityStateHash(graph));
   });
+});
+
+describe("v10.05 direct compact runtime variant admission", () => {
+  const blockHash: `0x${string}` = `0x${"ab".repeat(32)}`;
+  const codeHash: `0x${string}` = `0x${"cd".repeat(32)}`;
+  const implementationHash: `0x${string}` = `0x${"ef".repeat(32)}`;
+  const implementation = "ethereum:0x2222222222222222222222222222222222222222";
+  const pin = { chain: "ethereum", position: "100", hash: blockHash, timestamp: "2026-10-01T12:00:00Z" };
+  const review = { observedAt: "2026-10-01", reviewedAt: "2026-10-01", expiresAt: "2026-10-31", reviewer: "Modeled compact runtime fixture", pin };
+  const source = { label: "Modeled compact class source", url: "https://example.com/compact-runtime" };
+
+  function compactProfile(proxyKind: "none" | "eip1967" = "none"): MintAuthorityProfile {
+    const scopePin = { position: pin.position, hash: pin.hash, runtimeIdentity: codeHash, signerIdentity: "modeled-authority" };
+    const scope = reviewedScope({ pin: scopePin, observedState: scopePin });
+    const codeRead: V1005ExecutionCertificates["evidence"][number] = {
+      id: "member-code", pin, deployment: SCOPE_CONTROLLER, kind: "onchain-read", readType: "read-bundle",
+      function: "eth_getCode", selector: null, calldata: null, rawResult: null, captureHash: blockHash,
+      fieldReads: [{ field: "codeHash", function: "eth_getCode", selector: null, returnKind: "code-hash", target: "row-deployment", readType: "code", arguments: "none" }],
+      sourceUrl: source.url, sourceLocation: "modeled content-bound member table",
+      statement: "Modeled pinned code hash bound to this compact member row, not catalog evidence.", artificial: false,
+    };
+    const certificates: V1005ExecutionCertificates = {
+      schemaVersion: 1, liabilityBookId: "compact-book",
+      evidence: [codeRead, {
+        id: "source", pin, deployment: SCOPE_CONTROLLER, kind: "verified-source", readType: null,
+        function: "modeled executable source", selector: null, calldata: null, rawResult: null,
+        sourceUrl: source.url, sourceLocation: "modeled exact runtime correspondence",
+        statement: "The modeled source exactly matches the class executable and closes its path behavior.", artificial: false,
+      }, {
+        id: "implementation-code", pin, deployment: implementation, kind: "onchain-read", readType: "code",
+        function: "eth_getCode", selector: null, calldata: null, rawResult: null, codeHash: implementationHash, codeSize: 100,
+        sourceUrl: source.url, sourceLocation: "modeled implementation runtime",
+        statement: "Modeled pinned implementation bytes, not catalog evidence.", artificial: false,
+      }],
+      proofs: [
+        { id: "closed", conclusion: "closed", statement: "Modeled class behavior is closed.", evidenceRefIds: ["source"] },
+        { id: "runtime-source", conclusion: "closed", statement: "Modeled executable matches verified source.", evidenceRefIds: ["source", "member-code"] },
+        { id: "code-only", conclusion: "closed", statement: "Only observed code is established, not source correspondence.", evidenceRefIds: ["member-code"] },
+      ],
+      censuses: [], members: [],
+      classes: [{
+        id: "compact-class", review, memberRefs: [SCOPE_CONTROLLER], invariants: ["closed"], requiredConditions: [],
+        closure: scope.closure, sourcePathRefs: [{ controlRef: SCOPE_CONTROLLER, pathId: "issuance" }],
+        compactMembers: [{ deployment: SCOPE_CONTROLLER, codeHash, codeSize: 100, immutables: {}, state: {}, evidenceRefIds: ["member-code"] }],
+        runtimeVariants: [{
+          deployment: SCOPE_CONTROLLER, runtimeHash: codeHash, normalizedRuntimeHash: null, proxyKind,
+          implementation: proxyKind === "none" ? null : implementation,
+          implementationRuntimeHash: proxyKind === "none" ? null : implementationHash, normalizedImplementationRuntimeHash: null,
+          sourceRuntimeMatch: "exact", normalization: [], matchProofRef: "runtime-source",
+          evidenceRefIds: ["source", "member-code", "implementation-code"],
+        }],
+        paths: scope.paths.map(({ targetDeployment, activation, unavoidableDelaySec, affectedLiabilityIds, affectedDeployments, ...template }) => ({ ...template, proofRef: "closed" })),
+      }],
+    };
+    return {
+      mintPath: "user-collateralized-governed", authorityPosture: "bounded-admin", confidence: "verified",
+      summary: "Modeled direct compact runtime admission.", economicCapSemantics: "bounded", reconciliation: "none", supervision: "none",
+      review: { reviewer: review.reviewer, reviewedAt: review.reviewedAt, evidence: "The modeled fixture closes every native issuance path at its evidence pin.", disposition: "scoreable", sources: [source] },
+      controls: [{ chain: "ethereum", address: SCOPE_CONTROLLER.split(":")[1], label: "Modeled compact minter",
+        role: "direct-minter", authorityType: "contract", directMintAbility: "direct", executionScope: scope, sources: [source] }],
+      executionCertificates: certificates,
+    };
+  }
+
+  it.each(["unmatched-source", "unknown-proxy", "missing-implementation-hash", "code-only-match-proof"] as const)(
+    "denies only the runtime admission gate for %s",
+    (failure) => {
+      const profile = compactProfile(failure === "missing-implementation-hash" ? "eip1967" : "none");
+      const positive = compileReviewedMintControlScopes(profile, "alpha", SCOPE_CLOCK, 90 * 86400)[0]!;
+      expect(positive.complete).toBe(true);
+      expect(positive.processDiagnostics).toEqual([]);
+      const certificates = profile.executionCertificates!, runtime = certificates.classes[0]!.runtimeVariants[0]!;
+      if (failure === "unmatched-source") runtime.sourceRuntimeMatch = "unmatched";
+      else if (failure === "unknown-proxy") runtime.proxyKind = "unknown";
+      else if (failure === "missing-implementation-hash") runtime.implementationRuntimeHash = null;
+      else runtime.matchProofRef = "code-only";
+      expect(v1005ProofIsClosed(certificates, runtime.matchProofRef, pin)).toBe(true);
+      const denied = compileReviewedMintControlScopes(profile, "alpha", SCOPE_CLOCK, 90 * 86400)[0]!;
+      expect(denied.processDiagnostics).toEqual([{
+        code: runtime.proxyKind === "none" ? "runtime-unmatched" : "implementation-unmatched", gate: "shared",
+        field: runtime.proxyKind === "none" ? "compactMembers.codeHash" : "compactMembers.implementation",
+        controlRef: SCOPE_CONTROLLER, pathId: "issuance", classId: "compact-class", memberRef: SCOPE_CONTROLLER,
+        evidenceRefIds: ["member-code"],
+      }]);
+    },
+  );
 });
