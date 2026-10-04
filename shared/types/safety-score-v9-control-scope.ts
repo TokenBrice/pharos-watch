@@ -150,6 +150,11 @@ export const V1005ReviewSchema = z.object({
 }).strict().superRefine((row, ctx) => {
   if (row.reviewedAt < row.observedAt || row.expiresAt < row.reviewedAt) ctx.addIssue({ code: "custom", message: "Inconsistent process review dates" });
 });
+/** `0x`-prefixed whole bytes (even hex digit count) with at least `minBytes` bytes. */
+function isHexBytes(value: string, minBytes: number): boolean {
+  return value.length >= 2 + minBytes * 2 && value.length % 2 === 0 && /^0x[0-9a-fA-F]*$/.test(value);
+}
+
 export const V1005EvidenceSchema = z.object({
   id: Text, pin: V1005PinSchema, deployment: Deployment,
   kind: z.enum(["onchain-read", "verified-source", "controller-attribution"]),
@@ -172,8 +177,8 @@ export const V1005EvidenceSchema = z.object({
     return;
   }
   if (row.readType === "evm-call") {
-    if (row.selector === null || row.calldata === null || !/^0x[0-9a-fA-F]{8}(?:[0-9a-fA-F]{2})*$/.test(row.calldata) || row.calldata.slice(0, 10).toLowerCase() !== row.selector) issue("calldata", "Call requires exact selector and matching calldata");
-    if (row.rawResult === null ? row.rawResultHash == null : !/^0x(?:[0-9a-fA-F]{2})*$/.test(row.rawResult)) issue("rawResult", "Call requires returned bytes or their hash");
+    if (row.selector === null || row.calldata === null || !isHexBytes(row.calldata, 4) || row.calldata.slice(0, 10).toLowerCase() !== row.selector) issue("calldata", "Call requires exact selector and matching calldata");
+    if (row.rawResult === null ? row.rawResultHash == null : !isHexBytes(row.rawResult, 0)) issue("rawResult", "Call requires returned bytes or their hash");
   } else if (row.readType === "read-bundle") {
     if (!row.captureHash || !row.fieldReads?.length) issue("fieldReads", "Read bundle requires a capture hash and field reads");
     if (row.rawResult !== null || row.selector !== null || row.calldata !== null) issue("rawResult", "Read bundle stores captured values in its referenced member table");

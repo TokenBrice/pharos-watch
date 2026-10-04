@@ -371,7 +371,7 @@ describe("v10.05 direct compact runtime variant admission", () => {
           sourceRuntimeMatch: "exact", normalization: [], matchProofRef: "runtime-source",
           evidenceRefIds: ["source", "member-code", "implementation-code"],
         }],
-        paths: scope.paths.map(({ targetDeployment, activation, unavoidableDelaySec, affectedLiabilityIds, affectedDeployments, ...template }) => ({ ...template, proofRef: "closed" })),
+        paths: scope.paths.map(({ targetDeployment: _targetDeployment, activation: _activation, unavoidableDelaySec: _unavoidableDelaySec, affectedLiabilityIds: _affectedLiabilityIds, affectedDeployments: _affectedDeployments, ...template }) => ({ ...template, proofRef: "closed" })),
       }],
     };
     return {

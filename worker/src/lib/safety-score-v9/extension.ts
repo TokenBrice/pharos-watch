@@ -13,7 +13,7 @@ import type { V9AccessClaimGraph, V9AccessClaimGraphReview } from "@shared/types
 import { buildSafetyScoreV9AccessClaimGraph, computeSafetyScoreV9AccessClaimGraphReviewsDigest } from "./extension-access-lookthrough";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC, V9_SCOPED_QUESTION_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { compileReviewedControlScope, compileReviewedMintControlScopes, resolveV1005MintAuthorityProfile, partialControlScopeSemantics, weightedReviewIsCurrent, sortV1005ProcessDiagnostics, v1005ProofIsClosed, v1005ReviewIsCurrent, type V9ReviewedControlProjection } from "@shared/lib/safety-score-v9/control-scope";
+import { compileReviewedMintControlScopes, resolveV1005MintAuthorityProfile, partialControlScopeSemantics, weightedReviewIsCurrent, sortV1005ProcessDiagnostics, v1005ProofIsClosed, v1005ReviewIsCurrent, type V9ReviewedControlProjection } from "@shared/lib/safety-score-v9/control-scope";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -567,9 +567,9 @@ function compileMintVotingControl(profile: MintAuthorityProfile, clockSec: numbe
       if (stableJsonStringifyV1(expectedIds) !== stableJsonStringifyV1(actualIds) || aggregate === null ||
           route.affiliatedAggregatePowerRaw === null || aggregate !== BigInt(route.affiliatedAggregatePowerRaw) || !closed(route.affiliatedAggregateThresholdProofRef)) add("voting-control-unproved", `routes.${route.id}.affiliatedAggregate`, route);
       else if (aggregate > 0n) {
-        const pass = passes(aggregate, route.affiliatedAggregateUnilateralThresholdRaw, route.affiliatedAggregateThresholdComparator);
-        if (pass === "unknown") add("voting-control-unproved", `routes.${route.id}.affiliatedThreshold`, route);
-        else if (pass) { affiliatedRoutes.add(route.id); add("voting-affiliated-unilateral", `routes.${route.id}.affiliatedAggregate`, route); }
+        const thresholdOutcome = passes(aggregate, route.affiliatedAggregateUnilateralThresholdRaw, route.affiliatedAggregateThresholdComparator);
+        if (thresholdOutcome === "unknown") add("voting-control-unproved", `routes.${route.id}.affiliatedThreshold`, route);
+        else if (thresholdOutcome) { affiliatedRoutes.add(route.id); add("voting-affiliated-unilateral", `routes.${route.id}.affiliatedAggregate`, route); }
       }
     }
   }

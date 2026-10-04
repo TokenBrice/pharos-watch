@@ -129,7 +129,8 @@ function compile(profile = modeledProfile(), assetId = "alpha", sharedProfiles: 
   if (quarantines.length > 0) throw new Error(JSON.stringify(quarantines));
   const rows = factSet.assets[0]!.controls.filter((row) => row.controlKey.startsWith(`mint-meta:${assetId}:`));
   const asset = factSet.assets[0]!;
-  return { rows, governance: asset.issuanceFacts?.governance!, process: asset.issuanceFacts?.process, asset, extension };
+  const governance = asset.issuanceFacts?.governance;
+  return { rows, governance: governance!, process: asset.issuanceFacts?.process, asset, extension };
 }
 function failProof(profile: MintAuthorityProfile, id: string): void {
   profile.executionCertificates!.proofs.find((proof) => proof.id === id)!.conclusion = "open";
@@ -166,7 +167,7 @@ function modeledClassProfile(): MintAuthorityProfile {
   const runtime = { deployment: PROGRAM, runtimeHash: CODE_HASH, normalizedRuntimeHash: null, proxyKind: "none" as const, implementation: null,
     implementationRuntimeHash: null, normalizedImplementationRuntimeHash: null, sourceRuntimeMatch: "exact" as const, normalization: [], matchProofRef: "closed", evidenceRefIds: ["code-1", "source"] };
   profile.executionCertificates!.classes = [{ id: "program-class", review, runtimeVariants: [runtime], invariants: ["closed"], requiredConditions: [], memberRefs: [PROGRAM], closure: scope.closure,
-    paths: scope.paths.map(({ targetDeployment, activation, unavoidableDelaySec, affectedLiabilityIds, affectedDeployments, ...template }) => ({ ...template, proofRef: "closed" })) }];
+    paths: scope.paths.map(({ targetDeployment: _targetDeployment, activation: _activation, unavoidableDelaySec: _unavoidableDelaySec, affectedLiabilityIds: _affectedLiabilityIds, affectedDeployments: _affectedDeployments, ...template }) => ({ ...template, proofRef: "closed" })) }];
   profile.executionCertificates!.members = [{ memberRef: PROGRAM, classId: "program-class", censusIds: ["mint-census"], review, runtime, conditions: [], extensions: scope.extensions,
     pathBindings: scope.paths.map((path) => ({ templateId: path.id, targetDeployment: path.targetDeployment, activation: path.activation, unavoidableDelaySec: path.unavoidableDelaySec,
       affectedLiabilityIds: path.affectedLiabilityIds, affectedDeployments: path.affectedDeployments, authorityNodeIds: [path.id === "raise" ? "governor" : "operational-program"], provenanceNodeIds: ["operational-program"], proofRef: "closed" })) }];
