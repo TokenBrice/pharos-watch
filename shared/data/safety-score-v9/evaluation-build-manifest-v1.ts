@@ -150,7 +150,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/base-batches.ts",
-      "sha256": "3379e4063d1796f3c8514255a7c067acdf7f1aca5371cc7e5227316ae3aa00c1"
+      "sha256": "c79ed97766dd6d73f157dce2153dcfa8ed1ca0640fae42a9a09c16d6d3ad38fd"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
@@ -166,11 +166,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/major-issuers.ts",
-      "sha256": "3508e8b4ba601d3b17a240356d876d941c701ada36c773b4f75e86e03c693b60"
+      "sha256": "ae52939351cbf89eabb06678006ce4129ed55a0364adf326fc4764e8726b02cd"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized.ts",
-      "sha256": "c3e286b7e0abdb694786c91b63097bd33e0a360aafad81030bd0df22aeb0397d"
+      "sha256": "a0d1c83f2300eeba301095e38616ddae2bc804eff0da59138085858d0a7bf7e4"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts",
@@ -843,7 +843,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-03-block-26110811-shock-coverage.json.gz"
     }
   ],
-  "digest": "85d03b15f0e880007934d41075f7f5d1b5580c0a364d57e2bf0bb60fb0ab78f9"
+  "digest": "95e721219a3c9730bd9e9afa32b4730253e845a8e13da4fe6e8fc1eabbd4d104"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

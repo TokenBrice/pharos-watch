@@ -157,13 +157,19 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-04-20"),
     routeStatus: "open",
-    costModel: documentedVariableFee(
-      "Brale pricing includes 1:1 stablecoin swaps for platform users; bank payout rails can still carry fixed processing fees",
+    costModel: fixedFee(
+      0,
+      "Glo Dollar's offramp guide lists Brale Business Account 1:1 USDGLO redemption by US wire or ACH as free, and Brale pricing charges 0 bps on standard money movement. This is the issuer fee for eligible US Brale Business Account holders only; Brale's per-transfer rail charges (published at $0.25 per ACH and $20 per wire), network gas, and third-party costs are not included",
     ),
     docs: [
       sourceRefRouteCapacity("Glo Dollar contracts and reserves", "https://www.glodollar.org/articles/smart-contract-addresses"),
       sourceRef("Brale USDGLO", "https://brale.xyz/stablecoins/USDGLO", ["capacity"]),
-      sourceRef("Brale pricing", "https://brale.xyz/pricing", ["fees"]),
+      sourceRef("Brale pricing (reviewed 2026-10-03)", "https://brale.xyz/pricing", ["fees"]),
+      sourceRef("Glo Dollar offramp guide (reviewed 2026-10-03)", "https://www.glodollar.org/articles/offramping-glo-dollars", [
+        "route",
+        "fees",
+        "access",
+      ]),
     ],
     notes: [
       "USDGLO uses Brale issuer rails; Pharos treats this as documented full-supply eventual redeemability rather than measured immediate redemption capacity",

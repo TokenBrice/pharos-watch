@@ -86,6 +86,11 @@ const DOCUMENTED_BOUND_SOURCE_REFS: Partial<Record<string, RedemptionDocs>> = {
       ["route", "fees", "access", "settlement"],
     ),
     sourceRefRouteCapacityFees("Gate GUSD overview", "https://www.gate.com/gusd"),
+    sourceRef(
+      "Gate Learn GUSD redemption fees (last updated 2026-03-29; reviewed 2026-10-03)",
+      "https://www.gate.com/learn/articles/gusd-redemption-flexible-exit-options-for-stable-and-transparent-yield/11559",
+      ["fees", "settlement"],
+    ),
   ],
   "reur-royal-euro": [sourceRefRouteCapacityAccess("REUR", "https://www.rcoins.digital/REUR.html")],
   "rusd-royal-dollar": [sourceRefRouteCapacityAccess("RUSD", "https://www.rcoins.digital/RUSD.html")],
@@ -301,7 +306,15 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
               ...entry.config,
               v9RouteReviewTerms: WARS_BOUNDED_TERMS_GAP,
             }
-          : entry.config,
+          : entry.id === "eusd-telcoin"
+            ? {
+                ...entry.config,
+                costModel: fixedFee(
+                  0,
+                  "Telcoin Digital Asset Bank terms (dated 2026-06-15; reviewed 2026-10-03): no TDAB fee per eUSD redemption to third-party institutions. This is the issuer fee only; the receiving institutions may impose their own unquantified fees",
+                ),
+              }
+            : entry.config,
     overrideReason: "Non-USD review cohort upgrades issuer defaults to documented-bound capacity.",
   })),
   ...addDocumentedBoundSourceRefs(
@@ -333,16 +346,21 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
               ...entry.config,
               ...documentedBoundSupplyFull("2026-08-18"),
               // Keep this wording clear of the `feeDescriptionLooksUndisclosed`
-              // trigger list in ../shared.ts: Gate does document the fee
-              // *structure*, it just never quantifies the quota or the schedule,
-              // so the model stays `documented-variable`.
-              costModel: documentedVariableFee(
-                "Gate documents a 1:1 fee-free exit when redeeming in the original subscription asset (USDT, USDC, or USD1) within a per-currency fee-free exit quota that applies to both fast and standard redemption; redeeming in a non-original asset or above that quota is charged a fee shown only on the authenticated redemption page, and the quota size and fee schedule remain undisclosed",
-              ),
+              // trigger list in ../shared.ts. The fee-free quota makes the
+              // charge variable, so the model stays `documented-variable` with
+              // Gate's published fast-redemption fee as the ceiling.
+              costModel: {
+                ...documentedVariableFee(
+                  "Gate Learn (last updated 2026-03-29) prices GUSD redemption to USDC at 0.05% for standard redemption (credited D+3) and 0.1% for fast redemption (typically within 10 minutes). The modeled same-day route is the fast path, so the 10 bps fast fee is the ceiling; the July 2026 per-currency fee-free exit quota in the original subscription asset can lower the charge to zero, and the current authenticated redemption page remains the controlling quote",
+                ),
+                feeBpsMin: 0,
+                feeBpsMax: 10,
+              },
               notes: [
                 "Gate's 2026-07-27 GUSD upgrade announcement advertises instant credit, and the help centre states fast redemption is typically credited within 5 minutes. Settlement is nonetheless retained at same-day because the current product-page FAQ defers the actual arrival time to the authenticated redemption page and documents a standard redemption path credited on D+3, so no public SLA bounds the full-supply capacity this route models.",
                 "The 1:1 fee-free exit is conditional: it applies only in the original subscription asset and only within a per-currency fee-free exit quota whose size Gate has not published. The quota applies to both fast and standard redemption, so it bounds cost rather than speed.",
                 "Access is Gate-account-internal and jurisdiction-gated: the announcement states that users in the UK and other restricted regions cannot access the service.",
+                "Fee ceiling reviewed 2026-10-03 against Gate Learn's GUSD redemption article: 0.05% standard (D+3) and 0.1% fast. Pharos binds the 10 bps fast fee because this route keeps same-day settlement; pairing the cheaper standard fee with same-day settlement would mix the two exits.",
               ],
             }
         : entry.config,

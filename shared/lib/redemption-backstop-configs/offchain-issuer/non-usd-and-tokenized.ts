@@ -629,8 +629,9 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     unresolvedOutputAssetKeys: ["fiat:MXN"],
     unresolvedOutputDisposition: "reviewed-external",
     capacityModel: { kind: "supply-full", confidence: "documented-bound", basis: "issuer-term-redemption" },
-    costModel: documentedVariableFee(
-      "Telcoin's eXYZ terms state a 0.15% redemption fee; wire, international-transfer, expedited-processing, and other partner charges may also apply",
+    costModel: fixedFee(
+      15,
+      "Telcoin eXYZ Terms of Use section 24 (dated 2026-06-30; reviewed 2026-10-03): Telcoin LLC redeems eXYZs for their equivalent value minus a 0.15% redemption fee. This is the issuer fee only; wire, international-transfer, expedited-processing, and other partner charges are passed through and unquantified",
     ),
     holderEligibility: "verified-customer",
     routeExitCorrelation: "independent-issuer-rail",
