@@ -19,7 +19,7 @@ import type {
   V9MethodologySemantic,
 } from "../../types/safety-score-v9";
 import { normalizeDeploymentId } from "../../types/deployment-id";
-import { V9_EMPTY_ARRAY } from "./primitives";
+import { V9_EMPTY_ARRAY } from "../../types/safety-score-v9-immutable";
 import { sortV1005ProcessDiagnostics } from "./control-scope";
 
 export type V9MintReconciliation = V9EconomicControlReviewV2["mint"]["reconciliation"];

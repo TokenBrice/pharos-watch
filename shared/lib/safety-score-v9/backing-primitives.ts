@@ -2,7 +2,8 @@ import type { V9ReserveBoundedFact } from "../../types/reserve-bounded-facts";
 import type { V9EvidenceCause, V9RatingStatus, V9ScoringDisposition } from "../../types/safety-score-v9-causes";
 import type { V9ReserveResidualFact } from "../../types/safety-score-v9-fact-primitives";
 import { gapsForV9Ids } from "./gap-index";
-import { uniqueSorted, V9_EMPTY_ARRAY } from "./primitives";
+import { uniqueSorted } from "./primitives";
+import { V9_EMPTY_ARRAY } from "../../types/safety-score-v9-immutable";
 import type {
   V9AssetFactsBase,
   V9EvidenceResponsibility,

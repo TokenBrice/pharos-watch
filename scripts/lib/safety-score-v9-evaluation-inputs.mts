@@ -70,6 +70,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/types/safety-score-v9-control-scope.ts",
   "shared/types/safety-score-v9-fact-primitives.ts",
   "shared/types/safety-score-v9-facts.ts",
+  "shared/types/safety-score-v9-immutable.ts",
   "shared/types/safety-score-v9-operational-resilience.ts",
   "shared/types/safety-score-v9-public-facts.ts",
   "shared/types/safety-score-v9-public-internal.ts",

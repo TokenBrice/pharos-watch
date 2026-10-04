@@ -2,7 +2,8 @@ import type { MintAuthorityPosture } from "../../types/core";
 import type { V9RatingStatus } from "../../types/safety-score-v9-causes";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
-import { compareText, deepFreeze } from "./primitives";
+import { compareText } from "./primitives";
+import { deepFreeze } from "../../types/safety-score-v9-immutable";
 import {
   V9_MINT_POSTURE_BAND_ORDER,
   curatedMintPostureBand,

@@ -30,7 +30,8 @@ import {
   type V9ScopedRiskSignal,
 } from "./scoped-risk";
 import { clampScore } from "../math";
-import { canonicalUniqueBy, compareText, deepFreeze } from "./primitives";
+import { canonicalUniqueBy, compareText } from "./primitives";
+import { deepFreeze } from "../../types/safety-score-v9-immutable";
 
 const validatedScoringInputs = new WeakSet<object>();
 

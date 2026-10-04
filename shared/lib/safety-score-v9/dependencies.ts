@@ -11,7 +11,7 @@ import { orderDependencyGraphNodes, type DependencyGraphEdge } from "../dependen
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { isV9MaterialShare } from "./backing-primitives";
-import { deepFreeze } from "./primitives";
+import { deepFreeze } from "../../types/safety-score-v9-immutable";
 import { V9_CANDIDATE_POLICY_V1 } from "./policy";
 
 const V9_DEPENDENCY_PLAN_DIGEST_DOMAIN = "safety-score-v9.dependency-plan.v2";

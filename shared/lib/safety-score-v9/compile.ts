@@ -11,7 +11,7 @@ import {
 } from "../../types/safety-score-v9-facts";
 import { isV9AdmittedControlExecutionScope } from "../../types/safety-score-v9-control-scope";
 import { computeValidatedV9FactSetDigest } from "./facts";
-import { createV9ValueInterner, deepFreeze, V9_EMPTY_ARRAY } from "./primitives";
+import { createV9ValueInterner, deepFreeze, V9_EMPTY_ARRAY } from "../../types/safety-score-v9-immutable";
 import { findV9CauseEvidenceBindingIssues, requiredV9Applicability } from "./evidence";
 import { V9_UNRESEARCHED_CAUSE_PROOF } from "../../types/safety-score-v9-causes";
 

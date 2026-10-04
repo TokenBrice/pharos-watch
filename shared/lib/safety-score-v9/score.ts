@@ -25,13 +25,8 @@ import {
 import type { V9OperationalResilienceResult } from "./operational-resilience";
 import type { V9WrapperParentLimit } from "./wrapper-risk";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonTreatment } from "./policy";
-import {
-  canonicalUniqueBy,
-  V9_EMPTY_ARRAY,
-  compareText,
-  parentAttributionFields,
-  propagateParentAttribution,
-} from "./primitives";
+import { canonicalUniqueBy, compareText, parentAttributionFields, propagateParentAttribution } from "./primitives";
+import { V9_EMPTY_ARRAY } from "../../types/safety-score-v9-immutable";
 import {
   canonicalizeV9PublicReasons,
   type V9PublicReason,

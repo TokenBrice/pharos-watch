@@ -56,7 +56,8 @@ import {
   resolveV9PolicyChainMaturityIdentity,
   type V9PolicyChainMaturityIdentity,
 } from "./policy";
-import { compareText, deepFreeze, domainKey, uniqueSorted } from "./primitives";
+import { compareText, domainKey, uniqueSorted } from "./primitives";
+import { deepFreeze } from "../../types/safety-score-v9-immutable";
 import { projectV9DependencyScore } from "./score";
 import { computeV9ResultDigest } from "./trace";
 

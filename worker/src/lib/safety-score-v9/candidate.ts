@@ -14,7 +14,8 @@ import {
   assertV9ValidatedPolicyEnvelope,
   loadV9CandidateMethodologyPolicy,
 } from "@shared/lib/safety-score-v9/policy";
-import { compareText, deepFreeze, domainDigest } from "@shared/lib/safety-score-v9/primitives";
+import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
+import { deepFreeze } from "@shared/types/safety-score-v9-immutable";
 import { buildSafetyScoreV9Response, V9PublicCardProjectionError } from "@shared/lib/safety-score-v9/public";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type {

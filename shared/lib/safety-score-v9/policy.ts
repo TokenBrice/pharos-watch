@@ -16,7 +16,8 @@ import {
 } from "../../types/safety-score-v9";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
-import { compareText, deepFreeze, uniqueSorted } from "./primitives";
+import { compareText, uniqueSorted } from "./primitives";
+import { deepFreeze } from "../../types/safety-score-v9-immutable";
 import type { V9EvidenceCause, V9ScoringDisposition } from "../../types/safety-score-v9-causes";
 
 const V9_POLICY_DIGEST_DOMAIN = "safety-score-v9.methodology-policy.v1";

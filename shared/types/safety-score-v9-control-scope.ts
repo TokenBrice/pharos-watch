@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createV9ValueInterner, deepFreeze } from "../lib/safety-score-v9/primitives";
+import { createV9ValueInterner, deepFreeze } from "./safety-score-v9-immutable";
 import { normalizeDeploymentId } from "./deployment-id";
 import { CHAIN_META } from "./chain-identity";
 import { V9ControlCapabilitySchema, V9ControlCapSemanticsSchema, V9ClaimImpairmentSchema, V9EconomicLossScopeSchema } from "./safety-score-v9-fact-input-primitives";

@@ -7,7 +7,8 @@ import { compareCodeUnits } from "@shared/lib/compare";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { isRecord } from "@shared/lib/type-guards";
 import { canonicalV9DependencyEdgeKey } from "@shared/lib/safety-score-v9/facts";
-import { createV9ValueInterner, deepFreeze, domainDigest } from "@shared/lib/safety-score-v9/primitives";
+import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
+import { createV9ValueInterner, deepFreeze } from "@shared/types/safety-score-v9-immutable";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   defaultV9DependencyEconomicRole,
