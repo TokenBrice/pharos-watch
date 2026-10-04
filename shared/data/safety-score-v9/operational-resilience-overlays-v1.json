@@ -7184,13 +7184,13 @@
       "reviewedAt": "2026-10-03T22:45:48Z",
       "expiresAt": "2027-10-03T22:45:48Z",
       "reviewer": "W1R46 unknown-wave research",
-      "notes": "Exact FXD deployment establishes a 41-full-month lower bound. Issuer-reported confidence; no independently assured continuity, redemption throughput, stress recovery, reconciliation performance or incident-free claim.",
+      "notes": "Exact FXD deployment establishes a 41-full-month lower bound. Issuer-reported confidence; no independently assured continuity, redemption throughput, stress recovery, reconciliation performance or incident-free claim. Coordinator correction of W2R36/W2R07 date disagreement uses the exact creation transaction's XDCScan timestamp Apr-28-2023 08:13:44 AM UTC at block 59804723; April 29 is unsupported.",
       "sources": [
         {
           "sourceId": "exact-token-creation",
           "label": "FXD deployment XDC block 59804723",
           "publisher": "Fathom Protocol",
-          "publishedAt": "2023-04-29",
+          "publishedAt": "2023-04-28",
           "url": "https://xdcscan.com/tx/0x51177c1b72547a1511a60ca3a5973587f50a83ab44166721cd68b08972eb76e2",
           "confidence": "issuer-reported"
         }
@@ -13361,7 +13361,7 @@
       "reviewedAt": "2026-10-03T23:51:12Z",
       "expiresAt": "2027-10-03T23:59:59Z",
       "reviewer": "Pharos unknown-wave W2R10",
-      "notes": "Exact OnChain fund launch observed on 2026-08-03 establishes zero full live months at that observation. No operating continuity from launch to review is extrapolated. No throughput, stress, reconciliation continuity or incident-free claim is made.",
+      "notes": "Exact OnChain fund launch on 2026-08-03 establishes two full calendar months through the 2026-10-03 review. This is an issuer-reported eligibility lower bound, not independently verified operating continuity. No throughput, stress, reconciliation continuity or incident-free claim is made.",
       "sources": [
         {
           "sourceId": "brsrv-dated-launch",
@@ -13374,8 +13374,8 @@
       ],
       "eligibility": {
         "liveHistory": {
-          "minimumLiveHistoryMonths": 0,
-          "observedAt": "2026-08-03",
+          "minimumLiveHistoryMonths": 2,
+          "observedAt": "2026-10-03",
           "treatment": "eligibility-only",
           "sourceIds": [
             "brsrv-dated-launch"

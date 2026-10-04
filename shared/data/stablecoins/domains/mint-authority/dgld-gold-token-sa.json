@@ -140,8 +140,8 @@
           "solana:dg1dmo6NZNagkwB6EAfUeaco6CFXFLRhb1KCrsqXTVz"
         ],
         "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-10-03",
-        "observedBlock": 453082618,
+        "observedAt": "2026-10-04",
+        "observedBlock": 453098798,
         "sources": [
           {
             "label": "DGLD Solana mint",
@@ -156,11 +156,11 @@
             "url": "https://dgld.ch/audits"
           },
           {
-            "label": "Independently reproduced finalized paired Solana RPC, context slot 453082618",
+            "label": "Independently fetched finalized paired Solana RPC, context slot 453098798; block time 2026-10-04T00:46:06Z",
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "Independent verification reproduced a finalized paired getMultipleAccounts response at context slot 453082618: the Token-2022 mint's mintAuthority was 6pxf2QMUHRSMyRnso6RyEMgSTkafjA6ptpxFVy3rWzVv and the authority account was null. The October 3 observation date is retained; the original account state at slot 453072047 was not replayed. The issuer's audits page identifies program w7bpdM4Kbz936jJEcLpdGrraDd9qTFkjRQ5a5mkisZh. Adevar's July 22 audit, pages 6 and 11, identifies the mint_authority PDA signing issuance. Solana findProgramAddress derivation with seed bytes mint_authority, bump 255 and that program yields exactly the observed authority; its off-curve address is a program signer, not an EOA. This establishes the immediate contract authority only. The audited operational issuer/admin roles, Utila MPC/Squads custody and upgrade reach are not asserted to be completely closed."
+        "evidence": "Independent verification fetched a finalized paired getMultipleAccounts response at context slot 453098798: the Token-2022 mint's mintAuthority was 6pxf2QMUHRSMyRnso6RyEMgSTkafjA6ptpxFVy3rWzVv and the authority account was null. getBlockTime returned 1791074766 (2026-10-04T00:46:06Z), establishing the October 4 observation date. Historical account state at slot 453082618 was not replayed; its block time alone does not reproduce that state. The issuer's audits page identifies program w7bpdM4Kbz936jJEcLpdGrraDd9qTFkjRQ5a5mkisZh. Adevar's July 22 audit, pages 6 and 11, identifies the mint_authority PDA signing issuance. Solana findProgramAddress derivation with seed bytes mint_authority, bump 255 and that program yields exactly the observed authority; its off-curve address is a program signer, not an EOA. This establishes the immediate contract authority only. The audited operational issuer/admin roles, Utila MPC/Squads custody and upgrade reach are not asserted to be completely closed."
       }
     ],
     "upgradeability": {

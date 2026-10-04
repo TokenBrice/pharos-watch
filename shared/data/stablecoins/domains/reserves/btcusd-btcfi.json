@@ -35,11 +35,11 @@
     },
     {
       "sourceKey": "btcfi:jpyc",
-      "name": "Unified JPYC (Bifrost representation of JPYC Prepaid v2)",
+      "name": "Unified JPYC (Bifrost JPYC representation)",
       "pct": 13.53,
       "risk": "high",
       "assetClass": "stablecoin",
-      "issuerOrObligor": "Bifrost bridge / JPYC Inc. (JPYC Prepaid v2)",
+      "issuerOrObligor": "Bifrost bridge / JPYC Inc.",
       "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity", "market"],
       "liquidityHorizon": "unknown"
     },
@@ -108,17 +108,13 @@
       {
         "label": "Bifrost mainnet pinned block 39083783: handler getERC20Addr and held token identity",
         "url": "https://explorer.mainnet.bifrostnetwork.com/address/0x6894ae31cae97f228590f6dc7bbea7449f4db980"
-      },
-      {
-        "label": "JPYC issuer developer documentation: Prepaid v2 protocol",
-        "url": "https://jpyc-support.freshdesk.com/support/solutions/articles/70000675847-jpyc-sdk%EF%BC%88english%EF%BC%89"
       }
     ],
-    "rationale": "Historical weights and composition date are unchanged. New classification research resolves handler 5 through the issuer frontend's underlying call-proxy (0x6894ae31cae97f228590f6dc7bbea7449f4db980). At Bifrost block 39083783, both getERC20Addr() and getErc20Addr() return 0x84122a4a75bfe65ef455dba5f6d43d61359ca77e; its name is Unified JPYC. Official bridge pairs bind that token to Ethereum/Polygon 0xe7c3d8c9a439fede00d2600032d5db0be71c3c29, the legacy JPYC Prepaid v2 claim. This is a bridge representation, not the newer redeemable JPYC money-transfer token. The sidecar sourceKey now matches captured btcfi:jpyc through independently verified handler identity. No fiat-realization SLA or bridge custody guarantee is inferred.",
+    "rationale": "Historical weights and composition date are unchanged. New classification research resolves handler 5 through the issuer frontend's underlying call-proxy (0x6894ae31cae97f228590f6dc7bbea7449f4db980). At Bifrost block 39083783, both getERC20Addr() and getErc20Addr() return 0x84122a4a75bfe65ef455dba5f6d43d61359ca77e; its name is Unified JPYC. Official bridge pairs bind that token to Ethereum/Polygon 0xe7c3d8c9a439fede00d2600032d5db0be71c3c29. The sidecar sourceKey now matches captured btcfi:jpyc through independently verified handler identity. This technical identity establishes neither exact legal redemption rights nor a requirement for a tracked dependency link. No fiat-realization SLA or bridge custody guarantee is inferred.",
     "compositionBasis": "BTCFi current market API positive deposit_value across handlers, captured 2026-09-04 and normalized over the $8,917,531.02 positive-deposit total; the historical handler 5 weight is preserved while its previously unknown identity is classified separately.",
     "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
-    "knownUnknownExposure": "All historical collateral categories now have exact identities. Unified JPYC remains exposed to Bifrost representation custody, legacy prepaid redemption restrictions and an unestablished whole-position USD liquidity horizon. Metadata research does not refresh historical weights or establish full-book assurance.",
+    "knownUnknownExposure": "All historical collateral categories now have exact technical identities. Unified JPYC remains exposed to Bifrost representation custody, unestablished exact-address legal redemption rights and an unestablished whole-position USD liquidity horizon. Metadata research does not refresh historical weights or establish full-book assurance.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -137,10 +133,10 @@
       },
       {
         "reserveIndex": 2,
-        "reserveName": "Unified JPYC (Bifrost representation of JPYC Prepaid v2)",
+        "reserveName": "Unified JPYC (Bifrost JPYC representation)",
         "pct": 13.53,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Exact held claim is Bifrost Unified JPYC backed by the legacy JPYC Prepaid v2 contract. The tracked jpyc-jpyc entry describes the newer licensed bank-redeemable JPYC legal claim; no dependency link equating those rights is asserted."
+        "rationale": "Exact held technical identity is Bifrost Unified JPYC, bound by official bridge pairs to Ethereum/Polygon 0xe7c3d8c9a439fede00d2600032d5db0be71c3c29. An issuer source binding legal redemption rights to that exact underlying address is not established; no tracked dependency link is asserted from technical identity alone."
       },
       {
         "reserveIndex": 3,

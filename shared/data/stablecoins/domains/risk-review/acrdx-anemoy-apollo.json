@@ -218,17 +218,17 @@
         "controllerChain": "solana",
         "controllerAddress": "3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb",
         "reviewDisposition": "unresolved",
-        "reviewNote": "W2R46 getMultipleAccounts at finalized Solana slot 453087623 binds the exact Token-2022 mint, 6 decimals, active mint/freeze/permanent-delegate authority 3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb. That authority account is nonexecutable and System Program-owned, not a located bridge program/PDA. The official deployment registry identifies this mint, while the share bridge guide expressly excludes Solana destinations. No token-specific public offchain authorization, burn/release conservation or bridge operator terms establish its transport model; preserve the liability, not the unsupported historical burn-mint assertion.",
+        "reviewNote": "The historical account-state claim at W2R46 finalized slot 453087623 is unverifiable without archival proof; ordinary RPC cannot replay that account state. Separately, the independent verifier's fresh finalized getMultipleAccounts observation at slot 453101550 on 2026-10-04 confirms the exact Token-2022 mint, 6 decimals and active mint/freeze/permanent-delegate authority 3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb. System-owned, nonexecutable authority; signer derivation and token-specific bridge authorization are not established by this account read. The official deployment registry identifies this mint, while the share bridge guide expressly excludes Solana destinations. No token-specific public offchain authorization, burn/release conservation or bridge operator terms establish its transport model; preserve the unresolved liability, not the unsupported historical burn-mint assertion.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-03",
-        "observedBlock": 453087623,
+        "observedAt": "2026-10-04",
+        "observedBlock": 453101550,
         "failureDomainKeys": [
           "protocol:centrifuge-v3",
           "authority:solana:3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb"
         ],
         "sources": [
           {
-            "label": "W2R46 finalized Solana getMultipleAccounts observation, slot 453087623",
+            "label": "Independent verifier fresh finalized Solana getMultipleAccounts observation, slot 453101550; historical slot 453087623 account state not replayed",
             "url": "https://api.mainnet-beta.solana.com"
           },
           {

@@ -19,13 +19,6 @@
       "issuerOrObligor": "Metallicus (mpd.token on XPR Network, owned by the swapscold 2-of-4 multisig)",
       "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract", "concentration"],
       "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "XPYUSD (bridge-wrapped PayPal USD) held by the xmd.treasury contract",
-      "pct": 0.01,
-      "risk": "low",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Metallicus xtokens bridge contract on XPR Network (local XPYUSD wrapper issuer)"
     }
   ],
   "reserveReview": {
@@ -40,7 +33,7 @@
       {"label": "Metallicus Metal Dollar product page", "url": "https://www.metallicus.com/metal-dollar"},
       {"label": "XPR get_currency_stats POST code=xtokens symbol=XPYUSD: issuer xtokens (observed 2026-10-03)", "url": "https://proton.eosusa.io/v1/chain/get_currency_stats"}
     ],
-    "rationale": "The dated 2026-08-20 treasury composition is retained as a fallback, not refreshed to today's weights. On 2026-09-30, the XPR API at head block 406113096 returned 2,797,236.513852 XUSDC in xmd.treasury and xtokens authority delegated to swapscold. These observations prove local token holdings and operator authority, but do not identify a canonical USDC escrow or reconcile its balance against outstanding XUSDC. The former USDC link is withheld until that bridge backing is independently verified. MPD remains an untracked Metallicus-issued token. The added XPYUSD row is metadata for the exact captured live slice (0.01% in the dossier), joined by unique normalized name under full-composition; it is not a refreshed historical composition. A 2026-10-03 get_currency_stats response directly identifies xtokens as the local wrapper issuer. No upstream Paxos claim, bridge coverage or liquidity horizon is asserted.",
+    "rationale": "The dated 2026-08-20 treasury composition is retained as a fallback, not refreshed to today's weights. On 2026-09-30, the XPR API at head block 406113096 returned 2,797,236.513852 XUSDC in xmd.treasury and xtokens authority delegated to swapscold. These observations prove local token holdings and operator authority, but do not identify a canonical USDC escrow or reconcile its balance against outstanding XUSDC. The former USDC link is withheld until that bridge backing is independently verified. MPD remains an untracked Metallicus-issued token. A 2026-10-03 get_currency_stats response directly identifies xtokens as the local XPYUSD wrapper issuer; it does not establish the XPYUSD weight in this historical book. XPYUSD metadata integration is deferred pending a stable live-adapter sourceKey and keyed zero-percent metadata join. No upstream Paxos claim, bridge coverage or liquidity horizon is asserted.",
     "compositionBasis": "On-chain xmd.treasury token balances read via the XPR Network Antelope API at head block 399093779 (2026-08-20)",
     "compositionAsOf": "2026-08-20",
     "scope": "full-composition",

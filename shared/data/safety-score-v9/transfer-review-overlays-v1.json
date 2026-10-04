@@ -8394,23 +8394,23 @@
     },
     {
       "assetId": "chfsafo-spiko",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Refine05 primary-source and pinned-RPC review; partial native-deployment coverage",
+      "reviewedAt": "2026-10-04",
+      "reviewer": "Unknown-wave W2R12 complete eight-register issuer transfer-policy review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x18b5c15e5196a38a162b1787875295b76e4313fb",
           "scope": "canonical",
           "posture": "permissioned",
-          "evidence": "Exact CHF issuer API binds this native EVM fund register. Spiko's ERC20 PermissionManager design permits only KYC-allowlisted holders. At block 26110192 its authority() binds the live PermissionManager and current ADMIN Safe. This is positive holder-policy evidence, not full cross-register control or liability closure; the unreviewed Stellar/Starknet transfer implementations remain outside this partial review.",
+          "evidence": "Issuer API binds exact CHF share class FR0014015LG6 to this native register. SICAV prospectus requires shares to be held and transferred only between investors with an Allowlisted address. This establishes legal holder transfer policy, not complete administrator, liability or material-supply closure.",
           "sources": [
             {
-              "label": "Exact CHF register roster",
+              "label": "Exact CHF share class and native token roster",
               "url": "https://public-api.spiko.io/share-classes/chfSAFO"
             },
             {
-              "label": "Spiko EVM allowlisted holder architecture",
-              "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+              "label": "SICAV September 2026 prospectus, common share rules p.10 and registers p.8",
+              "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
             }
           ]
         },
@@ -8419,15 +8419,32 @@
           "contractOrTokenId": "0x9de2b2dcdcf43540e47143f28484b6d15118f089",
           "scope": "canonical",
           "posture": "permissioned",
-          "evidence": "Exact CHF issuer API binds this native EVM fund register. Spiko's ERC20 holder design is KYC allowlisted, separate from mint permissions. At block 94870785 authority() binds chain-local PermissionManager; native transfer policy is not a bridge escape. No complete eight-register transfer or liability attestation is asserted.",
+          "evidence": "Issuer API binds exact CHF share class FR0014015LG6 to this native register. SICAV prospectus requires shares to be held and transferred only between investors with an Allowlisted address. This establishes legal holder transfer policy, not complete administrator, liability or material-supply closure.",
           "sources": [
             {
-              "label": "Exact CHF register roster",
+              "label": "Exact CHF share class and native token roster",
               "url": "https://public-api.spiko.io/share-classes/chfSAFO"
             },
             {
-              "label": "Spiko EVM allowlisted holder architecture",
-              "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+              "label": "SICAV September 2026 prospectus, common share rules p.10 and registers p.8",
+              "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+            }
+          ]
+        },
+        {
+          "chainId": "starknet",
+          "contractOrTokenId": "0x06723dcb428eddb160c5adfc2d0a5e5adc184bf6a7298780c3cbf3fa764f709b",
+          "scope": "canonical",
+          "posture": "permissioned",
+          "evidence": "Issuer API binds exact CHF share class FR0014015LG6 to this native register. SICAV prospectus requires shares to be held and transferred only between investors with an Allowlisted address. This establishes legal holder transfer policy, not complete administrator, liability or material-supply closure.",
+          "sources": [
+            {
+              "label": "Exact CHF share class and native token roster",
+              "url": "https://public-api.spiko.io/share-classes/chfSAFO"
+            },
+            {
+              "label": "SICAV September 2026 prospectus, common share rules p.10 and registers p.8",
+              "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
             }
           ]
         },
@@ -8436,32 +8453,15 @@
           "contractOrTokenId": "0x97e7962bcd091e7ecfb583fc96289b1e1553ac6e",
           "scope": "canonical",
           "posture": "permissioned",
-          "evidence": "Exact CHF issuer API binds this native EVM fund register and the issuer ERC20 architecture requires KYC-allowlisted holders. At block 511230438 authority() binds chain-local PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a. This row does not establish cross-register transfer or liability closure.",
+          "evidence": "Issuer API binds exact CHF share class FR0014015LG6 to this native register. SICAV prospectus requires shares to be held and transferred only between investors with an Allowlisted address. This establishes legal holder transfer policy, not complete administrator, liability or material-supply closure.",
           "sources": [
             {
-              "label": "Exact CHF register roster",
+              "label": "Exact CHF share class and native token roster",
               "url": "https://public-api.spiko.io/share-classes/chfSAFO"
             },
             {
-              "label": "Spiko EVM allowlisted holder architecture",
-              "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
-            }
-          ]
-        },
-        {
-          "chainId": "base",
-          "contractOrTokenId": "0xd9aa2300e126869182dfb6ecf54984e4c687f36b",
-          "scope": "canonical",
-          "posture": "permissioned",
-          "evidence": "Exact CHF issuer API binds this native EVM fund register, governed by Spiko's documented KYC-allowlisted ERC20 holder design. At block 52110837 authority() confirms its PermissionManager. This partial transfer review grants no complete eight-register signer or liability coverage.",
-          "sources": [
-            {
-              "label": "Exact CHF register roster",
-              "url": "https://public-api.spiko.io/share-classes/chfSAFO"
-            },
-            {
-              "label": "Spiko EVM allowlisted holder architecture",
-              "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+              "label": "SICAV September 2026 prospectus, common share rules p.10 and registers p.8",
+              "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
             }
           ]
         },
@@ -8470,15 +8470,49 @@
           "contractOrTokenId": "0xef53e7d17822b641c6481837238a64a688709301",
           "scope": "canonical",
           "posture": "permissioned",
-          "evidence": "Exact CHF issuer API binds this native EVM fund register, governed by Spiko's documented KYC-allowlisted ERC20 holder design. At block 54814446 authority() confirms its PermissionManager. This is not an independently permissionless bridge representation or complete liability attestation.",
+          "evidence": "Issuer API binds exact CHF share class FR0014015LG6 to this native register. SICAV prospectus requires shares to be held and transferred only between investors with an Allowlisted address. This establishes legal holder transfer policy, not complete administrator, liability or material-supply closure.",
           "sources": [
             {
-              "label": "Exact CHF register roster",
+              "label": "Exact CHF share class and native token roster",
               "url": "https://public-api.spiko.io/share-classes/chfSAFO"
             },
             {
-              "label": "Spiko EVM allowlisted holder architecture",
-              "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+              "label": "SICAV September 2026 prospectus, common share rules p.10 and registers p.8",
+              "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+            }
+          ]
+        },
+        {
+          "chainId": "base",
+          "contractOrTokenId": "0xd9aa2300e126869182dfb6ecf54984e4c687f36b",
+          "scope": "canonical",
+          "posture": "permissioned",
+          "evidence": "Issuer API binds exact CHF share class FR0014015LG6 to this native register. SICAV prospectus requires shares to be held and transferred only between investors with an Allowlisted address. This establishes legal holder transfer policy, not complete administrator, liability or material-supply closure.",
+          "sources": [
+            {
+              "label": "Exact CHF share class and native token roster",
+              "url": "https://public-api.spiko.io/share-classes/chfSAFO"
+            },
+            {
+              "label": "SICAV September 2026 prospectus, common share rules p.10 and registers p.8",
+              "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+            }
+          ]
+        },
+        {
+          "chainId": "stellar",
+          "contractOrTokenId": "CAJD2IBSP7VO2VYJQUYJSOGPJINTUYV7MQITINXVPTIH3CCLCUENNMW4",
+          "scope": "canonical",
+          "posture": "permissioned",
+          "evidence": "Issuer API binds exact CHF share class FR0014015LG6 to this native register. SICAV prospectus requires shares to be held and transferred only between investors with an Allowlisted address. This establishes legal holder transfer policy, not complete administrator, liability or material-supply closure.",
+          "sources": [
+            {
+              "label": "Exact CHF share class and native token roster",
+              "url": "https://public-api.spiko.io/share-classes/chfSAFO"
+            },
+            {
+              "label": "SICAV September 2026 prospectus, common share rules p.10 and registers p.8",
+              "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
             }
           ]
         },
@@ -8487,15 +8521,15 @@
           "contractOrTokenId": "6Gst8o3L5uNtkUvhEg23HpDLpYRdNQTgdn1Bc7jnCM5c",
           "scope": "canonical",
           "posture": "permissioned",
-          "evidence": "Finalized slot 452864978 exact mint read identifies Token-2022 default frozen accounts, live freeze authority 9Sf6f8r63A86FEzbzkY4MXNjCX17B49fVizduLrZ7DyG, permanent delegate EeJqADE9Xqkqoyjid6H1GmbwDZ4Bz1qyC7ySpmFq849m and pausable authority 3wVzYmWt79gBpPtWBK8GHvRfii1SARpP8SKqEKuzJsDY. Zero current supply is not renunciation or permissionless transfer. Upstream issuer key/program closure remains unresolved; Stellar and Starknet are omitted rather than invented.",
+          "evidence": "Issuer API binds exact CHF share class FR0014015LG6 to this native register. SICAV prospectus requires shares to be held and transferred only between investors with an Allowlisted address. This establishes legal holder transfer policy, not complete administrator, liability or material-supply closure.",
           "sources": [
             {
-              "label": "Finalized exact CHF Solana mint",
-              "url": "https://api.mainnet-beta.solana.com"
+              "label": "Exact CHF share class and native token roster",
+              "url": "https://public-api.spiko.io/share-classes/chfSAFO"
             },
             {
-              "label": "Exact CHF issuer native roster",
-              "url": "https://public-api.spiko.io/share-classes/chfSAFO"
+              "label": "SICAV September 2026 prospectus, common share rules p.10 and registers p.8",
+              "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
             }
           ]
         }
