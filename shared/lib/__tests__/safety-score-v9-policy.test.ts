@@ -191,6 +191,42 @@ describe("Safety Score v9 methodology policy", () => {
     expect(() => loadV9MethodologyPolicy(excessive)).toThrow();
   });
 
+  it("keeps the generic mint uncertainty rung separate from known adverse authority", () => {
+    const semantic = V9_CANDIDATE_POLICY_V1.policy.semantic;
+    expect(semantic.control.mintPostureQuality).toMatchObject({
+      "unbounded-adverse": 25, unknown: 50, compromised: 25,
+      "unbounded-reconciled": 55, "unbounded-operationally-governed": 55,
+      "unbounded-governed": 60, "unbounded-veto-guarded": 70,
+    });
+    expect(v9UnknownRungLedger(semantic).filter(({ path }) => path.startsWith("control.mintPostureQuality.")))
+      .toEqual([{
+        path: "control.mintPostureQuality.unknown", polarity: "credit",
+        current: 45, value: 50, ordinaryMinimum: 50, required: 50,
+      }]);
+    expect(semantic.control.mintPostureGrading).toMatchObject({
+      prudentialReconciled: 80, attestationOnlyReconciled: 70,
+      seasonedCreditPoints: 10, seasonedCreditMinMonths: 60, adverseSeasonedCreditCeiling: 39,
+    });
+    expect(semantic.structural.signalLimits["centralized-mint"]).toMatchObject({
+      high: 59, moderate: 74, low: 83, critical: 39,
+    });
+  });
+
+  it.each(["unbounded-reconciliation-unknown", "unbounded-unreconciled"])(
+    "rejects retired quality key %s rather than aliasing it", (posture) => {
+      const policy = candidateClone();
+      Object.assign(policy.semantic.control.mintPostureQuality, { [posture]: 25 });
+      expect(() => loadV9MethodologyPolicy(policy)).toThrow();
+    },
+  );
+
+  it("requires the active adverse quality key", () => {
+    const policy = candidateClone();
+    const qualities = policy.semantic.control.mintPostureQuality as Partial<typeof policy.semantic.control.mintPostureQuality>;
+    delete qualities["unbounded-adverse"];
+    expect(() => loadV9MethodologyPolicy(policy)).toThrow();
+  });
+
   it("loads a changed withholding danger threshold with a distinct digest", () => {
     const changedPolicy = candidateClone();
     changedPolicy.semantic.formula.danger.withholdPegMultiplierFloor = 0.84;
@@ -397,8 +433,7 @@ describe("Safety Score v9 methodology policy", () => {
     const quality = V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintPostureQuality;
     expect(signalLimits.high).not.toBeNull();
     expect(signalLimits.moderate).not.toBeNull();
-    expect(quality["unbounded-unreconciled"] + formula.controlCompensabilityHeadroom).toBeLessThanOrEqual(signalLimits.high!);
-    expect(quality["unbounded-reconciliation-unknown"]).toBeLessThan(signalLimits.high!);
+    expect(quality["unbounded-adverse"] + formula.controlCompensabilityHeadroom).toBeLessThanOrEqual(signalLimits.high!);
     expect(quality["collateral-gated"]).toBeLessThan(signalLimits.moderate!);
     expect(quality["concentrated-admin"]).toBeLessThan(quality["unbounded-governed"]);
     expect(quality["unbounded-governed"]).toBeLessThan(quality["partially-bounded-admin"]);
@@ -426,7 +461,7 @@ describe("v10.05 operational governance policy", () => {
   });
 
   it("pins H units and the single55-to60 credit ladder without duplicate exposure/delay/ceiling keys", () => {
-    expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBe("10.05");
+    expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBe("10.06");
     for (const field of ["annualWindowSec", "keeperWindowSec", "requiresLifetimeBudget"] as const) {
       const changed = candidateClone();
       const flow = changed.semantic.control.governedIssuance.operationalFlow;

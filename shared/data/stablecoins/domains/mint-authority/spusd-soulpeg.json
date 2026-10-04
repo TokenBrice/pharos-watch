@@ -2,7 +2,7 @@
   "id": "spusd-soulpeg",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "D14 review 2026-10-03: verified SPUSD.mint(address,uint256) checks only MINTER_ROLE and nominal MAX_SUPPLY, with no deposit/collateral check. AccessControl DEFAULT_ADMIN_ROLE can grant MINTER_ROLE to a recipient-controlled account. A one-billion nominal ceiling does not prevent durable unbacked supply reaching a chosen recipient; economic cap is unbounded and unknown reconciliation yields unbounded-reconciliation-unknown.",
     "controls": [

@@ -3,7 +3,7 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "inheritedFrom": "xaut-tether",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "unknown",
     "summary": "XGLD inherits XAUt issuer risk and adds two active BNB native minter contracts plus an owner that can replace that roster without a token-code upgrade. Token code is non-proxy; downstream owner signing and the older minter implementation remain unresolved.",
     "controls": [

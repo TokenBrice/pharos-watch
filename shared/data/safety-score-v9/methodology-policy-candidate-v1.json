@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "10.05",
+  "releaseVersion": "10.06",
   "semantic": {
     "accessLookthrough": {
       "edgeKinds": ["reserve-position", "receipt", "bridge-representation"],
@@ -1125,8 +1125,7 @@
         "concentrated-admin": 55,
         "collateral-gated": 50,
         "unbounded-reconciled": 55,
-        "unbounded-reconciliation-unknown": 55,
-        "unbounded-unreconciled": 25,
+        "unbounded-adverse": 25,
         "compromised": 25,
         "unknown": 50
       },

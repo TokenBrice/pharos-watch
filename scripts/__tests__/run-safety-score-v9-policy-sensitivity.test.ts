@@ -65,6 +65,15 @@ describe("Safety Score v9 V9 policy sensitivity", { timeout: V9_EVALUATION_TEST_
       deltas: [-1],
     });
 
+    expect(report.baseline).toMatchObject({ scenarioCount: 34, pairwiseConstraintCount: 31, pairwiseViolationCount: 0 });
+    expect(report.baseline.scenarioIds).toContain("unbounded-adverse-mint-anchor");
+    const adverseOrderings = report.cases[0]!.pairwiseConstraints.filter(
+      ({ lowerId }) => lowerId === "unbounded-adverse-mint-anchor",
+    );
+    expect(adverseOrderings).toMatchObject([
+      { higherId: "reconciled-unbounded-mint-anchor", minGap: 4, passed: { from: true, to: true } },
+      { higherId: "unverified-mint-anchor", minGap: 10, passed: { from: true, to: true } },
+    ]);
     expect(report.summary.newPairwiseViolationCount).toBeGreaterThan(0);
     expect(report.summary.affectedPairwiseConstraintIds).toContain("active-depeg-d>active-depeg-f");
     expect(

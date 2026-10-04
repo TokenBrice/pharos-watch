@@ -2,7 +2,7 @@
   "id": "asusdf-astherus",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "inheritedFrom": "usdf-astherus",
     "summary": "asUSDF is a native BSC savings wrapper whose shares mint only after the asUSDFEarn UUPS wrapper receives USDF; the token's mint-role administration and wrapper upgrade authority are native timelock/Safe controls, not bridge machinery. Underlying USDF issuance remains inherited from usdf-astherus, and no cross-chain representation or bridge administrator is identified. D14 review 2026-10-03: asUSDFEarn deposits are locally share-backed, but the separately verified asUSDF token exposes mint(address,uint256) checking only MINTER_AND_BURN_ROLE and a positive amount. The token-local DEFAULT_ADMIN_ROLE timelock can grant that role to a chosen caller, which can mint asUSDF shares without a USDF deposit. This is not the inherited parent issuance edge and needs no upgrade. The 21600-second Safe-controlled delay is not D29 token governance; economic semantics are unbounded.",

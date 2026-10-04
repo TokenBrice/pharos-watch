@@ -2,7 +2,7 @@
   "id": "reusd-re-protocol",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "Native deposit ICLs on Ethereum, Avalanche, Arbitrum and Base hold MINTER_ROLE on their local reUSD token and remain upgradeable. Checked token admin/upgrader roles are held by each chain's two-day timelock, not the 3-of-5 Safe. The Avalanche and Arbitrum Safes additionally retain ICL DEFAULT_ADMIN_ROLE, an immediate authorization bypass; checked Ethereum and Base Safe ICL admin/upgrader roles are false. The Ethereum Safe's historical direct token-admin assignment was revoked on 2026-08-12. CCIP pool mint authority remains under Bridge Risk; the reviewed native paths retain unbounded economic-cap semantics and non-exhaustive role-inventory caveats.",
     "upgradeability": {

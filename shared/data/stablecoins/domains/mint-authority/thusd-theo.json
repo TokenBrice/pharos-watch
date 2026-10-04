@@ -2,7 +2,7 @@
   "id": "thusd-theo",
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "D14 review 2026-10-03: verified ThUSD.setMinter(address) is onlyOwner and accepts an arbitrary replacement address; ThUSD.mint(address,uint256) checks only msg.sender == minter before _mint. The timelock owner can therefore replace the collateral-checking ThUSDMinter with a recipient-controlled minter without upgrading token code. A 172800-second delay does not constrain the replacement to collateral-backed issuance. Economic cap is unbounded; unknown reconciliation yields unbounded-reconciliation-unknown. The governing 4-of-6 Safe is not delayed on-chain token governance, so no D29 qualification is asserted.",
     "upgradeability": {

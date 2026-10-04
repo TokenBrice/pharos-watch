@@ -2,7 +2,7 @@
   "id": "dola-inverse-finance",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "DOLA's INV-governed 48-hour Timelock operator can mint durable supply without a posted-collateral check or numeric token cap. Four enabled minters remain verified: FiRM and PSM Feds have governance-raiseable ceilings, Frontier Fed has uncapped local expansion into its cToken, and the atomic flash minter repays and burns within one transaction. Under D14 the least-constrained durable operator path determines the unbounded category; neither cToken accounting claims nor flash issuance establish new external backing.",
     "upgradeability": {

@@ -2,7 +2,7 @@
   "id": "yusd-yieldfi",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "YieldFi yUSD has ten reviewed native issuance deployments: the Ethereum YToken and nine chain-local YTokenL2 vaults. Users can mint local vault shares against each chain's configured asset, while the common Manager exposes a discretionary mintYToken/manageAssetAndShares path with no protocol supply ceiling. The native YIELD role path remains in Mint Authority; BridgeCCIP BRIDGE/LOCKBOX burn-mint accounting, peer configuration, LockBox escrow, and Chainlink CCIP validation are scored separately under Bridge Risk. Two bytecode-less ADMIN EOAs can change the native operator set immediately, so the canonical posture remains unbounded-or-compromised; base-asset USDC/USDT issuance remains an upstream dependency.",
     "inheritedFrom": "usdc-circle",

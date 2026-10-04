@@ -2,7 +2,7 @@
   "id": "zaru-blocktower",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "manual-review",
     "summary": "Native issuance remains under issuer authority. ZARU has a System Program Solana signer and the same EOA with mint/admin/upgrader powers on three EVM chains.",
     "controls": [

@@ -366,7 +366,7 @@ function reconstructResolutionInput(row: LockedVerdictRow): DdrResolveInput {
 
   if (k1) {
     coin.authorityPosture =
-      k1.severity === "severe" ? "unbounded-unreconciled" : "concentrated-admin";
+      k1.severity === "severe" ? "unbounded-adverse" : "concentrated-admin";
     coin.mintPath = "issuer-direct-mint";
   }
 
@@ -585,7 +585,7 @@ describe("H does not relax recorded-context DDR scenarios", () => {
     // reconstructions without inventing K1 attributions or changing lock-time data.
     for (const row of fixture.rows) {
       const input = reconstructResolutionInput(row);
-      const prior = resolveDepeg({ ...input, coin: { ...input.coin, authorityPosture: "unbounded-unreconciled" } });
+      const prior = resolveDepeg({ ...input, coin: { ...input.coin, authorityPosture: "unbounded-adverse" } });
       const operational = resolveDepeg({ ...input, coin: { ...input.coin, authorityPosture: "unbounded-operationally-governed" } });
       expect(operational.resolution.tier, row.rowId).toBe(prior.resolution.tier);
       expect(operational.resolution.factors.map(({ code, severity }) => ({ code, severity })), row.rowId)

@@ -1,12 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { evaluateV9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/control";
+import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-facts";
 import { reviewedScope, SCOPE_CONTROLLER } from "@shared/lib/__tests__/safety-score-v9-control-scope.test-support";
 import { makeCompiledVotingControl, makeOperationalIssuanceProcess } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { buildSafetyScoreV9RetainedRedemptionRoutes, buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
 import { compileSafetyScoreV9FactSetFromFixedInput, compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension, computeSafetyScoreV9ReserveExposureKey, materializeSafetyScoreV9FactSetExtension } from "../safety-score-v9/fact-set";
-import { V9_EVALUATION_TEST_TIMEOUT_MS, makeV9BoundedUnknownFeeRedemptionFixedInput as boundedUnknownFeeRedemptionFixedInput, makeV9FixedInput as exactFixedInput, makeV9QueuedRedemptionFixedInput as queuedRedemptionFixedInput } from "../../test-helpers/v9-fixed-input";
+import { V9_EVALUATION_TEST_TIMEOUT_MS, makeV9Extension, v9Status, makeV9BoundedUnknownFeeRedemptionFixedInput as boundedUnknownFeeRedemptionFixedInput, makeV9FixedInput as exactFixedInput, makeV9QueuedRedemptionFixedInput as queuedRedemptionFixedInput } from "../../test-helpers/v9-fixed-input";
 import {
   accessOnlyMeta,
   alphaMeta,
@@ -28,6 +30,22 @@ import {
   unmatchedFixture,
   withRedemptionRoute,
 } from "./safety-score-v9-fact-set.test-support";
+
+vi.mock("@shared/data/safety-score-v9/evidence-gap-classifications-v1.json", () => ({
+  default: { schemaVersion: 1, entries: [{
+    id: "fixture-mint-reconciliation-nondisclosure", assetId: "reviewed-issuer",
+    cause: "C", assertion: "researched-nondisclosure",
+    scope: { pillar: "control", componentKey: "economic-control:mint", factorKey: "reconciliation",
+      routeKey: null, exposureId: null, requiredDatum: "reconciliation" },
+    reviewedAt: "1970-01-01T01:00:00Z", reviewer: "fixture-curator",
+    sources: [{ url: "https://example.com/issuer-report", observedAt: "1970-01-01T01:00:00Z",
+      datumAsOf: null, location: "issuance and reserve disclosures",
+      excerpt: "The report describes issuance but does not disclose whole-supply reconciliation.",
+      assertion: "The required whole-supply reconciliation cadence is not published in the reviewed report." }],
+    searchedSurfaces: ["https://example.com/issuer-report"],
+    rationale: "Reviewed issuance and reserve disclosures do not establish the whole-supply reconciliation cadence.",
+  }] },
+}));
 
 const controlsOf = (asset: { controlReview: unknown }) => {
   const review = asset.controlReview;
@@ -408,4 +426,100 @@ describe("v10.01 control atomic cause scopes", () => {
         factorKey, routeKey: null, exposureId: null, requiredDatum: factorKey });
     }
   });
+
+  const compileMint = (
+    reconciliation: V9EconomicControlReviewV2["mint"]["reconciliation"],
+    supervision: V9EconomicControlReviewV2["mint"]["supervision"],
+    assetId = "alpha",
+  ) => {
+    const fixed = exactFixedInput({ assetId });
+    const extension = makeV9Extension({ assetId });
+    const source = extension.assets[0]!;
+    source.launchedAtSec = fixed.clockSec - 1000;
+    source.controlReview = { state: "reviewed-controls", controls: [localControl({
+      controlKey: "mint:known", deploymentKey: `asset:${assetId}`, controlKind: "mint",
+      capabilities: ["mint"], capSemantics: { kind: "unbounded", bound: null },
+      claimImpairment: "unbounded", economicLossScope: "global-claim",
+      delaySec: null, keyCustody: "hsm", modulesOrGuards: "none-detected",
+      failureDomains: [{ kind: "mint-control", key: "ethereum:0x4444444444444444444444444444444444444444" }],
+    })] };
+    source.economicControlReview!.mint = {
+      ...source.economicControlReview!.mint, controlKey: "mint:known",
+      status: v9Status("known", "v9.control.mint-review"),
+      reconciliation, supervision, upgrade: { state: "immutable", controlKey: null },
+    };
+    return compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+  };
+
+  for (const supervision of ["prudential", "attestation-only", "none", "unknown"] as const) {
+    it.each(["continuous", "periodic", "internal-ledger", "unknown", "none", "not-applicable"] as const)(
+      `retains only real reconciliation questions with ${supervision} supervision and %s reconciliation`,
+      (reconciliation) => {
+        const asset = compileMint(reconciliation, supervision);
+        const mint = asset.economicControlReview.mint;
+        expect(asset.controls[0]).toMatchObject({
+          status: { observationState: "known" }, capSemantics: { kind: "unbounded" },
+          claimImpairment: "unbounded", economicLossScope: "global-claim",
+        });
+        expect(mint.reconciliation).toBe(reconciliation);
+        const unanswered = reconciliation === "unknown" ||
+          (reconciliation === "internal-ledger" && supervision !== "prudential");
+        const gaps = asset.gaps.filter((gap) =>
+          gap.causeScope?.componentKey === "economic-control:mint" &&
+          gap.causeScope.factorKey === "reconciliation");
+        if (unanswered) {
+          expect(mint.factorStatuses!.reconciliation).toMatchObject({
+            observationState: "missing", gapIds: ["alpha:gap:economic-control:mint::reconciliation"],
+          });
+          expect(gaps).toHaveLength(1);
+          expect(gaps[0]).toMatchObject({
+            gapId: mint.factorStatuses!.reconciliation!.gapIds[0],
+            causeProof: { cause: "U" },
+            causeScope: { pillar: "control", componentKey: "economic-control:mint",
+              factorKey: "reconciliation", routeKey: null, exposureId: null, requiredDatum: "reconciliation" },
+          });
+        } else {
+          expect(mint.factorStatuses?.reconciliation).toBeUndefined();
+          expect(gaps).toEqual([]);
+        }
+      },
+    );
+  }
+
+  it.each(["alpha", "reviewed-issuer"])(
+    "retains %s's own scoped reconciliation cause alongside known adverse authority",
+    (assetId) => {
+      const asset = compileMint("unknown", "none", assetId);
+      const mint = asset.economicControlReview.mint;
+      const gapId = mint.factorStatuses!.reconciliation!.gapIds[0]!;
+      const gap = asset.gaps.find((entry) => entry.gapId === gapId)!;
+      const cause = assetId === "reviewed-issuer" ? "C" : "U";
+      expect(gap.causeProof.cause).toBe(cause);
+      const result = evaluateV9EconomicControlAssetFacts(
+        asset, { assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1,
+      );
+      expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
+        posture: "unbounded-adverse", score: 25, cause, causeGapIds: [gapId],
+      });
+      expect(result.structuralFailures).toContainEqual(expect.objectContaining({
+        kind: "centralized-mint", severity: "high", binding: true,
+      }));
+    },
+  );
+
+  it.each(["alpha", "reviewed-issuer"])(
+    "discloses %s's unanswered reconciliation without changing prudential-alone credit",
+    (assetId) => {
+      const asset = compileMint("unknown", "prudential", assetId);
+      const gapId = asset.economicControlReview.mint.factorStatuses!.reconciliation!.gapIds[0]!;
+      const result = evaluateV9EconomicControlAssetFacts(
+        asset, { assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1,
+      );
+      expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
+        posture: "unbounded-reconciled", score: 55,
+        cause: assetId === "reviewed-issuer" ? "C" : "U", causeGapIds: [gapId],
+      });
+      expect(result.structuralFailures).not.toContainEqual(expect.objectContaining({ kind: "centralized-mint" }));
+    },
+  );
 });

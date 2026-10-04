@@ -2,7 +2,7 @@
   "id": "scusd-rings",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "D14 review 2026-10-03: verified BoringVault.enter(from,asset,assetAmount,to,shareAmount) mints the caller-specified shareAmount and transfers assets only when assetAmount > 0. Governance can authorize a new native enter caller through RolesAuthority, who can use assetAmount=0 and an arbitrary recipient/shareAmount; this root path is native authorization, not an assertion about the separate LayerZero bridge route. The one-day Safe-controlled timelock does not make this collateral-bounded or D29 token-governed. Economic cap is unbounded; not-applicable reconciliation and no supervision yield unbounded-unreconciled.",
     "upgradeability": {

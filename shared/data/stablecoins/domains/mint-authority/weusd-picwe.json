@@ -2,7 +2,7 @@
   "id": "weusd-picwe",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "WEUSD has independent native issuance on BSC, Base, Arbitrum, Plume, and Movement. The PicWe admin EOA is an uncapped EVM native minter/admin across the four EVM deployments, while the Movement package publisher controls the native mint/redeem modules and their undelayed compatible upgrades. PicWe's self-built burn/mint bridge contract, relayer, and bridge-module upgrade surface are assessed separately under bridgeRouteRisk.",
     "upgradeability": {

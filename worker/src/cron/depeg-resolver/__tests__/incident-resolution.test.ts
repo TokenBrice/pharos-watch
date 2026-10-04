@@ -148,7 +148,7 @@ describe("deriveMintSurge", () => {
 
 describe("toStructural", () => {
   it.each([
-    ["bounded-admin", "unbounded-unreconciled", "unbounded-unreconciled"],
+    ["bounded-admin", "unbounded-adverse", "unbounded-adverse"],
     ["bounded-admin", "unbounded-governed", "unbounded-governed"],
     ["bounded-admin", "unbounded-veto-guarded", "unbounded-veto-guarded"],
     ["bounded-admin", "unbounded-operationally-governed", "unbounded-operationally-governed"],
@@ -240,7 +240,7 @@ describe("toStructural", () => {
       },
       mintAuthority: {
         mintPath: "issuer-direct-mint",
-        authorityPosture: "unbounded-unreconciled",
+        authorityPosture: "unbounded-adverse",
         confidence: "verified",
         summary: "Unbounded reviewed issuer mint controller.",
         review: {

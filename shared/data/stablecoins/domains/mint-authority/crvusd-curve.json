@@ -2,7 +2,7 @@
   "id": "crvusd-curve",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "crvUSD remains economically unbounded. Ordinary chosen-recipient mint and authority changes follow Curve Ownership Voting's 604800-second public period. At block 26118754, Convex's 5410.278994 bps pooled veCRV position has a 3-of-5 Safe-replaceable caster, so other-holder voting control does not support governed-issuance credit. PegKeepers, Controller fee collection, FeeSplitter and RewardsHandler transfer existing stock; Controller rates are capped at 43959106799 raw (1e-18/second). Historical economic certificates are not renewed; emergency callback/loss and selected downstream closure remain open.",
     "upgradeability": {

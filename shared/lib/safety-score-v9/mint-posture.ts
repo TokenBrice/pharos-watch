@@ -27,7 +27,7 @@ export const V9_MINT_POSTURE_BANDS: Record<V9MintPostureBand, { label: string; d
   },
   managed: {
     label: "Managed",
-    detail: "Economically unbounded minting that is reconciled against reserves or a supervisory regime.",
+    detail: "Economically unbounded minting that is reconciled against reserves or prudentially supervised.",
   },
   concentrated: {
     label: "Concentrated",
@@ -35,7 +35,7 @@ export const V9_MINT_POSTURE_BANDS: Record<V9MintPostureBand, { label: string; d
   },
   exposed: {
     label: "Exposed",
-    detail: "Economically effective minting is unbounded — unreconciled, unverified, or under an active incident.",
+    detail: "Known economically unbounded minting without a qualified governance, reconciliation, or supervisory process, or an active mint incident. An unanswered reconciliation question is disclosed separately.",
   },
 };
 
@@ -60,8 +60,7 @@ const POSTURE_BANDS: Record<V9MintPosture, V9MintPostureBand | null> = {
   "unbounded-reconciled": "managed",
   "concentrated-admin": "concentrated",
   "collateral-gated": "concentrated",
-  "unbounded-reconciliation-unknown": "exposed",
-  "unbounded-unreconciled": "exposed",
+  "unbounded-adverse": "exposed",
   compromised: "exposed",
   // An unresolved posture is not a band: it is the absence of a review.
   unknown: null,
@@ -153,8 +152,7 @@ const FRAGILE_MINT_POSTURES: ReadonlySet<string> = new Set<MintAuthorityPosture>
   "unbounded-governed",
   "unbounded-veto-guarded",
   "unbounded-operationally-governed",
-  "unbounded-reconciliation-unknown",
-  "unbounded-unreconciled",
+  "unbounded-adverse",
   "compromised",
 ]);
 
@@ -168,8 +166,7 @@ const UNBOUNDED_MINT_POSTURES: ReadonlySet<string> = new Set<MintAuthorityPostur
   "unbounded-governed",
   "unbounded-veto-guarded",
   "unbounded-operationally-governed",
-  "unbounded-reconciliation-unknown",
-  "unbounded-unreconciled",
+  "unbounded-adverse",
   "compromised",
 ]);
 

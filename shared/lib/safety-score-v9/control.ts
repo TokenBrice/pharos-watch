@@ -387,13 +387,12 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       // record earns seasonedCreditPoints, capped at the next rung of the merged
       // posture/grading ladder — longevity can close the gap to the next rung
       // but never leapfrog it. D29 governance and D30 minority-veto issuance use
-      // that ordinary ladder; the unreconciled adverse rung keeps its dedicated
-      // ceiling, and active compromise never earns credit.
+      // that ordinary ladder; the adverse rung keeps its dedicated ceiling,
+      // and active compromise never earns credit.
       const mintPostureScore = (() => {
         const grading = policy.control.mintPostureGrading;
         const postureSeasonedEligible =
-          posture === "unbounded-unreconciled" ||
-          posture === "unbounded-reconciliation-unknown" ||
+          posture === "unbounded-adverse" ||
           posture === "unbounded-governed" ||
           posture === "unbounded-veto-guarded" ||
           posture === "unbounded-operationally-governed";
@@ -412,7 +411,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         // never make a lower posture class read identical to the class above it
         // (adversarial-review finding on the credit widening to 10).
         const ceiling =
-          posture === "unbounded-unreconciled"
+          posture === "unbounded-adverse"
             ? grading.adverseSeasonedCreditCeiling
             : nextRung === undefined
               ? gradedPostureScore
@@ -452,7 +451,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
               ? "moderate"
               : posture === "unbounded-governed" || posture === "unbounded-veto-guarded"
                 ? "low"
-                : posture === "unbounded-unreconciled" || posture === "unbounded-reconciliation-unknown"
+                : posture === "unbounded-adverse"
                   ? "high"
                   : prudentiallySupervised
                     ? null
@@ -473,8 +472,8 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
                     ? "Minting is economically unbounded but every new issuer faces a public minority-veto window."
                     : posture === "unbounded-governed"
                       ? "Minting is economically unbounded but held only by delayed on-chain governance."
-                      : posture === "unbounded-unreconciled"
-                        ? "Economically effective minting is unbounded and unreconciled."
+                      : posture === "unbounded-adverse"
+                        ? "Economically effective minting is unbounded without a qualified governance, reconciliation, or supervisory process."
                         : "Minting is economically unbounded.",
             materialSharePct:
               mintControl?.materialSupplyShare == null
@@ -946,14 +945,19 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         ? [args.bridge.factorStatuses?.tier,
             ...args.bridge.routes.filter((route) => component.controlKeys.includes(route.controlKey)).map((route) => route.factorStatuses?.tier)]
         : [args.oracle.factorStatuses?.tier];
-    const uncertainty = component.posture === "unbounded-reconciliation-unknown"
-      ? [args.mint.factorStatuses?.reconciliation]
-      : component.kind === "mint" ? linkedControls.map((control) => control.factorStatuses?.topology) : [];
+    const reconciliationQuestion = component.kind === "mint" &&
+      linkedControls.some((control) => controlCanRepresent(control, "mint") &&
+        (control.capSemantics.kind === "unbounded" || control.claimImpairment === "unbounded")) &&
+      (args.mint.reconciliation === "unknown" ||
+        (args.mint.reconciliation === "internal-ledger" && args.mint.supervision !== "prudential"));
+    const uncertainty = component.kind === "mint"
+      ? linkedControls.map((control) => control.factorStatuses?.topology) : [];
+    if (reconciliationQuestion) uncertainty.push(args.mint.factorStatuses?.reconciliation);
     const causal = resolveV9StatusCauses(
-      unknown ? [section.status, ...factorStatuses, ...(component.causeStatuses ?? [])] : uncertainty,
+      unknown ? [section.status, ...factorStatuses, ...uncertainty, ...(component.causeStatuses ?? [])] : uncertainty,
       args.facts.gaps,
     );
-    if (causal.cause === null && (unknown || component.posture === "unbounded-reconciliation-unknown" ||
+    if (causal.cause === null && (unknown ||
       (component.kind === "mint" && linkedControls.some((control) => control.authority?.model === "multisig" &&
         control.authority.threshold === null && control.authority.weightedQuorum === undefined)))) {
       causal.cause = "U";

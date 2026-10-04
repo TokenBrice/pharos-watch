@@ -2,7 +2,7 @@
   "id": "fxusd-f-x-protocol",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "manual-review",
     "summary": "Ethereum fxUSD ordinarily mints through collateralized CDP pools, but the PoolManager administrator can register an arbitrary mint-critical pool module and raise its debt capacity without an independent collateral predicate. The current three-day timelock, rooted in the reviewed 6-of-9 Safe, can therefore authorize a durable unbacked mint path without upgrading code. Native economic issuance is unbounded and unreconciled; Base LayerZero controls remain scoped to Bridge Risk.",
     "upgradeability": {

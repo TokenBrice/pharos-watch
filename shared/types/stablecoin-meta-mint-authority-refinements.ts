@@ -16,7 +16,7 @@ const PRIVILEGED_MINT_PATH_ABILITIES: ReadonlySet<MintAuthorityDirectMintAbility
   "direct", "cap-limited", "can-authorize", "unknown",
 ] satisfies MintAuthorityDirectMintAbility[]);
 
-/** Floor for a reviewer sentence that states what was reconciled or supervised. */
+/** Floor for a reviewer sentence stating the positive economic-control fact. */
 const MIN_ECONOMIC_CONTROL_EVIDENCE_LENGTH = 40;
 
 type MintAuthorityControl = NonNullable<MintAuthorityProfile["controls"]>[number];
@@ -239,21 +239,22 @@ function validateAuthorityPosture({ profile, ctx, controls }: MintAuthorityRefin
 }
 
 function validateEconomicControlEvidence({ profile, ctx, profileHasSourceLinks }: MintAuthorityRefinementState): void {
-  // Evidence binding for the two economic-control facts (M-2). Only the
-  // score-bearing values are gated; absence values assert nothing.
-  const claimsReconciliation = profile.reconciliation === "continuous" || profile.reconciliation === "periodic";
-  const claimsSupervision = profile.supervision === "prudential";
+  // Positive process disclosures require evidence even when they grant no rung.
+  // Absence and unresolved values do not manufacture a positive claim.
+  const claimsReconciliation = profile.reconciliation === "continuous" ||
+    profile.reconciliation === "periodic" || profile.reconciliation === "internal-ledger";
+  const claimsSupervision = profile.supervision === "prudential" || profile.supervision === "attestation-only";
   if (!claimsReconciliation && !claimsSupervision) return;
   const claimed = [
     claimsReconciliation ? `reconciliation ${profile.reconciliation}` : null,
-    claimsSupervision ? "supervision prudential" : null,
+    claimsSupervision ? `supervision ${profile.supervision}` : null,
   ]
     .filter((value): value is string => value !== null)
     .join(" and ");
   if (!profileHasSourceLinks) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: `${claimed} is a scored economic-control claim and requires at least one review source`,
+      message: `${claimed} is a positive economic-control claim and requires at least one review source`,
       path: ["review", "sources"],
     });
   }
@@ -262,7 +263,7 @@ function validateEconomicControlEvidence({ profile, ctx, profileHasSourceLinks }
       code: z.ZodIssueCode.custom,
       message:
         `${claimed} requires a review evidence sentence of at least ` +
-        `${MIN_ECONOMIC_CONTROL_EVIDENCE_LENGTH} characters stating what was reconciled or which regime supervises it`,
+        `${MIN_ECONOMIC_CONTROL_EVIDENCE_LENGTH} characters stating the internal issuance workflow, reconciliation, or supervisory/attestation scope`,
       path: ["review", "evidence"],
     });
   }
@@ -431,17 +432,24 @@ function validateActiveIncidentPosture({ profile, ctx }: MintAuthorityRefinement
   }
 }
 
-function validateMintPathPostureConsistency({ profile, ctx }: MintAuthorityRefinementState): void {
+function validateMintPathPostureConsistency({ profile, ctx, controls }: MintAuthorityRefinementState): void {
+  const knownUnboundedAuthority = profile.mintPath === "unknown" &&
+    profile.authorityPosture === "unbounded-adverse" &&
+    (profile.economicCapSemantics === "unbounded" ||
+      controls.some((control) => (control.executionScope?.paths ??
+        profile.executionCertificates?.classes.find((entry) => entry.id === control.executionClassRef?.classId)?.paths ?? []).some(
+        (path) => path.capSemantics.kind === "unbounded" || path.claimImpairment === "unbounded",
+      )));
   if (
     profile.mintPath === "unknown" &&
     profile.authorityPosture !== "unknown" &&
-    profile.authorityPosture !== "unbounded-unreconciled" &&
+    !(profile.authorityPosture === "unbounded-adverse" && knownUnboundedAuthority) &&
     !(profile.authorityPosture === "none-resolved-mint" && profile.review.noLocalIssuance != null)
   ) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message:
-        "mintPath unknown should use authorityPosture unknown unless evidence supports unbounded-unreconciled or reviewed noLocalIssuance supports none-resolved-mint",
+        "mintPath unknown should use authorityPosture unknown unless known unbounded authority supports unbounded-adverse or reviewed noLocalIssuance supports none-resolved-mint",
       path: ["authorityPosture"],
     });
   }

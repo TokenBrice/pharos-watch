@@ -2,7 +2,7 @@
   "id": "umint-ubs",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "Native standalone uMINT has one default-admin EOA and a separate minter/enforcer EOA. Mint bytecode is non-upgradeable, but roles, transfer rules and issuer accounting remain privileged.",
     "controls": [

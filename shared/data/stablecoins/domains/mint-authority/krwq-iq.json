@@ -2,7 +2,7 @@
   "id": "krwq-iq",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "manual-review",
     "summary": "KRWQ has one issuer-native deployment on Ethereum. Its 3-of-5 Safe can authorize any nonzero token minter; minterMint has no collateral or token-level cap check. D14 issuance is economically unbounded despite deposit/oracle checks and mutable caps in the two current custodians. Whole-supply reconciliation remains unverified. LayerZero OFT representations and the Ethereum OFT Adapter remain exclusively in Bridge Risk.",
     "controls": [

@@ -2,7 +2,7 @@
   "id": "bd-basedollar",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "BD's five launch branches mint through collateral-gated BorrowerOperations and ActivePool contracts. The token owner is renounced, but the collateral registry's 4-of-6 Safe governor can authorize additional branch minters without a token-level cap or execution delay.",
     "upgradeability": {

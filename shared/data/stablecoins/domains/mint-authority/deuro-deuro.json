@@ -2,7 +2,7 @@
   "id": "deuro-deuro",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "dEURO has permissionless minter proposals with a proven 14-day application window and a 2% holding-period-weighted nDEPS minority veto. New or transferred shares carry no immediate votes. It nevertheless fails D30: existing zero-window hub/Position interest-loss settlement can mint a reserve shortfall without a new veto admission (V2/V4), and DEPSWrapper can asymmetrically reduce its own accumulated voting age at a qualified caller's request (V3). D30-R admits the currently unreachable insolvency restructure, but does not cover this wrapper override. Savings monetary-policy paths satisfy D30-S and remain reserve-bounded. Economically unbounded, unreconciled remains the fail-closed ordinary rung. At the v10.05 campaign pin, the largest account-level aged-vote controller has 5330–5331 bps (floor / conservative ceiling); its own-account EOA key holds the recorded shares; no positive issuer/team affiliation was established. Concentration is diagnostic, not an affirmative admission threshold; no new H classification is claimed.",
     "upgradeability": {

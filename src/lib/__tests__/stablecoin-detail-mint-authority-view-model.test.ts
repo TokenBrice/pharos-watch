@@ -107,6 +107,47 @@ describe("mint-authority detail view-model builder", () => {
     });
   });
 
+  it("keeps adverse authority Exposed at both qualities while preserving its separate reconciliation question", () => {
+    const coin = makeMintAuthorityCoin({
+      mintPath: "issuer-direct-mint",
+      authorityPosture: "unbounded-adverse",
+      confidence: "verified",
+      summary: "Reviewed economically unbounded issuer mint authority.",
+      unresolvedQuestions: ["Whole-supply reconciliation remains unverified."],
+    });
+    for (const score of [25, 35]) {
+      expect(buildMintAuthorityDetailViewModel(coin, {
+        mint: { score, posture: "unbounded-adverse" }, caps: [],
+      })).toMatchObject({
+        authorityPostureLabel: "Unbounded, adverse authority",
+        authorityPostureTone: "elevated",
+        score: { score, bandLabel: "Exposed" },
+        unresolvedQuestions: ["Whole-supply reconciliation remains unverified."],
+        mintIncidents: [],
+      });
+    }
+  });
+
+  it("keeps prudential-alone and recurring reconciliation in the same Managed band without claiming both", () => {
+    const coin = makeMintAuthorityCoin({
+      mintPath: "issuer-direct-mint",
+      authorityPosture: "unbounded-reconciled",
+      confidence: "verified",
+      summary: "Prudential supervision is established; reconciliation remains unresolved.",
+      unresolvedQuestions: ["Confirm recurring whole-supply reconciliation."],
+    });
+    for (const score of [55, 70, 80]) {
+      expect(buildMintAuthorityDetailViewModel(coin, {
+        mint: { score, posture: "unbounded-reconciled" }, caps: [],
+      })).toMatchObject({
+        authorityPostureLabel: "Unbounded, reconciled or prudentially supervised",
+        authorityPostureTone: "elevated",
+        score: { score, bandLabel: "Managed" },
+        unresolvedQuestions: ["Confirm recurring whole-supply reconciliation."],
+      });
+    }
+  });
+
   it.each([
     {
       label: "a Safe with a published threshold",

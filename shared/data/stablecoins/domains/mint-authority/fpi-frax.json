@@ -2,7 +2,7 @@
   "id": "fpi-frax",
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "D14 review 2026-10-03: verified FPI minter_mint(address,uint256) performs _mint without a collateral check, and addMinter(address) is onlyByOwnGov, not collateral-constrained. The reviewed Comptroller root can authorize a recipient-controlled native minter, so a collateral-checking Controller Pool does not bound root issuance. Economic cap is unbounded; unknown reconciliation yields unbounded-reconciliation-unknown. No D29 qualification is asserted.",
     "upgradeability": {

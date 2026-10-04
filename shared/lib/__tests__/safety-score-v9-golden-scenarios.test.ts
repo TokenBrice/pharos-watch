@@ -23,6 +23,13 @@ describe("Safety Score v9 durable golden corpus", () => {
       GOLDEN_SCENARIOS.map((scenario) => [scenario.id, scoreV9GoldenScenario(scenario, V9_CANDIDATE_POLICY_V1)]),
     );
     expect(new Set(GOLDEN_SCENARIOS.map((scenario) => scenario.id)).size).toBe(GOLDEN_SCENARIOS.length);
+    expect(GOLDEN_SCENARIOS).toHaveLength(34);
+    expect(PAIRWISE_CONSTRAINTS).toHaveLength(31);
+    const adverse = traces.get("unbounded-adverse-mint-anchor")!;
+    expect(adverse.finalGrade).toBe("F");
+    expect(adverse.finalScore).toBeGreaterThanOrEqual(30);
+    expect(adverse.finalScore).toBeLessThanOrEqual(39);
+    expect(adverse.bindingCap).toMatchObject({ kind: "signal:centralized-mint:critical", limit: 39 });
 
     for (const scenario of GOLDEN_SCENARIOS) {
       const trace = traces.get(scenario.id)!;

@@ -2,7 +2,7 @@
   "id": "usbd-bima",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "USBD has one reviewed canonical native Liquity-v1-fork CDP issuance deployment on Ethereum. Hemi, Plume, Sonic, BSC, and Nibiru expose the same DebtToken/OFT bytecode and documented local CDP stacks, but their destination balances are not reconciled at fixed observations as independent native liabilities rather than LayerZero OFT supply, so those routes remain in Bridge Risk. Ethereum BorrowerOperations is collateral/debt-ceiling bounded, while the shared BimaCore owner EOA can mint directly without limit, install new mint adapters or TroveManagers, and raise ceilings. LayerZero OFT peer/delegate and destination delivery administration is separately reviewed under Bridge Risk.",
     "controls": [

@@ -255,6 +255,9 @@ function compileEconomicFactorStatuses(
         : `The ${factorKey} datum for ${componentKey}${routeKey ? ` route ${routeKey}` : ""} has not been established.`,
       causeScope: { pillar: "control", componentKey, factorKey, routeKey, exposureId: null, requiredDatum: factorKey },
     }).status;
+  // Reuse the same scoped factor-gap factory for an unanswered cadence and the
+  // internal ledger's whole-supply question. Neither gap changes known authority
+  // semantics; none/NA remain reviewed findings, not missing-factor defaults.
   // An internal ledger establishes the mint process, not reconciliation of
   // otherwise unbounded supply against reserves.
   const missingWholeSupplyReconciliation = review.mint.reconciliation === "internal-ledger" &&

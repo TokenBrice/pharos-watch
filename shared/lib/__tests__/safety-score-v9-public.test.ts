@@ -12,6 +12,7 @@ import {
   buildSafetyScoreV9Response,
   projectSafetyScoreV9Card,
   projectTopDriver,
+  V9PublicCardProjectionError,
 } from "../safety-score-v9/public";
 import type { V9ProductionScoreTrace } from "../safety-score-v9/score";
 import {
@@ -1042,6 +1043,71 @@ describe("Safety Score v9 public projection", () => {
       results,
     });
   }
+
+  it.each(["C", "U"] as const)(
+    "publishes adverse mint quality with its own %s reconciliation gap without relabelling uncertainty as D",
+    (cause) => {
+      const assetId = `adverse-${cause.toLowerCase()}`;
+      const gapId = `${assetId}:gap:mint:reconciliation`;
+      const responsibility = cause === "C" ? "issuer-undisclosed" as const : "unresearched" as const;
+      const input = fixture(assetId, {
+        score: 59, grade: "C", qualityScore: 74.55,
+        pillars: { backing: 92, exit: 90, control: 25 },
+        caps: [cap({ source: "structural", kind: "signal:centralized-mint:high", limit: 59,
+          reason: "Known economically unbounded issuer mint authority.", binding: true })],
+      });
+      input.trace.weakestPillar = { pillar: "control", score: 25 };
+      input.trace.aggregation = { ...input.trace.aggregation!, weakestPillar: "control", weakestScore: 25 };
+      input.control = {
+        ...input.control!,
+        components: [{
+          ...input.control!.components[0]!,
+          posture: "unbounded-adverse", score: 25, cause, causeGapIds: [gapId],
+          scoringDisposition: "bounded-uncertainty",
+        }],
+      };
+      input.trace.unresolvedFacts = [{
+        code: "unresolved-control-identity", path: "control:mint:reconciliation",
+        reason: "Whole-supply reconciliation remains unanswered.",
+        critical: false, responsibility, sourceGapId: gapId, cause,
+        causeGapIds: [gapId], scoringDisposition: "bounded-uncertainty",
+      }];
+      input.trace.adverseAttribution = [{
+        source: "structural-signal", path: "structural:centralized-mint:high",
+        message: "Known economically unbounded issuer mint authority.",
+        responsibility: "measured-adverse",
+      }];
+      const response = SafetyScoreV9CurrentResponseSchema.parse(publish([
+        fixture("independent", { score: 91.8, grade: "A+" }), input,
+      ]));
+      const card = response.cards.find((entry) => entry.id === assetId)!;
+      const mint = card.breakdowns!.control.components[0]!;
+      expect(mint).toMatchObject({
+        posture: "unbounded-adverse", score: 25, cause, scoringDisposition: "bounded-uncertainty",
+      });
+      expect(mint.causeGapRefs!.map((ref) => resolveCauseGapId(response, card, ref))).toEqual([gapId]);
+      const [fact] = [...iterateEvidenceResponsibilityFacts(card.scoreTrace.evidenceResponsibility)];
+      expect(fact).toMatchObject({ 1: "control:mint:reconciliation", 3: responsibility, 4: false, 5: cause });
+      expect(fact![6].map((ref) => resolveCauseGapId(response, card, ref))).toEqual([gapId]);
+      expect(card.scoreTrace.adverseAttribution.items).toEqual(input.trace.adverseAttribution);
+      expect(card.scoreTrace.adverseAttribution.items.some((item) => item.path.includes("reconciliation"))).toBe(false);
+
+      const malformed = structuredClone(input);
+      malformed.control!.components = [{ ...malformed.control!.components[0]!, causeGapIds: [] }];
+      let projectionError: V9PublicCardProjectionError | undefined;
+      try {
+        publish([fixture("independent", { score: 91.8, grade: "A+" }), malformed]);
+      } catch (error) {
+        if (!(error instanceof V9PublicCardProjectionError)) throw error;
+        projectionError = error;
+      }
+      expect(projectionError).toBeInstanceOf(V9PublicCardProjectionError);
+      expect(projectionError!.failures.map((failure) => failure.assetId)).toEqual([assetId]);
+      expect(projectionError!.messageFor(assetId)).toContain("causal gaps");
+      const remainder = publish([fixture("independent", { score: 91.8, grade: "A+" })]);
+      expect(remainder.cards.map((entry) => entry.id)).toEqual(["independent"]);
+    },
+  );
 
   it("rejects empty publications", () => {
     expect(() => publish([])).toThrow(/at least one result/);

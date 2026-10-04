@@ -2,7 +2,7 @@
   "id": "frnt-wyoming",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "Commission-operated role holders can mint native liabilities on seven EVM-compatible deployments, including Hedera, and through the Solana Token-2022 mint authority. UUPS upgraders can replace EVM issuance rules. Fireblocks HSM custody is disclosed, but full live membership and signing independence are not verified.",
     "upgradeability": {

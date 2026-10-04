@@ -103,24 +103,23 @@ describe("structuralClass", () => {
   it("treats immutable CDP as robust and concentrated/algorithmic as fragile", () => {
     expect(structuralClass(coin({ mechanismArchetype: "cdp", authorityPosture: "none-resolved" }))).toBe("robust");
     expect(structuralClass(coin({ mechanismArchetype: "algorithmic" }))).toBe("fragile");
-    expect(structuralClass(coin({ authorityPosture: "unbounded-unreconciled" }))).toBe("fragile");
+    expect(structuralClass(coin({ authorityPosture: "unbounded-adverse" }))).toBe("fragile");
     expect(structuralClass(coin({ collateralQuality: "exotic", mechanismArchetype: "cdp" }))).toBe("fragile");
   });
 
   it("keeps a reconciled unbounded minter fragile, including over a robust archetype", () => {
     // Reconciliation refines the unbounded class, not its economic bound.
-    // Re-annotating an unreconciled issuer as reconciled must preserve the DDR
+    // Re-annotating known adverse authority as reconciled must preserve the DDR
     // stratum; the governed and incident split likewise never relaxes DDR.
     expect(structuralClass(coin({ authorityPosture: "unbounded-reconciled" }))).toBe("fragile");
     expect(
       structuralClass(coin({ mechanismArchetype: "fiat-cash", authorityPosture: "unbounded-reconciled" })),
-    ).toBe(structuralClass(coin({ mechanismArchetype: "fiat-cash", authorityPosture: "unbounded-unreconciled" })));
+    ).toBe(structuralClass(coin({ mechanismArchetype: "fiat-cash", authorityPosture: "unbounded-adverse" })));
   });
 
-  it("keeps 9.32 exposed/concentrated refinements fragile without relaxing DDR", () => {
-    // Finer vocabulary must never relax a verdict: both new postures join the
-    // fragile set; only unbounded-reconciliation-unknown also joins unbounded.
-    expect(structuralClass(coin({ authorityPosture: "unbounded-reconciliation-unknown" }))).toBe("fragile");
+  it("keeps adverse and collateral-gated authority fragile without relaxing DDR", () => {
+    // Both are fragile, but only the adverse unbounded posture is surge-severe.
+    expect(structuralClass(coin({ authorityPosture: "unbounded-adverse" }))).toBe("fragile");
     expect(structuralClass(coin({ authorityPosture: "collateral-gated" }))).toBe(
       structuralClass(coin({ authorityPosture: "concentrated-admin" })),
     );
@@ -159,7 +158,7 @@ describe("DDR curated-posture set membership — pinned", () => {
       baseLive(),
     ).factors.find((factor) => factor.code === "K1_supply_weaponization") ?? null;
 
-  it.each(["unbounded-reconciled", "unbounded-governed", "unbounded-veto-guarded", "unbounded-operationally-governed", "unbounded-unreconciled", "compromised"])(
+  it.each(["unbounded-reconciled", "unbounded-governed", "unbounded-veto-guarded", "unbounded-operationally-governed", "unbounded-adverse", "compromised"])(
     "keeps %s fragile, risky, and severe-surge eligible",
     (posture) => {
       expect(structuralClass(coin({ mechanismArchetype: "fiat-cash", authorityPosture: posture }))).toBe("fragile");
@@ -224,6 +223,41 @@ describe("DDR curated-posture set membership — pinned", () => {
       severity: "weak",
     });
   });
+
+  it("gives adverse authority no new R1 anchor while retaining the governed path's weak anchor", () => {
+    const anchorFor = (mintPath?: DdrCoinStructural["mintPath"]) =>
+      resolveOutlook(
+        event(),
+        coin({ authorityPosture: "unbounded-adverse", mintPath }),
+        baseSupply(),
+        baseLive(),
+      ).factors.find((factor) => factor.code === "R1_noninflatable_supply") ?? null;
+
+    expect(anchorFor()).toBeNull();
+    expect(anchorFor("issuer-direct-mint")).toBeNull();
+    expect(anchorFor("user-collateralized-governed")).toMatchObject({ kind: "anchor", severity: "weak" });
+  });
+
+  it("keeps adverse K1 gated by below-peg supply expansion or a recent mint incident", () => {
+    const killFor = (
+      direction: DdrActiveEventInput["direction"],
+      supply: DdrSupplyContext,
+      mintIncidents?: DdrCoinStructural["mintIncidents"],
+    ) => resolveOutlook(
+      event({ direction, peakDeviationBps: -2000 }),
+      coin({ authorityPosture: "unbounded-adverse", mintIncidents }),
+      supply,
+      baseLive(),
+    ).factors.find((factor) => factor.code === "K1_supply_weaponization") ?? null;
+
+    expect(killFor("below", baseSupply())).toBeNull();
+    expect(killFor("below", baseSupply({ mintSurge: null, change7dPct: null }))).toBeNull();
+    expect(killFor("above", surging())).toBeNull();
+    expect(killFor("below", surging())).toMatchObject({ severity: "severe" });
+    expect(killFor("below", baseSupply({ change7dPct: 21 }))).toMatchObject({ severity: "elevated" });
+    expect(killFor("below", baseSupply(), [{ date: "1970-01-12", status: "active", resolvedAt: null }]))
+      .toMatchObject({ severity: "severe" });
+  });
 });
 
 describe("resolveOutlook — acceptance cases", () => {
@@ -231,7 +265,7 @@ describe("resolveOutlook — acceptance cases", () => {
     const r = resolveOutlook(
       event({ stablecoinId: "usr-resolv", direction: "below", peakDeviationBps: -9025 }),
       coin({
-        authorityPosture: "unbounded-unreconciled",
+        authorityPosture: "unbounded-adverse",
         mintPath: "offchain-attested-minter",
         governance: "centralized",
         custodyModel: "institutional-unregulated",

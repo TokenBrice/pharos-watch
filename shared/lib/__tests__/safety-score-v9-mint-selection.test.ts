@@ -80,28 +80,64 @@ describe("V9 mint inventory selection", () => {
 });
 
 describe("H mint inventory selection", () => {
-  it("does not let a qualified operational-flow row hide a worse native chosen-recipient path", () => {
-    const ref = "ethereum:0x1234567890123456789012345678901234567890";
-    const operational = control("mint:operational", "mint", {
-      authority: { authorityKey: ref, model: "governance", threshold: null },
-      capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
-      issuanceProcess: makeOperationalIssuanceProcess(),
-      issuanceGovernance: { coverage: "complete", incompleteReasons: [], governorAuthorityKey: ref,
-        decisionRule: "affirmative-vote", minUnavoidableDelaySec: 0, votingPower: "lock-escrowed",
-        vetoQuorumBps: null, vetoOverride: null, enumerable: true, nonGovernorUnboundedPathKeys: ["operational#interest"],
-        votingControl: makeCompiledVotingControl(), diagnostics: [] },
-    });
-    const mint = makeReviewedMintInput(operational.controlKey, { reconciliation: "none", supervision: "none" });
-    const positive = evaluateV9EconomicControl(args({ facts: facts([operational]), mint }));
-    expect(positive.components.find((component) => component.kind === "mint")).toMatchObject({ posture: "unbounded-operationally-governed", score: 55 });
-    const discretionary = { ...operational, controlKey: "mint:council", issuanceProcess: undefined, issuanceGovernance: undefined };
-    for (const controls of [[operational, discretionary], [discretionary, operational]]) {
-      const result = evaluateV9EconomicControl(args({ facts: facts(controls), mint }));
-      expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
-        posture: "unbounded-unreconciled", score: 25, controlKeys: [discretionary.controlKey],
+  it.each(["not-applicable", "none", "unknown", "internal-ledger"] as const)(
+    "does not let a qualified 55/60/70 native row hide an adverse path with %s reconciliation", (reconciliation) => {
+      const ref = "ethereum:0x1234567890123456789012345678901234567890";
+      const operational = control("mint:operational", "mint", {
+        authority: { authorityKey: ref, model: "governance", threshold: null },
+        capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
+        issuanceProcess: makeOperationalIssuanceProcess(),
+        issuanceGovernance: { coverage: "complete", incompleteReasons: [], governorAuthorityKey: ref,
+          decisionRule: "affirmative-vote", minUnavoidableDelaySec: 0, votingPower: "lock-escrowed",
+          vetoQuorumBps: null, vetoOverride: null, enumerable: true, nonGovernorUnboundedPathKeys: ["operational#interest"],
+          votingControl: makeCompiledVotingControl(), diagnostics: [] },
       });
-      expect(result.structuralFailures).toContainEqual(expect.objectContaining({
-        kind: "centralized-mint", severity: "high", controlKeys: [discretionary.controlKey],
+      const governed = { ...operational, issuanceProcess: undefined, issuanceGovernance: {
+        ...operational.issuanceGovernance!, minUnavoidableDelaySec: 172800, nonGovernorUnboundedPathKeys: [],
+      } };
+      const vetoGuarded = { ...governed, issuanceGovernance: { ...governed.issuanceGovernance,
+        decisionRule: "minority-veto" as const, minUnavoidableDelaySec: 1209600, vetoQuorumBps: 200, vetoOverride: "none" as const,
+      } };
+      const discretionary = { ...operational, controlKey: "mint:council", issuanceProcess: undefined, issuanceGovernance: undefined };
+      const bridge = control("bridge:external", "bridge", { capabilities: ["mint", "bridge-mint"],
+        capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded" });
+      for (const [qualified, posture, score] of [
+        [operational, "unbounded-operationally-governed", 55],
+        [governed, "unbounded-governed", 60],
+        [vetoGuarded, "unbounded-veto-guarded", 70],
+      ] as const) {
+        const mint = makeReviewedMintInput(qualified.controlKey, { reconciliation, supervision: "none" });
+        const positive = evaluateV9EconomicControl(args({ facts: facts([qualified, bridge]), mint }));
+        expect(positive.components.find((component) => component.kind === "mint")).toMatchObject({ posture, score });
+        for (const controls of [[qualified, discretionary, bridge], [bridge, discretionary, qualified]]) {
+          const result = evaluateV9EconomicControl(args({ facts: facts(controls), mint }));
+          expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
+            posture: "unbounded-adverse", score: 25, controlKeys: [discretionary.controlKey],
+          });
+          expect(result.structuralFailures).toContainEqual(expect.objectContaining({
+            kind: "centralized-mint", severity: "high", controlKeys: [discretionary.controlKey],
+          }));
+        }
+      }
+    },
+  );
+
+  it("keeps adverse native ties canonical and prefers binding global rows over deployment-local ties", () => {
+    const first = control("mint:a", "mint", {
+      capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
+    });
+    const second = { ...first, controlKey: "mint:z" };
+    const local = { ...first, controlKey: "mint:0-local", scope: "deployment" as const,
+      economicLossScope: "deployment" as const, materialSupplyShare: 0.03 };
+    for (const controls of [[first, second, local], [local, second, first]]) {
+      const result = evaluateV9EconomicControl(args({ facts: facts(controls),
+        mint: makeReviewedMintInput(second.controlKey, { reconciliation: "unknown", supervision: "none" }),
+      }));
+      expect(result.components.find((component) => component.componentKey === "mint")).toMatchObject({
+        posture: "unbounded-adverse", score: 25, binding: true, controlKeys: [first.controlKey],
+      });
+      expect(result.components).toContainEqual(expect.objectContaining({
+        componentKey: `mint:deployment:${local.controlKey}`, binding: false, controlKeys: [local.controlKey],
       }));
     }
   });

@@ -2,7 +2,7 @@
   "id": "gho-aave",
   "mintAuthority": {
     "mintPath": "facilitator-bucket-mint",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "GHO has economically unbounded native issuance authority. Core/Lido/Horizon mintAndSupply prefunds a fixed first-hop pool on behalf of the minter, not a caller-chosen recipient; downstream lending/configuration/upgrade reach is not fully closed. The independent 2-of-3 Risk Council retains deposit-free, chosen-recipient GSMs Mainnet mint and maximum 2x Bucket Steward increases per facilitator after strictly more than 86400 seconds. That repeat cooldown is not public notice or a finite lifetime budget: the Council route remains zero-delay and independent of governance. The reviewed ordinary Level-1 payload-visible lower bound is 345603 seconds (1 + 259201 + 86401); global closure and D32 voting census remain incomplete. GHO retains its adverse mint posture; no active mint compromise is alleged. Removing the Council's chosen-recipient mint permission, restricting that mint to the reserve, or imposing a finite aggregate token-governed budget would let ordinary D29 assess GHO, subject to complete execution, authority and D32 voting evidence. None of these changes is established by this review.",
     "upgradeability": {

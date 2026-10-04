@@ -2,7 +2,7 @@
   "id": "stusd-stoneyield",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "stUSD has a wrapper-local arbitrary mint authorization path: DEFAULT_ADMIN_ROLE can grant MINTER_ROLE, whose issueFromWrapper(address,uint256) requires no deposit. The immutable 1B MAX_SUPPLY bounds nominal supply but does not prevent durable unbacked issuance. Circle parent exposure remains inherited separately.",
     "inheritedFrom": "usdc-circle",

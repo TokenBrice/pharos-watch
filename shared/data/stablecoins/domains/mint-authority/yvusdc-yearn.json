@@ -2,7 +2,7 @@
   "id": "yvusdc-yearn",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "The fixed YearnV3Vault implementation is not deposit-only: role_manager can assign ACCOUNTANT_MANAGER and REPORTING_MANAGER; set_accountant accepts a chosen contract. _process_report trusts its arbitrary total_fees, converts them to total_fees_shares without a source-enforced fee ceiling, and _issue_shares credits the chosen accountant. Repeated reports can therefore dilute holders without matching USDC deposits. Immutable bytecode and the DEPOSIT_LIMIT_MANAGER cap do not bound this authorization-powered local fee mint path. Parent usdc-circle issuance remains inherited through the dependency.",
     "inheritedFrom": "usdc-circle",

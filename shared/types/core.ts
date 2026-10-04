@@ -191,9 +191,9 @@ export type MintAuthorityMintPath = (typeof MINT_AUTHORITY_MINT_PATH_VALUES)[num
 
 // Ordered strongest-first, matching `V9_MINT_POSTURE_BAND_ORDER`.
 //
-// Economically unbounded issuance is annotated separately by reconciliation,
-// delayed affirmative governance (D29), minority-veto due process (D30), and
-// active incident. Governance process rungs require complete execution-scope
+// Economically unbounded issuance is annotated separately by independently
+// evidenced reconciliation/supervision, qualified governance process, adverse
+// authority, and active incident. Process rungs require complete execution-scope
 // evidence; `compromised` is reserved for an active mint incident.
 //
 // `none-resolved` and `none-resolved-mint` are the two scopes of the same
@@ -216,8 +216,7 @@ export const MINT_AUTHORITY_POSTURE_VALUES = [
   "unbounded-operationally-governed",
   "concentrated-admin",
   "collateral-gated",
-  "unbounded-reconciliation-unknown",
-  "unbounded-unreconciled",
+  "unbounded-adverse",
   "compromised",
   "unknown",
 ] as const;

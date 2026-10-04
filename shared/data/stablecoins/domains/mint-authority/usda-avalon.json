@@ -2,7 +2,7 @@
   "id": "usda-avalon",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "Ethereum USDa is an immutable AccessControl/OFT token with two current MINT_ROLE-holder proxies. Both minter ProxyAdmins and the token's ADMIN_ROLE, DEFAULT_ADMIN_ROLE, and owner resolve to the same 5-of-6 Safe, which can add minters and upgrade either minter proxy.",
     "upgradeability": {

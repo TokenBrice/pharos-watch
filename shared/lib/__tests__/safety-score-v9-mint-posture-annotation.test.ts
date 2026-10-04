@@ -26,9 +26,8 @@ describe("V9 mint posture bands", () => {
     expect(resolveV9MintPostureBand("unbounded-reconciled")).toBe("managed");
     expect(resolveV9MintPostureBand("concentrated-admin")).toBe("concentrated");
     expect(resolveV9MintPostureBand("collateral-gated")).toBe("concentrated");
-    expect(resolveV9MintPostureBand("unbounded-unreconciled")).toBe("exposed");
+    expect(resolveV9MintPostureBand("unbounded-adverse")).toBe("exposed");
     expect(resolveV9MintPostureBand("compromised")).toBe("exposed");
-    expect(resolveV9MintPostureBand("unbounded-reconciliation-unknown")).toBe("exposed");
     expect(resolveV9MintPostureBand("unknown")).toBeNull();
   });
 
@@ -41,6 +40,19 @@ describe("V9 mint posture bands", () => {
       expect(curatedMintPostureBand(prototypeName as MintAuthorityPosture)).toBeNull();
     }
   });
+
+  it.each(["unbounded-reconciliation-unknown", "unbounded-unreconciled"])(
+    "does not reinterpret retired posture %s as an active band",
+    (posture) => {
+      expect(MINT_AUTHORITY_POSTURE_VALUES).not.toContain(posture);
+      expect(resolveV9MintPostureBand(posture)).toBeNull();
+      expect(curatedMintPostureBand(posture as MintAuthorityPosture)).toBeNull();
+      expect(isNoPrivilegedMintPosture(posture)).toBe(false);
+      expect(isNoPrivilegedMintChainPosture(posture)).toBe(false);
+      expect(isFragileMintPosture(posture)).toBe(false);
+      expect(isUnboundedMintPosture(posture)).toBe(false);
+    },
+  );
 
   it("keeps the band order and label table in sync", () => {
     expect([...V9_MINT_POSTURE_BAND_ORDER].sort()).toEqual(Object.keys(V9_MINT_POSTURE_BANDS).sort());
@@ -72,19 +84,13 @@ describe("mint posture predicates", () => {
     "unbounded-operationally-governed": { noPrivilegedMint: false, noPrivilegedMintChain: false, fragile: true, unbounded: true },
     "concentrated-admin": { noPrivilegedMint: false, noPrivilegedMintChain: false, fragile: true, unbounded: false },
     "collateral-gated": { noPrivilegedMint: false, noPrivilegedMintChain: false, fragile: true, unbounded: false },
-    "unbounded-unreconciled": {
+    "unbounded-adverse": {
       noPrivilegedMint: false,
       noPrivilegedMintChain: false,
       fragile: true,
       unbounded: true,
     },
     compromised: { noPrivilegedMint: false, noPrivilegedMintChain: false, fragile: true, unbounded: true },
-    "unbounded-reconciliation-unknown": {
-      noPrivilegedMint: false,
-      noPrivilegedMintChain: false,
-      fragile: true,
-      unbounded: true,
-    },
     unknown: { noPrivilegedMint: false, noPrivilegedMintChain: false, fragile: false, unbounded: false },
   };
 
@@ -128,6 +134,7 @@ describe("V9 curated mint posture queue", () => {
       { assetId: "agree-exact", curatedPosture: "bounded-admin", derivedPosture: "bounded-admin" },
       { assetId: "agree-band", curatedPosture: "none-resolved", derivedPosture: "bounded-admin" },
       { assetId: "agree-reconciled", curatedPosture: "unbounded-reconciled", derivedPosture: "unbounded-reconciled" },
+      { assetId: "agree-adverse", curatedPosture: "unbounded-adverse", derivedPosture: "unbounded-adverse" },
       { assetId: "agree-mint-only", curatedPosture: "none-resolved-mint", derivedPosture: "bounded-admin" },
       { assetId: "neither", curatedPosture: "unknown", derivedPosture: "unknown" },
     ]);
@@ -136,14 +143,14 @@ describe("V9 curated mint posture queue", () => {
 
   it("classifies each disagreement direction and orders entries by asset id", () => {
     const queue = buildV9CuratedMintPostureQueue([
-      { assetId: "z-optimistic", curatedPosture: "bounded-admin", derivedPosture: "unbounded-unreconciled" },
+      { assetId: "z-optimistic", curatedPosture: "bounded-admin", derivedPosture: "unbounded-adverse" },
       { assetId: "a-adverse", curatedPosture: "concentrated-admin", derivedPosture: "partially-bounded-admin" },
       { assetId: "m-unreviewed", curatedPosture: "unknown", derivedPosture: "bounded-admin" },
       { assetId: "d-unresolved", curatedPosture: "bounded-admin", derivedPosture: "unknown" },
       // No longer suppressed: the curated vocabulary can now express the
       // reconciled rung, so a stale adverse annotation over it is a real
       // curation item.
-      { assetId: "b-stale-adverse", curatedPosture: "unbounded-unreconciled", derivedPosture: "unbounded-reconciled" },
+      { assetId: "b-stale-adverse", curatedPosture: "unbounded-adverse", derivedPosture: "unbounded-reconciled" },
     ]);
     expect(queue.entries.map((entry) => [entry.assetId, entry.disagreement])).toEqual([
       ["a-adverse", "curated-adverse"],
@@ -190,7 +197,7 @@ describe("V9 curated mint posture queue", () => {
     expect(
       buildV9CuratedMintPostureQueue([
         ...inputs.slice(1),
-        { ...inputs[0]!, derivedPosture: "unbounded-unreconciled" },
+        { ...inputs[0]!, derivedPosture: "unbounded-adverse" },
       ]).queueDigest,
     ).not.toBe(buildV9CuratedMintPostureQueue(inputs).queueDigest);
   });

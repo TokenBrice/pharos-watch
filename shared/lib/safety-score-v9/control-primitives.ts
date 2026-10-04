@@ -34,8 +34,7 @@ export type V9MintPosture =
   | "unbounded-governed"
   | "unbounded-veto-guarded"
   | "unbounded-operationally-governed"
-  | "unbounded-reconciliation-unknown"
-  | "unbounded-unreconciled"
+  | "unbounded-adverse"
   | "compromised"
   | "unknown";
 export type V9OracleTier = OracleRiskTier;
@@ -424,12 +423,9 @@ export function deriveV9MintPosture(
     if (isV9GovernedIssuanceQualified(control, governedPolicy, issuanceFacts)) return "unbounded-governed";
     if (isV9OperationallyGovernedIssuanceQualified(control, policy, issuanceFacts).qualified) return "unbounded-operationally-governed";
     if (reconciled || mint.supervision === "prudential") return "unbounded-reconciled";
-    // An internal ledger process resolves the mint-process question, not
-    // reserve reconciliation: retain the unverified rung without supervision.
-    if (mint.reconciliation === "unknown" || mint.reconciliation === "internal-ledger") {
-      return "unbounded-reconciliation-unknown";
-    }
-    return "unbounded-unreconciled";
+    // Reconciliation availability does not change known adverse economics.
+    // Internal-ledger disclosure can resolve a process question, not earn a rung.
+    return "unbounded-adverse";
   }
   if (control.capSemantics.kind === "unknown" || control.claimImpairment === "unknown") return "unknown";
   if (control.claimImpairment === "none") return "none-resolved";

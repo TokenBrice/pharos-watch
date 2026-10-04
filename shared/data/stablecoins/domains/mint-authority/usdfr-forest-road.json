@@ -2,7 +2,7 @@
   "id": "usdfr-forest-road",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "unknown",
     "summary": "D14 review 2026-10-03: verified USDfr.mint(address,uint256) is onlyRole(MINTER_ROLE) but performs _mint without the ReserveManager backing check used by the present controller. DEFAULT_ADMIN_ROLE grantRole can authorize a different minter once accrual is idle. This minter-authorization path, not UUPS upgrade alone or oracle admission, makes economic cap unbounded. Internal-ledger reconciliation implies unbounded-reconciliation-unknown. Existing unresolved upstream root/custody questions remain; no D29 certificate is authored.",
     "upgradeability": {

@@ -2,7 +2,7 @@
   "id": "usdd-tron-dao-reserve",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "USDD uses direct Maker-style token and Join contracts on Tron, Ethereum, and BSC. Each Join can mint only against existing Vat credit/debt accounting, but self-controlled chain-local GovActionsProxy owner paths can immediately authorize mint rails or remove limits with no independent timelock.",
     "upgradeability": {

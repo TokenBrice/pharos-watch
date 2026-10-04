@@ -325,9 +325,8 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       supervision: "none",
     };
     const { review, mintControl } = mintReviewFor(profile);
-    // Pre-9.32 the not-applicable inference swallowed the reviewer's explicit
-    // "unknown"; it now passes through so the evaluator can price the
-    // unbounded-reconciliation-unknown rung instead of the confirmed floor.
+    // Preserve the unanswered factor without turning it into a confirmed
+    // absence finding or granting a reconciliation-based mint rung.
     expect(review.reconciliation).toBe("unknown");
     expect(mintControl?.capSemantics.kind).toBe("unbounded");
   });
@@ -343,6 +342,49 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     expect(review.reconciliation).toBe("unknown");
     expect(mintControl?.capSemantics.kind).toBe("raiseable");
   });
+
+  it.each([
+    { authorityType: "issuer-backend", reconciliation: undefined, cadence: "monthly", expected: "periodic", score: 55 },
+    { authorityType: "issuer-backend", reconciliation: "unknown", cadence: "monthly", expected: "periodic", score: 55 },
+    { authorityType: "issuer-backend", reconciliation: "none", cadence: "monthly", expected: "none", score: 25 },
+    { authorityType: "issuer-backend", reconciliation: "unknown", cadence: "none", expected: "unknown", score: 25 },
+    { authorityType: "issuer-backend", reconciliation: "unknown", cadence: "undisclosed", expected: "unknown", score: 25 },
+    { authorityType: "multisig", reconciliation: "unknown", cadence: "monthly", expected: "unknown", score: 25 },
+    { authorityType: "multisig", reconciliation: undefined, cadence: "monthly", expected: "not-applicable", score: 25 },
+  ] as const)(
+    "prices $authorityType / $reconciliation / $cadence only from admitted authority and reconciliation evidence",
+    ({ authorityType, reconciliation, cadence, expected, score }) => {
+      const profile: MintAuthorityProfile = {
+        ...AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE,
+        controls: [{
+          ...AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE.controls![0]!,
+          authorityType, directMintAbility: "direct", modulesOrGuardsStatus: "none-detected",
+          ...(authorityType === "multisig" ? { threshold: 3, signerCount: 6 } : {}),
+          keyCustodyAttestation: { kind: "hsm", sources: [{
+            label: "Independent key custody review", url: "https://example.com/key-custody",
+          }] },
+        }],
+        reconciliation, supervision: "none",
+        upgradeability: { model: "immutable", canChangeMintLogic: false, sources: [] },
+      };
+      const input = fixedInput();
+      const metaById: Map<string, V9ExtensionRegistryMeta> = metaWith(profile);
+      metaById.set(ASSET_ID, {
+        ...metaById.get(ASSET_ID)!,
+        proofOfReserves: { type: "attestation", url: "https://example.com/attestation", cadence },
+      });
+      const extension = buildSafetyScoreV9BaselineExtension(input, { metaById });
+      const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
+      const asset = compiled.assets[0]!;
+      expect(asset.economicControlReview.mint.reconciliation).toBe(expected);
+      const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
+      expect(evaluated.control.components.find((component) => component.kind === "mint")).toMatchObject({
+        posture: score === 55 ? "unbounded-reconciled" : "unbounded-adverse", score,
+      });
+      expect(asset.economicControlReview.mint.factorStatuses?.reconciliation === undefined)
+        .toBe(expected !== "unknown");
+    },
+  );
 
   it("applies R3 to a prudential reconciled mint without a centralized-mint cap", () => {
     const input = fixedInput();

@@ -2,7 +2,7 @@
   "id": "luausd-lumi-finance",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "LUAUSD mint is onlyOwner. The token's owner is an ERC1967Proxy (0xb422502…) whose own owner is a 3-of-5 Gnosis Safe L2 v1.3.0 (0x7e502e2…) on Arbitrum with no modules and no guard.",
     "upgradeability": {

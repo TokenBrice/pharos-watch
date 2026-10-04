@@ -2,7 +2,7 @@
   "id": "usdh-hubble",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "USDH mint authority is a PDA of the Hubble Protocol program. The live program remains upgradeable through Hubble DAO SPL Governance: three of seven current council votes can meet the 40% approval threshold, early vote tipping is enabled, and the instruction hold-up is zero.",
     "upgradeability": {

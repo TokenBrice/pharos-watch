@@ -36,6 +36,7 @@ import {
   v9Status as status,
   v9TestClockSec,
 } from "../../test-helpers/v9-fixed-input";
+import { localControl } from "./safety-score-v9-fact-set.test-support";
 
 // One day past the newest reviewed registry date the usdc-circle capture below
 // reads, so the extension's "review is later than the scoring clock" guard stays
@@ -514,6 +515,76 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       expect.objectContaining({ id: "alpha", ratingStatus: "pipeline-gap", grade: null, score: null }),
     ]);
     build.mockRestore();
+  });
+
+  it("publishes adverse authority with its real U gap and isolates one malformed causal projection", () => {
+    const inputs = ["alpha", "beta"].map((assetId) => exactFixedInput(assetId));
+    const reviewedAssets = inputs.map((input) => reviewedExtension(input).assets[0]!);
+    const fixedInput = inputs[0]!;
+    fixedInput.activeAssetIds = ["alpha", "beta"];
+    for (const key of ["dexLiqMap", "pegDataById", "liveReserveMap", "liveReserveProvenanceMap",
+      "chainCirculatingById", "aggregateCirculatingById", "resolvedBlacklistStatuses"] as const) {
+      Object.assign(fixedInput[key], inputs[1]![key]);
+    }
+    fixedInput.dexPayloadFingerprint = computeDexLiquidityPayloadFingerprint(fixedInput.dexLiqMap, fixedInput.dexGenerationId);
+    fixedInput.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixedInput);
+    const extension = reviewedExtension(fixedInput);
+    extension.assets = reviewedAssets;
+    const alpha = extension.assets[0]!;
+    alpha.launchedAtSec = AS_OF_SEC - 86400;
+    alpha.controlReview = { state: "reviewed-controls", controls: [localControl({
+      controlKey: "mint:adverse", controlKind: "mint", capabilities: ["mint"],
+      capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
+      economicLossScope: "global-claim", delaySec: null, keyCustody: "hsm",
+      modulesOrGuards: "none-detected",
+      failureDomains: [{ kind: "mint-control", key: "ethereum:0x4444444444444444444444444444444444444444" }],
+    })] };
+    alpha.economicControlReview!.mint = {
+      status: status("known", "v9.control.mint-review"), controlKey: "mint:adverse",
+      reconciliation: "unknown", supervision: "none", latestResolvedIncidentAtSec: null,
+      upgrade: { state: "immutable", controlKey: null },
+    };
+    const input = { fixedInput, extension, publishedAtSec: PUBLISHED_AT_SEC };
+    const baseline = buildSafetyScoreV9Candidate(input);
+    expect(baseline.quarantines).toEqual([]);
+    const mint = baseline.evaluatedSet.assets.find((asset) => asset.assetId === "alpha")!
+      .control.components.find((component) => component.kind === "mint")!;
+    expect(mint).toMatchObject({
+      posture: "unbounded-adverse", score: 25, cause: "U",
+      causeGapIds: ["alpha:gap:economic-control:mint::reconciliation"],
+    });
+    expect(baseline.evaluatedSet.assets.find((asset) => asset.assetId === "alpha")!
+      .scoreInput.pillars.control.structuralSignals).toContainEqual(expect.objectContaining({
+        kind: "centralized-mint", responsibility: "measured-adverse",
+      }));
+    expect(SafetyScoreV9ResponseSchema.parse(baseline.candidate)).toEqual(baseline.candidate);
+
+    const evaluate = vi.spyOn(evaluateSetModule, "evaluateValidatedV9FactSet")
+      .mockImplementationOnce((...args) => {
+        const malformed = structuredClone(evaluateValidatedV9FactSet(...args));
+        const component = malformed.assets.find((asset) => asset.assetId === "alpha")!
+          .control.components.find((row) => row.kind === "mint")!;
+        component.causeGapIds = [];
+        return malformed;
+      });
+    try {
+      const result = buildSafetyScoreV9Candidate(input);
+      expect(result.quarantines).toEqual([expect.objectContaining({
+        assetId: "alpha", code: "evaluation-failed",
+      })]);
+      expect(result.candidate.cards.find((row) => row.id === "alpha")).toMatchObject({
+        ratingStatus: "pipeline-gap", grade: null, score: null,
+      });
+      const ordinaryBeta = baseline.candidate.cards.find((row) => row.id === "beta")!;
+      // Shared-domain census diagnostics are recompiled after quarantine; the
+      // surviving asset still publishes its rated numerical result.
+      expect(result.candidate.cards.find((row) => row.id === "beta")).toMatchObject({
+        id: "beta", ratingStatus: "rated", grade: ordinaryBeta.grade, score: ordinaryBeta.score,
+      });
+      expect(SafetyScoreV9ResponseSchema.parse(result.candidate)).toEqual(result.candidate);
+    } finally {
+      evaluate.mockRestore();
+    }
   });
 
   it.each(["alpha", "gamma"])("publishes %s through a quarantined reserve parent without cascading public-contract failures", (assetId) => {

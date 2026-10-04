@@ -2,7 +2,7 @@
   "id": "aa-falconx-mev-capital",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "inheritedFrom": "usdc-circle",
     "summary": "AA_FalconXUSDC is a native Ethereum IdleCDOTranche token minted exclusively by IdleCDO 0x433d5b17.... Ordinary user issuance transfers USDC, but the owner can enable minted-interest accounting: stopEpoch can create strategy receivables and durable AA fee shares without receiving the corresponding interest in USDC. The strategy APR ceiling is owner-adjustable and was zero (disabled) at Ethereum block 26097122. This least-constrained live accounting path is unbounded under D14; strategy claims are not posted collateral. Mint-logic upgrades remain behind an 86,400-second timelock. No complete reserve-to-liability reconciliation procedure is established for this path.",

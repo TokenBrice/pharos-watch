@@ -2,7 +2,7 @@
   "id": "gusd-gate",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "Ethereum Gate GUSD uses OpenZeppelin AccessControl on a UUPS ERC1967 proxy. MINTER_ROLE is held by one EOA; DEFAULT_ADMIN_ROLE and UPGRADER_ROLE are held by a second EOA with no timelock. These native authority facts are scoped to Ethereum; the GateLayer OFT representation is reviewed under Bridge Risk.",
     "upgradeability": {

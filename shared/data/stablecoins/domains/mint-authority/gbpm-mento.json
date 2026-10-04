@@ -2,7 +2,7 @@
   "id": "gbpm-mento",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "GBPm has native collateral-bound issuance only on Celo through Mento's Liquity V2 BorrowerOperations path. The Monad StableTokenSpoke is a Wormhole NTT burn/mint representation and its ProxyAdmin is scored under Bridge Risk; the Celo 4-of-6 Mento Safe can replace native mint logic or authorize minter changes. D14: native issuance is economically unbounded because the immediate 4/6 Safe can authorize an arbitrary minter that bypasses the normal CDP collateral checks.",
     "upgradeability": {

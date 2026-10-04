@@ -89,12 +89,20 @@ const compiledInput = (assetId: string, pillarScore: number, parent: CompiledV9A
   makeCompiledV9AssetInput({ assetId, pillarScore, parent, sourceKey: "fixture" });
 
 describe("anchor-coherence invariants — active", () => {
-  it("keeps the 32 golden orderings passing unmodified", () => {
+  it("keeps the 31 golden orderings and adverse-anchor calibration unchanged", () => {
     expect(GOLDEN_SCENARIOS).toHaveLength(34);
     expect(PAIRWISE_CONSTRAINTS).toHaveLength(31);
     const traces = new Map(
       GOLDEN_SCENARIOS.map((scenario) => [scenario.id, scoreV9GoldenScenario(scenario, V9_CANDIDATE_POLICY_V1)]),
     );
+    expect(traces.get("unbounded-adverse-mint-anchor")).toMatchObject({
+      finalGrade: "F", bindingCap: { kind: "signal:centralized-mint:critical", limit: 39 },
+    });
+    expect(PAIRWISE_CONSTRAINTS.filter(({ lowerId }) => lowerId === "unbounded-adverse-mint-anchor"))
+      .toMatchObject([
+        { higherId: "unverified-mint-anchor", minGap: 10 },
+        { higherId: "reconciled-unbounded-mint-anchor", minGap: 4 },
+      ]);
     for (const constraint of PAIRWISE_CONSTRAINTS) {
       const higher = traces.get(constraint.higherId)!;
       const lower = traces.get(constraint.lowerId)!;

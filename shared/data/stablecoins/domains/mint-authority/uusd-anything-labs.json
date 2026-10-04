@@ -2,7 +2,7 @@
   "id": "uusd-anything-labs",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "Unity USD (UUSD) is an upgradeable Ownable proxy ERC-20 on BSC operated by Anything Labs; live reads resolve the token owner to a 4/7 Safe that can mint/burn directly and controls the proxy-admin ownership chain.",
     "controls": [

@@ -933,9 +933,7 @@ const V9ControlPolicySchema = z
         // but the privileged administrator surface remains concentrated.
         "collateral-gated": ScoreSchema,
         "unbounded-reconciled": ScoreSchema,
-        // Unknown reconciliation compares the ordinary unbounded family, not generic mint.
-        "unbounded-reconciliation-unknown": ScoreSchema,
-        "unbounded-unreconciled": ScoreSchema,
+        "unbounded-adverse": ScoreSchema,
         compromised: ScoreSchema,
         unknown: ScoreSchema,
       })
@@ -1009,8 +1007,8 @@ const V9ControlPolicySchema = z
         // the next posture rung so a credit can never relabel the posture class.
         seasonedCreditPoints: z.number().finite().min(0).max(10).default(0),
         seasonedCreditMinMonths: z.number().int().positive().default(60),
-        // MINT-LADDER 9.32 (2026-08-21): adverse seasoned credit has its own
-        // ceiling so the new reconciliation-unknown rung cannot lower it.
+        // Adverse authority seasons under a dedicated ceiling, independently
+        // of reconciliation availability or the ordinary credit ladder.
         adverseSeasonedCreditCeiling: ScoreSchema,
       })
       .strict(),
@@ -1044,7 +1042,7 @@ const V9ControlPolicySchema = z
         unattestedEoaPenalty: z.number().finite().nonnegative(),
         // Bounded quorum-granularity adjustment replacing the binary
         // strong-quorum test. Credits can never leapfrog the next posture rung;
-        // penalties can never push below the unbounded-unreconciled rung.
+        // penalties can never push below the unbounded-adverse rung.
         multisigQuorumAdjustment: z
           .object({
             unknownTopology: z.number().finite().max(0),
@@ -1422,7 +1420,6 @@ export function v9UnknownRungLedger(semantic: V9MethodologySemantic): V9UnknownR
     ["backing.reserve.maturityUnknownQuality", 35, reserve.maturityUnknownQuality, Math.min(...reserve.maturityBands.map((band) => band.score)), "credit"],
     ["backing.reserve.concentrationUnknown", 35, backing.boundedUnknownQuality, Math.min(...reserve.concentrationBands.map((band) => band.score)), "credit"],
     ["control.mintPostureQuality.unknown", 45, mint.unknown, Math.min(mint["none-resolved"], mint["bounded-admin"], mint["partially-bounded-admin"], mint["concentrated-admin"], mint["collateral-gated"], mint["unbounded-reconciled"]), "credit"],
-    ["control.mintPostureQuality.unbounded-reconciliation-unknown", 35, mint["unbounded-reconciliation-unknown"], mint["unbounded-reconciled"], "credit"],
     ["control.oracleTierQuality.opaque-or-unknown", 45, control.oracleTierQuality["opaque-or-unknown"], Math.min(...Object.entries(control.oracleTierQuality).filter(([key]) => key !== "opaque-or-unknown").map(([, value]) => value)), "credit"],
     ["control.bridgeTierQuality.opaque-or-unknown", 45, control.bridgeTierQuality["opaque-or-unknown"], Math.min(...Object.entries(control.bridgeTierQuality).filter(([key]) => key !== "opaque-or-unknown").map(([, value]) => value)), "credit"],
     ["control.boundedUnknownQuality", 45, control.boundedUnknownQuality, 45, "credit"],
@@ -1486,7 +1483,7 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
   const operationalQuality = control.mintPostureQuality["unbounded-operationally-governed"];
   const knownMintQualities = [
     ...Object.entries(control.mintPostureQuality)
-      .filter(([posture]) => posture !== "unknown" && posture !== "unbounded-reconciliation-unknown")
+      .filter(([posture]) => posture !== "unknown")
       .map(([, quality]) => quality),
     control.mintPostureGrading.prudentialReconciled,
     control.mintPostureGrading.attestationOnlyReconciled,

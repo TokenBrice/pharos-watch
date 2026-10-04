@@ -2,7 +2,7 @@
   "id": "avusd-avant",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "Avalanche avUSD authorizes the immutable AvantMintingV2 gateway. Complete Routescan-indexed MinterUpdated and role-event replay through block 96542832, corroborated by pinned membership reads, identifies one active token minter and one gateway MINTER_ROLE caller. The common token owner/gateway admin can replace minters and raise the cap; Avant's archived address-specific disclosure identifies this admin as a 3-of-4 MPC controlled by core team members.",
     "upgradeability": {

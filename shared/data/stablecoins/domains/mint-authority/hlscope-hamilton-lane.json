@@ -2,7 +2,7 @@
   "id": "hlscope-hamilton-lane",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "HLSCOPE uses Securitize DSToken UUPS proxies on five independently native issuance chains: Ethereum, Polygon, Optimism, Plume, and Tron. The four EVM deployments share owner EOA 0x59c1eAcE...76Ee; Tron uses owner EOA TGmCDF...6huia. Both reviewed owners hold the trust-service MASTER role on their respective reviewed branches, which authorizes issuance and UUPS upgrades. No permissionless mint route exists. Wormhole's advertised multichain interoperability is reviewed separately under Bridge Risk and is not treated as native Mint Authority.",
     "upgradeability": {

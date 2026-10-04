@@ -2,7 +2,7 @@
   "id": "cngn-compliant-naira",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "cNGN's verified native issuance surface is the Africa Stablecoin Consortium issuer account for the CNGN credit asset on Bantu. The Bantu ledger is the stated source of truth for supply; the authored EVM deployments are destination representations under the Bantu lock-and-mint model, while the Solana deployment is conservatively treated as a representation because independent native liability and reconciliation are not proven. No separate issuer-side economic cap or timelock was evidenced, and no dated whole-supply reconciliation covering the destination representations is accessible.",
     "controls": [

@@ -2,7 +2,7 @@
   "id": "sdusd-dtrinity",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "inheritedFrom": "dusd-dtrinity",
     "summary": "The current Ethereum DStakeTokenV2 implementation has DEFAULT_ADMIN_ROLE migrateCore(newRouter,newCollateralVault). Its interface-consistency checks do not certify backing. The selected router may call mintForRouter(initiator,receiver,assets,shares), which directly _mints caller-selected shares without checking asset transfer or collateral. Full RoleGranted candidate enumeration and current hasRole reads identify TimelockController 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b as the active default admin. This is wrapper-local can-authorize unbacked issuance without upgrading the token. Fraxtal remains the older deposit-backed implementation; Ethereum suffices for the profile-level unbounded verdict. Parent dusd-dtrinity issuance remains inherited through the dependency.",

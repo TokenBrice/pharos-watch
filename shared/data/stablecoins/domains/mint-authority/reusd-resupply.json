@@ -2,7 +2,7 @@
   "id": "reusd-resupply",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "REUSD's immutable token accepts its Core owner or authorized operators for minting without collateral checks or a durable supply ceiling. Core's Voter currently uses a seven-day voting period followed by a one-day execution delay, but Core can directly mint or authorize arbitrary operators through its execution path. Exhaustive operator, hook, guardian and registered-pair closure is not certified, so D14 is unbounded and D29 is withheld; reconciliation is not-applicable.",
     "upgradeability": {

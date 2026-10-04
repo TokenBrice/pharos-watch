@@ -2,7 +2,7 @@
   "id": "oned-gennius",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "ONED native issuance is role-gated and subject to mutable per-minter rate limits. Separate no-code default-admin and beacon-owner addresses can authorize issuance or replace mint logic; the observed 24-hour default-admin transfer delay is not a global mint or upgrade delay.",
     "controls": [

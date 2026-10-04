@@ -2,7 +2,7 @@
   "id": "usdx-axis",
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "Canonical Ethereum USDx has two live MARKET_ROLE holders: USDxMarket and the 3-of-5 governance Safe. The Safe can call token mint directly without market capacity or collateral checks, as well as administer roles, routes and capacity. Proxy upgrades separately require a two-day timelock whose proposer and executor are the same Safe. Offchain reconciliation and key independence remain unverified.",
     "controls": [

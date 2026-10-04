@@ -2,7 +2,7 @@
   "id": "hyusd-hylo",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "The tracked hyUSD SPL mint has mint authority CfuSViqf6wvUKEprLhtuCsSanvfAsMbDmkAW92FP95qe and no freeze authority. Hylo V2 documentation describes independent SOL-LST, cbBTC, HYPE, and USDC collateral pools, including direct USDC minting and redemption. At finalized Solana slot 452213587, the config admin remains Squads vault 12DAP8y5XemtK1pJFNMVVnQugt3PUAbZZr9SmyVvy4Ce, with 3-of-5 voters and a 7,200-second timelock. Both tracked programs name GzyhwK4y7EKPEevAMc2TEpgi1Y3znwj14FUzkHmCMiNP as upgrade authority. Its current Squads account has 3-of-4 voters and a 21,600-second timelock; upgrades can replace the program's mint logic.",
     "upgradeability": {

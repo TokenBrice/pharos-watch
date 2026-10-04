@@ -2,7 +2,7 @@
   "id": "money-defi-money",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "MONEY has native collateralized MainController issuance on Arbitrum, Base and Optimism. The 3-of-7 owner Safes can also authorize arbitrary token minters; BridgeToken.mint checks only minter authorization, without collateral or controller debt ceilings. D14 root native issuance is economically unbounded. LayerZero OFT transfer machinery remains exclusively in Bridge Risk.",
     "controls": [

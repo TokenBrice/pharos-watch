@@ -2,7 +2,7 @@
   "id": "dusd-alto",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "DUSD is a non-proxy token owned by AltoTimelockController, historically controlled by the 4-of-7 Alto Safe with a 3600-second minimum delay. Current minters have ceilings, but owner-only minter admission and ceiling changes can authorize any address without token-level collateral checks. D14 classifies root native issuance as economically unbounded, regardless of current minter collateral gates.",
     "upgradeability": {

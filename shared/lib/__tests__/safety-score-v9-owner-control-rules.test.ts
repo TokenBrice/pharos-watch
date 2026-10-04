@@ -81,8 +81,8 @@ describe("owner Control rules", () => {
       expect(after.reasons.some((row) => row.code === "mint-control-question")).toBe(false);
       expect(after.score).toBe(before.score);
       expect(after.components.find((row) => row.kind === "mint")).toMatchObject({
-        posture: supervision === "prudential" ? "unbounded-reconciled" : "unbounded-reconciliation-unknown",
-        score: 55,
+        posture: supervision === "prudential" ? "unbounded-reconciled" : "unbounded-adverse",
+        score: supervision === "prudential" ? 55 : 25,
       });
       const compromised = evaluateV9EconomicControl(args({ facts: facts([{ ...mintControl, incidentState: "active" }]),
         mint: makeReviewedMintInput(mintControl.controlKey, { reconciliation: "internal-ledger", supervision }),
@@ -125,7 +125,7 @@ describe("owner Control rules", () => {
       .toMatchObject({ posture: "unbounded-reconciled", score: 52, binding: true });
   });
 
-  it.each(["not-applicable", "unknown"] as const)(
+  it.each(["not-applicable", "none", "unknown", "internal-ledger"] as const)(
     "retains recorded adverse mint facts with unresolved review and %s reconciliation", (reconciliation) => {
       const mintControl = control("mint:adverse", "mint", {
         status: boundedUnknown("control.mint-adverse"),
@@ -140,8 +140,8 @@ describe("owner Control rules", () => {
       }));
       expect(unresolved.score).toBe(measured.score);
       expect(unresolved.components.find((row) => row.kind === "mint")).toMatchObject({
-        posture: reconciliation === "unknown" ? "unbounded-reconciliation-unknown" : "unbounded-unreconciled",
-        score: reconciliation === "unknown" ? 59 : 35,
+        posture: "unbounded-adverse",
+        score: 35,
       });
       expect(unresolved.reasons).toContainEqual(expect.objectContaining({ code: "unresolved-mint-authority" }));
       expect(unresolved.structuralFailures).toContainEqual(expect.objectContaining({ kind: "centralized-mint", severity: "high" }));
@@ -161,7 +161,7 @@ describe("owner Control rules", () => {
       mint: makeReviewedMintInput(mintControl.controlKey, { status }), trackRecordMonths: 61,
     }));
     expect(result.components.find((row) => row.kind === "mint")).toMatchObject({
-      posture: "unbounded-unreconciled", score: 35,
+      posture: "unbounded-adverse", score: 35,
     });
     expect(result.reasons).toContainEqual(expect.objectContaining({ code: "mint-control-question" }));
   });
@@ -237,7 +237,7 @@ describe("owner H bounded-stock closure", () => {
     expect(positive.controlFacts![0]!.issuanceProcess?.diagnostics[0]?.code).toBe("external-accounting-trust");
     const failed = { ...minter, issuanceProcess: { ...process, otherClassesQualified: false } };
     const negative = evaluateV9EconomicControl(args({ facts: facts([failed]), mint }));
-    expect(negative.components.find((component) => component.kind === "mint")).toMatchObject({ posture: "unbounded-unreconciled", score: 25 });
+    expect(negative.components.find((component) => component.kind === "mint")).toMatchObject({ posture: "unbounded-adverse", score: 25 });
     expect(negative.processDiagnostics).toContainEqual(expect.objectContaining({ gate: "H4", code: "economic-reach-unclosed" }));
   });
 });

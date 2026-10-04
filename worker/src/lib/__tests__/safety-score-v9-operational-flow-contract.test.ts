@@ -474,7 +474,7 @@ describe("v10.05 source-bound operational and voting compilation", () => {
     profile.controls![1]!.executionScope!.paths[0]!.unavoidableDelaySec = 60;
     const short = compile(profile);
     expect(short.governance).toMatchObject({ coverage: "complete", minUnavoidableDelaySec: 60, votingPower: "live-balance" });
-    expect(deriveV9MintPosture(short.rows[0]!, makeReviewedMintInput(short.rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, short.asset.issuanceFacts)).toBe("unbounded-unreconciled");
+    expect(deriveV9MintPosture(short.rows[0]!, makeReviewedMintInput(short.rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, short.asset.issuanceFacts)).toBe("unbounded-adverse");
     profile.controls![1]!.executionScope!.paths[0]!.unavoidableDelaySec = null;
     expect(compile(profile).governance.minUnavoidableDelaySec).toBeNull();
     profile.controls![1]!.executionScope!.inventory = "partial";
@@ -500,7 +500,7 @@ describe("v10.05 source-bound operational and voting compilation", () => {
     const compiled = compile(profile);
     expect(compiled.governance).toMatchObject({ coverage: "complete", minUnavoidableDelaySec: 0 });
     const minter = compiled.rows.find((row) => row.capabilities.includes("mint"))!;
-    expect(deriveV9MintPosture(minter, makeReviewedMintInput(minter.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, compiled.asset.issuanceFacts)).toBe("unbounded-unreconciled");
+    expect(deriveV9MintPosture(minter, makeReviewedMintInput(minter.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, compiled.asset.issuanceFacts)).toBe("unbounded-adverse");
   });
 
   it.each(["unlisted", "short-change", "unknown-rule", "unbounded"] as const)("requires the single D30-S %s rate-path gate", (failure) => {

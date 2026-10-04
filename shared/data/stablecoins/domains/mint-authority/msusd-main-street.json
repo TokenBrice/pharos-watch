@@ -2,7 +2,7 @@
   "id": "msusd-main-street",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "MSUSD has one canonical native issuance deployment on Ethereum. The Ethereum msUSDV2 token permits minting through configured minter 0x70c0c12 and stakedmsUSD/msY 0x890a5122, both controlled by the Ethereum DAO Safe, which can appoint callers and raise the mutable supply ceiling. Sonic is a LayerZero OFT representation and is assessed only in Bridge Risk.",
     "upgradeability": {

@@ -2140,9 +2140,9 @@ function adaptMintReview(
   // (2026-08-21): reviewed "none" is intentionally passed through here, and a
   // reviewer's EXPLICIT "unknown" on a reviewed non-issuer-backend mint control
   // now also passes through instead of being swallowed by the not-applicable
-  // inference — the reviewer looked and could not establish a cadence, which is
-  // limited evidence (the 9.27 scoped-question doctrine), priced at the
-  // unbounded-reconciliation-unknown rung rather than the confirmed floor.
+  // inference — the reviewer looked and could not establish a cadence. Preserve
+  // that scoped unanswered factor independently of the base rung determined by
+  // known economic authority and qualifying process evidence.
   // Issuer-backend, inherited-share-fallback, and absent-mint-control paths
   // keep the inference: PoR evidence may establish "periodic" for a backend
   // minter, a share wrapper's cadence is structurally not-applicable by the

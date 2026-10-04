@@ -184,14 +184,13 @@ const AUTHORITY_POSTURE_LABELS: Record<string, string> = {
   "none-resolved-mint": "No privileged mint path",
   "bounded-admin": "Bounded admin",
   "partially-bounded-admin": "Partially bounded admin",
-  "unbounded-reconciled": "Unbounded, supervised & reconciled",
+  "unbounded-reconciled": "Unbounded, reconciled or prudentially supervised",
   "unbounded-governed": "Unbounded, governance-delayed",
   "unbounded-veto-guarded": "Unbounded, veto-guarded",
   "unbounded-operationally-governed": "Unbounded, operationally governed",
   "concentrated-admin": "Concentrated admin",
   "collateral-gated": "Collateral-gated admin",
-  "unbounded-reconciliation-unknown": "Unbounded, reconciliation unverified",
-  "unbounded-unreconciled": "Unbounded, unreconciled",
+  "unbounded-adverse": "Unbounded, adverse authority",
   compromised: "Compromised (active incident)",
   unknown: "Unknown",
 };
@@ -203,16 +202,15 @@ const AUTHORITY_POSTURE_TONES: Record<string, MintAuthorityPostureTone> = {
   "none-resolved-mint": "minimized",
   "bounded-admin": "minimized",
   "partially-bounded-admin": "neutral",
-  // Same elevated tone as the rest of the unbounded/concentrated tier: the
-  // supervision is real, but the minting is still economically unbounded.
+  // Reconciliation or prudential supervision is real, but neither imposes
+  // an economic issuance bound.
   "unbounded-reconciled": "elevated",
   "unbounded-governed": "neutral",
   "unbounded-veto-guarded": "neutral",
   "unbounded-operationally-governed": "neutral",
   "concentrated-admin": "elevated",
   "collateral-gated": "elevated",
-  "unbounded-reconciliation-unknown": "elevated",
-  "unbounded-unreconciled": "elevated",
+  "unbounded-adverse": "elevated",
   compromised: "elevated",
   unknown: "neutral",
 };

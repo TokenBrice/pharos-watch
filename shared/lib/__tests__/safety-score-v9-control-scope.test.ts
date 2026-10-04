@@ -78,11 +78,11 @@ describe("V10 exact authority scope", () => {
     scope.paths[0]!.capSemantics = { kind: "unbounded", bound: null };
     scope.paths[0]!.claimImpairment = "unbounded";
     const adverse = { ...partial, ...partialControlScopeSemantics(legacy, compile(scope)) };
-    expect(deriveV9MintPosture(adverse, mint, false, V9_CANDIDATE_POLICY_V1.policy.semantic)).toBe("unbounded-unreconciled");
+    expect(deriveV9MintPosture(adverse, mint, false, V9_CANDIDATE_POLICY_V1.policy.semantic)).toBe("unbounded-adverse");
     expect(evaluate(adverse).score).toBeLessThan(evaluate(legacy).score!);
     scope.paths[0]!.activation = "disabled-final";
     const disabledPartial = { ...partial, ...partialControlScopeSemantics(legacy, compile(scope)) };
-    expect(deriveV9MintPosture(disabledPartial, mint, false, V9_CANDIDATE_POLICY_V1.policy.semantic)).toBe("unbounded-unreconciled");
+    expect(deriveV9MintPosture(disabledPartial, mint, false, V9_CANDIDATE_POLICY_V1.policy.semantic)).toBe("unbounded-adverse");
     expect(evaluate(disabledPartial).score).toBe(evaluate(adverse).score);
     scope.inventory = "complete"; scope.confidence = "verified";
     expect(reviewedControlScopeSemantics(compile(scope).paths).claimImpairment).toBe("none");
@@ -215,7 +215,7 @@ describe("V10 exact authority scope", () => {
     const baseline = evaluate(known);
     for (const review of [mint, { ...mint, status: boundedUnknown() }]) {
       const result = evaluate(adjacentUnknown, review);
-      expect(deriveV9MintPosture(adjacentUnknown, review, false, V9_CANDIDATE_POLICY_V1.policy.semantic)).toBe("unbounded-unreconciled");
+      expect(deriveV9MintPosture(adjacentUnknown, review, false, V9_CANDIDATE_POLICY_V1.policy.semantic)).toBe("unbounded-adverse");
       expect(result.structuralFailures).toContainEqual(expect.objectContaining({ kind: "centralized-mint", severity: "high" }));
       expect(result.score).toBe(baseline.score);
       expect(result.reasons.map((reason) => reason.code)).toContain(adverseField === "cap" ? "unknown-control-mint-ability" : "unknown-control-cap-authority");
@@ -236,7 +236,10 @@ describe("V10 exact authority scope", () => {
     const unknownResult = evaluateV9EconomicControl(makeEconomicControlArgs({
       facts: makeEconomicControlFacts([control]), mint: reconciliationUnknown,
     }));
-    expect(result.score).toBe(unknownResult.score);
+    expect(unknownResult.score).toBe(25);
+    expect(unknownResult.components).toContainEqual(expect.objectContaining({
+      kind: "mint", posture: "unbounded-adverse", score: 25,
+    }));
     expect(result.components).toContainEqual(expect.objectContaining({
       kind: "mint", posture: "unbounded-reconciled", score: 52,
     }));

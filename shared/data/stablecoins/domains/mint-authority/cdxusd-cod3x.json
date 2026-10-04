@@ -2,7 +2,7 @@
   "id": "cdxusd-cod3x",
   "mintAuthority": {
     "mintPath": "facilitator-bucket-mint",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "cdxUSD has one verified native issuance deployment on Base and uses a GHO-style facilitator bucket model. The active 3/9 Safe facilitator mints within a finite bucket, while the immutable token owner is a TimelockController with a 24-hour delay; the facilitator Safe proposes native bucket changes and the 1/8 guardian Safe executes scheduled operations. The inherited LayerZero OFT extension and its bridge administration are scoped only under risk-review.bridgeRouteRisk and do not contribute separate native mint authority. D14: The owner can authorize facilitators and raise buckets on a non-collateral-checked mint path; native issuance is economically unbounded.",
     "upgradeability": {

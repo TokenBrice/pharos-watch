@@ -2,7 +2,7 @@
   "id": "cusd-cap",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "cUSD has native Ethereum collateralized-vault issuance and a separate Tempo TIP-20 issuer path. The Ethereum deposit caps do not bound the root: Tempo role administration can authorize an unrestricted issuer and change supplyCap without a token-level deposit check. D14 semantics are economically unbounded under the Safe-rooted one-day timelock; whole-supply reconciliation is unverified. MegaETH OFT controls remain exclusively in Bridge Risk.",
     "upgradeability": {
