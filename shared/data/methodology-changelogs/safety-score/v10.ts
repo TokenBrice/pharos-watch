@@ -5,7 +5,7 @@ export const SAFETY_SCORE_V10: readonly MethodologyChangelogEntry[] = [
     version: "10.04",
     title: "No unresearched facts for inapplicable maturity or float dust",
     date: "2026-10-04",
-    effectiveAt: 1791109320,
+    effectiveAt: 1791107520,
     summary:
       "Safety Score v10.04 stops publishing two compiler artifacts as unresearched (U) evidence facts that no research could close: maturity gaps on reserves whose maturity is already established as not applicable, either by the policy's maturity-not-applicable classes or by an admitted reviewed bound fact, and whole-asset remainders that are only floating-point accumulation dust. No card score, grade or rating status changes on the replayed production capture; the unresearched fact count falls by 599.",
     impact: [
@@ -25,7 +25,7 @@ export const SAFETY_SCORE_V10: readonly MethodologyChangelogEntry[] = [
     version: "10.03",
     title: "Minority-veto issuance due process",
     date: "2026-10-04",
-    effectiveAt: 1791109320,
+    effectiveAt: 1791107520,
     summary:
       "Safety Score v10.03 implements owner ruling D30: an unavoidable public minority-veto process protects issuance admission against majority capture and ranks above affirmative governance. Qualifying Frankencoin-style issuance derives unbounded-veto-guarded at quality 70 while remaining economically unbounded under unchanged D14. ZCHF, dEURO and JUSD are re-researched against the same fail-closed gates; a cohort member missing any gate keeps its ordinary unbounded rung. On the replayed production base only ZCHF moves, from 44/D to 81/A-.",
     impact: [
