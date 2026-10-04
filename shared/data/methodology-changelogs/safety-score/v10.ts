@@ -2,12 +2,12 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V10: readonly MethodologyChangelogEntry[] = [
   {
-    version: "10.03",
+    version: "10.04",
     title: "No unresearched facts for inapplicable maturity or float dust",
-    date: "2026-10-04",
-    effectiveAt: 1791115200,
+    date: "2026-10-05",
+    effectiveAt: 1791201600,
     summary:
-      "Safety Score v10.03 stops publishing two compiler artifacts as unresearched (U) evidence facts that no research could close: maturity gaps on reserves whose maturity is already established as not applicable, either by the policy's maturity-not-applicable classes or by an admitted reviewed bound fact, and whole-asset remainders that are only floating-point accumulation dust. No card score, grade or rating status changes on the replayed production capture; the unresearched fact count falls by 599.",
+      "Safety Score v10.04 stops publishing two compiler artifacts as unresearched (U) evidence facts that no research could close: maturity gaps on reserves whose maturity is already established as not applicable, either by the policy's maturity-not-applicable classes or by an admitted reviewed bound fact, and whole-asset remainders that are only floating-point accumulation dust. No card score, grade or rating status changes on the replayed production capture; the unresearched fact count falls by 599.",
     impact: [
       "Maturity on an admitted, current reserve row whose class is in the policy's maturityNotApplicableClasses compiles as a known not-applicable fact instead of a U material-reserve-slice-unstructured gap on maturityDaysMax. The factor still scores at the policy's 100 rung and publishes as an included contribution, so backing arithmetic is unchanged. Unadmitted classes, maturity-applicable classes and stale envelopes keep their existing gaps.",
       "The same applies when an admitted, current, exposure-scoped, all-in-scope maturity-applicability bound fact concludes maturity is not applicable to that exact exposure. The evaluator already covered the whole factor with that bound at 100, so the score is unchanged. Rejected, expired, not-yet-elapsed, partial-scope, sub-instrument or non-matching facts keep the gap.",
