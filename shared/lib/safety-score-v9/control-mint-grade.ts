@@ -1,5 +1,5 @@
 import type { V9DeploymentControlFactV2, V9FactGapV3 } from "../../types/safety-score-v9-facts";
-import { isKnownRequired, isV9GovernedIssuanceQualified, resolveV9StatusCauses, type V9ControlPolicy } from "./control-primitives";
+import { isKnownRequired, isV9GovernedIssuanceQualified, isV9VetoGuardedIssuanceQualified, resolveV9StatusCauses, type V9ControlPolicy } from "./control-primitives";
 import { effectiveAuthoritySignatureRequirement } from "./control-scope";
 
 /**
@@ -183,6 +183,7 @@ export function gradeVerifiedControlAuthority(control: V9DeploymentControlFactV2
   const quality = controlPolicy.mintPostureQuality;
   if (control.incidentState === "active") return quality.compromised;
   if (control.capSemantics.kind === "unbounded" || control.claimImpairment === "unbounded") {
+    if (isV9VetoGuardedIssuanceQualified(control, controlPolicy.governedIssuance)) return quality["unbounded-veto-guarded"];
     return isV9GovernedIssuanceQualified(control, controlPolicy.governedIssuance)
       ? quality["unbounded-governed"]
       : quality["unbounded-unreconciled"];

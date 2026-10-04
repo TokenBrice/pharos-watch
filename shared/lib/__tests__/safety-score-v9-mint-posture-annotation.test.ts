@@ -21,6 +21,7 @@ describe("V9 mint posture bands", () => {
     expect(resolveV9MintPostureBand("bounded-admin")).toBe("hardened");
     expect(resolveV9MintPostureBand("partially-bounded-admin")).toBe("governed");
     expect(resolveV9MintPostureBand("unbounded-governed")).toBe("governed");
+    expect(resolveV9MintPostureBand("unbounded-veto-guarded")).toBe("governed");
     expect(resolveV9MintPostureBand("unbounded-reconciled")).toBe("managed");
     expect(resolveV9MintPostureBand("concentrated-admin")).toBe("concentrated");
     expect(resolveV9MintPostureBand("collateral-gated")).toBe("concentrated");
@@ -66,6 +67,7 @@ describe("mint posture predicates", () => {
     },
     "unbounded-reconciled": { noPrivilegedMint: false, noPrivilegedMintChain: false, fragile: true, unbounded: true },
     "unbounded-governed": { noPrivilegedMint: false, noPrivilegedMintChain: false, fragile: true, unbounded: true },
+    "unbounded-veto-guarded": { noPrivilegedMint: false, noPrivilegedMintChain: false, fragile: true, unbounded: true },
     "concentrated-admin": { noPrivilegedMint: false, noPrivilegedMintChain: false, fragile: true, unbounded: false },
     "collateral-gated": { noPrivilegedMint: false, noPrivilegedMintChain: false, fragile: true, unbounded: false },
     "unbounded-unreconciled": {

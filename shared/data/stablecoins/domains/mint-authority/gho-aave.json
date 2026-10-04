@@ -1228,6 +1228,7 @@
     ],
     "economicCapSemantics": "unbounded",
     "governedIssuance": {
+      "decisionRule": "affirmative-vote",
       "governorControlRef": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
       "votingPower": "past-block-checkpoint",
       "votingPowerEvidence": "GovernanceCore.activateVoting snapshots blockhash(block.number - 1), stores proposal.snapshotBlockHash and forwards that hash to the selected VotingMachine. VotingMachineWithProofs validates voting-asset storage proofs against the proposal block hash before VotingStrategy.getVotingPower; balances and delegations are historical Ethereum snapshot state, not transaction-live balances. This voting-power condition is met, but the independently authorized Risk Council mint path and incomplete execution closure make this governed attempt ineligible.",

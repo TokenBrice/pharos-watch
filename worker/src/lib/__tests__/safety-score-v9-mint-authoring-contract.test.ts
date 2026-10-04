@@ -769,6 +769,7 @@ function governedProfile(controls = [governedControl()]): MintAuthorityProfile {
     supervision: "none",
     review: { ...AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE.review, reviewedAt: "2026-10-01" },
     governedIssuance: {
+      decisionRule: "affirmative-vote",
       governorControlRef: SCOPE_CONTROLLER,
       votingPower: "lock-escrowed",
       votingPowerEvidence: "Voting weight remains locked throughout the voting and executable delay interval.",
@@ -823,6 +824,7 @@ describe("Governed issuance compilation (D29)", () => {
       coverage: "complete",
       incompleteReasons: [],
       governorAuthorityKey: SCOPE_CONTROLLER,
+      decisionRule: "affirmative-vote", vetoQuorumBps: null, vetoOverride: null,
       minUnavoidableDelaySec: 172800,
       votingPower: "lock-escrowed",
       enumerable: true,
@@ -879,6 +881,7 @@ describe("Governed issuance compilation (D29)", () => {
     });
     const expected = {
       coverage: "complete", incompleteReasons: [], governorAuthorityKey: SCOPE_CONTROLLER,
+      decisionRule: "affirmative-vote", vetoQuorumBps: null, vetoOverride: null,
       minUnavoidableDelaySec: 172800, votingPower: "lock-escrowed", enumerable: true, nonGovernorUnboundedPathKeys: [],
     };
     expect(rows.map((row) => row.issuanceGovernance)).toEqual([expected, expected]);
@@ -913,7 +916,7 @@ describe("Governed issuance compilation (D29)", () => {
     expect(governedRows(nongovernor).rows[0]!.issuanceGovernance?.incompleteReasons).toEqual(["governor-not-governance"]);
   });
 
-  it.each(["lock-escrowed", "past-block-checkpoint"] as const)(
+  it.each(["holding-period-weighted", "lock-escrowed", "past-block-checkpoint"] as const)(
     "rejects signer-quorum claims on the %s governor during compilation", (votingPower) => {
       for (const field of ["weightedQuorum", "threshold", "signerCount"] as const) {
         const governor = governedControl();
@@ -1001,7 +1004,7 @@ describe("Governed issuance compilation (D29)", () => {
       .toEqual(["Contract minter:issuance"]);
   });
 
-  it.each(["2 of 3", "2 out of 3", "2/3", "2-of-3", "Safe", "safes", "multisig", "multisigs", "multisignature", "threshold", "thresholds", "signer", "signers", "owner", "owners", "quorum"])(
+  it.each(["2 of 3", "2 out of 3", "2/3", "2-of-3", "one of three", "two out of five", "three-of-five", "two signatures from five", "signature", "signatures", "Safe", "safes", "multisig", "multisigs", "multisignature", "threshold", "thresholds", "signer", "signers", "owner", "owners", "quorum"])(
     "rejects contract certificates containing %s party phrasing", (phrasing) => {
       const minter = governedControl("0x2222222222222222222222222222222222222222", {
         label: "Contract minter", authorityType: "contract", role: "direct-minter",
@@ -1155,4 +1158,246 @@ describe("Governed issuance compilation (D29)", () => {
     profile.governedIssuance!.reviewedAt = "2026-10-03";
     expect(governedRows(profile).rows[0]!.issuanceGovernance?.incompleteReasons).toEqual(["governed-review-expired"]);
   });
+});
+
+function vetoProfile(): MintAuthorityProfile {
+  const governor = governedControl(undefined, { directMintAbility: "parameter-only" });
+  const registry = governedControl("0x2222222222222222222222222222222222222222", {
+    label: "Guarded registry", authorityType: "contract", role: "minter-admin", directMintAbility: "can-authorize",
+  });
+  const vetoPath = governor.executionScope!.paths[0]!;
+  Object.assign(vetoPath, {
+    id: "veto-admission", targetDeployment: registry.executionScope!.controllerDeployment,
+    capabilities: ["parameter-change"], entrypoints: ["0x12345678", "0xabcdef01"],
+    capSemantics: { kind: "bounded", bound: { amount: 1, unit: "supply-fraction" } }, claimImpairment: "none",
+  });
+  registry.executionScope!.paths[0]!.unavoidableDelaySec = 1_209_600;
+  const profile = governedProfile([governor, registry]);
+  profile.authorityPosture = "unbounded-veto-guarded";
+  profile.governedIssuance = {
+    ...profile.governedIssuance!, decisionRule: "minority-veto", votingPower: "holding-period-weighted",
+    veto: {
+      quorumBps: 200, entrypoints: ["0x12345678", "0xabcdef01"], override: "symmetric-vote-destruction",
+      evidence: "Pinned executable fixture: every application remains vetoable for fourteen days by two percent of holding-duration votes, and neutralizing votes costs the caller an equal number.",
+    },
+  };
+  return profile;
+}
+
+describe("Minority-veto issuance compilation (D30)", () => {
+  it("admits a selector-complete veto path targeting the governor-rooted issuance registry", () => {
+    const { compiledRows } = governedRows(vetoProfile());
+    const registry = compiledRows.find((row) => row.authority?.model === "contract")!;
+    expect(registry.issuanceGovernance).toMatchObject({
+      coverage: "complete", incompleteReasons: [], decisionRule: "minority-veto",
+      minUnavoidableDelaySec: 1_209_600, vetoQuorumBps: 200, vetoOverride: "symmetric-vote-destruction",
+      nonGovernorUnboundedPathKeys: [],
+    });
+  });
+
+  it.each(["disabled", "dormant", "wrong-capability", "missing-selector", "wrong-target"] as const)(
+    "fails coverage for a %s veto execution path", (failure) => {
+      const profile = vetoProfile();
+      const path = profile.controls![0]!.executionScope!.paths[0]!;
+      if (failure === "disabled") path.activation = "disabled-final";
+      if (failure === "dormant") path.activation = "disabled-reactivatable";
+      if (failure === "wrong-capability") path.capabilities = ["mint"];
+      if (failure === "missing-selector") path.entrypoints = ["0x12345678"];
+      if (failure === "wrong-target") path.targetDeployment = SCOPE_CONTROLLER;
+      expect(governedRows(profile).compiledRows[0]!.issuanceGovernance).toMatchObject({
+        coverage: "incomplete", incompleteReasons: ["governor-without-veto-path:Guarded registry"],
+      });
+    },
+  );
+
+  it("requires veto coverage for each guarded controller, not a matching sibling", () => {
+    const profile = vetoProfile();
+    const second = governedControl("0x4444444444444444444444444444444444444444", {
+      label: "Second registry", authorityType: "contract", role: "minter-admin", directMintAbility: "can-authorize",
+    });
+    second.executionScope!.paths[0]!.unavoidableDelaySec = 1_209_600;
+    profile.controls!.push(second);
+    expect(governedRows(profile).compiledRows[0]!.issuanceGovernance?.incompleteReasons)
+      .toEqual(["governor-without-veto-path:Second registry"]);
+    const scope = profile.controls![0]!.executionScope!;
+    scope.paths.push({ ...scope.paths[0]!, id: "veto-second", targetDeployment: second.executionScope!.controllerDeployment });
+    expect(governedRows(profile).compiledRows[0]!.issuanceGovernance?.coverage).toBe("complete");
+  });
+
+  it.each(["unbounded", "unknown"] as const)("rejects a veto governor's %s issuance bypass", (kind) => {
+    const profile = vetoProfile();
+    const scope = profile.controls![0]!.executionScope!;
+    scope.paths.push({
+      ...scope.paths[0]!, id: "governor-bypass", targetDeployment: SCOPE_CONTROLLER,
+      capabilities: ["mint"], capSemantics: { kind, bound: null }, claimImpairment: kind,
+    });
+    expect(governedRows(profile).compiledRows[0]!.issuanceGovernance?.incompleteReasons)
+      .toContain("governor-carries-unbounded-path");
+  });
+
+  it("retains structured veto-governor rooting and the minimum, never summed, window", () => {
+    const profile = vetoProfile();
+    const registry = profile.controls![1]!;
+    registry.executionScope!.paths.push({
+      ...registry.executionScope!.paths[0]!, id: "second-admission", unavoidableDelaySec: 1_209_599,
+    });
+    registry.executionScope!.pin.signerIdentity = "A 2 of 3 threshold council controls this registry.";
+    registry.executionScope!.observedState = { ...registry.executionScope!.pin };
+    expect(governedRows(profile).compiledRows[0]!.issuanceGovernance).toMatchObject({
+      coverage: "complete", minUnavoidableDelaySec: 1_209_599,
+      nonGovernorUnboundedPathKeys: ["Guarded registry:issuance", "Guarded registry:second-admission"],
+    });
+  });
+
+  it("keeps admitted minter exercise delay separate from the admission window", () => {
+    const profile = vetoProfile();
+    const registry = profile.controls![1]!;
+    registry.executionScope!.paths.push({
+      ...registry.executionScope!.paths[0]!, id: "admitted-minter-exercise", unavoidableDelaySec: 0,
+    });
+    expect(governedRows(profile).compiledRows[0]!.issuanceGovernance).toMatchObject({
+      coverage: "complete", minUnavoidableDelaySec: 0, nonGovernorUnboundedPathKeys: [],
+    });
+  });
+
+  it.each(["missing", "incomplete"] as const)(
+    "names every unguarded controller when the veto governor is %s", (state) => {
+      const profile = vetoProfile();
+      if (state === "missing") profile.governedIssuance!.governorControlRef = "ethereum:0x3333333333333333333333333333333333333333";
+      else profile.controls![0]!.executionScope!.inventory = "partial";
+      expect(governedRows(profile).compiledRows[0]!.issuanceGovernance?.incompleteReasons)
+        .toContain("governor-without-veto-path:Guarded registry");
+    },
+  );
+});
+
+function monetaryVetoProfile(): MintAuthorityProfile {
+  const profile = vetoProfile();
+  const registry = profile.controls![1]!;
+  registry.executionScope!.paths.push({
+    ...registry.executionScope!.paths[0]!, id: "deposit-interest",
+    capSemantics: { kind: "raiseable", bound: null }, claimImpairment: "bounded", unavoidableDelaySec: 172800,
+  });
+  profile.governedIssuance!.monetaryPolicyPaths = [{
+    controlRef: registry.executionScope!.controllerDeployment, pathId: "deposit-interest",
+    rateCapPpm: 100000, rateChangeDelaySec: 172800, rateChangeRule: "minority-replaceable",
+    evidence: "Pinned formula fixture limits interest to deposits times the hard-capped rate times time; rate replacement is minority-blockable for at least two days.",
+  }];
+  return profile;
+}
+
+function restructureVetoProfile(): MintAuthorityProfile {
+  const profile = vetoProfile();
+  const bootstrap = governedControl("0x3333333333333333333333333333333333333333", {
+    label: "Bootstrap", authorityType: "eoa", role: "direct-minter", directMintAbility: "direct",
+  });
+  bootstrap.executionScope!.paths[0]!.activation = "disabled-reactivatable";
+  bootstrap.executionScope!.paths[0]!.unavoidableDelaySec = 0;
+  profile.controls!.push(bootstrap);
+  const governorScope = profile.controls![0]!.executionScope!;
+  governorScope.paths.push({
+    ...governorScope.paths[0]!, id: "veto-bootstrap", targetDeployment: bootstrap.executionScope!.controllerDeployment,
+  });
+  profile.governedIssuance!.enumerability.capacityReads.push("equity()");
+  profile.governedIssuance!.veto = {
+    ...profile.governedIssuance!.veto!, override: "insolvency-gated-restructure",
+    restructure: {
+      entrypoints: ["0xabcdef01"], equityThresholdUnits: 1000, observedEquityUnits: 2000,
+      dependentPaths: [{ controlRef: bootstrap.executionScope!.controllerDeployment, pathId: "issuance" }],
+      evidence: "Pinned equity exceeds the insolvency gate; only restructure can produce zero share supply, which alone reactivates bootstrap. Redemption retains one share.",
+    },
+  };
+  return profile;
+}
+
+describe("Minority-veto monetary policy and restructure (D30-S/D30-R)", () => {
+  it("excludes qualified formula-bound interest from the fourteen-day admission minimum", () => {
+    expect(governedRows(monetaryVetoProfile()).compiledRows[0]!.issuanceGovernance).toMatchObject({
+      coverage: "complete", minUnavoidableDelaySec: 1_209_600, nonGovernorUnboundedPathKeys: [],
+    });
+  });
+
+  it.each(["mint", "bridge-mint"] as const)("requires a monetary-policy review on a raiseable %s path", (capability) => {
+    const profile = monetaryVetoProfile();
+    profile.controls![1]!.executionScope!.paths[1]!.capabilities = [capability];
+    delete profile.governedIssuance!.monetaryPolicyPaths;
+    expect(governedRows(profile).compiledRows[0]!.issuanceGovernance?.incompleteReasons)
+      .toEqual(["monetary-policy-path-unreviewed:Guarded registry:deposit-interest"]);
+  });
+
+  it.each([
+    ["delay short", { rateChangeDelaySec: 172799 }],
+    ["unrestricted rate", { rateChangeRule: "unrestricted" }],
+    ["unknown rate rule", { rateChangeRule: "unknown" }],
+  ] as const)("rejects %s monetary-policy evidence", (_name, change) => {
+    const profile = monetaryVetoProfile();
+    Object.assign(profile.governedIssuance!.monetaryPolicyPaths![0]!, change);
+    expect(governedRows(profile).compiledRows[0]!.issuanceGovernance?.incompleteReasons)
+      .toEqual(["monetary-policy-path-inadmissible:Guarded registry:deposit-interest"]);
+  });
+
+  it.each(["missing", "disabled", "unbounded-cap", "unbounded-impairment"] as const)(
+    "rejects a %s listed monetary-policy path", (failure) => {
+      const profile = monetaryVetoProfile();
+      const path = profile.controls![1]!.executionScope!.paths[1]!;
+      if (failure === "missing") profile.governedIssuance!.monetaryPolicyPaths![0]!.pathId = "missing-path";
+      if (failure === "disabled") path.activation = "disabled-final";
+      if (failure === "unbounded-cap") path.capSemantics = { kind: "unbounded", bound: null };
+      if (failure === "unbounded-impairment") path.claimImpairment = "unbounded";
+      expect(governedRows(profile).compiledRows[0]!.issuanceGovernance?.incompleteReasons)
+        .toContain(`monetary-policy-path-inadmissible:Guarded registry:${failure === "missing" ? "missing-path" : "deposit-interest"}`);
+    },
+  );
+
+  it("keeps affirmative D29 compilation unchanged when no monetary-policy block is authored", () => {
+    const profile = monetaryVetoProfile();
+    profile.governedIssuance!.decisionRule = "affirmative-vote";
+    delete profile.governedIssuance!.veto;
+    delete profile.governedIssuance!.monetaryPolicyPaths;
+    profile.controls![0]!.executionScope!.paths[0]!.capabilities = ["upgrade"];
+    expect(governedRows(profile).compiledRows[0]!.issuanceGovernance?.incompleteReasons).toEqual([]);
+  });
+
+  it("excludes only certified dormant restructure-dependent paths while equity is above the gate", () => {
+    expect(governedRows(restructureVetoProfile()).compiledRows[0]!.issuanceGovernance).toMatchObject({
+      coverage: "complete", minUnavoidableDelaySec: 1_209_600,
+      vetoOverride: "insolvency-gated-restructure", nonGovernorUnboundedPathKeys: [],
+    });
+  });
+
+  it("requires a reachable certificate path containing every declared restructure selector", () => {
+    const profile = restructureVetoProfile();
+    profile.governedIssuance!.veto!.restructure!.entrypoints = ["0xeeeeeeee"];
+    expect(governedRows(profile).compiledRows[0]!.issuanceGovernance?.incompleteReasons)
+      .toEqual(["restructure-path-missing"]);
+    const scope = profile.controls![0]!.executionScope!;
+    scope.paths.push({
+      ...scope.paths[0]!, id: "restructure", entrypoints: ["0xeeeeeeee"], activation: "disabled-final",
+    });
+    expect(governedRows(profile).compiledRows[0]!.issuanceGovernance?.incompleteReasons)
+      .toEqual(["restructure-path-missing"]);
+    scope.paths[scope.paths.length - 1]!.activation = "active";
+    expect(governedRows(profile).compiledRows[0]!.issuanceGovernance?.coverage).toBe("complete");
+  });
+
+  it.each([1999, 1001, 1000, 999, 0])("fails closed at equity %i and retains bootstrap reach", (observedEquityUnits) => {
+    const profile = restructureVetoProfile();
+    profile.governedIssuance!.veto!.restructure!.observedEquityUnits = observedEquityUnits;
+    expect(governedRows(profile).compiledRows[0]!.issuanceGovernance).toMatchObject({
+      coverage: "incomplete", incompleteReasons: ["restructure-reachable"],
+      minUnavoidableDelaySec: 0, nonGovernorUnboundedPathKeys: ["Bootstrap:issuance"],
+    });
+  });
+
+  it.each(["missing-control", "missing-path", "active"] as const)(
+    "rejects %s restructure-dependent reach", (failure) => {
+      const profile = restructureVetoProfile();
+      const dependent = profile.governedIssuance!.veto!.restructure!.dependentPaths[0]!;
+      if (failure === "missing-control") dependent.controlRef = "ethereum:0x4444444444444444444444444444444444444444";
+      if (failure === "missing-path") dependent.pathId = "missing-path";
+      if (failure === "active") profile.controls![2]!.executionScope!.paths[0]!.activation = "active";
+      expect(governedRows(profile).compiledRows[0]!.issuanceGovernance?.incompleteReasons)
+        .toContain(`restructure-dependent-path-invalid:${failure === "missing-control" ? dependent.controlRef : "Bootstrap"}:${dependent.pathId}`);
+    },
+  );
 });

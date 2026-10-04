@@ -4,113 +4,3544 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
-    "summary": "dEURO admits arbitrary new minters through a permissionless fee/application process unless nDEPS holders veto them. Once admitted, a minter can mint durable tokens to a chosen recipient without a token-level collateral or numeric cap check; MintingHub collateral constraints do not bind arbitrary admitted minters. D14 is unbounded and unreconciled. Transferable current-state nDEPS voting and veto-only admission do not qualify as sole flash-resistant token-governor issuance.",
+    "summary": "dEURO has permissionless minter proposals with a proven 14-day application window and a 2% holding-period-weighted nDEPS minority veto. New or transferred shares carry no immediate votes. It nevertheless fails D30: existing zero-window hub/Position interest-loss settlement can mint a reserve shortfall without a new veto admission (V2/V4), and DEPSWrapper can asymmetrically reduce its own accumulated voting age at a qualified caller's request (V3). D30-R admits the currently unreachable insolvency restructure, but does not cover this wrapper override. Savings monetary-policy paths satisfy D30-S and remain reserve-bounded. Economically unbounded, unreconciled remains the fail-closed ordinary rung.",
     "upgradeability": {
       "model": "immutable",
       "implementationAddresses": [
         "0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
       ],
       "canChangeMintLogic": false,
-      "observedAt": "2026-07-21",
-      "observedBlock": 25579955,
+      "observedAt": "2026-10-04",
+      "observedBlock": 26117214,
       "sources": [
         {
-          "label": "dEURO token on Etherscan",
-          "url": "https://etherscan.io/address/0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+          "label": "Verified deployed source 0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
         },
         {
-          "label": "Ethereum PublicNode RPC",
-          "url": "https://ethereum-rpc.publicnode.com"
+          "label": "Ethereum pinned block 26117214",
+          "url": "https://eth.blockscout.com/block/26117214"
         }
       ]
     },
     "controls": [
       {
-        "label": "Frankencoin-style minting module (collateral mint)",
+        "chain": "ethereum",
+        "deploymentRefs": [
+          "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+        ],
+        "observedAt": "2026-10-04",
+        "observedBlock": 26117214,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "address": "0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
+        "label": "dEURO minter registry and closed module census",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
+        "capDescription": "The registry has no token-level economic ceiling; permissionless admission admits arbitrary-recipient mint code. Existing modules enforce their reviewed source/family/reserve constraints except the separately identified durable-interest reserve-shortfall path.",
+        "evidence": "Ethereum block 26117214 (0x17a158c02f6d95a7e3e54099f49ddc3ffba70b9909443b1d806e4964c8c28dc3), eth_getCode exactly matches verified dEURO runtime (10866 bytes; keccak256 0x0459afd840c25376c3c5991883bc81af8642bc044b4b4563b014e20f5a53b9cc). eth_call MIN_APPLICATION_PERIOD()=1209600, MIN_FEE()=1000e18, reserve()=0xc71104001a3ccda1bef1177d765831bd1bfe8ee6. suggestMinter 0xd1a15ff1 accepts arbitrary addresses after the fee and public delay; mint and mintWithReserve impose only minter authorization, not collateral. Complete eth_getLogs over 22088283..26117214 found 25 MinterApplied and one MinterDenied: 24 active modules, no pending applications. All module runtime bytecodes match verified source. The eight initial admissions had applicationPeriod=0 and fee=0, not a veto window. Bridges are source-transfer/immutable-limit gated; Savings and FrontendGateway clamp payouts to equity; PositionRoller flash mint is repaid in the same transaction; Position principal is collateral/family-limit gated. However existing hub/Position coverLoss paths mint a reserve shortfall including uncapped accrued interest, then burn principal and collect interest back to reserve. This is a zero-admission-delay non-veto unbounded durable-interest path, separately certified, failing V2/V4. initialize 0xf399e22e requires both supplies zero; eth_call totalSupply()=1259984883950306066870475 and Equity.totalSupply()=2519030651522408755046305278, and an initialize eth_call reverted at the pin. Closure is current-state, not a claim that an entirely extinguished system cannot reinitialize.",
+        "sources": [
+          {
+            "label": "Verified deployed source 0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+          },
+          {
+            "label": "Verified deployed source 0xc71104001a3ccda1bef1177d765831bd1bfe8ee6",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc71104001a3ccda1bef1177d765831bd1bfe8ee6"
+          },
+          {
+            "label": "Verified deployed source 0x8b3c41c649b9c7085c171cbb82337889b3604618",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8b3c41c649b9c7085c171cbb82337889b3604618"
+          },
+          {
+            "label": "Verified deployed source 0x4ce0ab2fc21bd27a47a64f594fdf7654ea57dc79",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ce0ab2fc21bd27a47a64f594fdf7654ea57dc79"
+          },
+          {
+            "label": "Verified deployed source 0x073493d73258c4beb6542e8dd3e1b2891c972303",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x073493d73258c4beb6542e8dd3e1b2891c972303"
+          },
+          {
+            "label": "Verified deployed source 0x5c49c00f897bd970d964bfb8c3065ae65a180994",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5c49c00f897bd970d964bfb8c3065ae65a180994"
+          },
+          {
+            "label": "Verified deployed source 0xd03cd3ea55e67bc61b78a0d70ee93018e2182dbe",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd03cd3ea55e67bc61b78a0d70ee93018e2182dbe"
+          },
+          {
+            "label": "Verified deployed source 0x2353d16869f717bfcd22dabc0adbf4dca62c609f",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2353d16869f717bfcd22dabc0adbf4dca62c609f"
+          },
+          {
+            "label": "Verified deployed source 0x3ed40fa0e5c803e807ebd51355e388006f9e1fee",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3ed40fa0e5c803e807ebd51355e388006f9e1fee"
+          },
+          {
+            "label": "Verified deployed source 0x0423f419de1c44151b6b000e2daa51859c1d5d2a",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0423f419de1c44151b6b000e2daa51859c1d5d2a"
+          },
+          {
+            "label": "Verified deployed source 0x3ef3d03efcc1338d6210946f8cf5fb1a8b630341",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3ef3d03efcc1338d6210946f8cf5fb1a8b630341"
+          },
+          {
+            "label": "Verified deployed source 0x20b0a153ff16c7b1e962fd3d3352a00cf019f1a7",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x20b0a153ff16c7b1e962fd3d3352a00cf019f1a7"
+          },
+          {
+            "label": "Verified deployed source 0xdc6450e91f49048fbff5f424046985fa03be0130",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdc6450e91f49048fbff5f424046985fa03be0130"
+          },
+          {
+            "label": "Verified deployed source 0xb66a40934a996373fa7602de9820c6bf3e8c9afe",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb66a40934a996373fa7602de9820c6bf3e8c9afe"
+          },
+          {
+            "label": "Verified deployed source 0x05620f4bb92246b4e067ebc0b6f5c7ff6b771702",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x05620f4bb92246b4e067ebc0b6f5c7ff6b771702"
+          },
+          {
+            "label": "Verified deployed source 0xb4ff7412f08c22d7381885e8bda9ee9825092fd1",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb4ff7412f08c22d7381885e8bda9ee9825092fd1"
+          },
+          {
+            "label": "Verified deployed source 0x935332d2899eade0083f5398a154186ad8e5cf56",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x935332d2899eade0083f5398a154186ad8e5cf56"
+          },
+          {
+            "label": "Verified deployed source 0x8a7984b542c38661e4fd04029a8f181fd088ac59",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8a7984b542c38661e4fd04029a8f181fd088ac59"
+          },
+          {
+            "label": "Verified deployed source 0xf3432984b708a3dc9555ccf9b4dbc78015deb8fd",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3432984b708a3dc9555ccf9b4dbc78015deb8fd"
+          },
+          {
+            "label": "Verified deployed source 0x73f38ca06b27eaefb1612d062d885f58924f5897",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x73f38ca06b27eaefb1612d062d885f58924f5897"
+          },
+          {
+            "label": "Verified deployed source 0x4dfd460d54854087af195906a2f260aa483a13b1",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4dfd460d54854087af195906a2f260aa483a13b1"
+          },
+          {
+            "label": "Verified deployed source 0x76d8f514554a4a8e5d6103875f2dd7a67543692b",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x76d8f514554a4a8e5d6103875f2dd7a67543692b"
+          },
+          {
+            "label": "Verified deployed source 0xdcc4835b34b4c05eb28b8defac4d03d00842c2df",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdcc4835b34b4c05eb28b8defac4d03d00842c2df"
+          },
+          {
+            "label": "Verified deployed source 0x760233b90e45d186a9a98e911b115f7f4b90d3d9",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x760233b90e45d186a9a98e911b115f7f4b90d3d9"
+          },
+          {
+            "label": "Verified deployed source 0x66acc54a0c64255137b8993cb4972b0901684f7b",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x66acc54a0c64255137b8993cb4972b0901684f7b"
+          },
+          {
+            "label": "Verified deployed source 0x5c22d5b752b2121fae7f6f0069252b03b2f7c5cd",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5c22d5b752b2121fae7f6f0069252b03b2f7c5cd"
+          },
+          {
+            "label": "Verified deployed source 0x167144d66ac1d02eaafca3649ef3305ea31ee5a8",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x167144d66ac1d02eaafca3649ef3305ea31ee5a8"
+          },
+          {
+            "label": "Verified deployed source 0x3a3985a96b1b51e6d914bc7c9e89fd6ba6defe81",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3a3985a96b1b51e6d914bc7c9e89fd6ba6defe81"
+          },
+          {
+            "label": "Verified deployed source 0x103747924e74708139a9400e4ab4bea79fffa380",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x103747924e74708139a9400e4ab4bea79fffa380"
+          },
+          {
+            "label": "Ethereum pinned block 26117214",
+            "url": "https://eth.blockscout.com/block/26117214"
+          },
+          {
+            "label": "Ethereum JSON-RPC (eth_call, eth_getCode, eth_getLogs)",
+            "url": "https://eth-mainnet.g.alchemy.com"
+          }
+        ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
+          "reviewedAt": "2026-10-04",
+          "observedAt": "2026-10-04",
+          "expiresAt": "2027-01-02",
+          "reviewer": "Sol v10.03 D30 cohort (ResearchDEURO)",
+          "confidence": "verified",
+          "sources": [
+            {
+              "label": "Verified deployed source 0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+            },
+            {
+              "label": "Verified deployed source 0xc71104001a3ccda1bef1177d765831bd1bfe8ee6",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc71104001a3ccda1bef1177d765831bd1bfe8ee6"
+            },
+            {
+              "label": "Verified deployed source 0x8b3c41c649b9c7085c171cbb82337889b3604618",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8b3c41c649b9c7085c171cbb82337889b3604618"
+            },
+            {
+              "label": "Verified deployed source 0x4ce0ab2fc21bd27a47a64f594fdf7654ea57dc79",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ce0ab2fc21bd27a47a64f594fdf7654ea57dc79"
+            },
+            {
+              "label": "Verified deployed source 0x073493d73258c4beb6542e8dd3e1b2891c972303",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x073493d73258c4beb6542e8dd3e1b2891c972303"
+            },
+            {
+              "label": "Verified deployed source 0x5c49c00f897bd970d964bfb8c3065ae65a180994",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5c49c00f897bd970d964bfb8c3065ae65a180994"
+            },
+            {
+              "label": "Verified deployed source 0xd03cd3ea55e67bc61b78a0d70ee93018e2182dbe",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd03cd3ea55e67bc61b78a0d70ee93018e2182dbe"
+            },
+            {
+              "label": "Verified deployed source 0x2353d16869f717bfcd22dabc0adbf4dca62c609f",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2353d16869f717bfcd22dabc0adbf4dca62c609f"
+            },
+            {
+              "label": "Verified deployed source 0x3ed40fa0e5c803e807ebd51355e388006f9e1fee",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3ed40fa0e5c803e807ebd51355e388006f9e1fee"
+            },
+            {
+              "label": "Verified deployed source 0x0423f419de1c44151b6b000e2daa51859c1d5d2a",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0423f419de1c44151b6b000e2daa51859c1d5d2a"
+            },
+            {
+              "label": "Verified deployed source 0x3ef3d03efcc1338d6210946f8cf5fb1a8b630341",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3ef3d03efcc1338d6210946f8cf5fb1a8b630341"
+            },
+            {
+              "label": "Verified deployed source 0x20b0a153ff16c7b1e962fd3d3352a00cf019f1a7",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x20b0a153ff16c7b1e962fd3d3352a00cf019f1a7"
+            },
+            {
+              "label": "Verified deployed source 0xdc6450e91f49048fbff5f424046985fa03be0130",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdc6450e91f49048fbff5f424046985fa03be0130"
+            },
+            {
+              "label": "Verified deployed source 0xb66a40934a996373fa7602de9820c6bf3e8c9afe",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb66a40934a996373fa7602de9820c6bf3e8c9afe"
+            },
+            {
+              "label": "Verified deployed source 0x05620f4bb92246b4e067ebc0b6f5c7ff6b771702",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x05620f4bb92246b4e067ebc0b6f5c7ff6b771702"
+            },
+            {
+              "label": "Verified deployed source 0xb4ff7412f08c22d7381885e8bda9ee9825092fd1",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb4ff7412f08c22d7381885e8bda9ee9825092fd1"
+            },
+            {
+              "label": "Verified deployed source 0x935332d2899eade0083f5398a154186ad8e5cf56",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x935332d2899eade0083f5398a154186ad8e5cf56"
+            },
+            {
+              "label": "Verified deployed source 0x8a7984b542c38661e4fd04029a8f181fd088ac59",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8a7984b542c38661e4fd04029a8f181fd088ac59"
+            },
+            {
+              "label": "Verified deployed source 0xf3432984b708a3dc9555ccf9b4dbc78015deb8fd",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3432984b708a3dc9555ccf9b4dbc78015deb8fd"
+            },
+            {
+              "label": "Verified deployed source 0x73f38ca06b27eaefb1612d062d885f58924f5897",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x73f38ca06b27eaefb1612d062d885f58924f5897"
+            },
+            {
+              "label": "Verified deployed source 0x4dfd460d54854087af195906a2f260aa483a13b1",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4dfd460d54854087af195906a2f260aa483a13b1"
+            },
+            {
+              "label": "Verified deployed source 0x76d8f514554a4a8e5d6103875f2dd7a67543692b",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x76d8f514554a4a8e5d6103875f2dd7a67543692b"
+            },
+            {
+              "label": "Verified deployed source 0xdcc4835b34b4c05eb28b8defac4d03d00842c2df",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdcc4835b34b4c05eb28b8defac4d03d00842c2df"
+            },
+            {
+              "label": "Verified deployed source 0x760233b90e45d186a9a98e911b115f7f4b90d3d9",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x760233b90e45d186a9a98e911b115f7f4b90d3d9"
+            },
+            {
+              "label": "Verified deployed source 0x66acc54a0c64255137b8993cb4972b0901684f7b",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x66acc54a0c64255137b8993cb4972b0901684f7b"
+            },
+            {
+              "label": "Verified deployed source 0x5c22d5b752b2121fae7f6f0069252b03b2f7c5cd",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5c22d5b752b2121fae7f6f0069252b03b2f7c5cd"
+            },
+            {
+              "label": "Verified deployed source 0x167144d66ac1d02eaafca3649ef3305ea31ee5a8",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x167144d66ac1d02eaafca3649ef3305ea31ee5a8"
+            },
+            {
+              "label": "Verified deployed source 0x3a3985a96b1b51e6d914bc7c9e89fd6ba6defe81",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3a3985a96b1b51e6d914bc7c9e89fd6ba6defe81"
+            },
+            {
+              "label": "Verified deployed source 0x103747924e74708139a9400e4ab4bea79fffa380",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x103747924e74708139a9400e4ab4bea79fffa380"
+            },
+            {
+              "label": "Ethereum pinned block 26117214",
+              "url": "https://eth.blockscout.com/block/26117214"
+            },
+            {
+              "label": "Ethereum JSON-RPC (eth_call, eth_getCode, eth_getLogs)",
+              "url": "https://eth-mainnet.g.alchemy.com"
+            }
+          ],
+          "pin": {
+            "position": "ethereum:26117214",
+            "hash": "0x17a158c02f6d95a7e3e54099f49ddc3ffba70b9909443b1d806e4964c8c28dc3",
+            "runtimeIdentity": "keccak256:0x0459afd840c25376c3c5991883bc81af8642bc044b4b4563b014e20f5a53b9cc",
+            "signerIdentity": "Permissionless proposal on dEURO; minority-veto governor 0xc71104001a3ccda1bef1177d765831bd1bfe8ee6. Existing admitted modules execute their fixed runtime paths."
+          },
+          "observedState": {
+            "position": "ethereum:26117214",
+            "hash": "0x17a158c02f6d95a7e3e54099f49ddc3ffba70b9909443b1d806e4964c8c28dc3",
+            "runtimeIdentity": "keccak256:0x0459afd840c25376c3c5991883bc81af8642bc044b4b4563b014e20f5a53b9cc",
+            "signerIdentity": "Permissionless proposal on dEURO; minority-veto governor 0xc71104001a3ccda1bef1177d765831bd1bfe8ee6. Existing admitted modules execute their fixed runtime paths."
+          },
+          "inventory": "complete",
+          "closure": {
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
+          },
+          "paths": [
+            {
+              "id": "permissionless-veto-admission",
+              "targetDeployment": "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xd1a15ff1",
+                "0xb52c696d",
+                "0x40c10f19",
+                "0xb2901db8",
+                "0xd1fa5e98",
+                "0x08b8bb4b"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 1209600,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "legacy-interest-shortfall",
+              "targetDeployment": "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xd1fa5e98"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "token-burn-and-accounting",
+              "targetDeployment": "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xd9169487",
+                "0x3644e515",
+                "0x1a46c7e9",
+                "0x76c7a3c7",
+                "0x7f2eecc3",
+                "0xa0cc6a68",
+                "0xdd62ed3e",
+                "0x095ea7b3",
+                "0xe94a0102",
+                "0x70a08231",
+                "0x42966c68",
+                "0x79cc6790",
+                "0x315f3e72",
+                "0xc7641866",
+                "0x16e0e538",
+                "0xe093c8a4",
+                "0x5a049a70",
+                "0x6ebdb8ee",
+                "0x313ce567",
+                "0x9b404da6",
+                "0x84b0196e",
+                "0x91a0ac6a",
+                "0xaa5dd7f1",
+                "0xaa271e1a",
+                "0xd38bb009",
+                "0xf46eccc4",
+                "0x06fdde03",
+                "0x7ecebe00",
+                "0xd505accf",
+                "0x55f57510",
+                "0xef55bec6",
+                "0xcd3293de",
+                "0x01ffc9a7",
+                "0x95d89b41",
+                "0x18160ddd",
+                "0xa9059cbb",
+                "0x23b872dd",
+                "0xe3ee160e"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "zero-supply-initialization",
+              "targetDeployment": "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xf399e22e"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "disabled-reactivatable",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-8b3c41c6",
+              "targetDeployment": "ethereum:0x8b3c41c649b9c7085c171cbb82337889b3604618",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xaf5806b6",
+                "0xdbe8a4c2",
+                "0x0f2f8e86",
+                "0x338c5371",
+                "0x2bf78dd8",
+                "0x664e9704",
+                "0xf09e9e3a",
+                "0x7eb81bb3",
+                "0x25e28124",
+                "0xc14a9f05",
+                "0x8f1d3776",
+                "0x2e2c6314",
+                "0x3bb84940",
+                "0x93a83a24",
+                "0x9d8ff2a6",
+                "0xe6ac5ea4",
+                "0x7d0ea02d",
+                "0x35a4b349",
+                "0x4cb95914",
+                "0x643745fb",
+                "0xe6ca1df2",
+                "0xe85cde6f",
+                "0x01ffc9a7"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "collateral-gated",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-4ce0ab2f",
+              "targetDeployment": "ethereum:0x4ce0ab2fc21bd27a47a64f594fdf7654ea57dc79",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x89523c33",
+                "0xc2a1c506",
+                "0x5e871b54"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-073493d7",
+              "targetDeployment": "ethereum:0x073493d73258c4beb6542e8dd3e1b2891c972303",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x338c5371",
+                "0x77267ec3",
+                "0xa696399d",
+                "0x753ef93c",
+                "0xbdc65152",
+                "0x4e65037e",
+                "0xd99ce42b",
+                "0x06a7b376",
+                "0xb079f163",
+                "0x82b8eaf5",
+                "0x91a0ac6a",
+                "0xb6f83c17",
+                "0x2e4b20ab",
+                "0x1de252e4",
+                "0xb77cd1c7",
+                "0x85bd12d1",
+                "0x9e2363dc",
+                "0xc1983610",
+                "0xcbcf9676",
+                "0xfd449c14",
+                "0x1f7cdd5f",
+                "0x534cb30d",
+                "0x1791dc5e",
+                "0x829a0476"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "raiseable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-5c49c00f",
+              "targetDeployment": "ethereum:0x5c49c00f897bd970d964bfb8c3065ae65a180994",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x1acad25d",
+                "0xdbe8a4c2",
+                "0xa34ca630",
+                "0xf8327950",
+                "0x1aa7a559",
+                "0x3f6068fb",
+                "0xc2db9d32",
+                "0x978bbdb9",
+                "0x3603f35d",
+                "0xd8f21747",
+                "0xf09a4016",
+                "0x8467004f",
+                "0x57eac85f",
+                "0x7b025bdf",
+                "0x01137702",
+                "0xd8db60c9",
+                "0xe28a0b96",
+                "0x8da5cb5b",
+                "0xc275a200",
+                "0xdc3012ef",
+                "0xe0c01f79",
+                "0x736a3f05",
+                "0xa0737776",
+                "0x715018a6",
+                "0x368da021",
+                "0xfe9f9d2c",
+                "0xf2fde38b",
+                "0x9bfe870b",
+                "0x2a5e3231",
+                "0x423bf674",
+                "0x31266ff5",
+                "0x7dfb6626",
+                "0x5ebdc043"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-d03cd3ea",
+              "targetDeployment": "ethereum:0xd03cd3ea55e67bc61b78a0d70ee93018e2182dbe",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x42966c68",
+                "0x9e41b44d",
+                "0xd395d24b",
+                "0x7439ae59",
+                "0x1ce832b5",
+                "0xa4d66daf",
+                "0xa0712d68",
+                "0x449a52f8",
+                "0x4f02c420"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "bounded",
+                "bound": {
+                  "amount": 1000000,
+                  "unit": "token-units"
+                }
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-2353d168",
+              "targetDeployment": "ethereum:0x2353d16869f717bfcd22dabc0adbf4dca62c609f",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x42966c68",
+                "0x9e41b44d",
+                "0xd395d24b",
+                "0x7439ae59",
+                "0x1ce832b5",
+                "0xa4d66daf",
+                "0xa0712d68",
+                "0x449a52f8",
+                "0x4f02c420"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "bounded",
+                "bound": {
+                  "amount": 1000000,
+                  "unit": "token-units"
+                }
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-3ed40fa0",
+              "targetDeployment": "ethereum:0x3ed40fa0e5c803e807ebd51355e388006f9e1fee",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x42966c68",
+                "0x9e41b44d",
+                "0xd395d24b",
+                "0x7439ae59",
+                "0x1ce832b5",
+                "0xa4d66daf",
+                "0xa0712d68",
+                "0x449a52f8",
+                "0x4f02c420"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "bounded",
+                "bound": {
+                  "amount": 1000000,
+                  "unit": "token-units"
+                }
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-0423f419",
+              "targetDeployment": "ethereum:0x0423f419de1c44151b6b000e2daa51859c1d5d2a",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x42966c68",
+                "0x9e41b44d",
+                "0xd395d24b",
+                "0x7439ae59",
+                "0x1ce832b5",
+                "0xa4d66daf",
+                "0xa0712d68",
+                "0x449a52f8",
+                "0x4f02c420"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "bounded",
+                "bound": {
+                  "amount": 1000000,
+                  "unit": "token-units"
+                }
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-3ef3d03e",
+              "targetDeployment": "ethereum:0x3ef3d03efcc1338d6210946f8cf5fb1a8b630341",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x42966c68",
+                "0x9e41b44d",
+                "0xd395d24b",
+                "0x7439ae59",
+                "0x1ce832b5",
+                "0xa4d66daf",
+                "0xa0712d68",
+                "0x449a52f8",
+                "0x4f02c420"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "bounded",
+                "bound": {
+                  "amount": 100000,
+                  "unit": "token-units"
+                }
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-20b0a153",
+              "targetDeployment": "ethereum:0x20b0a153ff16c7b1e962fd3d3352a00cf019f1a7",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x42966c68",
+                "0x9e41b44d",
+                "0xd395d24b",
+                "0x7439ae59",
+                "0x1ce832b5",
+                "0xa4d66daf",
+                "0xa0712d68",
+                "0x449a52f8",
+                "0x4f02c420"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "bounded",
+                "bound": {
+                  "amount": 100000,
+                  "unit": "token-units"
+                }
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-dc6450e9",
+              "targetDeployment": "ethereum:0xdc6450e91f49048fbff5f424046985fa03be0130",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x42966c68",
+                "0x9e41b44d",
+                "0xd395d24b",
+                "0x7439ae59",
+                "0x1ce832b5",
+                "0xa4d66daf",
+                "0xa0712d68",
+                "0x449a52f8",
+                "0x4f02c420"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "bounded",
+                "bound": {
+                  "amount": 100000,
+                  "unit": "token-units"
+                }
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-b66a4093",
+              "targetDeployment": "ethereum:0xb66a40934a996373fa7602de9820c6bf3e8c9afe",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x42966c68",
+                "0x9e41b44d",
+                "0xd395d24b",
+                "0x7439ae59",
+                "0x1ce832b5",
+                "0xa4d66daf",
+                "0xa0712d68",
+                "0x449a52f8",
+                "0x4f02c420"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "bounded",
+                "bound": {
+                  "amount": 100000,
+                  "unit": "token-units"
+                }
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-05620f4b",
+              "targetDeployment": "ethereum:0x05620f4bb92246b4e067ebc0b6f5c7ff6b771702",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x42966c68",
+                "0x9e41b44d",
+                "0xd395d24b",
+                "0x7439ae59",
+                "0x1ce832b5",
+                "0xa4d66daf",
+                "0xa0712d68",
+                "0x449a52f8",
+                "0x4f02c420"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "bounded",
+                "bound": {
+                  "amount": 100000,
+                  "unit": "token-units"
+                }
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-b4ff7412",
+              "targetDeployment": "ethereum:0xb4ff7412f08c22d7381885e8bda9ee9825092fd1",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x42966c68",
+                "0x9e41b44d",
+                "0xd395d24b",
+                "0x7439ae59",
+                "0x1ce832b5",
+                "0xa4d66daf",
+                "0xa0712d68",
+                "0x449a52f8",
+                "0x4f02c420"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "bounded",
+                "bound": {
+                  "amount": 1000000,
+                  "unit": "token-units"
+                }
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-935332d2",
+              "targetDeployment": "ethereum:0x935332d2899eade0083f5398a154186ad8e5cf56",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x42966c68",
+                "0x9e41b44d",
+                "0xd395d24b",
+                "0x7439ae59",
+                "0x1ce832b5",
+                "0xa4d66daf",
+                "0xa0712d68",
+                "0x449a52f8",
+                "0x4f02c420"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "bounded",
+                "bound": {
+                  "amount": 100000,
+                  "unit": "token-units"
+                }
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-8a7984b5",
+              "targetDeployment": "ethereum:0x8a7984b542c38661e4fd04029a8f181fd088ac59",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x42966c68",
+                "0x9e41b44d",
+                "0xd395d24b",
+                "0x7439ae59",
+                "0x1ce832b5",
+                "0xa4d66daf",
+                "0xa0712d68",
+                "0x449a52f8",
+                "0x4f02c420"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "bounded",
+                "bound": {
+                  "amount": 100000,
+                  "unit": "token-units"
+                }
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-f3432984",
+              "targetDeployment": "ethereum:0xf3432984b708a3dc9555ccf9b4dbc78015deb8fd",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x42966c68",
+                "0x9e41b44d",
+                "0xd395d24b",
+                "0x7439ae59",
+                "0x1ce832b5",
+                "0xa4d66daf",
+                "0xa0712d68",
+                "0x449a52f8",
+                "0x4f02c420"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "bounded",
+                "bound": {
+                  "amount": 100000,
+                  "unit": "token-units"
+                }
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-73f38ca0",
+              "targetDeployment": "ethereum:0x73f38ca06b27eaefb1612d062d885f58924f5897",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x42966c68",
+                "0x9e41b44d",
+                "0xd395d24b",
+                "0x7439ae59",
+                "0x1ce832b5",
+                "0xa4d66daf",
+                "0xa0712d68",
+                "0x449a52f8",
+                "0x4f02c420"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "bounded",
+                "bound": {
+                  "amount": 100000,
+                  "unit": "token-units"
+                }
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-4dfd460d",
+              "targetDeployment": "ethereum:0x4dfd460d54854087af195906a2f260aa483a13b1",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x42966c68",
+                "0x9e41b44d",
+                "0xd395d24b",
+                "0x7439ae59",
+                "0x1ce832b5",
+                "0xa4d66daf",
+                "0xa0712d68",
+                "0x449a52f8",
+                "0x4f02c420"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "bounded",
+                "bound": {
+                  "amount": 100000,
+                  "unit": "token-units"
+                }
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-76d8f514",
+              "targetDeployment": "ethereum:0x76d8f514554a4a8e5d6103875f2dd7a67543692b",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x42966c68",
+                "0x9e41b44d",
+                "0xd395d24b",
+                "0x7439ae59",
+                "0x1ce832b5",
+                "0xa4d66daf",
+                "0xa0712d68",
+                "0x449a52f8",
+                "0x4f02c420"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "bounded",
+                "bound": {
+                  "amount": 100000,
+                  "unit": "token-units"
+                }
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-dcc4835b",
+              "targetDeployment": "ethereum:0xdcc4835b34b4c05eb28b8defac4d03d00842c2df",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x42966c68",
+                "0x9e41b44d",
+                "0xd395d24b",
+                "0x7439ae59",
+                "0x1ce832b5",
+                "0xa4d66daf",
+                "0xa0712d68",
+                "0x449a52f8",
+                "0x4f02c420"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "bounded",
+                "bound": {
+                  "amount": 10000000,
+                  "unit": "token-units"
+                }
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-760233b9",
+              "targetDeployment": "ethereum:0x760233b90e45d186a9a98e911b115f7f4b90d3d9",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x77267ec3",
+                "0xa696399d",
+                "0xbdc65152",
+                "0x4e65037e",
+                "0xd99ce42b",
+                "0x88d742c2",
+                "0x4f24d20a",
+                "0x06a7b376",
+                "0xb079f163",
+                "0x82b8eaf5",
+                "0x91a0ac6a",
+                "0xb6f83c17",
+                "0x2e4b20ab",
+                "0xcdb95c3b",
+                "0x1de252e4",
+                "0xb77cd1c7",
+                "0x85bd12d1",
+                "0xa776f78c",
+                "0xc1983610",
+                "0xfd449c14",
+                "0x1f7cdd5f",
+                "0x534cb30d",
+                "0x1791dc5e"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "raiseable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-66acc54a",
+              "targetDeployment": "ethereum:0x66acc54a0c64255137b8993cb4972b0901684f7b",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xaf5806b6",
+                "0xdbe8a4c2",
+                "0x0f2f8e86",
+                "0x2bf78dd8",
+                "0x664e9704",
+                "0xf09e9e3a",
+                "0xad5c4648",
+                "0x4e65037e",
+                "0x9064ae7c",
+                "0xcb2b87b2",
+                "0x25e28124",
+                "0x86a7c248",
+                "0xc14a9f05",
+                "0x8f1d3776",
+                "0xe29bf421",
+                "0x06a7b376",
+                "0xb079f163",
+                "0xf32ddc2d",
+                "0xd6d87bdb",
+                "0x91a0ac6a",
+                "0xe6ac5ea4",
+                "0xb6f83c17",
+                "0x2e4b20ab",
+                "0x35a4b349",
+                "0x643745fb",
+                "0x26a49e37",
+                "0x1de252e4",
+                "0x187dcc05",
+                "0xe85cde6f",
+                "0x01ffc9a7",
+                "0x534cb30d"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "collateral-gated",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "module-5c22d5b7",
+              "targetDeployment": "ethereum:0x5c22d5b752b2121fae7f6f0069252b03b2f7c5cd",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x89523c33",
+                "0xc2a1c506",
+                "0x84a2496b",
+                "0xb7daf954",
+                "0x5e871b54",
+                "0xb227696b"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ],
+          "extensions": {
+            "exhaustive": true,
+            "paginationEnd": "eth_getLogs closed at Ethereum block 26117214: 25 applications, 1 denial; 24 active modules and 103 PositionOpened records.",
+            "sourceRuntimeCorrespondence": true,
+            "entries": [
+              {
+                "deployment": "ethereum:0x8b3c41c649b9c7085c171cbb82337889b3604618",
+                "runtimeIdentity": "keccak256:0x8423e43a80f2a96891648608a879c14cadc9b6d6558059dbcf65f60b0fc9a231",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x4ce0ab2fc21bd27a47a64f594fdf7654ea57dc79",
+                "runtimeIdentity": "keccak256:0xcb4cd5e9ee56c5b64163b8684de4bfea08ad31dd7983bdfab569402542553f09",
+                "kind": "module",
+                "pathRefs": [
+                  "module-4ce0ab2f"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x073493d73258c4beb6542e8dd3e1b2891c972303",
+                "runtimeIdentity": "keccak256:0x3c904b01c50f76481e144940c297b417e3b8278a26f21af6ffa7441d0b9e6640",
+                "kind": "module",
+                "pathRefs": [
+                  "module-073493d7"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x5c49c00f897bd970d964bfb8c3065ae65a180994",
+                "runtimeIdentity": "keccak256:0xe0a8d51ddebfa31d8cc8d1698ef10ada60a19f2ba5d5dae8b6509bb1d473af7d",
+                "kind": "module",
+                "pathRefs": [
+                  "module-5c49c00f"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xd03cd3ea55e67bc61b78a0d70ee93018e2182dbe",
+                "runtimeIdentity": "keccak256:0xde9259ff43f6204e82902675006b981d8e8ec2ce7188be86e43a1c00763f5b16",
+                "kind": "module",
+                "pathRefs": [
+                  "module-d03cd3ea"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x2353d16869f717bfcd22dabc0adbf4dca62c609f",
+                "runtimeIdentity": "keccak256:0x18360ae138f4e44714add2427f7f8aeb772ca45352fc19b49bb04ff4802c8bf0",
+                "kind": "module",
+                "pathRefs": [
+                  "module-2353d168"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x3ed40fa0e5c803e807ebd51355e388006f9e1fee",
+                "runtimeIdentity": "keccak256:0x5b4d673f02bdaa88303286fea883dc7c8e89b8474a97f742234fbb9cc64c44f1",
+                "kind": "module",
+                "pathRefs": [
+                  "module-3ed40fa0"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x0423f419de1c44151b6b000e2daa51859c1d5d2a",
+                "runtimeIdentity": "keccak256:0x84c231b764355066e10164c768ae638fa756ff61b8df97c20a10cf3513deaed3",
+                "kind": "module",
+                "pathRefs": [
+                  "module-0423f419"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x3ef3d03efcc1338d6210946f8cf5fb1a8b630341",
+                "runtimeIdentity": "keccak256:0xbe34b24f4ee7dda7cb0c7f86cb4af5f0dcafb26477fb0652c510ee4664d335fc",
+                "kind": "module",
+                "pathRefs": [
+                  "module-3ef3d03e"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x20b0a153ff16c7b1e962fd3d3352a00cf019f1a7",
+                "runtimeIdentity": "keccak256:0x4c8121d0a4af0190b3d6aebcacf767e9043c7f23011fc1ae5e9c4c9847604734",
+                "kind": "module",
+                "pathRefs": [
+                  "module-20b0a153"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xdc6450e91f49048fbff5f424046985fa03be0130",
+                "runtimeIdentity": "keccak256:0x7e600645d60dde134c13ffa228f497932ec68884503ee7879e43b82ca2d93272",
+                "kind": "module",
+                "pathRefs": [
+                  "module-dc6450e9"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xb66a40934a996373fa7602de9820c6bf3e8c9afe",
+                "runtimeIdentity": "keccak256:0xc0f69d0df76785c3ae3a439bd2ab822b3d60c22d4d43308b8f8d82f2d7205b15",
+                "kind": "module",
+                "pathRefs": [
+                  "module-b66a4093"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x05620f4bb92246b4e067ebc0b6f5c7ff6b771702",
+                "runtimeIdentity": "keccak256:0x8a196a04c8b1b78a9c7163b9387cdd7151bf0afdca74f3fa847d91c3fe1c8b08",
+                "kind": "module",
+                "pathRefs": [
+                  "module-05620f4b"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xb4ff7412f08c22d7381885e8bda9ee9825092fd1",
+                "runtimeIdentity": "keccak256:0x60f7913b884fdb041998af6e2c401eb65984464164317e8a9b6e3c66c3eeaa32",
+                "kind": "module",
+                "pathRefs": [
+                  "module-b4ff7412"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x935332d2899eade0083f5398a154186ad8e5cf56",
+                "runtimeIdentity": "keccak256:0x65f263023bef9a092f736ea2c5ac3a226020eea4a4cf719b4a028f665e65d978",
+                "kind": "module",
+                "pathRefs": [
+                  "module-935332d2"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x8a7984b542c38661e4fd04029a8f181fd088ac59",
+                "runtimeIdentity": "keccak256:0x5c0e905b9d8c2121e0f166abca23eaa33662f57156612d920e99217f86b7f426",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8a7984b5"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xf3432984b708a3dc9555ccf9b4dbc78015deb8fd",
+                "runtimeIdentity": "keccak256:0xa0515cc287c8eea5ecf06f06cf135e46f3c46e22db6b2ca4482bc8840f15d783",
+                "kind": "module",
+                "pathRefs": [
+                  "module-f3432984"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x73f38ca06b27eaefb1612d062d885f58924f5897",
+                "runtimeIdentity": "keccak256:0xa108d72cb40f3776ca20ded14055f96efcaeaf645d41a10fb90d48ec285e6b60",
+                "kind": "module",
+                "pathRefs": [
+                  "module-73f38ca0"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x4dfd460d54854087af195906a2f260aa483a13b1",
+                "runtimeIdentity": "keccak256:0x669710d9e9ab6ea238f842fc7d3c385d43bccfcfd8f407d00fabca8056fb9ba9",
+                "kind": "module",
+                "pathRefs": [
+                  "module-4dfd460d"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x76d8f514554a4a8e5d6103875f2dd7a67543692b",
+                "runtimeIdentity": "keccak256:0x45c5a17c5696096794d67fc1d9a2482156a348277c68fc5c15e4b031900aec62",
+                "kind": "module",
+                "pathRefs": [
+                  "module-76d8f514"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xdcc4835b34b4c05eb28b8defac4d03d00842c2df",
+                "runtimeIdentity": "keccak256:0x75a8dc0a1730fad5f5bf7565618ccc67043d8ae5ce714fcd2268b2f5e819ffa3",
+                "kind": "module",
+                "pathRefs": [
+                  "module-dcc4835b"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x760233b90e45d186a9a98e911b115f7f4b90d3d9",
+                "runtimeIdentity": "keccak256:0xe2e7a2f5569e71f4f5c27466152881b107b5fef6512a6523e47e5137b8cc08b9",
+                "kind": "module",
+                "pathRefs": [
+                  "module-760233b9"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x66acc54a0c64255137b8993cb4972b0901684f7b",
+                "runtimeIdentity": "keccak256:0xc3e57a92795b430727204be28e9ba5d2f196a7e4958bf4fb2b8f998e75abe868",
+                "kind": "module",
+                "pathRefs": [
+                  "module-66acc54a",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x5c22d5b752b2121fae7f6f0069252b03b2f7c5cd",
+                "runtimeIdentity": "keccak256:0x5a9363e60669cecf8c4f9f9065033d09cc266da27f364f9fe74a795825921acd",
+                "kind": "module",
+                "pathRefs": [
+                  "module-5c22d5b7"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x167144d66ac1d02eaafca3649ef3305ea31ee5a8",
+                "runtimeIdentity": "keccak256:0xce3ff2f711b5c9b580598a0845dde1770f35971013b92e0a72c11e94e3bff9df",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x3a3985a96b1b51e6d914bc7c9e89fd6ba6defe81",
+                "runtimeIdentity": "keccak256:0xe93018bffc5e2d706bd58eab44d0db34b5cf6c5c666ddbef370e54c099b4aa8e",
+                "kind": "module",
+                "pathRefs": [
+                  "module-66acc54a"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x489c40401d465a632297c5810b0e209059e71be4",
+                "runtimeIdentity": "keccak256:0x8588758382bfad63e4d40078f5967cd6321a3ba2bedebfc5b151169365e65576",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x1f26faac7dcdbe356d21d12aede2c2ff3acb044e",
+                "runtimeIdentity": "keccak256:0xb77ff1623a8a70d64dc91f213fa8a31fa7469d4c051caf1f5e60e3c373bba990",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xde084c54634ce433e4216175d1f95ae3a62461a9",
+                "runtimeIdentity": "keccak256:0x4e92e711df5d389078e2a2a296c89c9906f81be7beb3da6751e4a11fdd89faa9",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x1cd8c2aa91327437c54595a987d347652adcd102",
+                "runtimeIdentity": "keccak256:0x78d1ab3e4e6498a47a9d9a7201cfa90e9565660a6d8e5ff1d3f9507443f36737",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x4aacb415158d5c4b0a51f1ca37033d44cf00ef3b",
+                "runtimeIdentity": "keccak256:0x2e0c38766319f37a312b7319a05ff3ec8a7ee8afb8fd3bdd4e570898c6127260",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x4b57fca0e11842e72cd6a6462e35b252235fc4ec",
+                "runtimeIdentity": "keccak256:0x0b91f1422406651ee915c777fbfc09134ab3a6d82b9ef96669b525d239e1ee55",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x34c70957536445b86471079ac69eb7efb2ad2b82",
+                "runtimeIdentity": "keccak256:0x68528735b58fa88189e3ca57857e509b31b66390b49598848b0a3373bf5dc6e0",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x17dc34333f3d3aaf59bdc389769289176f8b58b3",
+                "runtimeIdentity": "keccak256:0xdb68bc869df2363c55c6f12b5e26d97a4af982183583d8af707575a4302404ed",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x08ef4f555dd84acc3ba924686d08fd96810a6895",
+                "runtimeIdentity": "keccak256:0x803e5c6cf557dd222dfe4ffb9ca0ba69079cf49915796ab589d070def1805a47",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x0ecf0fb32acf1ea85eb8020684a828e4c90d1d5d",
+                "runtimeIdentity": "keccak256:0x90fb35ae0f839b02d29f44a9e8b34e6070c7f95f0ce3ec1531ae361ce7716350",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xca428f192c20a48b23be1408c6ff12212746d866",
+                "runtimeIdentity": "keccak256:0x9b95aff6774ea3fd34f97fb2f2d9bc0dc32a9e9ff3164efeb2b31d345cd58666",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x391d2c7677e566ede516a0780ddfbbb65a806914",
+                "runtimeIdentity": "keccak256:0x3f6494c568290f0ca53f866d19a6e114404fad01f8f131594a299e7e2726b583",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x4345bb97e05223f966f74385826b999d426af15e",
+                "runtimeIdentity": "keccak256:0x1600aff40ad1329b269085f6a39b105edeace9756634654c6b6b84aef6fec83e",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x9b16421a0ebf4b049638a083639725de32a31ee3",
+                "runtimeIdentity": "keccak256:0x1600aff40ad1329b269085f6a39b105edeace9756634654c6b6b84aef6fec83e",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xffe80345c8b6cf316c66bfb050491e57a27700e4",
+                "runtimeIdentity": "keccak256:0x1600aff40ad1329b269085f6a39b105edeace9756634654c6b6b84aef6fec83e",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x318a6c5b5b5dc881d7c7828cd1bf7f5234b5c065",
+                "runtimeIdentity": "keccak256:0x1600aff40ad1329b269085f6a39b105edeace9756634654c6b6b84aef6fec83e",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x94b6d2c09d8e01f1f2af9f917f669ef39bc2cc4a",
+                "runtimeIdentity": "keccak256:0x0149f4596de57c0b12a23c1dd522904501fb9916979fea86410e4d5a6aa97d9d",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x9e8d2f40b53418e7cd960091992645c4ef2197eb",
+                "runtimeIdentity": "keccak256:0x0149f4596de57c0b12a23c1dd522904501fb9916979fea86410e4d5a6aa97d9d",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x0403d727a922195f401e89333d9eb5f9e5c17628",
+                "runtimeIdentity": "keccak256:0x1600aff40ad1329b269085f6a39b105edeace9756634654c6b6b84aef6fec83e",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x8cc2f94dafd7a2861c8d08e70f40e1c9038c7b9e",
+                "runtimeIdentity": "keccak256:0x1600aff40ad1329b269085f6a39b105edeace9756634654c6b6b84aef6fec83e",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x8ce918cf5b58d9b39db4c66decac5323598eae84",
+                "runtimeIdentity": "keccak256:0x50d2615c799d234e63585727456ec34aad95d51d4da14ecd663d0006b18eb905",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xe7a8b241cc1f2b61711f4ae91fb1c55d6be55650",
+                "runtimeIdentity": "keccak256:0x1600aff40ad1329b269085f6a39b105edeace9756634654c6b6b84aef6fec83e",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xafa9ba5099616aefda4aa2ff6057544165128630",
+                "runtimeIdentity": "keccak256:0x1600aff40ad1329b269085f6a39b105edeace9756634654c6b6b84aef6fec83e",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x3ebe0ab785b6672b4e2ccf30edf3b4a45f11b74f",
+                "runtimeIdentity": "keccak256:0x0149f4596de57c0b12a23c1dd522904501fb9916979fea86410e4d5a6aa97d9d",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x1079b893cff37f2a159fe8ea1a0e8cc5cba57d49",
+                "runtimeIdentity": "keccak256:0xae59c58053860c680b38dfcf31d98d136cb3eb012ae6a8f35c9322932d51c191",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xf791dbd84130223fe166c24a7314748e7dbc2051",
+                "runtimeIdentity": "keccak256:0x0149f4596de57c0b12a23c1dd522904501fb9916979fea86410e4d5a6aa97d9d",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x57bcb60408beecb6bfa8df0a18d63263b0f221df",
+                "runtimeIdentity": "keccak256:0xf7da142b77f91e8b5d8259fbd520cee74d26bc4304a84088c5639923ace6de7b",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x5368db411760355fa883e94c27fe75b395f13be6",
+                "runtimeIdentity": "keccak256:0xc6f21243c645e08145d08509271e673b981d416b1b6f8ec659601082d5e9aeb7",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xde652f342550d582144104a3d5c7729c037ca539",
+                "runtimeIdentity": "keccak256:0xdd7ed0ffb05ffc3db05352f963763f6ff3a9a9fbd7d8e1c772ffab9cbdd0fd0b",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xad6528459006d32e1e0d7c84456fc9e0fb106a93",
+                "runtimeIdentity": "keccak256:0xdd7ed0ffb05ffc3db05352f963763f6ff3a9a9fbd7d8e1c772ffab9cbdd0fd0b",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xaf3b8a869d55d550c15e0b4759240edfc9e8acb2",
+                "runtimeIdentity": "keccak256:0x1600aff40ad1329b269085f6a39b105edeace9756634654c6b6b84aef6fec83e",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x9ec7b807c7a23751c692cf8e2ac6a50b12fd16e8",
+                "runtimeIdentity": "keccak256:0xdd7ed0ffb05ffc3db05352f963763f6ff3a9a9fbd7d8e1c772ffab9cbdd0fd0b",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xfd5051da2cd22eefbbfd144fe62704c4df621576",
+                "runtimeIdentity": "keccak256:0xdd7ed0ffb05ffc3db05352f963763f6ff3a9a9fbd7d8e1c772ffab9cbdd0fd0b",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xfff0bc0b91776fa39fcf479e9fd8c3dca6378a1b",
+                "runtimeIdentity": "keccak256:0xc6f21243c645e08145d08509271e673b981d416b1b6f8ec659601082d5e9aeb7",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x92dd8aa73bf8c47e706e62e349b5fd805ee9d4b0",
+                "runtimeIdentity": "keccak256:0xdd7ed0ffb05ffc3db05352f963763f6ff3a9a9fbd7d8e1c772ffab9cbdd0fd0b",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x0387bc6eb4341d21f831a8fa9908f58a191332a2",
+                "runtimeIdentity": "keccak256:0xdd7ed0ffb05ffc3db05352f963763f6ff3a9a9fbd7d8e1c772ffab9cbdd0fd0b",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x477c652216d88d0159eda16029fa11b3173811c0",
+                "runtimeIdentity": "keccak256:0x9e5d26a5ebce941cef40e570a7f8a45fa026458478f6cdba43d4bdfca373d7d4",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xdc16eda3ebd016da5e7f5f4193c25a250bfe4416",
+                "runtimeIdentity": "keccak256:0xdd7ed0ffb05ffc3db05352f963763f6ff3a9a9fbd7d8e1c772ffab9cbdd0fd0b",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x35db7fefcf299207720efe3034462292729d52a8",
+                "runtimeIdentity": "keccak256:0x0149f4596de57c0b12a23c1dd522904501fb9916979fea86410e4d5a6aa97d9d",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x3712c70f79754a40b9405abe002a68d09a9d7c6b",
+                "runtimeIdentity": "keccak256:0xc6f21243c645e08145d08509271e673b981d416b1b6f8ec659601082d5e9aeb7",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x41c03b32dad10904e30ba04391589a26476eb740",
+                "runtimeIdentity": "keccak256:0xc6f21243c645e08145d08509271e673b981d416b1b6f8ec659601082d5e9aeb7",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x710f1ed8ddffcee485288e408f5fe8ca95ca989c",
+                "runtimeIdentity": "keccak256:0xc1f5afae4998c3f38ecd92a015661e56461627c86682d7d85250fc586ad2bcba",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x835e4b8b952c82124ee43b1401ba35ad10d3a9e0",
+                "runtimeIdentity": "keccak256:0x77faf7c1c1f66e0099de6743440ce013c3d7ff673f94dd223529e890cd49d593",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x4d99a2a003011e966b9900ac2fd67556eb4f9781",
+                "runtimeIdentity": "keccak256:0x69fb6bee5f604439b192841de0c61cfb3de3ed2ed1dfa75ab25470238724b1b8",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x8baa6d891c907e4eba4b1b0ef351cb678d50ae7f",
+                "runtimeIdentity": "keccak256:0x0e16f68f129b1bc3d1da95995f3aaba54aaa44256c04dc98cc761a5d37e82455",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x5736fe775432e45b821826db556f3de6cbd0dba3",
+                "runtimeIdentity": "keccak256:0xfc102d0b4e58391d0c4d041625fc60e1634540c3fa3824dd23d57d8aee499c25",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x73553c3f2e5dc32e0e4b63ef127f205bd33d16b6",
+                "runtimeIdentity": "keccak256:0x770227aef80dad181adab9312fbfd4f826c8d117365f37790ae89a56508b2a86",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xf2b486ec5f38bfce8a45e3aaeea6e5b54166853b",
+                "runtimeIdentity": "keccak256:0xc3a3d9fab4f1b3ef4c5b17bfea6018a6697461d2e82e3ba62798daf861ec4654",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x53f455368509cbe9da8d3278a6a5a51d018d2865",
+                "runtimeIdentity": "keccak256:0x755ba0ee043718f3806dcaf9b18fcdb29fa234fbcd41da58c931536b8be1b239",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x5229c48193ade435a81e65a76c904a7b83835b93",
+                "runtimeIdentity": "keccak256:0x755ba0ee043718f3806dcaf9b18fcdb29fa234fbcd41da58c931536b8be1b239",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xbafc2082cf5a7d47302f5981a161d04cdb82ef68",
+                "runtimeIdentity": "keccak256:0x755ba0ee043718f3806dcaf9b18fcdb29fa234fbcd41da58c931536b8be1b239",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x5afb27c7aadc3ad87bdd4a6de7cc9271f80d566f",
+                "runtimeIdentity": "keccak256:0x755ba0ee043718f3806dcaf9b18fcdb29fa234fbcd41da58c931536b8be1b239",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xc5daf0bdd5b5a4bdd74a8f571d13a94198428d5c",
+                "runtimeIdentity": "keccak256:0x755ba0ee043718f3806dcaf9b18fcdb29fa234fbcd41da58c931536b8be1b239",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xa7410afeb23afae0dffa55264ad0dc40e65d56bf",
+                "runtimeIdentity": "keccak256:0x755ba0ee043718f3806dcaf9b18fcdb29fa234fbcd41da58c931536b8be1b239",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x23a7c7034c38d8adfa7b10f42f93eeeb1ad83ed5",
+                "runtimeIdentity": "keccak256:0xa58e77a1ccafeac8f191e490e8c1019cc6a6cce39703201aa532f3c760c60838",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xf4d60405d1c5a083fff048cc57f611fa6eadea96",
+                "runtimeIdentity": "keccak256:0x1c4eb4a9a2ca1b30f05d09124c1b1d01b45d111b031c884cca5372e24567ac95",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x8872280f8d14a53a496fc48db7ec8f53917956ce",
+                "runtimeIdentity": "keccak256:0x755ba0ee043718f3806dcaf9b18fcdb29fa234fbcd41da58c931536b8be1b239",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xc01b96405b28446a726784c9fc1cecb9bcacee92",
+                "runtimeIdentity": "keccak256:0x0b1bb31e0b5b8886dadb81973ed69943e780e831b84f8a8d4e20c94aa2baa8d9",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xc53ba0d04b9d12080c0db170c875d5f301aeca68",
+                "runtimeIdentity": "keccak256:0xc3a3d9fab4f1b3ef4c5b17bfea6018a6697461d2e82e3ba62798daf861ec4654",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x165eb06a94bb3e5c728f8fc04a880cbc90944503",
+                "runtimeIdentity": "keccak256:0xe34e6ca8d1eff73b355f4577023f0d5287c97f185ddf33b837280869c982aeca",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x19b38cc305ebaf477dde0ff56dcf72ae54fcf66e",
+                "runtimeIdentity": "keccak256:0xf98772b0927270ee689364cabc56a1d2932823d13a80695b362a4f35910f9c14",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xb42768b1eeec4a324713cdd988755d8e885125e4",
+                "runtimeIdentity": "keccak256:0xf98772b0927270ee689364cabc56a1d2932823d13a80695b362a4f35910f9c14",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x95c64a900cdb62f6cdb0f45d35642f89177a9798",
+                "runtimeIdentity": "keccak256:0xf98772b0927270ee689364cabc56a1d2932823d13a80695b362a4f35910f9c14",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xafffd255ee9d538efa1b211f1284a17e010574dd",
+                "runtimeIdentity": "keccak256:0xc3a3d9fab4f1b3ef4c5b17bfea6018a6697461d2e82e3ba62798daf861ec4654",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x8b79bb67bffbd311795f8c5a820eb5e1d7a88d99",
+                "runtimeIdentity": "keccak256:0x755ba0ee043718f3806dcaf9b18fcdb29fa234fbcd41da58c931536b8be1b239",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xc6b3c8a078a9480b01c5706468abe0c150060de5",
+                "runtimeIdentity": "keccak256:0xa2b5ae021afc9b7c9457555cdc9d5c6356b32935cd0666f1e88436e3331e1333",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xdf181cc836d6515fcd0caa81f8fd773aab2d659b",
+                "runtimeIdentity": "keccak256:0xd5b62cfaec9d6a7ac060b7249a18531a5772d7094a8079c5597c45dcf38dcd38",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x274ce25429b3732f0649ef9e32646b945300c195",
+                "runtimeIdentity": "keccak256:0xe8754a69d8abdda046199b312fd12cfd39c1e3c4d13fa555aff4ed2c0f8ac53a",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x86c1ca0f349edb461dc50f04357067a4b053cefa",
+                "runtimeIdentity": "keccak256:0x50459e08e486059b0dfca7740ee7ff5f79b54069f6735456c83daf433692abaa",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xb7e37c845fac4066c3a9dcadb5c752204adff91a",
+                "runtimeIdentity": "keccak256:0xfb109faeaca61d1a87e918b0c5370bfaf6489c06c4f4bc52954120afc270dd5b",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x6ed8b076918c7ca54c6708331b6c04fe5cb74211",
+                "runtimeIdentity": "keccak256:0xfb109faeaca61d1a87e918b0c5370bfaf6489c06c4f4bc52954120afc270dd5b",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xb26dc06660c89e0aa4aa7030a11ef14189b1897d",
+                "runtimeIdentity": "keccak256:0x94588f1322b29581c23da6ba1c5e89f152f710cff3098085203a3b0eee273514",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xff072d0327dc4bacf518c7e8ba0385b07974c6b1",
+                "runtimeIdentity": "keccak256:0x9e8ce074b4a015937a2bd78da41b3eeebdfebbb9f807ea66710165a3c3bedd4f",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xb347af766086d02b3f658554d433bc74451349a6",
+                "runtimeIdentity": "keccak256:0x9e8ce074b4a015937a2bd78da41b3eeebdfebbb9f807ea66710165a3c3bedd4f",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xd79c9989e5123c3d311be907fab46b2af9341f11",
+                "runtimeIdentity": "keccak256:0x9e8ce074b4a015937a2bd78da41b3eeebdfebbb9f807ea66710165a3c3bedd4f",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x1146f103815f1986a33791859bda2773f9253297",
+                "runtimeIdentity": "keccak256:0x9e8ce074b4a015937a2bd78da41b3eeebdfebbb9f807ea66710165a3c3bedd4f",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x94ab9fb2bf9cfae35565852f90c8b72ade59a1ef",
+                "runtimeIdentity": "keccak256:0x9e8ce074b4a015937a2bd78da41b3eeebdfebbb9f807ea66710165a3c3bedd4f",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x68639de18de0eb26eb9bbb287d7d209b0a42299d",
+                "runtimeIdentity": "keccak256:0x9e8ce074b4a015937a2bd78da41b3eeebdfebbb9f807ea66710165a3c3bedd4f",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xfecfe3ce43cde8a0240cfe27e9948ede81320af3",
+                "runtimeIdentity": "keccak256:0x9e8ce074b4a015937a2bd78da41b3eeebdfebbb9f807ea66710165a3c3bedd4f",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x1244590efdbb4adf26ea18d939205261ffd7ebed",
+                "runtimeIdentity": "keccak256:0x9e8ce074b4a015937a2bd78da41b3eeebdfebbb9f807ea66710165a3c3bedd4f",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xc9322a77bc93424e3b3e464d5fdc4e7bc0bac583",
+                "runtimeIdentity": "keccak256:0x9e8ce074b4a015937a2bd78da41b3eeebdfebbb9f807ea66710165a3c3bedd4f",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x6724f9da7fe5ad96c2f5508c9d1b96c79a293b85",
+                "runtimeIdentity": "keccak256:0x9e8ce074b4a015937a2bd78da41b3eeebdfebbb9f807ea66710165a3c3bedd4f",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xc1895698cb1c40ab78cce8f4902f5473cfdbd766",
+                "runtimeIdentity": "keccak256:0x9e8ce074b4a015937a2bd78da41b3eeebdfebbb9f807ea66710165a3c3bedd4f",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x05052d677787145770e10d970f9ee833ac5bb26b",
+                "runtimeIdentity": "keccak256:0x9e8ce074b4a015937a2bd78da41b3eeebdfebbb9f807ea66710165a3c3bedd4f",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xb630d29e446acc6f89eb6fd53f1c85b0af5479e4",
+                "runtimeIdentity": "keccak256:0x05ddc65e9fa7a4e5d2f28dfda5127a4e560383f5998911761e2b380bc6c72e7f",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x5a65f50b6769ce9cdcc3e1b09e8b718479713dee",
+                "runtimeIdentity": "keccak256:0x1a0e2e244f65011d8887ef4c0e9f6d1c0c5fbf8f3ff0bf14922d34e1adbfc7d6",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x57e4805517d3f37d0d23c973c2ae9f3f43126963",
+                "runtimeIdentity": "keccak256:0x143a39ca245ed5995fe75aee089d036c708f892d5d01fabedd1f16d30e577d4c",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x6cfeb07b6515d566c55a059e5b68f57d8135f5fc",
+                "runtimeIdentity": "keccak256:0x47f87fa03a1fc16c90ee0739dbd56c72074a09436a8397088cd7ee9a646c0745",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x15a91c214e7885c4c38a5a6500eac68b9b4f8500",
+                "runtimeIdentity": "keccak256:0x9e8ce074b4a015937a2bd78da41b3eeebdfebbb9f807ea66710165a3c3bedd4f",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x7ec6f1948acf8e1ca486ca77b1919345e19b3392",
+                "runtimeIdentity": "keccak256:0x47f87fa03a1fc16c90ee0739dbd56c72074a09436a8397088cd7ee9a646c0745",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x8af915bde327b30c1c455824795db5e2c7e9bb4b",
+                "runtimeIdentity": "keccak256:0x44121668bac3b90fb603e757929f6f735bfd1350b0a9be4fbfa1d06b7c52d173",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x3fefd8d571f0d0d7c4b37c1ec6d7e07a3af677dc",
+                "runtimeIdentity": "keccak256:0x5f64de74ae89d4f8e4246b3487fc6dc2a884e75d7191e8460356700ce253403a",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x63432c4b0038adf57d36c0850b93337006d03bee",
+                "runtimeIdentity": "keccak256:0xf98772b0927270ee689364cabc56a1d2932823d13a80695b362a4f35910f9c14",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xa63ea06d540651c19d8740ff8e67cc2652bddab6",
+                "runtimeIdentity": "keccak256:0xf98772b0927270ee689364cabc56a1d2932823d13a80695b362a4f35910f9c14",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x6a8686756449df28c6045c9b660f9e90b85b0f13",
+                "runtimeIdentity": "keccak256:0xf98772b0927270ee689364cabc56a1d2932823d13a80695b362a4f35910f9c14",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xa6d07702d75f4261ad23c9c2b1822af74041337e",
+                "runtimeIdentity": "keccak256:0xcdbc032ab738b2460e1e4289d2780bf48c877a7c1c384925157663fdaaf30ef4",
+                "kind": "module",
+                "pathRefs": [
+                  "module-66acc54a",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x3b277d43baf347ac913c40e8ab79942ca2464301",
+                "runtimeIdentity": "keccak256:0xe6ea55b25a78ea309452db3d8e27c7f6d91eebc892b905a809a556f5fe932ff5",
+                "kind": "module",
+                "pathRefs": [
+                  "module-66acc54a",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xeae78f38faeb497d2f80414069e5cd862301c8a2",
+                "runtimeIdentity": "keccak256:0xf98772b0927270ee689364cabc56a1d2932823d13a80695b362a4f35910f9c14",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x7f8cb22fa3f0f67cc65a7709e6994c1540cf07ed",
+                "runtimeIdentity": "keccak256:0x755ba0ee043718f3806dcaf9b18fcdb29fa234fbcd41da58c931536b8be1b239",
+                "kind": "module",
+                "pathRefs": [
+                  "module-8b3c41c6",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xe6ce51abb758622e7a12d46d5cf2ee169535531c",
+                "runtimeIdentity": "keccak256:0x22437e6c317c733a32b99cc838febb690157081e866e4a668ebfd6ae7fafeb98",
+                "kind": "module",
+                "pathRefs": [
+                  "module-66acc54a",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x8446a6debfe68a22eb006a1197308864f529b880",
+                "runtimeIdentity": "keccak256:0xa0f7a01a991c75e7633ea5c9b7f2bec702b83b1076eac69ca7d7366c1df093f3",
+                "kind": "module",
+                "pathRefs": [
+                  "module-66acc54a",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0xb259a596b9ddd681512f339fe4de81512b01a46c",
+                "runtimeIdentity": "keccak256:0xc9bc9b8ebb1f9c7f1bd3288b1c4bbcd6783780e8a36a22566d48fb3605b54d9a",
+                "kind": "module",
+                "pathRefs": [
+                  "module-66acc54a",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              },
+              {
+                "deployment": "ethereum:0x8de509b1bad845e57c095add8f6ad1bc5d5ff941",
+                "runtimeIdentity": "keccak256:0x21072cbd7addafa0df3b106321c3866cfbe4ccbfc4e3328d8777f5297dc1f112",
+                "kind": "module",
+                "pathRefs": [
+                  "module-66acc54a",
+                  "legacy-interest-shortfall"
+                ],
+                "mutableReachClosed": true
+              }
+            ]
+          }
+        }
+      },
+      {
         "chain": "ethereum",
         "deploymentRefs": [
           "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
         ],
-        "capDescription": "Mint bounded by per-position overcollateralization with oracle-free auction liquidation; users self-mint against approved collateral.",
+        "observedAt": "2026-10-04",
+        "observedBlock": 26117214,
         "canRaiseCap": true,
-        "evidence": "Verified on-chain 2026-07-20: the dEURO constructor block 22088283 approved 8 minting modules (MinterApplied events: 0x8b3c41c649b9c7085c171cbb82337889b3604618, 0x4ce0ab2fc21bd27a47a64f594fdf7654ea57dc79, 0x073493d73258c4beb6542e8dd3e1b2891c972303, 0x5c49c00f897bd970d964bfb8c3065ae65a180994, 0xd03cd3ea55e67bc61b78a0d70ee93018e2182dbe, 0x2353d16869f717bfcd22dabc0adbf4dca62c609f, 0x3ed40fa0e5c803e807ebd51355e388006f9e1fee, 0x0423f419de1c44151b6b000e2daa51859c1d5d2a); no MinterDenied events were observed through block 22,140,000, and isMinter() = true at the latest block for 0x8b3c41c6..., 0x4ce0ab2f... and 0x073493d7.... Mint is bounded per module by overcollateralized position rules; the module set is expandable through the application-and-veto process, so the aggregate cap is raiseable.",
-        "sources": [
-          {
-            "label": "dEURO token on Etherscan",
-            "url": "https://etherscan.io/address/0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
-          }
-        ],
-        "failureDomainKeys": [
-          "contract:ethereum:0x8b3c41c649b9c7085c171cbb82337889b3604618",
-          "contract:ethereum:0x4ce0ab2fc21bd27a47a64f594fdf7654ea57dc79",
-          "contract:ethereum:0x073493d73258c4beb6542e8dd3e1b2891c972303",
-          "contract:ethereum:0x5c49c00f897bd970d964bfb8c3065ae65a180994",
-          "contract:ethereum:0xd03cd3ea55e67bc61b78a0d70ee93018e2182dbe",
-          "contract:ethereum:0x2353d16869f717bfcd22dabc0adbf4dca62c609f",
-          "contract:ethereum:0x3ed40fa0e5c803e807ebd51355e388006f9e1fee",
-          "contract:ethereum:0x0423f419de1c44151b6b000e2daa51859c1d5d2a"
-        ]
-      },
-      {
-        "label": "nDEPS veto governance (Equity contract)",
+        "modulesOrGuardsStatus": "not-applicable",
+        "address": "0xc71104001a3ccda1bef1177d765831bd1bfe8ee6",
+        "label": "nDEPS minority-veto governance (Equity)",
         "role": "governor",
         "authorityType": "dao-governor",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": true,
-        "evidence": "nDEPS (Equity) at 0xc71104001a3ccda1bef1177d765831bd1bfe8ee6, deployed by the dEURO constructor in block 22088283, governs minting-module admissions: anyone may propose a module with a fee and application period; nDEPS holders can veto via denyMinter(). This governance path can authorize new minting capacity.",
+        "evidence": "At Ethereum block 26117214 (0x17a158c02f6d95a7e3e54099f49ddc3ffba70b9909443b1d806e4964c8c28dc3), eth_getCode exactly matches verified Equity source. votes(holder)=balanceOf(holder)*(uint64(block.timestamp<<20)-voteAnchor[holder]); _update adjusts recipient and total anchors so transferred/new shares add zero immediate votes. votesDelegated sums sorted, deduplicated, valid delegation support. checkQualified 0x352e3a83 requires votesDelegated*10000 >= 200*totalVotes. dEURO denyMinter 0x9b404da6 calls checkQualified during the application window. kamikaze 0x2295abea destroys target votes at an at-least-matching caller cost. restructureCapTable 0x820710af burns arbitrary holders' shares only when dEURO.equity()<1000e18 and the caller qualifies; eth_call equity()=63136024511895141755806, so D30-R admits this currently unreachable insolvency power. Ordinary redeem paths keep shares+1e18<totalSupply, and only restructure can wipe nDEPS supply to zero. However linked DEPSWrapper 0x103747924e74708139a9400e4ab4bea79fffa380.halveHoldingDuration(address[]) 0x8747842b calls nDEPS.checkQualified(caller,helpers), then nDEPS.transfer(address(this),totalSupply()) to halve wrapper-held voting age without caller sacrifice or an insolvency condition. This independent asymmetric override is not covered by D30-R; veto.override remains unknown and V3 fails closed. Equity invest/investFor transfers existing dEURO and mints only nDEPS; redeem/redeemExpected/redeemFrom burns nDEPS after 90-day average holding and transfers existing dEURO. No native Equity arbitrary-call, delegatecall, fallback, owner or upgrade path exists.",
         "sources": [
           {
-            "label": "dEURO Equity (nDEPS) on Etherscan",
-            "url": "https://etherscan.io/address/0xc71104001a3ccda1bef1177d765831bd1bfe8ee6"
+            "label": "Verified deployed source 0xc71104001a3ccda1bef1177d765831bd1bfe8ee6",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc71104001a3ccda1bef1177d765831bd1bfe8ee6"
           },
           {
-            "label": "dEURO docs",
-            "url": "https://docs.deuro.com/"
+            "label": "Verified deployed source 0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+          },
+          {
+            "label": "Verified deployed source 0x103747924e74708139a9400e4ab4bea79fffa380",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x103747924e74708139a9400e4ab4bea79fffa380"
+          },
+          {
+            "label": "Ethereum pinned block 26117214",
+            "url": "https://eth.blockscout.com/block/26117214"
           }
         ],
-        "chain": "ethereum",
-        "address": "0xc71104001a3ccda1bef1177d765831bd1bfe8ee6",
-        "observedAt": "2026-10-01",
-        "observedBlock": 26096006,
-        "deploymentRefs": [
-          "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
-        ]
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xc71104001a3ccda1bef1177d765831bd1bfe8ee6",
+          "reviewedAt": "2026-10-04",
+          "observedAt": "2026-10-04",
+          "expiresAt": "2027-01-02",
+          "reviewer": "Sol v10.03 D30 cohort (ResearchDEURO)",
+          "confidence": "verified",
+          "sources": [
+            {
+              "label": "Verified deployed source 0xc71104001a3ccda1bef1177d765831bd1bfe8ee6",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc71104001a3ccda1bef1177d765831bd1bfe8ee6"
+            },
+            {
+              "label": "Verified deployed source 0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+            },
+            {
+              "label": "Verified deployed source 0x103747924e74708139a9400e4ab4bea79fffa380",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x103747924e74708139a9400e4ab4bea79fffa380"
+            },
+            {
+              "label": "Ethereum pinned block 26117214",
+              "url": "https://eth.blockscout.com/block/26117214"
+            }
+          ],
+          "pin": {
+            "position": "ethereum:26117214",
+            "hash": "0x17a158c02f6d95a7e3e54099f49ddc3ffba70b9909443b1d806e4964c8c28dc3",
+            "runtimeIdentity": "keccak256:0x4343d2134f84098eb8c5d41ea922a7b7e0b97055897ac06473bc668f0a3e62b0",
+            "signerIdentity": "Holding-period-weighted nDEPS token governance at 0xc71104001a3ccda1bef1177d765831bd1bfe8ee6; permissionless proposal, individual minority veto and delegated support."
+          },
+          "observedState": {
+            "position": "ethereum:26117214",
+            "hash": "0x17a158c02f6d95a7e3e54099f49ddc3ffba70b9909443b1d806e4964c8c28dc3",
+            "runtimeIdentity": "keccak256:0x4343d2134f84098eb8c5d41ea922a7b7e0b97055897ac06473bc668f0a3e62b0",
+            "signerIdentity": "Holding-period-weighted nDEPS token governance at 0xc71104001a3ccda1bef1177d765831bd1bfe8ee6; permissionless proposal, individual minority veto and delegated support."
+          },
+          "inventory": "complete",
+          "closure": {
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
+          },
+          "paths": [
+            {
+              "id": "minority-veto",
+              "targetDeployment": "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x9b404da6"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "qualification-and-age-weighted-votes",
+              "targetDeployment": "ethereum:0xc71104001a3ccda1bef1177d765831bd1bfe8ee6",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xd9169487",
+                "0x3644e515",
+                "0xb0c2bf06",
+                "0x7f2eecc3",
+                "0xa0cc6a68",
+                "0x250f25f4",
+                "0xdd62ed3e",
+                "0x095ea7b3",
+                "0xe94a0102",
+                "0x70a08231",
+                "0xad08ce5b",
+                "0x3ec16194",
+                "0x151535b9",
+                "0x5a049a70",
+                "0x352e3a83",
+                "0xd395d24b",
+                "0x313ce567",
+                "0x9823004f",
+                "0x587cde1e",
+                "0x84b0196e",
+                "0xc9f72b67",
+                "0xd87aa643",
+                "0xa1c1fb4f",
+                "0x06fdde03",
+                "0x7ecebe00",
+                "0xd505accf",
+                "0xa035b1fe",
+                "0xef55bec6",
+                "0x1e9a6950",
+                "0x0e89c370",
+                "0x91ac6f99",
+                "0x84a7aa0c",
+                "0x01ffc9a7",
+                "0x95d89b41",
+                "0x18160ddd",
+                "0x0d15fd77",
+                "0xa9059cbb",
+                "0x23b872dd",
+                "0xe3ee160e",
+                "0xd8bff5a5",
+                "0x5895b773"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change",
+                "custody-transfer",
+                "burn"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "symmetric-vote-destruction",
+              "targetDeployment": "ethereum:0xc71104001a3ccda1bef1177d765831bd1bfe8ee6",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x2295abea"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "asymmetric-cap-table-restructure",
+              "targetDeployment": "ethereum:0xc71104001a3ccda1bef1177d765831bd1bfe8ee6",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x820710af"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "burn",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "wrapped-vote-age-reduction",
+              "targetDeployment": "ethereum:0x103747924e74708139a9400e4ab4bea79fffa380",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x8747842b"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "bounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "deuro-deuro"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "not-applicable",
-    "supervision": "none",
-    "review": {
-      "evidence": "At Ethereum block 25295200: DecentralizedEURO (0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea) is immutable, no EIP-1967 proxy admin slot, owner() reverts, code length 21734. Equity/nDEPS contract (0xc71104001a3ccda1bef1177d765831bd1bfe8ee6) confirmed via internal CREATE from dEURO constructor at block 22088283. The minting model is Frankencoin-style: anyone can suggestMinter() with a fee and application period; nDEPS holders can denyMinter(). No privileged operator can mint directly; new modules are time-delayed and community-vetoable. Economic-posture fields reviewed 2026-08-15: permissionless overcollateralized minting can expand only through the challenge-period and nDEPS veto process, with no off-chain reserve claim or prudential supervisor. D14/D29 sweep 2026-10-03 supersedes the historical raiseable classification: at Ethereum block 26113566 (hash 0x8ee5bf8702023bb24470045b03b62f22fe10f1c46654ea9e79377e5dac7193b9), reserve() confirms Equity 0xc71104001a3ccda1bef1177d765831bd1bfe8ee6 and MIN_APPLICATION_PERIOD()=1209600 seconds. Verified suggestMinter admits any new address after fee/application requirements; mint(target,amount) checks minterOnly without a posted-collateral or amount check. Module-level collateral checks do not bind arbitrary new minters, so D14 is unbounded. D29 fails G1 because admission is permissionless unless vetoed, not affirmative token-governor execution. Equity votes use current balance multiplied by holding age; transfers adjust the recipient anchor. This is not evidence of a flash exploit, but this transferable current-state model is live-balance, not D29's lock-escrowed or past-block-checkpoint voting. The 14-day application delay does not constrain subsequent mint calls from an admitted arbitrary minter. Complete current module/position executionScope inventory is not certified; no governed qualification is authored. With reconciliation not-applicable and no supervision, fallback is unbounded-unreconciled.",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U5GovAmbiguousA)",
-      "reviewedAt": "2026-10-03",
+    "governedIssuance": {
+      "decisionRule": "minority-veto",
+      "governorControlRef": "ethereum:0xc71104001a3ccda1bef1177d765831bd1bfe8ee6",
+      "votingPower": "holding-period-weighted",
+      "votingPowerEvidence": "Verified deployed Equity at Ethereum block 26117214 (0x17a158c02f6d95a7e3e54099f49ddc3ffba70b9909443b1d806e4964c8c28dc3), eth_getCode runtime matches verified source (12120 bytes; keccak256 0x4343d2134f84098eb8c5d41ea922a7b7e0b97055897ac06473bc668f0a3e62b0). votes(address) 0xd8bff5a5 = balanceOf(holder)*(_anchorTime()-voteAnchor[holder]); _anchorTime = uint64(block.timestamp<<20). _update invokes _adjustRecipientVoteAnchor and _adjustTotalVotes before changing balances: recipient anchor preserves existing votes (less rounding); transferred/new shares add zero immediate votes; sender loses amount*age. totalVotes() 0x0d15fd77 adds totalSupply*(time-totalVotesAnchorTime) to totalVotesAtAnchor. votesDelegated(address,address[]) 0x5895b773 sums age-weighted votes after sorted/deduplicated helper and delegation checks; delegateVoteTo 0x9823004f changes delegation only. holdingDuration 0xc9f72b67 and relativeVotes 0x84a7aa0c expose age and relative weight. This is holding-period-weighted, not plain live-balance voting; transferable shares do not transfer their accrued vote age.",
+      "veto": {
+        "quorumBps": 200,
+        "entrypoints": [
+          "0x9b404da6"
+        ],
+        "override": "unknown",
+        "evidence": "At Ethereum block 26117214 (0x17a158c02f6d95a7e3e54099f49ddc3ffba70b9909443b1d806e4964c8c28dc3), verified deployed dEURO denyMinter(address,address[],string) 0x9b404da6 checks block.timestamp <= minters[minter] then Equity.checkQualified(msg.sender,helpers) 0x352e3a83. Private constant QUORUM=200; qualification requires votesDelegated*10000 >= 200*totalVotes. kamikaze(address[],uint256) 0x2295abea is symmetric vote destruction. restructureCapTable(address[],address[]) 0x820710af requires equity()<1000e18 and qualification, then burns arbitrary holders' entire shares without caller sacrifice; pinned eth_call equity()=63136024511895141755806, so D30-R admits that currently unreachable insolvency path. But DEPSWrapper 0x103747924e74708139a9400e4ab4bea79fffa380.halveHoldingDuration(address[]) 0x8747842b calls nDEPS.checkQualified(caller,helpers), then nDEPS.transfer(address(this),totalSupply()), asymmetrically halving wrapper-held voting age without sacrificing caller votes and without insolvency gating. No owner ruling admits this independent override. unknown is deliberate fail-closed authoring; V3 fails despite proven holding-period weighting and 200-bps qualification."
+      },
+      "monetaryPolicyPaths": [
+        {
+          "controlRef": "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
+          "pathId": "module-073493d7",
+          "rateCapPpm": 16777215,
+          "rateChangeDelaySec": 604800,
+          "rateChangeRule": "minority-replaceable",
+          "evidence": "Ethereum block 26117214 (0x17a158c02f6d95a7e3e54099f49ddc3ffba70b9909443b1d806e4964c8c28dc3), exact runtime-matched SavingsGateway and inherited Savings/Leadrate source: interest is saved balance times accrued rate ticks divided by 1000000 and 365 days, additionally clamped to dEURO.equity(). Rate storage and proposal argument are uint24, hard maximum 16777215 ppm. proposeChange checks Equity qualification, overwrites the pending rate and sets nextChange=block.timestamp+604800; any qualified minority may replace the proposal with the current rate and reset the clock. eth_call currentRatePPM=100000, nextRatePPM=0, nextChange=1786415591. D30-S conditions hold; this reserve-covered monetary-policy path is raiseable with bounded impairment, not an unbounded shortfall mint."
+        },
+        {
+          "controlRef": "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
+          "pathId": "module-760233b9",
+          "rateCapPpm": 16777215,
+          "rateChangeDelaySec": 604800,
+          "rateChangeRule": "minority-replaceable",
+          "evidence": "Ethereum block 26117214 (0x17a158c02f6d95a7e3e54099f49ddc3ffba70b9909443b1d806e4964c8c28dc3), exact runtime-matched later Savings and inherited Leadrate source: formula-bound interest uses saved balance times rate ticks divided by 1000000 and 365 days, with payout clamped to current dEURO.equity(). Both rate storage and proposal argument are uint24 (maximum 16777215 ppm). proposeChange checks Equity qualification, overwrites the pending rate and delays execution for 604800 seconds; a qualified minority may replace it with the current rate and reset the clock. eth_call currentRatePPM=70000, nextRatePPM=70000, nextChange=1787920619. D30-S conditions hold; this reserve-covered monetary-policy path is raiseable with bounded impairment."
+        }
+      ],
+      "enumerability": {
+        "authorizationEvents": [
+          "dEURO.MinterApplied(address,uint256,uint256,string)",
+          "dEURO.MinterDenied(address,string)",
+          "MintingHub.PositionOpened(address,address,address,address)",
+          "Equity.Delegation(address,address)"
+        ],
+        "capacityReads": [
+          "dEURO.minters(address)",
+          "dEURO.isMinter(address)",
+          "dEURO.getPositionParent(address)",
+          "dEURO.totalSupply()",
+          "dEURO.minterReserve()",
+          "dEURO.equity()",
+          "StablecoinBridge.limit()",
+          "StablecoinBridge.minted()",
+          "StablecoinBridge.horizon()",
+          "Position.limit()",
+          "Position.principal()",
+          "Position.availableForMinting()",
+          "Position.getInterest()",
+          "Savings.currentRatePPM()",
+          "Savings.nextRatePPM()",
+          "Equity.totalVotes()"
+        ]
+      },
+      "observedAt": "2026-10-04",
+      "observedBlock": 26117214,
+      "reviewedAt": "2026-10-04",
+      "reviewer": "Sol v10.03 D30 cohort (ResearchDEURO)",
       "sources": [
         {
-          "label": "dEURO docs",
-          "url": "https://docs.deuro.com/"
-        },
-        {
-          "label": "dEURO token on Etherscan",
-          "url": "https://etherscan.io/address/0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
-        },
-        {
-          "label": "dEURO Equity (nDEPS) on Etherscan",
-          "url": "https://etherscan.io/address/0xc71104001a3ccda1bef1177d765831bd1bfe8ee6"
-        },
-        {
-          "label": "Verified dEURO: permissionless minter admission and role-only mint",
+          "label": "Verified deployed source 0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
         },
         {
-          "label": "Verified Equity: current balance/age voting and transferable shares",
+          "label": "Verified deployed source 0xc71104001a3ccda1bef1177d765831bd1bfe8ee6",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc71104001a3ccda1bef1177d765831bd1bfe8ee6"
         },
         {
-          "label": "Ethereum pinned block 26113566",
-          "url": "https://eth.blockscout.com/block/26113566"
+          "label": "Verified deployed source 0x8b3c41c649b9c7085c171cbb82337889b3604618",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8b3c41c649b9c7085c171cbb82337889b3604618"
+        },
+        {
+          "label": "Verified deployed source 0x4ce0ab2fc21bd27a47a64f594fdf7654ea57dc79",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ce0ab2fc21bd27a47a64f594fdf7654ea57dc79"
+        },
+        {
+          "label": "Verified deployed source 0x073493d73258c4beb6542e8dd3e1b2891c972303",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x073493d73258c4beb6542e8dd3e1b2891c972303"
+        },
+        {
+          "label": "Verified deployed source 0x5c49c00f897bd970d964bfb8c3065ae65a180994",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5c49c00f897bd970d964bfb8c3065ae65a180994"
+        },
+        {
+          "label": "Verified deployed source 0xd03cd3ea55e67bc61b78a0d70ee93018e2182dbe",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd03cd3ea55e67bc61b78a0d70ee93018e2182dbe"
+        },
+        {
+          "label": "Verified deployed source 0x2353d16869f717bfcd22dabc0adbf4dca62c609f",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2353d16869f717bfcd22dabc0adbf4dca62c609f"
+        },
+        {
+          "label": "Verified deployed source 0x3ed40fa0e5c803e807ebd51355e388006f9e1fee",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3ed40fa0e5c803e807ebd51355e388006f9e1fee"
+        },
+        {
+          "label": "Verified deployed source 0x0423f419de1c44151b6b000e2daa51859c1d5d2a",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0423f419de1c44151b6b000e2daa51859c1d5d2a"
+        },
+        {
+          "label": "Verified deployed source 0x3ef3d03efcc1338d6210946f8cf5fb1a8b630341",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3ef3d03efcc1338d6210946f8cf5fb1a8b630341"
+        },
+        {
+          "label": "Verified deployed source 0x20b0a153ff16c7b1e962fd3d3352a00cf019f1a7",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x20b0a153ff16c7b1e962fd3d3352a00cf019f1a7"
+        },
+        {
+          "label": "Verified deployed source 0xdc6450e91f49048fbff5f424046985fa03be0130",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdc6450e91f49048fbff5f424046985fa03be0130"
+        },
+        {
+          "label": "Verified deployed source 0xb66a40934a996373fa7602de9820c6bf3e8c9afe",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb66a40934a996373fa7602de9820c6bf3e8c9afe"
+        },
+        {
+          "label": "Verified deployed source 0x05620f4bb92246b4e067ebc0b6f5c7ff6b771702",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x05620f4bb92246b4e067ebc0b6f5c7ff6b771702"
+        },
+        {
+          "label": "Verified deployed source 0xb4ff7412f08c22d7381885e8bda9ee9825092fd1",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb4ff7412f08c22d7381885e8bda9ee9825092fd1"
+        },
+        {
+          "label": "Verified deployed source 0x935332d2899eade0083f5398a154186ad8e5cf56",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x935332d2899eade0083f5398a154186ad8e5cf56"
+        },
+        {
+          "label": "Verified deployed source 0x8a7984b542c38661e4fd04029a8f181fd088ac59",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8a7984b542c38661e4fd04029a8f181fd088ac59"
+        },
+        {
+          "label": "Verified deployed source 0xf3432984b708a3dc9555ccf9b4dbc78015deb8fd",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3432984b708a3dc9555ccf9b4dbc78015deb8fd"
+        },
+        {
+          "label": "Verified deployed source 0x73f38ca06b27eaefb1612d062d885f58924f5897",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x73f38ca06b27eaefb1612d062d885f58924f5897"
+        },
+        {
+          "label": "Verified deployed source 0x4dfd460d54854087af195906a2f260aa483a13b1",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4dfd460d54854087af195906a2f260aa483a13b1"
+        },
+        {
+          "label": "Verified deployed source 0x76d8f514554a4a8e5d6103875f2dd7a67543692b",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x76d8f514554a4a8e5d6103875f2dd7a67543692b"
+        },
+        {
+          "label": "Verified deployed source 0xdcc4835b34b4c05eb28b8defac4d03d00842c2df",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdcc4835b34b4c05eb28b8defac4d03d00842c2df"
+        },
+        {
+          "label": "Verified deployed source 0x760233b90e45d186a9a98e911b115f7f4b90d3d9",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x760233b90e45d186a9a98e911b115f7f4b90d3d9"
+        },
+        {
+          "label": "Verified deployed source 0x66acc54a0c64255137b8993cb4972b0901684f7b",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x66acc54a0c64255137b8993cb4972b0901684f7b"
+        },
+        {
+          "label": "Verified deployed source 0x5c22d5b752b2121fae7f6f0069252b03b2f7c5cd",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5c22d5b752b2121fae7f6f0069252b03b2f7c5cd"
+        },
+        {
+          "label": "Verified deployed source 0x167144d66ac1d02eaafca3649ef3305ea31ee5a8",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x167144d66ac1d02eaafca3649ef3305ea31ee5a8"
+        },
+        {
+          "label": "Verified deployed source 0x3a3985a96b1b51e6d914bc7c9e89fd6ba6defe81",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3a3985a96b1b51e6d914bc7c9e89fd6ba6defe81"
+        },
+        {
+          "label": "Verified deployed source 0x103747924e74708139a9400e4ab4bea79fffa380",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x103747924e74708139a9400e4ab4bea79fffa380"
+        },
+        {
+          "label": "Ethereum pinned block 26117214",
+          "url": "https://eth.blockscout.com/block/26117214"
+        },
+        {
+          "label": "Ethereum JSON-RPC (eth_call, eth_getCode, eth_getLogs)",
+          "url": "https://eth-mainnet.g.alchemy.com"
+        }
+      ]
+    },
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "evidence": "Ethereum block 26117214 (0x17a158c02f6d95a7e3e54099f49ddc3ffba70b9909443b1d806e4964c8c28dc3), eth_getCode source/runtime matches, eth_call and eth_getLogs over 22088283..26117214 close the census: 25 MinterApplied, one MinterDenied, 24 active modules, no pending applications; 103 registered positions from both hubs, 37 full originals and 66 fixed-target clones. MIN_APPLICATION_PERIOD()=1209600 and MIN_FEE()=1000e18; eight initializer admissions had period/fee zero. Bridges enforce source transfers, immutable limits and horizons; Savings and FrontendGateway payouts are clamped to equity; roller flash mints are repaid atomically. Position principal is collateral/family-limit gated, but its fixed uint24 annual rate is not automatically reset by minority counter-proposals and interest accrues beyond expiration. Hub/Position coverLoss pays reserve shortfall by minting, burns principal and collects interest back to reserve, leaving a reachable unbounded durable-interest path at delay zero. D30-S does not admit that path; the separately listed Savings paths do meet formula/rate-cap/minority-replaceable-delay conditions. Equity votes are balance times holding duration with transfer-anchor adjustment, not plain live-balance voting. denyMinter 0x9b404da6 uses 200-bps checkQualified 0x352e3a83. kamikaze is symmetric; restructureCapTable 0x820710af is gated by equity<1000e18, while pinned equity()=63136024511895141755806, so D30-R would admit that isolated override. Ordinary redemptions retain at least one nDEPS share; only restructure can zero the share supply. However DEPSWrapper.halveHoldingDuration 0x8747842b lets a qualified minority halve the wrapper's age-weighted votes without its own sacrifice or insolvency gating; unknown override remains necessary. initialize requires both supplies zero; token supply=1259984883950306066870475 and nDEPS supply=2519030651522408755046305278; a pinned initialize eth_call reverted. V1 passes complete fresh scopes and closed census; V2 fails existing durable-interest issuance delay zero; V3 fails the independent ungated wrapper override; V4 fails the non-veto initial interest-shortfall path; V5 passes active veto selectors targeting the registry; V6 passes closed events and capacity reads; V7 passes the two reviewed Savings monetary-policy paths. Ordinary unbounded-unreconciled posture remains; no affirmative-governed fallback, bounded-economic reclassification or threshold waiver is claimed.",
+      "reviewer": "Sol v10.03 D30 cohort (ResearchDEURO)",
+      "reviewedAt": "2026-10-04",
+      "sources": [
+        {
+          "label": "Verified deployed source 0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+        },
+        {
+          "label": "Verified deployed source 0xc71104001a3ccda1bef1177d765831bd1bfe8ee6",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc71104001a3ccda1bef1177d765831bd1bfe8ee6"
+        },
+        {
+          "label": "Verified deployed source 0x8b3c41c649b9c7085c171cbb82337889b3604618",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8b3c41c649b9c7085c171cbb82337889b3604618"
+        },
+        {
+          "label": "Verified deployed source 0x4ce0ab2fc21bd27a47a64f594fdf7654ea57dc79",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ce0ab2fc21bd27a47a64f594fdf7654ea57dc79"
+        },
+        {
+          "label": "Verified deployed source 0x073493d73258c4beb6542e8dd3e1b2891c972303",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x073493d73258c4beb6542e8dd3e1b2891c972303"
+        },
+        {
+          "label": "Verified deployed source 0x5c49c00f897bd970d964bfb8c3065ae65a180994",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5c49c00f897bd970d964bfb8c3065ae65a180994"
+        },
+        {
+          "label": "Verified deployed source 0xd03cd3ea55e67bc61b78a0d70ee93018e2182dbe",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd03cd3ea55e67bc61b78a0d70ee93018e2182dbe"
+        },
+        {
+          "label": "Verified deployed source 0x2353d16869f717bfcd22dabc0adbf4dca62c609f",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2353d16869f717bfcd22dabc0adbf4dca62c609f"
+        },
+        {
+          "label": "Verified deployed source 0x3ed40fa0e5c803e807ebd51355e388006f9e1fee",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3ed40fa0e5c803e807ebd51355e388006f9e1fee"
+        },
+        {
+          "label": "Verified deployed source 0x0423f419de1c44151b6b000e2daa51859c1d5d2a",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0423f419de1c44151b6b000e2daa51859c1d5d2a"
+        },
+        {
+          "label": "Verified deployed source 0x3ef3d03efcc1338d6210946f8cf5fb1a8b630341",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3ef3d03efcc1338d6210946f8cf5fb1a8b630341"
+        },
+        {
+          "label": "Verified deployed source 0x20b0a153ff16c7b1e962fd3d3352a00cf019f1a7",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x20b0a153ff16c7b1e962fd3d3352a00cf019f1a7"
+        },
+        {
+          "label": "Verified deployed source 0xdc6450e91f49048fbff5f424046985fa03be0130",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdc6450e91f49048fbff5f424046985fa03be0130"
+        },
+        {
+          "label": "Verified deployed source 0xb66a40934a996373fa7602de9820c6bf3e8c9afe",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb66a40934a996373fa7602de9820c6bf3e8c9afe"
+        },
+        {
+          "label": "Verified deployed source 0x05620f4bb92246b4e067ebc0b6f5c7ff6b771702",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x05620f4bb92246b4e067ebc0b6f5c7ff6b771702"
+        },
+        {
+          "label": "Verified deployed source 0xb4ff7412f08c22d7381885e8bda9ee9825092fd1",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb4ff7412f08c22d7381885e8bda9ee9825092fd1"
+        },
+        {
+          "label": "Verified deployed source 0x935332d2899eade0083f5398a154186ad8e5cf56",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x935332d2899eade0083f5398a154186ad8e5cf56"
+        },
+        {
+          "label": "Verified deployed source 0x8a7984b542c38661e4fd04029a8f181fd088ac59",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8a7984b542c38661e4fd04029a8f181fd088ac59"
+        },
+        {
+          "label": "Verified deployed source 0xf3432984b708a3dc9555ccf9b4dbc78015deb8fd",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3432984b708a3dc9555ccf9b4dbc78015deb8fd"
+        },
+        {
+          "label": "Verified deployed source 0x73f38ca06b27eaefb1612d062d885f58924f5897",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x73f38ca06b27eaefb1612d062d885f58924f5897"
+        },
+        {
+          "label": "Verified deployed source 0x4dfd460d54854087af195906a2f260aa483a13b1",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4dfd460d54854087af195906a2f260aa483a13b1"
+        },
+        {
+          "label": "Verified deployed source 0x76d8f514554a4a8e5d6103875f2dd7a67543692b",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x76d8f514554a4a8e5d6103875f2dd7a67543692b"
+        },
+        {
+          "label": "Verified deployed source 0xdcc4835b34b4c05eb28b8defac4d03d00842c2df",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdcc4835b34b4c05eb28b8defac4d03d00842c2df"
+        },
+        {
+          "label": "Verified deployed source 0x760233b90e45d186a9a98e911b115f7f4b90d3d9",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x760233b90e45d186a9a98e911b115f7f4b90d3d9"
+        },
+        {
+          "label": "Verified deployed source 0x66acc54a0c64255137b8993cb4972b0901684f7b",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x66acc54a0c64255137b8993cb4972b0901684f7b"
+        },
+        {
+          "label": "Verified deployed source 0x5c22d5b752b2121fae7f6f0069252b03b2f7c5cd",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5c22d5b752b2121fae7f6f0069252b03b2f7c5cd"
+        },
+        {
+          "label": "Verified deployed source 0x167144d66ac1d02eaafca3649ef3305ea31ee5a8",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x167144d66ac1d02eaafca3649ef3305ea31ee5a8"
+        },
+        {
+          "label": "Verified deployed source 0x3a3985a96b1b51e6d914bc7c9e89fd6ba6defe81",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3a3985a96b1b51e6d914bc7c9e89fd6ba6defe81"
+        },
+        {
+          "label": "Verified deployed source 0x103747924e74708139a9400e4ab4bea79fffa380",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x103747924e74708139a9400e4ab4bea79fffa380"
+        },
+        {
+          "label": "Ethereum pinned block 26117214",
+          "url": "https://eth.blockscout.com/block/26117214"
+        },
+        {
+          "label": "Ethereum JSON-RPC (eth_call, eth_getCode, eth_getLogs)",
+          "url": "https://eth-mainnet.g.alchemy.com"
         }
       ]
     }
