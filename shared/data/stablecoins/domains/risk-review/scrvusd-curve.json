@@ -367,6 +367,118 @@
     ],
     "controls": [
       {
+        "id": "base-scrvusd-standardbridge",
+        "label": "Base scrvUSD upgradeable StandardBridge issuance",
+        "routeRefs": ["base:0x646a737b9b6024e49f5908762b3ff73e65b5160c"],
+        "capabilities": ["bridge-mint", "bridge-burn", "upgrade"],
+        "authorityType": "contract",
+        "controllerChain": "base",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "observedAt": "2026-10-03",
+        "observedBlock": 52141103,
+        "sources": [
+          {
+            "label": "Exact-match Base StandardBridge proxy source",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x4200000000000000000000000000000000000010?fields=all"
+          },
+          {
+            "label": "Exact-match ProxyAdmin implementation; onlyOwner upgrade and upgradeAndCall",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xc0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d30018?fields=all"
+          },
+          {
+            "label": "Exact-match Base satellite; BRIDGE-only uncapped mint and arbitrary-account burn",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x646a737b9b6024e49f5908762b3ff73e65b5160c?fields=all"
+          },
+          {
+            "label": "Pinned Base block 52141103 (0x8796ffa05e7feb226ba865166034ffd7dd0821704fafa41b0d8c56942f15b2ac)",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "Token BRIDGE() binds this proxy. At block 52141103, exact runtime/source correspondence holds for token, bridge proxy, ProxyAdmin proxy and its implementation. Bridge admin is 0x4200000000000000000000000000000000000018, whose owner is 0x8cc51c3008b3f03fe483b28b8db90e19cf076a6d. proxyType(bridge)=0 (ERC1967). onlyOwner upgrade/upgradeAndCall can replace bridge logic and call it; token mint has no numeric ceiling and burn accepts arbitrary holder addresses. These are adverse reachable issuance/impairment powers, not a complete owner/governance execution certificate or incident-free claim."
+      },
+      {
+        "id": "optimism-scrvusd-standardbridge",
+        "label": "Optimism scrvUSD upgradeable StandardBridge issuance",
+        "routeRefs": ["optimism:0x289f635106d5b822a505b39ac237a0ae9189335b"],
+        "capabilities": ["bridge-mint", "bridge-burn", "upgrade"],
+        "authorityType": "contract",
+        "controllerChain": "optimism",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "observedAt": "2026-10-03",
+        "observedBlock": 157736365,
+        "sources": [
+          {
+            "label": "Exact-match Optimism StandardBridge proxy source",
+            "url": "https://sourcify.dev/server/v2/contract/10/0x4200000000000000000000000000000000000010?fields=all"
+          },
+          {
+            "label": "Exact-match L2ProxyAdmin implementation; owner upgrade and depositor upgradePredeploys",
+            "url": "https://sourcify.dev/server/v2/contract/10/0x893c2ceeb71d38514daf67728d3ff1b213fc4b5f?fields=all"
+          },
+          {
+            "label": "Exact-match Optimism satellite; BRIDGE-only uncapped mint and arbitrary-account burn",
+            "url": "https://sourcify.dev/server/v2/contract/10/0x289f635106d5b822a505b39ac237a0ae9189335b?fields=all"
+          },
+          {
+            "label": "Pinned Optimism block 157736365 (0xcfdc07a274bfcbebc2400bdf11b8032cad8811d1216f5ff5f3a82320696994ff)",
+            "url": "https://mainnet.optimism.io"
+          }
+        ],
+        "evidence": "Token BRIDGE() binds this proxy. At block 157736365, exact runtime/source correspondence holds for token, bridge proxy, ProxyAdmin proxy and L2ProxyAdmin implementation. Bridge admin is 0x4200000000000000000000000000000000000018, whose owner is 0x6b1bae59d09fccbddb6c6cceb07b7279367c4e3b. proxyType(bridge)=0 (ERC1967). onlyOwner upgrade/upgradeAndCall and the distinct depositor-account upgradePredeploys path can change executable bridge logic. Token mint has no numeric ceiling and burn accepts arbitrary holders. This proves adverse reachable powers, not a complete remote-governance certificate, liability conservation or incident absence."
+      },
+      {
+        "id": "fraxtal-scrvusd-standardbridge",
+        "label": "Fraxtal scrvUSD upgradeable StandardBridge issuance",
+        "routeRefs": ["fraxtal:0xab94c721040b33aa8b0b4d159da9878e2a836ed0"],
+        "capabilities": ["bridge-mint", "bridge-burn", "upgrade"],
+        "authorityType": "contract",
+        "controllerChain": "fraxtal",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "observedAt": "2026-10-03",
+        "observedBlock": 42130421,
+        "sources": [
+          {
+            "label": "Exact-match Fraxtal StandardBridge proxy source",
+            "url": "https://sourcify.dev/server/v2/contract/252/0x4200000000000000000000000000000000000010?fields=all"
+          },
+          {
+            "label": "Exact-match Fraxtal ProxyAdmin implementation; onlyOwner upgrade and upgradeAndCall",
+            "url": "https://sourcify.dev/server/v2/contract/252/0xc0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d30018?fields=all"
+          },
+          {
+            "label": "Verified OptimismMintablePermitERC20 satellite source",
+            "url": "https://fraxscan.com/address/0xab94c721040b33aa8b0b4d159da9878e2a836ed0#code"
+          },
+          {
+            "label": "Fraxtal pinned block 42130421 (0xd49640730ee5c79ea0f59a3b0907bc2f3a79b4f4cab78a9cd19a94b957f2e9fc); proxy slots, ProxyAdmin implementation runtime and owner",
+            "url": "https://fraxtal.drpc.org"
+          }
+        ],
+        "evidence": "Current bridge proxy source matches pinned runtime; bridge admin is 0x4200000000000000000000000000000000000018 and proxyType(bridge)=0 (ERC1967). ProxyAdmin implementation 0xc0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d30018 has exact runtime/source correspondence, owner() is 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6, and its onlyOwner upgrade/upgradeAndCall changes bridge code. Verified satellite source binds BRIDGE to 0x4200000000000000000000000000000000000010 and exposes uncapped mint and arbitrary-account burn. This records adverse upgrade-mediated issuance/impairment; Safe bypass/owner reach and incident-free history remain unproved."
+      },
+      {
+        "id": "fantom-scrvusd-minter-proxy",
+        "label": "Fantom scrvUSD MinterProxy uncapped issuance",
+        "routeRefs": ["fantom:0x5191946500e75f0a74476f146df7d386e52961d9"],
+        "capabilities": ["bridge-mint", "admin"],
+        "authorityType": "contract",
+        "controllerChain": "fantom",
+        "controllerAddress": "0xf830b9e88f994bbb069ac884d40fa2e09d050bb8",
+        "observedAt": "2026-10-03",
+        "observedBlock": 123541859,
+        "sources": [
+          {
+            "label": "Exact-match BSC MinterProxy source; complete Fantom opcode and dispatch correspondence, accounting for PUSH1-zero versus PUSH0",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x4c62ac3f6088e882c9b2a315056bc298d22128bd?fields=all"
+          },
+          {
+            "label": "Fantom runtime, token-to-minter, TOKEN and owner reads at block 123541859, hash 0x000570db00002f75111a404518393c2f60ba9901a2eb76917063daec14e6b1c8",
+            "url": "https://rpcapi.fantom.network"
+          }
+        ],
+        "evidence": "At Fantom block 123541859, token.minter() and minter.TOKEN() bind this contract to the satellite, and owner() is 0xd62ade30f740de7ef766008258b4b2f574a084f7. All 306 executable instructions and seven dispatch-table targets correspond to exact-match BSC MinterProxy.vy after resolving jump/data offsets and the Paris PUSH1-zero versus Shanghai PUSH0 encoding; only the TOKEN immutable differs. set_minter grants arbitrary minters under owner authorization, and mint forwards unrestricted values to TOKEN. This proves adverse uncapped issuance, not exhaustive minter permissions, owner signer custody, incident absence or pending-liability conservation."
+      },
+      {
         "id": "bsc-scrvusd-minter-proxy",
         "label": "BSC scrvUSD MinterProxy uncapped issuance",
         "routeRefs": ["bsc:0x0094ad026643994c8fb2136ec912d508b15fe0e5"],

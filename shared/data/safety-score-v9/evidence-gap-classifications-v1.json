@@ -30300,304 +30300,6 @@
       "rationale": "Exact missing datum is a publicly documented supervisor and authorization boundary governing earnUSD mint/strategist operations. Linked terms identify Runtime Global S.A. but no regulator/license. Exact-entity search plus Panama SMV's current juridical register and August 31 manager, advisor, private-fund and foreign-offered-fund lists yield no match. Lido's no-supervision statement governs its interface only and is not transferred to the token. Supervision remains unknown, not none."
     },
     {
-      "id": "uw-emxn-telcoin-cea8163e46b1de54",
-      "assetId": "emxn-telcoin",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:09:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
-      "sources": [
-        {
-          "url": "https://www.telco.in/en/digital-cash",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": null,
-          "location": "Transparent and secure",
-          "excerpt": "Telcoin will also publish monthly attestations from an external auditor.",
-          "assertion": "Future publication commitment, not an actual eMXN holdings denominator or performed recurring whole-supply reconciliation."
-        },
-        {
-          "url": "https://www.telco.in/en/terms-of-use",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": "2026-06-30",
-          "location": "XXIX eXYZ Terms, reserves",
-          "excerpt": "Currency or Currency equivalents in its Segregated Accounts",
-          "assertion": "eXYZ reserve policy disclosed, without dated eMXN asset-class balances and token-liability reconciliation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.telco.in/en/terms-of-use",
-        "https://www.telco.in/en/digital-cash",
-        "https://trust.telco.in/",
-        "https://forum.telcoin.org/t/telxip-increasing-liquidity-for-digital-cash-emxn/626",
-        "https://polygonscan.com/token/0x68727e573D21a49c767c3c86A92D9F24bd933c99"
-      ],
-      "rationale": "No dated whole-denominator eMXN reserve composition or performed whole-supply reserves/liabilities reconciliation cadence is published on the searched issuer, legal, trust and exact-token surfaces. Generic segregation, onchain supply and promised future monthly attestations do not establish either datum. eUSD bank supervision is a separate issuer and is not borrowed."
-    },
-    {
-      "id": "uw-emxn-telcoin-7390667d8a35adea",
-      "assetId": "emxn-telcoin",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:09:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
-      "sources": [
-        {
-          "url": "https://www.telco.in/en/digital-cash",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": null,
-          "location": "Transparent and secure",
-          "excerpt": "Telcoin will also publish monthly attestations from an external auditor.",
-          "assertion": "Future publication commitment, not an actual eMXN holdings denominator or performed recurring whole-supply reconciliation."
-        },
-        {
-          "url": "https://www.telco.in/en/terms-of-use",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": "2026-06-30",
-          "location": "XXIX eXYZ Terms, reserves",
-          "excerpt": "Currency or Currency equivalents in its Segregated Accounts",
-          "assertion": "eXYZ reserve policy disclosed, without dated eMXN asset-class balances and token-liability reconciliation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.telco.in/en/terms-of-use",
-        "https://www.telco.in/en/digital-cash",
-        "https://trust.telco.in/",
-        "https://forum.telcoin.org/t/telxip-increasing-liquidity-for-digital-cash-emxn/626",
-        "https://polygonscan.com/token/0x68727e573D21a49c767c3c86A92D9F24bd933c99"
-      ],
-      "rationale": "No dated whole-denominator eMXN reserve composition or performed whole-supply reserves/liabilities reconciliation cadence is published on the searched issuer, legal, trust and exact-token surfaces. Generic segregation, onchain supply and promised future monthly attestations do not establish either datum. eUSD bank supervision is a separate issuer and is not borrowed."
-    },
-    {
-      "id": "uw-eusd-telcoin-376c69faf7c58300",
-      "assetId": "eusd-telcoin",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:09:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
-      "sources": [
-        {
-          "url": "https://bank.telco.in/eUSD",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": null,
-          "location": "Transparency",
-          "excerpt": "Telcoin Digital Asset Bank will publish regular disclosures regarding eUSD reserves and operations.",
-          "assertion": "Future disclosure promise supplies neither measured reserve composition nor performed whole-supply reconciliation."
-        },
-        {
-          "url": "https://bank.telco.in/terms-of-use",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": "2026-06-15",
-          "location": "20 finality",
-          "excerpt": "Minting is considered final after blockchain confirmation and internal ledger reconciliation",
-          "assertion": "Internal mint ledger finality is disclosed; it is not whole-supply reserve reconciliation."
-        },
-        {
-          "url": "https://ndbf.nebraska.gov/sites/default/files/industries/NFIA%20Statement%20of%20Policy%20%235%20-%20Liquidity%20Program_0.pdf",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": "2024-08-01",
-          "location": "Attestation, page 3",
-          "excerpt": "End of day quantity of outstanding stablecoin units; and",
-          "assertion": "Regulatory required reporting is not evidence that an actual scoped issuer report is available."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://bank.telco.in/terms-of-use",
-        "https://bank.telco.in/customer-agreement",
-        "https://bank.telco.in/eUSD",
-        "https://www.telco.in/en/digital-cash",
-        "https://trust.telco.in/",
-        "https://ndbf.nebraska.gov/sites/default/files/industries/NFIA%20Statement%20of%20Policy%20%235%20-%20Liquidity%20Program_0.pdf",
-        "https://ndbf.nebraska.gov/industries/digital-assets",
-        "https://etherscan.io/token/0x14913815bcfde78baead2111f463d038ac9c2949"
-      ],
-      "rationale": "No actual dated whole-book eUSD reserve composition or documented performed whole-supply reconciliation cadence was located. Terms disclose eligible reserve categories and internal ledger finality; regulator policy requires reports, but no actual reserve/liability report is published on searched surfaces. Do not treat charter, 1:1 policy or ledger finality as recurring financial reconciliation."
-    },
-    {
-      "id": "uw-eusd-telcoin-ca74d0bd68015d50",
-      "assetId": "eusd-telcoin",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:09:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
-      "sources": [
-        {
-          "url": "https://bank.telco.in/eUSD",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": null,
-          "location": "Transparency",
-          "excerpt": "Telcoin Digital Asset Bank will publish regular disclosures regarding eUSD reserves and operations.",
-          "assertion": "Future disclosure promise supplies neither measured reserve composition nor performed whole-supply reconciliation."
-        },
-        {
-          "url": "https://bank.telco.in/terms-of-use",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": "2026-06-15",
-          "location": "20 finality",
-          "excerpt": "Minting is considered final after blockchain confirmation and internal ledger reconciliation",
-          "assertion": "Internal mint ledger finality is disclosed; it is not whole-supply reserve reconciliation."
-        },
-        {
-          "url": "https://ndbf.nebraska.gov/sites/default/files/industries/NFIA%20Statement%20of%20Policy%20%235%20-%20Liquidity%20Program_0.pdf",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": "2024-08-01",
-          "location": "Attestation, page 3",
-          "excerpt": "End of day quantity of outstanding stablecoin units; and",
-          "assertion": "Regulatory required reporting is not evidence that an actual scoped issuer report is available."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://bank.telco.in/terms-of-use",
-        "https://bank.telco.in/customer-agreement",
-        "https://bank.telco.in/eUSD",
-        "https://www.telco.in/en/digital-cash",
-        "https://trust.telco.in/",
-        "https://ndbf.nebraska.gov/sites/default/files/industries/NFIA%20Statement%20of%20Policy%20%235%20-%20Liquidity%20Program_0.pdf",
-        "https://ndbf.nebraska.gov/industries/digital-assets",
-        "https://etherscan.io/token/0x14913815bcfde78baead2111f463d038ac9c2949"
-      ],
-      "rationale": "No actual dated whole-book eUSD reserve composition or documented performed whole-supply reconciliation cadence was located. Terms disclose eligible reserve categories and internal ledger finality; regulator policy requires reports, but no actual reserve/liability report is published on searched surfaces. Do not treat charter, 1:1 policy or ledger finality as recurring financial reconciliation."
-    },
-    {
-      "id": "uw-emxn-telcoin-cfc7995ebab3dfb4",
-      "assetId": "emxn-telcoin",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:emxn-telcoin:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:09:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
-      "sources": [
-        {
-          "url": "https://www.telco.in/en/terms-of-use",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": "2026-06-30",
-          "location": "XXIX.26 Processing times",
-          "excerpt": "business days or longer.",
-          "assertion": "Large redemptions expressly allow longer processing; there is no final delivered-fiat maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.telco.in/en/terms-of-use",
-        "https://www.telco.in/en/digital-cash",
-        "https://www.telco.in/support"
-      ],
-      "rationale": "No maximum end-to-end eMXN final spendable-fiat settlement SLA is disclosed. Standard 1-3 business-day processing is not final settlement; large transactions allow 3-5 business days or longer and extraordinary/compliance delays. Do not convert this target to calendar seconds."
-    },
-    {
-      "id": "uw-acrdx-anemoy-apollo-4f19f49dcda5ca62",
-      "assetId": "acrdx-anemoy-apollo",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:b2523b7dcb7224300edacdf7",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:09:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
-      "sources": [
-        {
-          "url": "https://www.apollo.com/content/dam/apolloaem/documents/fund-documents/adcf-prospectus.pdf",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": "2025-04-29",
-          "location": "Investment Strategy, page 7",
-          "excerpt": "there is no limit on the maturity or duration of any individual security in which the Fund may invest.",
-          "assertion": "Underlying credit holdings have no maximum maturity mandate; this is not a scalar maximum for feeder fund-share claim."
-        },
-        {
-          "url": "https://www.anemoy.io/news/acrdx-launched",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": "2025-09-16",
-          "location": "Feeder fund paragraph",
-          "excerpt": "ACRDX will serve as a feeder fund that provides tokenized access to Apollo Diversified Credit Fund",
-          "assertion": "The admitted slice is a fund-share claim, not any individual bond."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.anemoy.io/news/acrdx-launched",
-        "https://www.anemoy.io/",
-        "https://www.apollo.com/content/dam/apolloaem/documents/fund-documents/adcf-prospectus.pdf",
-        "https://centrifuge.io/blog/fission-centrifuge",
-        "https://docs.centrifuge.io/developer/protocol/deployments/"
-      ],
-      "rationale": "No finite contractual maximum maturity for the Apollo fund-share NAV claim is disclosed. The continuously offered interval fund discloses quarterly repurchases, not a fund-share final maturity, and expressly has no maximum maturity for individual underlying securities. Do not substitute average duration, quarterly liquidity or underlying security terms for the claim maximum."
-    },
-    {
-      "id": "uw-acrdx-anemoy-apollo-3a8998c5c16956b6",
-      "assetId": "acrdx-anemoy-apollo",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:acrdx-anemoy-apollo:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:09:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
-      "sources": [
-        {
-          "url": "https://centrifuge.io/blog/fission-centrifuge",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": "2026-08-25",
-          "location": "The redemption cycle",
-          "excerpt": "ACRDX goes further, providing tokenized access to the Apollo Diversified Credit Fund, with quarterly liquidity through its standard redemption path.",
-          "assertion": "Quarterly liquidity is a request/repurchase schedule, not full notional final settlement maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.anemoy.io/news/acrdx-launched",
-        "https://www.anemoy.io/",
-        "https://www.apollo.com/content/dam/apolloaem/documents/fund-documents/adcf-prospectus.pdf",
-        "https://centrifuge.io/blog/fission-centrifuge",
-        "https://docs.centrifuge.io/developer/protocol/deployments/"
-      ],
-      "rationale": "No full-notional final fiat settlement SLA for the Anemoy ACRDX issuer route is published. Standard quarterly liquidity and underlying limited repurchase offers are not a maximum completion bound. Fission immediate USDC liquidity is a different provider/route and cannot substitute for offchain issuer settlement."
-    },
-    {
       "id": "uw-nxusd-nereus-2cf669e993693ebe",
       "assetId": "nxusd-nereus",
       "scope": {
@@ -34160,421 +33862,6 @@
         "https://eth.blockscout.com/api/v2/smart-contracts/0xaf6186b3521b60e27396b5d23b48abc34bf585c5"
       ],
       "rationale": "No current GUSD-specific whole-book reserve holdings schedule, allocation weights or complete backing denominator is disclosed. Product/help/hub pages name Treasury RWAs and stablecoin-backed yield categories; the transparency report reports product funds and exchange-wide ratios rather than constituent backing amounts."
-    },
-    {
-      "id": "uw-eurcv-societe-generale-forge-abaf9379a6d01f16",
-      "assetId": "eurcv-societe-generale-forge",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:bb57ffd3351ebb61692ca703",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:59:11Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R42)",
-      "sources": [
-        {
-          "url": "https://www.sgforge.com/product/coinvertible/",
-          "observedAt": "2026-10-03T22:54:23Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Fully regulated. 100% backed.",
-          "excerpt": "Your assets are 100% backed by cash, ensuring immediate liquidity.",
-          "assertion": "Names current cash backing but not the contractual maximum term of every bank deposit."
-        },
-        {
-          "url": "https://www.sgforge.com/wp-content/uploads/2026/09/EURCV-WP-Ethereum_Solana_XRPL_Stellar_Canton_2026-09-30.pdf",
-          "observedAt": "2026-10-03T22:54:23Z",
-          "datumAsOf": "2026-09-30",
-          "location": "I.06 / Collateral Assets Provisions",
-          "excerpt": "will be accessible by the Issuer to meet any requests for redemption",
-          "assertion": "Whitepaper commits accessibility, not a maximum contractual maturity for bank-account deposits."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.sgforge.com/product/coinvertible/",
-        "https://www.sgforge.com/wp-content/uploads/2026/09/EURCV-WP-Ethereum_Solana_XRPL_Stellar_Canton_2026-09-30.pdf",
-        "https://www.sgforge.com/investors/",
-        "https://www.sgforge.com/important-information-related-to-products/",
-        "https://etherscan.io/token/0x5F7827FDeb7c20b443265Fc2F40845B715385Ff2"
-      ],
-      "rationale": "The exact bank-deposit slice has no published contractual maturityDaysMax. Daily cash balances, named bank allocations, liquidity language and Article 54 eligibility are disclosed; neither the reserve dashboard nor governing account/whitepaper disclosures publish a maximum deposit term. Demand-deposit status or zero maturity is not inferred."
-    },
-    {
-      "id": "uw-eurcv-societe-generale-forge-abfd95976ff5ac6c",
-      "assetId": "eurcv-societe-generale-forge",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:eurcv-societe-generale-forge:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:59:11Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R42)",
-      "sources": [
-        {
-          "url": "https://www.sgforge.com/investors/",
-          "observedAt": "2026-10-03T22:54:23Z",
-          "datumAsOf": null,
-          "location": "Costs and charges",
-          "excerpt": "Relevant information on cost and charges for professional clients and eligible counterparties is available upon request with your usual contact persons at Societe Generale-Forge.",
-          "assertion": "Charges are supplied on request, not a public route/scenario fee bound."
-        },
-        {
-          "url": "https://www.sgforge.com/wp-content/uploads/2026/09/EURCV-WP-Ethereum_Solana_XRPL_Stellar_Canton_2026-09-30.pdf",
-          "observedAt": "2026-10-03T22:54:23Z",
-          "datumAsOf": "2026-09-30",
-          "location": "D.4 recovery options",
-          "excerpt": "liquidity fees",
-          "assertion": "Recovery plan may impose liquidity fees without a quantified tariff; par redemption does not establish all-in zero cost."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.sgforge.com/product/coinvertible/",
-        "https://www.sgforge.com/wp-content/uploads/2026/09/EURCV-WP-Ethereum_Solana_XRPL_Stellar_Canton_2026-09-30.pdf",
-        "https://www.sgforge.com/investors/",
-        "https://www.sgforge.com/important-information-related-to-products/"
-      ],
-      "rationale": "No public all-in issuer-redemption cost for the institutional-eligible route was located. The current whitepaper, issuer FAQ, investor cost page and risk disclosures explain par redemption, gas and possible recovery liquidity fees but disclose no applicable flat fee, bps schedule or complete bound. The investor page explicitly offers transaction-specific charges only on request."
-    },
-    {
-      "id": "uw-eurcv-societe-generale-forge-f58d738d654fb67a",
-      "assetId": "eurcv-societe-generale-forge",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:eurcv-societe-generale-forge:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:59:11Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R42)",
-      "sources": [
-        {
-          "url": "https://www.sgforge.com/wp-content/uploads/2026/09/EURCV-WP-Ethereum_Solana_XRPL_Stellar_Canton_2026-09-30.pdf",
-          "observedAt": "2026-10-03T22:54:23Z",
-          "datumAsOf": "2026-09-30",
-          "location": "I.07, p.6 and D.1",
-          "excerpt": "at the latest on the last Business Day of the month following the month the controls were successfully completed.",
-          "assertion": "This is a post-controls payment deadline, not a bound from submitting a redemption request; no controls-completion maximum is disclosed."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.sgforge.com/product/coinvertible/",
-        "https://www.sgforge.com/wp-content/uploads/2026/09/EURCV-WP-Ethereum_Solana_XRPL_Stellar_Canton_2026-09-30.pdf",
-        "https://www.sgforge.com/coinvertible-update-faster-settlement/",
-        "https://www.sgforge.com/investors/"
-      ],
-      "rationale": "The required end-to-end settlement maximum is undisclosed. Acknowledgement is due within five Business Days and bank payment by the last Business Day of the following month after successful controls. No maximum is stated for KYC/AML, sanctions and other controls; these preconditions and conditional calendar wording cannot honestly become a seconds SLA from request to final fiat. The older faster-settlement announcement concerns token transfers only."
-    },
-    {
-      "id": "uw-usdcv-societe-generale-forge-7f012808f34df120",
-      "assetId": "usdcv-societe-generale-forge",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:bb57ffd3351ebb61692ca703",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:59:11Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R42)",
-      "sources": [
-        {
-          "url": "https://www.sgforge.com/product/coinvertible/",
-          "observedAt": "2026-10-03T22:54:23Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Fully regulated. 100% backed.",
-          "excerpt": "Your assets are 100% backed by cash, ensuring immediate liquidity.",
-          "assertion": "Names current cash backing but not the contractual maximum term of every bank deposit."
-        },
-        {
-          "url": "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf",
-          "observedAt": "2026-10-03T22:54:23Z",
-          "datumAsOf": "2026-09-30",
-          "location": "I.06 / Collateral Assets Provisions",
-          "excerpt": "will be accessible by the Issuer to meet any requests for redemption",
-          "assertion": "Whitepaper commits accessibility, not a maximum contractual maturity for bank-account deposits."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.sgforge.com/product/coinvertible/",
-        "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf",
-        "https://www.sgforge.com/investors/",
-        "https://www.sgforge.com/important-information-related-to-products/",
-        "https://etherscan.io/token/0x5422374B27757da72d5265cC745ea906E0446634"
-      ],
-      "rationale": "The exact bank-deposit slice has no published contractual maturityDaysMax. Daily cash balances, named bank allocations, liquidity language and Article 54 eligibility are disclosed; neither the reserve dashboard nor governing account/whitepaper disclosures publish a maximum deposit term. Demand-deposit status or zero maturity is not inferred."
-    },
-    {
-      "id": "uw-usdcv-societe-generale-forge-a17a6c13d6ac5681",
-      "assetId": "usdcv-societe-generale-forge",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdcv-societe-generale-forge:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:59:11Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R42)",
-      "sources": [
-        {
-          "url": "https://www.sgforge.com/investors/",
-          "observedAt": "2026-10-03T22:54:23Z",
-          "datumAsOf": null,
-          "location": "Costs and charges",
-          "excerpt": "Relevant information on cost and charges for professional clients and eligible counterparties is available upon request with your usual contact persons at Societe Generale-Forge.",
-          "assertion": "Charges are supplied on request, not a public route/scenario fee bound."
-        },
-        {
-          "url": "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf",
-          "observedAt": "2026-10-03T22:54:23Z",
-          "datumAsOf": "2026-09-30",
-          "location": "D.4 recovery options",
-          "excerpt": "liquidity fees",
-          "assertion": "Recovery plan may impose liquidity fees without a quantified tariff; par redemption does not establish all-in zero cost."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.sgforge.com/product/coinvertible/",
-        "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf",
-        "https://www.sgforge.com/investors/",
-        "https://www.sgforge.com/important-information-related-to-products/"
-      ],
-      "rationale": "No public all-in issuer-redemption cost for the institutional-eligible route was located. The current whitepaper, issuer FAQ, investor cost page and risk disclosures explain par redemption, gas and possible recovery liquidity fees but disclose no applicable flat fee, bps schedule or complete bound. The investor page explicitly offers transaction-specific charges only on request."
-    },
-    {
-      "id": "uw-usdcv-societe-generale-forge-a1be88cf45d8502a",
-      "assetId": "usdcv-societe-generale-forge",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdcv-societe-generale-forge:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:59:11Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R42)",
-      "sources": [
-        {
-          "url": "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf",
-          "observedAt": "2026-10-03T22:54:23Z",
-          "datumAsOf": "2026-09-30",
-          "location": "I.07, p.6 and D.1",
-          "excerpt": "at the latest on the last Business Day of the month following the month the controls were successfully completed.",
-          "assertion": "This is a post-controls payment deadline, not a bound from submitting a redemption request; no controls-completion maximum is disclosed."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.sgforge.com/product/coinvertible/",
-        "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf",
-        "https://www.sgforge.com/coinvertible-update-faster-settlement/",
-        "https://www.sgforge.com/investors/"
-      ],
-      "rationale": "The required end-to-end settlement maximum is undisclosed. Acknowledgement is due within five Business Days and bank payment by the last Business Day of the following month after successful controls. No maximum is stated for KYC/AML, sanctions and other controls; these preconditions and conditional calendar wording cannot honestly become a seconds SLA from request to final fiat. The older faster-settlement announcement concerns token transfers only."
-    },
-    {
-      "id": "uw-btcusd-btcfi-5464f6a09c3d531e",
-      "assetId": "btcusd-btcfi",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:59:11Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R42)",
-      "sources": [
-        {
-          "url": "https://docs.bifrostnetwork.com/eng.btcfi.one/dashboard/3.-mint-btcusd.md",
-          "observedAt": "2026-10-03T22:54:23Z",
-          "datumAsOf": null,
-          "location": "Mint BtcUSD",
-          "excerpt": "You can mint up to a maximum of 50% of your held collateral assets, with a 5.5% loan interest applied.",
-          "assertion": "Documents borrower LTV, not a complete issuer supply-to-backing reconciliation procedure or cadence."
-        },
-        {
-          "url": "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false",
-          "observedAt": "2026-10-03T22:54:23Z",
-          "datumAsOf": null,
-          "location": "BtcUSD handler 2",
-          "excerpt": "\"symbol\": \"BtcUSD\"",
-          "assertion": "Discloses token-handler identities but omits positive collateral handler 5; not a full all-path reconciliation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.btcfi.one/",
-        "https://docs.bifrostnetwork.com/btcfi.one",
-        "https://ecosystem.btcfi.one/",
-        "https://docs.bifrostnetwork.com/eng.btcfi.one/llms.txt",
-        "https://docs.bifrostnetwork.com/eng.btcfi.one/faq/frequently-asked-questions.md",
-        "https://docs.bifrostnetwork.com/eng.btcfi.one/dashboard/5.-withdrawing-btc.md",
-        "https://www.btcfi.one/api/getBtcfiMarket?isTestnet=false",
-        "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false",
-        "https://explorer-backend.mainnet.thebifrost.io/api/v2/smart-contracts/0x682143652b6e305730dd12b0dc7c38d5048fb647"
-      ],
-      "rationale": "BTCFi publishes collateralized user borrowing, repayment and market balances but no dated whole-supply reconciliation procedure/cadence covering arbitrary authorized minting, all chains, bridged/in-flight liabilities and every collateral handler. Public handler runtime is unverified and the collateral handler census omits handler 5. The LTV rule, security claims and API debt amount are not substituted for whole-supply reconciliation; unknown remains the scalar value."
-    },
-    {
-      "id": "uw-usdrif-rif-db61d5ad28b94c05",
-      "assetId": "usdrif-rif",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:a405d3d0d84221bc4d8e0ac4",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:59:11Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R42)",
-      "sources": [
-        {
-          "url": "https://raw.githubusercontent.com/money-on-chain/stable-protocol-roc-v2/master/doc/whitepaper.pdf",
-          "observedAt": "2026-10-03T22:54:23Z",
-          "datumAsOf": null,
-          "location": "Legal disclaimer p.3",
-          "excerpt": "There is also no guarantee of liquidity or of the",
-          "assertion": "The whitepaper declines liquidity guarantees; no whole-slice realization horizon in days is published."
-        },
-        {
-          "url": "https://raw.githubusercontent.com/money-on-chain/stable-protocol-roc-v2/master/doc/whitepaper.pdf",
-          "observedAt": "2026-10-03T22:54:23Z",
-          "datumAsOf": null,
-          "location": "2.1, p.6",
-          "excerpt": "USDRIF can be redeemed from either",
-          "assertion": "Selected-bucket redemption is constrained by attributed liabilities and execution conditions, not immediate full reserve realizability."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://rifonchain.com/",
-        "https://raw.githubusercontent.com/money-on-chain/stable-protocol-roc-v2/master/doc/whitepaper.pdf",
-        "https://forum.moneyonchain.com/t/proposal-rif-on-chain-v2-v3-upgrade-multi-collateral-support/463",
-        "https://rifonchain.com/privacy-policy/",
-        "https://docs.moneyonchain.com/rdoc-contract/integration-with-roc-platform/getting-rdocs/redeeming-rdocs",
-        "https://rootstock.blockscout.com/api/v2/smart-contracts/0x47f5014115d3bb29B20b5168Ee75050D6f8c3Bf1"
-      ],
-      "rationale": "Neither the RIF nor DOC V3 collateral bucket has a published whole-position stressed realization maximum. V3 documents collateral and selected-bucket redemptions, queues, coverage constraints, Flux Capacitor throttles and external task execution. Transferability and short minimum queue waits do not establish realizability of the entire reserve position at a known value. The whitepaper expressly declines liquidity guarantees; unknown liquidity is retained."
-    },
-    {
-      "id": "uw-usdrif-rif-6171d66919fbbd7e",
-      "assetId": "usdrif-rif",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:a836ffdf89f2ae1fb5794de2",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:59:11Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R42)",
-      "sources": [
-        {
-          "url": "https://raw.githubusercontent.com/money-on-chain/stable-protocol-roc-v2/master/doc/whitepaper.pdf",
-          "observedAt": "2026-10-03T22:54:23Z",
-          "datumAsOf": null,
-          "location": "Legal disclaimer p.3",
-          "excerpt": "There is also no guarantee of liquidity or of the",
-          "assertion": "The whitepaper declines liquidity guarantees; no whole-slice realization horizon in days is published."
-        },
-        {
-          "url": "https://raw.githubusercontent.com/money-on-chain/stable-protocol-roc-v2/master/doc/whitepaper.pdf",
-          "observedAt": "2026-10-03T22:54:23Z",
-          "datumAsOf": null,
-          "location": "2.1, p.6",
-          "excerpt": "USDRIF can be redeemed from either",
-          "assertion": "Selected-bucket redemption is constrained by attributed liabilities and execution conditions, not immediate full reserve realizability."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://rifonchain.com/",
-        "https://raw.githubusercontent.com/money-on-chain/stable-protocol-roc-v2/master/doc/whitepaper.pdf",
-        "https://forum.moneyonchain.com/t/proposal-rif-on-chain-v2-v3-upgrade-multi-collateral-support/463",
-        "https://rifonchain.com/privacy-policy/",
-        "https://docs.moneyonchain.com/rdoc-contract/integration-with-roc-platform/getting-rdocs/redeeming-rdocs",
-        "https://rootstock.blockscout.com/api/v2/smart-contracts/0x47f5014115d3bb29B20b5168Ee75050D6f8c3Bf1"
-      ],
-      "rationale": "Neither the RIF nor DOC V3 collateral bucket has a published whole-position stressed realization maximum. V3 documents collateral and selected-bucket redemptions, queues, coverage constraints, Flux Capacitor throttles and external task execution. Transferability and short minimum queue waits do not establish realizability of the entire reserve position at a known value. The whitepaper expressly declines liquidity guarantees; unknown liquidity is retained."
-    },
-    {
-      "id": "uw-usdrif-rif-03891fece0c81edf",
-      "assetId": "usdrif-rif",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdrif-rif:queue-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:59:11Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R42)",
-      "sources": [
-        {
-          "url": "https://raw.githubusercontent.com/money-on-chain/stable-protocol-roc-v2/master/doc/whitepaper.pdf",
-          "observedAt": "2026-10-03T22:54:23Z",
-          "datumAsOf": null,
-          "location": "Appendix C.5, pp.42\u201343",
-          "excerpt": "TasksRunner operators.",
-          "assertion": "Execution depends on external operators and contract conditions, without a funded end-to-end completion SLA."
-        },
-        {
-          "url": "https://raw.githubusercontent.com/money-on-chain/stable-protocol-roc-v2/master/doc/whitepaper.pdf",
-          "observedAt": "2026-10-03T22:54:23Z",
-          "datumAsOf": null,
-          "location": "Appendix B.6, p.40",
-          "excerpt": "the execution pipeline for that bucket pauses until the decay process restores sufficient capacity.",
-          "assertion": "Throttled queue operations can wait; initial delay is not the maximum final settlement time."
-        },
-        {
-          "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0x8D7a31357bA29FECd3e6CE5B6110a2a28F619C97",
-          "observedAt": "2026-10-03T22:56:10Z",
-          "datumAsOf": null,
-          "location": "MocQueue.sol: maxOperWaitingBlk declaration and execute",
-          "excerpt": "Even if there is no price update it can be executed after this amount of blocks",
-          "assertion": "The published maximum is an execution-eligibility delay, not an enforced final-redemption SLA. execute is external onlyMocMultiCollateralGuard and can catch a failed redemption."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://rifonchain.com/",
-        "https://raw.githubusercontent.com/money-on-chain/stable-protocol-roc-v2/master/doc/whitepaper.pdf",
-        "https://forum.moneyonchain.com/t/proposal-rif-on-chain-v2-v3-upgrade-multi-collateral-support/463",
-        "https://rifonchain.com/privacy-policy/",
-        "https://docs.moneyonchain.com/rdoc-contract/integration-with-roc-platform/getting-rdocs/redeeming-rdocs",
-        "https://rootstock.blockscout.com/api/v2/smart-contracts/0x47f5014115d3bb29B20b5168Ee75050D6f8c3Bf1"
-      ],
-      "rationale": "No final maximum for the retained USDRIF queue-redeem route is published. V3 has minimum queue delay, dynamic throttles, coverage/oracle conditions and TasksRunner execution; none guarantees completion. Verified current MocQueue source also publishes maxOperWaitingBlk: it makes an operation executable even without a price update, but does not ensure that the privileged guard executes it or that bucket redemption succeeds. Legacy docs describe 90-day settlement intervals, not a V3 SLA. No eligibility delay, minimum or average is encoded as a final-settlement maximum."
     },
     {
       "id": "uw-gldon-ondo-7b60c3ae2773a905",
@@ -38495,6 +37782,745 @@
         "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/why-cygnus.md"
       ],
       "rationale": "Queue-redeem end-to-end settlement maximum is unpublished. FAQ gives two business days for sales, three for conversion and normal 5-7 days; mechanics gives typically 2-5 days followed by an oracle update/claim. Policy explicitly disclaims deterministic transit timing. Website and legal terms add no funded request-to-spendable-USDC upper guarantee. Do not convert normal windows, business-day legs or oracle batching into a calendar-second maximum."
+    },
+    {
+      "id": "uw-scrvusd-curve-1449bae989751546",
+      "assetId": "scrvusd-curve",
+      "scope": {
+        "componentKey": "access:transfer",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "access:transfer",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-04T00:02:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R32)",
+      "sources": [
+        {
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x646a737b9b6024e49f5908762b3ff73e65b5160c?fields=all",
+          "observedAt": "2026-10-04T00:01:30Z",
+          "datumAsOf": "2026-10-03",
+          "location": "contracts/OptimismMintableERC20.sol burn; current BRIDGE/admin pins; complete 10-deployment review staged in registryUpserts",
+          "excerpt": "function burn(\n        address _from,\n        uint256 _amount\n    )\n        external\n        virtual\n        override(IOptimismMintableERC20, ILegacyMintableERC20)\n        onlyBridge\n    {\n        _burn(_from, _amount);",
+          "assertion": "Complete canonical + nine-satellite token census publicly establishes restrictable worst posture via upgradeable BRIDGE burn. Staged review is representable, but exact captured materialDeploymentScopeComplete is false without producer economic-supply/pending partition; adapter refuses admission."
+        }
+      ]
+    },
+    {
+      "id": "uw-eurcv-societe-generale-forge-abaf9379a6d01f16",
+      "assetId": "eurcv-societe-generale-forge",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:bb57ffd3351ebb61692ca703",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:59:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R42)",
+      "sources": [
+        {
+          "url": "https://www.sgforge.com/product/coinvertible/",
+          "observedAt": "2026-10-03T22:54:23Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Fully regulated. 100% backed.",
+          "excerpt": "Your assets are 100% backed by cash, ensuring immediate liquidity.",
+          "assertion": "Names current cash backing but not the contractual maximum term of every bank deposit."
+        },
+        {
+          "url": "https://www.sgforge.com/wp-content/uploads/2026/09/EURCV-WP-Ethereum_Solana_XRPL_Stellar_Canton_2026-09-30.pdf",
+          "observedAt": "2026-10-03T22:54:23Z",
+          "datumAsOf": "2026-09-30",
+          "location": "I.06 / Collateral Assets Provisions",
+          "excerpt": "will be accessible by the Issuer to meet any requests for redemption",
+          "assertion": "Whitepaper commits accessibility, not a maximum contractual maturity for bank-account deposits."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.sgforge.com/product/coinvertible/",
+        "https://www.sgforge.com/wp-content/uploads/2026/09/EURCV-WP-Ethereum_Solana_XRPL_Stellar_Canton_2026-09-30.pdf",
+        "https://www.sgforge.com/investors/",
+        "https://www.sgforge.com/important-information-related-to-products/",
+        "https://etherscan.io/token/0x5F7827FDeb7c20b443265Fc2F40845B715385Ff2"
+      ],
+      "rationale": "The exact bank-deposit slice has no published contractual maturityDaysMax. Daily cash balances, named bank allocations, liquidity language and Article 54 eligibility are disclosed; neither the reserve dashboard nor governing account/whitepaper disclosures publish a maximum deposit term. Demand-deposit status or zero maturity is not inferred."
+    },
+    {
+      "id": "uw-eurcv-societe-generale-forge-abfd95976ff5ac6c",
+      "assetId": "eurcv-societe-generale-forge",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:eurcv-societe-generale-forge:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:59:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R42)",
+      "sources": [
+        {
+          "url": "https://www.sgforge.com/investors/",
+          "observedAt": "2026-10-03T22:54:23Z",
+          "datumAsOf": null,
+          "location": "Costs and charges",
+          "excerpt": "Relevant information on cost and charges for professional clients and eligible counterparties is available upon request with your usual contact persons at Societe Generale-Forge.",
+          "assertion": "Charges are supplied on request, not a public route/scenario fee bound."
+        },
+        {
+          "url": "https://www.sgforge.com/wp-content/uploads/2026/09/EURCV-WP-Ethereum_Solana_XRPL_Stellar_Canton_2026-09-30.pdf",
+          "observedAt": "2026-10-03T22:54:23Z",
+          "datumAsOf": "2026-09-30",
+          "location": "D.4 recovery options",
+          "excerpt": "liquidity fees",
+          "assertion": "Recovery plan may impose liquidity fees without a quantified tariff; par redemption does not establish all-in zero cost."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.sgforge.com/product/coinvertible/",
+        "https://www.sgforge.com/wp-content/uploads/2026/09/EURCV-WP-Ethereum_Solana_XRPL_Stellar_Canton_2026-09-30.pdf",
+        "https://www.sgforge.com/investors/",
+        "https://www.sgforge.com/important-information-related-to-products/"
+      ],
+      "rationale": "No public all-in issuer-redemption cost for the institutional-eligible route was located. The current whitepaper, issuer FAQ, investor cost page and risk disclosures explain par redemption, gas and possible recovery liquidity fees but disclose no applicable flat fee, bps schedule or complete bound. The investor page explicitly offers transaction-specific charges only on request."
+    },
+    {
+      "id": "uw-eurcv-societe-generale-forge-f58d738d654fb67a",
+      "assetId": "eurcv-societe-generale-forge",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:eurcv-societe-generale-forge:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:59:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R42)",
+      "sources": [
+        {
+          "url": "https://www.sgforge.com/wp-content/uploads/2026/09/EURCV-WP-Ethereum_Solana_XRPL_Stellar_Canton_2026-09-30.pdf",
+          "observedAt": "2026-10-03T22:54:23Z",
+          "datumAsOf": "2026-09-30",
+          "location": "I.07, p.6 and D.1",
+          "excerpt": "at the latest on the last Business Day of the month following the month the controls were successfully completed.",
+          "assertion": "This is a post-controls payment deadline, not a bound from submitting a redemption request; no controls-completion maximum is disclosed."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.sgforge.com/product/coinvertible/",
+        "https://www.sgforge.com/wp-content/uploads/2026/09/EURCV-WP-Ethereum_Solana_XRPL_Stellar_Canton_2026-09-30.pdf",
+        "https://www.sgforge.com/coinvertible-update-faster-settlement/",
+        "https://www.sgforge.com/investors/"
+      ],
+      "rationale": "The required end-to-end settlement maximum is undisclosed. Acknowledgement is due within five Business Days and bank payment by the last Business Day of the following month after successful controls. No maximum is stated for KYC/AML, sanctions and other controls; these preconditions and conditional calendar wording cannot honestly become a seconds SLA from request to final fiat. The older faster-settlement announcement concerns token transfers only."
+    },
+    {
+      "id": "uw-usdcv-societe-generale-forge-7f012808f34df120",
+      "assetId": "usdcv-societe-generale-forge",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:bb57ffd3351ebb61692ca703",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:59:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R42)",
+      "sources": [
+        {
+          "url": "https://www.sgforge.com/product/coinvertible/",
+          "observedAt": "2026-10-03T22:54:23Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Fully regulated. 100% backed.",
+          "excerpt": "Your assets are 100% backed by cash, ensuring immediate liquidity.",
+          "assertion": "Names current cash backing but not the contractual maximum term of every bank deposit."
+        },
+        {
+          "url": "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf",
+          "observedAt": "2026-10-03T22:54:23Z",
+          "datumAsOf": "2026-09-30",
+          "location": "I.06 / Collateral Assets Provisions",
+          "excerpt": "will be accessible by the Issuer to meet any requests for redemption",
+          "assertion": "Whitepaper commits accessibility, not a maximum contractual maturity for bank-account deposits."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.sgforge.com/product/coinvertible/",
+        "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf",
+        "https://www.sgforge.com/investors/",
+        "https://www.sgforge.com/important-information-related-to-products/",
+        "https://etherscan.io/token/0x5422374B27757da72d5265cC745ea906E0446634"
+      ],
+      "rationale": "The exact bank-deposit slice has no published contractual maturityDaysMax. Daily cash balances, named bank allocations, liquidity language and Article 54 eligibility are disclosed; neither the reserve dashboard nor governing account/whitepaper disclosures publish a maximum deposit term. Demand-deposit status or zero maturity is not inferred."
+    },
+    {
+      "id": "uw-usdcv-societe-generale-forge-a17a6c13d6ac5681",
+      "assetId": "usdcv-societe-generale-forge",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdcv-societe-generale-forge:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:59:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R42)",
+      "sources": [
+        {
+          "url": "https://www.sgforge.com/investors/",
+          "observedAt": "2026-10-03T22:54:23Z",
+          "datumAsOf": null,
+          "location": "Costs and charges",
+          "excerpt": "Relevant information on cost and charges for professional clients and eligible counterparties is available upon request with your usual contact persons at Societe Generale-Forge.",
+          "assertion": "Charges are supplied on request, not a public route/scenario fee bound."
+        },
+        {
+          "url": "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf",
+          "observedAt": "2026-10-03T22:54:23Z",
+          "datumAsOf": "2026-09-30",
+          "location": "D.4 recovery options",
+          "excerpt": "liquidity fees",
+          "assertion": "Recovery plan may impose liquidity fees without a quantified tariff; par redemption does not establish all-in zero cost."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.sgforge.com/product/coinvertible/",
+        "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf",
+        "https://www.sgforge.com/investors/",
+        "https://www.sgforge.com/important-information-related-to-products/"
+      ],
+      "rationale": "No public all-in issuer-redemption cost for the institutional-eligible route was located. The current whitepaper, issuer FAQ, investor cost page and risk disclosures explain par redemption, gas and possible recovery liquidity fees but disclose no applicable flat fee, bps schedule or complete bound. The investor page explicitly offers transaction-specific charges only on request."
+    },
+    {
+      "id": "uw-usdcv-societe-generale-forge-a1be88cf45d8502a",
+      "assetId": "usdcv-societe-generale-forge",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdcv-societe-generale-forge:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:59:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R42)",
+      "sources": [
+        {
+          "url": "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf",
+          "observedAt": "2026-10-03T22:54:23Z",
+          "datumAsOf": "2026-09-30",
+          "location": "I.07, p.6 and D.1",
+          "excerpt": "at the latest on the last Business Day of the month following the month the controls were successfully completed.",
+          "assertion": "This is a post-controls payment deadline, not a bound from submitting a redemption request; no controls-completion maximum is disclosed."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.sgforge.com/product/coinvertible/",
+        "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf",
+        "https://www.sgforge.com/coinvertible-update-faster-settlement/",
+        "https://www.sgforge.com/investors/"
+      ],
+      "rationale": "The required end-to-end settlement maximum is undisclosed. Acknowledgement is due within five Business Days and bank payment by the last Business Day of the following month after successful controls. No maximum is stated for KYC/AML, sanctions and other controls; these preconditions and conditional calendar wording cannot honestly become a seconds SLA from request to final fiat. The older faster-settlement announcement concerns token transfers only."
+    },
+    {
+      "id": "uw-btcusd-btcfi-5464f6a09c3d531e",
+      "assetId": "btcusd-btcfi",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:59:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R42)",
+      "sources": [
+        {
+          "url": "https://docs.bifrostnetwork.com/eng.btcfi.one/dashboard/3.-mint-btcusd.md",
+          "observedAt": "2026-10-03T22:54:23Z",
+          "datumAsOf": null,
+          "location": "Mint BtcUSD",
+          "excerpt": "You can mint up to a maximum of 50% of your held collateral assets, with a 5.5% loan interest applied.",
+          "assertion": "Documents borrower LTV, not a complete issuer supply-to-backing reconciliation procedure or cadence."
+        },
+        {
+          "url": "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false",
+          "observedAt": "2026-10-03T22:54:23Z",
+          "datumAsOf": null,
+          "location": "BtcUSD handler 2",
+          "excerpt": "\"symbol\": \"BtcUSD\"",
+          "assertion": "Discloses token-handler identities but omits positive collateral handler 5; not a full all-path reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.btcfi.one/",
+        "https://docs.bifrostnetwork.com/btcfi.one",
+        "https://ecosystem.btcfi.one/",
+        "https://docs.bifrostnetwork.com/eng.btcfi.one/llms.txt",
+        "https://docs.bifrostnetwork.com/eng.btcfi.one/faq/frequently-asked-questions.md",
+        "https://docs.bifrostnetwork.com/eng.btcfi.one/dashboard/5.-withdrawing-btc.md",
+        "https://www.btcfi.one/api/getBtcfiMarket?isTestnet=false",
+        "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false",
+        "https://explorer-backend.mainnet.thebifrost.io/api/v2/smart-contracts/0x682143652b6e305730dd12b0dc7c38d5048fb647"
+      ],
+      "rationale": "BTCFi publishes collateralized user borrowing, repayment and market balances but no dated whole-supply reconciliation procedure/cadence covering arbitrary authorized minting, all chains, bridged/in-flight liabilities and every collateral handler. Public handler runtime is unverified and the collateral handler census omits handler 5. The LTV rule, security claims and API debt amount are not substituted for whole-supply reconciliation; unknown remains the scalar value."
+    },
+    {
+      "id": "uw-usdrif-rif-db61d5ad28b94c05",
+      "assetId": "usdrif-rif",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:a405d3d0d84221bc4d8e0ac4",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:59:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R42)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/money-on-chain/stable-protocol-roc-v2/master/doc/whitepaper.pdf",
+          "observedAt": "2026-10-03T22:54:23Z",
+          "datumAsOf": null,
+          "location": "Legal disclaimer p.3",
+          "excerpt": "There is also no guarantee of liquidity or of the",
+          "assertion": "The whitepaper declines liquidity guarantees; no whole-slice realization horizon in days is published."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/money-on-chain/stable-protocol-roc-v2/master/doc/whitepaper.pdf",
+          "observedAt": "2026-10-03T22:54:23Z",
+          "datumAsOf": null,
+          "location": "2.1, p.6",
+          "excerpt": "USDRIF can be redeemed from either",
+          "assertion": "Selected-bucket redemption is constrained by attributed liabilities and execution conditions, not immediate full reserve realizability."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://rifonchain.com/",
+        "https://raw.githubusercontent.com/money-on-chain/stable-protocol-roc-v2/master/doc/whitepaper.pdf",
+        "https://forum.moneyonchain.com/t/proposal-rif-on-chain-v2-v3-upgrade-multi-collateral-support/463",
+        "https://rifonchain.com/privacy-policy/",
+        "https://docs.moneyonchain.com/rdoc-contract/integration-with-roc-platform/getting-rdocs/redeeming-rdocs",
+        "https://rootstock.blockscout.com/api/v2/smart-contracts/0x47f5014115d3bb29B20b5168Ee75050D6f8c3Bf1"
+      ],
+      "rationale": "Neither the RIF nor DOC V3 collateral bucket has a published whole-position stressed realization maximum. V3 documents collateral and selected-bucket redemptions, queues, coverage constraints, Flux Capacitor throttles and external task execution. Transferability and short minimum queue waits do not establish realizability of the entire reserve position at a known value. The whitepaper expressly declines liquidity guarantees; unknown liquidity is retained."
+    },
+    {
+      "id": "uw-usdrif-rif-6171d66919fbbd7e",
+      "assetId": "usdrif-rif",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:a836ffdf89f2ae1fb5794de2",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:59:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R42)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/money-on-chain/stable-protocol-roc-v2/master/doc/whitepaper.pdf",
+          "observedAt": "2026-10-03T22:54:23Z",
+          "datumAsOf": null,
+          "location": "Legal disclaimer p.3",
+          "excerpt": "There is also no guarantee of liquidity or of the",
+          "assertion": "The whitepaper declines liquidity guarantees; no whole-slice realization horizon in days is published."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/money-on-chain/stable-protocol-roc-v2/master/doc/whitepaper.pdf",
+          "observedAt": "2026-10-03T22:54:23Z",
+          "datumAsOf": null,
+          "location": "2.1, p.6",
+          "excerpt": "USDRIF can be redeemed from either",
+          "assertion": "Selected-bucket redemption is constrained by attributed liabilities and execution conditions, not immediate full reserve realizability."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://rifonchain.com/",
+        "https://raw.githubusercontent.com/money-on-chain/stable-protocol-roc-v2/master/doc/whitepaper.pdf",
+        "https://forum.moneyonchain.com/t/proposal-rif-on-chain-v2-v3-upgrade-multi-collateral-support/463",
+        "https://rifonchain.com/privacy-policy/",
+        "https://docs.moneyonchain.com/rdoc-contract/integration-with-roc-platform/getting-rdocs/redeeming-rdocs",
+        "https://rootstock.blockscout.com/api/v2/smart-contracts/0x47f5014115d3bb29B20b5168Ee75050D6f8c3Bf1"
+      ],
+      "rationale": "Neither the RIF nor DOC V3 collateral bucket has a published whole-position stressed realization maximum. V3 documents collateral and selected-bucket redemptions, queues, coverage constraints, Flux Capacitor throttles and external task execution. Transferability and short minimum queue waits do not establish realizability of the entire reserve position at a known value. The whitepaper expressly declines liquidity guarantees; unknown liquidity is retained."
+    },
+    {
+      "id": "uw-usdrif-rif-03891fece0c81edf",
+      "assetId": "usdrif-rif",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdrif-rif:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:59:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R42)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/money-on-chain/stable-protocol-roc-v2/master/doc/whitepaper.pdf",
+          "observedAt": "2026-10-03T22:54:23Z",
+          "datumAsOf": null,
+          "location": "Appendix C.5, pp.42\u201343",
+          "excerpt": "TasksRunner operators.",
+          "assertion": "Execution depends on external operators and contract conditions, without a funded end-to-end completion SLA."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/money-on-chain/stable-protocol-roc-v2/master/doc/whitepaper.pdf",
+          "observedAt": "2026-10-03T22:54:23Z",
+          "datumAsOf": null,
+          "location": "Appendix B.6, p.40",
+          "excerpt": "the execution pipeline for that bucket pauses until the decay process restores sufficient capacity.",
+          "assertion": "Throttled queue operations can wait; initial delay is not the maximum final settlement time."
+        },
+        {
+          "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0x8D7a31357bA29FECd3e6CE5B6110a2a28F619C97",
+          "observedAt": "2026-10-03T22:56:10Z",
+          "datumAsOf": null,
+          "location": "MocQueue.sol: maxOperWaitingBlk declaration and execute",
+          "excerpt": "Even if there is no price update it can be executed after this amount of blocks",
+          "assertion": "The published maximum is an execution-eligibility delay, not an enforced final-redemption SLA. execute is external onlyMocMultiCollateralGuard and can catch a failed redemption."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://rifonchain.com/",
+        "https://raw.githubusercontent.com/money-on-chain/stable-protocol-roc-v2/master/doc/whitepaper.pdf",
+        "https://forum.moneyonchain.com/t/proposal-rif-on-chain-v2-v3-upgrade-multi-collateral-support/463",
+        "https://rifonchain.com/privacy-policy/",
+        "https://docs.moneyonchain.com/rdoc-contract/integration-with-roc-platform/getting-rdocs/redeeming-rdocs",
+        "https://rootstock.blockscout.com/api/v2/smart-contracts/0x47f5014115d3bb29B20b5168Ee75050D6f8c3Bf1"
+      ],
+      "rationale": "No final maximum for the retained USDRIF queue-redeem route is published. V3 has minimum queue delay, dynamic throttles, coverage/oracle conditions and TasksRunner execution; none guarantees completion. Verified current MocQueue source also publishes maxOperWaitingBlk: it makes an operation executable even without a price update, but does not ensure that the privileged guard executes it or that bucket redemption succeeds. Legacy docs describe 90-day settlement intervals, not a V3 SLA. No eligibility delay, minimum or average is encoded as a final-settlement maximum."
+    },
+    {
+      "id": "uw-emxn-telcoin-cea8163e46b1de54",
+      "assetId": "emxn-telcoin",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://www.telco.in/en/digital-cash",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": null,
+          "location": "Transparent and secure",
+          "excerpt": "Telcoin will also publish monthly attestations from an external auditor.",
+          "assertion": "Future publication commitment, not an actual eMXN holdings denominator or performed recurring whole-supply reconciliation."
+        },
+        {
+          "url": "https://www.telco.in/en/terms-of-use",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2026-06-30",
+          "location": "XXIX eXYZ Terms, reserves",
+          "excerpt": "Currency or Currency equivalents in its Segregated Accounts",
+          "assertion": "eXYZ reserve policy disclosed, without dated eMXN asset-class balances and token-liability reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.telco.in/en/terms-of-use",
+        "https://www.telco.in/en/digital-cash",
+        "https://trust.telco.in/",
+        "https://forum.telcoin.org/t/telxip-increasing-liquidity-for-digital-cash-emxn/626",
+        "https://polygonscan.com/token/0x68727e573D21a49c767c3c86A92D9F24bd933c99"
+      ],
+      "rationale": "No dated whole-denominator eMXN reserve composition or performed whole-supply reserves/liabilities reconciliation cadence is published on the searched issuer, legal, trust and exact-token surfaces. Generic segregation, onchain supply and promised future monthly attestations do not establish either datum. eUSD bank supervision is a separate issuer and is not borrowed."
+    },
+    {
+      "id": "uw-emxn-telcoin-7390667d8a35adea",
+      "assetId": "emxn-telcoin",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://www.telco.in/en/digital-cash",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": null,
+          "location": "Transparent and secure",
+          "excerpt": "Telcoin will also publish monthly attestations from an external auditor.",
+          "assertion": "Future publication commitment, not an actual eMXN holdings denominator or performed recurring whole-supply reconciliation."
+        },
+        {
+          "url": "https://www.telco.in/en/terms-of-use",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2026-06-30",
+          "location": "XXIX eXYZ Terms, reserves",
+          "excerpt": "Currency or Currency equivalents in its Segregated Accounts",
+          "assertion": "eXYZ reserve policy disclosed, without dated eMXN asset-class balances and token-liability reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.telco.in/en/terms-of-use",
+        "https://www.telco.in/en/digital-cash",
+        "https://trust.telco.in/",
+        "https://forum.telcoin.org/t/telxip-increasing-liquidity-for-digital-cash-emxn/626",
+        "https://polygonscan.com/token/0x68727e573D21a49c767c3c86A92D9F24bd933c99"
+      ],
+      "rationale": "No dated whole-denominator eMXN reserve composition or performed whole-supply reserves/liabilities reconciliation cadence is published on the searched issuer, legal, trust and exact-token surfaces. Generic segregation, onchain supply and promised future monthly attestations do not establish either datum. eUSD bank supervision is a separate issuer and is not borrowed."
+    },
+    {
+      "id": "uw-eusd-telcoin-376c69faf7c58300",
+      "assetId": "eusd-telcoin",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://bank.telco.in/eUSD",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": null,
+          "location": "Transparency",
+          "excerpt": "Telcoin Digital Asset Bank will publish regular disclosures regarding eUSD reserves and operations.",
+          "assertion": "Future disclosure promise supplies neither measured reserve composition nor performed whole-supply reconciliation."
+        },
+        {
+          "url": "https://bank.telco.in/terms-of-use",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2026-06-15",
+          "location": "20 finality",
+          "excerpt": "Minting is considered final after blockchain confirmation and internal ledger reconciliation",
+          "assertion": "Internal mint ledger finality is disclosed; it is not whole-supply reserve reconciliation."
+        },
+        {
+          "url": "https://ndbf.nebraska.gov/sites/default/files/industries/NFIA%20Statement%20of%20Policy%20%235%20-%20Liquidity%20Program_0.pdf",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2024-08-01",
+          "location": "Attestation, page 3",
+          "excerpt": "End of day quantity of outstanding stablecoin units; and",
+          "assertion": "Regulatory required reporting is not evidence that an actual scoped issuer report is available."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://bank.telco.in/terms-of-use",
+        "https://bank.telco.in/customer-agreement",
+        "https://bank.telco.in/eUSD",
+        "https://www.telco.in/en/digital-cash",
+        "https://trust.telco.in/",
+        "https://ndbf.nebraska.gov/sites/default/files/industries/NFIA%20Statement%20of%20Policy%20%235%20-%20Liquidity%20Program_0.pdf",
+        "https://ndbf.nebraska.gov/industries/digital-assets",
+        "https://etherscan.io/token/0x14913815bcfde78baead2111f463d038ac9c2949"
+      ],
+      "rationale": "No actual dated whole-book eUSD reserve composition or documented performed whole-supply reconciliation cadence was located. Terms disclose eligible reserve categories and internal ledger finality; regulator policy requires reports, but no actual reserve/liability report is published on searched surfaces. Do not treat charter, 1:1 policy or ledger finality as recurring financial reconciliation."
+    },
+    {
+      "id": "uw-eusd-telcoin-ca74d0bd68015d50",
+      "assetId": "eusd-telcoin",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://bank.telco.in/eUSD",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": null,
+          "location": "Transparency",
+          "excerpt": "Telcoin Digital Asset Bank will publish regular disclosures regarding eUSD reserves and operations.",
+          "assertion": "Future disclosure promise supplies neither measured reserve composition nor performed whole-supply reconciliation."
+        },
+        {
+          "url": "https://bank.telco.in/terms-of-use",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2026-06-15",
+          "location": "20 finality",
+          "excerpt": "Minting is considered final after blockchain confirmation and internal ledger reconciliation",
+          "assertion": "Internal mint ledger finality is disclosed; it is not whole-supply reserve reconciliation."
+        },
+        {
+          "url": "https://ndbf.nebraska.gov/sites/default/files/industries/NFIA%20Statement%20of%20Policy%20%235%20-%20Liquidity%20Program_0.pdf",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2024-08-01",
+          "location": "Attestation, page 3",
+          "excerpt": "End of day quantity of outstanding stablecoin units; and",
+          "assertion": "Regulatory required reporting is not evidence that an actual scoped issuer report is available."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://bank.telco.in/terms-of-use",
+        "https://bank.telco.in/customer-agreement",
+        "https://bank.telco.in/eUSD",
+        "https://www.telco.in/en/digital-cash",
+        "https://trust.telco.in/",
+        "https://ndbf.nebraska.gov/sites/default/files/industries/NFIA%20Statement%20of%20Policy%20%235%20-%20Liquidity%20Program_0.pdf",
+        "https://ndbf.nebraska.gov/industries/digital-assets",
+        "https://etherscan.io/token/0x14913815bcfde78baead2111f463d038ac9c2949"
+      ],
+      "rationale": "No actual dated whole-book eUSD reserve composition or documented performed whole-supply reconciliation cadence was located. Terms disclose eligible reserve categories and internal ledger finality; regulator policy requires reports, but no actual reserve/liability report is published on searched surfaces. Do not treat charter, 1:1 policy or ledger finality as recurring financial reconciliation."
+    },
+    {
+      "id": "uw-emxn-telcoin-cfc7995ebab3dfb4",
+      "assetId": "emxn-telcoin",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:emxn-telcoin:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://www.telco.in/en/terms-of-use",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2026-06-30",
+          "location": "XXIX.26 Processing times",
+          "excerpt": "business days or longer.",
+          "assertion": "Large redemptions expressly allow longer processing; there is no final delivered-fiat maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.telco.in/en/terms-of-use",
+        "https://www.telco.in/en/digital-cash",
+        "https://www.telco.in/support"
+      ],
+      "rationale": "No maximum end-to-end eMXN final spendable-fiat settlement SLA is disclosed. Standard 1-3 business-day processing is not final settlement; large transactions allow 3-5 business days or longer and extraordinary/compliance delays. Do not convert this target to calendar seconds."
+    },
+    {
+      "id": "uw-acrdx-anemoy-apollo-4f19f49dcda5ca62",
+      "assetId": "acrdx-anemoy-apollo",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:b2523b7dcb7224300edacdf7",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://www.apollo.com/content/dam/apolloaem/documents/fund-documents/adcf-prospectus.pdf",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2025-04-29",
+          "location": "Investment Strategy, page 7",
+          "excerpt": "there is no limit on the maturity or duration of any individual security in which the Fund may invest.",
+          "assertion": "Underlying credit holdings have no maximum maturity mandate; this is not a scalar maximum for feeder fund-share claim."
+        },
+        {
+          "url": "https://www.anemoy.io/news/acrdx-launched",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2025-09-16",
+          "location": "Feeder fund paragraph",
+          "excerpt": "ACRDX will serve as a feeder fund that provides tokenized access to Apollo Diversified Credit Fund",
+          "assertion": "The admitted slice is a fund-share claim, not any individual bond."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.anemoy.io/news/acrdx-launched",
+        "https://www.anemoy.io/",
+        "https://www.apollo.com/content/dam/apolloaem/documents/fund-documents/adcf-prospectus.pdf",
+        "https://centrifuge.io/blog/fission-centrifuge",
+        "https://docs.centrifuge.io/developer/protocol/deployments/"
+      ],
+      "rationale": "No finite contractual maximum maturity for the Apollo fund-share NAV claim is disclosed. The continuously offered interval fund discloses quarterly repurchases, not a fund-share final maturity, and expressly has no maximum maturity for individual underlying securities. Do not substitute average duration, quarterly liquidity or underlying security terms for the claim maximum."
+    },
+    {
+      "id": "uw-acrdx-anemoy-apollo-3a8998c5c16956b6",
+      "assetId": "acrdx-anemoy-apollo",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:acrdx-anemoy-apollo:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://centrifuge.io/blog/fission-centrifuge",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2026-08-25",
+          "location": "The redemption cycle",
+          "excerpt": "ACRDX goes further, providing tokenized access to the Apollo Diversified Credit Fund, with quarterly liquidity through its standard redemption path.",
+          "assertion": "Quarterly liquidity is a request/repurchase schedule, not full notional final settlement maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.anemoy.io/news/acrdx-launched",
+        "https://www.anemoy.io/",
+        "https://www.apollo.com/content/dam/apolloaem/documents/fund-documents/adcf-prospectus.pdf",
+        "https://centrifuge.io/blog/fission-centrifuge",
+        "https://docs.centrifuge.io/developer/protocol/deployments/"
+      ],
+      "rationale": "No full-notional final fiat settlement SLA for the Anemoy ACRDX issuer route is published. Standard quarterly liquidity and underlying limited repurchase offers are not a maximum completion bound. Fission immediate USDC liquidity is a different provider/route and cannot substitute for offchain issuer settlement."
     }
   ]
 }

@@ -3703,27 +3703,8 @@
     },
     {
       "assetId": "scrvusd-curve",
-      "transferScopeAttestation": {
-        "kind": "single-deployment-attribution",
-        "version": 1,
-        "reviewedAt": "2026-09-21",
-        "expiresAt": "2027-09-21",
-        "reviewer": "Claude curation campaign 2026-09-21 (ChainSupplyAttribution)",
-        "deploymentKey": "ethereum:0x0655977feb2f289a4ab78af67bab0d17aab84367",
-        "exhaustiveLiability": true,
-        "sources": [
-          {
-            "label": "Pinned contract code, totalSupply and decimals at block 26025950 (0x802cead23edbf6891cc98d260b56b35c3d7164a5b0e390a0807a67a56cb495ce); reviewed sole registry liability deployment, no representation routes",
-            "url": "https://ethereum-rpc.publicnode.com"
-          },
-          {
-            "label": "Exact deployed liability token",
-            "url": "https://etherscan.io/address/0x0655977feb2f289a4ab78af67bab0d17aab84367"
-          }
-        ]
-      },
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACC-B TRANSFER-FACT",
+      "reviewedAt": "2026-10-04",
+      "reviewer": "W2R32 complete material deployment transfer review",
       "deployments": [
         {
           "chainId": "ethereum",
@@ -3739,6 +3720,151 @@
             {
               "label": "Ethereum public RPC used for the block 25575172 bytecode read",
               "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "chainId": "optimism",
+          "contractOrTokenId": "0x289f635106d5b822a505b39ac237a0ae9189335b",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "Verified immutable satellite has balance/allowance-based ordinary transfers, but BRIDGE-only burn(_from,_amount) can burn arbitrary holder balances without allowance. At optimism block 157736365, BRIDGE is the upgradeable 0x4200000000000000000000000000000000000010, its admin is 0x4200000000000000000000000000000000000018, and exact-match administrator implementation permits replacement and arbitrary initialization. Thus ordinary bridge checks are not a permanent no-seizure protection: the reachable upgrade-and-call can invoke privileged burn against any holder. Source/runtime correspondence was verified; this is restrictable, not holder whitelisting.",
+          "sources": [
+            {
+              "label": "Verified satellite mint/burn/transfer code",
+              "url": "https://sourcify.dev/server/v2/contract/10/0x289f635106d5b822a505b39ac237a0ae9189335b?fields=all"
+            },
+            {
+              "label": "Pinned bridge proxy/admin permissions and current source correspondence",
+              "url": "https://mainnet.optimism.io"
+            },
+            {
+              "label": "Exact current ProxyAdmin implementation",
+              "url": "https://sourcify.dev/server/v2/contract/10/0x893c2ceeb71d38514daf67728d3ff1b213fc4b5f?fields=all"
+            }
+          ]
+        },
+        {
+          "chainId": "base",
+          "contractOrTokenId": "0x646a737b9b6024e49f5908762b3ff73e65b5160c",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "Verified immutable satellite has balance/allowance-based ordinary transfers, but BRIDGE-only burn(_from,_amount) can burn arbitrary holder balances without allowance. At base block 52141103, BRIDGE is the upgradeable 0x4200000000000000000000000000000000000010, its admin is 0x4200000000000000000000000000000000000018, and exact-match administrator implementation permits replacement and arbitrary initialization. Thus ordinary bridge checks are not a permanent no-seizure protection: the reachable upgrade-and-call can invoke privileged burn against any holder. Source/runtime correspondence was verified; this is restrictable, not holder whitelisting.",
+          "sources": [
+            {
+              "label": "Verified satellite mint/burn/transfer code",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x646a737b9b6024e49f5908762b3ff73e65b5160c?fields=all"
+            },
+            {
+              "label": "Pinned bridge proxy/admin permissions and current source correspondence",
+              "url": "https://base-rpc.publicnode.com"
+            },
+            {
+              "label": "Exact current ProxyAdmin implementation",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0xc0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d30018?fields=all"
+            }
+          ]
+        },
+        {
+          "chainId": "fraxtal",
+          "contractOrTokenId": "0xaB94C721040b33aA8b0b4D159Da9878e2a836Ed0",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "Verified immutable satellite has balance/allowance-based ordinary transfers, but BRIDGE-only burn(_from,_amount) can burn arbitrary holder balances without allowance. At fraxtal block 42130421, BRIDGE is the upgradeable 0x4200000000000000000000000000000000000010, its admin is 0x4200000000000000000000000000000000000018, and exact-match administrator implementation permits replacement and arbitrary initialization. Thus ordinary bridge checks are not a permanent no-seizure protection: the reachable upgrade-and-call can invoke privileged burn against any holder. Source/runtime correspondence was verified; this is restrictable, not holder whitelisting.",
+          "sources": [
+            {
+              "label": "Verified satellite mint/burn/transfer code",
+              "url": "https://fraxscan.com/address/0xaB94C721040b33aA8b0b4D159Da9878e2a836Ed0#code"
+            },
+            {
+              "label": "Pinned bridge proxy/admin permissions and current source correspondence",
+              "url": "https://fraxtal.drpc.org"
+            },
+            {
+              "label": "Exact current ProxyAdmin implementation",
+              "url": "https://sourcify.dev/server/v2/contract/252/0xc0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d30018?fields=all"
+            }
+          ]
+        },
+        {
+          "chainId": "fantom",
+          "contractOrTokenId": "0x5191946500e75f0A74476F146dF7d386e52961d9",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At Fantom block 123541859 (0x000570db00002f75111a404518393c2f60ba9901a2eb76917063daec14e6b1c8), all 1538 Token.vy executable instructions and 16 dispatch targets match exact-source BSC Token.vy after PC/data-offset resolution and PUSH1-zero/PUSH0 normalization. Only chain ID/domain separator immutables differ. Full nonproxy token has ordinary transfer/allowance paths, allowance-checked burnFrom, self burn, and no holder freeze, seizure, whitelist or upgrade hook. Arbitrary minter grants dilute shares but cannot debit holder balances. Complete correspondence artifact is recorded in W2R32 staging.",
+          "sources": [
+            {
+              "label": "Exact-match reference Token.vy with complete pinned Fantom executable correspondence",
+              "url": "https://sourcify.dev/server/v2/contract/56/0x0094ad026643994c8fb2136ec912d508b15fe0e5?fields=all"
+            },
+            {
+              "label": "Fantom pinned runtime and exact token identity",
+              "url": "https://rpcapi.fantom.network"
+            }
+          ]
+        },
+        {
+          "chainId": "bsc",
+          "contractOrTokenId": "0x0094Ad026643994c8fB2136ec912D508B15fe0E5",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "Exact verified Token.vy source (identical to the exact-match BSC source) is a full nonproxy token with ordinary balance/allowance transfers, allowance-checked burnFrom and self burn. No whitelist, blacklist, pause, holder seizure, transfer hook or implementation-upgrade selector exists. set_minter changes issuance permission only and cannot debit holder balances. This exact issuer-manifest deployment is covered regardless of its current receipt supply; it is not excluded as zero.",
+          "sources": [
+            {
+              "label": "Exact satellite verified Token.vy source",
+              "url": "https://sourcify.dev/server/v2/contract/56/0x0094Ad026643994c8fB2136ec912D508B15fe0E5?fields=all"
+            }
+          ]
+        },
+        {
+          "chainId": "avalanche",
+          "contractOrTokenId": "0xA3ea433509F7941df3e33857D9c9f212Ad4A4e64",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "Exact verified Token.vy source (identical to the exact-match BSC source) is a full nonproxy token with ordinary balance/allowance transfers, allowance-checked burnFrom and self burn. No whitelist, blacklist, pause, holder seizure, transfer hook or implementation-upgrade selector exists. set_minter changes issuance permission only and cannot debit holder balances. This exact issuer-manifest deployment is covered regardless of its current receipt supply; it is not excluded as zero.",
+          "sources": [
+            {
+              "label": "Exact satellite verified Token.vy source",
+              "url": "https://snowscan.xyz/address/0xa3ea433509f7941df3e33857d9c9f212ad4a4e64#code"
+            }
+          ]
+        },
+        {
+          "chainId": "xdc",
+          "contractOrTokenId": "0x3d8eadb739d1ef95dd53d718e4810721837c69c1",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "Exact verified Token.vy source (identical to the exact-match BSC source) is a full nonproxy token with ordinary balance/allowance transfers, allowance-checked burnFrom and self burn. No whitelist, blacklist, pause, holder seizure, transfer hook or implementation-upgrade selector exists. set_minter changes issuance permission only and cannot debit holder balances. This exact issuer-manifest deployment is covered regardless of its current receipt supply; it is not excluded as zero.",
+          "sources": [
+            {
+              "label": "Exact satellite verified Token.vy source",
+              "url": "https://xdcscan.com/address/0x3d8eadb739d1ef95dd53d718e4810721837c69c1#code"
+            }
+          ]
+        },
+        {
+          "chainId": "sonic",
+          "contractOrTokenId": "0x8fb3ec8f2d1dc089e70cd61f1e49496d443b2124",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "Exact verified Token.vy source (identical to the exact-match BSC source) is a full nonproxy token with ordinary balance/allowance transfers, allowance-checked burnFrom and self burn. No whitelist, blacklist, pause, holder seizure, transfer hook or implementation-upgrade selector exists. set_minter changes issuance permission only and cannot debit holder balances. This exact issuer-manifest deployment is covered regardless of its current receipt supply; it is not excluded as zero.",
+          "sources": [
+            {
+              "label": "Exact satellite verified Token.vy source",
+              "url": "https://sonicscan.org/address/0x8fb3ec8f2d1dc089e70cd61f1e49496d443b2124#code"
+            }
+          ]
+        },
+        {
+          "chainId": "etherlink",
+          "contractOrTokenId": "0xe35a879e5efb4f1bb7f70dcf3250f2e19f096bd8",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "Exact verified Token.vy source (identical to the exact-match BSC source) is a full nonproxy token with ordinary balance/allowance transfers, allowance-checked burnFrom and self burn. No whitelist, blacklist, pause, holder seizure, transfer hook or implementation-upgrade selector exists. set_minter changes issuance permission only and cannot debit holder balances. This exact issuer-manifest deployment is covered regardless of its current receipt supply; it is not excluded as zero.",
+          "sources": [
+            {
+              "label": "Exact satellite verified Token.vy source",
+              "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0xe35a879e5efb4f1bb7f70dcf3250f2e19f096bd8"
             }
           ]
         }
