@@ -14,7 +14,7 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "capDescription": "Signed orders must pass account eligibility, signer, enabled route/channel, nonce and configured CapConfig capacity checks. Exact current cap amounts and complete latent route closure are not asserted.",
+        "capDescription": "Deployment-to-26114911 configuration census and pinned getters identify four enabled USDC/USDT mint/redeem routes and channels, no CapSet events, and 20m minted / 1m redeemed USDx block limits. These Safe-admin mutable market-only limits do not constrain direct Safe token minting.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-10-02",
@@ -35,7 +35,7 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
-        "capDescription": "Executes approved signed mint orders under USDxMarket capacity and routing constraints; exact cap values remain unreviewed.",
+        "capDescription": "Executes signed mint orders through account, signature/delegation, nonce, route/channel and capacity checks; the pinned market block-mint maximum is 20m USDx. Governance can change limits and separately mint directly.",
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-10-02",
         "observedBlock": 26107703,
@@ -75,7 +75,7 @@
           { "label": "Pinned complete role census and Safe observation, block 26110188", "url": "https://etherscan.io/block/26110188" },
           { "label": "Verified USDx direct-mint implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7c4ba7477f180b0370338f722c3717b3fbfda1c6" }
         ],
-        "evidence": "At Ethereum block 26110188, complete RoleGranted/RoleRevoked history and hasRole confirm this Safe holds both DEFAULT_ADMIN_ROLE and MARKET_ROLE on USDx. The verified deployed USDx.mint(address,uint256) only checks MARKET_ROLE and transfer restrictions: this path bypasses signed orders and market caps. getThreshold=3, getOwners lists the same five owners, complete getModulesPaginated(0x1,100) terminates empty, and the standard guard slot is zero. The fallback-handler slot is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, whose exact bypass reach remains unreviewed. Signer independence is not established."
+        "evidence": "Block 26110188 complete role history and hasRole identify the Safe as token admin and direct uncapped minter. Follow-up block 26114911 reproduces the same 3-of-5 owners, complete empty module list and zero guard. Slot zero identifies runtime-matched Safe 1.4.1 implementation 0x41675c099f32341bf84bfc5382af534df5c7461a; the handler is runtime-matched standard CompatibilityFallbackHandler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Signature methods require Safe validation, receiver methods do not mint, and simulation uses simulateAndRevert with full rollback. FallbackManager CALLs rather than delegates to the handler, appending the original caller. No persistent issuance bypass was identified. Signed arbitrary CALL/DELEGATECALL and self-authorized permission/module/handler changes remain unbounded governance reach; signer independence remains unverified."
       },
       {
         "chain": "ethereum",
@@ -123,15 +123,17 @@
         { "label": "Axis primary market", "url": "https://docs.axis.to/usdx-the-synthetic-dollar/mint-and-redeem.md" },
         { "label": "Complete native and timelock role census through Ethereum block 26110188", "url": "https://etherscan.io/block/26110188" },
         { "label": "Exact USDx implementation source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7c4ba7477f180b0370338f722c3717b3fbfda1c6" },
-        { "label": "Exact standard Safe CompatibilityFallbackHandler deployed source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfd0732dc9e303f09fcef3a7388ad10a83459ec99" }
+        { "label": "Exact standard Safe CompatibilityFallbackHandler deployed source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfd0732dc9e303f09fcef3a7388ad10a83459ec99" },
+        { "label": "Pinned market and Safe follow-up execution observation", "url": "https://etherscan.io/block/26114911" },
+        { "label": "Exact Safe 1.4.1 implementation source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x41675c099f32341bf84bfc5382af534df5c7461a" },
+        { "label": "Scoped issuer security disclosure", "url": "https://docs.axis.to/backing-reserves-and-transparency/security.md" },
+        { "label": "Scoped V2 audit findings", "url": "https://www.openzeppelin.com/news/axis-coordinate-v2-contracts-audit" }
       ],
-      "evidence": "The deployment-to-block-26110188 event census confirms the Safe is sole DEFAULT_ADMIN on token, market and MarketConfig; MARKET_ROLE has both market and Safe; MINT_OPERATOR_ROLE has only 0xdeca86926d2aec9c3b0eeeb54aacfde6d0249370; BRIDGE_ROLE has no grants. Timelock proposer/executor/canceller are the Safe, with self-only admin and 172800-second delay. Current hasRole and Safe quorum calls corroborate the census. Direct uncapped Safe token minting contradicts the documentation's market-only assertion, so global issuance is unbounded despite market-specific capacities. Accountable reporting does not establish full issuance-ledger reconciliation or prudential supervision. The known fallback handler has not received execution-complete review; no bypass exclusion or human-independence credit is claimed. Its exact verified deployed source identifies the standard Safe CompatibilityFallbackHandler; with no enabled modules or standard guard detected, that generic noninterference question is not a separate mint-identity gap. Independent signer/key-custody evidence remains unavailable. Current market capacities and configurable latent route inventory remain unpinned and are scoped to USDxMarket; they do not bound direct Safe minting.",
-      "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
-      "reviewedAt": "2026-10-03",
+      "evidence": "Complete deployment-to-26110188 role census establishes Safe administration, market plus Safe token minters, the sole published mint operator, no bridge-role grants, and Safe-governed 172800-second proxy upgrades. At 26114911 the market and Safe implementation/handler runtimes match verified source. Deployment-to-26114911 MarketConfig census (183 logs) and pinned getters close four USDC/USDT mint/redeem routes and channels, no CapSet events, and 20m/1m USDx mint/redeem block maxima. Market settle/mint/redeem share signed account/nonce/route validation, capacity consumption and atomic ERC20 movement plus USDx mint/burn; settlementData is hashed, not executed. Configured token/destination addresses introduce no generic calldata execution. Safe fallback methods add no persistent unquorummed issuance bypass; signed arbitrary execution and self-authorized control mutation remain unbounded adverse reach. Scoped issuer security/announcement/audit, governance/access-control, canonical mint/upgrade history and exact-token exploit/incident-database searches found no known V2 mint-control incident; OpenZeppelin findings are audit findings, not reported exploitation. Reviewed absence is not a guarantee against undisclosed incidents. Offchain reconciliation, supervision and independent signer/operator custody remain separately unresolved; no protective cap or independence credit is inferred.",
+      "reviewer": "Unknown-resolver W2R11",
+      "reviewedAt": "2026-10-04",
       "disposition": "scoreable",
-      "unresolvedQuestions": [
-        "What are the exact current USDxMarket capacities and complete configurable latent route inventory? Full deployed market execution/configuration closure is not established by the current role census and issuer documentation; these gaps do not bound the independently verified direct Safe token-mint path."
-      ],
+      "unresolvedQuestions": [],
       "scopedQuestions": [
         {
           "controlRef": "Axis governance Safe native issuance administration",
