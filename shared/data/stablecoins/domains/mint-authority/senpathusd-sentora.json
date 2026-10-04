@@ -296,6 +296,63 @@
           }
         ],
         "evidence": "At pinned block 42323768, full deployment-history role logs and current mapping reads establish sentinel authority. Allocator can allocate/deallocate within caps, change liquidityAdapter/data and maxRate without delay; this can affect future fee accrual and cash-exit routing but is not arbitrary share minting. Sentinel can deallocate, reduce caps and revoke pending changes. Pinned account code is empty."
+      },
+      {
+        "chain": "tempo",
+        "address": "0x645890a0b5632e2cf4cb774994ebeab01230fbbc",
+        "deploymentRefs": [
+          "tempo:0x9a044ae05e5e6290dcf56afd69548565e957a626"
+        ],
+        "label": "Morpho Tempo adapter RegistryList owner 5-of-9 Safe",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 5,
+        "signerCount": 9,
+        "canRaiseCap": false,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0xe0aeb6811d33df42a09066857cdafca16b506086",
+            "0x84d3e4ee550dd5f99e76a548ac59a6be1c8dcf79",
+            "0xc100c251bdd297a66795112f04356e6ba5f89d80",
+            "0x264c86dbbd2e4165fbbf0c35b0ddf0e00aec6b31",
+            "0x30e7c016fc702cde9a50720a469d418490b7b652",
+            "0x8f02b4a44eacd9b8ee7739aa0ba58833dd45d002",
+            "0xcf263cee139763114faafc5f52865135412f50ec",
+            "0x69fcefde2b48503d675181448b3d4272128bca9c",
+            "0x13ca8756e9470b71b8e998352c8741706217f963"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 42485981,
+          "observedAt": "2026-10-03",
+          "source": "onchain"
+        },
+        "observedAt": "2026-10-03",
+        "observedBlock": 42485981,
+        "sources": [
+          {
+            "label": "Tempo RPC block 42485981, hash 0x2390d6cd9f7ebf4b266af003418e13f7d757f15f3678ef7911cdea2fd0a85701",
+            "url": "https://rpc.tempo.xyz"
+          },
+          {
+            "label": "RegistryList verified runtime-identical reference",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e"
+          },
+          {
+            "label": "Safe 1.4.1 verified runtime-identical implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x41675c099f32341bf84bfc5382af534df5c7461a"
+          },
+          {
+            "label": "CompatibilityFallbackHandler verified runtime-identical implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfd0732dc9e303f09fcef3a7388ad10a83459ec99"
+          }
+        ],
+        "evidence": "Pinned block 42485981: RegistryList.owner is this 5-of-9 Safe; every current signer has empty code, modules paginate to sentinel 0x1, and guard is zero. Safe master copy and nonzero compatibility fallback runtime exactly match verified source. The fallback validates Safe signatures or simulates with mandatory revert; it is not an enabled execution module. RegistryList owner may immediately change its owner or append ANY new subregistry, widening future adapter eligibility; the current singleton registry is not an immutable permanent strategy restriction. Current subregistry/factory runtimes match verified source after only their read-backed immutable address substitutions, with no admin, upgrade, remove or mutable eligibility setter. Registry owner cannot itself raise vault allocation caps or directly mint shares; curator authorization and its existing delays remain separate. This records actual topology, not signer independence or a complete executionScope certificate."
       }
     ],
     "review": {
@@ -326,14 +383,35 @@
         {
           "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
           "url": "https://sentora.com/legal/terms-of-use"
+        },
+        {
+          "label": "RegistryList verified runtime-identical reference",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e"
+        },
+        {
+          "label": "MorphoMarketV1RegistryV2 reference; only immutable factory address differs",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfb4d38d93736a040993c50aaac776a2be2cff8be"
+        },
+        {
+          "label": "MorphoMarketV1AdapterV2Factory reference; only immutable Morpho and IRM addresses differ",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x32bb1c0d48d8b1b3363e86eeb9a0300bad61ccc1"
+        },
+        {
+          "label": "Morpho security review archive",
+          "url": "https://docs.morpho.org/get-started/resources/audits/"
+        },
+        {
+          "label": "Sentora incident archive: Resolv report, unrelated to this vault",
+          "url": "https://sentora.com/market-events/resolv-incident-report"
+        },
+        {
+          "label": "Exact pathUSD vault incident cross-check",
+          "url": "https://defillama.com/yields/pool/8ee39d92-b2b7-457b-b636-46e655892a11/risk"
         }
       ],
-      "evidence": "Pinned identity, zero implementation slot, exact immutable source and gate/role reads bound the local share mint path. User issuance requires underlying assets; interest accrual may mint fee shares. Parent issuance is inherited and parent financial attestations do not reconcile this vault. At tempo block 42323768, asset() was 0x20c0000000000000000000000000000000000000, share decimals 18 and underlying decimals 6; totalAssets raw 38668628815373, totalSupply raw 19338159753529440843074671, idle raw 38165213421856, sole adapter market assets raw 503415393517, with an exact zero accounting difference. The only funded market lent pathUSD against cbBTC at 77% LLTV. The adapter position had zero borrowing and zero posted collateral. Rechecked 2026-10-03 at the same pin: owner and curator each have threshold 1 and one owner; getModulesPaginated(0x1,100) reaches sentinel 0x1 with no modules. addAdapter and increaseAbsoluteCap delays are 259200s; setPerformanceFee, setManagementFee and setSendAssetsGate delays are zero. The sendAssetsGate restricts deposit/mint, not withdrawal/redeem; receiveAssetsGate and share-gate setters are permanently abdicated. Sentora terms assert non-custody but do not negate on-chain allocation and fee authority. Complete constructor-to-pin SetIsAllocator/SetIsSentinel log scan, followed by isAllocator/isSentinel reads, establishes allocators [0xc4ba4e822c420452fe2bab93211208d3ccbd79d3, 0x9e396de3312d373b87f9bd8763fb48184b42aac0] and sentinels [0x9e396de3312d373b87f9bd8763fb48184b42aac0, 0x74d1672d0b90f6e7c322dec9d5396ff6ace61618]. Registry 0xb118227c728b5ce52445a5aaee48c8a281c429e0 has owner 0x645890a0b5632e2cf4cb774994ebeab01230fbbc and current subregistries [0x3978101957db6f7c2687cb501e441a4cdb78d4c7]. Calibration v1 moved signer/key-custody nondisclosure outside the aggregate mint-closure flag; v2 records it on each identified owner/curator Safe as a sourced scoped question: Who controls the two sole signer EOAs organizationally, and what independently attested key custody protects them? Sentora terms do not identify the key holders. Calibration v2 restores the unresolved registry/subregistry authorization and any delegated allocator execution census to unresolvedQuestions; known controller types are not relabeled unknown. Reconciliation remains not-applicable to native asset-backed share/fee accounting; exact-vault financial assurance and holder recovery are Backing gaps. Supervision remains none, so no prudential or attestation-only credit is claimed. D14/A7/A10 review 2026-10-03, pinned tempo block 42451876 (hash 0x4e12ac0ec8edd0fb16ac606874c0e9ebb4e3b5e7e154340ac54e6cce77beae9c). The pinned immutable VaultV2 source routes deposit/mint through enter(), which transfers underlying assets before createShares(). Curator increaseAbsoluteCap/increaseRelativeCap and addAdapter govern allocation limits, not arbitrary recipient minting; owner/curator, deposit-gate and fee-recipient settings cannot bypass this accounting. accrueInterest() separately creates fee shares under immutable MAX_PERFORMANCE_FEE (50% of interest) and MAX_MANAGEMENT_FEE (5% annualized) limits, not discretionary arbitrary-share issuance. There is no local upgrade entrypoint. Tempo runtime is byte-for-byte identical to the verified Ethereum senPYUSDmain runtime after replacing only six embedded immutable asset addresses; both deployment hashes are pinned. Inherited controls concern pathusd-bridge, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "evidence": "Local VaultV2 bytecode is immutable and matches the verified Ethereum vault after only the immutable underlying asset substitutions. Deposits transfer assets before issuing shares; fee shares use immutable limits, while concentrated owner/curator/allocator parameters remain separately represented. Wave-2 closure at Tempo block 42485981, hash 0x2390d6cd9f7ebf4b266af003418e13f7d757f15f3678ef7911cdea2fd0a85701: RegistryList runtime exactly matches verified source, owner is the newly inventoried 5-of-9 Safe, and the complete current subregistry census contains only 0x3978101957db6f7c2687cb501e441a4cdb78d4c7. Its factory is 0xf85ad5f14cc903533fc409b8098b58b4c2f36697, with immutable Morpho 0x10ee9aac980a180dd4dcfc96c746d60b0ea88f97 and IRM 0x112fd4042e442c3c12c67ad23587b0afe36eb74e. Registry/factory runtimes match verified executable references after only those exact read-backed immutable substitutions. Their only eligibility writer is permissionless factory creation of fixed adapter code; there is no mutable admin/upgrade/eligibility setter. RegistryList owner can nevertheless append arbitrary future registries without delay, so no permanent safe-adapter restriction or signer independence is asserted. All current local EOAs/signers have empty code; owner/curator Safes and the registry Safe have no modules, zero guards, and verified standard Safe/fallback implementations. Local role census is complete and no delegated allocator exists on Tempo. Incident review covers creation block 18585504 (2026-05-06) through block 42485981: 240 successful <=100000-block eth_getLogs ranges, 161875 logs and 36408 transactions. In every transaction minted Transfer shares exactly equal Deposit shares plus accrued fee shares; burned shares exactly equal Withdraw shares, with zero mismatches. All owner/curator/allocator/sentinel and adapter changes were inspected. Issuer security/market-event archives, Morpho audits, exact-address incident searches and the exact-vault DeFiLlama incident page identify no relevant local mint/control incident. Related Resolv and MetaMask staking reports are not exact-vault compromises. This is a reviewed no-known-incident finding, not proof of undisclosed absence. The answered registry aggregate question is removed; owner/curator organizational key-custody scoped questions remain unchanged and unresolved. Reconciliation stays not-applicable to asset-backed local share accounting and supervision stays none; no parent financial assurance is copied.",
+      "reviewer": "W2R24 primary-source, executable correspondence and complete Tempo mint/control history review",
       "reviewedAt": "2026-10-03",
-      "unresolvedQuestions": [
-        "Current role census is complete, but registry owner 0x645890a0b5632e2cf4cb774994ebeab01230fbbc and subregistry authority/bypass closure across [0x3978101957db6f7c2687cb501e441a4cdb78d4c7] is not established."
-      ],
       "scopedQuestions": [
         {
           "controlRef": "tempo:0xe8c9c99ecad0686a14a00d8521c572281e938008",

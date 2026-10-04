@@ -110,13 +110,13 @@
     ]
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
+    "tier": "privileged-internal-pricing",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
-    "summary": "Pinned block 26107702: 8 funded Morpho markets have exact oracle/LLTV identities and all six BASE/QUOTE feed/vault getter values. Vault accounting is verified price-feed-independent; borrower liquidation pricing remains applicable. Upstream feed administrator, heartbeat and mutable NAV-controller closure remain incomplete, so no standard-external or redundant tier is asserted.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
-    "confidence": "probable",
+    "summary": "A positively evidenced funded internal-NAV borrower branch binds the worst material tier: syrupUSDC collateral pricing multiplies its embedded MaplePool.convertToAssets rate, which forwards totalAssets to issuer-governed, upgradeable MaplePoolManager and four strategy AUM reports rather than independent collateral market marks. Block 26115263 confirms nonzero lender shares in this exact market. Current manager implementation, strategy set, governor and pool delegate are pinned; principal/accounted-interest/accrued-interest ledger valuation and governor/delegate default/upgrade discretion are verified in exact published source. This does not assert an arbitrary numerical price setter or claim that impairment alone changes Morpho price: convertToAssets does not subtract unrealizedLosses. Other seven branch tiers remain explicitly opaque pending full quality classification; a known lowest-scoring material internal-NAV branch does not create external-oracle protection, independent failover, freshness guarantees or favorable credit for them.",
+    "reviewedAt": "2026-10-04",
+    "reviewer": "W2R24 exact funded borrower position, embedded NAV implementation and controller review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Paypal USD Main exact vault",
@@ -181,6 +181,22 @@
       {
         "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x007db14ca0d171fa583955fef3917b2b9a95cf18"
+      },
+      {
+        "label": "Exact syrupUSDC MaplePool conversion source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
+      },
+      {
+        "label": "Pinned current MaplePoolManager implementation: strategy-ledger NAV and upgrade/default controls",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+      },
+      {
+        "label": "Funded Maple LoanManager implementation: principal and interest ledger valuation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbad003da1e107f537ae2f687f5fe7a7affe9b241"
+      },
+      {
+        "label": "Independent archive RPC: Ethereum block 26115263, hash 0x8d5a8b65a11ca9898987c28e2de75e399af9e0fda7b12520d80513f79eb500f6",
+        "url": "https://eth.drpc.org"
       }
     ],
     "branchApplicability": {
@@ -863,8 +879,8 @@
       {
         "id": "0xc9629945524f3fde56c7e8854a6c3d48e76b9d97236abbe73c750fcc7aeb8501",
         "label": "Morpho market 0xc9629945524f3fde56c7e8854a6c3d48e76b9d97236abbe73c750fcc7aeb8501",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact market oracle 0xc8043d248551ed19b33cbc89dccd69148c827039: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0x8fffffd4afb6115b954bd326cbe7b4ba576818f6\",\"BASE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_FEED_1\":\"0x8f1df6d7f2db73eece86a18b4381f4707b918fb1\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "tier": "privileged-internal-pricing",
+        "summary": "Exact oracle 0xc8043d248551ed19b33cbc89dccd69148c827039 is verified MorphoChainlinkOracleV2, with embedded BASE_VAULT syrupUSDC 0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b. Its getAssets path invokes convertToAssets, which values shares as shares * MaplePool.totalAssets / totalSupply; MaplePool.totalAssets forwards to manager 0x7ad5ffa5fdf509e30186f4609c2f6269f4b6158f, current implementation 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8. That internal ledger sums four current strategy AUM reports, with funded LoanManager 0x6aceb4caba81fa6a8065059f3a944fb066a10fac (implementation 0xbad003da1e107f537ae2f687f5fe7a7affe9b241) valuing principalOut + accountedInterest + accruedInterest rather than independently market-priced loans. Governor 0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b and pool delegate 0xc1e18ffd8825ffb286d177ddebeba345ec70b49f participate in internal accounting/default/upgrade authority. Thus independent Chainlink price legs do not remove privileged internal NAV valuation from this collateral conversion. Position read at block 26115263 confirms this vault adapter still has nonzero supply shares. No arbitrary numerical price setter, realized loss, current mispricing or direct impairment-to-conversion effect is alleged.",
         "collateralAssets": [
           "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
         ],
@@ -954,6 +970,18 @@
           {
             "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc8043d248551ed19b33cbc89dccd69148c827039"
+          },
+          {
+            "label": "Exact embedded MaplePool conversion",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
+          },
+          {
+            "label": "Current MaplePoolManager implementation at pinned block 26115263",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+          },
+          {
+            "label": "Current funded LoanManager principal-and-interest valuation implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbad003da1e107f537ae2f687f5fe7a7affe9b241"
           }
         ]
       },
