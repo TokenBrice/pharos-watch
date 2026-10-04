@@ -832,6 +832,8 @@ export const V9DeploymentControlFactBaseSchema = z
     keyCustody: V9KeyCustodySchema,
     modulesOrGuards: V9ModulesOrGuardsSchema,
     executionScope: V9ControlExecutionScopeSchema.optional(),
+    /** Selected path on an execution-complete split fact; the full certificate still owns closure. */
+    executionPathId: CanonicalTextSchema.optional(),
     executionScopeContributors: z.array(z.object({ authorityKey: CanonicalTextSchema, scope: V9ControlExecutionScopeSchema.optional() }).strict()).min(1).optional(),
     executionScopeComplete: z.boolean().optional(),
     scopeDiagnostics: CanonicalStringArraySchema.optional(),

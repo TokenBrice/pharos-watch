@@ -693,6 +693,7 @@ function adaptMintControl(
       const row: ControlOverlay = {
         ...globalControl,
         controlKey: `${controlKey}:path:${path.id}`,
+        executionPathId: path.id,
         capabilities: [...new Set(path.capabilities)].sort(compareText),
         capSemantics: path.capSemantics,
         claimImpairment: path.claimImpairment,

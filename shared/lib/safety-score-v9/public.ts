@@ -486,8 +486,10 @@ function projectControlBreakdown(
             executionScopeComplete: fact.executionScopeComplete ?? null,
             moduleImpact: fact.moduleImpact ?? "unresolved",
             diagnostics: fact.scopeDiagnostics ?? [],
-            executionPaths: [ ...(fact.executionScope?.paths ?? []), ...(fact.executionScopeContributors ?? []).flatMap((entry) => entry.scope?.paths ?? []) ]
-              .map((path) => ({ id: path.id, targetDeployment: path.targetDeployment, entrypointKind: path.entrypointKind, entrypoints: path.entrypoints, activation: path.activation, reach: path.reach, capabilities: path.capabilities })),
+            executionPaths: [
+              ...(fact.executionScope?.paths.filter((path) => fact.executionPathId === undefined || path.id === fact.executionPathId) ?? []),
+              ...(fact.executionScopeContributors ?? []).flatMap((entry) => entry.scope?.paths.filter((path) => fact.executionPathId === undefined || path.id === fact.executionPathId) ?? []),
+            ].map((path) => ({ id: path.id, targetDeployment: path.targetDeployment, entrypointKind: path.entrypointKind, entrypoints: path.entrypoints, activation: path.activation, reach: path.reach, capabilities: path.capabilities })),
           })) } : {}),
       })),
     adjustments: projectPillarAdjustments(input, "control", evaluatedScore),
