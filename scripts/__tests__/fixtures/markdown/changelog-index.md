@@ -6,6 +6,20 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-09-28 to 2026-10-04
+
+Safety Score V10 ships through five versions in three days while the registry grows from 409 to 488 coins.
+
+- **Safety Score V10**: V10 adds physical-to-USD Exit and known-supply sizing after 9.93 to 9.98; 10.01 stops scoring Pharos-side pipeline gaps as asset risk, re-rating 138 cards and cutting Not Rated from 23 to 17.
+- **Issuance governance rulings**: 10.02 separates governed issuance from economic bounds: crvUSD rises to B-, DAI and USDS fall to C- and D. 10.03's minority-veto rung returns ZCHF from D to A-; 10.04 clears 599 unresearched-fact artifacts.
+- **Unknown-resolver research**: An October 1 pass re-verified 331 active coins against primary evidence; two research waves in 152 commits then worked open Safety Score facts and fed published redemption fees into Exit route configs.
+- **Coverage expansion**: The registry grows from 409 to 488 entries, led by 66 active and 11 pre-launch additions. Open USD and Theo thUSD go active, SoFiUSD returns, and JLTXX waits in quarantine for its first reserve snapshot.
+- **Dependency map Exposure mode**: Exposure mode shows which coins rest on an upstream asset and how much of their backing, with look-through shares, modeled score scenarios from an offline lane (ADR-36) and a 35 KB gzip graph API.
+- **Cemetery plot map**: /cemetery/ becomes an isometric plot map grouped by cause of death, linked to an autopsy register and charts; the register's server HTML falls from 772 KB to 237 KB.
+- **Honest public values**: Release B makes flows, pricing, PSI and Chain Health publish null when unobserved, Liquidity 6.9 counts only DEX volume observed within 72h, and detail heroes stop printing absent market cap as $0.00.
+- **Supporter and partner keys**: /api/ now leads with a $10 donor supporter key and a partner key. The self-serve key lane is deleted, and supporter eligibility counts only reviewed token contracts, now 15 coins, up from 5.
+- **Publication resilience**: A card that breaks its public contract is quarantined (R8) instead of failing the Safety Score run, reclaimed graphs restore 128 MiB headroom, and digests move to Opus 5.5 at high effort.
+
 ## 2026-09-21 to 2026-09-27
 
 Holistic review makes unavailable data fail closed, a false VCHF depeg brings majority pool rules, and yield hits 8.45.
