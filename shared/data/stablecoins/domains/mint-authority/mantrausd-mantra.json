@@ -4,7 +4,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "inheritedFrom": "m-m0",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "Mantra USD inherits base M issuance and uses chain-local M-extension wrapping. Local proxy upgrades and operational role administration remain additional controls; public wM conversion is distinct from approved direct M output.",
     "controls": [
       {
@@ -143,6 +143,60 @@
         "threshold": 3,
         "signerCount": 5,
         "canRaiseCap": true
+      },
+      {
+        "label": "MANTRA SwapFacility ProxyAdmin owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "chain": "mantra",
+        "address": "0xe5acad215fb9cff7823ad7d81fdd09615b93f41f",
+        "deploymentRefs": [
+          "mantra:0xd2b95283011e47257917770d28bb3ee44c849f6f"
+        ],
+        "threshold": 2,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03",
+        "observedBlock": 18558336,
+        "timelockDelaySec": 0,
+        "safe": {
+          "owners": [
+            "0x8c9b09eb2312311bcabc4069ea2329c734e770cd",
+            "0xc13604a9be6bb4d3781a7f84b39f92d59ea84789",
+            "0x61a771a8a4ed092cd9254c504847483df0163d4c"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
+          "observedAt": "2026-10-03",
+          "observedBlock": 18558336,
+          "source": "onchain"
+        },
+        "evidence": "At MANTRA block 18558336, SwapFacility 0xb6807116b3b1b321a390594e31ecd6e0076f6278 points to implementation 0x21a657d7dae3f33548252d350ebbe48c82c23c3c. Its immutable ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924 has owner this 2-of-3 Safe. Source permits onlyOwner upgradeAndCall without a timelock. Safe module pagination terminates empty; guard is zero; the verified standard CompatibilityFallbackHandler simulates with mandatory revert and checks Safe signatures. This is an adverse replacement power over the immutable-SwapFacility-bound mantraUSD wrapping path, not independently custodial or governed issuance.",
+        "sources": [
+          {
+            "label": "Exact SwapFacility transparent proxy and embedded immutable admin",
+            "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0xb6807116b3b1b321a390594e31ecd6e0076f6278"
+          },
+          {
+            "label": "Exact SwapFacility implementation",
+            "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x21a657d7dae3f33548252d350ebbe48c82c23c3c"
+          },
+          {
+            "label": "Verified facility Safe singleton",
+            "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0xfb1bffc9d739b8d520daf37df666da4c687191ea"
+          },
+          {
+            "label": "Verified facility Safe fallback handler",
+            "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x017062a1de2fe6b99be3d9d37841fed19f573804"
+          },
+          {
+            "label": "MANTRA RPC at block 18558336",
+            "url": "https://evm.mantrachain.io"
+          }
+        ]
       }
     ],
     "upgradeability": {
@@ -235,16 +289,29 @@
           "label": "Guardian JMI/MYieldToOne/Freezable/SwapFacility code review, 2025-12-12; not a reserve audit or exact deployment certification",
           "url": "https://github.com/m0-foundation/evm-m-extensions/blob/main/audits/JMI/M0_EVM-M_Extensions_Review_report.pdf"
         }
+        ,
+        {
+          "label": "Complete token and SwapFacility RoleGranted/RoleRevoked history, checked at block 18558336",
+          "url": "https://blockscout.mantrascan.io/api"
+        },
+        {
+          "label": "MANTRA native-token incident primary postmortem, application contracts excluded",
+          "url": "https://mantrachain.io/resources/announcements/20th-august-2026-full-incident-post-mortem"
+        },
+        {
+          "label": "mantraUSD security disclosures",
+          "url": "https://docs.mantrausd.com/smart-contracts/security"
+        },
+        {
+          "label": "SwapFacility exact implementation and permission paths",
+          "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x21a657d7dae3f33548252d350ebbe48c82c23c3c"
+        }
       ],
-      "evidence": "At mantra block 18531313, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 439,646.447844 M against 434,703.845695 mantraUSD supply. M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right. Local role/proxy reach is authored separately from inherited M authority and the parent bridge layer. Calibration provenance (2026-10-03): original umbrella observations retained verbatim: [\"EOA upgrade-owner operational key custody is undisclosed; no enforceable delay has been established.\", \"Close all local role holders and SwapFacility governance; Safe owner/threshold and terminal module pagination are enumerated, but executable fallback-handler noninterference and signer independence remain unestablished.\"]. Human independence and key custody remain unverified and are priced by their dedicated control signals; financial/legal safeguards remain Backing-domain gaps. Calibration v2 (2026-10-03) reconsidered every prior removal and scoped move. Prior scoped observations retained verbatim: [\"No enforceable delay on the named mantraUSD ProxyAdmin-owner upgrade path has been established; operational key custody is a separate, preserved disclosure gap.\", \"Close the current mantraUSD local SwapFacility governance, permission and upgrade-control reach at mantra:0xb6807116b3b1b321a390594e31ecd6e0076f6278.\"]. Genuine unknown implementation, controller authorization and unreadable execution state are retained as umbrella questions; identified-signer custody/independence is recorded per control, not asserted to be independently scored or resolved. Field re-justification: reconciliation=continuous describes the cited local parent-token custody and wrap/custodian supply-accounting mechanism only. It does not certify the upstream fiat/Treasury book, independent assurance or holder insolvency priority; supervision=unknown supplies no prudential or attestation-based credit. D14/D29 sweep (2026-10-03): The extension-local verified MantraUSD/MYieldToOne/MExtension code exposes only immutable-SwapFacility wrap/unwrap and claimYield issuance: wrap transfers the matching M before _mint; claimYield mints at most max(M custody minus existing supply, 0). DEFAULT_ADMIN can assign freeze/yield-recipient roles, not a deposit-free minter. Parent M issuance is inherited through the serial-claim dependency, not charged again here. Proxy replacement remains an Upgrade Risk power and is not a D14 trigger. Pinned block hashes read this review: mantra 18540330 0x0c37c60ea7c05ae167b94eaf61c6869a70d0a863890bbecd85ce1a655f96e3fb; mantra 18531313 0x370a627e349b11079b602ddd68e08e563a9b5422bc4040ac8a4edff450940f37. No transaction was sent; no governed-issuance qualification is claimed.",
-      "reviewer": "Sol v10.02 D14/D29 sweep (MiscRaiseable)",
-      "reviewedAt": "2026-10-03",
+      "evidence": "Wave 2 local-control review at MANTRA block 18558336, hash 0xde0552c53e1cf32ae1b2e8514645c195195dea21a1a47decc363b0a5708132c4, timestamp 2026-10-03T23:46:31Z. Complete explorer RoleGranted/RoleRevoked histories from block zero through this pin yielded four token grants, no token revocations, five SwapFacility grants and one SwapFacility revocation; hasRole at the same pin confirms every surviving holder and the revoked administrator. The token's three source-defined roles are DEFAULT_ADMIN, FREEZE_MANAGER and YIELD_RECIPIENT_MANAGER; current holders are respectively 0x3b49208e7e831b29ea2e93fb09f315f414fd7343; 0x9cb81ad5423e0ca22d3e3af3004c85d865b70efe and 0x363c256d368277bbfaf6eaf65bee123a7adba464; and 0x50651b740e5d7b6c7c063c8618ccfc13a24b4874. Facility source defines DEFAULT_ADMIN, M_SWAPPER and PAUSER: current holders are respectively 0xe5acad215fb9cff7823ad7d81fdd09615b93f41f; 0x36f586a30502ae3afb555b8aa4dcc05d233c2ece and 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd; and 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. The latter's earlier DEFAULT_ADMIN grant was revoked. Facility proxy, implementation, immutable ProxyAdmin and its 2-of-3 Safe owner are resolved in the additional control; pinned Safe singleton storage is 0xfb1bffc9d739b8d520daf37df666da4c687191ea. The token ProxyAdmin owner's pinned code is empty; exact ProxyAdmin onlyOwner upgradeAndCall contains no delay, an adverse zero-delay replacement power rather than an unknown protective safeguard. Verified local token issuance remains only immutable-SwapFacility wrap/unwrap and claimYield: wrap transfers matching M before minting; claimYield is bounded by M custody minus existing supply. Facility permissions gate paths and recipients but do not create deposit-free M; the immutable registrar/M dependency is upstream M authority, not a new local mint path. Earlier unresolved role census, upgrade-delay and facility-reach questions are answered by these reads and verified code. Identified signers' organizational independence and key custody remain separately scoped non-disclosures, not proven safeguards. Prior block-18531313 custody/supply reconciliation and block-18540330 token Safe observations retain their own dates and are not claimed re-read. Local reconciliation=continuous describes only parent-token custody accounting, not upstream reserve assurance; supervision=unknown remains unchanged. Scoped incident search includes current mantraUSD security disclosures and the primary 2026-08-28 MANTRA-chain postmortem: the native-accounting exploit debited native MANTRA, did not create tokens or debit application contracts, and compromised no administrative/governance/multisig keys. No local mantraUSD unauthorized-issuance incident was located. No transaction was sent and no executionScope certificate or governed-issuance qualification is claimed.",
+      "reviewer": "Unknown wave W2R47; preserving D14/D29 local reconciliation scope",
+      "reviewedAt": "2026-10-04",
       "disposition": "scoreable",
-      "unresolvedQuestions": [
-        "Complete the mantraUSD local role-holder census on mantra:0xd2b95283011e47257917770d28bb3ee44c849f6f; all live operational roles and their holders have not been exhaustively enumerated.",
-        "No enforceable delay on the named mantraUSD ProxyAdmin-owner upgrade path has been established; operational key custody is a separate, preserved disclosure gap.",
-        "Close the current mantraUSD local SwapFacility governance, permission and upgrade-control reach at mantra:0xb6807116b3b1b321a390594e31ecd6e0076f6278."
-      ],
+      "unresolvedQuestions": [],
       "scopedQuestions": [
         {
           "controlRef": "mantraUSD token ProxyAdmin owner",
