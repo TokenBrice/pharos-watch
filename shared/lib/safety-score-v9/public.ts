@@ -1082,6 +1082,35 @@ export function projectSafetyScoreV9CommonModeGroups(
   }).sort((left, right) => compareText(left.id, right.id));
 }
 
+export interface V9PublicCardProjectionFailure {
+  assetId: string;
+  issues: z.core.$ZodIssue[];
+}
+
+/**
+ * Per-card public-contract violations, attributed to their assets so the
+ * producer can quarantine them and publish the rest (R8) instead of failing
+ * the cohort. Issue paths are response-relative (`cards.<index>...`).
+ */
+export class V9PublicCardProjectionError extends Error {
+  readonly failures: readonly V9PublicCardProjectionFailure[];
+
+  constructor(failures: readonly V9PublicCardProjectionFailure[]) {
+    const issue = failures[0]!.issues[0];
+    super(`Safety Score v9 public card projection failed for ${failures.map((failure) => failure.assetId).join(", ")}` +
+      (issue ? ` at ${issue.path.join(".")}: ${issue.message}` : ""));
+    this.name = "V9PublicCardProjectionError";
+    this.failures = failures;
+  }
+
+  /** Asset-local quarantine message naming that card's first failing public field. */
+  messageFor(assetId: string): string {
+    const issue = this.failures.find((failure) => failure.assetId === assetId)?.issues[0];
+    return `Safety Score v9 asset ${assetId} public card projection failed` +
+      (issue ? ` at ${issue.path.slice(2).join(".")}: ${issue.message}` : "");
+  }
+}
+
 export function buildSafetyScoreV9Response(args: BuildSafetyScoreV9ResponseArgs): SafetyScoreV9CurrentResponse {
   // A producer transfers sole ownership of its array, so each result's graph is
   // released as soon as its card is projected; arrays stay caller-owned.
@@ -1093,6 +1122,7 @@ export function buildSafetyScoreV9Response(args: BuildSafetyScoreV9ResponseArgs)
   const traces = ordered.map((result) => result!.trace);
   const first = traces[0]!;
   const drafts = [];
+  const failures: V9PublicCardProjectionFailure[] = [];
   for (let index = 0; index < ordered.length; index++) {
     const result = ordered[index]!;
     ordered[index] = undefined;
@@ -1102,12 +1132,13 @@ export function buildSafetyScoreV9Response(args: BuildSafetyScoreV9ResponseArgs)
       drafts.push({ ...draft, foreignCauseGaps: foreign });
     } catch (error) {
       if (!(error instanceof z.ZodError)) throw error;
-      throw new z.ZodError(error.issues.map((issue) => ({
+      failures.push({ assetId: result.trace.assetId, issues: error.issues.map((issue) => ({
         ...issue,
         path: ["cards", index, ...issue.path],
-      })));
+      })) });
     }
   }
+  if (failures.length > 0) throw new V9PublicCardProjectionError(failures);
   ordered.length = 0;
   const { cards, foreignCauseGaps } = finalizeV9PublicCauseGaps(drafts);
   drafts.length = 0;

@@ -15,7 +15,7 @@ import {
   loadV9CandidateMethodologyPolicy,
 } from "@shared/lib/safety-score-v9/policy";
 import { compareText, deepFreeze, domainDigest } from "@shared/lib/safety-score-v9/primitives";
-import { buildSafetyScoreV9Response } from "@shared/lib/safety-score-v9/public";
+import { buildSafetyScoreV9Response, V9PublicCardProjectionError } from "@shared/lib/safety-score-v9/public";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type {
   CompiledV9FactSetV3,
@@ -696,19 +696,27 @@ function buildSafetyScoreV9CandidatePipeline(
     if (!retainIntermediates) compiledFacts = null;
     return facts;
   };
-  let evaluatedSet: Readonly<V9EvaluatedSet> | null;
+  let evaluatedSet: Readonly<V9EvaluatedSet> | null = null;
+  let publication: {
+    candidate: SafetyScoreV9CurrentResponse;
+    candidateIdentity: z.infer<typeof SafetyScoreV9CandidateIdentityV1Schema>;
+    retained: { extension: SafetyScoreV9FactSetExtensionV2; compiledFacts: CompiledV9FactSetV3; evaluatedSet: Readonly<V9EvaluatedSet> } | null;
+  };
+  // An asset whose evaluation or public card violates its contract is
+  // quarantined and the cohort recompiled (R8), never the whole attempt.
   while (true) {
     try {
       evaluatedSet = evaluateValidatedV9FactSet(takeEvaluationFacts(), policy);
+      publication = publishEvaluatedCandidate();
       break;
     } catch (error) {
-      if (
-        !(error instanceof V9AssetEvaluationError) ||
-        evaluationFailures.has(error.assetId)
-      ) {
-        throw error;
-      }
-      evaluationFailures.set(error.assetId, error.message);
+      const failed = error instanceof V9AssetEvaluationError
+        ? [[error.assetId, error.message] as const]
+        : error instanceof V9PublicCardProjectionError
+          ? error.failures.map((failure) => [failure.assetId, error.messageFor(failure.assetId)] as const)
+          : null;
+      if (failed === null || failed.some(([assetId]) => evaluationFailures.has(assetId))) throw error;
+      for (const [assetId, message] of failed) evaluationFailures.set(assetId, message);
       const retryExtension = extension ?? materializeCandidateExtension(input);
       compilation =
         compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
@@ -722,76 +730,81 @@ function buildSafetyScoreV9CandidatePipeline(
       compilation = null;
     }
   }
-  const { affectedAssetIds, displayByAssetId, scoreGradeLiveReserveIds, dependencyMetadataByAssetId } = publicationFacts;
-
-  // The published response does not expose replay intermediates. Release each
-  // large graph as soon as its compact projection has been captured; replay and
-  // verification callers keep the same graphs through `retained`.
-  const retained = retainIntermediates ? { extension: extension!, compiledFacts: compiledFacts!, evaluatedSet } : null;
+  const { candidate, candidateIdentity, retained } = publication;
+  const { affectedAssetIds } = publicationFacts;
   extension = null;
   compiledFacts = null;
-  // Read the evaluated set only inside closures: a property read in this frame
-  // parks the graph in an interpreter register that outlives `evaluatedSet = null`.
-  const evaluated = (() => {
-    const set = evaluatedSet!;
-    return {
-      evaluationBuildDigest: set.evaluationBuildDigest,
-      baseInputGenerationId: set.baseInputGenerationId,
-      factSetDigest: set.factSetDigest,
-      evaluatedSetDigest: set.evaluatedSetDigest,
-      scoreResultDigest: set.scoreResultDigest,
-      commonModeGroups: set.dependencyPlan.commonModeGroups,
+
+  function publishEvaluatedCandidate() {
+    const { displayByAssetId, scoreGradeLiveReserveIds, dependencyMetadataByAssetId } = publicationFacts;
+    // The published response does not expose replay intermediates. Release each
+    // large graph as soon as its compact projection has been captured; replay and
+    // verification callers keep the same graphs through `retained`.
+    const retained = retainIntermediates ? { extension: extension!, compiledFacts: compiledFacts!, evaluatedSet: evaluatedSet! } : null;
+    // Read the evaluated set only inside closures: a property read in this frame
+    // parks the graph in an interpreter register that outlives `evaluatedSet = null`.
+    const evaluated = (() => {
+      const set = evaluatedSet!;
+      return {
+        evaluationBuildDigest: set.evaluationBuildDigest,
+        baseInputGenerationId: set.baseInputGenerationId,
+        factSetDigest: set.factSetDigest,
+        evaluatedSetDigest: set.evaluatedSetDigest,
+        scoreResultDigest: set.scoreResultDigest,
+        commonModeGroups: set.dependencyPlan.commonModeGroups,
+      };
+    })();
+    const candidateIdentity = SafetyScoreV9CandidateIdentityV1Schema.parse({
+      schemaVersion: 1,
+      policyId: policy.policy.policyId,
+      policyDigest: policy.semanticDigest,
+      evaluationBuildDigest: evaluated.evaluationBuildDigest,
+      compilerFactSchemaDigest,
+      producerCapabilityDigest,
+    });
+    const candidateId =
+      input.releaseCandidateId === undefined
+        ? computeSafetyScoreV9CandidateId(candidateIdentity)
+        : ReleaseCandidateIdSchema.parse(input.releaseCandidateId);
+    const publicationGenerationId = `report-cards:v9:v1:${domainDigest("safety-score-v9.publication.v1", {
+      candidateId,
+      baseInputGenerationId: evaluated.baseInputGenerationId,
+      factSetDigest: evaluated.factSetDigest,
+      evaluatedSetDigest: evaluated.evaluatedSetDigest,
+      resultDigest: evaluated.scoreResultDigest,
+      publishedAtSec: input.publishedAtSec,
+    })}`;
+    const takePublicResults = () => {
+      const results = evaluatedSet!.assets.map((asset) => ({
+        trace: asset.trace,
+        ...(asset.providerRowExclusions?.length ? { providerRowExclusions: asset.providerRowExclusions } : {}),
+        backingFromLiveReserves: scoreGradeLiveReserveIds.has(asset.assetId),
+        ...dependencyMetadataByAssetId.get(asset.assetId),
+        scoreInput: asset.scoreInput,
+        access: asset.access,
+        dependencyInputs: asset.dependencyInputs,
+        policy,
+        backing: asset.backing,
+        exit: asset.exit,
+        control: asset.control,
+        display: displayByAssetId.get(asset.assetId),
+        freshness: {
+          exit: exitPillarFreshnessFromDexInput(fixedInput, asset.assetId, dexExitRouteMaxAgeSec),
+        },
+      }));
+      if (!retainIntermediates) evaluatedSet = null;
+      return results;
     };
-  })();
-  const candidateIdentity = SafetyScoreV9CandidateIdentityV1Schema.parse({
-    schemaVersion: 1,
-    policyId: policy.policy.policyId,
-    policyDigest: policy.semanticDigest,
-    evaluationBuildDigest: evaluated.evaluationBuildDigest,
-    compilerFactSchemaDigest,
-    producerCapabilityDigest,
-  });
-  const candidateId =
-    input.releaseCandidateId === undefined
-      ? computeSafetyScoreV9CandidateId(candidateIdentity)
-      : ReleaseCandidateIdSchema.parse(input.releaseCandidateId);
-  const publicationGenerationId = `report-cards:v9:v1:${domainDigest("safety-score-v9.publication.v1", {
-    candidateId,
-    baseInputGenerationId: evaluated.baseInputGenerationId,
-    factSetDigest: evaluated.factSetDigest,
-    evaluatedSetDigest: evaluated.evaluatedSetDigest,
-    resultDigest: evaluated.scoreResultDigest,
-    publishedAtSec: input.publishedAtSec,
-  })}`;
-  const takePublicResults = () => {
-    const results = evaluatedSet!.assets.map((asset) => ({
-      trace: asset.trace,
-      ...(asset.providerRowExclusions?.length ? { providerRowExclusions: asset.providerRowExclusions } : {}),
-      backingFromLiveReserves: scoreGradeLiveReserveIds.has(asset.assetId),
-      ...dependencyMetadataByAssetId.get(asset.assetId),
-      scoreInput: asset.scoreInput,
-      access: asset.access,
-      dependencyInputs: asset.dependencyInputs,
-      policy,
-      backing: asset.backing,
-      exit: asset.exit,
-      control: asset.control,
-      display: displayByAssetId.get(asset.assetId),
-      freshness: {
-        exit: exitPillarFreshnessFromDexInput(fixedInput, asset.assetId, dexExitRouteMaxAgeSec),
-      },
-    }));
-    if (!retainIntermediates) evaluatedSet = null;
-    return results;
-  };
-  const candidate = buildSafetyScoreV9Response({
-    candidateId,
-    policyVersion,
-    publicationGenerationId,
-    publishedAtSec: input.publishedAtSec,
-    commonModeGroups: evaluated.commonModeGroups,
-    results: takePublicResults,
-  });
+    const candidate = buildSafetyScoreV9Response({
+      candidateId,
+      policyVersion,
+      publicationGenerationId,
+      publishedAtSec: input.publishedAtSec,
+      commonModeGroups: evaluated.commonModeGroups,
+      results: takePublicResults,
+    });
+    return { candidate, candidateIdentity, retained };
+  }
 
   if (retained === null) {
     return {

@@ -228,9 +228,12 @@ function scoreV9ReserveExposureClassification(
     });
   }
   const totalWeight = weights.assetQuality + weights.liquidity + weights.maturity;
+  // A/B factors are excluded from the row's renormalized score, so they control
+  // the row only when every factor is excluded; otherwise only scored C/U/D can.
+  const controllingCauses = includedWeight > 0 ? (["D", "C", "U"] as const) : (["A", "B"] as const);
   return { score: includedWeight > 0 ? weighted / includedWeight : null,
     adverseSupportScore: adverseSupport / totalWeight, evidenceRefIds: bounds.evidenceRefIds,
-    cause: (["D", "C", "U", "A", "B"] as const).find(cause => causes.includes(cause)) ?? null,
+    cause: controllingCauses.find(cause => causes.includes(cause)) ?? null,
     causeGapIds: uniqueSorted(causeGapIds), factors: traces.map(row => ({ ...row,
       effectiveScoringWeight: includedWeight > 0 ? row.effectiveScoringWeight / includedWeight : 0 })) };
 }
@@ -831,7 +834,9 @@ function appendReserveConcentrationContribution(params: {
   const unknownDomainShare = domainGroups.length === 0 ? boundedShare : unidentifiedShare;
   const concentration = includedShare > 0
     ? (measuredConcentration * (includedShare - unknownDomainShare) + backing.boundedUnknownQuality * unknownDomainShare) / includedShare : null;
-  const cause = (["D", "C", "U", "A", "B"] as const).find(candidate => causes.includes(candidate)) ?? null;
+  // A/B rows are excluded from the concentration share, so they control it only when nothing is included.
+  const cause = (concentration === null ? (["A", "B"] as const) : (["D", "C", "U"] as const))
+    .find(candidate => causes.includes(candidate)) ?? null;
   contributions.push({
     componentKey: "reserve:concentration", source: "reserve-concentration", score: concentration,
     normalizedWeight: backing.reserve.concentrationWeight,
@@ -842,7 +847,7 @@ function appendReserveConcentrationContribution(params: {
     cause, causeGapIds: uniqueSorted(causeGapIds), wholeAssetWeight: null,
     effectiveScoringWeight: concentration === null ? 0 : backing.reserve.concentrationWeight,
     scoringDisposition: concentration === null ? cause === "B" ? "excluded-uncurated" : "excluded-pipeline"
-      : boundedShare > 0 ? "bounded-uncertainty" : "included",
+      : cause === "C" || cause === "U" ? "bounded-uncertainty" : cause === "D" ? "measured-adverse" : "included",
   });
   return concentration;
 }

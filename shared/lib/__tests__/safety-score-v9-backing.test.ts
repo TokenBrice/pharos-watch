@@ -90,9 +90,18 @@ describe("v10.01 cause-aware reserve quality", () => {
       factorStatuses: { liquidity: { ...knownStatus("report"), observationState: "missing" as const, gapIds: [gaps[0]!.gapId] },
         maturity: { ...knownStatus("report"), observationState: "missing" as const, gapIds: [gaps[1]!.gapId] } } };
     const result = evaluateV9ReserveExposures({ ...asset([row]), gaps }, V9_CANDIDATE_POLICY_V1);
-    expect(result.contributions.find(entry => entry.componentKey === "reserve:gold")).toMatchObject({
-      score: 40, wholeAssetWeight: 1, effectiveScoringWeight: 1, cause, causeGapIds: ["gap:liquidity", "gap:maturity"],
+    const contribution = result.contributions.find(entry => entry.componentKey === "reserve:gold")!;
+    // Excluded factors leave the row scored on its class, so A/B does not control the row.
+    expect(contribution).toMatchObject({
+      score: 40, wholeAssetWeight: 1, effectiveScoringWeight: 1, cause: null, scoringDisposition: "included",
+      causeGapIds: ["gap:liquidity", "gap:maturity"],
     });
+    expect(contribution.factors!.filter(factor => factor.score === null)).toEqual([
+      expect.objectContaining({ componentKey: "reserve:gold:liquidity", cause, effectiveScoringWeight: 0,
+        scoringDisposition: cause === "A" ? "excluded-pipeline" : "excluded-uncurated" }),
+      expect.objectContaining({ componentKey: "reserve:gold:maturity", cause, effectiveScoringWeight: 0,
+        scoringDisposition: cause === "A" ? "excluded-pipeline" : "excluded-uncurated" }),
+    ]);
     expect(result.structuralReasons.filter(entry => entry.kind === "unsafe-backing")).toEqual([]);
   });
   it("retains supplied stale classifications without converting their uncertainty into measured adversity", () => {

@@ -8,6 +8,7 @@ import {
   V9AssetEvaluationError,
 } from "@shared/lib/safety-score-v9/evaluate-set";
 import * as evaluateSetModule from "@shared/lib/safety-score-v9/evaluate-set";
+import * as publicModule from "@shared/lib/safety-score-v9/public";
 import {
   loadV9CandidateMethodologyPolicy,
   loadV9MethodologyPolicy,
@@ -432,6 +433,37 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       expect.objectContaining({ id: "alpha", ratingStatus: "pipeline-gap", grade: null, score: null }),
     ]);
     evaluate.mockRestore();
+  });
+
+  it("quarantines an asset whose public card violates its contract instead of failing the publication", () => {
+    const fixedInput = exactFixedInput("alpha");
+    const build = vi
+      .spyOn(publicModule, "buildSafetyScoreV9Response")
+      .mockImplementationOnce(() => {
+        throw new publicModule.V9PublicCardProjectionError([{ assetId: "alpha", issues: [{
+          code: "custom", input: undefined, message: "Scoring disposition must agree with controlling cause",
+          path: ["cards", 0, "breakdowns", "backing", "components", 4],
+        }] }]);
+      });
+
+    const result = buildSafetyScoreV9Candidate({
+      fixedInput,
+      extension: reviewedExtension(fixedInput),
+      publishedAtSec: PUBLISHED_AT_SEC,
+    });
+
+    expect(build).toHaveBeenCalledTimes(2);
+    expect(result.quarantines).toEqual([
+      expect.objectContaining({
+        assetId: "alpha",
+        code: "evaluation-failed",
+        message: expect.stringContaining("breakdowns.backing.components.4: Scoring disposition must agree with controlling cause"),
+      }),
+    ]);
+    expect(result.candidate.cards).toEqual([
+      expect.objectContaining({ id: "alpha", ratingStatus: "pipeline-gap", grade: null, score: null }),
+    ]);
+    build.mockRestore();
   });
 
   it("keeps strict, trusted, full, and compact paths identical with provenance guards", () => {
