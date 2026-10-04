@@ -15,7 +15,7 @@
         "counterparty",
         "legal"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "over-seven-days"
     },
     {
       "name": "ChinaAMC USD Digital Money Market Fund tokenized unlisted Class F USD (CUMFU)",
@@ -31,7 +31,7 @@
         "counterparty",
         "legal"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "over-seven-days"
     },
     {
       "name": "Finloop USD Instant Digital Liquidity Token - Acc (FUIDL-AC), referencing BNY Mellon U.S. Dollar Liquidity Fund",
@@ -51,10 +51,18 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol NR wave 2026-10-02 (NrFusd)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W2R49 exact TKUSD Class T and CUMFU Class F tokenized-share liquidity review; original composition by NrFusd",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Taikang Kaitai Funds August 2026 explanatory memorandum: Appendix D tokenized Class T redemption, printed pp.273-274",
+        "url": "https://hk.taikangasset.cn/productinformation/7ac3dc4f-394d-4003-9b8b-83cd1c492e63.9).pdf"
+      },
+      {
+        "label": "ChinaAMC Digital OFC September 14 2026 prospectus: Schedule 5 tokenized unlisted-share redemption, printed p.126",
+        "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf"
+      },
       {
         "label": "FinChain FUSD reserves",
         "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/fusd-reserves"
@@ -88,7 +96,7 @@
         "url": "https://api.finchain.global/api/v0/fusd-data"
       }
     ],
-    "rationale": "At Ethereum block 26103182 on 2026-10-02, gateway LP storage resolves to 0x3fea1cb36d2c5523c062d0e060eac253608b4daf. Its getTotalReservesInfo() identifies the three exact reserve tokens; every tracked quantity equals its treasury token balance. Current issuer API product addresses and values match the pinned tuple: TKUSD 304595.134265585947553817, CUMFU 303739.818920391652339903 and FUIDL-AC 616041.200182124511630189, totaling 1224376.153368102111523909 in issuer-marked USD. The API's published six-decimal ratios directly supply the authored percentages (24.8776%, 24.8077%, 50.3147%). latestBundleTimestamp() is 2026-10-02T07:05:01Z, independently dating the issuer NAV mark publication; updateAt 1776736295 remains reserve configuration time in April. This refresh records a new current token-inventory and publisher-NAV observation, not a financial report or independently authenticated underlying fund holdings. Each share remains insufficient-evidence for underlying obligor, liquidity, holder-priority and recovery look-through; known unknown exposure remains 100%.",
+    "rationale": "At Ethereum block 26103182 on 2026-10-02, gateway LP storage resolves to 0x3fea1cb36d2c5523c062d0e060eac253608b4daf. Its getTotalReservesInfo() identifies the three exact reserve tokens; every tracked quantity equals its treasury token balance. Current issuer API product addresses and values match the pinned tuple: TKUSD 304595.134265585947553817, CUMFU 303739.818920391652339903 and FUIDL-AC 616041.200182124511630189, totaling 1224376.153368102111523909 in issuer-marked USD. The API's published six-decimal ratios directly supply the authored percentages (24.8776%, 24.8077%, 50.3147%). latestBundleTimestamp() is 2026-10-02T07:05:01Z, independently dating the issuer NAV mark publication; updateAt 1776736295 remains reserve configuration time in April. This refresh records a new current token-inventory and publisher-NAV observation, not a financial report or independently authenticated underlying fund holdings. W2R49 liquidity-only research recovered the actual August 2026 Kaitai memorandum (not the unrelated Taikang ETF) and September 14 2026 ChinaAMC Digital OFC prospectus through the managers' rendered document archives. Appendix D governs TKUSD tokenized Class T; Schedule 5 governs CUMFU tokenized unlisted Class F. Both permit extreme-market redemption payment delays up to one calendar month from properly documented token-redemption requests, so both are conservatively categorized over-seven-days, not by daily dealing frequency or normal one-/three-business-day marketing. This is a governing token-claim delay category, not a measured whole-position stress realization guarantee; suspension, partial acceptance, distributor transfer and compliance conditions remain. No finite maturityDaysMax is inferred from underlying portfolio WAM or instrument mandates. FUIDL-AC liquidity remains unknown. Composition percentages and October 2 observation date are unchanged; independent underlying financial reconciliation, priority and recovery look-through remain unknown across 100% of the book.",
     "compositionBasis": "Pinned Ethereum reserve-token inventory and issuer-marked USD values at block 26103182, matched to the current official API product-address mapping and directly published ratios",
     "scope": "full-composition",
     "knownUnknownExposure": "Current reserve token quantities and publisher-marked product weights are observable on-chain. Independent reconciliation to fund-held assets, fund NAV administration, underlying holdings and maturities, holder priority and recovery safeguards remain unverified.",
