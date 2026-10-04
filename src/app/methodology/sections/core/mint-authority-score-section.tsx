@@ -22,7 +22,7 @@ const SIGNAL_ROWS = [
       signal: "Derived posture",
       effect: "Sets the base",
       meaning:
-        "Cap semantics, claim impairment, reconciliation cadence, supervisory regime, and qualified governance place the mint on a posture rung. The ladder distinguishes collateral-gated issuance, minority-veto, governance-delayed and operationally governed unbounded issuance, unbounded minting with unknown reconciliation, and a confirmed absence of reconciliation.",
+        "Cap semantics, claim impairment and positively qualified governance, recurring reconciliation or prudential supervision place the mint on a posture rung. Known unbounded authority without a qualifying process starts at 25 regardless of reconciliation availability. Unknown reconciliation is disclosed separately, not priced as a 55 grant or treated as proof of non-reconciliation. The ladder retains collateral-gated, minority-veto, governance-delayed and operationally governed issuance.",
     },
   },
   {
@@ -40,7 +40,7 @@ const SIGNAL_ROWS = [
       signal: "Seasoned track record",
       effect: "Bounded credit",
       meaning:
-        "After 60 months, eligible postures earn 10 points without crossing the next rung. Minority-veto issuance starts at 70 and clips at 79 below prudential reconciliation at 80, just like partially bounded administration. Governance-delayed issuance starts at 60 and clips at 69. Operationally governed issuance starts at 55 and clips seasoning and final positive merged credit at 59. Other eligible 55-base rows also stop at 59. Unbounded, unreconciled issuance has a dedicated ceiling of 39. An active incident is ineligible.",
+        "After 60 months, eligible postures earn 10 points without crossing the next rung. Minority-veto issuance starts at 70 and clips at 79 below prudential reconciliation at 80, just like partially bounded administration. Governance-delayed issuance starts at 60 and clips at 69. Operationally governed issuance starts at 55 and clips seasoning and final positive merged credit at 59. Other eligible 55-base rows also stop at 59. Unbounded, adverse authority starts at 25 and becomes 35 after 60 implementation months under unchanged knobs, with a dedicated ceiling of 39 rather than an automatic 39 grant, regardless of reconciliation availability. An active incident is ineligible.",
     },
   },
   {
@@ -99,7 +99,7 @@ const BAND_ROWS = [
     id: "managed",
     cells: {
       band: V9_MINT_POSTURE_BANDS.managed.label,
-      posture: "Prudential-reconciled (80), attestation-reconciled (70), or unbounded-reconciled base (55)",
+      posture: "Prudential-reconciled (80), attestation-reconciled (70), or recurring reconciliation / prudential supervision alone (55)",
       meaning: V9_MINT_POSTURE_BANDS.managed.detail,
     },
   },
@@ -115,7 +115,7 @@ const BAND_ROWS = [
     id: "exposed",
     cells: {
       band: V9_MINT_POSTURE_BANDS.exposed.label,
-      posture: "Unknown reconciliation (55), or unbounded, unreconciled / compromised (25)",
+      posture: "Unbounded, adverse authority (25), or compromised by an active mint incident (25)",
       meaning: V9_MINT_POSTURE_BANDS.exposed.detail,
     },
   },
@@ -273,8 +273,9 @@ export function MintAuthorityScoreMethodologySection() {
           controller-plus-residual conservation to pinned voting supply. A controller able to pass alone may vote
           its OWN locked/escrowed tokens unless positively identified issuer/team/council-affiliated; unknown
           beneficial affiliation and concentration are diagnostics. A key casting OTHER holders&apos; votes, or able
-          to replace their caster without on-chain token-holder approval, is council control; needing those votes
-          to pass alone denies. Nongovernance privileged/forced vote creation or delegation denies.
+          to replace their caster without on-chain token-holder approval, is council control. A threshold-capable key
+          with actual other-holder casting/replacement authority fails even if its own stake alone suffices;
+          needing those votes to pass alone also denies. Nongovernance privileged/forced vote creation or delegation denies.
           Controllers unable to pass alone need no identification. There is no universal concentration ceiling.
         </p>
         <p>
@@ -299,6 +300,47 @@ export function MintAuthorityScoreMethodologySection() {
           GHO stays mint 25 (historical captured total 42/D). Improvement requires removing the Council&apos;s
           chosen-recipient direct mint, restricting it to genuinely reserve-backed issuance, or imposing a finite
           aggregate token-governed budget; then test ordinary D29, without promising a future rating.
+        </p>
+      </MethodologyDetails>
+      <p>
+        Safety Score v10.06 adds D33: known economically unbounded mint authority is priced from its evidenced actor,
+        power and qualifying process, regardless of reconciliation availability. Without qualified governance,
+        recurring reconciliation or prudential supervision, it starts at 25 as &quot;Unbounded, adverse authority&quot;
+        in the Exposed band, with high centralized-mint severity (cap 59 under existing proof and scope gates).
+        This is removal of an unavailable-evidence grant, not new adverse findings; it does not establish reserve
+        impairment, a governance compromise, a new issuance event or measured non-reconciliation.
+      </p>
+      <MethodologyDetails summary="Availability-invariant mint fallback: D33 (Safety Score v10.06)">
+        <p>
+          An active mint incident overrides the ladder. Otherwise, for positively known unbounded authority,
+          continuous or periodic reconciliation plus prudential or attestation-only supervision ranks first at
+          80 or 70. Fully qualified minority-veto issuance (70), affirmative governance (60), then operational
+          governance (55) follow. Remaining recurring reconciliation or independently established prudential
+          supervision supports base 55; otherwise known unbounded adverse authority starts at 25.
+          The v10.05 certificate, typed-authority and D32 gates remain mandatory for each governance process.
+        </p>
+        <p>
+          At fixed positive actor/process facts, not-applicable, none, unknown and internal-ledger reconciliation
+          do not change that base rung. Unknown reconciliation remains an explicitly attributed C/U factor,
+          with its real scoped causal gaps and any topology gaps retained, even when a governance process or
+          prudential supervision qualifies. Unobserved values stay null. The known authority supplies any
+          adverse support separately; a missing reconciliation read cannot create an adverse finding.
+          Genuinely unresolved authority or economic semantics retains generic unknown quality 50.
+        </p>
+        <p>
+          Internal-ledger records an issuance/accounting workflow, not reserve-to-total-liability assurance.
+          It may clear the issuer-backend mint-control question but grants no standalone rung: recording
+          liabilities cannot constrain the same actor&apos;s unbounded issuance power. Backing assurance and
+          the non-prudential Control whole-supply question remain. Independently evidenced prudential supervision
+          alone retains 55, Managed and no centralized-mint signal, unless a higher-priority qualifying
+          governance process supplies its own band and signal. The public label is &quot;Unbounded, reconciled or
+          prudentially supervised&quot;; it does not claim both are established. Attestation-only alone grants no rung.
+        </p>
+        <p>
+          Adverse authority remains fragile and unbounded for DDR; K1 severe-surge and R1 recovery-anchor rules
+          are unchanged. Ordinary seasoning adds 10 once after 60 implementation months, producing 25 to 35
+          with unchanged knobs and a ceiling of 39. Merged penalties cannot cross the adverse 25 floor.
+          Active compromise never seasons; D29, D30 and H retain their existing ceilings and signals.
         </p>
       </MethodologyDetails>
       <WorkedExample summary="Worked example: a resolved mint incident on a reconciled issuer">
