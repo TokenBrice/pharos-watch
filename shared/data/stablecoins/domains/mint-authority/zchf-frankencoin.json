@@ -17823,6 +17823,50 @@
               ]
             }
           ],
+          "cloneRuntimeVariants": [
+            {
+              "runtimeHash": "0x99e22dc6391d14fe257c05f5ccef0e411cd0a672fec42cefb2c0b29d4abb4ebd",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0x7c245a2d29b88cb7c5fb118518fc7f03e85f2e99",
+              "matchProofRef": "p123"
+            },
+            {
+              "runtimeHash": "0xc66b0e0ec96a834716f97c0c66e13ce96d844fe8d22f6d3260e1792da628ddf7",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0x98725ee62833096c1c9be26001f3cda9a6241ef3",
+              "matchProofRef": "p123"
+            },
+            {
+              "runtimeHash": "0xa540299d04ebcb480bbd1a6ce2f93b416e18720a9add92723838eb61be39114f",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0xa73ea04fef834e41a044f0bdddd959a9ff8fc639",
+              "matchProofRef": "p123"
+            },
+            {
+              "runtimeHash": "0x5146fc2b57f193328728ff45ab565a49772db92d20995b338b8004d785f849c3",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0xc724701a14f15888205682c5a192b8bad78353ee",
+              "matchProofRef": "p123"
+            },
+            {
+              "runtimeHash": "0x0db7d518aa0b32de614d56e3b8199d8c0d5b191b5b95423f2b0ad62e0dc9e3e5",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0xd0a8652afa21c58589751a17afb1c6e36edf019f",
+              "matchProofRef": "p123"
+            },
+            {
+              "runtimeHash": "0x543a6ab5c1dc8ed1a659728b15ae119475dc800f2f913b1ffae0faff424953da",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0xed58b9d4f63b3da63b13078e027c8c3f92d5d597",
+              "matchProofRef": "p123"
+            },
+            {
+              "runtimeHash": "0x994d51fd434b84a52d4fa293ed52c47470367bb6eb48c58c33fbe63fcf890cac",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0xfc22a33e5746a45517e9725c1d5cd958c37538a7",
+              "matchProofRef": "p123"
+            }
+          ],
           "invariants": [
             "p123"
           ],
@@ -19802,6 +19846,110 @@
                 "e122",
                 "e229"
               ]
+            }
+          ],
+          "cloneRuntimeVariants": [
+            {
+              "runtimeHash": "0x1e9321de57e89a2e76f2c22d135ada568cf21e8e263c8521a98ea7d51e00b50e",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0x19c4aaced0b2370d99548a1fbf61c3bb61c77e2d",
+              "matchProofRef": "p124"
+            },
+            {
+              "runtimeHash": "0x14d9ac067be76cc3695b4f0bcef91619037578409314ccb695b5383b8c49019b",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0x1eed91eefa0da607fa32088ad686fb8ca4254804",
+              "matchProofRef": "p124"
+            },
+            {
+              "runtimeHash": "0x9a8a3198f019d6a8dec0a9c45034d5aeb50a90f7c645767da8750939dc70347c",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0x224bc870a661cc77742d63b6c1fe82df1841e0d5",
+              "matchProofRef": "p124"
+            },
+            {
+              "runtimeHash": "0x3039cc5e0ebea98f039c367d674e5d3edf0dfa293080aa6131c617056c4fb9a5",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0x25bd3a5d6ee54f9ec5536c6ff20c0685d953a70a",
+              "matchProofRef": "p124"
+            },
+            {
+              "runtimeHash": "0xcbb0d244bd36f797634d91a904ab70eb7fc55563ba779f164158121819088425",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0x3484c2aaf6cb7c27aa68c89edcdac878020a4da7",
+              "matchProofRef": "p124"
+            },
+            {
+              "runtimeHash": "0xe06036f72dd6c1c4ee51dc0033dff65e26813e45e78d5910826aa3c7594c8a78",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0x44bfc2a260f091f8365ba8b240cd9491903467b9",
+              "matchProofRef": "p124"
+            },
+            {
+              "runtimeHash": "0x8c91e10651bd6ad91dc08667188d29bd44db6878bf32f9e24a03a0e5b3d3b5c5",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0x49c431454c40ecbf848096f2753b2abc3a699a10",
+              "matchProofRef": "p124"
+            },
+            {
+              "runtimeHash": "0xb87792f672523dbfed7d0455b086b8e2c53dcd69b87ec37934e5c56f8b88debd",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0x5f2c10f779b7f0c44ee80128a3d7ac75b255bb95",
+              "matchProofRef": "p124"
+            },
+            {
+              "runtimeHash": "0x851a9bd90b2985f9299cf33e64c7b24ef4085064407870a4a7cc7277ddaa0948",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0x6880881ae5a79f0c2657162a0f64072c075a60ce",
+              "matchProofRef": "p124"
+            },
+            {
+              "runtimeHash": "0x97a8e062194a054ac5fea22dc20303c845e60f37e2ec31b01f457561c11296a4",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0x826c54287c0c1e2a4d0fbf81e2e734c85c48d3f4",
+              "matchProofRef": "p124"
+            },
+            {
+              "runtimeHash": "0x86d9a1d02cf6dba8ec1c0fd8705f145cf94eeaab6a8a374c7fa19396516926a2",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0x8e2dc1ed2ecf29def3a5c436455162d0639e2cf8",
+              "matchProofRef": "p124"
+            },
+            {
+              "runtimeHash": "0x257dc1108f9bdb50429129e7d2106898239e8841b1a208b687c4378d6b35c245",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0x9cf4e932285474e72b82b288c4064054223ba502",
+              "matchProofRef": "p124"
+            },
+            {
+              "runtimeHash": "0xce05624996d2914dd9eacb67cdeab3e65ba9d0fa2b17d831ee58f10b577da369",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0xae4be19e25a10ce9b67d76dc2c8c774f4850b215",
+              "matchProofRef": "p124"
+            },
+            {
+              "runtimeHash": "0x27000adf1d7d3a7713df3549cdd2326b5239e8090691a251d753fdb4e04c7caf",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0xb4a71ee7f3ed5bb508bfb5883b548dc601546709",
+              "matchProofRef": "p124"
+            },
+            {
+              "runtimeHash": "0x200c5958bbe21b5c3b74f40652b5c268f91f1c138c67216b7a94a99b08c99fe2",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0xb51c8044fdbbbffc577f8d811125a7553d6ef4d0",
+              "matchProofRef": "p124"
+            },
+            {
+              "runtimeHash": "0x32f430d44f7046bd678cf7cbb85148a62117747d9ab11bf7200b861422955619",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0xca14d52ce97a8c910d4f50cb52efe414ecab41be",
+              "matchProofRef": "p124"
+            },
+            {
+              "runtimeHash": "0x803af87227d85ce8e89233651c1d98e41a40f16284074fa6f97df2cd6b653a46",
+              "proxyKind": "eip1167",
+              "implementationIdentityRef": "ethereum:0xe8017ad9a703baae37c23549b3b30841caf3e873",
+              "matchProofRef": "p124"
             }
           ],
           "invariants": [

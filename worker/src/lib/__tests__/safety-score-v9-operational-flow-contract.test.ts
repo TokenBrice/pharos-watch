@@ -7,6 +7,7 @@ import { evaluateV9EconomicControl } from "@shared/lib/safety-score-v9/control";
 import { makeEconomicControlArgs, makeReviewedMintInput } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
 import { MintAuthorityProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
 import { V9AssetFactsV3Schema } from "@shared/types/safety-score-v9-facts";
+import type { V9AssetFactsV3 } from "@shared/types/safety-score-v9-facts";
 import type { MintAuthorityProfile } from "@shared/types/core";
 import type { V1005ExecutionCertificates, V1005AuthorityGraph, V1005OperationalIssuance } from "@shared/types/safety-score-v9-control-scope";
 import { sha256Hex } from "@shared/lib/sha256";
@@ -850,5 +851,221 @@ describe("v10.05 source-bound operational and voting compilation", () => {
     const projections = compileReviewedMintControlScopes(dai, "dai-makerdao", CLOCK, 90 * 86400);
     expect(projections).toHaveLength(dai.controls!.length);
     expect(dai.executionCertificates!.liabilityBookId).toBe(usds.executionCertificates!.liabilityBookId);
+  });
+});
+
+describe("governance public-clock and replacement-approval admission", () => {
+  function governanceProfile(family: "D29" | "D30" | "H"): MintAuthorityProfile {
+    if (family === "D30") return modeledVetoProfile();
+    const profile = modeledProfile();
+    if (family === "D29") {
+      delete profile.operationalIssuance; profile.authorityPosture = "unbounded-governed";
+      profile.controls![1]!.executionScope!.paths.forEach((path) => { path.unavoidableDelaySec = 172800; });
+      profile.authorityGraph!.pathBindings.forEach((binding) => { binding.authorityNodeIds = ["governor"]; });
+      restamp(profile);
+    }
+    return profile;
+  }
+
+  function posture(asset: V9AssetFactsV3) {
+    const control = asset.controls.find((row) => row.capSemantics.kind === "unbounded" && row.capabilities.includes("mint"))!;
+    return deriveV9MintPosture(control, makeReviewedMintInput(control.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, asset.issuanceFacts);
+  }
+
+  describe.each(["D29", "D30"] as const)("%s public-clock admission", (family) => {
+    it.each(["zero", "short", "null", "calldata-unbound", "calldata-unknown"] as const)("denies the single %s clock gate on the fastest authority alternative", (failure) => {
+      const profile = governanceProfile(family), graph = profile.authorityGraph!;
+      const delay = family === "D29" ? 172800 : 1209600;
+      const ref = { controlRef: family === "D29" ? SCOPE_CONTROLLER : PROGRAM, pathId: "issuance" };
+      graph.nodes.push({ ...graph.nodes[1]!, id: "public-clock-route", kind: "timelock", terminal: false });
+      graph.pathBindings.find((binding) => binding.path.controlRef === ref.controlRef && binding.path.pathId === ref.pathId)!.authorityNodeIds = ["public-clock-route"];
+      for (const id of ["slow-public-route", "fast-public-route"]) {
+        graph.edges.push({ id, from: "public-clock-route", to: "governor", kind: "admin", pathRefs: [ref],
+          selectors: [], role: "governor-execution", activation: "active", publicDelaySec: delay, calldataBound: true, proofRef: "closed" });
+      }
+      restamp(profile);
+      const positive = compile(profile);
+      expect(positive.governance).toMatchObject({ coverage: "complete", minUnavoidableDelaySec: delay, nonGovernorUnboundedPathKeys: [],
+        votingControl: { qualified: true } });
+      expect(posture(positive.asset)).toBe(family === "D29" ? "unbounded-governed" : "unbounded-veto-guarded");
+
+      const fast = graph.edges.find((edge) => edge.id === "fast-public-route")!;
+      if (failure === "zero") fast.publicDelaySec = 0;
+      if (failure === "short") fast.publicDelaySec = delay - 1;
+      if (failure === "null") fast.publicDelaySec = null;
+      if (failure === "calldata-unbound") fast.calldataBound = false;
+      if (failure === "calldata-unknown") fast.calldataBound = "unknown";
+      restamp(profile);
+      const denied = compile(profile);
+      const authoredPath = profile.controls!.find((control) => `ethereum:${control.address}` === ref.controlRef)!.executionScope!.paths.find((path) => path.id === ref.pathId)!;
+      expect(authoredPath.unavoidableDelaySec).toBe(delay);
+      expect(denied.governance).toMatchObject({ coverage: "complete", nonGovernorUnboundedPathKeys: [], votingControl: { qualified: true },
+        minUnavoidableDelaySec: failure === "zero" ? 0 : failure === "short" ? delay - 1 : null });
+      expect(posture(denied.asset)).toBe("unbounded-adverse");
+    });
+  });
+
+  it.each(["D29", "D30", "H"] as const)("requires known program approval for actual other-holder authority even when own stake passes %s", (family) => {
+    const profile = governanceProfile(family), voting = profile.governedIssuance!.votingControl;
+    const controller = voting.controllers[0]!;
+    controller.voteAuthorityNodeIds = ["operational-program"];
+    controller.voteReplacementApproval = "onchain-token-holder-approval";
+    voting.routes[0]!.controllerPowers = [{ controllerId: "dominant-own-holder", ownHolderRowIds: [], otherHolderRowIds: ["small-position"],
+      unknownProvenanceHolderRowIds: [], unilateralThresholdRaw: "50", thresholdComparator: "gt", thresholdProofRef: "closed" }];
+    const positive = compile(profile);
+    expect(positive.governance.votingControl).toMatchObject({ qualified: true, largestSingleControllerShareBps: 10000,
+      unknownAboveThresholdVoteOwnershipControllerIds: [], otherHolderVoteOperatorControllerIds: [],
+      censusReconciliations: [{ state: "reconciled", accountedPowerRaw: "100" }] });
+    expect(posture(positive.asset)).toBe(family === "D29" ? "unbounded-governed" : family === "D30" ? "unbounded-veto-guarded" : "unbounded-operationally-governed");
+    if (family === "H") expect(positive.process?.minOperationalExerciseDelaySec).toBe(0);
+
+    controller.voteReplacementApproval = "unknown";
+    const denied = compile(profile);
+    expect(denied.governance.votingControl).toMatchObject({ qualified: false, largestSingleControllerShareBps: 10000,
+      unknownAboveThresholdVoteOwnershipControllerIds: ["dominant-own-holder"], otherHolderVoteOperatorControllerIds: [],
+      censusReconciliations: [{ state: "reconciled", accountedPowerRaw: "100" }] });
+    expect(denied.governance.diagnostics).toContainEqual(expect.objectContaining({ code: "voting-control-unproved", gate: "D32",
+      field: "controllers.dominant-own-holder.voteReplacementApproval" }));
+    expect(posture(denied.asset)).toBe("unbounded-adverse");
+    if (family === "H") expect(denied.process?.coverage).toBe("incomplete");
+  });
+
+  it("does not demand other-holder approval from a controller voting only its own proved stake", () => {
+    const profile = governanceProfile("D29");
+    profile.governedIssuance!.votingControl.controllers[0]!.voteReplacementApproval = "unknown";
+    const compiled = compile(profile);
+    expect(compiled.governance.votingControl).toMatchObject({ qualified: true, unknownAboveThresholdVoteOwnershipControllerIds: [] });
+    expect(posture(compiled.asset)).toBe("unbounded-governed");
+  });
+});
+
+describe("authority clock, cycle, and compact runtime admission", () => {
+  const authority = (profile: MintAuthorityProfile, pathId: string) => compileReviewedMintControlScopes(
+    profile, "alpha", CLOCK, 90 * 86400,
+  )[0]!.authorityPaths!.get(`${PROGRAM}#${pathId}`);
+
+  it.each([
+    [0, "null-delay"], [172800, "null-delay"],
+    [0, "unbound-calldata"], [172800, "unbound-calldata"],
+  ] as const)("keeps an unknown inner clock unknown beneath a %s-second outer edge (%s)", (outerDelay, failure) => {
+    const profile = modeledProfile(), graph = profile.authorityGraph!;
+    graph.nodes.push({ ...graph.nodes[1]!, id: "outer-authority", kind: "contract", terminal: false },
+      { ...graph.nodes[1]!, id: "inner-authority", kind: "contract", terminal: false });
+    graph.pathBindings.find((binding) => binding.path.controlRef === PROGRAM && binding.path.pathId === "raise")!.authorityNodeIds = ["outer-authority"];
+    graph.edges.push({ id: "outer-clock", from: "outer-authority", to: "inner-authority", kind: "execution-hop",
+      pathRefs: [{ controlRef: PROGRAM, pathId: "raise" }], selectors: [], role: null, activation: "active",
+      publicDelaySec: outerDelay, calldataBound: true, proofRef: "closed" },
+    { id: "inner-clock", from: "inner-authority", to: "governor", kind: "execution-hop",
+      pathRefs: [{ controlRef: PROGRAM, pathId: "raise" }], selectors: [], role: null, activation: "active",
+      publicDelaySec: 172800, calldataBound: true, proofRef: "closed" });
+    restamp(profile);
+    expect(authority(profile, "raise")).toMatchObject({ closed: true, governorRooted: true, publicDelaySec: 172800 });
+    const positive = compile(profile);
+    expect(positive.process?.coverage).toBe("complete");
+    expect(deriveV9MintPosture(positive.rows[0]!, makeReviewedMintInput(positive.rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, positive.asset.issuanceFacts)).toBe("unbounded-operationally-governed");
+    const inner = graph.edges.find((edge) => edge.id === "inner-clock")!;
+    if (failure === "null-delay") inner.publicDelaySec = null;
+    else inner.calldataBound = false;
+    restamp(profile);
+    expect(authority(profile, "raise")).toMatchObject({ closed: true, governorRooted: true, publicDelaySec: null });
+    const denied = compile(profile);
+    expect(denied.process).toMatchObject({ coverage: "incomplete", minDiscretionaryPublicDelaySec: null });
+    expect(denied.process?.diagnostics).toContainEqual(expect.objectContaining({ code: "delay-unproved", gate: "H1", controlRef: PROGRAM, pathId: "raise" }));
+    expect(deriveV9MintPosture(denied.rows[0]!, makeReviewedMintInput(denied.rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, denied.asset.issuanceFacts)).toBe("unbounded-adverse");
+  });
+
+  it.each(["self-loop", "two-node-cycle"] as const)("denies a terminal fixed-program %s without a certified governor component", (cycle) => {
+    const profile = modeledProfile(), graph = profile.authorityGraph!;
+    const edge = { kind: "owner" as const, pathRefs: [{ controlRef: PROGRAM, pathId: "interest" }],
+      selectors: [], role: null, activation: "active" as const, publicDelaySec: 0, calldataBound: true, proofRef: "closed" };
+    if (cycle === "two-node-cycle") {
+      graph.nodes.push({ ...graph.nodes[1]!, id: "fixed-leaf" });
+      graph.edges.push({ ...edge, id: "program-leaf", from: "operational-program", to: "fixed-leaf" });
+    }
+    restamp(profile);
+    expect(authority(profile, "interest")).toMatchObject({ closed: true, governorRooted: false, publicDelaySec: 0 });
+    const positive = compile(profile);
+    expect(positive.process?.coverage).toBe("complete");
+    expect(deriveV9MintPosture(positive.rows[0]!, makeReviewedMintInput(positive.rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, positive.asset.issuanceFacts)).toBe("unbounded-operationally-governed");
+    graph.edges.push({ ...edge, id: "fixed-back-edge", from: cycle === "self-loop" ? "operational-program" : "fixed-leaf", to: "operational-program" });
+    restamp(profile);
+    expect(authority(profile, "interest")?.closed).toBe(false);
+    const denied = compile(profile);
+    expect(denied.process?.coverage).toBe("incomplete");
+    expect(denied.process?.diagnostics).toContainEqual(expect.objectContaining({
+      code: "graph-cycle-unclosed", controlRef: PROGRAM, pathId: "interest", field: "authorityGraph.nodes.operational-program",
+    }));
+    expect(deriveV9MintPosture(denied.rows[0]!, makeReviewedMintInput(denied.rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, denied.asset.issuanceFacts)).toBe("unbounded-adverse");
+  });
+
+  it("requires a compact clone's observed hash to match its variant even when the original exemplar is unchanged", () => {
+    const clone = "ethereum:0x4444444444444444444444444444444444444444";
+    const profile = modeledClassProfile(), certificates = profile.executionCertificates!, klass = certificates.classes[0]!;
+    profile.controls![1]!.executionScope = modeledProfile().controls![1]!.executionScope;
+    delete profile.controls![1]!.executionClassRef; certificates.members = [];
+    profile.controls![1]!.executionScope!.paths[0]!.affectedDeployments.push(clone);
+    klass.memberRefs = [clone];
+    klass.sourcePathRefs = [{ controlRef: PROGRAM, pathId: "interest" }];
+    klass.requiredConditions = [{ id: "original", kind: "immutable", field: "immutables.original", description: "The clone binds the reviewed source exemplar.",
+      test: { kind: "equal", value: PROGRAM }, proofRef: "closed" }];
+    klass.compactMembers = [{ deployment: clone, codeHash: CODE_HASH, codeSize: 100,
+      immutables: { original: PROGRAM }, state: {}, evidenceRefIds: ["clone-code"] }];
+    const codeRead = { ...certificates.evidence.find((row) => row.id === "code-1")!, id: "clone-code", deployment: clone };
+    certificates.evidence.push(codeRead);
+    certificates.censuses[0]!.authoritativeMembers.push(clone);
+    certificates.censuses[0]!.observations.push({ memberRef: clone, authorized: true, evidenceRefIds: ["clone-code"] });
+    const positive = compile(profile);
+    expect(positive.process?.diagnostics).toEqual([]);
+    expect(deriveV9MintPosture(positive.rows[0]!, makeReviewedMintInput(positive.rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, positive.asset.issuanceFacts)).toBe("unbounded-operationally-governed");
+    klass.compactMembers[0]!.codeHash = HASH; codeRead.codeHash = HASH;
+    expect(klass.compactMembers[0]!.immutables.original).toBe(klass.runtimeVariants[0]!.deployment);
+    const denied = compile(profile);
+    expect(denied.process?.coverage).toBe("incomplete");
+    expect(denied.process?.diagnostics).toContainEqual(expect.objectContaining({
+      code: "runtime-unmatched", field: "compactMembers.codeHash", controlRef: PROGRAM, pathId: "interest", memberRef: clone,
+    }));
+    expect(deriveV9MintPosture(denied.rows[0]!, makeReviewedMintInput(denied.rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, denied.asset.issuanceFacts)).toBe("unbounded-adverse");
+  });
+
+  it.each(["wrong-clone-hash", "unreviewed-implementation", "wrong-implementation", "unproved-clone-template"] as const)("admits an exact reviewed EIP-1167 clone but denies the single %s gate", (failure) => {
+    const clone = "ethereum:0x4444444444444444444444444444444444444444";
+    const profile = modeledClassProfile(), certificates = profile.executionCertificates!, klass = certificates.classes[0]!;
+    profile.controls![1]!.executionScope = modeledProfile().controls![1]!.executionScope;
+    delete profile.controls![1]!.executionClassRef; certificates.members = [];
+    profile.controls![1]!.executionScope!.paths[0]!.affectedDeployments.push(clone);
+    klass.memberRefs = [clone];
+    klass.sourcePathRefs = [{ controlRef: PROGRAM, pathId: "interest" }];
+    klass.requiredConditions = [{ id: "original", kind: "immutable", field: "immutables.original", description: "The clone binds the reviewed source exemplar.",
+      test: { kind: "one-of", values: [PROGRAM, HOLDER] }, proofRef: "closed" }];
+    certificates.proofs.push({ id: "clone-template", conclusion: "closed",
+      statement: "The exact observed clone runtime delegates only to the named reviewed original implementation.", evidenceRefIds: ["source"] },
+    { id: "implementation-source", conclusion: "closed",
+      statement: "The original implementation's exact observed executable bytes correspond to the reviewed class source.", evidenceRefIds: ["source"] });
+    klass.runtimeVariants[0]!.matchProofRef = "implementation-source";
+    klass.cloneRuntimeVariants = [{ runtimeHash: HASH, proxyKind: "eip1167", implementationIdentityRef: PROGRAM, matchProofRef: "clone-template" }];
+    klass.compactMembers = [{ deployment: clone, codeHash: HASH, codeSize: 45,
+      immutables: { original: PROGRAM }, state: {}, evidenceRefIds: ["clone-code"] }];
+    const codeRead = { ...certificates.evidence.find((row) => row.id === "code-1")!, id: "clone-code", deployment: clone, codeHash: HASH, codeSize: 45 };
+    certificates.evidence.push(codeRead);
+    certificates.censuses[0]!.authoritativeMembers.push(clone);
+    certificates.censuses[0]!.observations.push({ memberRef: clone, authorized: true, evidenceRefIds: ["clone-code"] });
+    expect(MintAuthorityProfileSchema.safeParse(profile).success).toBe(true);
+    const positive = compile(profile);
+    expect(positive.process?.diagnostics).toEqual([]);
+    expect(deriveV9MintPosture(positive.rows[0]!, makeReviewedMintInput(positive.rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, positive.asset.issuanceFacts)).toBe("unbounded-operationally-governed");
+    if (failure === "wrong-clone-hash") {
+      klass.compactMembers[0]!.codeHash = `0x${"ef".repeat(32)}`;
+      codeRead.codeHash = klass.compactMembers[0]!.codeHash;
+    } else if (failure === "unreviewed-implementation") failProof(profile, "implementation-source");
+    else if (failure === "wrong-implementation") klass.compactMembers[0]!.immutables.original = HOLDER;
+    else failProof(profile, "clone-template");
+    const denied = compile(profile);
+    expect(denied.process?.coverage).toBe("incomplete");
+    expect(denied.process?.diagnostics).toContainEqual(expect.objectContaining({
+      code: failure === "unreviewed-implementation" ? "implementation-unmatched" : "runtime-unmatched",
+      field: failure === "unreviewed-implementation" ? "compactMembers.implementation" : "compactMembers.codeHash",
+      controlRef: PROGRAM, pathId: "interest", memberRef: clone,
+    }));
+    expect(deriveV9MintPosture(denied.rows[0]!, makeReviewedMintInput(denied.rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, denied.asset.issuanceFacts)).toBe("unbounded-adverse");
   });
 });

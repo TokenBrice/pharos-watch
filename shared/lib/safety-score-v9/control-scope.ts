@@ -426,6 +426,17 @@ export function compileReviewedMintControlScopes(profile: MintAuthorityProfile, 
     });
     if (!v1005ReviewIsCurrent(klass.review, clockSec, maxAgeSec) || klass.invariants.some((ref) => !proofClosed(ref, klass.review.pin)) ||
         sourcePaths.length !== klass.sourcePathRefs?.length || Object.values(klass.closure).some((value) => !value)) add("execution-class-unmatched", "compactMembers.sourcePathRefs", null, null, klass.id);
+    const matchedCloneVariants = new Set(klass.cloneRuntimeVariants);
+    for (const runtime of matchedCloneVariants) {
+      const implementation = klass.runtimeVariants.find((candidate) => candidate.proxyKind === "none" &&
+        candidate.deployment === runtime.implementationIdentityRef);
+      const matchProof = certificates.proofs.find((proof) => proof.id === runtime.matchProofRef);
+      if (!proofClosed(runtime.matchProofRef, klass.review.pin) ||
+          !matchProof?.evidenceRefIds.some((id) => certificates.evidence.some((row) => row.id === id && row.kind === "verified-source")) ||
+          !implementation || klass.runtimeVariants.some((candidate) => candidate !== implementation &&
+            candidate.deployment === runtime.implementationIdentityRef) ||
+          !v1005RuntimeIsMatched(implementation, certificates, klass.review.pin)) matchedCloneVariants.delete(runtime);
+    }
     for (const member of klass.compactMembers) {
       if (compactMembers.has(member.deployment) || memberMap.has(member.deployment)) add("authority-census-incomplete", "compactMembers.duplicate", null, null, klass.id, member.deployment);
       compactMembers.set(member.deployment, { classId: klass.id, evidenceRefIds: member.evidenceRefIds });
@@ -436,10 +447,12 @@ export function compileReviewedMintControlScopes(profile: MintAuthorityProfile, 
       const codeRead = evidence.some((row) => row.deployment === member.deployment && row.readType === "code" && row.codeHash === member.codeHash &&
         (member.codeSize == null || row.codeSize === member.codeSize)) ||
         bundles.some((row) => row.fieldReads?.some((field) => field.field === "codeHash" && field.readType === "code" && field.target === "row-deployment"));
-      const original = member.immutables.original;
-      const variant = klass.runtimeVariants.find((runtime) => runtime.runtimeHash === member.codeHash ||
-        original != null && runtime.deployment === original && runtime.proxyKind === "none");
-      if (member.codeHash === null || !codeRead || !variant || !proofClosed(variant.matchProofRef, klass.review.pin)) add("runtime-unmatched", "compactMembers.codeHash", ref?.controlRef ?? null, ref?.pathId ?? null, klass.id, member.deployment, member.evidenceRefIds);
+      const variant = klass.runtimeVariants.find((runtime) => runtime.runtimeHash === member.codeHash);
+      const cloneVariant = klass.cloneRuntimeVariants?.find((runtime) => runtime.runtimeHash === member.codeHash &&
+        runtime.implementationIdentityRef === member.immutables.original);
+      const runtimeProofRef = variant?.matchProofRef ?? cloneVariant?.matchProofRef;
+      if (member.codeHash === null || !codeRead || !runtimeProofRef || !proofClosed(runtimeProofRef, klass.review.pin)) add("runtime-unmatched", "compactMembers.codeHash", ref?.controlRef ?? null, ref?.pathId ?? null, klass.id, member.deployment, member.evidenceRefIds);
+      else if (!variant && cloneVariant && !matchedCloneVariants.has(cloneVariant)) add("implementation-unmatched", "compactMembers.implementation", ref?.controlRef ?? null, ref?.pathId ?? null, klass.id, member.deployment, member.evidenceRefIds);
       if (bindings.length !== 1 || !bindings[0]?.projection.complete) add("authority-census-incomplete", "compactMembers.sourcePathRefs", ref?.controlRef ?? null, ref?.pathId ?? null, klass.id, member.deployment, member.evidenceRefIds);
       if (bindings.length === 1) {
         const { path } = bindings[0]!;
@@ -583,8 +596,7 @@ export function compileReviewedMintControlScopes(profile: MintAuthorityProfile, 
         }
       }
       if (visiting.has(memoKey)) {
-        // A source-closed executable or governor-containing authority component closes the route's cycle.
-        if (node.terminal && node.kind === "fixed-program") return { closed: true, governorRooted: false, publicDelaySec: 0 };
+        // Only a certified governor-containing authority component closes a route's cycle.
         if (certifiedGovernorCycle(pathKey).has(id)) return { closed: true, governorRooted: true, publicDelaySec: 0 };
         add("graph-cycle-unclosed", `authorityGraph.nodes.${id}`, pathRef.controlRef, pathRef.pathId, null, memberRef);
         return { closed: false, governorRooted: false, publicDelaySec: null };
@@ -603,7 +615,7 @@ export function compileReviewedMintControlScopes(profile: MintAuthorityProfile, 
             add(proofReferencesExist(edge.proofRef) ? "economic-reach-unclosed" : "graph-reference-unresolved",
               `authorityGraph.edges.${edge.id}`, pathRef.controlRef, pathRef.pathId, null, memberRef);
           }
-          return { ...root, closed: root.closed && edge.activation !== "unknown" && proofClosed(edge.proofRef, graph.review.pin), publicDelaySec: edgeClock === null ? null : Math.max(edgeClock, root.publicDelaySec ?? 0) };
+          return { ...root, closed: root.closed && edge.activation !== "unknown" && proofClosed(edge.proofRef, graph.review.pin), publicDelaySec: edgeClock === null || root.publicDelaySec === null ? null : Math.max(edgeClock, root.publicDelaySec) };
         });
         result = { closed: routes.every((route) => route.closed), governorRooted: routes.every((route) => route.governorRooted),
           publicDelaySec: routes.some((route) => route.publicDelaySec === null) ? null : Math.min(...routes.map((route) => route.publicDelaySec!)) };

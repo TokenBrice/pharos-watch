@@ -241,6 +241,10 @@ const PathBindingTemplateSchema = PathBindingSchema.omit({ targetDeployment: tru
 });
 const ClassSchema = z.object({
   id: Text, review: V1005ReviewSchema, runtimeVariants: z.array(V1005RuntimeSchema).min(1),
+  cloneRuntimeVariants: z.array(z.object({
+    runtimeHash: Hash, proxyKind: z.literal("eip1167"),
+    implementationIdentityRef: Deployment, matchProofRef: Text,
+  }).strict()).min(1).optional(),
   invariants: Refs, requiredConditions: z.array(ConditionSchema), memberRefs: z.array(Deployment).min(1),
   closure: V9ControlExecutionScopeObjectSchema.shape.closure, paths: z.array(PathTemplateSchema).min(1),
   sourcePathRefs: z.array(V1005PathRefSchema).min(1).optional(),

@@ -530,9 +530,13 @@ function compileMintVotingControl(profile: MintAuthorityProfile, clockSec: numbe
       };
       for (const id of controller.voteAuthorityNodeIds) visitVoteAuthority(id);
       if (unresolved) { unknownOwnership.add(controller.id); add("voting-control-unproved", `controllers.${controller.id}.voteAuthority`, route); }
-      if (BigInt(row.otherHoldersPowerRaw) > 0n &&
-          (!ownPasses || controller.voteReplacementApproval === "key-discretion" || keyAlternative)) {
-        operators.add(controller.id); add("voting-other-holder-operator", `controllers.${controller.id}.otherHoldersPowerRaw`, route);
+      if (BigInt(row.otherHoldersPowerRaw) > 0n) {
+        if (controller.voteReplacementApproval === "unknown") {
+          unknownOwnership.add(controller.id); add("voting-control-unproved", `controllers.${controller.id}.voteReplacementApproval`, route);
+        }
+        if (!ownPasses || controller.voteReplacementApproval === "key-discretion" || keyAlternative) {
+          operators.add(controller.id); add("voting-other-holder-operator", `controllers.${controller.id}.otherHoldersPowerRaw`, route);
+        }
       }
     }
     const residual = route.residualUpperRaw === null ? null : BigInt(route.residualUpperRaw);
@@ -709,12 +713,14 @@ function compileMintIssuanceGovernance(
             path.claimImpairment === "unbounded" || path.claimImpairment === "unknown")) continue;
       const pathKey = `${projection.scope?.controllerDeployment ?? normalizeDeploymentId(`${control.chain}:${control.address}`)}#${path.id}`;
       const authority = projection.authorityPaths?.get(pathKey);
-      if (path.unavoidableDelaySec === null) {
+      const publicDelaySec = path.unavoidableDelaySec === null || authority?.publicDelaySec == null
+        ? null : Math.min(path.unavoidableDelaySec, authority.publicDelaySec);
+      if (publicDelaySec === null) {
         hasNullDelay = true;
       } else {
         minUnavoidableDelaySec = minUnavoidableDelaySec === null
-          ? path.unavoidableDelaySec
-          : Math.min(minUnavoidableDelaySec, path.unavoidableDelaySec);
+          ? publicDelaySec
+          : Math.min(minUnavoidableDelaySec, publicDelaySec);
       }
       if (!authority?.closed || !authority.governorRooted) nonGovernorUnboundedPathKeys.add(pathKey);
     }
