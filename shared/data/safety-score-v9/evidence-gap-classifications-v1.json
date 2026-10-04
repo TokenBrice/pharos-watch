@@ -2251,147 +2251,6 @@
       "rationale": "No published whole-position realization horizon for the aggregate HBAR collateral across Troves and Stability Pool was located. Borrowing, repayment, liquidation/redistribution and redemption mechanics disclose encumbrance and distinct claims but no maximum for realizing the entire scoped collateral into USD. Atomic HBAR redemption alone does not establish immediate liquidity of the whole reserve slice. Preserve unknown rather than infer zero-day liquidity from native HBAR transferability."
     },
     {
-      "id": "uw-senpyusdmwin-sentora-1b4b759ba82fe191",
-      "assetId": "senpyusdmwin-sentora",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:b52575f909bf946b51ece17f",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:57:29Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R33)",
-      "sources": [
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T22:57:29Z",
-          "datumAsOf": null,
-          "location": "June 2026 terms, Appendix B-1 section 6",
-          "excerpt": "The sole mechanism available to you to reduce exposure to a Sentora Vault is to initiate a withdrawal transaction, subject to applicable smart contract logic, protocol constraints, and potential time-lock requirements.",
-          "assertion": "Terms disclose conditional withdrawal, not a time bound for realizing the entire idle-plus-lent PYUSD/RLUSD position."
-        },
-        {
-          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
-          "observedAt": "2026-10-03T22:57:29Z",
-          "datumAsOf": null,
-          "location": "Advanced Liquidity Curation; Core Non-Custodial Mechanisms",
-          "excerpt": "It does not withdraw assets out of the Morpho protocol; instead, it shifts the user\u2019s exposure from the vault to the underlying positions, even when those positions are illiquid.",
-          "assertion": "In-kind exit transfers protocol exposure; it does not establish a whole-position cash realization horizon."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/",
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/platform/risk-management",
-        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
-        "https://sentora.com/asset-risk-reviews/huma",
-        "https://docs.morpho.org/learn/concepts/vault-v2/",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x8381a156958711e230f325428b5eb4b6555c75d9",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
-      ],
-      "rationale": "The exact liquidityHorizon of each entire idle-plus-lent protocol-position slice is not published. Source exit() pays available underlying or uses the configured liquidity adapter; pinned block 26114898 shows no liquidity adapter in all three wrappers. Docs/legal terms describe liquidity-conditional ordinary exit and in-kind position transfer, but no whole-slice cash realization bound. Collateral-token redemption SLAs are not lender-vault PYUSD/RLUSD realization SLAs; no immediate/one-day/seven-day scalar is justified."
-    },
-    {
-      "id": "uw-senpyusdpst-sentora-becb1cf34a222a85",
-      "assetId": "senpyusdpst-sentora",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:b52575f909bf946b51ece17f",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:57:29Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R33)",
-      "sources": [
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T22:57:29Z",
-          "datumAsOf": null,
-          "location": "June 2026 terms, Appendix B-1 section 6",
-          "excerpt": "The sole mechanism available to you to reduce exposure to a Sentora Vault is to initiate a withdrawal transaction, subject to applicable smart contract logic, protocol constraints, and potential time-lock requirements.",
-          "assertion": "Terms disclose conditional withdrawal, not a time bound for realizing the entire idle-plus-lent PYUSD/RLUSD position."
-        },
-        {
-          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
-          "observedAt": "2026-10-03T22:57:29Z",
-          "datumAsOf": null,
-          "location": "Advanced Liquidity Curation; Core Non-Custodial Mechanisms",
-          "excerpt": "It does not withdraw assets out of the Morpho protocol; instead, it shifts the user\u2019s exposure from the vault to the underlying positions, even when those positions are illiquid.",
-          "assertion": "In-kind exit transfers protocol exposure; it does not establish a whole-position cash realization horizon."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/",
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/platform/risk-management",
-        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
-        "https://sentora.com/asset-risk-reviews/huma",
-        "https://docs.morpho.org/learn/concepts/vault-v2/",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x8381a156958711e230f325428b5eb4b6555c75d9",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
-      ],
-      "rationale": "The exact liquidityHorizon of each entire idle-plus-lent protocol-position slice is not published. Source exit() pays available underlying or uses the configured liquidity adapter; pinned block 26114898 shows no liquidity adapter in all three wrappers. Docs/legal terms describe liquidity-conditional ordinary exit and in-kind position transfer, but no whole-slice cash realization bound. Collateral-token redemption SLAs are not lender-vault PYUSD/RLUSD realization SLAs; no immediate/one-day/seven-day scalar is justified."
-    },
-    {
-      "id": "uw-sxsrlusd-sentora-bc99b6508c2435b8",
-      "assetId": "sxsrlusd-sentora",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:e3b1fb8a74fb6d9b8b059d21",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:57:29Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R33)",
-      "sources": [
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T22:57:29Z",
-          "datumAsOf": null,
-          "location": "June 2026 terms, Appendix B-1 section 6",
-          "excerpt": "The sole mechanism available to you to reduce exposure to a Sentora Vault is to initiate a withdrawal transaction, subject to applicable smart contract logic, protocol constraints, and potential time-lock requirements.",
-          "assertion": "Terms disclose conditional withdrawal, not a time bound for realizing the entire idle-plus-lent PYUSD/RLUSD position."
-        },
-        {
-          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
-          "observedAt": "2026-10-03T22:57:29Z",
-          "datumAsOf": null,
-          "location": "Advanced Liquidity Curation; Core Non-Custodial Mechanisms",
-          "excerpt": "It does not withdraw assets out of the Morpho protocol; instead, it shifts the user\u2019s exposure from the vault to the underlying positions, even when those positions are illiquid.",
-          "assertion": "In-kind exit transfers protocol exposure; it does not establish a whole-position cash realization horizon."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/",
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/platform/risk-management",
-        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
-        "https://sentora.com/asset-risk-reviews/huma",
-        "https://docs.morpho.org/learn/concepts/vault-v2/",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x8381a156958711e230f325428b5eb4b6555c75d9",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
-      ],
-      "rationale": "The exact liquidityHorizon of each entire idle-plus-lent protocol-position slice is not published. Source exit() pays available underlying or uses the configured liquidity adapter; pinned block 26114898 shows no liquidity adapter in all three wrappers. Docs/legal terms describe liquidity-conditional ordinary exit and in-kind position transfer, but no whole-slice cash realization bound. Collateral-token redemption SLAs are not lender-vault PYUSD/RLUSD realization SLAs; no immediate/one-day/seven-day scalar is justified."
-    },
-    {
       "id": "uw-avusd-avant-426038f745ffca82",
       "assetId": "avusd-avant",
       "scope": {
@@ -5843,318 +5702,6 @@
         "https://explorer.tempo.xyz/address/0x20c0000000000000000000000a6da882d075a4c3"
       ],
       "rationale": "For each identified EVM/Tempo fiat-minter and administrator EOA, the scoped question\u2019s independently evidenced key-custody/operator/recovery/replacement process remains undisclosed. The report publishes generic Fireblocks two-approval controls, but does not map them to these exact addresses or disclose signer/operator identities, key recovery and replacement. Contract role identity alone cannot supply these off-chain facts."
-    },
-    {
-      "id": "uw-gbpe-monerium-c05bcd51528a3dd0",
-      "assetId": "gbpe-monerium",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:19:09Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
-      "sources": [
-        {
-          "url": "https://monerium.com/financial-information/",
-          "observedAt": "2026-10-03T23:19:09Z",
-          "datumAsOf": null,
-          "location": "Financial statements; Attestations; How we safeguard",
-          "excerpt": "Our policy is to hold only as much in bank deposits as we need to meet anticipated redemptions.",
-          "assertion": "Named providers and a qualitative EURe fund policy are disclosed, but no current currency-specific whole-book portfolio allocation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://monerium.com/",
-        "https://docs.monerium.com/",
-        "https://monerium.com/financial-information/",
-        "https://monerium.com/whitepapers/eure-whitepaper.xhtml",
-        "https://monerium.com/policies/business-terms-of-service/",
-        "https://www.skatturinn.is/fyrirtaekjaskra/leit/kennitala/5505121060"
-      ],
-      "rationale": "Current EURe/GBPe whole-asset reserve composition, denominator and provider allocation are not published on the issuer financial/attestation surface, whitepaper or terms. Disclosures identify permitted categories, qualitative EURe bulk-in-fund policy and annual issuer-wide totals only. The registry lists 2025 annual accounts, not a fresh currency-specific holdings schedule; no historic mixed basket refreshed."
-    },
-    {
-      "id": "uw-eure-monerium-0586410ed083995d",
-      "assetId": "eure-monerium",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:19:09Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
-      "sources": [
-        {
-          "url": "https://monerium.com/financial-information/",
-          "observedAt": "2026-10-03T23:19:09Z",
-          "datumAsOf": null,
-          "location": "Financial statements; Attestations; How we safeguard",
-          "excerpt": "Our policy is to hold only as much in bank deposits as we need to meet anticipated redemptions.",
-          "assertion": "Named providers and a qualitative EURe fund policy are disclosed, but no current currency-specific whole-book portfolio allocation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://monerium.com/",
-        "https://docs.monerium.com/",
-        "https://monerium.com/financial-information/",
-        "https://monerium.com/whitepapers/eure-whitepaper.xhtml",
-        "https://monerium.com/policies/business-terms-of-service/",
-        "https://www.skatturinn.is/fyrirtaekjaskra/leit/kennitala/5505121060"
-      ],
-      "rationale": "Current EURe/GBPe whole-asset reserve composition, denominator and provider allocation are not published on the issuer financial/attestation surface, whitepaper or terms. Disclosures identify permitted categories, qualitative EURe bulk-in-fund policy and annual issuer-wide totals only. The registry lists 2025 annual accounts, not a fresh currency-specific holdings schedule; no historic mixed basket refreshed."
-    },
-    {
-      "id": "uw-gbpe-monerium-0b8bf0ccfd917f26",
-      "assetId": "gbpe-monerium",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:gbpe-monerium:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:19:09Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
-      "sources": [
-        {
-          "url": "https://monerium.com/policies/business-terms-of-service/",
-          "observedAt": "2026-10-03T23:19:09Z",
-          "datumAsOf": null,
-          "location": "Section 4",
-          "excerpt": "The issuances and redemption of e-money denominated in other currencies than EUR are subject to an additional contractual agreement between us and you.",
-          "assertion": "Non-EUR redemption requires a separate agreement; public general terms do not specify the applicable GBPe tariff."
-        },
-        {
-          "url": "https://monerium.com/policies/business-terms-of-service/",
-          "observedAt": "2026-10-03T23:19:09Z",
-          "datumAsOf": null,
-          "location": "Section 4",
-          "excerpt": "we can not guarantee execution time of transactions through 3rd party service providers.",
-          "assertion": "Public terms expressly decline an end-to-end banking execution guarantee."
-        },
-        {
-          "url": "https://help.monerium.com/article/12-gbpe-ibans",
-          "observedAt": "2026-10-03T23:19:09Z",
-          "datumAsOf": "2025-10-01",
-          "location": "GBPe IBANs",
-          "excerpt": "At the moment, we do not offer GBP IBANs to our customers.",
-          "assertion": "No public GBP IBAN rail or confirmed timeline; onchain CoW swap is not this issuer redemption route."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://monerium.com/policies/business-terms-of-service/",
-        "https://monerium.com/policies/personal-terms-of-service/",
-        "https://monerium.com/fee-schedule/",
-        "https://help.monerium.com/article/12-gbpe-ibans",
-        "https://docs.monerium.com/api/",
-        "https://monerium.com/whitepapers/eure-whitepaper.xhtml"
-      ],
-      "rationale": "No applicable public GBPe offchain issuer all-in fee or final GBP banking settlement maximum found. Terms require a separate non-EUR agreement, reserve fees and disclaim third-party execution guarantees. GBP help says IBANs unavailable. The former fee-schedule URL returning 404 is not the basis for C. EURe free-service/SEPA statements cannot establish this bespoke GBP route's terms."
-    },
-    {
-      "id": "uw-gbpe-monerium-cc424002568307e4",
-      "assetId": "gbpe-monerium",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:gbpe-monerium:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:19:09Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
-      "sources": [
-        {
-          "url": "https://monerium.com/policies/business-terms-of-service/",
-          "observedAt": "2026-10-03T23:19:09Z",
-          "datumAsOf": null,
-          "location": "Section 4",
-          "excerpt": "The issuances and redemption of e-money denominated in other currencies than EUR are subject to an additional contractual agreement between us and you.",
-          "assertion": "Non-EUR redemption requires a separate agreement; public general terms do not specify the applicable GBPe tariff."
-        },
-        {
-          "url": "https://monerium.com/policies/business-terms-of-service/",
-          "observedAt": "2026-10-03T23:19:09Z",
-          "datumAsOf": null,
-          "location": "Section 4",
-          "excerpt": "we can not guarantee execution time of transactions through 3rd party service providers.",
-          "assertion": "Public terms expressly decline an end-to-end banking execution guarantee."
-        },
-        {
-          "url": "https://help.monerium.com/article/12-gbpe-ibans",
-          "observedAt": "2026-10-03T23:19:09Z",
-          "datumAsOf": "2025-10-01",
-          "location": "GBPe IBANs",
-          "excerpt": "At the moment, we do not offer GBP IBANs to our customers.",
-          "assertion": "No public GBP IBAN rail or confirmed timeline; onchain CoW swap is not this issuer redemption route."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://monerium.com/policies/business-terms-of-service/",
-        "https://monerium.com/policies/personal-terms-of-service/",
-        "https://monerium.com/fee-schedule/",
-        "https://help.monerium.com/article/12-gbpe-ibans",
-        "https://docs.monerium.com/api/",
-        "https://monerium.com/whitepapers/eure-whitepaper.xhtml"
-      ],
-      "rationale": "No applicable public GBPe offchain issuer all-in fee or final GBP banking settlement maximum found. Terms require a separate non-EUR agreement, reserve fees and disclaim third-party execution guarantees. GBP help says IBANs unavailable. The former fee-schedule URL returning 404 is not the basis for C. EURe free-service/SEPA statements cannot establish this bespoke GBP route's terms."
-    },
-    {
-      "id": "uw-tryb-bilira-8102453e4ce9c8d6",
-      "assetId": "tryb-bilira",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:f3e432036a0ef2478d7e04cf",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:19:09Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
-      "sources": [
-        {
-          "url": "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a8569b8840c2c64559e3c4a_TRYB_Guvence_Raporu_082026_ENG.pdf",
-          "observedAt": "2026-10-03T23:10:13Z",
-          "datumAsOf": "2026-08-17",
-          "location": "Scanned PDF page 5, reserve-account criterion 2",
-          "excerpt": "Turkish Lira held in custody accounts are the total balances in accounts held by the Company at federally insured TL depository institutions on behalf of the TRYb holders at the Report Date and Time.",
-          "assertion": "The complete scanned report discloses bank balances, but no bank-deposit maturity maximum or whole-position withdrawal horizon."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.bilira.co/en/audit-reports",
-        "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a8569b8840c2c64559e3c4a_TRYB_Guvence_Raporu_082026_ENG.pdf",
-        "https://www.bilira.co/en/legal-information/tryb-terms-of-use",
-        "https://www.bilira.co/en/legal-information/framework-agreement",
-        "https://cs.bilira.co/hc/bilira-kripto-yardim-merkezi/articles/1746700110-what-is-tryb-where-can-tryb-be-used",
-        "https://www.bilira.co/en/product/tryb-stablecoin"
-      ],
-      "rationale": "TRYB reserve deposit maximum term and whole-position liquidity horizon are not disclosed. Visually reviewed all six scanned August report pages, reserve/archive disclosures, token terms, help and framework agreement. Bank cash totals are disclosed, not demand/term classification, maturity schedule or withdrawal conditions. Customer platform-balance payment promises do not establish reserve-bank realizability."
-    },
-    {
-      "id": "uw-tryb-bilira-408d3fc46eb99fb7",
-      "assetId": "tryb-bilira",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:f3e432036a0ef2478d7e04cf",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:19:09Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
-      "sources": [
-        {
-          "url": "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a8569b8840c2c64559e3c4a_TRYB_Guvence_Raporu_082026_ENG.pdf",
-          "observedAt": "2026-10-03T23:10:13Z",
-          "datumAsOf": "2026-08-17",
-          "location": "Scanned PDF page 5, reserve-account criterion 2",
-          "excerpt": "Turkish Lira held in custody accounts are the total balances in accounts held by the Company at federally insured TL depository institutions on behalf of the TRYb holders at the Report Date and Time.",
-          "assertion": "The complete scanned report discloses bank balances, but no bank-deposit maturity maximum or whole-position withdrawal horizon."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.bilira.co/en/audit-reports",
-        "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a8569b8840c2c64559e3c4a_TRYB_Guvence_Raporu_082026_ENG.pdf",
-        "https://www.bilira.co/en/legal-information/tryb-terms-of-use",
-        "https://www.bilira.co/en/legal-information/framework-agreement",
-        "https://cs.bilira.co/hc/bilira-kripto-yardim-merkezi/articles/1746700110-what-is-tryb-where-can-tryb-be-used",
-        "https://www.bilira.co/en/product/tryb-stablecoin"
-      ],
-      "rationale": "TRYB reserve deposit maximum term and whole-position liquidity horizon are not disclosed. Visually reviewed all six scanned August report pages, reserve/archive disclosures, token terms, help and framework agreement. Bank cash totals are disclosed, not demand/term classification, maturity schedule or withdrawal conditions. Customer platform-balance payment promises do not establish reserve-bank realizability."
-    },
-    {
-      "id": "uw-audf-forte-03f5ae6b7660778f",
-      "assetId": "audf-forte",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:5bfd0a7830e7ce008eee2128",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:19:09Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
-      "sources": [
-        {
-          "url": "https://www.forteaud.com/api/documents/view/audf-reserves-report-august-2026",
-          "observedAt": "2026-10-03T23:10:13Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Auditor opinion, page 2",
-          "excerpt": "We have audited the Australian Dollar (AUD) Reserve bank account held by Forte Securities Australia Pty Ltd",
-          "assertion": "Audit establishes reserve bank cash balance, not the account's demand/term status, maturity maximum or whole-position realization time."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.forteaud.com/",
-        "https://www.forteaud.com/transparency",
-        "https://www.forteaud.com/how-audf-works",
-        "https://www.forteaud.com/api/documents/view/audf-reserves-report-august-2026",
-        "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/65f294b4fb7847349b4aa198/1710396597284/Forte%2BAUDF%2B-%2BWhitepaper%2B14.03.24.pdf",
-        "https://www.cointree.com/company/pds/audf-pds/"
-      ],
-      "rationale": "AUDF reserve bank-deposit maximum contractual maturity and whole-position liquidity horizon are not disclosed. Issuer transparency/workflow, August bank reserve audit, complete whitepaper and distributor PDS describe cash backing and conditional redemption but not bank-account term/withdrawal conditions. Open-ended or on-demand holder liabilities do not establish the underlying deposit maturity."
-    },
-    {
-      "id": "uw-audf-forte-685e460848fb1c64",
-      "assetId": "audf-forte",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:5bfd0a7830e7ce008eee2128",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:19:09Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
-      "sources": [
-        {
-          "url": "https://www.forteaud.com/api/documents/view/audf-reserves-report-august-2026",
-          "observedAt": "2026-10-03T23:10:13Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Auditor opinion, page 2",
-          "excerpt": "We have audited the Australian Dollar (AUD) Reserve bank account held by Forte Securities Australia Pty Ltd",
-          "assertion": "Audit establishes reserve bank cash balance, not the account's demand/term status, maturity maximum or whole-position realization time."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.forteaud.com/",
-        "https://www.forteaud.com/transparency",
-        "https://www.forteaud.com/how-audf-works",
-        "https://www.forteaud.com/api/documents/view/audf-reserves-report-august-2026",
-        "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/65f294b4fb7847349b4aa198/1710396597284/Forte%2BAUDF%2B-%2BWhitepaper%2B14.03.24.pdf",
-        "https://www.cointree.com/company/pds/audf-pds/"
-      ],
-      "rationale": "AUDF reserve bank-deposit maximum contractual maturity and whole-position liquidity horizon are not disclosed. Issuer transparency/workflow, August bank reserve audit, complete whitepaper and distributor PDS describe cash backing and conditional redemption but not bank-account term/withdrawal conditions. Open-ended or on-demand holder liabilities do not establish the underlying deposit maturity."
     },
     {
       "id": "uw-chfsafo-spiko-708d621780a16eaa",
@@ -36796,304 +36343,6 @@
       "rationale": "No final maximum for the retained USDRIF queue-redeem route is published. V3 has minimum queue delay, dynamic throttles, coverage/oracle conditions and TasksRunner execution; none guarantees completion. Verified current MocQueue source also publishes maxOperWaitingBlk: it makes an operation executable even without a price update, but does not ensure that the privileged guard executes it or that bucket redemption succeeds. Legacy docs describe 90-day settlement intervals, not a V3 SLA. No eligibility delay, minimum or average is encoded as a final-settlement maximum."
     },
     {
-      "id": "uw-emxn-telcoin-cea8163e46b1de54",
-      "assetId": "emxn-telcoin",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:09:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
-      "sources": [
-        {
-          "url": "https://www.telco.in/en/digital-cash",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": null,
-          "location": "Transparent and secure",
-          "excerpt": "Telcoin will also publish monthly attestations from an external auditor.",
-          "assertion": "Future publication commitment, not an actual eMXN holdings denominator or performed recurring whole-supply reconciliation."
-        },
-        {
-          "url": "https://www.telco.in/en/terms-of-use",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": "2026-06-30",
-          "location": "XXIX eXYZ Terms, reserves",
-          "excerpt": "Currency or Currency equivalents in its Segregated Accounts",
-          "assertion": "eXYZ reserve policy disclosed, without dated eMXN asset-class balances and token-liability reconciliation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.telco.in/en/terms-of-use",
-        "https://www.telco.in/en/digital-cash",
-        "https://trust.telco.in/",
-        "https://forum.telcoin.org/t/telxip-increasing-liquidity-for-digital-cash-emxn/626",
-        "https://polygonscan.com/token/0x68727e573D21a49c767c3c86A92D9F24bd933c99"
-      ],
-      "rationale": "No dated whole-denominator eMXN reserve composition or performed whole-supply reserves/liabilities reconciliation cadence is published on the searched issuer, legal, trust and exact-token surfaces. Generic segregation, onchain supply and promised future monthly attestations do not establish either datum. eUSD bank supervision is a separate issuer and is not borrowed."
-    },
-    {
-      "id": "uw-emxn-telcoin-7390667d8a35adea",
-      "assetId": "emxn-telcoin",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:09:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
-      "sources": [
-        {
-          "url": "https://www.telco.in/en/digital-cash",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": null,
-          "location": "Transparent and secure",
-          "excerpt": "Telcoin will also publish monthly attestations from an external auditor.",
-          "assertion": "Future publication commitment, not an actual eMXN holdings denominator or performed recurring whole-supply reconciliation."
-        },
-        {
-          "url": "https://www.telco.in/en/terms-of-use",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": "2026-06-30",
-          "location": "XXIX eXYZ Terms, reserves",
-          "excerpt": "Currency or Currency equivalents in its Segregated Accounts",
-          "assertion": "eXYZ reserve policy disclosed, without dated eMXN asset-class balances and token-liability reconciliation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.telco.in/en/terms-of-use",
-        "https://www.telco.in/en/digital-cash",
-        "https://trust.telco.in/",
-        "https://forum.telcoin.org/t/telxip-increasing-liquidity-for-digital-cash-emxn/626",
-        "https://polygonscan.com/token/0x68727e573D21a49c767c3c86A92D9F24bd933c99"
-      ],
-      "rationale": "No dated whole-denominator eMXN reserve composition or performed whole-supply reserves/liabilities reconciliation cadence is published on the searched issuer, legal, trust and exact-token surfaces. Generic segregation, onchain supply and promised future monthly attestations do not establish either datum. eUSD bank supervision is a separate issuer and is not borrowed."
-    },
-    {
-      "id": "uw-eusd-telcoin-376c69faf7c58300",
-      "assetId": "eusd-telcoin",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:09:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
-      "sources": [
-        {
-          "url": "https://bank.telco.in/eUSD",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": null,
-          "location": "Transparency",
-          "excerpt": "Telcoin Digital Asset Bank will publish regular disclosures regarding eUSD reserves and operations.",
-          "assertion": "Future disclosure promise supplies neither measured reserve composition nor performed whole-supply reconciliation."
-        },
-        {
-          "url": "https://bank.telco.in/terms-of-use",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": "2026-06-15",
-          "location": "20 finality",
-          "excerpt": "Minting is considered final after blockchain confirmation and internal ledger reconciliation",
-          "assertion": "Internal mint ledger finality is disclosed; it is not whole-supply reserve reconciliation."
-        },
-        {
-          "url": "https://ndbf.nebraska.gov/sites/default/files/industries/NFIA%20Statement%20of%20Policy%20%235%20-%20Liquidity%20Program_0.pdf",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": "2024-08-01",
-          "location": "Attestation, page 3",
-          "excerpt": "End of day quantity of outstanding stablecoin units; and",
-          "assertion": "Regulatory required reporting is not evidence that an actual scoped issuer report is available."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://bank.telco.in/terms-of-use",
-        "https://bank.telco.in/customer-agreement",
-        "https://bank.telco.in/eUSD",
-        "https://www.telco.in/en/digital-cash",
-        "https://trust.telco.in/",
-        "https://ndbf.nebraska.gov/sites/default/files/industries/NFIA%20Statement%20of%20Policy%20%235%20-%20Liquidity%20Program_0.pdf",
-        "https://ndbf.nebraska.gov/industries/digital-assets",
-        "https://etherscan.io/token/0x14913815bcfde78baead2111f463d038ac9c2949"
-      ],
-      "rationale": "No actual dated whole-book eUSD reserve composition or documented performed whole-supply reconciliation cadence was located. Terms disclose eligible reserve categories and internal ledger finality; regulator policy requires reports, but no actual reserve/liability report is published on searched surfaces. Do not treat charter, 1:1 policy or ledger finality as recurring financial reconciliation."
-    },
-    {
-      "id": "uw-eusd-telcoin-ca74d0bd68015d50",
-      "assetId": "eusd-telcoin",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:09:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
-      "sources": [
-        {
-          "url": "https://bank.telco.in/eUSD",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": null,
-          "location": "Transparency",
-          "excerpt": "Telcoin Digital Asset Bank will publish regular disclosures regarding eUSD reserves and operations.",
-          "assertion": "Future disclosure promise supplies neither measured reserve composition nor performed whole-supply reconciliation."
-        },
-        {
-          "url": "https://bank.telco.in/terms-of-use",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": "2026-06-15",
-          "location": "20 finality",
-          "excerpt": "Minting is considered final after blockchain confirmation and internal ledger reconciliation",
-          "assertion": "Internal mint ledger finality is disclosed; it is not whole-supply reserve reconciliation."
-        },
-        {
-          "url": "https://ndbf.nebraska.gov/sites/default/files/industries/NFIA%20Statement%20of%20Policy%20%235%20-%20Liquidity%20Program_0.pdf",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": "2024-08-01",
-          "location": "Attestation, page 3",
-          "excerpt": "End of day quantity of outstanding stablecoin units; and",
-          "assertion": "Regulatory required reporting is not evidence that an actual scoped issuer report is available."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://bank.telco.in/terms-of-use",
-        "https://bank.telco.in/customer-agreement",
-        "https://bank.telco.in/eUSD",
-        "https://www.telco.in/en/digital-cash",
-        "https://trust.telco.in/",
-        "https://ndbf.nebraska.gov/sites/default/files/industries/NFIA%20Statement%20of%20Policy%20%235%20-%20Liquidity%20Program_0.pdf",
-        "https://ndbf.nebraska.gov/industries/digital-assets",
-        "https://etherscan.io/token/0x14913815bcfde78baead2111f463d038ac9c2949"
-      ],
-      "rationale": "No actual dated whole-book eUSD reserve composition or documented performed whole-supply reconciliation cadence was located. Terms disclose eligible reserve categories and internal ledger finality; regulator policy requires reports, but no actual reserve/liability report is published on searched surfaces. Do not treat charter, 1:1 policy or ledger finality as recurring financial reconciliation."
-    },
-    {
-      "id": "uw-emxn-telcoin-cfc7995ebab3dfb4",
-      "assetId": "emxn-telcoin",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:emxn-telcoin:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:09:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
-      "sources": [
-        {
-          "url": "https://www.telco.in/en/terms-of-use",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": "2026-06-30",
-          "location": "XXIX.26 Processing times",
-          "excerpt": "business days or longer.",
-          "assertion": "Large redemptions expressly allow longer processing; there is no final delivered-fiat maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.telco.in/en/terms-of-use",
-        "https://www.telco.in/en/digital-cash",
-        "https://www.telco.in/support"
-      ],
-      "rationale": "No maximum end-to-end eMXN final spendable-fiat settlement SLA is disclosed. Standard 1-3 business-day processing is not final settlement; large transactions allow 3-5 business days or longer and extraordinary/compliance delays. Do not convert this target to calendar seconds."
-    },
-    {
-      "id": "uw-acrdx-anemoy-apollo-4f19f49dcda5ca62",
-      "assetId": "acrdx-anemoy-apollo",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:b2523b7dcb7224300edacdf7",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:09:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
-      "sources": [
-        {
-          "url": "https://www.apollo.com/content/dam/apolloaem/documents/fund-documents/adcf-prospectus.pdf",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": "2025-04-29",
-          "location": "Investment Strategy, page 7",
-          "excerpt": "there is no limit on the maturity or duration of any individual security in which the Fund may invest.",
-          "assertion": "Underlying credit holdings have no maximum maturity mandate; this is not a scalar maximum for feeder fund-share claim."
-        },
-        {
-          "url": "https://www.anemoy.io/news/acrdx-launched",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": "2025-09-16",
-          "location": "Feeder fund paragraph",
-          "excerpt": "ACRDX will serve as a feeder fund that provides tokenized access to Apollo Diversified Credit Fund",
-          "assertion": "The admitted slice is a fund-share claim, not any individual bond."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.anemoy.io/news/acrdx-launched",
-        "https://www.anemoy.io/",
-        "https://www.apollo.com/content/dam/apolloaem/documents/fund-documents/adcf-prospectus.pdf",
-        "https://centrifuge.io/blog/fission-centrifuge",
-        "https://docs.centrifuge.io/developer/protocol/deployments/"
-      ],
-      "rationale": "No finite contractual maximum maturity for the Apollo fund-share NAV claim is disclosed. The continuously offered interval fund discloses quarterly repurchases, not a fund-share final maturity, and expressly has no maximum maturity for individual underlying securities. Do not substitute average duration, quarterly liquidity or underlying security terms for the claim maximum."
-    },
-    {
-      "id": "uw-acrdx-anemoy-apollo-3a8998c5c16956b6",
-      "assetId": "acrdx-anemoy-apollo",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:acrdx-anemoy-apollo:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:09:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
-      "sources": [
-        {
-          "url": "https://centrifuge.io/blog/fission-centrifuge",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": "2026-08-25",
-          "location": "The redemption cycle",
-          "excerpt": "ACRDX goes further, providing tokenized access to the Apollo Diversified Credit Fund, with quarterly liquidity through its standard redemption path.",
-          "assertion": "Quarterly liquidity is a request/repurchase schedule, not full notional final settlement maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.anemoy.io/news/acrdx-launched",
-        "https://www.anemoy.io/",
-        "https://www.apollo.com/content/dam/apolloaem/documents/fund-documents/adcf-prospectus.pdf",
-        "https://centrifuge.io/blog/fission-centrifuge",
-        "https://docs.centrifuge.io/developer/protocol/deployments/"
-      ],
-      "rationale": "No full-notional final fiat settlement SLA for the Anemoy ACRDX issuer route is published. Standard quarterly liquidity and underlying limited repurchase offers are not a maximum completion bound. Fission immediate USDC liquidity is a different provider/route and cannot substitute for offchain issuer settlement."
-    },
-    {
       "id": "uw-iusd-initia-6df0ccd0cbbfd37f",
       "assetId": "iusd-initia",
       "scope": {
@@ -38567,6 +37816,1078 @@
           "assertion": "Exact basket imbalance withdrawal formula is public (R=V_n-V_(n+1), V=C*D/(1-D), maximum penalty 10%); current documented redemption producer does not evaluate basket-state-dependent same-notional cost. W15 disclosed-unquantified treatment, not zero fees."
         }
       ]
+    },
+    {
+      "id": "uw-senpyusdmwin-sentora-22c3401a575b6341",
+      "assetId": "senpyusdmwin-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senpyusdmwin-sentora:1be9607c721d81c35ac8",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:senpyusdmwin-sentora:1be9607c721d81c35ac8",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T00:02:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T23:59:20Z",
+          "datumAsOf": null,
+          "location": "Definitions, item 3: Vaults",
+          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
+          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
+        },
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "observedAt": "2026-10-04T00:02:38Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Block 26115203; owner Safe getOwners()",
+          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
+          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
+        "https://sentora.com/asset-risk-reviews/huma",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+        "https://ethereum-rpc.publicnode.com"
+      ],
+      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
+    },
+    {
+      "id": "uw-senpyusdmwin-sentora-b4695b740d839ab9",
+      "assetId": "senpyusdmwin-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senpyusdmwin-sentora:f188864829dfe0fe3ccd",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:senpyusdmwin-sentora:f188864829dfe0fe3ccd",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T00:02:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T23:59:20Z",
+          "datumAsOf": null,
+          "location": "Definitions, item 3: Vaults",
+          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
+          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
+        },
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "observedAt": "2026-10-04T00:02:38Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Block 26115203; owner Safe getOwners()",
+          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
+          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
+        "https://sentora.com/asset-risk-reviews/huma",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+        "https://ethereum-rpc.publicnode.com"
+      ],
+      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
+    },
+    {
+      "id": "uw-senpyusdmwin-sentora-9d0c8c104a3d32af",
+      "assetId": "senpyusdmwin-sentora",
+      "scope": {
+        "componentKey": "deployment-controls",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "deployment-controls",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T00:02:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T23:59:20Z",
+          "datumAsOf": null,
+          "location": "Definitions, item 3: Vaults",
+          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
+          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
+        },
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "observedAt": "2026-10-04T00:02:38Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Block 26115203; owner Safe getOwners()",
+          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
+          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
+        "https://sentora.com/asset-risk-reviews/huma",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+        "https://ethereum-rpc.publicnode.com"
+      ],
+      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
+    },
+    {
+      "id": "uw-senpyusdpst-sentora-8d80637939486aaf",
+      "assetId": "senpyusdpst-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senpyusdpst-sentora:b7310f8ffc318dc58be7",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:senpyusdpst-sentora:b7310f8ffc318dc58be7",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T00:02:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T23:59:20Z",
+          "datumAsOf": null,
+          "location": "Definitions, item 3: Vaults",
+          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
+          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
+        },
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "observedAt": "2026-10-04T00:02:38Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Block 26115203; owner Safe getOwners()",
+          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
+          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
+        "https://sentora.com/asset-risk-reviews/huma",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+        "https://ethereum-rpc.publicnode.com"
+      ],
+      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
+    },
+    {
+      "id": "uw-senpyusdpst-sentora-bc2edfa58b4612d7",
+      "assetId": "senpyusdpst-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senpyusdpst-sentora:c2c2e21589eb38c9ac47",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:senpyusdpst-sentora:c2c2e21589eb38c9ac47",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T00:02:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T23:59:20Z",
+          "datumAsOf": null,
+          "location": "Definitions, item 3: Vaults",
+          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
+          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
+        },
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "observedAt": "2026-10-04T00:02:38Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Block 26115203; owner Safe getOwners()",
+          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
+          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
+        "https://sentora.com/asset-risk-reviews/huma",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+        "https://ethereum-rpc.publicnode.com"
+      ],
+      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
+    },
+    {
+      "id": "uw-senpyusdpst-sentora-8336c0da2d7693f2",
+      "assetId": "senpyusdpst-sentora",
+      "scope": {
+        "componentKey": "deployment-controls",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "deployment-controls",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T00:02:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T23:59:20Z",
+          "datumAsOf": null,
+          "location": "Definitions, item 3: Vaults",
+          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
+          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
+        },
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "observedAt": "2026-10-04T00:02:38Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Block 26115203; owner Safe getOwners()",
+          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
+          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
+        "https://sentora.com/asset-risk-reviews/huma",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+        "https://ethereum-rpc.publicnode.com"
+      ],
+      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
+    },
+    {
+      "id": "uw-acrdx-anemoy-apollo-1485ddb454b91b34",
+      "assetId": "acrdx-anemoy-apollo",
+      "scope": {
+        "componentKey": "economic-control:bridge",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "economic-control:bridge",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T00:02:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
+      "sources": [
+        {
+          "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/",
+          "observedAt": "2026-10-04T00:02:38Z",
+          "datumAsOf": null,
+          "location": "Bridging warning",
+          "excerpt": "Share tokens can only be bridged between EVM networks. Solana (`centrifugeId` 7) and Stellar (`centrifugeId` 8) cannot be used as a target network.",
+          "assertion": "Published EVM share-bridge semantics cannot establish the separately catalogued exact Solana liability's transport or conservation model."
+        },
+        {
+          "url": "https://api.mainnet-beta.solana.com",
+          "observedAt": "2026-10-03T23:58:54Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Finalized getMultipleAccounts, slot 453087623",
+          "excerpt": "3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb",
+          "assertion": "Exact mint/freeze/permanent delegate authority is live but System-owned and nonexecutable. A token-specific bridge program or publicly disclosed offchain authorization/conservation procedure is absent."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.anemoy.io/",
+        "https://www.anemoy.io/news/acrdx-launched",
+        "https://docs.centrifuge.io/developer/protocol/deployments/",
+        "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/",
+        "https://docs.centrifuge.io/developer/protocol/features/token-compliance/",
+        "https://docs.centrifuge.io/developer/centrifuge-api/",
+        "https://solscan.io/token/ACDR3LGFrMuDZSDRyJjncFCzo5c8xkQxhWx4im4Vmq8G",
+        "https://api.mainnet-beta.solana.com"
+      ],
+      "rationale": "The complete bridge review lacks publicly disclosed Solana liability transport, cross-chain burn/release conservation and backend authorization/operator semantics. Current exact mint and its live authority were successfully read, and the latter is a System-owned nonprogram account, not an executable bridge address. Issuer announcement names Wormhole generically; official deployments name the Solana mint but bridge/API docs restrict executable share transport to EVM. This is exact missing offchain disclosure, not a failed lookup, zero-supply exemption or permission to delete Solana."
+    },
+    {
+      "id": "uw-senpyusdmwin-sentora-1b4b759ba82fe191",
+      "assetId": "senpyusdmwin-sentora",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:b52575f909bf946b51ece17f",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R33)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T22:57:29Z",
+          "datumAsOf": null,
+          "location": "June 2026 terms, Appendix B-1 section 6",
+          "excerpt": "The sole mechanism available to you to reduce exposure to a Sentora Vault is to initiate a withdrawal transaction, subject to applicable smart contract logic, protocol constraints, and potential time-lock requirements.",
+          "assertion": "Terms disclose conditional withdrawal, not a time bound for realizing the entire idle-plus-lent PYUSD/RLUSD position."
+        },
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T22:57:29Z",
+          "datumAsOf": null,
+          "location": "Advanced Liquidity Curation; Core Non-Custodial Mechanisms",
+          "excerpt": "It does not withdraw assets out of the Morpho protocol; instead, it shifts the user\u2019s exposure from the vault to the underlying positions, even when those positions are illiquid.",
+          "assertion": "In-kind exit transfers protocol exposure; it does not establish a whole-position cash realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
+        "https://sentora.com/asset-risk-reviews/huma",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x8381a156958711e230f325428b5eb4b6555c75d9",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+      ],
+      "rationale": "The exact liquidityHorizon of each entire idle-plus-lent protocol-position slice is not published. Source exit() pays available underlying or uses the configured liquidity adapter; pinned block 26114898 shows no liquidity adapter in all three wrappers. Docs/legal terms describe liquidity-conditional ordinary exit and in-kind position transfer, but no whole-slice cash realization bound. Collateral-token redemption SLAs are not lender-vault PYUSD/RLUSD realization SLAs; no immediate/one-day/seven-day scalar is justified."
+    },
+    {
+      "id": "uw-senpyusdpst-sentora-becb1cf34a222a85",
+      "assetId": "senpyusdpst-sentora",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:b52575f909bf946b51ece17f",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R33)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T22:57:29Z",
+          "datumAsOf": null,
+          "location": "June 2026 terms, Appendix B-1 section 6",
+          "excerpt": "The sole mechanism available to you to reduce exposure to a Sentora Vault is to initiate a withdrawal transaction, subject to applicable smart contract logic, protocol constraints, and potential time-lock requirements.",
+          "assertion": "Terms disclose conditional withdrawal, not a time bound for realizing the entire idle-plus-lent PYUSD/RLUSD position."
+        },
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T22:57:29Z",
+          "datumAsOf": null,
+          "location": "Advanced Liquidity Curation; Core Non-Custodial Mechanisms",
+          "excerpt": "It does not withdraw assets out of the Morpho protocol; instead, it shifts the user\u2019s exposure from the vault to the underlying positions, even when those positions are illiquid.",
+          "assertion": "In-kind exit transfers protocol exposure; it does not establish a whole-position cash realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
+        "https://sentora.com/asset-risk-reviews/huma",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x8381a156958711e230f325428b5eb4b6555c75d9",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+      ],
+      "rationale": "The exact liquidityHorizon of each entire idle-plus-lent protocol-position slice is not published. Source exit() pays available underlying or uses the configured liquidity adapter; pinned block 26114898 shows no liquidity adapter in all three wrappers. Docs/legal terms describe liquidity-conditional ordinary exit and in-kind position transfer, but no whole-slice cash realization bound. Collateral-token redemption SLAs are not lender-vault PYUSD/RLUSD realization SLAs; no immediate/one-day/seven-day scalar is justified."
+    },
+    {
+      "id": "uw-sxsrlusd-sentora-bc99b6508c2435b8",
+      "assetId": "sxsrlusd-sentora",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e3b1fb8a74fb6d9b8b059d21",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R33)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T22:57:29Z",
+          "datumAsOf": null,
+          "location": "June 2026 terms, Appendix B-1 section 6",
+          "excerpt": "The sole mechanism available to you to reduce exposure to a Sentora Vault is to initiate a withdrawal transaction, subject to applicable smart contract logic, protocol constraints, and potential time-lock requirements.",
+          "assertion": "Terms disclose conditional withdrawal, not a time bound for realizing the entire idle-plus-lent PYUSD/RLUSD position."
+        },
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T22:57:29Z",
+          "datumAsOf": null,
+          "location": "Advanced Liquidity Curation; Core Non-Custodial Mechanisms",
+          "excerpt": "It does not withdraw assets out of the Morpho protocol; instead, it shifts the user\u2019s exposure from the vault to the underlying positions, even when those positions are illiquid.",
+          "assertion": "In-kind exit transfers protocol exposure; it does not establish a whole-position cash realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
+        "https://sentora.com/asset-risk-reviews/huma",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x8381a156958711e230f325428b5eb4b6555c75d9",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+      ],
+      "rationale": "The exact liquidityHorizon of each entire idle-plus-lent protocol-position slice is not published. Source exit() pays available underlying or uses the configured liquidity adapter; pinned block 26114898 shows no liquidity adapter in all three wrappers. Docs/legal terms describe liquidity-conditional ordinary exit and in-kind position transfer, but no whole-slice cash realization bound. Collateral-token redemption SLAs are not lender-vault PYUSD/RLUSD realization SLAs; no immediate/one-day/seven-day scalar is justified."
+    },
+    {
+      "id": "uw-emxn-telcoin-cea8163e46b1de54",
+      "assetId": "emxn-telcoin",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://www.telco.in/en/digital-cash",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": null,
+          "location": "Transparent and secure",
+          "excerpt": "Telcoin will also publish monthly attestations from an external auditor.",
+          "assertion": "Future publication commitment, not an actual eMXN holdings denominator or performed recurring whole-supply reconciliation."
+        },
+        {
+          "url": "https://www.telco.in/en/terms-of-use",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2026-06-30",
+          "location": "XXIX eXYZ Terms, reserves",
+          "excerpt": "Currency or Currency equivalents in its Segregated Accounts",
+          "assertion": "eXYZ reserve policy disclosed, without dated eMXN asset-class balances and token-liability reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.telco.in/en/terms-of-use",
+        "https://www.telco.in/en/digital-cash",
+        "https://trust.telco.in/",
+        "https://forum.telcoin.org/t/telxip-increasing-liquidity-for-digital-cash-emxn/626",
+        "https://polygonscan.com/token/0x68727e573D21a49c767c3c86A92D9F24bd933c99"
+      ],
+      "rationale": "No dated whole-denominator eMXN reserve composition or performed whole-supply reserves/liabilities reconciliation cadence is published on the searched issuer, legal, trust and exact-token surfaces. Generic segregation, onchain supply and promised future monthly attestations do not establish either datum. eUSD bank supervision is a separate issuer and is not borrowed."
+    },
+    {
+      "id": "uw-emxn-telcoin-7390667d8a35adea",
+      "assetId": "emxn-telcoin",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://www.telco.in/en/digital-cash",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": null,
+          "location": "Transparent and secure",
+          "excerpt": "Telcoin will also publish monthly attestations from an external auditor.",
+          "assertion": "Future publication commitment, not an actual eMXN holdings denominator or performed recurring whole-supply reconciliation."
+        },
+        {
+          "url": "https://www.telco.in/en/terms-of-use",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2026-06-30",
+          "location": "XXIX eXYZ Terms, reserves",
+          "excerpt": "Currency or Currency equivalents in its Segregated Accounts",
+          "assertion": "eXYZ reserve policy disclosed, without dated eMXN asset-class balances and token-liability reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.telco.in/en/terms-of-use",
+        "https://www.telco.in/en/digital-cash",
+        "https://trust.telco.in/",
+        "https://forum.telcoin.org/t/telxip-increasing-liquidity-for-digital-cash-emxn/626",
+        "https://polygonscan.com/token/0x68727e573D21a49c767c3c86A92D9F24bd933c99"
+      ],
+      "rationale": "No dated whole-denominator eMXN reserve composition or performed whole-supply reserves/liabilities reconciliation cadence is published on the searched issuer, legal, trust and exact-token surfaces. Generic segregation, onchain supply and promised future monthly attestations do not establish either datum. eUSD bank supervision is a separate issuer and is not borrowed."
+    },
+    {
+      "id": "uw-eusd-telcoin-376c69faf7c58300",
+      "assetId": "eusd-telcoin",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://bank.telco.in/eUSD",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": null,
+          "location": "Transparency",
+          "excerpt": "Telcoin Digital Asset Bank will publish regular disclosures regarding eUSD reserves and operations.",
+          "assertion": "Future disclosure promise supplies neither measured reserve composition nor performed whole-supply reconciliation."
+        },
+        {
+          "url": "https://bank.telco.in/terms-of-use",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2026-06-15",
+          "location": "20 finality",
+          "excerpt": "Minting is considered final after blockchain confirmation and internal ledger reconciliation",
+          "assertion": "Internal mint ledger finality is disclosed; it is not whole-supply reserve reconciliation."
+        },
+        {
+          "url": "https://ndbf.nebraska.gov/sites/default/files/industries/NFIA%20Statement%20of%20Policy%20%235%20-%20Liquidity%20Program_0.pdf",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2024-08-01",
+          "location": "Attestation, page 3",
+          "excerpt": "End of day quantity of outstanding stablecoin units; and",
+          "assertion": "Regulatory required reporting is not evidence that an actual scoped issuer report is available."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://bank.telco.in/terms-of-use",
+        "https://bank.telco.in/customer-agreement",
+        "https://bank.telco.in/eUSD",
+        "https://www.telco.in/en/digital-cash",
+        "https://trust.telco.in/",
+        "https://ndbf.nebraska.gov/sites/default/files/industries/NFIA%20Statement%20of%20Policy%20%235%20-%20Liquidity%20Program_0.pdf",
+        "https://ndbf.nebraska.gov/industries/digital-assets",
+        "https://etherscan.io/token/0x14913815bcfde78baead2111f463d038ac9c2949"
+      ],
+      "rationale": "No actual dated whole-book eUSD reserve composition or documented performed whole-supply reconciliation cadence was located. Terms disclose eligible reserve categories and internal ledger finality; regulator policy requires reports, but no actual reserve/liability report is published on searched surfaces. Do not treat charter, 1:1 policy or ledger finality as recurring financial reconciliation."
+    },
+    {
+      "id": "uw-eusd-telcoin-ca74d0bd68015d50",
+      "assetId": "eusd-telcoin",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://bank.telco.in/eUSD",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": null,
+          "location": "Transparency",
+          "excerpt": "Telcoin Digital Asset Bank will publish regular disclosures regarding eUSD reserves and operations.",
+          "assertion": "Future disclosure promise supplies neither measured reserve composition nor performed whole-supply reconciliation."
+        },
+        {
+          "url": "https://bank.telco.in/terms-of-use",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2026-06-15",
+          "location": "20 finality",
+          "excerpt": "Minting is considered final after blockchain confirmation and internal ledger reconciliation",
+          "assertion": "Internal mint ledger finality is disclosed; it is not whole-supply reserve reconciliation."
+        },
+        {
+          "url": "https://ndbf.nebraska.gov/sites/default/files/industries/NFIA%20Statement%20of%20Policy%20%235%20-%20Liquidity%20Program_0.pdf",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2024-08-01",
+          "location": "Attestation, page 3",
+          "excerpt": "End of day quantity of outstanding stablecoin units; and",
+          "assertion": "Regulatory required reporting is not evidence that an actual scoped issuer report is available."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://bank.telco.in/terms-of-use",
+        "https://bank.telco.in/customer-agreement",
+        "https://bank.telco.in/eUSD",
+        "https://www.telco.in/en/digital-cash",
+        "https://trust.telco.in/",
+        "https://ndbf.nebraska.gov/sites/default/files/industries/NFIA%20Statement%20of%20Policy%20%235%20-%20Liquidity%20Program_0.pdf",
+        "https://ndbf.nebraska.gov/industries/digital-assets",
+        "https://etherscan.io/token/0x14913815bcfde78baead2111f463d038ac9c2949"
+      ],
+      "rationale": "No actual dated whole-book eUSD reserve composition or documented performed whole-supply reconciliation cadence was located. Terms disclose eligible reserve categories and internal ledger finality; regulator policy requires reports, but no actual reserve/liability report is published on searched surfaces. Do not treat charter, 1:1 policy or ledger finality as recurring financial reconciliation."
+    },
+    {
+      "id": "uw-emxn-telcoin-cfc7995ebab3dfb4",
+      "assetId": "emxn-telcoin",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:emxn-telcoin:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://www.telco.in/en/terms-of-use",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2026-06-30",
+          "location": "XXIX.26 Processing times",
+          "excerpt": "business days or longer.",
+          "assertion": "Large redemptions expressly allow longer processing; there is no final delivered-fiat maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.telco.in/en/terms-of-use",
+        "https://www.telco.in/en/digital-cash",
+        "https://www.telco.in/support"
+      ],
+      "rationale": "No maximum end-to-end eMXN final spendable-fiat settlement SLA is disclosed. Standard 1-3 business-day processing is not final settlement; large transactions allow 3-5 business days or longer and extraordinary/compliance delays. Do not convert this target to calendar seconds."
+    },
+    {
+      "id": "uw-acrdx-anemoy-apollo-4f19f49dcda5ca62",
+      "assetId": "acrdx-anemoy-apollo",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:b2523b7dcb7224300edacdf7",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://www.apollo.com/content/dam/apolloaem/documents/fund-documents/adcf-prospectus.pdf",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2025-04-29",
+          "location": "Investment Strategy, page 7",
+          "excerpt": "there is no limit on the maturity or duration of any individual security in which the Fund may invest.",
+          "assertion": "Underlying credit holdings have no maximum maturity mandate; this is not a scalar maximum for feeder fund-share claim."
+        },
+        {
+          "url": "https://www.anemoy.io/news/acrdx-launched",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2025-09-16",
+          "location": "Feeder fund paragraph",
+          "excerpt": "ACRDX will serve as a feeder fund that provides tokenized access to Apollo Diversified Credit Fund",
+          "assertion": "The admitted slice is a fund-share claim, not any individual bond."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.anemoy.io/news/acrdx-launched",
+        "https://www.anemoy.io/",
+        "https://www.apollo.com/content/dam/apolloaem/documents/fund-documents/adcf-prospectus.pdf",
+        "https://centrifuge.io/blog/fission-centrifuge",
+        "https://docs.centrifuge.io/developer/protocol/deployments/"
+      ],
+      "rationale": "No finite contractual maximum maturity for the Apollo fund-share NAV claim is disclosed. The continuously offered interval fund discloses quarterly repurchases, not a fund-share final maturity, and expressly has no maximum maturity for individual underlying securities. Do not substitute average duration, quarterly liquidity or underlying security terms for the claim maximum."
+    },
+    {
+      "id": "uw-acrdx-anemoy-apollo-3a8998c5c16956b6",
+      "assetId": "acrdx-anemoy-apollo",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:acrdx-anemoy-apollo:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
+      "sources": [
+        {
+          "url": "https://centrifuge.io/blog/fission-centrifuge",
+          "observedAt": "2026-10-03T23:09:45Z",
+          "datumAsOf": "2026-08-25",
+          "location": "The redemption cycle",
+          "excerpt": "ACRDX goes further, providing tokenized access to the Apollo Diversified Credit Fund, with quarterly liquidity through its standard redemption path.",
+          "assertion": "Quarterly liquidity is a request/repurchase schedule, not full notional final settlement maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.anemoy.io/news/acrdx-launched",
+        "https://www.anemoy.io/",
+        "https://www.apollo.com/content/dam/apolloaem/documents/fund-documents/adcf-prospectus.pdf",
+        "https://centrifuge.io/blog/fission-centrifuge",
+        "https://docs.centrifuge.io/developer/protocol/deployments/"
+      ],
+      "rationale": "No full-notional final fiat settlement SLA for the Anemoy ACRDX issuer route is published. Standard quarterly liquidity and underlying limited repurchase offers are not a maximum completion bound. Fission immediate USDC liquidity is a different provider/route and cannot substitute for offchain issuer settlement."
+    },
+    {
+      "id": "uw-gbpe-monerium-c05bcd51528a3dd0",
+      "assetId": "gbpe-monerium",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:19:09Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
+      "sources": [
+        {
+          "url": "https://monerium.com/financial-information/",
+          "observedAt": "2026-10-03T23:19:09Z",
+          "datumAsOf": null,
+          "location": "Financial statements; Attestations; How we safeguard",
+          "excerpt": "Our policy is to hold only as much in bank deposits as we need to meet anticipated redemptions.",
+          "assertion": "Named providers and a qualitative EURe fund policy are disclosed, but no current currency-specific whole-book portfolio allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://monerium.com/",
+        "https://docs.monerium.com/",
+        "https://monerium.com/financial-information/",
+        "https://monerium.com/whitepapers/eure-whitepaper.xhtml",
+        "https://monerium.com/policies/business-terms-of-service/",
+        "https://www.skatturinn.is/fyrirtaekjaskra/leit/kennitala/5505121060"
+      ],
+      "rationale": "Current EURe/GBPe whole-asset reserve composition, denominator and provider allocation are not published on the issuer financial/attestation surface, whitepaper or terms. Disclosures identify permitted categories, qualitative EURe bulk-in-fund policy and annual issuer-wide totals only. The registry lists 2025 annual accounts, not a fresh currency-specific holdings schedule; no historic mixed basket refreshed."
+    },
+    {
+      "id": "uw-eure-monerium-0586410ed083995d",
+      "assetId": "eure-monerium",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:19:09Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
+      "sources": [
+        {
+          "url": "https://monerium.com/financial-information/",
+          "observedAt": "2026-10-03T23:19:09Z",
+          "datumAsOf": null,
+          "location": "Financial statements; Attestations; How we safeguard",
+          "excerpt": "Our policy is to hold only as much in bank deposits as we need to meet anticipated redemptions.",
+          "assertion": "Named providers and a qualitative EURe fund policy are disclosed, but no current currency-specific whole-book portfolio allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://monerium.com/",
+        "https://docs.monerium.com/",
+        "https://monerium.com/financial-information/",
+        "https://monerium.com/whitepapers/eure-whitepaper.xhtml",
+        "https://monerium.com/policies/business-terms-of-service/",
+        "https://www.skatturinn.is/fyrirtaekjaskra/leit/kennitala/5505121060"
+      ],
+      "rationale": "Current EURe/GBPe whole-asset reserve composition, denominator and provider allocation are not published on the issuer financial/attestation surface, whitepaper or terms. Disclosures identify permitted categories, qualitative EURe bulk-in-fund policy and annual issuer-wide totals only. The registry lists 2025 annual accounts, not a fresh currency-specific holdings schedule; no historic mixed basket refreshed."
+    },
+    {
+      "id": "uw-gbpe-monerium-0b8bf0ccfd917f26",
+      "assetId": "gbpe-monerium",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:gbpe-monerium:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:19:09Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
+      "sources": [
+        {
+          "url": "https://monerium.com/policies/business-terms-of-service/",
+          "observedAt": "2026-10-03T23:19:09Z",
+          "datumAsOf": null,
+          "location": "Section 4",
+          "excerpt": "The issuances and redemption of e-money denominated in other currencies than EUR are subject to an additional contractual agreement between us and you.",
+          "assertion": "Non-EUR redemption requires a separate agreement; public general terms do not specify the applicable GBPe tariff."
+        },
+        {
+          "url": "https://monerium.com/policies/business-terms-of-service/",
+          "observedAt": "2026-10-03T23:19:09Z",
+          "datumAsOf": null,
+          "location": "Section 4",
+          "excerpt": "we can not guarantee execution time of transactions through 3rd party service providers.",
+          "assertion": "Public terms expressly decline an end-to-end banking execution guarantee."
+        },
+        {
+          "url": "https://help.monerium.com/article/12-gbpe-ibans",
+          "observedAt": "2026-10-03T23:19:09Z",
+          "datumAsOf": "2025-10-01",
+          "location": "GBPe IBANs",
+          "excerpt": "At the moment, we do not offer GBP IBANs to our customers.",
+          "assertion": "No public GBP IBAN rail or confirmed timeline; onchain CoW swap is not this issuer redemption route."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://monerium.com/policies/business-terms-of-service/",
+        "https://monerium.com/policies/personal-terms-of-service/",
+        "https://monerium.com/fee-schedule/",
+        "https://help.monerium.com/article/12-gbpe-ibans",
+        "https://docs.monerium.com/api/",
+        "https://monerium.com/whitepapers/eure-whitepaper.xhtml"
+      ],
+      "rationale": "No applicable public GBPe offchain issuer all-in fee or final GBP banking settlement maximum found. Terms require a separate non-EUR agreement, reserve fees and disclaim third-party execution guarantees. GBP help says IBANs unavailable. The former fee-schedule URL returning 404 is not the basis for C. EURe free-service/SEPA statements cannot establish this bespoke GBP route's terms."
+    },
+    {
+      "id": "uw-gbpe-monerium-cc424002568307e4",
+      "assetId": "gbpe-monerium",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:gbpe-monerium:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:19:09Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
+      "sources": [
+        {
+          "url": "https://monerium.com/policies/business-terms-of-service/",
+          "observedAt": "2026-10-03T23:19:09Z",
+          "datumAsOf": null,
+          "location": "Section 4",
+          "excerpt": "The issuances and redemption of e-money denominated in other currencies than EUR are subject to an additional contractual agreement between us and you.",
+          "assertion": "Non-EUR redemption requires a separate agreement; public general terms do not specify the applicable GBPe tariff."
+        },
+        {
+          "url": "https://monerium.com/policies/business-terms-of-service/",
+          "observedAt": "2026-10-03T23:19:09Z",
+          "datumAsOf": null,
+          "location": "Section 4",
+          "excerpt": "we can not guarantee execution time of transactions through 3rd party service providers.",
+          "assertion": "Public terms expressly decline an end-to-end banking execution guarantee."
+        },
+        {
+          "url": "https://help.monerium.com/article/12-gbpe-ibans",
+          "observedAt": "2026-10-03T23:19:09Z",
+          "datumAsOf": "2025-10-01",
+          "location": "GBPe IBANs",
+          "excerpt": "At the moment, we do not offer GBP IBANs to our customers.",
+          "assertion": "No public GBP IBAN rail or confirmed timeline; onchain CoW swap is not this issuer redemption route."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://monerium.com/policies/business-terms-of-service/",
+        "https://monerium.com/policies/personal-terms-of-service/",
+        "https://monerium.com/fee-schedule/",
+        "https://help.monerium.com/article/12-gbpe-ibans",
+        "https://docs.monerium.com/api/",
+        "https://monerium.com/whitepapers/eure-whitepaper.xhtml"
+      ],
+      "rationale": "No applicable public GBPe offchain issuer all-in fee or final GBP banking settlement maximum found. Terms require a separate non-EUR agreement, reserve fees and disclaim third-party execution guarantees. GBP help says IBANs unavailable. The former fee-schedule URL returning 404 is not the basis for C. EURe free-service/SEPA statements cannot establish this bespoke GBP route's terms."
+    },
+    {
+      "id": "uw-tryb-bilira-8102453e4ce9c8d6",
+      "assetId": "tryb-bilira",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:f3e432036a0ef2478d7e04cf",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:19:09Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a8569b8840c2c64559e3c4a_TRYB_Guvence_Raporu_082026_ENG.pdf",
+          "observedAt": "2026-10-03T23:10:13Z",
+          "datumAsOf": "2026-08-17",
+          "location": "Scanned PDF page 5, reserve-account criterion 2",
+          "excerpt": "Turkish Lira held in custody accounts are the total balances in accounts held by the Company at federally insured TL depository institutions on behalf of the TRYb holders at the Report Date and Time.",
+          "assertion": "The complete scanned report discloses bank balances, but no bank-deposit maturity maximum or whole-position withdrawal horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.bilira.co/en/audit-reports",
+        "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a8569b8840c2c64559e3c4a_TRYB_Guvence_Raporu_082026_ENG.pdf",
+        "https://www.bilira.co/en/legal-information/tryb-terms-of-use",
+        "https://www.bilira.co/en/legal-information/framework-agreement",
+        "https://cs.bilira.co/hc/bilira-kripto-yardim-merkezi/articles/1746700110-what-is-tryb-where-can-tryb-be-used",
+        "https://www.bilira.co/en/product/tryb-stablecoin"
+      ],
+      "rationale": "TRYB reserve deposit maximum term and whole-position liquidity horizon are not disclosed. Visually reviewed all six scanned August report pages, reserve/archive disclosures, token terms, help and framework agreement. Bank cash totals are disclosed, not demand/term classification, maturity schedule or withdrawal conditions. Customer platform-balance payment promises do not establish reserve-bank realizability."
+    },
+    {
+      "id": "uw-tryb-bilira-408d3fc46eb99fb7",
+      "assetId": "tryb-bilira",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:f3e432036a0ef2478d7e04cf",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:19:09Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a8569b8840c2c64559e3c4a_TRYB_Guvence_Raporu_082026_ENG.pdf",
+          "observedAt": "2026-10-03T23:10:13Z",
+          "datumAsOf": "2026-08-17",
+          "location": "Scanned PDF page 5, reserve-account criterion 2",
+          "excerpt": "Turkish Lira held in custody accounts are the total balances in accounts held by the Company at federally insured TL depository institutions on behalf of the TRYb holders at the Report Date and Time.",
+          "assertion": "The complete scanned report discloses bank balances, but no bank-deposit maturity maximum or whole-position withdrawal horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.bilira.co/en/audit-reports",
+        "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a8569b8840c2c64559e3c4a_TRYB_Guvence_Raporu_082026_ENG.pdf",
+        "https://www.bilira.co/en/legal-information/tryb-terms-of-use",
+        "https://www.bilira.co/en/legal-information/framework-agreement",
+        "https://cs.bilira.co/hc/bilira-kripto-yardim-merkezi/articles/1746700110-what-is-tryb-where-can-tryb-be-used",
+        "https://www.bilira.co/en/product/tryb-stablecoin"
+      ],
+      "rationale": "TRYB reserve deposit maximum term and whole-position liquidity horizon are not disclosed. Visually reviewed all six scanned August report pages, reserve/archive disclosures, token terms, help and framework agreement. Bank cash totals are disclosed, not demand/term classification, maturity schedule or withdrawal conditions. Customer platform-balance payment promises do not establish reserve-bank realizability."
+    },
+    {
+      "id": "uw-audf-forte-03f5ae6b7660778f",
+      "assetId": "audf-forte",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:5bfd0a7830e7ce008eee2128",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:19:09Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
+      "sources": [
+        {
+          "url": "https://www.forteaud.com/api/documents/view/audf-reserves-report-august-2026",
+          "observedAt": "2026-10-03T23:10:13Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Auditor opinion, page 2",
+          "excerpt": "We have audited the Australian Dollar (AUD) Reserve bank account held by Forte Securities Australia Pty Ltd",
+          "assertion": "Audit establishes reserve bank cash balance, not the account's demand/term status, maturity maximum or whole-position realization time."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.forteaud.com/",
+        "https://www.forteaud.com/transparency",
+        "https://www.forteaud.com/how-audf-works",
+        "https://www.forteaud.com/api/documents/view/audf-reserves-report-august-2026",
+        "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/65f294b4fb7847349b4aa198/1710396597284/Forte%2BAUDF%2B-%2BWhitepaper%2B14.03.24.pdf",
+        "https://www.cointree.com/company/pds/audf-pds/"
+      ],
+      "rationale": "AUDF reserve bank-deposit maximum contractual maturity and whole-position liquidity horizon are not disclosed. Issuer transparency/workflow, August bank reserve audit, complete whitepaper and distributor PDS describe cash backing and conditional redemption but not bank-account term/withdrawal conditions. Open-ended or on-demand holder liabilities do not establish the underlying deposit maturity."
+    },
+    {
+      "id": "uw-audf-forte-685e460848fb1c64",
+      "assetId": "audf-forte",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:5bfd0a7830e7ce008eee2128",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:19:09Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R81)",
+      "sources": [
+        {
+          "url": "https://www.forteaud.com/api/documents/view/audf-reserves-report-august-2026",
+          "observedAt": "2026-10-03T23:10:13Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Auditor opinion, page 2",
+          "excerpt": "We have audited the Australian Dollar (AUD) Reserve bank account held by Forte Securities Australia Pty Ltd",
+          "assertion": "Audit establishes reserve bank cash balance, not the account's demand/term status, maturity maximum or whole-position realization time."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.forteaud.com/",
+        "https://www.forteaud.com/transparency",
+        "https://www.forteaud.com/how-audf-works",
+        "https://www.forteaud.com/api/documents/view/audf-reserves-report-august-2026",
+        "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/65f294b4fb7847349b4aa198/1710396597284/Forte%2BAUDF%2B-%2BWhitepaper%2B14.03.24.pdf",
+        "https://www.cointree.com/company/pds/audf-pds/"
+      ],
+      "rationale": "AUDF reserve bank-deposit maximum contractual maturity and whole-position liquidity horizon are not disclosed. Issuer transparency/workflow, August bank reserve audit, complete whitepaper and distributor PDS describe cash backing and conditional redemption but not bank-account term/withdrawal conditions. Open-ended or on-demand holder liabilities do not establish the underlying deposit maturity."
     }
   ]
 }
