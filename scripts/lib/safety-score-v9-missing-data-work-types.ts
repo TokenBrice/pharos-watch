@@ -1,5 +1,6 @@
 import type { V9AssetFactsV3 } from "@shared/types/safety-score-v9-facts";
 import type { V9EvidenceGapQueueEntryV2 } from "@shared/types/safety-score-v9-evidence-queue";
+import type { V9WrapperLocalFactKey } from "@shared/types/safety-score-v9-wrapper";
 import type { StablecoinSourceEntry } from "./stablecoin-catalog-sources";
 
 export type WorkType =
@@ -18,12 +19,16 @@ export type WorkType =
   | "IMPLEMENTATION_DATE"
   | "MECHANISM_REVIEW"
   | "MINT_AUTHORITY"
+  | "OPERATIONAL_RESILIENCE"
   | "ORACLE_BRANCH"
   | "ORACLE_PROFILE"
   | "PARENT_RATEABILITY"
   | "PEG_INPUT"
   | "RESERVE_COMPOSITION"
-  | "RESERVE_SLICE";
+  | "RESERVE_SLICE"
+  | "WRAPPER_ALLOCATION"
+  | "WRAPPER_CONTROL_FACTS"
+  | "WRAPPER_EXIT_FACTS";
 
 export type ResolutionMode =
   | "agent-curation"
@@ -383,6 +388,21 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     }),
     touchpoints: (source) => unique([mint(source)]),
   },
+  OPERATIONAL_RESILIENCE: {
+    title: "Operational-resilience overlay", stream: "CTRL",
+    instructions: "Author a dated, sourced overlay for the exact asset in the operational-resilience overlays registry: reviewedAt/expiresAt, reviewer, typed sources with confidence, live-history eligibility evidence, and only the redemption-throughput, stress-episode, reserve-reconciliation, and incident-review claims those sources establish. Leave every unestablished performance field null or not-reviewed.",
+    completionCriteria: "A fresh exact replay admits the overlay inside its review window, compiles operational resilience for the asset, and removes the operational-resilience gapId.",
+    recommendedSkill: "safety-score-curation", likelyRepoAreas: ["shared/data/safety-score-v9/operational-resilience-overlays-v1.json"],
+    cautions: ["Live history is eligibility-only, never a score bonus.", "Keep issuer-reported performance distinct from independent assurance; never upgrade source confidence to claim a performance fact."],
+    ownerDomain: "control",
+    defaultResolutionMode: "agent-curation",
+    ...workReasons({}),
+    context: (asset) => ({
+      operationalResilience: asset.operationalResilience ?? null,
+      operationalResilienceStatus: asset.operationalResilienceStatus ?? null,
+    }),
+    touchpoints: () => ["shared/data/safety-score-v9/operational-resilience-overlays-v1.json"],
+  },
   ORACLE_BRANCH: {
     title: "Oracle/liquidation branch review", stream: "ORCL",
     instructions: "Complete the named oracle branch with applicability, feed, collateral-parameter, liquidation, backstop, or shutdown/bad-debt facts, plus its controlling authority/mechanism identity and dated sources.",
@@ -470,6 +490,55 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     }),
     touchpoints: (source) => unique([reserve(source)]),
   },
+  WRAPPER_ALLOCATION: {
+    title: "Wrapper allocation, custody, and strategy review", stream: "WRAP",
+    instructions: "Establish the wrapper's own allocation layer for the named factor. A current whole-allocation proof in the wrapper allocation reviews registry (fully on-chain custody, local leverage, capital reuse) resolves custodyEscrow, leverage, and rehypothecationCorrelation; otherwise curate the custodyProfile (segregation, bankruptcy remoteness, rehypothecation, known-unknown exposure share) and reserve exposure risk factors in the reserves sidecar. strategyComplexity needs a resolved wrapper form: the variant kind and serial wrapper dependency edge.",
+    completionCriteria: "A fresh exact replay reports the wrapper-local factor as reviewed or not-applicable and the listed wrapper-local gapId is absent.",
+    recommendedSkill: "reserve-research",
+    likelyRepoAreas: ["shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json", "shared/data/stablecoins/domains/reserves/", "shared/data/stablecoins/coins/"],
+    cautions: ["Allocation proof must pin a current block or slot and cover the whole allocation; a partial or expired proof grants no relief.", "Reserve composition alone cannot establish the absence of local leverage."],
+    ownerDomain: "backing",
+    defaultResolutionMode: "agent-curation",
+    ...workReasons({}),
+    context: (asset) => ({
+      reserveStatus: asset.reserveStatus,
+      reserveExposures: asset.reserveExposures,
+      dependencies: asset.dependencies,
+    }),
+    touchpoints: (source) =>
+      unique(["shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json", reserve(source), base(source)]),
+  },
+  WRAPPER_CONTROL_FACTS: {
+    title: "Wrapper-local control, oracle, and loss-absorption facts", stream: "WRAP",
+    instructions: "These wrapper-local factors are derived from the wrapper's own control facts; resolve the upstream review, never the factor directly. contractMutability needs a known mint economic-control review with a reviewed upgrade posture and a compiled upgrade control; shareAccountingNavOracle needs a known NAV peg reference plus the oracle profile (tier and topology); lossAbsorptionEmergencyControls needs the wrapper-local deployment controls (authority, capabilities, delay, incident state).",
+    completionCriteria: "A fresh exact replay reports the wrapper-local factor as reviewed or not-applicable and the listed wrapper-local gapId is absent.",
+    recommendedSkill: null,
+    likelyRepoAreas: ["shared/data/stablecoins/domains/mint-authority/", "shared/data/stablecoins/domains/risk-review/", "shared/data/stablecoins/coins/"],
+    cautions: ["Review the wrapper contract itself; parent-asset control facts do not establish wrapper-local mutability or controls."],
+    ownerDomain: "control",
+    defaultResolutionMode: "agent-curation",
+    ...workReasons({}),
+    context: (asset) => ({
+      peg: asset.peg,
+      controlStatus: asset.controlStatus,
+      controls: asset.controls,
+      economicControlReview: asset.economicControlReview,
+    }),
+    touchpoints: (source) => unique([mint(source), risk(source)]),
+  },
+  WRAPPER_EXIT_FACTS: {
+    title: "Wrapper-local withdrawal terms and measured unwind", stream: "WRAP",
+    instructions: "These wrapper-local factors are derived from the wrapper's exit routes. withdrawalTerms needs a known redemption route whose holder access, execution model, settlement model/SLA, and fee evidence are documented in its redemption-backstop config; measuredUnwind needs a score-eligible, exact-complete route observation with a capacity curve at the policy stress notional from a fresh producer capture.",
+    completionCriteria: "A fresh exact capture and replay report the wrapper-local factor as reviewed and the listed wrapper-local gapId is absent.",
+    recommendedSkill: null,
+    likelyRepoAreas: ["shared/lib/redemption-backstop-configs/", "worker/src/cron/sync-redemption-backstops.ts", "worker/src/cron/dex-liquidity/"],
+    cautions: ["Documented terms, modeled routes, and partial inventories are lower bounds, not observed unwind capacity.", "An undisclosed fee schedule is an issuer-disclosure blocker; record it rather than inventing a fee."],
+    ownerDomain: "exit",
+    defaultResolutionMode: "mixed-curation-and-runtime",
+    ...workReasons({}),
+    context: exitContext,
+    touchpoints: () => ["shared/lib/redemption-backstop-configs/", "worker/src/cron/sync-redemption-backstops.ts", "worker/src/cron/dex-liquidity/"],
+  },
 };
 
 type GapPath = V9EvidenceGapQueueEntryV2["path"];
@@ -498,6 +567,40 @@ function mechanismContext(asset: V9AssetFactsV3, componentKey: string): unknown 
   return { reviewStatus: asset.mechanismRiskReview.status, componentKey: match?.[0] ?? requested, component: match?.[1] ?? null };
 }
 
+// Every wrapper-local factor is routed by the surface its compiler input is
+// curated on. The exhaustive Record makes a new factor key a type error, and a
+// component key outside the enumerated factors stays unrouted (fail closed).
+const WRAPPER_LOCAL_FACTOR_WORK_TYPES: Readonly<Record<V9WrapperLocalFactKey, WorkType>> = {
+  contractMutability: "WRAPPER_CONTROL_FACTS",
+  custodyEscrow: "WRAPPER_ALLOCATION",
+  strategyComplexity: "WRAPPER_ALLOCATION",
+  leverage: "WRAPPER_ALLOCATION",
+  rehypothecationCorrelation: "WRAPPER_ALLOCATION",
+  shareAccountingNavOracle: "WRAPPER_CONTROL_FACTS",
+  withdrawalTerms: "WRAPPER_EXIT_FACTS",
+  measuredUnwind: "WRAPPER_EXIT_FACTS",
+  lossAbsorptionEmergencyControls: "WRAPPER_CONTROL_FACTS",
+};
+
+function wrapperLocalFactorKey(componentKey: string): V9WrapperLocalFactKey | null {
+  if (!componentKey.startsWith("wrapper-local:")) return null;
+  const factorKey = componentKey.slice("wrapper-local:".length);
+  return Object.hasOwn(WRAPPER_LOCAL_FACTOR_WORK_TYPES, factorKey) ? (factorKey as V9WrapperLocalFactKey) : null;
+}
+
+function wrapperLocalContext(factorKey: V9WrapperLocalFactKey): WorkTypeDescriptor["context"] {
+  const upstream = V9_MISSING_DATA_WORK_TYPES[WRAPPER_LOCAL_FACTOR_WORK_TYPES[factorKey]].context;
+  return (asset) => {
+    const wrapper = asset.wrapperLocalFacts;
+    return {
+      factorKey,
+      wrapperForm: wrapper?.applicability === "wrapper" ? wrapper.form : null,
+      fact: wrapper?.applicability === "wrapper" ? wrapper.facts[factorKey] : null,
+      upstream: upstream(asset),
+    };
+  };
+}
+
 function contextForPath(path: GapPath): WorkTypeDescriptor["context"] {
   if (path.kind === "collateral-exposure") return (asset) => asset.reserveExposures.find((row) => row.exposureKey === path.exposureKey) ?? null;
   if (path.kind === "optional-exit") return (asset) => asset.exitRoutes.find((row) => row.routeKey === path.routeKey) ?? null;
@@ -509,6 +612,9 @@ function contextForPath(path: GapPath): WorkTypeDescriptor["context"] {
   if (componentKey === "asset-compilation") return (asset) => ({ gaps: asset.gaps });
   if (componentKey === "chain-supply" || componentKey === "bridge-materiality") return (asset) => asset.supply;
   if (componentKey === "implementation-date") return (asset) => asset.implementation;
+  if (componentKey === "operational-resilience") return V9_MISSING_DATA_WORK_TYPES.OPERATIONAL_RESILIENCE.context;
+  const wrapperFactorKey = wrapperLocalFactorKey(componentKey);
+  if (wrapperFactorKey) return wrapperLocalContext(wrapperFactorKey);
   if (componentKey === "mechanism-risk-review" || componentKey.startsWith("mechanism-review:")) return (asset) => mechanismContext(asset, componentKey);
   if (componentKey === "reserve-composition") return (asset) => ({ reserveStatus: asset.reserveStatus, exposures: asset.reserveExposures.map(({ exposureKey, name, weight, status }) => ({ exposureKey, name, weight, status })) });
   if (componentKey === "exit-routes" || componentKey === "exit-portfolio-coverage") return exitContext;
@@ -533,6 +639,9 @@ export function descriptorForReason(reason: string, path?: GapPath): WorkTypeDes
     if (path.componentKey === "chain-supply") descriptor = V9_MISSING_DATA_WORK_TYPES.CHAIN_SUPPLY;
     if (path.componentKey === "asset-compilation") descriptor = V9_MISSING_DATA_WORK_TYPES.ASSET_COMPILATION;
     if (path.componentKey.startsWith("access:")) descriptor = V9_MISSING_DATA_WORK_TYPES.ACCESS_REVIEW;
+    if (path.componentKey === "operational-resilience") descriptor = V9_MISSING_DATA_WORK_TYPES.OPERATIONAL_RESILIENCE;
+    const wrapperFactorKey = wrapperLocalFactorKey(path.componentKey);
+    if (wrapperFactorKey) descriptor = V9_MISSING_DATA_WORK_TYPES[WRAPPER_LOCAL_FACTOR_WORK_TYPES[wrapperFactorKey]];
   }
   if (!descriptor) throw new Error(`Missing agent work-type definition for ${reason} at ${JSON.stringify(path)}`);
   return path ? { ...descriptor, context: contextForPath(path) } : descriptor;

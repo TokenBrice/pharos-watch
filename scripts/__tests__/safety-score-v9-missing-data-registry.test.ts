@@ -143,12 +143,31 @@ describe("Safety Score v9 missing-data work routing", () => {
     ["missing-peg-input", "peg", "PEG_INPUT"],
     ["unreviewed-dependency-relationships", "effective-dependencies", "DEPENDENCY_REVIEW"],
     ["missing-implementation-date", "implementation-date", "IMPLEMENTATION_DATE"],
+    ["missing-pillar-evidence", "operational-resilience", "OPERATIONAL_RESILIENCE"],
+    ["missing-pillar-evidence", "wrapper-local:custodyEscrow", "WRAPPER_ALLOCATION"],
+    ["missing-pillar-evidence", "wrapper-local:strategyComplexity", "WRAPPER_ALLOCATION"],
+    ["missing-pillar-evidence", "wrapper-local:leverage", "WRAPPER_ALLOCATION"],
+    ["missing-pillar-evidence", "wrapper-local:rehypothecationCorrelation", "WRAPPER_ALLOCATION"],
+    ["missing-pillar-evidence", "wrapper-local:contractMutability", "WRAPPER_CONTROL_FACTS"],
+    ["missing-pillar-evidence", "wrapper-local:shareAccountingNavOracle", "WRAPPER_CONTROL_FACTS"],
+    ["missing-pillar-evidence", "wrapper-local:lossAbsorptionEmergencyControls", "WRAPPER_CONTROL_FACTS"],
+    ["missing-pillar-evidence", "wrapper-local:withdrawalTerms", "WRAPPER_EXIT_FACTS"],
+    ["missing-pillar-evidence", "wrapper-local:measuredUnwind", "WRAPPER_EXIT_FACTS"],
   ] as const)("routes %s at %s to %s", (reasonCode, componentKey, expected) => {
     expect(classify(reasonCode, componentKey)).toBe(expected);
   });
 
   it("fails closed when a new reason has no agent work definition", () => {
     expect(() => classify("unregistered-reason")).toThrow(/Missing agent work-type definition/);
+  });
+
+  it.each([
+    "wrapper-local:unregisteredFactor",
+    "wrapper-local:toString",
+    "wrapper-local:parentBackingInheritance",
+    "operational-resilience:incident-review",
+  ])("fails closed for unrouted missing-pillar-evidence component %s", (componentKey) => {
+    expect(() => classify("missing-pillar-evidence", componentKey)).toThrow(/Missing agent work-type definition/);
   });
 
   it.each([
