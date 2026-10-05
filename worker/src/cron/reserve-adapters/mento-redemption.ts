@@ -333,6 +333,13 @@ async function fetchMentoFpmmPoolsRedemption(
       ["unitQuote", pool.poolAddress, quoteData(10n ** BigInt(params.selfDecimals + 6))],
     ].map(([label, contract, data]) => ({ label, contract, data }));
     const rows = await fetchOnchainMulticall3({ chain: CELO_CHAIN, signal, ctx: plan.ctx, calls });
+    // getAmountOut calls OracleAdapter.getFXRateIfValid(), so the routine
+    // weekend/holiday gate reverts with FXMarketClosed(), not an RPC outage.
+    // Retain the actual rejection; never substitute reserves or an old quote.
+    const quoteFailure = rows?.find((row) => row.label === "unitQuote" && !row.success);
+    if (quoteFailure?.returnData.toLowerCase() === "0xa407143a") {
+      throw new Error("mento fpmm-pools: fx-market-closed");
+    }
     const values = new Map(rows?.filter((row) => row.success).map((row) => [row.label, row.returnData]));
     const raw = (label: string): `0x${string}` => {
       const value = values.get(label);

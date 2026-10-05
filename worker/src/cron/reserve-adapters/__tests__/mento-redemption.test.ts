@@ -69,6 +69,20 @@ describe("USDm V3 output pools", () => {
     setup(change);
     await expect(fetchMentoRedemptionMetadata(config, new AbortController().signal, undefined)).rejects.toThrow();
   });
+  it("names a measured FX market closure without emitting reserve-based capacity", async () => {
+    setup();
+    const implementation = vi.mocked(fetchOnchainMulticall3).getMockImplementation()!;
+    vi.mocked(fetchOnchainMulticall3).mockImplementation(async (options) => {
+      const rows = await implementation(options);
+      return rows?.map((row) => row.label === "unitQuote"
+        ? { ...row, success: false, returnData: "0xa407143a" as const }
+        : row) ?? null;
+    });
+    await expect(fetchMentoRedemptionMetadata(config, new AbortController().signal, undefined))
+      .rejects.toThrow("fx-market-closed");
+    expect(fetchOnchainUint256).not.toHaveBeenCalled();
+  });
+
   it("rejects a zero input reserve even when its balance matches", async () => {
     setup({
       inputBalance: uint(0n),

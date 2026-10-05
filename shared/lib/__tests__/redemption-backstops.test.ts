@@ -36,6 +36,26 @@ describe("getRedemptionBackstopConfig", () => {
     });
   });
 
+  it("keeps Lido earnUSD queue terms separate from unproduced executable capacity", () => {
+    const config = getRedemptionBackstopConfig("earnusd-lido");
+    expect(config).toMatchObject({
+      accessModel: "permissionless-onchain",
+      holderEligibility: "any-holder",
+      settlementModel: "queued",
+      outputAssets: ["usdc-circle"],
+      capacityModel: { kind: "reserve-sync-metadata" },
+      v9RouteReviewTerms: {
+        scoringDisposition: "bounded-terms-gap",
+        missingScoringFields: ["capacity", "settlement"],
+      },
+    });
+    expect(config?.capacityModel).not.toHaveProperty("fallbackRatio");
+    expect(config?.capacityModel).not.toHaveProperty("fallbackUsd");
+    expect(config?.v9RouteReviewTerms).not.toHaveProperty("settlementDelaySec");
+    expect(config?.notes?.join(" ")).toContain("not a maximum");
+    expect(config?.notes?.join(" ")).toContain("not Ember eEARN");
+  });
+
   it("keeps UTY's verified Base USDC payout separate from unbounded redemption terms", () => {
     const config = getRedemptionBackstopConfig("uty-xsy");
 

@@ -106,6 +106,35 @@ function erc4626ReserveTelemetryQueueConfig(options: {
 }
 
 const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
+  "earnusd-lido": defineQueueRedeemConfig({
+    accessModel: "permissionless-onchain",
+    holderEligibility: "any-holder",
+    executionModel: "deterministic-onchain",
+    settlementModel: "queued",
+    outputAssets: ["usdc-circle"],
+    capacityModel: { kind: "reserve-sync-metadata" },
+    costModel: fixedFee(0, "At Ethereum block 26122344, redeemFeeD6 and the SyncRedeemQueue penaltyD6 were both zero. This is a mutable on-chain fee snapshot, not a perpetual zero-fee covenant."),
+    reviewedAt: "2026-10-04",
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement"],
+      rationale: "Ordinary holders can request and claim USDC through the async queue, with no guaranteed completion maximum. Instant sync redemption requires a valid current oracle report, an unpaused queue, liquid USDC and remaining rolling share limit; no runtime queue telemetry is currently produced.",
+      reviewedAt: "2026-10-04",
+      docs: [sourceRefFull("Lido Earn withdrawal queues", "https://docs.lido.fi/earn/")],
+    },
+    docs: [
+      sourceRefFull("Lido Earn withdrawal queues", "https://docs.lido.fi/earn/"),
+      sourceRefFull("Lido Earn exact deployments", "https://docs.lido.fi/earn/deployment-contracts"),
+      sourceRefFull("Verified USDC RedeemQueue implementation", "https://eth.blockscout.com/api/v2/smart-contracts/0x000000000c139266ba06170ed1deaca6d11903c1"),
+      sourceRefFull("Verified USDC SyncRedeemQueue implementation", "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000038801c7281284f8f68b80b679f64a074"),
+      sourceRefFull("Verified FeeManager implementation", "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000de74e5d51651326e0a3e1aca94beaf6e1"),
+    ],
+    notes: [
+      "The exact async USDC queue is 0x9e36a74fe278906a76e7615263e46a83fc40c47f; the conditional instant sync queue is 0xe0eee7e956a94bd00546d9ca07e5012f11a5059d. Both consume the same underlying vault liquidity; their inventories must not be added.",
+      "The reported 216000-second average (60 hours) is not a maximum, and sync maxAge 86400 seconds limits oracle-price age, not settlement time. Neither a three-day SLA nor current-balance stress capacity is inferred.",
+      "The tracked contract is a Mellow ShareManager, not Ember eEARN or an ERC-4626 vault. A reserve-neutral queue-telemetry producer hook is required before current executable capacity can be admitted; no static full-supply fallback or reserve-composition override is configured.",
+    ],
+  }),
   "strusd-tori": defineQueueRedeemConfig({
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
