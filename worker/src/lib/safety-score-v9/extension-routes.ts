@@ -691,7 +691,7 @@ function redemptionCoverageClass(
   return requiresCurrentOpenAttribution && !hasCurrentOpenAttribution ? "diagnostic" : "exact-lower-bound";
 }
 
-function redemptionReviewTerms(entry: RedemptionBackstopEntry, clockSec: number): {
+function redemptionReviewTerms(entry: RedemptionBackstopEntry, clockSec: number, outputIdentityMatches = true): {
   settlementModel: RedemptionSettlementModel;
   settlementDelaySec: number | undefined;
   settlementHorizonSec: number;
@@ -700,7 +700,7 @@ function redemptionReviewTerms(entry: RedemptionBackstopEntry, clockSec: number)
 } {
   const config = getRedemptionBackstopConfig(entry.stablecoinId);
   const reviewed = config?.v9RouteReviewTerms;
-  const capturedBaseSettlementModel = reviewed?.settlementModel !== undefined || reviewed?.businessDayTerms !== undefined
+  const capturedBaseSettlementModel = outputIdentityMatches && (reviewed?.settlementModel !== undefined || reviewed?.businessDayTerms !== undefined)
     ? config?.settlementModel ?? entry.settlementModel
     : entry.settlementModel;
   // Business-day terms supersede generated/persisted scalar guesses. If the
@@ -735,7 +735,7 @@ function redemptionReviewTerms(entry: RedemptionBackstopEntry, clockSec: number)
   // Score-improving settlement research shares V9's existing reviewed-evidence
   // expiry window. Conservative overlays remain admissible without evidence.
   const admitsReviewedFasterSettlement =
-    reviewedSettlementIsFaster && reviewedSettlementEvidenceIsCurrent;
+    outputIdentityMatches && reviewedSettlementIsFaster && reviewedSettlementEvidenceIsCurrent;
   const reviewedFasterSettlementDelaySec = admitsReviewedFasterSettlement
     ? reviewedSettlementDelaySec
     : undefined;
@@ -845,14 +845,18 @@ function buildRedemptionRouteReview(
         : ("producer-failed" as const);
   const scope = observation.scope;
   const modelConfidence = observation.modelConfidence ?? entry.modelConfidence;
-  const reviewedTerms = redemptionReviewTerms(entry, fixedInput.clockSec);
+  const outputIdentityIssues = validateRedemptionOutputIdentity(entry.stablecoinId, observation.output);
+  const stableOutputIdentityMatches = !staticConfig?.outputAssets?.length ||
+    (staticConfig.outputAssetType !== "stable-single" && staticConfig.outputAssetType !== "stable-basket") ||
+    (observation.output.kind === "tracked-stablecoin" &&
+      outputIdentityIssues.length === 0);
+  const reviewedTerms = redemptionReviewTerms(entry, fixedInput.clockSec, stableOutputIdentityMatches);
   const physicalResourceKeys =
     scope.kind === "issuer"
       ? [`issuer:${scope.issuerId}`]
       : scope.kind === "protocol"
         ? [`protocol:${scope.protocol}${scope.chain ? `:${scope.chain}` : ""}`]
         : dexPhysicalResourceKeys(observation);
-  const outputIdentityIssues = validateRedemptionOutputIdentity(entry.stablecoinId, observation.output);
   const outputReview =
     outputIdentityIssues.every((issue) => issue.code === "output-identity-mismatch")
       ? buildOutputReview(fixedInput, observation, fixedInput.redemptionGenerationId, entry.stablecoinId)
