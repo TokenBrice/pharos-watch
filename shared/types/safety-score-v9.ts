@@ -1249,6 +1249,7 @@ const V9MaterialityPolicySchema = z
     basketExposureTreatment: z.literal("proportional"),
     deploymentMaterialSharePct: z.number().finite().min(0).max(100),
     haltedChainMinStallSec: z.number().int().positive(),
+    nativeInventoryUnmatchedDustShareMax: z.number().finite().min(0).max(1),
     unresolvedDeploymentBlendStartSharePct: z.number().finite().min(0).max(100),
     unresolvedDeploymentFullCeilingSharePct: z.number().finite().min(0).max(100),
     commonModeOracleMinBranches: z.number().int().positive(),

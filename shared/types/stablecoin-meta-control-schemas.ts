@@ -378,6 +378,23 @@ const BridgeRouteDeploymentSchema = z
     }
   });
 
+const NativeInventoryReviewSchema = z
+  .object({
+    kind: z.literal("exhaustive-material-native-census"),
+    exhaustive: z.literal(true),
+    reviewedAt: ReviewDateSchema,
+    reviewer: z.string().min(1),
+    routeIds: z.array(z.string().min(1).transform(normalizeDeploymentId)).min(1),
+    rationale: z.string().min(12),
+    sources: z.array(StablecoinLinkSchema).min(1),
+  })
+  .strict()
+  .superRefine((review, ctx) => {
+    if (new Set(review.routeIds).size !== review.routeIds.length) {
+      ctx.addIssue({ code: "custom", path: ["routeIds"], message: "Native census route identities must be unique" });
+    }
+  });
+
 export const BridgeRouteRiskProfileSchema = z
   .object({
     tier: z.enum(BRIDGE_ROUTE_RISK_TIER_VALUES),
@@ -389,11 +406,29 @@ export const BridgeRouteRiskProfileSchema = z
     sourceFreeRationale: z.string().min(1).optional(),
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
     routes: z.array(BridgeRouteDeploymentSchema).min(1).optional(),
+    nativeInventoryReview: NativeInventoryReviewSchema.optional(),
     controls: z.array(z.lazy(() => BridgeRouteControlSchema)).min(1).optional(),
     scopedQuestions: z.array(z.lazy(() => ControlScopedQuestionSchema)).min(1).optional(),
   })
   .strict()
   .superRefine((profile, ctx) => {
+    if (profile.nativeInventoryReview) {
+      const nativeIds = new Set(profile.nativeInventoryReview.routeIds);
+      if (
+        nativeIds.size !== (profile.routes?.length ?? 0) ||
+        (profile.routes ?? []).some((route) =>
+          !nativeIds.has(normalizeDeploymentId(route.id)) ||
+          route.reviewDisposition !== "reviewed" ||
+          route.routeClass !== "native" ||
+          route.issuanceModel !== "native-issuance")
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["nativeInventoryReview", "routeIds"],
+          message: "Exhaustive native census must match every reviewed native route, with no representation routes",
+        });
+      }
+    }
     for (const [index, question] of (profile.scopedQuestions ?? []).entries()) {
       const ref = question.controlRef.toLowerCase();
       const matched = (profile.controls ?? []).some(

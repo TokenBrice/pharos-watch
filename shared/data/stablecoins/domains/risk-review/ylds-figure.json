@@ -22,6 +22,31 @@
     "reviewedAt": "2026-10-03",
     "reviewer": "W2R21 official live-native inventory review",
     "confidence": "verified",
+    "nativeInventoryReview": {
+      "kind": "exhaustive-material-native-census",
+      "exhaustive": true,
+      "reviewedAt": "2026-10-05",
+      "reviewer": "Pharos engineering W4-D5 primary native census review",
+      "routeIds": [
+        "provenance:uylds.fcc",
+        "stellar:YLDS-GAC7MOPTQLQUM3KC24AW4GHS3RLF72LPEZO54AH7EZ6TSMGRB5SOAVH3"
+      ],
+      "rationale": "Figure's current Where YLDS lives today inventory explicitly lists two live permissioned YLDS chains: Provenance and Stellar. Exact issuer identities retain their source-bound marker and Stellar observations below. The nonzero supplier Tempo row is not authenticated as an FCC certificate and remains unmatched, never reclassified native or removed; this review admits only material native applicability while its live share remains at or below the policy dust limit. Hastra wYLDS remains a separate claim.",
+      "sources": [
+        {
+          "label": "Figure two-chain live YLDS inventory, reviewed 2026-10-05",
+          "url": "https://www.ylds.com/developers-and-ecosystems/"
+        },
+        {
+          "label": "FCC Stellar issuer identity",
+          "url": "https://www.ylds.com/.well-known/stellar.toml"
+        },
+        {
+          "label": "Provenance native YLDS marker identity",
+          "url": "https://api.provenance.io/cosmos/bank/v1beta1/denoms_metadata/uylds.fcc"
+        }
+      ]
+    },
     "sources": [
       {
         "label": "Figure current developer inventory: Where YLDS lives today lists only Provenance and Stellar as Live, accessed 2026-10-03",
