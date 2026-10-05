@@ -202,6 +202,7 @@ function bridgeAuthoritySeverity(authority: NonNullable<ControlOverlay["authorit
     contract: 2,
     "issuer-backend": 3,
     "validator-quorum": 4,
+    "chain-consensus": 4,
     eoa: 5,
     unknown: 6,
   }[model];
@@ -657,6 +658,46 @@ function hasCompleteSubthresholdBridgeInventory(
   return true;
 }
 
+/**
+ * A native census can forgive only unmatched dust, not a missing representation
+ * review or a controlled supply row. The supply book is never rewritten here.
+ */
+function hasReviewedNativeDustInventory(
+  profile: BridgeRouteRiskProfile,
+  supplyReview: ExtensionAsset["supplyReview"],
+  clockSec: number,
+): boolean {
+  const census = profile.nativeInventoryReview;
+  if (
+    census?.kind !== "exhaustive-material-native-census" ||
+    census.exhaustive !== true ||
+    census.sources.length === 0 ||
+    profile.confidence !== "verified" ||
+    researchReviewObservationState(census.reviewedAt, clockSec) !== "current" ||
+    supplyReview === null
+  ) return false;
+  const nativeIds = new Set(census.routeIds.map(normalizedBridgeDeploymentId));
+  const profileRoutes = profile.routes ?? [];
+  if (
+    nativeIds.size === 0 ||
+    nativeIds.size !== census.routeIds.length ||
+    nativeIds.size !== profileRoutes.length ||
+    profileRoutes.some((route) =>
+      !nativeIds.has(normalizedBridgeDeploymentId(route.id)) ||
+      route.reviewDisposition !== "reviewed" ||
+      route.routeClass !== "native" ||
+      route.issuanceModel !== "native-issuance")
+  ) return false;
+  const dustMax = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.nativeInventoryUnmatchedDustShareMax;
+  return supplyReview.selectedBridgeRoutes.every((row) =>
+    Number.isFinite(row.supplyShare) && row.supplyShare >= 0 &&
+    (row.reviewState === "unmatched"
+      ? row.supplyShare <= dustMax
+      : row.reviewState === "selected-reviewed" &&
+        row.reviewedRouteKind === "native" &&
+        nativeIds.has(normalizedBridgeDeploymentId(row.deploymentRouteKey))));
+}
+
 type BridgeJoinChainRows = Readonly<Record<string, { current: number }>>;
 
 function bridgeJoinSharesReconcile(left: number, right: number): boolean {
@@ -943,21 +984,17 @@ export function adaptBridgeReview(
   // inherits the marker only when every unresolved contributor on the route is
   // named; one unnamed unresolved sibling keeps the hard treatment, mirroring
   // the mint-authority whole-inventory rule at route granularity.
-  const freshScopedQuestionRefs = new Set(
-    (profile.scopedQuestions ?? [])
-      .filter(
-        (question) =>
-          clockSec - isoDateStartSec(question.reviewedAt, clockSec, `${meta.id}:bridge-scoped-question`) <=
-          V9_SCOPED_QUESTION_MAX_AGE_SEC,
-      )
-      .map((question) => question.controlRef.toLowerCase()),
-  );
-  const controlHasFreshScopedQuestion = (control: BridgeRouteControl): boolean =>
-    freshScopedQuestionRefs.has(control.id.toLowerCase()) ||
-    freshScopedQuestionRefs.has(control.label.toLowerCase()) ||
+  const freshScopedQuestions = (profile.scopedQuestions ?? []).filter((question) =>
+    clockSec - isoDateStartSec(question.reviewedAt, clockSec, `${meta.id}:bridge-scoped-question`) <= V9_SCOPED_QUESTION_MAX_AGE_SEC);
+  const freshScopedQuestionRefs = new Set(freshScopedQuestions.map((question) => question.controlRef.toLowerCase()));
+  const semanticQuestionRefs = new Set(freshScopedQuestions.filter((question) =>
+    question.subject !== "key-custody-independence").map((question) => question.controlRef.toLowerCase()));
+  const controlHasFreshScopedQuestion = (control: BridgeRouteControl, refs = freshScopedQuestionRefs): boolean =>
+    refs.has(control.id.toLowerCase()) ||
+    refs.has(control.label.toLowerCase()) ||
     (control.controllerChain != null &&
       control.controllerAddress != null &&
-      freshScopedQuestionRefs.has(`${control.controllerChain}:${control.controllerAddress.toLowerCase()}`));
+      refs.has(`${control.controllerChain}:${control.controllerAddress.toLowerCase()}`));
   const overlayFullyResolved = (overlay: ControlOverlay): boolean =>
     overlay.authority !== null &&
     overlay.authority.model !== "unknown" &&
@@ -969,13 +1006,21 @@ export function adaptBridgeReview(
   if (freshScopedQuestionRefs.size > 0) {
     for (const [routeId, entries] of structuredOverlaysByDeployment) {
       const merged = structuredRouteControlsByDeployment.get(routeId);
-      if (!merged || overlayFullyResolved(merged)) continue;
+      if (!merged) continue;
       const anyNamed = entries.some((entry) => controlHasFreshScopedQuestion(entry.sourceControl));
+      const custodyOnly = anyNamed && !entries.some((entry) => controlHasFreshScopedQuestion(entry.sourceControl, semanticQuestionRefs));
+      if (custodyOnly && overlayFullyResolved(merged)) {
+        structuredRouteControlsByDeployment.set(routeId, { ...merged, scopedQuestionFresh: true,
+          scopedQuestionSubject: "key-custody-independence", keyCustody: "unknown" });
+        continue;
+      }
+      if (overlayFullyResolved(merged)) continue;
       const allUnresolvedNamed = entries.every(
         (entry) => controlHasFreshScopedQuestion(entry.sourceControl) || overlayFullyResolved(entry.overlay),
       );
       if (anyNamed && allUnresolvedNamed) {
-        structuredRouteControlsByDeployment.set(routeId, { ...merged, scopedQuestionFresh: true });
+        structuredRouteControlsByDeployment.set(routeId, { ...merged, scopedQuestionFresh: true,
+          ...(custodyOnly ? { scopedQuestionSubject: "key-custody-independence" as const, keyCustody: "unknown" as const } : {}) });
       }
     }
   }
@@ -1102,11 +1147,14 @@ export function adaptBridgeReview(
   // resolve, so control emptiness alone cannot prove the absence of a bridge.
   const hasReviewedRepresentationRoute = reviewedRoutes.some((route) => isBridgeRepresentationRoute(route, profile, meta.id));
   const allMaterialRoutesReviewed = hasCompleteSubthresholdBridgeInventory(meta.id, profileRoutes, controls, supplyReview);
-  const hasToleratedUnmatchedRow = (supplyReview?.selectedBridgeRoutes ?? []).some(
-    (route) =>
-      route.reviewState === "unmatched" &&
-      classifyBridgeSupplyRow(route) !== "control-required",
+  const hasUnmatchedRow = (supplyReview?.selectedBridgeRoutes ?? []).some(
+    (route) => route.reviewState === "unmatched",
   );
+  const reviewedNativeDustInventory =
+    allMaterialRoutesReviewed &&
+    bridgeClaimControls.length === 0 &&
+    routes.length === 0 &&
+    hasReviewedNativeDustInventory(profile, supplyReview, clockSec);
   // Deliberately over the whole inventory, not `bridgeClaimControls`: a canonical
   // control carrying real supply must keep blocking this branch, so an unresolved
   // zero-share deployment stays an audit fact rather than proof of no bridge.
@@ -1121,15 +1169,28 @@ export function adaptBridgeReview(
     !reviewStale &&
     ((bridgeClaimControls.length === 0 &&
       !hasReviewedRepresentationRoute &&
-      !hasToleratedUnmatchedRow) ||
-      (allMaterialRoutesReviewed && onlyZeroShareUnroutedControls))
+      ((!hasUnmatchedRow && profile.nativeInventoryReview === undefined) || reviewedNativeDustInventory)) ||
+      (!hasUnmatchedRow && profile.nativeInventoryReview === undefined &&
+        allMaterialRoutesReviewed && onlyZeroShareUnroutedControls))
   ) {
+    const nativeEvidenceKeys = reviewedNativeDustInventory && profile.nativeInventoryReview
+      ? [...evidenceKeys, ...evidence.add({
+          componentKeys: ["economic-control:bridge"],
+          sourceId: "stablecoin-meta.native-inventory-census",
+          reviewedAt: profile.nativeInventoryReview.reviewedAt,
+          publishedBy: "unknown",
+          confidence: "verified",
+          sources: profile.nativeInventoryReview.sources,
+          payload: profile.nativeInventoryReview,
+          maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
+        })]
+      : evidenceKeys;
     return {
       review: {
         status: notApplicableStatus(
           "v9.control.bridge-review",
           "Every reviewed deployment route is native issuance; no bridge control carries the claim.",
-          evidenceKeys,
+          nativeEvidenceKeys,
         ),
         routes: [],
         diagnostics: buildBridgeJoinDiagnostics(

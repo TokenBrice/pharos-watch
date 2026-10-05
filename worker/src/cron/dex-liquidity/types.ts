@@ -101,7 +101,8 @@ export type LiquiditySourceMixByFamily = Partial<Record<LiquidityPoolSourceFamil
 
 /** Internal descriptor awaiting same-block factory and reserve verification. */
 export interface EvmV2ExecutionCandidate {
-  source: "uniswap-v2" | "pancakeswap-v2" | "aerodrome-volatile";
+  source: "uniswap-v2" | "pancakeswap-v2" | "solidly-v2";
+  solidlyProtocol?: "aerodrome" | "velodrome" | "shadow-exchange";
   poolAddress: `0x${string}`;
   tokenAddresses: [`0x${string}`, `0x${string}`];
   tokenSymbols: [string, string];

@@ -309,10 +309,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "HyperCore FEUSD and its linked HyperEVM feUSD contract are two execution-domain balances within the same Hyperliquid chain, secured by the same HyperBFT consensus. Official transfer specifications describe system-address ERC20 escrow transfers and Transfer-log-based Core credits, not an external bridge quorum. The transport tier is single-chain; asset-specific linkage administration and executable system-controller semantics remain unresolved and receive no protective authority or cap assumptions.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Unknown wave W2R51 exact linkage transport review",
-    "confidence": "manual-review",
+    "summary": "HyperCore FEUSD and linked HyperEVM feUSD are two execution-domain balances within the same Hyperliquid L1 and HyperBFT consensus. FEUSD index 241 binds the Core token to the ERC20 and system address 0x20000000000000000000000000000000000000f1. Holders send their own assets; consensus credits Core from ERC20 Transfer logs and releases existing EVM escrow with transfer, not mint. Spot-deployer request plus EVM-deployer finalization establishes the link. This is a typed same-chain system transport, not an external validator quorum; escrow sufficiency and Felix token upgrades remain separate risks.",
+    "reviewedAt": "2026-10-05",
+    "reviewer": "E21 FEUSD same-chain system transport review",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "l2beat",
@@ -389,15 +389,15 @@
         "semantics": "other",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "The official POST /info spotMeta response rechecked on 2026-10-03 binds FEUSD index 241/tokenId 0x88102bea0bbad5f301f6e9e4dacdf979 to feUSD 0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70, with eight Core wei decimals and ten extra EVM wei decimals. At HyperEVM block 47595439 the linked contract returns name feUSD and the token-index system address 0x20000000000000000000000000000000000000f1 has empty EVM code. Official architecture states HyperEVM is not a separate chain; transfer documentation specifies ERC20 transfers from/to that system address and Core credits from Transfer logs. This establishes a single-chain transport tier, not an independently validated external bridge. Empty system-address bytecode does not prove absence of native system powers, and neither the spotMeta row nor the documentation certifies the asset-specific finalizer, replacement, upgrade or intervention authority. The representation identity and unresolved controller failure domains are preserved.",
+        "reviewNote": "POST /info spotMeta on 2026-10-05 binds FEUSD index 241/tokenId 0x88102bea0bbad5f301f6e9e4dacdf979 to feUSD 0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70, with eight Core wei decimals and ten extra EVM wei decimals. At pinned HyperEVM block 47712886 the ERC20 returns name feUSD and system address 0x20000000000000000000000000000000000000f1 has empty EVM bytecode. Official specifications bind transfer authority to native L1 system transactions, not bytecode at that address: outbound Core sendAsset calls ERC20 transfer as the system address; inbound ERC20 Transfer logs credit the sending holder's Core balance. Linking requires the spot deployer's request and EVM deployer/finalizer's confirmation. Empty bytecode is not evidence of absent consensus authority; this review claims neither independent validators nor full escrow/liability reconciliation.",
         "mappingVersion": "bridge-route-facts-v1",
         "failureDomainKeys": [
           "protocol:hyperliquid-hypercore-evm-linkage",
           "contract:hyperevm:0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70",
-          "system:hyperliquid-feusd-asset-linkage-unknown"
+          "consensus:hyperliquid"
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 47595439,
+        "observedAt": "2026-10-05",
+        "observedBlock": 47712886,
         "sources": [
           {
             "label": "Hyperliquid unified chain and consensus architecture",
@@ -424,6 +424,50 @@
             "url": "https://rpc.hyperliquid.xyz/evm"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "feusd-hypercore-system-transport",
+        "label": "Hyperliquid L1 consensus FEUSD spot system transport",
+        "routeRefs": ["hyperliquid:0x88102bea0bbad5f301f6e9e4dacdf979"],
+        "capabilities": ["escrow"],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x20000000000000000000000000000000000000f1",
+        "authorityType": "chain-consensus",
+        "sameChainSystemTransport": {
+          "family": "hypercore-evm-spot",
+          "tokenIndex": 241,
+          "coreTokenId": "0x88102bea0bbad5f301f6e9e4dacdf979",
+          "evmToken": "hyperevm:0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70",
+          "systemAddress": "0x20000000000000000000000000000000000000f1"
+        },
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-05",
+        "observedBlock": 47712886,
+        "failureDomainKeys": [
+          "consensus:hyperliquid",
+          "contract:hyperevm:0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70"
+        ],
+        "sources": [
+          {
+            "label": "Same HyperBFT consensus, not a separate chain",
+            "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hyperevm.md"
+          },
+          {
+            "label": "Native system transfer and two-party link finalization specification",
+            "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/hypercore-less-than-greater-than-hyperevm-transfers.md"
+          },
+          {
+            "label": "Live FEUSD spotMeta asset-link identity",
+            "url": "https://api.hyperliquid.xyz/info"
+          },
+          {
+            "label": "Pinned HyperEVM ERC20 name and system-address code reads",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          }
+        ],
+        "evidence": "Reviewed 2026-10-05 spotMeta identifies token index 241, exact Core tokenId and linked ERC20. Block 47712886 binds ERC20 identity and the token-index system address; its empty EVM code is expected native execution, not renunciation. Core holders authorize sendAsset of their own balances; EVM holders authorize ERC20 transfers into the system escrow. HyperBFT consensus executes the system transfer/credit rules. The system release calls transfer(recipient,amount), not mint; Felix's eight native minters and upgrade Safe remain in Mint Authority. Spot deployer requests linkage and EVM deployer or storage-bound finalizer confirms it. No current validator roster, quorum independence, escrow adequacy, renounced linkage authority or absence of L1 upgrades is asserted."
       }
     ]
   }

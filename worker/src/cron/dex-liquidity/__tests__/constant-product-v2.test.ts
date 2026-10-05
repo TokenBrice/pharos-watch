@@ -91,7 +91,6 @@ function makeAerodromeCandidate() {
     poolAddress: AERODROME_PAIR,
     tokenAddresses: [USDC_BASE, WETH_BASE],
     tokenSymbols: ["USDC", "WETH"],
-    confirmedStable: false,
   })!;
 }
 
@@ -350,7 +349,7 @@ describe("constant-product V2 execution", () => {
       }),
     ).toMatchObject({ source: "uniswap-v2" });
     expect(makeAerodromeCandidate()).toMatchObject({
-      source: "aerodrome-volatile",
+      source: "solidly-v2",
       poolAddress: AERODROME_PAIR,
     });
     expect(
@@ -361,7 +360,7 @@ describe("constant-product V2 execution", () => {
         poolAddress: AERODROME_PAIR,
         tokenAddresses: [USDC_BASE, WETH_BASE],
       }),
-    ).toBeNull();
+    ).toMatchObject({ source: "solidly-v2", solidlyProtocol: "aerodrome" });
     expect(
       buildEvmV2ExecutionCandidate({
         chain: "base",
@@ -369,9 +368,8 @@ describe("constant-product V2 execution", () => {
         poolType: "aerodrome-stable",
         poolAddress: AERODROME_PAIR,
         tokenAddresses: [USDC_BASE, WETH_BASE],
-        confirmedStable: true,
       }),
-    ).toBeNull();
+    ).toMatchObject({ source: "solidly-v2", solidlyProtocol: "aerodrome" });
     expect(
       buildEvmV2ExecutionCandidate({
         chain: "avalanche",
@@ -379,7 +377,6 @@ describe("constant-product V2 execution", () => {
         poolType: "aerodrome-volatile",
         poolAddress: AERODROME_PAIR,
         tokenAddresses: [USDC_BASE, WETH_BASE],
-        confirmedStable: false,
       }),
     ).toBeNull();
   });
@@ -859,162 +856,6 @@ describe("constant-product V2 execution", () => {
     expect(fetchMulticall).toHaveBeenCalledTimes(2);
     expect(fetchMulticall.mock.calls.map((call) => call[1].length)).toEqual([24, 6]);
     expect(metric.topPools.every((pool) => pool.extra?.ammExecutionModel?.source === "pancakeswap-v2")).toBe(true);
-  });
-
-  it("builds a classic Base Aerodrome volatile model with same-block deployment and fee checks", async () => {
-    const candidate = makeAerodromeCandidate();
-    const metric = initMetrics("usdc-circle", "USDC");
-    metric.topPools.push({
-      poolId: buildPoolFingerprint("base", "aerodrome", [USDC_BASE, WETH_BASE])!,
-      project: "aerodrome",
-      chain: "Base",
-      tvlUsd: 2_000_000,
-      symbol: "USDC-WETH",
-      volumeUsd1d: 100_000,
-      poolType: "aerodrome-volatile",
-      source: "dl",
-      extra: { evmV2ExecutionCandidate: candidate },
-    });
-    const deployment = EVM_V2_EXECUTION_DEPLOYMENTS.find((entry) => entry.source === "aerodrome-volatile");
-    if (!deployment || deployment.binding !== "aerodrome-volatile") throw new Error("missing Aerodrome deployment");
-
-    const fetchCodeAtBlock = vi.fn(async (_chain: string, address: string) =>
-      address === deployment.factoryAddress ? ("0x6000" as const) : ("0x6001" as const),
-    );
-    const fetchMulticall = vi.fn(
-      async (_chain: string, calls: readonly { label: string; callData: string }[], _blockNumber: number) =>
-        calls.map((call) => ({
-          label: call.label,
-          success: true,
-          returnData:
-            call.label === "v2-factory-implementation"
-              ? addressWord(deployment.expectedImplementationAddress)
-              : call.label === "v2-factory-paused"
-                ? word(0n)
-                : call.label.endsWith("-pair")
-                  ? addressWord(AERODROME_PAIR)
-                  : call.label.endsWith("-token0")
-                    ? addressWord(USDC_BASE)
-                    : call.label.endsWith("-token1")
-                      ? addressWord(WETH_BASE)
-                      : call.label.endsWith("-reserves")
-                        ? reservesWord(1_000_000n * 10n ** 6n, 500n * 10n ** 18n)
-                        : call.label.endsWith("-fee")
-                          ? word(42n)
-                          : call.label.endsWith("-stable")
-                            ? word(0n)
-                            : call.label.endsWith("-decimals0")
-                              ? word(6n)
-                              : word(18n),
-        })),
-    );
-
-    await enrichEvmV2ExecutionModels({
-      metrics: new Map([[metric.stablecoinId, metric]]),
-      chainAddressToId: new Map([[canonicalExitRouteAssetKey("base", USDC_BASE), metric.stablecoinId]]),
-      contractMetaByChainAddress: new Map([
-        [
-          canonicalExitRouteAssetKey("base", USDC_BASE),
-          { stablecoinId: metric.stablecoinId, symbol: "USDC", decimals: 6, source: "contract" },
-        ],
-      ]),
-      stablecoinPriceById: new Map([[metric.stablecoinId, 1]]),
-      chainRpcs: captureRpcs("base", "Base"),
-      dependencies: {
-        fetchBlockNumber: vi.fn(async () => 33_000_000),
-        fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") =>
-          blockHeader(blockNumber as number)),
-        fetchCodeAtBlock: fetchCodeAtBlock as never,
-        fetchMulticall: fetchMulticall as never,
-        hashCode: vi.fn((code) =>
-          code === "0x6000" ? deployment.expectedFactoryCodeHash : deployment.expectedImplementationCodeHash,
-        ),
-      },
-    });
-
-    const calls = fetchMulticall.mock.calls.flatMap((call) => call[1]);
-    expect(calls.find((call) => call.label === "v2-0-pair")?.callData).toMatch(/^0x79bc57d5/);
-    expect(calls.find((call) => call.label === "v2-0-pair")?.callData).toMatch(/0{64}$/);
-    expect(calls.find((call) => call.label === "v2-0-fee")?.callData).toMatch(/^0xcc56b2c5/);
-    expect(fetchCodeAtBlock).toHaveBeenNthCalledWith(
-      1,
-      "base",
-      deployment.factoryAddress,
-      33_000_000,
-      expect.any(Object),
-    );
-    expect(fetchCodeAtBlock).toHaveBeenNthCalledWith(
-      2,
-      "base",
-      deployment.expectedImplementationAddress,
-      33_000_000,
-      expect.any(Object),
-    );
-    expect(metric.topPools[0]!.extra?.ammExecutionModel).toMatchObject({
-      source: "aerodrome-volatile",
-      invariant: "constant-product",
-      feeRate: 0.0042,
-      trackedTokenIndex: 0,
-      tokens: [
-        { address: USDC_BASE, balance: 1_000_000, referencePriceUsd: 1 },
-        { address: WETH_BASE, balance: 500, referencePriceUsd: 2_000 },
-      ],
-    });
-  });
-
-  it("fails classic Aerodrome volatile execution closed while the factory is paused", async () => {
-    const candidate = makeAerodromeCandidate();
-    const metric = initMetrics("usdc-circle", "USDC");
-    metric.topPools.push({
-      poolId: `base:${AERODROME_PAIR}`,
-      project: "aerodrome",
-      chain: "Base",
-      tvlUsd: 2_000_000,
-      symbol: "USDC-WETH",
-      volumeUsd1d: 100_000,
-      poolType: "aerodrome-volatile",
-      source: "dl",
-      extra: { evmV2ExecutionCandidate: candidate },
-    });
-    const deployment = EVM_V2_EXECUTION_DEPLOYMENTS.find((entry) => entry.source === "aerodrome-volatile");
-    if (!deployment || deployment.binding !== "aerodrome-volatile") throw new Error("missing Aerodrome deployment");
-
-    await enrichEvmV2ExecutionModels({
-      metrics: new Map([[metric.stablecoinId, metric]]),
-      chainAddressToId: new Map(),
-      contractMetaByChainAddress: new Map(),
-      stablecoinPriceById: new Map(),
-      chainRpcs: captureRpcs("base", "Base"),
-      dependencies: {
-        fetchBlockNumber: vi.fn(async () => 33_000_000),
-        fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") =>
-          blockHeader(blockNumber as number)),
-        fetchCodeAtBlock: vi.fn(async (_chain, address) =>
-          address === deployment.factoryAddress ? ("0x6000" as const) : ("0x6001" as const),
-        ),
-        fetchMulticall: vi.fn(async (_chain: string, calls: readonly { label: string }[]) =>
-          calls.map((call) => ({
-            label: call.label,
-            success: true,
-            returnData:
-              call.label === "v2-factory-implementation"
-                ? addressWord(deployment.expectedImplementationAddress)
-                : call.label === "v2-factory-paused"
-                  ? word(1n)
-                  : word(0n),
-          })),
-        ) as never,
-        hashCode: vi.fn((code) =>
-          code === "0x6000" ? deployment.expectedFactoryCodeHash : deployment.expectedImplementationCodeHash,
-        ),
-      },
-    });
-
-    expect(metric.topPools[0]!.extra?.ammExecutionModel).toBeUndefined();
-    expect(metric.topPools[0]!.extra?.executionCapabilityGate).toEqual({
-      family: "constant-product-v2",
-      reason: "paused-or-swap-disabled",
-    });
   });
 
   it("fails closed when the canonical factory runtime does not match", async () => {

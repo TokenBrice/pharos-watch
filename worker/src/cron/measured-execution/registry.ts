@@ -15,9 +15,13 @@ export interface DexMeasuredExecutionDeployment {
   adapterProfileId:
     | "uniswap-v3-quoter-v2"
     | "pancakeswap-v3-quoter-v2"
-    | "aerodrome-slipstream-quoter-v2";
-  protocol: "uniswap-v3" | "pancakeswap" | "aerodrome-slipstream";
-  chain: "ethereum" | "arbitrum" | "base" | "polygon" | "bsc" | "celo" | "xlayer";
+    | "aerodrome-slipstream-quoter-v2"
+    | "hyperswap-v3-quoter-v2"
+    | "hybra-v3-quoter-v2"
+    | "kodiak-v3-quoter-v2"
+    | "xswap-v3-quoter-v2";
+  protocol: "uniswap-v3" | "pancakeswap" | "aerodrome-slipstream" | "hyperswap-v3" | "hybra-finance-v3" | "kodiak-v3" | "xswap-v3";
+  chain: "ethereum" | "arbitrum" | "base" | "polygon" | "bsc" | "celo" | "xlayer" | "hyperevm" | "berachain" | "xdc";
   endpointAddress: `0x${string}`;
   expectedCodeHash: `0x${string}`;
   factoryAddress: `0x${string}`;
@@ -130,6 +134,44 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
     factoryAddress: "0x4b2ab38dbf28d31d467aa8993f6c2585981d6804",
     expectedFactoryCodeHash: "0x98cde3564f540d7529feb2c697e2d79b85e3bc864d088ebe09fd5dcfc60a5c0e",
   },
+  // Official address sources and 2026-10-05 pinned deployment receipts:
+  // docs/dex-liquidity.md, Wave 4 QuoterV2 shadow deployment packet.
+  {
+    adapterProfileId: "hyperswap-v3-quoter-v2",
+    protocol: "hyperswap-v3",
+    chain: "hyperevm",
+    endpointAddress: "0x03a918028f22d9e1473b7959c927ad7425a45c7c",
+    expectedCodeHash: "0x8e057a51d14a83e3c529f3cd2769726f049de16be42694c04270154ff0b5dde9",
+    factoryAddress: "0xb1c0fa0b789320044a6f623cfe5ebda9562602e3",
+    expectedFactoryCodeHash: "0xd668a05940a3aa339b641289658f88c6ef124b1cfcdfb4e1e129199a99e3ef08",
+  },
+  {
+    adapterProfileId: "hybra-v3-quoter-v2",
+    protocol: "hybra-finance-v3",
+    chain: "hyperevm",
+    endpointAddress: "0x9aaa88ddd409c015f3ab3f557d3b138ec3cd66c0",
+    expectedCodeHash: "0xda3dd56533aa0d3fd604528e6a8a331973eb52c46da2f726faf3c84aba9dd927",
+    factoryAddress: "0x2dc0ec0f0db8baf250ecccf268d7dfbf59346e5e",
+    expectedFactoryCodeHash: "0x37cdb74d5c38c5c059dc201b5bf06d0934ac519af2a97a01de5e8a17679a383d",
+  },
+  {
+    adapterProfileId: "kodiak-v3-quoter-v2",
+    protocol: "kodiak-v3",
+    chain: "berachain",
+    endpointAddress: "0x644c8d6e501f7c994b74f5cea96abe65d0ba662b",
+    expectedCodeHash: "0xf5ac082a04ee0dd92707a357e28096bd71e5569acadedc46458841225a16f05b",
+    factoryAddress: "0xd84cbf0b02636e7f53db9e5e45a616e05d710990",
+    expectedFactoryCodeHash: "0x890bf10c470ed585d15232302989f948304f2b2dac33807ed242746faab9eac3",
+  },
+  {
+    adapterProfileId: "xswap-v3-quoter-v2",
+    protocol: "xswap-v3",
+    chain: "xdc",
+    endpointAddress: "0x88c1cf91b3d16ec2b06a689010121ff79c9d823a",
+    expectedCodeHash: "0x4d1fa9d5a98694a1412387418f55239361417e8845f935808833f67fc02cbbcf",
+    factoryAddress: "0x30f317a9ec0f0d06d5de0f8d248ec3506b7e4a8a",
+    expectedFactoryCodeHash: "0x69ef22d821db7b6a3f4b2377aafcbb56a6c5af91f0b13d841a2332bf96670d40",
+  },
 ] as const;
 
 
@@ -154,6 +196,11 @@ export function getDexMeasuredExecutionDeployment(
         deployment.chain === normalizedChain,
     ) ?? null
   );
+}
+
+/** Reviewed Slipstream-compatible tuples key identity by int24 tick spacing. */
+export function isTickSpacingQuoterV2Profile(adapterProfileId: string): boolean {
+  return adapterProfileId === "aerodrome-slipstream-quoter-v2";
 }
 
 export async function verifyDexMeasuredExecutionDeployment(input: {

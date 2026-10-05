@@ -459,6 +459,7 @@ function projectUnresolvedTrackedReserveExposure(params: {
       compareText(left.responsibility, right.responsibility),
     "last",
   );
+  const gapIndex = asset.gapIndex ?? createV9GapIndex(asset.gaps);
   return (
     attributions.length > 0
       ? attributions
@@ -466,13 +467,24 @@ function projectUnresolvedTrackedReserveExposure(params: {
           causalKey: `dependency-projection:${trackedAssetId}`,
           responsibility: "method-unsupported" as const,
         }]
-  ).map((attribution) => ({
-    code: unavailableCode,
-    pathKey,
-    gapIds: [],
-    treatment: resolveV9ReasonTreatment(policy, unavailableCode).treatment,
-    ...attribution,
-  }));
+  ).map((attribution) => {
+    // A projection key is not evidence. Bind only a retained dependency gap;
+    // sentinels and unrelated local reserve gaps remain method uncertainty.
+    const sourceGap = gapIndex.byId.get(attribution.causalKey);
+    const dependencyGap = sourceGap?.ownerDomain === "dependency" && "causeProof" in sourceGap
+      ? sourceGap : undefined;
+    const cause = dependencyGap?.causeProof.cause ?? "U";
+    return {
+      code: unavailableCode,
+      pathKey,
+      gapIds: [],
+      treatment: resolveV9ReasonTreatment(policy, unavailableCode, cause).treatment,
+      ...attribution,
+      responsibility: dependencyGap?.responsibility ?? attribution.responsibility,
+      cause,
+      causeGapIds: dependencyGap === undefined ? [] : [dependencyGap.gapId],
+    };
+  });
 }
 
 function collectPrivateCreditObligorStructuralReasons(

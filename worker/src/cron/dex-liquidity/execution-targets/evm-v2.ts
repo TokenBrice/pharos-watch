@@ -1,5 +1,6 @@
 import type { DexExecutionTargetFactoryInput, DexExecutionTargetFactoryOutput } from "../execution-target-registry";
 import { buildEvmV2ExecutionCandidate } from "../constant-product-v2";
+import { buildSolidlyV2RegisteredExecutionTarget } from "./solidly-v2";
 import {
   buildDexMeasuredExecutionTargetId,
   DEX_MEASURED_TARGET_SCHEMA_VERSION,
@@ -96,7 +97,7 @@ function buildTarget(
     tokenSymbols: parsePoolSymbols(identity.pool.symbol),
   });
 
-  if (!candidate) {
+  if (!candidate || candidate.source === "solidly-v2") {
     return null;
   }
 
@@ -195,6 +196,8 @@ function buildTarget(
 export function buildEvmV2RegisteredExecutionTarget(
   input: DexExecutionTargetFactoryInput,
 ): DexExecutionTargetFactoryOutput | null {
+  const solidlyCandidate = buildSolidlyV2RegisteredExecutionTarget(input);
+  if (solidlyCandidate) return solidlyCandidate;
   const target = buildTarget(input);
 
   return target

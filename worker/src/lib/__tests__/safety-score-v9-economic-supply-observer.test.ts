@@ -3,11 +3,11 @@ import { encodeAbiParameters, keccak256, parseAbiParameters, toFunctionSelector,
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { sha256Hex } from "@shared/lib/sha256";
 import type { StablecoinMeta } from "@shared/types/core";
-import type { CurveLzPendingRead, ReviewedEconomicSupplyPlan } from "@shared/types/safety-score-v9-supply-attribution";
+import { ReviewedEconomicSupplyPlanSchema, type CurveLzPendingRead, type ReviewedEconomicSupplyPlan } from "@shared/types/safety-score-v9-supply-attribution";
 import * as evmRpc from "../evm-rpc";
 import type { ChainRpcConfig } from "../chain-registry";
 import { observeCurveLzPending, observeEconomicSolanaMint, observeReviewedEconomicDeploymentPartitionAttempt } from "../safety-score-v9/economic-supply-observer";
-import { REVIEWED_ECONOMIC_SUPPLY_PLANS } from "../safety-score-v9/supply-attribution-contract";
+import { REVIEWED_ECONOMIC_SUPPLY_PLANS, reviewedEconomicDeploymentAttributionValidationError } from "../safety-score-v9/supply-attribution-contract";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 
 const CLOCK = 1790850000;
@@ -60,6 +60,45 @@ describe("reviewed economic supply observation", () => {
     expect(result.attribution.observations).toEqual([expect.objectContaining({ deploymentKey: f.plan.deployments[0]!.deploymentKey, amount: "100000000", anchor: "100", anchorHash: HASH, observedAtSec: CLOCK - 60 })]);
     expect(result.attribution.deployments[0]!.currentSupplyUsd).toBe(100);
     expect(result.attribution.unattributedSupplyUsd).toBe(0);
+  });
+
+  it("batches same-chain supplies and balance exclusions at one pin without mixing amounts", async () => {
+    const f = fixture();
+    const first = f.plan.deployments[0]!;
+    const second = { ...first, deploymentKey: `ethereum:0x${"2".repeat(40)}`, address: `0x${"2".repeat(40)}` };
+    f.plan.deployments.push(second);
+    f.plan.exclusions = [{ id: "treasury", deploymentKey: second.deploymentKey, account: `0x${"3".repeat(40)}` }];
+    vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mockImplementation(async (_chain, calls) =>
+      calls.map(call => ({ label: call.label, success: true, returnData: word(
+        call.label.endsWith(":decimals") ? 6n : call.label === first.deploymentKey ? 100000000n :
+          call.label === "treasury" ? 100000000n : 1000000000n,
+      ) })),
+    );
+    const result = await f.run();
+    expect(result.status).toBe("accepted");
+    if (result.status !== "accepted") throw new Error("Expected accepted batch partition");
+    expect(result.attribution.deployments.map(row => row.currentSupplyUsd)).toEqual([10, 90]);
+    expect(result.attribution.observations.map(row => row.amount)).toEqual(["100000000", "1000000000", "100000000"]);
+    expect(new Set(result.attribution.observations.map(row => row.anchorHash))).toEqual(new Set([HASH]));
+    expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mock.calls[0][1]).toHaveLength(6);
+    expect(vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mock.calls[0][3])
+      .toMatchObject({ stateBlockHash: HASH, multicallFallbackBlockHash: HASH });
+  });
+
+  it("rejects the exact failed batch leaf, never treating its unavailable amount as zero", async () => {
+    const f = fixture();
+    const first = f.plan.deployments[0]!;
+    const second = { ...first, deploymentKey: `ethereum:0x${"2".repeat(40)}`, address: `0x${"2".repeat(40)}` };
+    f.plan.deployments.push(second);
+    vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mockImplementation(async (_chain, calls) =>
+      calls.map(call => ({ label: call.label, success: call.label !== second.deploymentKey,
+        returnData: word(call.label.endsWith(":decimals") ? 6n : 100000000n) })),
+    );
+    expect(await f.run()).toEqual({
+      status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: second.deploymentKey,
+    });
+    expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).toHaveBeenCalledTimes(1);
   });
 
   it("admits pre-capture state newer than the previous source clock without redating its source", async () => {
@@ -329,6 +368,79 @@ describe("validated XRPL issued-currency observations", () => {
   });
   it.each(["malformed", "negative", "unvalidated", "hash mismatch", "missing time", "stale time"])("rejects XRPL %s", async failure => {
     expect(await xrplFixture(failure).run()).toMatchObject({ status: "rejected", rejectionCode: failure === "stale time" ? "packet-reconciliation-failed" : "deployment-state-unavailable" });
+  });
+});
+
+describe("identity-bound non-EVM economic supply", () => {
+  const metadataAddress = `0x${"b".repeat(64)}`;
+  const master = "EQDQ5UUyPHrLcQJlPAczd_fjxn8SLrlNQwolBznxCdSlfQwr";
+  const pin = { workchain: -1, shard: "-9223372036854775808", seqno: 97048839,
+    root_hash: "G++xuEKh8vIc5zIdqmuZXGKyAKbwCiAqzTKEsTSI3OM=", file_hash: "VsEwupusnpifJYRlFR4f9cZ1vJqpnxb9Huywp8jBA90=" };
+  function nonEvmFixture(chainId: "aptos" | "movement" | "ton", failure?: string) {
+    const f = fixture(), row = f.plan.deployments[0]!;
+    const address = chainId === "ton" ? master : metadataAddress;
+    Object.assign(row, { deploymentKey: `${chainId}:${address}`, chainId, address, read: chainId === "ton"
+      ? { kind: "ton-jetton-supply", apiUrl: "https://ton.example/api/v2" }
+      : { kind: "move-fa-supply", identityKind: "metadata-address", metadataAddress, ledgerChainId: chainId === "aptos" ? 1 : 126 } });
+    vi.mocked(fetch).mockImplementation(async (url, init) => {
+      const path = String(url);
+      let result: unknown;
+      if (chainId !== "ton") {
+        if (path.includes("ConcurrentSupply")) result = { type: "0x1::fungible_asset::ConcurrentSupply", data: { current: { value: "100000000" } } };
+        else if (path.includes("Metadata")) result = { type: "0x1::fungible_asset::Metadata", data: { decimals: failure === "decimals" ? 18 : 6 } };
+        else if (path.includes("ObjectCore")) result = { type: "0x1::object::ObjectCore", data: { transfer_events: { guid: { id: { addr: failure === "identity" ? "0x123" : metadataAddress } } } } };
+        else result = { chain_id: chainId === "aptos" ? 1 : 126, ledger_version: failure === "pin" ? undefined : "100",
+          ledger_timestamp: failure === "timestamp" ? undefined : String((CLOCK - 60) * 1_000_000) };
+      } else {
+        if (path.includes("getMasterchainInfo")) result = { ok: true, result: { last: pin } };
+        else if (path.includes("lookupBlock")) result = { ok: true, result: pin };
+        else if (path.includes("getBlockHeader")) result = { ok: true, result: { id: pin, global_id: -239, gen_utime: failure === "timestamp" ? undefined : CLOCK - 60 } };
+        else if (init?.method === "POST" && path.endsWith("runGetMethod")) result = { ok: true, result: { exit_code: 0, block_id: failure === "pin" ? undefined : pin, stack: [["num", "0x5f5e100"]] } };
+        else result = { ok: true, result: { address: failure === "identity" ? "other-master" : master, contract_type: "jetton_master", total_supply: "100000000",
+          jetton_content: { type: "onchain", data: { decimals: failure === "decimals" ? "18" : "6" } } } };
+      }
+      return new Response(JSON.stringify(result));
+    });
+    return f;
+  }
+  it.each(["aptos", "movement", "ton"] as const)("admits %s supply to the conserved census without rewriting the provider aggregate", async chainId => {
+    const f = nonEvmFixture(chainId);
+    expect(ReviewedEconomicSupplyPlanSchema.safeParse(f.plan).success).toBe(true);
+    expect(await f.run()).toMatchObject({ status: "accepted", attribution: {
+      aggregate: { supplyUsd: 100, observedAtSec: CLOCK - 60 }, quantitativeCompleteness: true,
+      observations: [expect.objectContaining({ amount: "100000000", anchor: chainId === "ton" ? String(pin.seqno) : "100", observedAtSec: CLOCK - 60 })],
+      deployments: [expect.objectContaining({ currentSupplyUsd: 100 })],
+    } });
+  });
+  it.each(["aptos", "movement", "ton"] as const)("rejects %s wrong metadata, missing chronology and decimals", async chainId => {
+    for (const failure of ["identity", "pin", "timestamp", "decimals"]) {
+      expect(await nonEvmFixture(chainId, failure).run()).toMatchObject({ status: "rejected", rejectionCode: "deployment-state-unavailable" });
+    }
+  });
+  it("rejects Move plan metadata and ledger-chain mismatches before observation", () => {
+    const f = nonEvmFixture("aptos"), row = f.plan.deployments[0]!;
+    if (row.read.kind !== "move-fa-supply") throw new Error("Expected Move read");
+    row.read.metadataAddress = "0x123";
+    expect(ReviewedEconomicSupplyPlanSchema.safeParse(f.plan).success).toBe(false);
+    row.read.metadataAddress = metadataAddress;
+    row.read.ledgerChainId = 126;
+    expect(ReviewedEconomicSupplyPlanSchema.safeParse(f.plan).success).toBe(false);
+  });
+  it.each(["aptos", "ton"] as const)("rejects missing persisted %s anchor identity rather than trusting conserved rows", async chainId => {
+    const f = nonEvmFixture(chainId), result = await f.run();
+    if (result.status !== "accepted") throw new Error("Expected accepted partition");
+    const validate = () => reviewedEconomicDeploymentAttributionValidationError({
+      assetId: "alpha", attribution: result.attribution, aggregateSupplyUsd: 100,
+      registryFingerprint: f.fixedInput.registryFingerprint, clockSec: CLOCK,
+    });
+    expect(validate()).toBeNull();
+    const observation = result.attribution.observations[0]!;
+    const anchor = observation.anchor;
+    observation.anchor = "latest";
+    expect(validate()).toBe("Economic supply attribution accounting/census invalid");
+    observation.anchor = anchor;
+    observation.anchorHash = "unpinned";
+    expect(validate()).toBe("Economic supply attribution accounting/census invalid");
   });
 });
 

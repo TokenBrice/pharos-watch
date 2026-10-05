@@ -1,6 +1,46 @@
 {
   "schemaVersion": 1,
   "assets": {
+    "pathusd-bridge": [
+      {
+        "factKey": "pathusd:treasury:conditional-business-day-liquidity",
+        "kind": "business-calendar-liquidity",
+        "scope": { "kind": "exposure", "exposureKey": "reserve:1c4dd3588a3d275a0d87b130" },
+        "asOfSec": 1791159033,
+        "publisher": "Bridge",
+        "sourceUrls": ["https://apidocs.bridge.xyz/platform/issuance/reserve-management"],
+        "assertion": "Reserves allocated to treasuries earn maximum rewards, and can be redeemed within 1 business day. The reserve matrix distinguishes traditional US banking hours from tokenized partners with some out-of-hours availability. This conditional normal window is not a binding whole-position liquidation guarantee.",
+        "contentDigest": "6f944f4650e6a5f510ac918ad7b8678049458e614480c0b1dd8d5ef1d542fad3",
+        "provenance": { "kind": "reviewed-research", "reviewedAt": "2026-10-05", "reviewer": "W3R38 and E09 governing-calendar review", "confidence": "high" },
+        "settlementAsset": "fiat:USD", "allInScope": true, "availableDuring": "business-day",
+        "businessDayTerms": {
+          "businessDays": 1, "calendarId": "us-federal-reserve",
+          "cutoff": { "time": null, "timezone": "America/New_York" },
+          "assurance": "target", "conditional": true,
+          "conditions": ["Partner-specific banking hours and liquidation", "No reviewed whole-position binding final-cash deadline or numeric cutoff"],
+          "startEvent": "Eligible treasury reserve redemption through Bridge and the applicable custodian"
+        }
+      },
+      {
+        "factKey": "pathusd:cash:conditional-banking-hours-liquidity",
+        "kind": "business-calendar-liquidity",
+        "scope": { "kind": "exposure", "exposureKey": "reserve:ad8f3089c8d58cf408e0be9a" },
+        "asOfSec": 1791159033,
+        "publisher": "Bridge",
+        "sourceUrls": ["https://apidocs.bridge.xyz/platform/issuance/reserve-management"],
+        "assertion": "Instantly redeemable during US banking hours, but offers lower reward than treasuries. Lead Bank is named for off-chain USD. The separate 24/7 on-chain stablecoin window does not apply to this captured Cash exposure.",
+        "contentDigest": "9204b29ab5f001bb195056c6d40e5ba0832424e84b22c60ace4265942131d1d8",
+        "provenance": { "kind": "reviewed-research", "reviewedAt": "2026-10-05", "reviewer": "W3R38 and E09 governing-calendar review", "confidence": "high" },
+        "settlementAsset": "fiat:USD", "allInScope": true, "availableDuring": "banking-hours",
+        "businessDayTerms": {
+          "businessDays": 0, "calendarId": "us-federal-reserve",
+          "cutoff": { "time": null, "timezone": "America/New_York" },
+          "assurance": "target", "conditional": true,
+          "conditions": ["US banking-hours availability only", "No numeric opening/closing times or binding whole-position final-cash deadline"],
+          "startEvent": "Eligible off-chain USD reserve redemption during Lead Bank's applicable banking hours"
+        }
+      }
+    ],
     "cash-phantom": [
       {
         "factKey": "cash-phantom:direct-treasury-bills:contractual-three-calendar-months",
@@ -550,6 +590,382 @@
         "claimId": "ethereum:0x553c7f9c780316fc1d34b8e14ac2465ab22a090b",
         "conclusion": "not-applicable",
         "governingInstrument": "RealUnit Schweiz AG Registration Agreement, September 29 2023, sections 1 and 3",
+        "allInScope": true
+      },
+      {
+        "factKey": "zchf-frankencoin:reserve:27b25b267717e34136aeb99a:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:27b25b267717e34136aeb99a"
+        },
+        "asOfSec": 1791187868,
+        "publisher": "DQTS Token Holder Agreement March 1, 2021, sections 1, 2 and 5",
+        "sourceUrls": [
+          "https://storage.googleapis.com/aktionariat/public/10/ff1e540c-b0a5-4396-9587-563e2bf8f428/2021-03-01-Token-Holder-Agreement-DQTS.pdf"
+        ],
+        "assertion": "DQTS Token Holder Agreement March 1, 2021, sections 1, 2 and 5: \"It is not possible to 'unwrap' the Drag-Along Tokens or to terminate this Agreement except as set out in Section 5 (Amendments & Termination).\" Exact held claim: Ethereum DQTS 0x8747a3114ef7f0eebd3eb337f745e31dbf81a952. Applicable duration has no finite contractual maximum. Optional termination/redemption and underlying portfolio maturity are not claim maturity maxima; no liquidity assertion.",
+        "contentDigest": "21083df5738116453a4ef4139c76824338b05be6de15c98424f86932312665c8",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "E08PerpetualMaturity governing-claim review / W3R21",
+          "confidence": "high"
+        },
+        "claimId": "Ethereum DQTS 0x8747a3114ef7f0eebd3eb337f745e31dbf81a952",
+        "conclusion": "open-ended",
+        "governingInstrument": "DQTS Token Holder Agreement March 1, 2021, sections 1, 2 and 5",
+        "allInScope": true
+      },
+      {
+        "factKey": "zchf-frankencoin:reserve:d89f0f33e2f6cd9e9da154f0:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:d89f0f33e2f6cd9e9da154f0"
+        },
+        "asOfSec": 1791187868,
+        "publisher": "Ondo Global Markets",
+        "sourceUrls": [
+          "https://cdn.sanity.io/files/8k2tqa6n/production/6f66dfe94fa8256fc18dce75edd162e3ba62fc3f.pdf"
+        ],
+        "assertion": "Ondo Global Markets Final Terms Product 1 / ISIN VGG7001AAA21 November 11, 2025, Contractual Terms Maturity Date: \"The Token is open-ended and therefore does not have a predetermined fixed maturity date.\" Exact held claim: SPYon Product 1 / ISIN VGG7001AAA21 / Ethereum 0xfedc5f4a6c38211c1338aa411018dfaf26612c08. Applicable duration has no finite contractual maximum. Optional termination/redemption and underlying portfolio maturity are not claim maturity maxima; no liquidity assertion.",
+        "contentDigest": "53e8a7b5425fa41c27de765f610310da28ce701f78e37efc2547ba3fa651a697",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "E08PerpetualMaturity governing-claim review / W3R21",
+          "confidence": "high"
+        },
+        "claimId": "SPYon Product 1 / ISIN VGG7001AAA21 / Ethereum 0xfedc5f4a6c38211c1338aa411018dfaf26612c08",
+        "conclusion": "open-ended",
+        "governingInstrument": "Ondo Global Markets Final Terms Product 1 / ISIN VGG7001AAA21 November 11, 2025, Contractual Terms Maturity Date",
+        "allInScope": true
+      }
+    ],
+    "cusd-cap": [
+      {
+        "factKey": "cusd-cap:reserve:05b4dbd0d8f8ac6ece9620b2:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:05b4dbd0d8f8ac6ece9620b2"
+        },
+        "asOfSec": 1791187868,
+        "publisher": "WisdomTree Digital Trust SAI revised August 14, 2026, General Description",
+        "sourceUrls": [
+          "https://tsr-db-bucket-1.s3.us-west-2.amazonaws.com/multiple_uploaded/1786985110_CQh9WNPM2f.pdf"
+        ],
+        "assertion": "WisdomTree Digital Trust SAI revised August 14, 2026, General Description: \"The Trust is an open-end management investment company; each Fund is a series of the Trust (including WTGXX).\" Exact held claim: WisdomTree Treasury Money Market Digital Fund (WTGXX) shares. Applicable duration has no finite contractual maximum. Optional termination/redemption and underlying portfolio maturity are not claim maturity maxima; no liquidity assertion.",
+        "contentDigest": "12d454ebc74bd1f726aca82ef9047bb2fa3c3b5f2d537c187f386f8ff40c7462",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "E08PerpetualMaturity governing-claim review / W3C09",
+          "confidence": "high"
+        },
+        "claimId": "WisdomTree Treasury Money Market Digital Fund (WTGXX) shares",
+        "conclusion": "open-ended",
+        "governingInstrument": "WisdomTree Digital Trust SAI revised August 14, 2026, General Description",
+        "allInScope": true
+      }
+    ],
+    "frax-frax": [
+      {
+        "factKey": "frax-frax:reserve:4755b7b10c8efc321b15a5b6:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:4755b7b10c8efc321b15a5b6"
+        },
+        "asOfSec": 1791187868,
+        "publisher": "Securitize Markets BUIDL distributor STEP terms May 4, 2024, Expected Maturity and Plan Design 2",
+        "sourceUrls": [
+          "https://forum.arbitrum.foundation/t/securitize-markets-buidl-step-application/23652",
+          "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+        ],
+        "assertion": "Securitize Markets BUIDL distributor STEP terms May 4, 2024, Expected Maturity and Plan Design 2: \"The fund does not have a maturity date.\" Exact held claim: BlackRock USD Institutional Digital Liquidity Fund Ltd. non-voting participating Class A shares / Ethereum 0x7712c34205737192402172409a8F7ccef8aA2AEc. Applicable duration has no finite contractual maximum. Optional termination/redemption and underlying portfolio maturity are not claim maturity maxima; no liquidity assertion.",
+        "contentDigest": "65cf9300e14b9d90f3b140d19c9a4a480cbe986e3906ec0fd905e137cea518b0",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "E08PerpetualMaturity governing-claim review / W3R04",
+          "confidence": "high"
+        },
+        "claimId": "BlackRock USD Institutional Digital Liquidity Fund Ltd. non-voting participating Class A shares / Ethereum 0x7712c34205737192402172409a8F7ccef8aA2AEc",
+        "conclusion": "open-ended",
+        "governingInstrument": "Securitize Markets BUIDL distributor STEP terms May 4, 2024, Expected Maturity and Plan Design 2",
+        "allInScope": true
+      },
+      {
+        "factKey": "frax-frax:reserve:2641ff3ab7b972607cc51b82:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:2641ff3ab7b972607cc51b82"
+        },
+        "asOfSec": 1791187868,
+        "publisher": "WisdomTree Digital Trust SAI revised August 14, 2026, General Description",
+        "sourceUrls": [
+          "https://tsr-db-bucket-1.s3.us-west-2.amazonaws.com/multiple_uploaded/1786985110_CQh9WNPM2f.pdf",
+          "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+        ],
+        "assertion": "WisdomTree Digital Trust SAI revised August 14, 2026, General Description: \"The Trust is an open-end management investment company; each Fund is a series of the Trust (including WTGXX).\" Exact held claim: WisdomTree Treasury Money Market Digital Fund (WTGXX) shares. Applicable duration has no finite contractual maximum. Optional termination/redemption and underlying portfolio maturity are not claim maturity maxima; no liquidity assertion.",
+        "contentDigest": "12d454ebc74bd1f726aca82ef9047bb2fa3c3b5f2d537c187f386f8ff40c7462",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "E08PerpetualMaturity governing-claim review / W3R11",
+          "confidence": "high"
+        },
+        "claimId": "WisdomTree Treasury Money Market Digital Fund (WTGXX) shares",
+        "conclusion": "open-ended",
+        "governingInstrument": "WisdomTree Digital Trust SAI revised August 14, 2026, General Description",
+        "allInScope": true
+      }
+    ],
+    "chfsafo-spiko": [
+      {
+        "factKey": "chfsafo-spiko:reserve:6a152156f1233d15b9d4071d:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:6a152156f1233d15b9d4071d"
+        },
+        "asOfSec": 1791187868,
+        "publisher": "SPIKO SICAV Prospectus September 1, 2026, Articles 5 and 28",
+        "sourceUrls": [
+          "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        ],
+        "assertion": "SPIKO SICAV Prospectus September 1, 2026, Articles 5 and 28: \"The Company's term is ninety-nine (99) years from the date of its registration in the Trade and Companies Register, except in the event of early dissolution or extension as provided for in these Articles of Association.\" Exact held claim: Spiko Amundi Overnight Swap Fund CHF shares / ISIN FR0014015LG6. Applicable duration has no finite contractual maximum. Optional termination/redemption and underlying portfolio maturity are not claim maturity maxima; no liquidity assertion.",
+        "contentDigest": "f91cab989094cfb70b1b6a2643933837d09e9f65593fa5a7bbf705cd5001b985",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "E08PerpetualMaturity governing-claim review / W3R08",
+          "confidence": "high"
+        },
+        "claimId": "Spiko Amundi Overnight Swap Fund CHF shares / ISIN FR0014015LG6",
+        "conclusion": "open-ended",
+        "governingInstrument": "SPIKO SICAV Prospectus September 1, 2026, Articles 5 and 28",
+        "allInScope": true
+      }
+    ],
+    "frxusd-frax": [
+      {
+        "factKey": "frxusd-frax:reserve:2641ff3ab7b972607cc51b82:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:2641ff3ab7b972607cc51b82"
+        },
+        "asOfSec": 1791187868,
+        "publisher": "WisdomTree Digital Trust SAI revised August 14, 2026, General Description",
+        "sourceUrls": [
+          "https://tsr-db-bucket-1.s3.us-west-2.amazonaws.com/multiple_uploaded/1786985110_CQh9WNPM2f.pdf"
+        ],
+        "assertion": "WisdomTree Digital Trust SAI revised August 14, 2026, General Description: \"The Trust is an open-end management investment company; each Fund is a series of the Trust (including WTGXX).\" Exact held claim: WisdomTree Treasury Money Market Digital Fund (WTGXX) shares. Applicable duration has no finite contractual maximum. Optional termination/redemption and underlying portfolio maturity are not claim maturity maxima; no liquidity assertion.",
+        "contentDigest": "12d454ebc74bd1f726aca82ef9047bb2fa3c3b5f2d537c187f386f8ff40c7462",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "E08PerpetualMaturity governing-claim review / W3R11",
+          "confidence": "high"
+        },
+        "claimId": "WisdomTree Treasury Money Market Digital Fund (WTGXX) shares",
+        "conclusion": "open-ended",
+        "governingInstrument": "WisdomTree Digital Trust SAI revised August 14, 2026, General Description",
+        "allInScope": true
+      },
+      {
+        "factKey": "frxusd-frax:reserve:4755b7b10c8efc321b15a5b6:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:4755b7b10c8efc321b15a5b6"
+        },
+        "asOfSec": 1791187868,
+        "publisher": "Securitize Markets BUIDL distributor STEP terms May 4, 2024, Expected Maturity and Plan Design 2",
+        "sourceUrls": [
+          "https://forum.arbitrum.foundation/t/securitize-markets-buidl-step-application/23652",
+          "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+        ],
+        "assertion": "Securitize Markets BUIDL distributor STEP terms May 4, 2024, Expected Maturity and Plan Design 2: \"The fund does not have a maturity date.\" Exact held claim: BlackRock USD Institutional Digital Liquidity Fund Ltd. non-voting participating Class A shares / Ethereum 0x7712c34205737192402172409a8F7ccef8aA2AEc. Applicable duration has no finite contractual maximum. Optional termination/redemption and underlying portfolio maturity are not claim maturity maxima; no liquidity assertion.",
+        "contentDigest": "65cf9300e14b9d90f3b140d19c9a4a480cbe986e3906ec0fd905e137cea518b0",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "E08PerpetualMaturity governing-claim review / W3R11",
+          "confidence": "high"
+        },
+        "claimId": "BlackRock USD Institutional Digital Liquidity Fund Ltd. non-voting participating Class A shares / Ethereum 0x7712c34205737192402172409a8F7ccef8aA2AEc",
+        "conclusion": "open-ended",
+        "governingInstrument": "Securitize Markets BUIDL distributor STEP terms May 4, 2024, Expected Maturity and Plan Design 2",
+        "allInScope": true
+      }
+    ],
+    "fusd-finchain": [
+      {
+        "factKey": "fusd-finchain:reserve:70a7a641bec3d68477f9f8e4:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:70a7a641bec3d68477f9f8e4"
+        },
+        "asOfSec": 1791187868,
+        "publisher": "ChinaAMC Digital OFC",
+        "sourceUrls": [
+          "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf"
+        ],
+        "assertion": "ChinaAMC Digital OFC prospectus September 14, 2026, The Company p.14 and Appendix 2 pp.154-156: \"The Company is an open-ended fund company established as an umbrella fund pursuant to the Instrument of Incorporation and is governed by the SFO.\" Exact held claim: ChinaAMC USD Digital Money Market Fund tokenized unlisted Class F USD (CUMFU). Applicable duration has no finite contractual maximum. Optional termination/redemption and underlying portfolio maturity are not claim maturity maxima; no liquidity assertion.",
+        "contentDigest": "cf0abe594f4de09215391cc4a64010576463eddef65afaaaa172a6623f81cbc0",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "E08PerpetualMaturity governing-claim review / W3R27",
+          "confidence": "high"
+        },
+        "claimId": "ChinaAMC USD Digital Money Market Fund tokenized unlisted Class F USD (CUMFU)",
+        "conclusion": "open-ended",
+        "governingInstrument": "ChinaAMC Digital OFC prospectus September 14, 2026, The Company p.14 and Appendix 2 pp.154-156",
+        "allInScope": true
+      }
+    ],
+    "usdtb-ethena": [
+      {
+        "factKey": "usdtb-ethena:reserve:ac76c3545bd09672a7ff2017:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:ac76c3545bd09672a7ff2017"
+        },
+        "asOfSec": 1791187868,
+        "publisher": "Securitize Markets BUIDL distributor STEP terms May 4, 2024, Expected Maturity and Plan Design 2",
+        "sourceUrls": [
+          "https://forum.arbitrum.foundation/t/securitize-markets-buidl-step-application/23652"
+        ],
+        "assertion": "Securitize Markets BUIDL distributor STEP terms May 4, 2024, Expected Maturity and Plan Design 2: \"The fund does not have a maturity date.\" Exact held claim: BlackRock USD Institutional Digital Liquidity Fund Ltd. non-voting participating Class A shares / Ethereum 0x7712c34205737192402172409a8F7ccef8aA2AEc. Applicable duration has no finite contractual maximum. Optional termination/redemption and underlying portfolio maturity are not claim maturity maxima; no liquidity assertion.",
+        "contentDigest": "8476ec949caae6870974cb37c6432b7bb15ddb551c95d8ba2a34db5071addfbb",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "E08PerpetualMaturity governing-claim review / W3R34",
+          "confidence": "high"
+        },
+        "claimId": "BlackRock USD Institutional Digital Liquidity Fund Ltd. non-voting participating Class A shares / Ethereum 0x7712c34205737192402172409a8F7ccef8aA2AEc",
+        "conclusion": "open-ended",
+        "governingInstrument": "Securitize Markets BUIDL distributor STEP terms May 4, 2024, Expected Maturity and Plan Design 2",
+        "allInScope": true
+      }
+    ],
+    "usdh-hermetica": [
+      {
+        "factKey": "usdh-hermetica:reserve:23aafbb25ba7fd0deb915e8f:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:23aafbb25ba7fd0deb915e8f"
+        },
+        "asOfSec": 1791187868,
+        "publisher": "Backed Assets (JE) Limited May 8, 2026",
+        "sourceUrls": [
+          "https://sppdownloaddocumentservice.l-p-a.com/api/DownloadDocument/UPI/CH1500008482/BF%20Final%20Terms%20AND%20Summary%20%28PDF%29"
+        ],
+        "assertion": "Backed Assets (JE) Limited May 8, 2026 Final Terms Product134, Contractual Terms Maturity Date and Terms V: \"The Products are perpetual (“open-ended”) and have no predetermined fixed maturity.\" Exact held claim: STRCx Product134 / ISIN CH1500008482 / Ethereum 0x1aad217b8f78dba5e6693460e8470f8b1a3977f3. Applicable duration has no finite contractual maximum. Optional termination/redemption and underlying portfolio maturity are not claim maturity maxima; no liquidity assertion.",
+        "contentDigest": "de6376d01c195523e07e04e27ee6bd028dc35f60ea7e72cecfc008c06ed884c4",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "E08PerpetualMaturity governing-claim review / W3R35",
+          "confidence": "high"
+        },
+        "claimId": "STRCx Product134 / ISIN CH1500008482 / Ethereum 0x1aad217b8f78dba5e6693460e8470f8b1a3977f3",
+        "conclusion": "open-ended",
+        "governingInstrument": "Backed Assets (JE) Limited May 8, 2026 Final Terms Product134, Contractual Terms Maturity Date and Terms V",
+        "allInScope": true
+      }
+    ],
+    "acrdx-anemoy-apollo": [
+      {
+        "factKey": "acrdx-anemoy-apollo:reserve:b2523b7dcb7224300edacdf7:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:b2523b7dcb7224300edacdf7"
+        },
+        "asOfSec": 1791187868,
+        "publisher": "Apollo Diversified Credit Fund",
+        "sourceUrls": [
+          "https://app.centrifuge.io/pool/281474976710664",
+          "https://centrifuge-files.mypinata.cloud/ipfs/bafkreigpp4zkwecojcuipjnzyclrfgzaqe6tu5vedvujw6u73c3xfwbx5m",
+          "https://www.apollo.com/content/dam/apolloaem/documents/fund-documents/adcf-prospectus.pdf"
+        ],
+        "assertion": "Apollo Diversified Credit Fund prospectus April 29, 2025, Fund life (expected indefinite): \"throughout the life of the Fund (which is expected to be indefinite)\" Exact held claim: Apollo Diversified Credit Fund shares held by Anemoy Tokenized Apollo Diversified Credit Fund Segregated Portfolio. Applicable duration has no finite contractual maximum. Optional termination/redemption and underlying portfolio maturity are not claim maturity maxima; no liquidity assertion.",
+        "contentDigest": "a43e2f693cfe24fe4c148e4c681f67d85b943a645907f0836bd657237772c281",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "E08PerpetualMaturity governing-claim review / W3R37",
+          "confidence": "high"
+        },
+        "claimId": "Apollo Diversified Credit Fund shares held by Anemoy Tokenized Apollo Diversified Credit Fund Segregated Portfolio",
+        "conclusion": "open-ended",
+        "governingInstrument": "Apollo Diversified Credit Fund prospectus April 29, 2025, Fund life (expected indefinite)",
+        "allInScope": true
+      }
+    ],
+    "usdo-openeden": [
+      {
+        "factKey": "usdo-openeden:reserve:7c0d903fb0332872c1d7c426:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:7c0d903fb0332872c1d7c426"
+        },
+        "asOfSec": 1791187868,
+        "publisher": "Securitize Markets BUIDL distributor STEP terms May 4, 2024, Expected Maturity and Plan Design 2",
+        "sourceUrls": [
+          "https://forum.arbitrum.foundation/t/securitize-markets-buidl-step-application/23652"
+        ],
+        "assertion": "Securitize Markets BUIDL distributor STEP terms May 4, 2024, Expected Maturity and Plan Design 2: \"The fund does not have a maturity date.\" Exact held claim: BlackRock USD Institutional Digital Liquidity Fund Ltd. non-voting participating Class A shares / Ethereum 0x7712c34205737192402172409a8F7ccef8aA2AEc. Applicable duration has no finite contractual maximum. Optional termination/redemption and underlying portfolio maturity are not claim maturity maxima; no liquidity assertion.",
+        "contentDigest": "8476ec949caae6870974cb37c6432b7bb15ddb551c95d8ba2a34db5071addfbb",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "E08PerpetualMaturity governing-claim review / W3R42",
+          "confidence": "high"
+        },
+        "claimId": "BlackRock USD Institutional Digital Liquidity Fund Ltd. non-voting participating Class A shares / Ethereum 0x7712c34205737192402172409a8F7ccef8aA2AEc",
+        "conclusion": "open-ended",
+        "governingInstrument": "Securitize Markets BUIDL distributor STEP terms May 4, 2024, Expected Maturity and Plan Design 2",
+        "allInScope": true
+      }
+    ],
+    "jaaa-janus-henderson-anemoy": [
+      {
+        "factKey": "jaaa-janus-henderson-anemoy:reserve:4a82d397df2ecd3c6575e829:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:4a82d397df2ecd3c6575e829"
+        },
+        "asOfSec": 1791187868,
+        "publisher": "Janus Henderson Anemoy AAA CLO Fund June 2026 factsheet, Key Facts Type and Overview",
+        "sourceUrls": [
+          "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le",
+          "https://www.anemoy.io/funds/jaaa"
+        ],
+        "assertion": "Janus Henderson Anemoy AAA CLO Fund June 2026 factsheet, Key Facts Type and Overview: \"Open-ended BVI professional fund\" Exact held claim: Janus Henderson Anemoy AAA CLO Fund Segregated Portfolio shares / chainlink-nav:token:0x5a0f93d040de44e78f251b03c43be9cf317dcf64. Applicable duration has no finite contractual maximum. Optional termination/redemption and underlying portfolio maturity are not claim maturity maxima; no liquidity assertion.",
+        "contentDigest": "5e91bd74e0bbf7dc1e7d6d5a51b72563b82a40b6ff15e9bbcc38d8bd9deffbce",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "E08PerpetualMaturity governing-claim review / W3R52",
+          "confidence": "high"
+        },
+        "claimId": "Janus Henderson Anemoy AAA CLO Fund Segregated Portfolio shares / chainlink-nav:token:0x5a0f93d040de44e78f251b03c43be9cf317dcf64",
+        "conclusion": "open-ended",
+        "governingInstrument": "Janus Henderson Anemoy AAA CLO Fund June 2026 factsheet, Key Facts Type and Overview",
         "allInScope": true
       }
     ]

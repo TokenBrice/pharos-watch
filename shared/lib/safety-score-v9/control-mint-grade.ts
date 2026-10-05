@@ -224,6 +224,10 @@ export function gradeVerifiedControlAuthority(control: V9DeploymentControlFactV2
       // A centralized backend key with a bounded claim is neither a lift nor a
       // clear danger on static facts alone: hold at the neutral default.
       return controlPolicy.boundedUnknownQuality;
+    case "chain-consensus":
+      // Native same-chain execution is known, but proves neither independent
+      // signers nor a protective mint/escrow bound. No favorable authority lift.
+      return controlPolicy.boundedUnknownQuality;
     case "validator-quorum":
       // An external validation quorum is a named, public failure domain — it is
       // no longer unknown — but its membership rotates and no individual signer

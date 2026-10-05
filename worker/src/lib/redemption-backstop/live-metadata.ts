@@ -13,7 +13,7 @@ import type {
   RedemptionRouteStatus,
   RedemptionRouteStatusSource,
 } from "@shared/types/redemption";
-import { LiveReserveRedemptionOutputValuationSchema } from "@shared/types/live-reserves";
+import { LiveReserveRedemptionOutputValuationSchema, LiveReserveRedemptionTelemetrySchema } from "@shared/types/live-reserves";
 import { isValidIsoDateOnly } from "@shared/types/date-primitives";
 import {
   RedemptionHolderEligibilitySchema,
@@ -71,6 +71,7 @@ export interface RedemptionBackstopLiveMetadata {
   v9FpiControllerRouteState: FpiControllerV9RouteState | null;
   v9SfrxusdCrosschainRouteState: SfrxusdCrosschainV9RouteState | null;
   v9OutputValuation?: LiveReserveRedemptionOutputValuation | null;
+  outputAssetKeys?: string[] | null;
 }
 
 interface ParsedRedemptionTelemetry {
@@ -604,12 +605,16 @@ export function readRedemptionBackstopLiveMetadata(
     stablecoinId,
   });
 
+  const parsedOutputAssetKeys = LiveReserveRedemptionTelemetrySchema.shape.outputAssetKeys.safeParse(
+    redemptionTelemetry.outputAssetKeys,
+  );
   return {
     updatedAt,
     isFresh,
     hasScoringEligibleFreshness,
     hasBlockingWarnings,
     capacityNotes: [...telemetryWarnings, ...capacityNotes],
+    outputAssetKeys: parsedOutputAssetKeys.success ? parsedOutputAssetKeys.data ?? null : null,
     capacityConfidence:
       capacityTelemetryInvalid
         ? null

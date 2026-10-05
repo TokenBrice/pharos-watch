@@ -6,6 +6,7 @@ import type {
 } from "../../types";
 import { criticalControllerKey } from "../control-identities";
 import { isWellFormedDeploymentId, normalizeDeploymentId } from "../../types/deployment-id";
+import { BridgeRouteRiskProfileSchema } from "../../types/stablecoin-meta-control-schemas";
 import { isActiveStablecoinMeta } from "./status";
 
 export type MintBridgeOwnershipMeta = Pick<
@@ -487,6 +488,12 @@ export function validateMintBridgeOwnership(
       control.routeRefs.some((routeRef) => normalizeDeploymentId(routeRef) === routeId),
     );
     if (coveringControls.length === 0 || coveringControls.some((control) => control.capabilities.includes("bridge-mint"))) {
+      continue;
+    }
+    // The reviewed native system family transfers ERC20 escrow; it does not
+    // invoke a representation-token minter. Do not admit a bare family label.
+    if (coveringControls.some((control) => control.sameChainSystemTransport != null) &&
+        BridgeRouteRiskProfileSchema.safeParse(meta.bridgeRouteRisk).success) {
       continue;
     }
 

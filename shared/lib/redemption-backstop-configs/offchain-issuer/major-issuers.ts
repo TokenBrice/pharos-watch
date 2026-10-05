@@ -140,6 +140,17 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-04-20"),
     settlementModel: "days",
+    v9RouteReviewTerms: {
+      businessDayTerms: {
+        businessDays: 3, calendarId: "brazil-b3-national",
+        cutoff: { time: null, timezone: "America/Sao_Paulo" },
+        assurance: "target", conditional: true,
+        conditions: ["Approved user's verified bank account", "Banking constraints", "Reserve-asset liquidation; T+1 before noon, T+2 before local market close, T+3 after close are targets"],
+        startEvent: "Approved standard redemption request; local market-close cutoff has no reviewed numeric time",
+      },
+      reviewedAt: "2026-10-05",
+      docs: [sourceRef("Crown binding terms, section III.A (2026-09-18)", "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_ENG_aa655faffc.pdf", ["settlement"])],
+    },
     routeStatus: "open",
     costModel: documentedVariableFee(
       "Crown terms describe standard and instant BRL redemption routes, but public materials reviewed do not expose a machine-readable fixed fee schedule",
@@ -351,6 +362,17 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...reviewedDirectRedemptionSupplyFull,
     settlementModel: "days",
     costModel: fixedFee(0, "Issuer docs describe EURI redemption as fee-free at par"),
+    v9RouteReviewTerms: {
+      businessDayTerms: {
+        businessDays: 5, calendarId: "luxembourg-banking-target",
+        cutoff: { time: null, timezone: "Europe/Luxembourg" },
+        assurance: "binding-guarantee", conditional: true,
+        conditions: ["Completed Tokenholder KYC to Banking Circle's satisfaction", "Receipt of EURI in the Banking Circle Burn Wallet; KYC failure permits suspension"],
+        startEvent: "Receipt of Redemption Request subject to completed KYC and burn-wallet delivery (condition 7.1)",
+      },
+      reviewedAt: "2026-10-05",
+      docs: [sourceRef("EURI governing terms, conditions 1.2 and 7.1", "https://www.eurite.com/wp-content/uploads/2024/07/EUR-TCs-Final-clean.pdf", ["settlement"])],
+    },
     docs: [
       sourceRefRouteCapacityFees("EURI white paper", "https://www.eurite.com/wp-content/uploads/2024/08/EURI-white-paper.html"),
     ],

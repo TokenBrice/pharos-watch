@@ -9,11 +9,12 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import reviewedEconomicSupplyPlans from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import type { BridgeRouteRiskProfile, StablecoinMeta } from "@shared/types/core";
-import { ReviewedEconomicSupplyPlanEnvelopeSchema, ReviewedEconomicSupplyPlanSchema, ReviewedEconomicDeploymentPartitionSchema, type ReviewedEconomicSupplyPlan, type ReviewedEconomicDeploymentPartition, type EconomicSupplyObservation, type EconomicSupplyReference } from "@shared/types/safety-score-v9-supply-attribution";
+import { ReviewedEconomicSupplyPlanEnvelopeSchema, ReviewedEconomicSupplyPlanSchema, ReviewedEconomicDeploymentPartitionSchema, ReviewedProviderChainPartitionSchema, type ReviewedProviderChainPartition, type ReviewedEconomicSupplyPlan, type ReviewedEconomicDeploymentPartition, type EconomicSupplyObservation, type EconomicSupplyReference } from "@shared/types/safety-score-v9-supply-attribution";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import { createReviewedAssetRegistry, ReviewedRegistryEntryError } from "./extension-reviewed-registry";
 import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
+import { authenticateCcipPendingObservation } from "./ccip-pending-observer";
 
 const REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec;
 const REVIEWED_DEPLOYMENT_SUPPLY_MAX_SKEW_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxSkewSec;
@@ -918,6 +919,77 @@ export const REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE = economicSupplyRegistry.envel
 export const REVIEWED_ECONOMIC_SUPPLY_PLANS: ReadonlyMap<string, ReviewedEconomicSupplyPlan> = economicSupplyRegistry.plans;
 export const REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES: ReadonlyMap<string, ReviewedRegistryEntryError> = economicSupplyRegistry.quarantines;
 
+export const REVIEWED_PROVIDER_CHAIN_PARTITIONS = createReviewedAssetRegistry({
+  rows: REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE.providerChainPartitionReviews ?? [],
+  schema: ReviewedProviderChainPartitionSchema,
+  path: "supplyAttribution.providerChainPartitionReviews",
+  keyOf: row => typeof row.chainId === "string" ? `${row.assetId}:${row.chainId}` : undefined,
+  keyPath: "chainId",
+});
+
+/** Preserves a provider row, splitting only a reviewed disjoint same-unit chain census. */
+export function deriveReviewedProviderChainPartition(input: {
+  review: ReviewedProviderChainPartition;
+  meta: Pick<StablecoinMeta, "contracts" | "bridgeRouteRisk">;
+  clockSec: number; supplyUsd: number;
+  observations: readonly {
+    deploymentKey: string; rawTokenUnits: string | null; decimals: number | null;
+    blockNumber: string | null; blockHash?: string; observedAtSec: number | null; status: string;
+  }[];
+}): Array<{ routeId: string; supplyUsd: number }> | null {
+  const { review, meta, observations } = input;
+  if (!ReviewedProviderChainPartitionSchema.safeParse(review).success ||
+    input.clockSec < review.reviewedAtSec || input.clockSec >= review.expiresAtSec ||
+    !Number.isFinite(input.supplyUsd) || input.supplyUsd < 0) return null;
+  const contracts = (meta.contracts ?? []).filter(row => resolveChainId(row.chain) === review.chainId);
+  const routes = (meta.bridgeRouteRisk?.routes ?? []).filter(row => resolveChainId(row.destinationChain) === review.chainId);
+  if (contracts.length !== review.deployments.length || routes.length !== review.deployments.length ||
+    observations.length !== review.deployments.length ||
+    new Set(observations.map(row => row.deploymentKey)).size !== observations.length ||
+    new Set(contracts.map(row => normalizeAddress(review.chainId, row.address))).size !== contracts.length ||
+    new Set(routes.map(row => row.id)).size !== routes.length) return null;
+  const maxDecimals = Math.max(...review.deployments.map(row => row.decimals));
+  const quantities: bigint[] = [];
+  let anchor: string | null = null;
+  for (const deployment of review.deployments) {
+    const contract = contracts.find(row => normalizeAddress(review.chainId, row.address) === deployment.address);
+    const route = routes.find(row => row.id === deployment.routeId);
+    const observation = observations.find(row => row.deploymentKey === deployment.routeId);
+    if (!contract || !isFixedDecimalDeployment(contract) || contract.decimals !== deployment.decimals ||
+      !route || route.contractAddress.toLowerCase() !== deployment.address || route.reviewDisposition !== "reviewed" ||
+      !observation || observation.status !== "accepted" || observation.rawTokenUnits === null ||
+      !RAW_SUPPLY_RE.test(observation.rawTokenUnits) || observation.rawTokenUnits.length > 78 || observation.decimals !== deployment.decimals ||
+      observation.blockNumber === null || !RAW_SUPPLY_RE.test(observation.blockNumber) ||
+      !observation.blockHash || !EVM_BLOCK_HASH_RE.test(observation.blockHash) ||
+      observation.observedAtSec === null || !Number.isInteger(observation.observedAtSec) ||
+      observation.observedAtSec > input.clockSec ||
+      input.clockSec - observation.observedAtSec > REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC) return null;
+    const pin = `${observation.blockNumber}:${observation.blockHash}:${observation.observedAtSec}`;
+    if (anchor !== null && pin !== anchor) return null;
+    anchor = pin;
+    quantities.push(BigInt(observation.rawTokenUnits) * 10n ** BigInt(maxDecimals - deployment.decimals));
+  }
+  const total = quantities.reduce((sum, value) => sum + value, 0n);
+  if (total === 0n) return input.supplyUsd === 0 ? review.deployments.map(row => ({ routeId: row.routeId, supplyUsd: 0 })) : null;
+  if (input.supplyUsd === 0) return null;
+  // The adapter proves a common price cancels in this ratio. No whole-asset
+  // denominator, escrow subtraction or other-chain liability is inferred.
+  let residualIndex = quantities.length - 1;
+  while (quantities[residualIndex] === 0n) residualIndex--;
+  let allocated = 0;
+  const rows = review.deployments.map((row, index) => {
+    const supplyUsd = index === residualIndex ? 0 : input.supplyUsd * (Number(quantities[index]!) / Number(total));
+    allocated += supplyUsd;
+    return { routeId: row.routeId, supplyUsd };
+  });
+  const residual = input.supplyUsd - allocated;
+  const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
+  if (!Number.isFinite(residual) || residual < 0 ||
+    Math.abs(allocated + residual - input.supplyUsd) > Math.max(policy.conservationAbsoluteToleranceUsd, input.supplyUsd * policy.conservationRelativeTolerance)) return null;
+  rows[residualIndex]!.supplyUsd = residual;
+  return rows;
+}
+
 /** A native liability can still expose bridge message acceptance or escrow control. */
 export function reviewedSupplyRouteKind(route: NonNullable<BridgeRouteRiskProfile["routes"]>[number], profile?: Pick<BridgeRouteRiskProfile, "controls">): "native" | "controlled" {
   const controlled = (profile?.controls ?? []).some(control =>
@@ -937,6 +1009,8 @@ export function buildReviewedEconomicDeploymentInventory(
   const keys = new Set(plan.deployments.map(row => row.deploymentKey));
   const excluded = new Set(plan.excludedRegistryDeploymentKeys);
   if ([...excluded].some(key => keys.has(key))) return null;
+  if ((meta.bridgeRouteRisk?.routes ?? []).some(route => route.semantics === "lock-mint") &&
+    plan.escrows.length === 0) return null;
   if ((meta.bridgeRouteRisk?.routes ?? []).some(route => route.semantics === "burn-mint") &&
     plan.escrows.length === 0 && plan.liabilityInFlightSource === null) return null;
   const registeredKeys = new Set<string>();
@@ -1073,6 +1147,11 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
       }
       if (row.read.kind === "solana-mint" && !SOLANA_BLOCK_HASH_RE.test(observation.anchorHash)) return null;
       if (row.read.kind === "xrpl-issued-currency" && !SHA256_RE.test(observation.anchorHash)) return null;
+      if (row.read.kind === "move-fa-supply" &&
+        (!RAW_SUPPLY_RE.test(observation.anchor) || !SHA256_RE.test(observation.anchorHash) ||
+          observation.anchorHash !== observation.responseSha256)) return null;
+      if (row.read.kind === "ton-jetton-supply" &&
+        (!/^[1-9][0-9]*$/.test(observation.anchor) || !/^[A-Za-z0-9+/]{43}=$/.test(observation.anchorHash))) return null;
     }
     if (row.decimals !== null && !RAW_SUPPLY_RE.test(observation.amount)) return null;
     let value = economicDecimal(observation.amount, row.decimals);
@@ -1089,7 +1168,7 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
     observation: EconomicSupplyObservation,
   ): boolean => {
     const proof = observation.layerZeroOftPendingProof;
-    if (!proof || observation.curvePendingProof !== undefined ||
+    if (!proof || observation.curvePendingProof !== undefined || observation.ccipPendingProof !== undefined ||
       proof.sourceDigest !== sha256Hex(stableJsonStringifyV1(source)) ||
       proof.pins.length !== source.sides.length || proof.pathways.length !== source.pathways.length ||
       proof.pins.some((pin, index) => {
@@ -1142,7 +1221,8 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
           pendingObservation.observedAtSec !== observation.observedAtSec) return null;
         if (escrow.inFlightSource.kind === "evm-curve-lz-pending") {
           const source = escrow.inFlightSource, proof = pendingObservation.curvePendingProof;
-          if (!proof || proof.sourceDigest !== sha256Hex(stableJsonStringifyV1(source)) ||
+          if (!proof || pendingObservation.layerZeroOftPendingProof !== undefined || pendingObservation.ccipPendingProof !== undefined ||
+            proof.sourceDigest !== sha256Hex(stableJsonStringifyV1(source)) ||
             proof.pins.length !== source.sides.length ||
             proof.pins.some((pin, index) => {
               const side = source.sides[index]!;
@@ -1157,7 +1237,11 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
             pendingObservation.responseSha256 !== sha256Hex(stableJsonStringifyV1({ proof, amount: pendingObservation.amount }))) return null;
         } else if (escrow.inFlightSource.kind === "evm-layerzero-oft-pending") {
           if (!validOftPending(escrow.inFlightSource, pendingObservation)) return null;
-        } else if (pendingObservation.curvePendingProof !== undefined || pendingObservation.layerZeroOftPendingProof !== undefined) return null;
+        } else if (escrow.inFlightSource.kind === "evm-ccip-pending") {
+          if (pendingObservation.curvePendingProof !== undefined || pendingObservation.layerZeroOftPendingProof !== undefined ||
+            !authenticateCcipPendingObservation(escrow.inFlightSource, pendingObservation, input.observations, input.plan.deployments)) return null;
+        } else if (pendingObservation.curvePendingProof !== undefined ||
+          pendingObservation.layerZeroOftPendingProof !== undefined || pendingObservation.ccipPendingProof !== undefined) return null;
       }
       const pending: EconomicFraction | null | undefined = escrow.inFlightSource === null && input.plan.inFlightTreatment === "atomic-native-wrapper"
         ? { n: 0n, d: 1n } : pendingObservation && convert(escrow.canonicalDeploymentKey, pendingObservation);
@@ -1182,10 +1266,16 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
     }
     if (input.plan.liabilityInFlightSource !== null) {
       const pendingObservation = observations.get("in-flight:liability");
-      if (input.plan.liabilityInFlightSource !== null && "kind" in input.plan.liabilityInFlightSource) {
-        if (input.plan.liabilityInFlightSource.kind !== "evm-layerzero-oft-pending" || !pendingObservation ||
-          !validOftPending(input.plan.liabilityInFlightSource, pendingObservation)) return null;
-      } else if (pendingObservation?.layerZeroOftPendingProof !== undefined) return null;
+      const source = input.plan.liabilityInFlightSource;
+      if ("kind" in source) {
+        if (!pendingObservation) return null;
+        if (source.kind === "evm-layerzero-oft-pending") {
+          if (!validOftPending(source, pendingObservation)) return null;
+        } else if (source.kind === "evm-ccip-pending") {
+          if (pendingObservation.curvePendingProof !== undefined || pendingObservation.layerZeroOftPendingProof !== undefined ||
+            !authenticateCcipPendingObservation(source, pendingObservation, input.observations, input.plan.deployments)) return null;
+        } else return null;
+      } else if (pendingObservation?.layerZeroOftPendingProof !== undefined || pendingObservation?.ccipPendingProof !== undefined) return null;
       const pending = pendingObservation && convert(input.plan.deployments[0]!.deploymentKey, pendingObservation);
       if (!pending) return null;
       remainder = addEconomicUnits(remainder, pending);

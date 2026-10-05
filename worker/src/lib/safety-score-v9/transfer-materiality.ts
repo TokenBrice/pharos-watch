@@ -11,7 +11,7 @@ import type { V9ExtensionRegistryMeta } from "./extension-shared";
 import type { SafetyScoreV9TransferMaterialScope } from "./extension-transfer";
 import { reviewedDeploymentObservationTimingIssue } from "./supply-attribution-contract";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { REVIEWED_ECONOMIC_SUPPLY_PLANS, reviewedEconomicDeploymentAttributionValidationError } from "./supply-attribution-contract";
+import { REVIEWED_ECONOMIC_SUPPLY_PLANS, REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE, reviewedEconomicDeploymentAttributionValidationError } from "./supply-attribution-contract";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 
@@ -19,7 +19,7 @@ export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY =
   "safety-score-v9:transfer-materiality-generation:v1";
 const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_MAX_AGE_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec;
 
-export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS = Object.freeze([
+export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS = Object.freeze([...new Set([
   "aa-falconx-mev-capital", "asusdf-astherus", "bbqusdc-steakhouse", "bd-basedollar", "dusd-dialectic",
   "eearn-ember", "fusd-freedom-dollar", "fxsave-f-x-protocol", "gldt-gold-dao",
   "gtusdc-gauntlet", "gtusdcp-gauntlet", "jpyt-dephaser", "jusd-juicedollar",
@@ -30,19 +30,41 @@ export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS = Object.freeze([
   "vcred-vcred", "vusd-virtue", "wsrusd-reservoir", "xdai-gnosis", "ybold-yearn",
   "yusd-yieldfi", "zsd-zephyr-protocol", "zys-zephyr-protocol",
   ...REVIEWED_ECONOMIC_SUPPLY_PLANS.keys(),
-].sort(compareText));
+  ...REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE.independentLiabilityAssetIds,
+  ...(REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE.providerChainPartitionReviews ?? []).map(row => row.assetId),
+])].sort(compareText));
 
 const TRANSFER_MATERIALITY_ASSET_ID_SET = new Set(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS);
+const HaltedChainHeadSchema = z.object({
+  endpointOrigin: z.string().url().refine(value => new URL(value).origin === value),
+  blockNumber: z.string().regex(/^(0|[1-9][0-9]*)$/),
+  blockHash: z.string().regex(/^0x[a-f0-9]{64}$/),
+  timestampSec: UnixSecondsSchema,
+}).strict();
+const HaltedChainProvenanceSchema = z.object({
+  kind: z.literal("halted-chain"),
+  checkedAtSec: UnixSecondsSchema,
+  heads: z.tuple([HaltedChainHeadSchema, HaltedChainHeadSchema]),
+}).strict();
 const DeploymentObservationSchema = z.object({
   deploymentKey: z.string().min(1),
   rawTokenUnits: z.string().regex(/^(0|[1-9][0-9]*)$/).nullable(),
   decimals: z.number().int().min(0).max(255).nullable(),
   blockNumber: z.string().regex(/^(0|[1-9][0-9]*)$/).nullable(),
+  blockHash: z.string().regex(/^0x[0-9a-f]{64}$/).optional(),
   observedAtSec: UnixSecondsSchema.nullable(),
   status: z.enum(["accepted", "rejected"]),
+  provenance: HaltedChainProvenanceSchema.optional(),
 }).strict().superRefine((row, ctx) => {
   const complete = row.rawTokenUnits !== null && row.decimals !== null && row.blockNumber !== null && row.observedAtSec !== null;
   if ((row.status === "accepted") !== complete) ctx.addIssue({ code: "custom", message: "Accepted observations require a complete raw-unit packet" });
+  if (row.provenance && (row.status !== "accepted" ||
+      row.provenance.heads[0].endpointOrigin === row.provenance.heads[1].endpointOrigin ||
+      row.provenance.heads.some(head => head.blockNumber !== row.blockNumber ||
+        head.timestampSec !== row.observedAtSec || head.blockHash !== row.provenance!.heads[0].blockHash ||
+        row.provenance!.checkedAtSec - head.timestampSec < V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.haltedChainMinStallSec))) {
+    ctx.addIssue({ code: "custom", message: "Frozen liabilities require agreeing independent stalled heads" });
+  }
 });
 
 /** Raw token-unit evidence only. It is deliberately incapable of carrying USD or price data. */
@@ -79,14 +101,13 @@ function authoritativeDeployments(meta: V9ExtensionRegistryMeta): Array<{ deploy
   return rows.some((row) => row === null) ? null : rows as Array<{ deployment: ContractDeployment; key: string }>;
 }
 
-export interface SafetyScoreV9ExactTransferMaterialityObservation {
-  deploymentKey: string;
+export type SafetyScoreV9ExactTransferMaterialityObservation = SafetyScoreV9TransferMaterialityObservation & {
   rawTokenUnits: string;
   decimals: number;
   blockNumber: string;
   observedAtSec: number;
   status: "accepted";
-}
+};
 
 export interface SafetyScoreV9ExactTransferMaterialityPacket {
   authoritativeDeploymentKeys: readonly string[];
@@ -131,17 +152,23 @@ export function exactInputBoundTransferMaterialityPacket(input: {
     return row.status !== "accepted" || row.rawTokenUnits === null || row.decimals === null ||
       row.blockNumber === null || row.observedAtSec === null || !deployment || !isFixedDecimalDeployment(deployment) ||
       row.decimals !== deployment.decimals || row.observedAtSec > input.clockSec ||
-      input.clockSec - row.observedAtSec > SAFETY_SCORE_V9_TRANSFER_MATERIALITY_MAX_AGE_SEC;
+      (row.provenance
+        ? row.provenance.checkedAtSec > input.clockSec ||
+          input.clockSec - row.provenance.checkedAtSec > SAFETY_SCORE_V9_TRANSFER_MATERIALITY_MAX_AGE_SEC ||
+          !DeploymentObservationSchema.safeParse(row).success
+        : input.clockSec - row.observedAtSec > SAFETY_SCORE_V9_TRANSFER_MATERIALITY_MAX_AGE_SEC);
   })) return null;
 
   const accepted = observations as SafetyScoreV9ExactTransferMaterialityObservation[];
-  const observedAt = accepted.map((row) => row.observedAtSec);
+  // Frozen ledger time is retained; only the independent head check has a
+  // current clock. It never makes the halted leg healthy-live or native.
+  const observedAt = accepted.map((row) => row.provenance?.checkedAtSec ?? row.observedAtSec);
   if (reviewedDeploymentObservationTimingIssue({
     clockSec: input.clockSec,
     captureStartedAtSec: Math.min(...observedAt),
     captureEndedAtSec: Math.max(...observedAt),
     observedAtSec: Math.max(...observedAt),
-    deployments: accepted.map((row) => ({ routeId: row.deploymentKey, blockTimeSec: row.observedAtSec })),
+    deployments: accepted.map((row) => ({ routeId: row.deploymentKey, blockTimeSec: row.provenance?.checkedAtSec ?? row.observedAtSec })),
   }) !== null) return null;
 
   return {

@@ -41,7 +41,7 @@ describe("redemption backstop config consistency", () => {
   });
 
   it("uses every reviewed settlement override as the canonical public model", () => {
-    const clockSec = Date.UTC(2026, 8, 5) / 1_000;
+    const clockSec = Date.UTC(2026, 9, 5) / 1_000;
     const reviewed = entries.filter(([, config]) => config.v9RouteReviewTerms?.settlementModel != null);
     expect(reviewed.length).toBeGreaterThan(0);
     for (const [id, config] of reviewed) {
@@ -49,6 +49,12 @@ describe("redemption backstop config consistency", () => {
         config.v9RouteReviewTerms?.settlementModel,
       );
     }
+  });
+
+  it.each(["slvon-ondo", "iauon-ondo"])("does not apply the %s USDon review before its evidence date", (id) => {
+    const config = getRedemptionBackstopConfig(id)!;
+    expect(resolveReviewedRedemptionSettlement(config, Date.UTC(2026, 8, 5) / 1_000)).toBe("immediate");
+    expect(resolveReviewedRedemptionSettlement(config, Date.UTC(2026, 9, 5) / 1_000)).toBe("atomic");
   });
 
   it("every config ID exists in TRACKED_META_BY_ID", () => {
