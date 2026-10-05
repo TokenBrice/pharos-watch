@@ -40458,6 +40458,1095 @@
         "https://ethereum-rpc.publicnode.com"
       ],
       "rationale": "Rebind the prior custody-only proof to this exact owner/curator 1-of-1 Safe keyCustody factor. Prior issuer legal/security/product/governance/reporting/audit and contract research establishes no public identity-to-sole-EOA mapping, independently attested signing/custody/recovery policy or inter-role human independence. Noncustodial user-asset terms and segregated-key execution claims do not bind these exact signers. Preserve any separate incident, delegated-reach and execution gaps U."
+    },
+    {
+      "id": "uw-chfsafo-spiko-abdae90503fc8c19",
+      "assetId": "chfsafo-spiko",
+      "scope": {
+        "componentKey": "control:mint-meta:chfsafo-spiko:638ff2559d7d189253b4",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2025-05-04",
+          "location": "Managing Permissions",
+          "excerpt": "The super-admin group, controlled by our multisig wallet, has full access to upgrade contracts and manage permissions.",
+          "assertion": "Names super-admin multisig authority, not current chain-local signer custody."
+        },
+        {
+          "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2025-10-24",
+          "location": "Transaction Execution and Relaying",
+          "excerpt": "Transaction Signing: Secures transaction signing using a managed wallet from Dfns",
+          "assertion": "Dfns statement concerns relayer signing, not the five ADMIN Safe owner key sets."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": null,
+          "location": "PDF p8, Maturity evaluation / Access Controls",
+          "excerpt": "Privileged operations are handled through multisignature accounts and hardware wallets.",
+          "assertion": "2023 architecture audit does not bind hardware-wallet custody to the current CHF ADMIN Safe signers."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.spiko.io/",
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://dfns.co/article/announcing-spiko.md",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://public-api.spiko.io/share-classes/chfSAFO",
+        "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+        "https://raw.githubusercontent.com/AdevarLabs/audit-reports/main/reports/2026-06-12_Spiko_Solana_Minter_audit_report.pdf",
+        "https://docs.spiko.io/documentation/product_overview/overview"
+      ],
+      "rationale": "Current Ethereum, Polygon, Arbitrum, Base and Etherlink 3-of-6 ADMIN Safe human independence, beneficial key custody and signing approval policy are not disclosed for those controllers. Dfns is named for relayers/treasury/client wallets and the 2023 audit describes hardware wallets generically; neither identifies these current CHF ADMIN signer key sets. C applies only to offchain custody, never to observable quorum or privileges. Typed custody questions remain open."
+    },
+    {
+      "id": "uw-chfsafo-spiko-aeaf1cd4ef01ee37",
+      "assetId": "chfsafo-spiko",
+      "scope": {
+        "componentKey": "control:mint-meta:chfsafo-spiko:88611217558137a4e2e2",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2025-05-04",
+          "location": "Managing Permissions",
+          "excerpt": "The super-admin group, controlled by our multisig wallet, has full access to upgrade contracts and manage permissions.",
+          "assertion": "Names super-admin multisig authority, not current chain-local signer custody."
+        },
+        {
+          "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2025-10-24",
+          "location": "Transaction Execution and Relaying",
+          "excerpt": "Transaction Signing: Secures transaction signing using a managed wallet from Dfns",
+          "assertion": "Dfns statement concerns relayer signing, not the five ADMIN Safe owner key sets."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": null,
+          "location": "PDF p8, Maturity evaluation / Access Controls",
+          "excerpt": "Privileged operations are handled through multisignature accounts and hardware wallets.",
+          "assertion": "2023 architecture audit does not bind hardware-wallet custody to the current CHF ADMIN Safe signers."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.spiko.io/",
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://dfns.co/article/announcing-spiko.md",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://public-api.spiko.io/share-classes/chfSAFO",
+        "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+        "https://raw.githubusercontent.com/AdevarLabs/audit-reports/main/reports/2026-06-12_Spiko_Solana_Minter_audit_report.pdf",
+        "https://docs.spiko.io/documentation/product_overview/overview"
+      ],
+      "rationale": "Current Ethereum, Polygon, Arbitrum, Base and Etherlink 3-of-6 ADMIN Safe human independence, beneficial key custody and signing approval policy are not disclosed for those controllers. Dfns is named for relayers/treasury/client wallets and the 2023 audit describes hardware wallets generically; neither identifies these current CHF ADMIN signer key sets. C applies only to offchain custody, never to observable quorum or privileges. Typed custody questions remain open."
+    },
+    {
+      "id": "uw-chfsafo-spiko-e3cf132d68657ed9",
+      "assetId": "chfsafo-spiko",
+      "scope": {
+        "componentKey": "control:mint-meta:chfsafo-spiko:a747402b94770f893a2e",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2025-05-04",
+          "location": "Managing Permissions",
+          "excerpt": "The super-admin group, controlled by our multisig wallet, has full access to upgrade contracts and manage permissions.",
+          "assertion": "Names super-admin multisig authority, not current chain-local signer custody."
+        },
+        {
+          "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2025-10-24",
+          "location": "Transaction Execution and Relaying",
+          "excerpt": "Transaction Signing: Secures transaction signing using a managed wallet from Dfns",
+          "assertion": "Dfns statement concerns relayer signing, not the five ADMIN Safe owner key sets."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": null,
+          "location": "PDF p8, Maturity evaluation / Access Controls",
+          "excerpt": "Privileged operations are handled through multisignature accounts and hardware wallets.",
+          "assertion": "2023 architecture audit does not bind hardware-wallet custody to the current CHF ADMIN Safe signers."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.spiko.io/",
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://dfns.co/article/announcing-spiko.md",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://public-api.spiko.io/share-classes/chfSAFO",
+        "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+        "https://raw.githubusercontent.com/AdevarLabs/audit-reports/main/reports/2026-06-12_Spiko_Solana_Minter_audit_report.pdf",
+        "https://docs.spiko.io/documentation/product_overview/overview"
+      ],
+      "rationale": "Current Ethereum, Polygon, Arbitrum, Base and Etherlink 3-of-6 ADMIN Safe human independence, beneficial key custody and signing approval policy are not disclosed for those controllers. Dfns is named for relayers/treasury/client wallets and the 2023 audit describes hardware wallets generically; neither identifies these current CHF ADMIN signer key sets. C applies only to offchain custody, never to observable quorum or privileges. Typed custody questions remain open."
+    },
+    {
+      "id": "uw-chfsafo-spiko-687bf147a2a42ec7",
+      "assetId": "chfsafo-spiko",
+      "scope": {
+        "componentKey": "control:mint-meta:chfsafo-spiko:d07f8e29640ee2c8cfee",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2025-05-04",
+          "location": "Managing Permissions",
+          "excerpt": "The super-admin group, controlled by our multisig wallet, has full access to upgrade contracts and manage permissions.",
+          "assertion": "Names super-admin multisig authority, not current chain-local signer custody."
+        },
+        {
+          "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2025-10-24",
+          "location": "Transaction Execution and Relaying",
+          "excerpt": "Transaction Signing: Secures transaction signing using a managed wallet from Dfns",
+          "assertion": "Dfns statement concerns relayer signing, not the five ADMIN Safe owner key sets."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": null,
+          "location": "PDF p8, Maturity evaluation / Access Controls",
+          "excerpt": "Privileged operations are handled through multisignature accounts and hardware wallets.",
+          "assertion": "2023 architecture audit does not bind hardware-wallet custody to the current CHF ADMIN Safe signers."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.spiko.io/",
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://dfns.co/article/announcing-spiko.md",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://public-api.spiko.io/share-classes/chfSAFO",
+        "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+        "https://raw.githubusercontent.com/AdevarLabs/audit-reports/main/reports/2026-06-12_Spiko_Solana_Minter_audit_report.pdf",
+        "https://docs.spiko.io/documentation/product_overview/overview"
+      ],
+      "rationale": "Current Ethereum, Polygon, Arbitrum, Base and Etherlink 3-of-6 ADMIN Safe human independence, beneficial key custody and signing approval policy are not disclosed for those controllers. Dfns is named for relayers/treasury/client wallets and the 2023 audit describes hardware wallets generically; neither identifies these current CHF ADMIN signer key sets. C applies only to offchain custody, never to observable quorum or privileges. Typed custody questions remain open."
+    },
+    {
+      "id": "uw-chfsafo-spiko-6d5ec5709cf4301c",
+      "assetId": "chfsafo-spiko",
+      "scope": {
+        "componentKey": "control:mint-meta:chfsafo-spiko:ecc844187a18d2c3efb2",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2025-05-04",
+          "location": "Managing Permissions",
+          "excerpt": "The super-admin group, controlled by our multisig wallet, has full access to upgrade contracts and manage permissions.",
+          "assertion": "Names super-admin multisig authority, not current chain-local signer custody."
+        },
+        {
+          "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2025-10-24",
+          "location": "Transaction Execution and Relaying",
+          "excerpt": "Transaction Signing: Secures transaction signing using a managed wallet from Dfns",
+          "assertion": "Dfns statement concerns relayer signing, not the five ADMIN Safe owner key sets."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": null,
+          "location": "PDF p8, Maturity evaluation / Access Controls",
+          "excerpt": "Privileged operations are handled through multisignature accounts and hardware wallets.",
+          "assertion": "2023 architecture audit does not bind hardware-wallet custody to the current CHF ADMIN Safe signers."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.spiko.io/",
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://dfns.co/article/announcing-spiko.md",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://public-api.spiko.io/share-classes/chfSAFO",
+        "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+        "https://raw.githubusercontent.com/AdevarLabs/audit-reports/main/reports/2026-06-12_Spiko_Solana_Minter_audit_report.pdf",
+        "https://docs.spiko.io/documentation/product_overview/overview"
+      ],
+      "rationale": "Current Ethereum, Polygon, Arbitrum, Base and Etherlink 3-of-6 ADMIN Safe human independence, beneficial key custody and signing approval policy are not disclosed for those controllers. Dfns is named for relayers/treasury/client wallets and the 2023 audit describes hardware wallets generically; neither identifies these current CHF ADMIN signer key sets. C applies only to offchain custody, never to observable quorum or privileges. Typed custody questions remain open."
+    },
+    {
+      "id": "uw-cumiu-chinaamc-a6a97d819d610c99",
+      "assetId": "cumiu-chinaamc",
+      "scope": {
+        "componentKey": "control:mint-meta:cumiu-chinaamc:242b68650534af3e8c12",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2026-09-14",
+          "location": "Schedule 6, Business Continuity Plans, printed p134",
+          "excerpt": "all private keys for mainnet Digital Wallets are backed-up on hardware devices which are disconnected from the internet and any form of wireless communication",
+          "assertion": "Digital Wallet backup disclosure does not identify the four CUMIU admin/minter EOA keys."
+        },
+        {
+          "url": "https://libeara.com/standard-chartered-backs-chinaamcs-first-tokenised-retail-fund/",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2025-02-13",
+          "location": "Case study",
+          "excerpt": "Standard Chartered collaborates with ChinaAMC (HK) to build an ecosystem for its tokenised money market fund",
+          "assertion": "Provider named at platform level, not exact role-key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.chinaamc.com.hk/detail?fundId=USDDMMF&fundName=ChinaAMC-USD-Digital-Money-Market-Fund-(Tokenized-Unlisted-Class)&lan=EN",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-25AFS_DigitalOFC_Cover.pdf",
+        "https://libeara.com/standard-chartered-backs-chinaamcs-first-tokenised-retail-fund/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"
+      ],
+      "rationale": "Custody, beneficial human control and approval policy of CUMIU default admins 0x407374be435ed278fca44be695d32f0230fe46e3 and 0x5c943b2b881af70af571098a228d92cbcc2b5ba2 and delegated minters 0x7ba63cdc16abfbe4838eee04aff4150749a21bd8 and 0xb99123ccab3e0110742cede9271953c6803947d4 are not published. Standard Chartered/Libeara platform roles and investor Digital Wallet offline backups do not bind these exact privileged keys. No favorable attestation inferred; typed questions retained."
+    },
+    {
+      "id": "uw-cumiu-chinaamc-2f814c8d3c208c01",
+      "assetId": "cumiu-chinaamc",
+      "scope": {
+        "componentKey": "control:mint-meta:cumiu-chinaamc:629719261d58e7b110b5",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2026-09-14",
+          "location": "Schedule 6, Business Continuity Plans, printed p134",
+          "excerpt": "all private keys for mainnet Digital Wallets are backed-up on hardware devices which are disconnected from the internet and any form of wireless communication",
+          "assertion": "Digital Wallet backup disclosure does not identify the four CUMIU admin/minter EOA keys."
+        },
+        {
+          "url": "https://libeara.com/standard-chartered-backs-chinaamcs-first-tokenised-retail-fund/",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2025-02-13",
+          "location": "Case study",
+          "excerpt": "Standard Chartered collaborates with ChinaAMC (HK) to build an ecosystem for its tokenised money market fund",
+          "assertion": "Provider named at platform level, not exact role-key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.chinaamc.com.hk/detail?fundId=USDDMMF&fundName=ChinaAMC-USD-Digital-Money-Market-Fund-(Tokenized-Unlisted-Class)&lan=EN",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-25AFS_DigitalOFC_Cover.pdf",
+        "https://libeara.com/standard-chartered-backs-chinaamcs-first-tokenised-retail-fund/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"
+      ],
+      "rationale": "Custody, beneficial human control and approval policy of CUMIU default admins 0x407374be435ed278fca44be695d32f0230fe46e3 and 0x5c943b2b881af70af571098a228d92cbcc2b5ba2 and delegated minters 0x7ba63cdc16abfbe4838eee04aff4150749a21bd8 and 0xb99123ccab3e0110742cede9271953c6803947d4 are not published. Standard Chartered/Libeara platform roles and investor Digital Wallet offline backups do not bind these exact privileged keys. No favorable attestation inferred; typed questions retained."
+    },
+    {
+      "id": "uw-cumiu-chinaamc-e86efac6043545c7",
+      "assetId": "cumiu-chinaamc",
+      "scope": {
+        "componentKey": "control:mint-meta:cumiu-chinaamc:93093d353d70ed48724b",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2026-09-14",
+          "location": "Schedule 6, Business Continuity Plans, printed p134",
+          "excerpt": "all private keys for mainnet Digital Wallets are backed-up on hardware devices which are disconnected from the internet and any form of wireless communication",
+          "assertion": "Digital Wallet backup disclosure does not identify the four CUMIU admin/minter EOA keys."
+        },
+        {
+          "url": "https://libeara.com/standard-chartered-backs-chinaamcs-first-tokenised-retail-fund/",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2025-02-13",
+          "location": "Case study",
+          "excerpt": "Standard Chartered collaborates with ChinaAMC (HK) to build an ecosystem for its tokenised money market fund",
+          "assertion": "Provider named at platform level, not exact role-key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.chinaamc.com.hk/detail?fundId=USDDMMF&fundName=ChinaAMC-USD-Digital-Money-Market-Fund-(Tokenized-Unlisted-Class)&lan=EN",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-25AFS_DigitalOFC_Cover.pdf",
+        "https://libeara.com/standard-chartered-backs-chinaamcs-first-tokenised-retail-fund/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"
+      ],
+      "rationale": "Custody, beneficial human control and approval policy of CUMIU default admins 0x407374be435ed278fca44be695d32f0230fe46e3 and 0x5c943b2b881af70af571098a228d92cbcc2b5ba2 and delegated minters 0x7ba63cdc16abfbe4838eee04aff4150749a21bd8 and 0xb99123ccab3e0110742cede9271953c6803947d4 are not published. Standard Chartered/Libeara platform roles and investor Digital Wallet offline backups do not bind these exact privileged keys. No favorable attestation inferred; typed questions retained."
+    },
+    {
+      "id": "uw-cumiu-chinaamc-f751f44c536cc8aa",
+      "assetId": "cumiu-chinaamc",
+      "scope": {
+        "componentKey": "control:mint-meta:cumiu-chinaamc:b900842dc4e7284c0acb",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2026-09-14",
+          "location": "Schedule 6, Business Continuity Plans, printed p134",
+          "excerpt": "all private keys for mainnet Digital Wallets are backed-up on hardware devices which are disconnected from the internet and any form of wireless communication",
+          "assertion": "Digital Wallet backup disclosure does not identify the four CUMIU admin/minter EOA keys."
+        },
+        {
+          "url": "https://libeara.com/standard-chartered-backs-chinaamcs-first-tokenised-retail-fund/",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2025-02-13",
+          "location": "Case study",
+          "excerpt": "Standard Chartered collaborates with ChinaAMC (HK) to build an ecosystem for its tokenised money market fund",
+          "assertion": "Provider named at platform level, not exact role-key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.chinaamc.com.hk/detail?fundId=USDDMMF&fundName=ChinaAMC-USD-Digital-Money-Market-Fund-(Tokenized-Unlisted-Class)&lan=EN",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-25AFS_DigitalOFC_Cover.pdf",
+        "https://libeara.com/standard-chartered-backs-chinaamcs-first-tokenised-retail-fund/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"
+      ],
+      "rationale": "Custody, beneficial human control and approval policy of CUMIU default admins 0x407374be435ed278fca44be695d32f0230fe46e3 and 0x5c943b2b881af70af571098a228d92cbcc2b5ba2 and delegated minters 0x7ba63cdc16abfbe4838eee04aff4150749a21bd8 and 0xb99123ccab3e0110742cede9271953c6803947d4 are not published. Standard Chartered/Libeara platform roles and investor Digital Wallet offline backups do not bind these exact privileged keys. No favorable attestation inferred; typed questions retained."
+    },
+    {
+      "id": "uw-gusdcq-galaxy-7210b12f9439fc6d",
+      "assetId": "gusdcq-galaxy",
+      "scope": {
+        "componentKey": "control:mint-meta:gusdcq-galaxy:500d12b75edd99ba5f44",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://www.galaxy.com/newsroom/galaxy-launches-institutional-vault-curator",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2026-07-16",
+          "location": "Launch disclosure, Fireblocks Earn access",
+          "excerpt": "Through Fireblocks Earn, access runs through the same approval workflows, transaction signing, and policy controls institutions already use.",
+          "assertion": "Describes depositor access policies, not Galaxy owner/curator/sentinel/allocator key custody."
+        },
+        {
+          "url": "https://curation.galaxy.com/vaults/0x91600e31fbedc72433d4a57f16639cfe661be7d8",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": null,
+          "location": "USDC Quality, Ethereum Mainnet vault strategy",
+          "excerpt": "The Galaxy Quality Stablecoin Vault allocates stablecoin liquidity across a curated selection of markets collateralized exclusively by blue chip assets.",
+          "assertion": "Exact-vault strategy and allocations published; privileged signer custody absent."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.galaxy.com/",
+        "https://www.galaxy.com/newsroom/galaxy-launches-institutional-vault-curator",
+        "https://www.galaxy.com/newsroom/galaxy-curation-adds-two-institutional-vaults-on-kamino",
+        "https://curation.galaxy.com/vaults/0x91600e31fbedc72433d4a57f16639cfe661be7d8",
+        "https://www.galaxy.com/infrastructure/custody",
+        "https://docs.morpho.org/curate/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x91600e31fbedc72433d4a57f16639cfe661be7d8"
+      ],
+      "rationale": "Galaxy USDC Quality owner 0x42d510edeb9257f8d920d5b9f5109d95cb22419d, curator 0xa13094eced689b7419baba12851374424c1486f1, sentinel 0xb4b1c558af077b34f071b1b6e4cca0fb8a34aee0 and allocator 0xd1fcd938008a582e5f356bfe0d92604ffb7d3171 have no public key-custody/signing-policy/human-control attestation. Fireblocks Earn access refers to clients; Galaxy offers GK8/uMPC products without binding them to these four keys. EOA identity is not custody assurance. Typed questions retained."
+    },
+    {
+      "id": "uw-gusdcq-galaxy-40b9e9da2677dc10",
+      "assetId": "gusdcq-galaxy",
+      "scope": {
+        "componentKey": "control:mint-meta:gusdcq-galaxy:b6d4a68990f3a897cc27",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://www.galaxy.com/newsroom/galaxy-launches-institutional-vault-curator",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2026-07-16",
+          "location": "Launch disclosure, Fireblocks Earn access",
+          "excerpt": "Through Fireblocks Earn, access runs through the same approval workflows, transaction signing, and policy controls institutions already use.",
+          "assertion": "Describes depositor access policies, not Galaxy owner/curator/sentinel/allocator key custody."
+        },
+        {
+          "url": "https://curation.galaxy.com/vaults/0x91600e31fbedc72433d4a57f16639cfe661be7d8",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": null,
+          "location": "USDC Quality, Ethereum Mainnet vault strategy",
+          "excerpt": "The Galaxy Quality Stablecoin Vault allocates stablecoin liquidity across a curated selection of markets collateralized exclusively by blue chip assets.",
+          "assertion": "Exact-vault strategy and allocations published; privileged signer custody absent."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.galaxy.com/",
+        "https://www.galaxy.com/newsroom/galaxy-launches-institutional-vault-curator",
+        "https://www.galaxy.com/newsroom/galaxy-curation-adds-two-institutional-vaults-on-kamino",
+        "https://curation.galaxy.com/vaults/0x91600e31fbedc72433d4a57f16639cfe661be7d8",
+        "https://www.galaxy.com/infrastructure/custody",
+        "https://docs.morpho.org/curate/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x91600e31fbedc72433d4a57f16639cfe661be7d8"
+      ],
+      "rationale": "Galaxy USDC Quality owner 0x42d510edeb9257f8d920d5b9f5109d95cb22419d, curator 0xa13094eced689b7419baba12851374424c1486f1, sentinel 0xb4b1c558af077b34f071b1b6e4cca0fb8a34aee0 and allocator 0xd1fcd938008a582e5f356bfe0d92604ffb7d3171 have no public key-custody/signing-policy/human-control attestation. Fireblocks Earn access refers to clients; Galaxy offers GK8/uMPC products without binding them to these four keys. EOA identity is not custody assurance. Typed questions retained."
+    },
+    {
+      "id": "uw-gusdcq-galaxy-fa30a81dbc33051d",
+      "assetId": "gusdcq-galaxy",
+      "scope": {
+        "componentKey": "control:mint-meta:gusdcq-galaxy:dbc1b245173022fa4fee",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://www.galaxy.com/newsroom/galaxy-launches-institutional-vault-curator",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2026-07-16",
+          "location": "Launch disclosure, Fireblocks Earn access",
+          "excerpt": "Through Fireblocks Earn, access runs through the same approval workflows, transaction signing, and policy controls institutions already use.",
+          "assertion": "Describes depositor access policies, not Galaxy owner/curator/sentinel/allocator key custody."
+        },
+        {
+          "url": "https://curation.galaxy.com/vaults/0x91600e31fbedc72433d4a57f16639cfe661be7d8",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": null,
+          "location": "USDC Quality, Ethereum Mainnet vault strategy",
+          "excerpt": "The Galaxy Quality Stablecoin Vault allocates stablecoin liquidity across a curated selection of markets collateralized exclusively by blue chip assets.",
+          "assertion": "Exact-vault strategy and allocations published; privileged signer custody absent."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.galaxy.com/",
+        "https://www.galaxy.com/newsroom/galaxy-launches-institutional-vault-curator",
+        "https://www.galaxy.com/newsroom/galaxy-curation-adds-two-institutional-vaults-on-kamino",
+        "https://curation.galaxy.com/vaults/0x91600e31fbedc72433d4a57f16639cfe661be7d8",
+        "https://www.galaxy.com/infrastructure/custody",
+        "https://docs.morpho.org/curate/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x91600e31fbedc72433d4a57f16639cfe661be7d8"
+      ],
+      "rationale": "Galaxy USDC Quality owner 0x42d510edeb9257f8d920d5b9f5109d95cb22419d, curator 0xa13094eced689b7419baba12851374424c1486f1, sentinel 0xb4b1c558af077b34f071b1b6e4cca0fb8a34aee0 and allocator 0xd1fcd938008a582e5f356bfe0d92604ffb7d3171 have no public key-custody/signing-policy/human-control attestation. Fireblocks Earn access refers to clients; Galaxy offers GK8/uMPC products without binding them to these four keys. EOA identity is not custody assurance. Typed questions retained."
+    },
+    {
+      "id": "uw-gusdcq-galaxy-423bb076e11c2bea",
+      "assetId": "gusdcq-galaxy",
+      "scope": {
+        "componentKey": "control:mint-meta:gusdcq-galaxy:f3e52c2859bd07d96d46",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://www.galaxy.com/newsroom/galaxy-launches-institutional-vault-curator",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2026-07-16",
+          "location": "Launch disclosure, Fireblocks Earn access",
+          "excerpt": "Through Fireblocks Earn, access runs through the same approval workflows, transaction signing, and policy controls institutions already use.",
+          "assertion": "Describes depositor access policies, not Galaxy owner/curator/sentinel/allocator key custody."
+        },
+        {
+          "url": "https://curation.galaxy.com/vaults/0x91600e31fbedc72433d4a57f16639cfe661be7d8",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": null,
+          "location": "USDC Quality, Ethereum Mainnet vault strategy",
+          "excerpt": "The Galaxy Quality Stablecoin Vault allocates stablecoin liquidity across a curated selection of markets collateralized exclusively by blue chip assets.",
+          "assertion": "Exact-vault strategy and allocations published; privileged signer custody absent."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.galaxy.com/",
+        "https://www.galaxy.com/newsroom/galaxy-launches-institutional-vault-curator",
+        "https://www.galaxy.com/newsroom/galaxy-curation-adds-two-institutional-vaults-on-kamino",
+        "https://curation.galaxy.com/vaults/0x91600e31fbedc72433d4a57f16639cfe661be7d8",
+        "https://www.galaxy.com/infrastructure/custody",
+        "https://docs.morpho.org/curate/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x91600e31fbedc72433d4a57f16639cfe661be7d8"
+      ],
+      "rationale": "Galaxy USDC Quality owner 0x42d510edeb9257f8d920d5b9f5109d95cb22419d, curator 0xa13094eced689b7419baba12851374424c1486f1, sentinel 0xb4b1c558af077b34f071b1b6e4cca0fb8a34aee0 and allocator 0xd1fcd938008a582e5f356bfe0d92604ffb7d3171 have no public key-custody/signing-policy/human-control attestation. Fireblocks Earn access refers to clients; Galaxy offers GK8/uMPC products without binding them to these four keys. EOA identity is not custody assurance. Typed questions retained."
+    },
+    {
+      "id": "uw-eurw-newrails-01b4c04fae0b77f8",
+      "assetId": "eurw-newrails",
+      "scope": {
+        "componentKey": "control:mint-meta:eurw-newrails:270465fe3fe62100cb23",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml",
+          "observedAt": "2026-10-05T12:25:30Z",
+          "datumAsOf": "2026-05-26",
+          "location": "D.1 Holder's rights and obligations, Issuance of EURW",
+          "excerpt": "Private keys for the Newrails-operated omnibus wallet are securely stored in CloudHSM.",
+          "assertion": "Explicit HSM custody applies to the omnibus recipient wallet; no binding to ADMIN/MINTER/APPROVER authority keys is given."
+        },
+        {
+          "url": "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2026-03-12",
+          "location": "Potential Risks, p7",
+          "excerpt": "Insufficient Multi-signature Controls for Critical Functions",
+          "assertion": "Code audit identifies lack of multisignature requirements, not operational EOA key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.newrails.xyz/en",
+        "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml",
+        "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf",
+        "https://www.lb.lt/en/sfi-financial-market-participants/newrails-uab",
+        "https://www.newrails.xyz/en/legal/emt-redemption-policy",
+        "https://www.newrails.xyz/en/legal/terms-of-use",
+        "https://www.newrails.xyz/en/legal/privacy-policy",
+        "https://www.newrails.xyz/en/legal/disclaimer"
+      ],
+      "rationale": "No role-specific custody/signing policy or human-independence statement for Monad ADMIN 0x1c4f1a908ae8c15c3fef774775b8e897c1fc9ca6, MINTER 0x259b74273f2a371f88cbc2cd8ca3339066600757 or MINTER_APPROVER 0x778b36adecb99a5a920106c441598879bfeb184c. Whitepaper CloudHSM custody is explicitly for the omnibus recipient wallet, not these privileged EOAs. Exclusive issuer control and audit role descriptions establish authority only. No HSM binding inferred; typed custody questions retained."
+    },
+    {
+      "id": "uw-eurw-newrails-833ecd8858d021aa",
+      "assetId": "eurw-newrails",
+      "scope": {
+        "componentKey": "control:mint-meta:eurw-newrails:494b95f7d897d10172dc",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml",
+          "observedAt": "2026-10-05T12:25:30Z",
+          "datumAsOf": "2026-05-26",
+          "location": "D.1 Holder's rights and obligations, Issuance of EURW",
+          "excerpt": "Private keys for the Newrails-operated omnibus wallet are securely stored in CloudHSM.",
+          "assertion": "Explicit HSM custody applies to the omnibus recipient wallet; no binding to ADMIN/MINTER/APPROVER authority keys is given."
+        },
+        {
+          "url": "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2026-03-12",
+          "location": "Potential Risks, p7",
+          "excerpt": "Insufficient Multi-signature Controls for Critical Functions",
+          "assertion": "Code audit identifies lack of multisignature requirements, not operational EOA key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.newrails.xyz/en",
+        "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml",
+        "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf",
+        "https://www.lb.lt/en/sfi-financial-market-participants/newrails-uab",
+        "https://www.newrails.xyz/en/legal/emt-redemption-policy",
+        "https://www.newrails.xyz/en/legal/terms-of-use",
+        "https://www.newrails.xyz/en/legal/privacy-policy",
+        "https://www.newrails.xyz/en/legal/disclaimer"
+      ],
+      "rationale": "No role-specific custody/signing policy or human-independence statement for Monad ADMIN 0x1c4f1a908ae8c15c3fef774775b8e897c1fc9ca6, MINTER 0x259b74273f2a371f88cbc2cd8ca3339066600757 or MINTER_APPROVER 0x778b36adecb99a5a920106c441598879bfeb184c. Whitepaper CloudHSM custody is explicitly for the omnibus recipient wallet, not these privileged EOAs. Exclusive issuer control and audit role descriptions establish authority only. No HSM binding inferred; typed custody questions retained."
+    },
+    {
+      "id": "uw-eurw-newrails-d7446a7ce321ba4d",
+      "assetId": "eurw-newrails",
+      "scope": {
+        "componentKey": "control:mint-meta:eurw-newrails:c9ae024d9d826cc024f7",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml",
+          "observedAt": "2026-10-05T12:25:30Z",
+          "datumAsOf": "2026-05-26",
+          "location": "D.1 Holder's rights and obligations, Issuance of EURW",
+          "excerpt": "Private keys for the Newrails-operated omnibus wallet are securely stored in CloudHSM.",
+          "assertion": "Explicit HSM custody applies to the omnibus recipient wallet; no binding to ADMIN/MINTER/APPROVER authority keys is given."
+        },
+        {
+          "url": "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2026-03-12",
+          "location": "Potential Risks, p7",
+          "excerpt": "Insufficient Multi-signature Controls for Critical Functions",
+          "assertion": "Code audit identifies lack of multisignature requirements, not operational EOA key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.newrails.xyz/en",
+        "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml",
+        "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf",
+        "https://www.lb.lt/en/sfi-financial-market-participants/newrails-uab",
+        "https://www.newrails.xyz/en/legal/emt-redemption-policy",
+        "https://www.newrails.xyz/en/legal/terms-of-use",
+        "https://www.newrails.xyz/en/legal/privacy-policy",
+        "https://www.newrails.xyz/en/legal/disclaimer"
+      ],
+      "rationale": "No role-specific custody/signing policy or human-independence statement for Monad ADMIN 0x1c4f1a908ae8c15c3fef774775b8e897c1fc9ca6, MINTER 0x259b74273f2a371f88cbc2cd8ca3339066600757 or MINTER_APPROVER 0x778b36adecb99a5a920106c441598879bfeb184c. Whitepaper CloudHSM custody is explicitly for the omnibus recipient wallet, not these privileged EOAs. Exclusive issuer control and audit role descriptions establish authority only. No HSM binding inferred; typed custody questions retained."
+    },
+    {
+      "id": "uw-syrupusdg-maple-792c406929c9fb9a",
+      "assetId": "syrupusdg-maple",
+      "scope": {
+        "componentKey": "control:mint-meta:syrupusdg-maple:431ff7e95faaeefabda3",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://docs.maple.finance/technical-resources/singletons/governor-timelock.md",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": null,
+          "location": "Overview / Key Roles",
+          "excerpt": "Separates responsibilities via roles and enforces a schedule \u2192 wait \u2192 execute lifecycle.",
+          "assertion": "Timelock execution policy is disclosed, but controlling humans/key protection are not."
+        },
+        {
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": null,
+          "location": "Multisignature wallets risk disclosure",
+          "excerpt": "Certain protocol functions are controlled by multi-signature wallets (\"MultiSigs\").",
+          "assertion": "Generic multisig risk does not establish exact holder independence or key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.maple.finance/llms.txt",
+        "https://docs.maple.finance/technical-resources/security/security.md",
+        "https://docs.maple.finance/technical-resources/security/list-of-assumptions.md",
+        "https://docs.maple.finance/technical-resources/singletons/governor-timelock.md",
+        "https://docs.maple.finance/technical-resources/admin-functions/pool-delegate-admin-actions.md",
+        "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+        "https://docs.maple.finance/legal/syrupusdg-product-disclosures-and-disclaimers.md",
+        "https://raw.githubusercontent.com/maple-labs/maple-core-v2/main/audits/2025-sept-governor-timelock/0xMacro-Maple-Finance-timelock-Sept-2025.pdf"
+      ],
+      "rationale": "Human signer independence, operational signing approvals and custody protections for GovernorTimelock role-holder Safe/EOA keys, security-admin 0x6b1a78c1943b03086f7ee53360f9b0672bd60818, and syrupUSDG delegate 0x54e28bb2d530ee10386dbca6e7e84efac809292c are not attested. Docs give Maple-managed multisigs, delay lifecycle and generic potentially unaffiliated signatories, but no exact-controller key custody mapping. No independence inferred from role labels; questions retained."
+    },
+    {
+      "id": "uw-syrupusdg-maple-2b1297530a44cb13",
+      "assetId": "syrupusdg-maple",
+      "scope": {
+        "componentKey": "control:mint-meta:syrupusdg-maple:5f7c40f02150db7e90c6",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://docs.maple.finance/technical-resources/singletons/governor-timelock.md",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": null,
+          "location": "Overview / Key Roles",
+          "excerpt": "Separates responsibilities via roles and enforces a schedule \u2192 wait \u2192 execute lifecycle.",
+          "assertion": "Timelock execution policy is disclosed, but controlling humans/key protection are not."
+        },
+        {
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": null,
+          "location": "Multisignature wallets risk disclosure",
+          "excerpt": "Certain protocol functions are controlled by multi-signature wallets (\"MultiSigs\").",
+          "assertion": "Generic multisig risk does not establish exact holder independence or key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.maple.finance/llms.txt",
+        "https://docs.maple.finance/technical-resources/security/security.md",
+        "https://docs.maple.finance/technical-resources/security/list-of-assumptions.md",
+        "https://docs.maple.finance/technical-resources/singletons/governor-timelock.md",
+        "https://docs.maple.finance/technical-resources/admin-functions/pool-delegate-admin-actions.md",
+        "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+        "https://docs.maple.finance/legal/syrupusdg-product-disclosures-and-disclaimers.md",
+        "https://raw.githubusercontent.com/maple-labs/maple-core-v2/main/audits/2025-sept-governor-timelock/0xMacro-Maple-Finance-timelock-Sept-2025.pdf"
+      ],
+      "rationale": "Human signer independence, operational signing approvals and custody protections for GovernorTimelock role-holder Safe/EOA keys, security-admin 0x6b1a78c1943b03086f7ee53360f9b0672bd60818, and syrupUSDG delegate 0x54e28bb2d530ee10386dbca6e7e84efac809292c are not attested. Docs give Maple-managed multisigs, delay lifecycle and generic potentially unaffiliated signatories, but no exact-controller key custody mapping. No independence inferred from role labels; questions retained."
+    },
+    {
+      "id": "uw-syrupusdg-maple-2cfd4678bb4e953f",
+      "assetId": "syrupusdg-maple",
+      "scope": {
+        "componentKey": "control:mint-meta:syrupusdg-maple:9e48f28742950c38d04f",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://docs.maple.finance/technical-resources/singletons/governor-timelock.md",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": null,
+          "location": "Overview / Key Roles",
+          "excerpt": "Separates responsibilities via roles and enforces a schedule \u2192 wait \u2192 execute lifecycle.",
+          "assertion": "Timelock execution policy is disclosed, but controlling humans/key protection are not."
+        },
+        {
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": null,
+          "location": "Multisignature wallets risk disclosure",
+          "excerpt": "Certain protocol functions are controlled by multi-signature wallets (\"MultiSigs\").",
+          "assertion": "Generic multisig risk does not establish exact holder independence or key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.maple.finance/llms.txt",
+        "https://docs.maple.finance/technical-resources/security/security.md",
+        "https://docs.maple.finance/technical-resources/security/list-of-assumptions.md",
+        "https://docs.maple.finance/technical-resources/singletons/governor-timelock.md",
+        "https://docs.maple.finance/technical-resources/admin-functions/pool-delegate-admin-actions.md",
+        "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+        "https://docs.maple.finance/legal/syrupusdg-product-disclosures-and-disclaimers.md",
+        "https://raw.githubusercontent.com/maple-labs/maple-core-v2/main/audits/2025-sept-governor-timelock/0xMacro-Maple-Finance-timelock-Sept-2025.pdf"
+      ],
+      "rationale": "Human signer independence, operational signing approvals and custody protections for GovernorTimelock role-holder Safe/EOA keys, security-admin 0x6b1a78c1943b03086f7ee53360f9b0672bd60818, and syrupUSDG delegate 0x54e28bb2d530ee10386dbca6e7e84efac809292c are not attested. Docs give Maple-managed multisigs, delay lifecycle and generic potentially unaffiliated signatories, but no exact-controller key custody mapping. No independence inferred from role labels; questions retained."
+    },
+    {
+      "id": "uw-sirloinusdc-steakhouse-783bcb233a2f8669",
+      "assetId": "sirloinusdc-steakhouse",
+      "scope": {
+        "componentKey": "control:mint-meta:sirloinusdc-steakhouse:68938022f9b845782d19",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": null,
+          "location": "Owner Multisig",
+          "excerpt": "Any \u201cowner\u201d action also requires an internal process to ensure proper signature is enforced internally and ensure the signers of the validity of the operation.",
+          "assertion": "General owner approval process disclosed; exact Safe-owner key protection/independence not named."
+        },
+        {
+          "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": null,
+          "location": "Operator/curator description",
+          "excerpt": "We act solely as Vault curators, establishing strategy parameters through the Vault smart contracts and related interfaces.",
+          "assertion": "Legal operator/curation scope disclosed, not privileged key-custody controls."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.steakhouse.financial/docs",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/ongoing-risk-monitoring",
+        "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+        "https://www.steakhouse.financial/docs/products",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=all"
+      ],
+      "rationale": "Exact Base curator Safe 0x827e86072b06674a077f592a531dce4590adecdb and ultimate supervisor-owner Safe 0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd lack role-bound key-custody and beneficial signer-independence attestations. General Steakhouse five-person owner/internal-validation statements describe a typical configuration and expressly warn configurations/signers vary; they do not identify these owner keys or attest their separation. Typed questions retained."
+    },
+    {
+      "id": "uw-sirloinusdc-steakhouse-6f91eb27f1b8c385",
+      "assetId": "sirloinusdc-steakhouse",
+      "scope": {
+        "componentKey": "control:mint-meta:sirloinusdc-steakhouse:79cd565b7c69daeb3994",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": null,
+          "location": "Owner Multisig",
+          "excerpt": "Any \u201cowner\u201d action also requires an internal process to ensure proper signature is enforced internally and ensure the signers of the validity of the operation.",
+          "assertion": "General owner approval process disclosed; exact Safe-owner key protection/independence not named."
+        },
+        {
+          "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": null,
+          "location": "Operator/curator description",
+          "excerpt": "We act solely as Vault curators, establishing strategy parameters through the Vault smart contracts and related interfaces.",
+          "assertion": "Legal operator/curation scope disclosed, not privileged key-custody controls."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.steakhouse.financial/docs",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/ongoing-risk-monitoring",
+        "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+        "https://www.steakhouse.financial/docs/products",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=all"
+      ],
+      "rationale": "Exact Base curator Safe 0x827e86072b06674a077f592a531dce4590adecdb and ultimate supervisor-owner Safe 0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd lack role-bound key-custody and beneficial signer-independence attestations. General Steakhouse five-person owner/internal-validation statements describe a typical configuration and expressly warn configurations/signers vary; they do not identify these owner keys or attest their separation. Typed questions retained."
+    },
+    {
+      "id": "uw-usdr-rise-913e68eb7d393cbd",
+      "assetId": "usdr-rise",
+      "scope": {
+        "componentKey": "control:mint-meta:usdr-rise:6a7defee9af87be458f4",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://docs.risechain.com/docs/rise-evm/usdr",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": null,
+          "location": "Minting and redemption",
+          "excerpt": "RISE holds a direct minting relationship with M0, enabling 1:1 minting of USDR by RISE from USDC on Ethereum.",
+          "assertion": "Product relationship disclosed, not ProxyAdmin/default-admin signer key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.risechain.com/",
+        "https://docs.risechain.com/docs/rise-evm/usdr",
+        "https://docs.risechain.com/docs/rise-evm",
+        "https://docs.risechain.com/docs/builders",
+        "https://blog.risechain.com/composable-books-from-high-performance-trading-to-programmable-liquidity",
+        "https://explorer.risechain.com/api/v2/smart-contracts/0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b",
+        "https://docs.m0.org/resources/audits"
+      ],
+      "rationale": "Offchain custody, independent beneficial signer control and transaction approval policy are not published for RISE USDR ProxyAdmin-owner Safe 0xc588c10a90c942ee3476877c4bac3d798e724856 or operational DEFAULT_ADMIN Safe 0xb0ea3203b80d67c58f6709779c5fbac641aab769. Product docs identify the M0 relationship/solver flows; parent reserve or framework audit claims do not bind these local control keys. Existing quorum/source facts unchanged and typed questions retained."
+    },
+    {
+      "id": "uw-usdr-rise-3650e23a1f8f1c0f",
+      "assetId": "usdr-rise",
+      "scope": {
+        "componentKey": "control:mint-meta:usdr-rise:a55ec30feae3f39e36b9",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://docs.risechain.com/docs/rise-evm/usdr",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": null,
+          "location": "Minting and redemption",
+          "excerpt": "RISE holds a direct minting relationship with M0, enabling 1:1 minting of USDR by RISE from USDC on Ethereum.",
+          "assertion": "Product relationship disclosed, not ProxyAdmin/default-admin signer key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.risechain.com/",
+        "https://docs.risechain.com/docs/rise-evm/usdr",
+        "https://docs.risechain.com/docs/rise-evm",
+        "https://docs.risechain.com/docs/builders",
+        "https://blog.risechain.com/composable-books-from-high-performance-trading-to-programmable-liquidity",
+        "https://explorer.risechain.com/api/v2/smart-contracts/0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b",
+        "https://docs.m0.org/resources/audits"
+      ],
+      "rationale": "Offchain custody, independent beneficial signer control and transaction approval policy are not published for RISE USDR ProxyAdmin-owner Safe 0xc588c10a90c942ee3476877c4bac3d798e724856 or operational DEFAULT_ADMIN Safe 0xb0ea3203b80d67c58f6709779c5fbac641aab769. Product docs identify the M0 relationship/solver flows; parent reserve or framework audit claims do not bind these local control keys. Existing quorum/source facts unchanged and typed questions retained."
+    },
+    {
+      "id": "uw-skymoneyusdtsavings-sky-78c8ebc826c92fdc",
+      "assetId": "skymoneyusdtsavings-sky",
+      "scope": {
+        "componentKey": "control:mint-meta:skymoneyusdtsavings-sky:070a32986c8eec98f55f",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:30Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K05)",
+      "sources": [
+        {
+          "url": "https://sky.money/vaults",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": null,
+          "location": "Who curates the vaults?",
+          "excerpt": "It selects which lending markets each vault may use and sets exposure limits for each",
+          "assertion": "Curator parameter responsibilities named without Safe owner key-custody policy."
+        },
+        {
+          "url": "https://sky.money/blog/what-are-sky-vaults",
+          "observedAt": "2026-10-05T12:21:56Z",
+          "datumAsOf": "2026-08-07",
+          "location": "What Sky Vaults are live now / USDT Savings",
+          "excerpt": "The vault supplies USDT into that market, where sUSDS is posted as collateral, and your yield tracks the market's borrowing activity.",
+          "assertion": "Specific USDT Savings strategy disclosed, not parameter-controller signer assurance."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sky.money/",
+        "https://sky.money/vaults",
+        "https://sky.money/blog/what-are-sky-vaults",
+        "https://docs.sky.money/legal/skybase-international/terms-of-use",
+        "https://docs.sky.money/legal/skybase-international/user-risks",
+        "https://docs.sky.money/legal/skybase-international/privacy-policy",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11"
+      ],
+      "rationale": "Exact Ethereum USDT Savings parameter-control Safe 0x3f32bc09d41ee699844f8296e806417d6bf61bba has no disclosed offchain signer custody, human independence or signing approval assurance. Sky.money names curation/exposure-limit responsibilities and describes non-custodial supplied assets; neither establishes custody of privileged Safe owner keys. Sky protocol governance is not substituted for this local controller. Typed custody question retained."
     }
   ]
 }
