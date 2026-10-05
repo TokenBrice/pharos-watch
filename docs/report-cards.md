@@ -95,6 +95,8 @@ Known external Exit output identity without same-notional valuation does not est
 
 Partial mint reviews retain admitted controls and scoped causes; unresolved deployments never gain invented shares or closure. Local wrapper controls do not establish parent loss absorption. Missing same-notional evidence resolves its actual cause, not a blanket integration/issuer label. `published-evidence-expired` records dated publisher history separately from present A/B/C/U cause; expiry alone proves neither issuer silence nor current public availability.
 
+Published projection reasons bind retained causal witnesses, not newly invented gaps: deployment bridge materiality uses its `materialSupplyShare` factor before aggregate review; unresolved oracle applicability uses the scoped applicability gap; unproven route settlement uses the settlement factor. This refines attribution and deduplicates views without resolving the source obligation or changing scores. Missing or unsupported same-notional methods stay bounded unless an actual admitted witness exists.
+
 Shared-control pricing uses each receiving asset's own member facts. Admitted adverse reach/domain evidence remains charged; unknown member quality alone cannot manufacture D or a shared-failure signal. Missing/stale/unresolved members carry scoped causes, and no gap establishes high confidence or clears a known adverse path. Common-control census and deployment-scope requirements below remain unchanged.
 
 Common-control census counts independent root liabilities: wrappers/derivatives cannot make their parent meet the multi-liability threshold; same-issuer controllers remain diagnostic, not external common mode. Mint/upgrade/bridge/related signals are deployment-scoped only when every member is reviewed non-root, exact deployment is named and liability partition complete/reconciled; otherwise global/fail-closed. Mento's shared Safe follows the same-issuer rule.
@@ -235,6 +237,8 @@ Reviewed catalog `wrapperLocalFacts.parentBackingInheritance` withholding blocks
 Direct-wrapper onchain custody relief requires a current fully-onchain allocation review or complete custody checks with zero unknown exposure; an authored `custodyModel: "onchain"` alone is insufficient. Parent custody and reuse remain in the dependency instead of being duplicated locally. Missing or expired proof, omitted models and CEX, institutional, mixed or unknown custody retain conservative local treatment. Relief grants no legal segregation, bankruptcy remoteness or parent Backing inheritance.
 
 ctUSD is a pure fixed-unit M wrapper from independently verified deployed implementation; parent, bridge, permissioned swap-out, intervention and upgrade risks remain. The 2026-10-02 USDK/XO review retains defaults: funded indexed M vaults and NoYield state do not establish exact deployed-source equivalence or pure-wrapper credit. Owner ruling 12 preserves aggregate sdUSD parent treatment and legacy USDv's August scope rather than inferring current closure.
+
+An unresolved tracked reserve projection can bind only an existing dependency-owned gap. A `dependency-projection:unattributed` key is not evidence; absent source scope stays bounded, retaining the measured reserve weight and canonical serial dependencies. Projection binding neither manufactures upstream identity/weights nor removes an unlinked savings claim.
 
 ### Wrapper-local evidence
 
