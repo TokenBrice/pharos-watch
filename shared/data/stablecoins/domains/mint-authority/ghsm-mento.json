@@ -87,10 +87,10 @@
         "label": "Celo Validators (GHSm-authorized mint address)",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "unknown",
-        "canRaiseCap": "unknown",
-        "observedAt": "2026-10-01",
-        "observedBlock": 78936852,
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "observedAt": "2026-10-05",
+        "observedBlock": 79301985,
         "sources": [
           {
             "label": "GHSm StableTokenV2 verified onlyMinter authorization",
@@ -99,34 +99,51 @@
           {
             "label": "Celo Validators current implementation",
             "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x13B0B89F3242f815C1FC6C9CF56e1Ab5aEA4dC58"
+          },
+          {
+            "label": "ValidatorsProxy verified owner-only implementation replacement",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58"
+          },
+          {
+            "label": "Celo Registry verified owner-only stable-token retargeting",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x203fdf86a00999107df531fa00b4ba81d674cb66"
+          },
+          {
+            "label": "Celo Governance verified proposal and hotfix authorization",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x40cac0be7e25b14e39f782d5b7e5c3076aa6c57a"
+          },
+          {
+            "label": "Pinned Celo authorization and token-selection observations",
+            "url": "https://celo.blockscout.com/block/79301985"
           }
         ],
-        "evidence": "At Celo block 78936852, GHSm.validators() returned this address. StableTokenV2 onlyMinter admits broker, validators or exchange; exchange() was zero. Validators._getImplementation() returned 0x13b0b89f3242f815c1fc6c9cf56e1ab5aea4dc58 and _getOwner() returned 0xd533ca259b330c7a88f74e000a3faea2d63b7972. Its verified mintStableToEpochManager path targets getStableToken(). registry() returned 0x000000000000000000000000000000000000ce10, whose getAddressForString(\"StableToken\") returned USDm at 0x765de816845861e75a25fca122bb6898b8b1282a, not GHSm. This observed path does not establish current direct GHSm issuance; governance could still retarget or replace the configured implementation."
+        "evidence": "At Celo block 79301985 (hash 0x14e025b0199a6cfb75e97f1645b92a85fa791b2e423d4fbf341c9aaeec2bd217), GHSm.validators() returned this proxy. Its implementation was 0x13b0b89f3242f815c1fc6c9cf56e1ab5aea4dc58; both ValidatorsProxy._getOwner() and Registry.owner() returned Celo Governance 0xd533ca259b330c7a88f74e000a3faea2d63b7972, independently of Mento governance. The verified proxy exposes owner-only _setImplementation(address), accepting any deployed contract. The verified Registry exposes owner-only setAddressFor(string,address), so Celo Governance can retarget StableToken from observed USDm 0x765de816845861e75a25fca122bb6898b8b1282a to GHSm. Current mintStableToEpochManager(amount) is restricted to the registry's EpochManager 0xf424b5e85b290b66ac20f8a9eab75e25a526725e and currently mints USDm, not GHSm. Governance implementation 0x40cac0be7e25b14e39f782d5b7e5c3076aa6c57a executes arbitrary proposal destinations/data only after proposal approval, passing support and Execution stage; its hotfix route requires both approver and securityCouncil approval and an execution window, whose configured duration was zero at the pin. This resolves the separate upgrade/retarget authorization path, not a currently callable public GHSm mint. Replacement code at the already token-authorized Validators address can invoke GHSm.mint(to,value), whose verified onlyMinter gate imposes no economic ceiling. The can-authorize/raiseable finding is conservative latent issuance reach; no complete execution-scope certificate or governor-only issuance closure is claimed."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "Re-reviewed 2026-10-01 at Celo block 78936852. MGP-18 and the live token confirm GHSm remains on its V2 Broker FX pool; the previously authored BorrowerOperations is not authorized to mint GHSm. The token implementation/admin and enforced 172800-second Timelock delay were re-pinned. The Broker proxy is also owned by the Timelock, while the Validators address has a separate observed proxy owner. Its GHSm-specific issuance reach is left as a scoped question rather than assumed safe. D14/D29 review 2026-10-03 at Celo block 79142378 (hash 0xe5ac3917c420c5f097992356e3a8934c336d354a139b8a1207fe547af3569c6c): owner(), _getOwner(), and the EIP-1967 admin slot resolve to Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147, not the migration Safe; the implementation slot resolves to verified StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e. Read-only setBroker(0x000000000000000000000000000000000000dead) from that owner succeeds, and mint(chosenRecipient,1e18) from the configured Broker succeeds. Verified setBroker accepts an arbitrary address; onlyMinter gates mint by caller identity and imposes no collateral/deposit check or economic ceiling. The 172800-second Timelock delay does not make arbitrary minter authorization economically bounded. D29 screening confirms MentoGovernor proposer/canceller membership, open execution, Timelock administration, and no such Safe roles; the separately observed canceller 0xe6951c4176aab41097c6f5fe11e9c515b7108acd is not asserted to have mint power. The governor uses the verified lock-escrowed veMENTO contract. However validators() on this token resolves to 0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58, whose proxy owner is separate Celo Governance 0xd533ca259b330c7a88f74e000a3faea2d63b7972: independently replacing this token-authorized implementation is not rooted in MentoGovernor. Current Validators targets registry USDm, not this token; that observation does not close its independent upgrade path. Complete governor-only issuance closure is therefore not certified and no governedIssuance or complete executionScope is authored. This D14 verdict supersedes any earlier raiseable/partially-bounded economic inference; reconciliation and supervision are unchanged.",
+      "evidence": "Re-reviewed 2026-10-01 at Celo block 78936852. MGP-18 and the live token confirm GHSm remains on its V2 Broker FX pool; the previously authored BorrowerOperations is not authorized to mint GHSm. The token implementation/admin and enforced 172800-second Timelock delay were re-pinned. The Broker proxy is also owned by the Timelock, while the Validators address has a separate observed proxy owner. Its GHSm-specific issuance reach is separately governed latent authorization, not assumed bounded by the current USDm-only code. D14/D29 review 2026-10-03 at Celo block 79142378 (hash 0xe5ac3917c420c5f097992356e3a8934c336d354a139b8a1207fe547af3569c6c): owner(), _getOwner(), and the EIP-1967 admin slot resolve to Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147, not the migration Safe; the implementation slot resolves to verified StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e. Read-only setBroker(0x000000000000000000000000000000000000dead) from that owner succeeds, and mint(chosenRecipient,1e18) from the configured Broker succeeds. Verified setBroker accepts an arbitrary address; onlyMinter gates mint by caller identity and imposes no collateral/deposit check or economic ceiling. The 172800-second Timelock delay does not make arbitrary minter authorization economically bounded. D29 screening confirms MentoGovernor proposer/canceller membership, open execution, Timelock administration, and no such Safe roles; the separately observed canceller 0xe6951c4176aab41097c6f5fe11e9c515b7108acd is not asserted to have mint power. The governor uses the verified lock-escrowed veMENTO contract. However validators() on this token resolves to 0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58, whose proxy owner is separate Celo Governance 0xd533ca259b330c7a88f74e000a3faea2d63b7972: independently replacing this token-authorized implementation is not rooted in MentoGovernor. Current Validators targets registry USDm, not this token; that observation does not close its independent upgrade path. Complete governor-only issuance closure is therefore not certified and no governedIssuance or complete executionScope is authored. This D14 verdict supersedes any earlier raiseable/partially-bounded economic inference; reconciliation and supervision are unchanged. K03's 2026-10-05 source review and block 79301985 observations answer the separate governance/authorization question: owner-only proxy replacement and Registry.setAddressFor are callable by Celo Governance through approved passing proposals in Execution stage, with a separately guarded hotfix mechanism. The Validators control is now conservatively can-authorize/raiseable; this resolves its previously unknown latent reach without certifying complete execution scope or favorable governed-issuance closure.",
       "reviewer": "Sol v10.02 D14/D29 sweep (U4MentoFamily)",
       "reviewedAt": "2026-10-03",
-      "scopedQuestions": [
-        {
-          "controlRef": "celo:0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58",
-          "question": "What governance and authorization path can replace the Validators implementation or retarget its registry-selected stable token from the currently observed USDm to GHSm?",
-          "subject": "execution-scope",
-          "reviewedAt": "2026-10-01",
-          "reviewer": "Sol curation pass 2026-10-01 (CurB01USDU)",
-          "sources": [
-            {
-              "label": "Celo Validators verified implementation",
-              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x13B0B89F3242f815C1FC6C9CF56e1Ab5aEA4dC58"
-            }
-          ]
-        }
-      ],
       "sources": [
+        {
+          "label": "Celo ValidatorsProxy independent implementation authorization",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58"
+        },
+        {
+          "label": "Celo Registry stable-token authorization",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x203fdf86a00999107df531fa00b4ba81d674cb66"
+        },
+        {
+          "label": "Celo Governance proposal and hotfix authorization",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x40cac0be7e25b14e39f782d5b7e5c3076aa6c57a"
+        },
+        {
+          "label": "K03 pinned Validators and Registry authorization block",
+          "url": "https://celo.blockscout.com/block/79301985"
+        },
         {
           "label": "Pinned Celo block",
           "url": "https://celo.blockscout.com/block/79142378"
