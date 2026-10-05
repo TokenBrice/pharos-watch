@@ -29,6 +29,7 @@ export const DEX_EXACT_QUOTE_ADAPTER_IDS = {
   curveComposite: "evm-curve-composite",
   evmV2: "evm-v2-reserve-exact",
   solanaClmm: "solana-clmm",
+  suiClmm: "sui-clmm",
 } as const;
 
 export type DexExactQuoteAdapterId =

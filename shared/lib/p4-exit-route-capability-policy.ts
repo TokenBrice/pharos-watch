@@ -38,13 +38,14 @@ export type DexExecutionProofKind =
   | "evm-call-proof"
   | "evm-state-and-call-proof"
   | "evm-reserve-proof"
-  | "solana-account-proof";
+  | "solana-account-proof"
+  | "sui-checkpoint-object-proof";
 
 export interface DexExecutionCapabilityRegistration {
   profileId: string;
   capabilityId: string;
   adapterId: DexExactQuoteAdapterId;
-  platform: "evm" | "solana";
+  platform: "evm" | "solana" | "sui";
   lifecycle: DexExecutionCapabilityLifecycle;
   eligibleChains: readonly string[];
   /** Collection-only cohorts; never contributes to the scoring denominator. */
@@ -202,6 +203,24 @@ export const DEX_EXECUTION_CAPABILITY_REGISTRY: readonly DexExecutionCapabilityR
     lifecycle: "shadow",
     eligibleChains: ["solana"],
     proofKind: "solana-account-proof",
+  }),
+  capabilityRegistration({
+    profileId: "cetus-clmm-exact-v1",
+    capabilityId: "measured-adapter-shadow",
+    adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.suiClmm,
+    platform: "sui",
+    lifecycle: "shadow",
+    eligibleChains: ["sui"],
+    proofKind: "sui-checkpoint-object-proof",
+  }),
+  capabilityRegistration({
+    profileId: "bluefin-spot-clmm-exact-v1",
+    capabilityId: "measured-adapter-shadow",
+    adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.suiClmm,
+    platform: "sui",
+    lifecycle: "shadow",
+    eligibleChains: ["sui"],
+    proofKind: "sui-checkpoint-object-proof",
   }),
 ] as const;
 

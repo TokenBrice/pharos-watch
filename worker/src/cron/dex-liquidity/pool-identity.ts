@@ -5,6 +5,7 @@ import {
   canonicalExitRouteScopedKey,
 } from "@shared/types/exit-route-identity";
 import { normalizeProtocol } from "./pool-helpers";
+import { suiClmmFamily, suiCoinType, suiObjectId } from "./sui/identity";
 
 export type PoolIdentitySource = "address" | "native-id" | "token-shape-heuristic" | "none";
 export type PoolDedupReason = "exact" | "derived_unique" | "derived_optional_wildcard";
@@ -108,6 +109,7 @@ function resolvePoolShapeFamily(poolType?: string | null, protocol?: string | nu
   if (normalizedProtocol === "uniswap-v3" || normalizedProtocol === "uniswap-v4") {
     return "concentrated";
   }
+  if (suiClmmFamily(normalizedProtocol)) return "concentrated";
   if (!normalized) return "generic";
   if (normalized.includes("orderbook")) return "orderbook";
   if (normalized.includes("weighted")) {
@@ -162,8 +164,13 @@ export function buildPoolIdentity(input: {
   isStableHint?: boolean;
 }): PoolIdentity {
   const chain = canonicalExitRouteChain(input.chain);
-  const exactPoolId = input.poolAddressOrId ? canonicalizeExactPoolId(input.poolAddressOrId, chain) : "";
-  const exactPoolKey = isTrustworthyExactPoolId(exactPoolId, input.protocol)
+  const sourcePoolId = input.poolAddressOrId ? canonicalizeExactPoolId(input.poolAddressOrId, chain) : "";
+  const suiFamily = chain === "sui" ? suiClmmFamily(normalizeProtocol(input.protocol)) : null;
+  const suiPoolId = suiFamily && /^0x[a-f0-9]{64}$/i.test(sourcePoolId)
+    ? suiObjectId(sourcePoolId)
+    : null;
+  const exactPoolId = suiPoolId ?? sourcePoolId;
+  const exactPoolKey = suiPoolId != null || isTrustworthyExactPoolId(exactPoolId, input.protocol)
     ? canonicalExitRouteScopedKey(chain, exactPoolId)
     : null;
 
@@ -173,7 +180,7 @@ export function buildPoolIdentity(input: {
       : (input.isStable ?? null);
 
   const normalizedTokens = input.tokenAddresses
-    .map((token) => canonicalExitRouteScopedId(chain, token))
+    .map((token) => suiFamily ? suiCoinType(token) ?? "" : canonicalExitRouteScopedId(chain, token))
     .filter(Boolean)
     .sort();
   const poolShapeFamily = resolvePoolShapeFamily(input.poolType, input.protocol, effectiveIsStable);

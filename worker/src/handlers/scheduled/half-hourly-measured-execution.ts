@@ -7,6 +7,7 @@
  */
 import { syncDexMeasuredExecution } from "../../cron/measured-execution/sync";
 import { collectWhirlpoolShadowQuotes, collectRaydiumShadowQuotes } from "../../cron/dex-liquidity/solana/whirlpool-shadow";
+import { collectSuiClmmShadowQuotes } from "../../cron/dex-liquidity/sui/shadow";
 import { throwIfAborted } from "../../lib/abort";
 import type { CronResult } from "../../lib/cron-logger";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -57,7 +58,16 @@ export async function runHalfHourlyMeasuredExecutionSlot(runtime: ScheduledRunti
         throwIfAborted(signal);
         raydiumShadow = { error: toErrorMessage(error).slice(0, 240), scoreEligible: false, durationMs: Date.now() - raydiumStartedAt };
       }
-      return { ...evm, metadata: JSON.stringify({ ...JSON.parse(evm.metadata ?? "{}"), orcaShadow, raydiumShadow }) };
+      throwIfAborted(signal);
+      let suiShadow: unknown;
+      const suiStartedAt = Date.now();
+      try {
+        suiShadow = await collectSuiClmmShadowQuotes({ db: runtime.db, env: runtime.env, signal });
+      } catch (error) {
+        throwIfAborted(signal);
+        suiShadow = { error: toErrorMessage(error).slice(0, 240), scoreEligible: false, durationMs: Date.now() - suiStartedAt };
+      }
+      return { ...evm, metadata: JSON.stringify({ ...JSON.parse(evm.metadata ?? "{}"), orcaShadow, raydiumShadow, suiShadow }) };
     },
   });
 }
