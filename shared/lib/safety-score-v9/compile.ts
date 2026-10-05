@@ -9,13 +9,12 @@ import {
   type V9FactSetCoreV2,
   type V9FactSetCoreV3,
 } from "../../types/safety-score-v9-facts";
+import { isV9AdmittedControlExecutionScope } from "../../types/safety-score-v9-control-scope";
 import { computeValidatedV9FactSetDigest } from "./facts";
-import { deepFreeze, V9_EMPTY_ARRAY } from "./primitives";
+import { createV9ValueInterner, deepFreeze, V9_EMPTY_ARRAY } from "../../types/safety-score-v9-immutable";
 import { findV9CauseEvidenceBindingIssues, requiredV9Applicability } from "./evidence";
 import { V9_UNRESEARCHED_CAUSE_PROOF } from "../../types/safety-score-v9-causes";
 
-const EMPTY_COMPILED_OBJECT: Record<string, never> = {};
-Object.freeze(EMPTY_COMPILED_OBJECT);
 const COMMON_REQUIRED_APPLICABILITY = new Map([
   "v9.control.review",
   "v9.exit.route-factors",
@@ -33,30 +32,7 @@ Object.freeze(EMPTY_UNKNOWN_EVIDENCE_HISTORY);
  * that clone, without retaining a cache (or source generations) between assets.
  */
 function internCompiledAssetFacts(asset: V9AssetFactsV3): V9AssetFactsV3 {
-  const objects = new Map<string, object>();
-  const strings = new Map<string, string>();
-  const identities = new Map<unknown, number>();
-  let nextIdentity = 0;
-  const identity = (value: unknown): string => {
-    if (typeof value === "number" && Object.is(value, -0)) return "-0";
-    let id = identities.get(value);
-    if (id === undefined) {
-      id = nextIdentity++;
-      identities.set(value, id);
-    }
-    return String(id);
-  };
-  const intern = (value: unknown): unknown => {
-    if (typeof value === "string") {
-      const canonical = strings.get(value);
-      if (canonical !== undefined) return canonical;
-      strings.set(value, value);
-      return value;
-    }
-    if (value === null || typeof value !== "object") return value;
-    const keys = Object.keys(value);
-    const array = Array.isArray(value);
-    if (keys.length === 0) return array ? V9_EMPTY_ARRAY : EMPTY_COMPILED_OBJECT;
+  const intern = createV9ValueInterner((value, keys) => {
     const record = value as Record<string, unknown>;
     if (
       keys.length === 3 && record.cause === "U" &&
@@ -79,18 +55,9 @@ function internCompiledAssetFacts(asset: V9AssetFactsV3): V9AssetFactsV3 {
     ) {
       return EMPTY_UNKNOWN_EVIDENCE_HISTORY;
     }
-    let key = array ? "a" : "o";
-    for (const property of keys) {
-      const child = intern(record[property]);
-      record[property] = child;
-      key += `${property.length}:${property}=${identity(child)};`;
-    }
-    const canonical = objects.get(key);
-    if (canonical !== undefined) return canonical;
-    objects.set(key, value);
-    return Object.freeze(value);
-  };
-  return intern(asset) as V9AssetFactsV3;
+    return undefined;
+  }, isV9AdmittedControlExecutionScope);
+  return intern(asset);
 }
 
 const validatedCompiledFactSets = new WeakSet<object>();

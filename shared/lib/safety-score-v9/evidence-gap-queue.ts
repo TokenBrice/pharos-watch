@@ -27,7 +27,8 @@ import { stableJsonStringifyV1 } from "../stable-json";
 import { readCompiledV9FactSetForEvaluation } from "./facts";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonTreatment } from "./policy";
 import { evaluateV9SubthresholdUnresolvedBridgeJoins } from "./control-bridge-join";
-import { compareText, deepFreeze } from "./primitives";
+import { compareText } from "./primitives";
+import { deepFreeze } from "../../types/safety-score-v9-immutable";
 import { v9AccessClaimGraphStatuses } from "../../types/safety-score-v9-access-lookthrough";
 
 const V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V1 = "safety-score-v9.evidence-gap-queue.v1";

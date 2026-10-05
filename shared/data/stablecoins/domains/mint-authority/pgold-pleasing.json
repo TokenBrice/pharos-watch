@@ -2,7 +2,7 @@
   "id": "pgold-pleasing",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "Arbitrum is PGOLD's only canonical native-issuance deployment. The proxy owner EOA 0x142a96da can call mint() directly, and the separate zero-delay ProxyAdmin 0x50ead2d2 is owned by EOA 0x7e5cc9bb and can replace mint logic. Ethereum, Pharos, and ApeChain token and pool controls are bridge representations assessed separately in Bridge Risk.",
     "controls": [

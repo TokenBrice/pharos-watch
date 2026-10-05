@@ -2,7 +2,7 @@
   "id": "gbpa-agant",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "GBPA has five issuer-native deployments. Ethereum, Base and Arc retain a direct EOA fiat minter and an EOA owner of upgrade administration. The same codeless minter and sole role/cap administrator are resolved on Tempo by complete role-event history; its additional token-bound transfer proxy retains an execution-closure gap. Solana minting uses a 1-of-2 Token-2022 multisig. LayerZero transfer machinery is reviewed separately under Bridge Risk.",
     "upgradeability": {

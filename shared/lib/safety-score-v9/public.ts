@@ -10,14 +10,14 @@ import {
   type SafetyScoreV9CurrentCard,
   type SafetyScoreV9CommonModeGroups,
 } from "../../types/safety-score-v9-public";
-import type { SafetyScoreV9PillarAdjustment } from "../../types/safety-score-v9-public-breakdowns";
+import type { SafetyScoreV9PillarAdjustment, SafetyScoreV9IssuanceSummary } from "../../types/safety-score-v9-public-breakdowns";
 import type {
   V9EvidenceLevel,
   V9QualityPillar,
   V9ReasonCode,
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
-import type { V9EvidenceResponsibility } from "../../types/safety-score-v9-facts";
+import type { V9EvidenceResponsibility, V1005ProcessDiagnostic, V1005AssetIssuanceFacts } from "../../types/safety-score-v9-facts";
 import { projectV9CompactPartialEvidence } from "../../types/safety-score-v9-causes";
 import { projectExitExecutionCertificate } from "./exit-execution";
 import { V9EvidenceResponsibilitySchema } from "../../types/safety-score-v9-fact-primitives";
@@ -30,9 +30,10 @@ import type { V9CommonModeGroup, V9ResolvedDependencyInputs } from "./dependenci
 import type { V9ExitEvaluationResult, V9ExitHolderEligibility } from "./exit";
 import { structuralSignalNeedsHardCap } from "./formula";
 import type { V9PillarReason, V9ProductionScoreInput, V9ProductionScoreTrace } from "./score";
-import { computeV9ResultDigest } from "./trace";
+import { computeV9CompactResultDigest, projectCompactV9ScoreTrace, type V9CompactScoreTrace } from "./trace";
 import { compareText, uniqueSorted } from "./primitives";
 import { effectiveAuthoritySignatureRequirement } from "./control-scope";
+import { normalizeDeploymentId } from "../../types/deployment-id";
 
 type V9PublicAccessProjectionInput = V9AccessPostureResult & {
   reasons?: readonly V9PillarReason[];
@@ -62,7 +63,7 @@ export interface V9PublicCardProjectionInput {
     | "diversificationBonus"
     | "routes"
   >;
-  control?: Pick<V9EconomicControlResult, "score" | "components" | "controlFacts" | "unresolvedDeploymentAdjustment">;
+  control?: Pick<V9EconomicControlResult, "score" | "components" | "controlFacts" | "unresolvedDeploymentAdjustment" | "processDiagnostics" | "issuanceFacts">;
   display?: {
     labels?: Readonly<Record<string, string>>;
     exitHolderEligibility?: Readonly<Record<string, V9ExitHolderEligibility>>;
@@ -88,6 +89,23 @@ export interface BuildSafetyScoreV9ResponseArgs {
   results: readonly V9PublicCardProjectionInput[] | (() => V9PublicCardProjectionInput[]);
   commonModeGroups?: readonly V9CommonModeGroup[];
 }
+
+export interface V9ProjectedResponseArgs extends Omit<BuildSafetyScoreV9ResponseArgs, "results"> {
+  resultDigest: string | (() => string);
+}
+
+export interface V9PublicResponseProjector {
+  project(input: V9PublicCardProjectionInput): void;
+  finalize(args: V9ProjectedResponseArgs): SafetyScoreV9CurrentResponse;
+}
+
+export interface V9CommonModeProjectionResult {
+  trace: Pick<V9ProductionScoreTrace, "assetId" | "structuralSignals" | "caps" | "deploymentAdjustments">;
+}
+
+type V9PublicResultIdentity = Pick<V9ProductionScoreTrace,
+  "baseInputGenerationId" | "factSetDigest" | "policyId" | "policyDigest" |
+  "evaluationBuildDigest" | "sourceGenerations" | "asOfSec">;
 
 export interface SafetyScoreV9TopDriver {
   kind: "cap-bound" | "pillar-bound" | "withheld";
@@ -443,6 +461,130 @@ function projectExitBreakdown(
   };
 }
 
+function canonicalProcessDiagnostics(
+  diagnostics: Iterable<V1005ProcessDiagnostic>,
+  issuanceFacts: V1005AssetIssuanceFacts | undefined,
+): V1005ProcessDiagnostic[] {
+  const processEvidence = uniqueSorted(issuanceFacts?.process?.evidenceRefIds ?? []);
+  const processEvidenceSet = new Set(processEvidence);
+  const rows = new Map<string, {
+    diagnostic: V1005ProcessDiagnostic; evidenceRefs: Set<string>; usesProcessEvidence: boolean;
+  }>();
+  for (const diagnostic of diagnostics) {
+    const referenced = diagnostic.issuanceFactsRef !== undefined;
+    const usesProcessEvidence = referenced && diagnostic.issuanceFactsRef === issuanceFacts?.ref && issuanceFacts?.process !== undefined;
+    const key = [diagnostic.gate, diagnostic.code, diagnostic.controlRef, diagnostic.pathId,
+      diagnostic.classId, diagnostic.memberRef, diagnostic.field].join("\u0000");
+    let entry = rows.get(key);
+    if (!entry) {
+      entry = { diagnostic, evidenceRefs: new Set(), usesProcessEvidence: false };
+      rows.set(key, entry);
+    }
+    entry.usesProcessEvidence ||= usesProcessEvidence;
+    if (!referenced) for (const ref of diagnostic.evidenceRefIds) entry.evidenceRefs.add(ref);
+  }
+  return [...rows.entries()].sort(([left], [right]) => compareText(left, right)).map(([, entry]) => {
+    // Reuse the one full evidence table for generated failures; only actual extra refs allocate.
+    let evidenceRefIds = processEvidence;
+    if (!entry.usesProcessEvidence) {
+      evidenceRefIds = [...entry.evidenceRefs].sort(compareText);
+    } else if (entry.evidenceRefs.size > 0) {
+      const extraRefs: string[] = [];
+      for (const ref of entry.evidenceRefs) if (!processEvidenceSet.has(ref)) extraRefs.push(ref);
+      if (extraRefs.length > 0) evidenceRefIds = [...processEvidence, ...extraRefs].sort(compareText);
+    }
+    return { ...entry.diagnostic, evidenceRefIds };
+  });
+}
+
+function projectIssuanceSummary(control: NonNullable<V9PublicCardProjectionInput["control"]>): SafetyScoreV9IssuanceSummary | undefined {
+  const facts = control.controlFacts ?? [];
+  if (!control.issuanceFacts && !control.processDiagnostics?.length && !facts.some((fact) => fact.processDiagnostics?.length)) return undefined;
+  const governance = control.issuanceFacts?.governance;
+  const process = control.issuanceFacts?.process;
+  function* diagnostics(): Iterable<V1005ProcessDiagnostic> {
+    yield* control.processDiagnostics ?? [];
+    yield* control.issuanceFacts?.diagnostics ?? [];
+    yield* governance?.diagnostics ?? [];
+    yield* governance?.votingControl.diagnostics ?? [];
+    yield* process?.diagnostics ?? [];
+    yield* process?.votingControl.diagnostics ?? [];
+    for (const fact of facts) {
+      yield* fact.processDiagnostics ?? [];
+    }
+  }
+  const grouped = new Map<string, {
+    summary: SafetyScoreV9IssuanceSummary["diagnostics"][number];
+    controlRefs: Set<V1005ProcessDiagnostic["controlRef"]>;
+  }>();
+  for (const diagnostic of canonicalProcessDiagnostics(diagnostics(), control.issuanceFacts)) {
+    const key = [diagnostic.gate, diagnostic.code, diagnostic.field, diagnostic.classId].join("\u0000");
+    let group = grouped.get(key);
+    if (!group) {
+      group = {
+        summary: { code: diagnostic.code, gate: diagnostic.gate, field: diagnostic.field,
+          classId: diagnostic.classId, count: 0, controlRefs: [], exemplars: [] },
+        controlRefs: new Set(),
+      };
+      grouped.set(key, group);
+    }
+    group.controlRefs.add(diagnostic.controlRef);
+    group.summary.count++;
+    if (group.summary.exemplars.length < 3) {
+      const { issuanceFactsRef: _ref, ...measurements } = diagnostic;
+      group.summary.exemplars.push({
+        ...measurements, evidenceRefIds: diagnostic.evidenceRefIds.slice(0, 3),
+        evidenceRefCount: diagnostic.evidenceRefIds.length,
+      });
+    }
+  }
+  if (!governance && !process && grouped.size === 0) return undefined;
+  let governanceSummary: SafetyScoreV9IssuanceSummary["governance"];
+  if (governance) {
+    const { incompleteReasons, nonGovernorUnboundedPathKeys, diagnostics: governanceDiagnostics, votingControl, ...measurements } = governance;
+    const incompleteReasonCounts = new Map<string, number>();
+    for (const reason of incompleteReasons) {
+      const separator = reason.indexOf(":");
+      const code = separator < 0 ? reason : reason.slice(0, separator);
+      incompleteReasonCounts.set(code, (incompleteReasonCounts.get(code) ?? 0) + 1);
+    }
+    governanceSummary = {
+      ...measurements, incompleteReasonCount: incompleteReasons.length,
+      incompleteReasonCounts: [...incompleteReasonCounts.entries()].sort(([left], [right]) => compareText(left, right))
+        .map(([code, count]) => ({ code, count })),
+      nonGovernorUnboundedPathCount: nonGovernorUnboundedPathKeys.length, diagnosticCount: governanceDiagnostics.length,
+      votingControl: {
+        observationState: votingControl.observationState, qualified: votingControl.qualified,
+        largestSingleControllerShareBps: votingControl.largestSingleControllerShareBps,
+        affiliatedAggregateShareBps: votingControl.affiliatedAggregateShareBps,
+        affiliatedUnilateralRouteCount: votingControl.affiliatedUnilateralRouteIds.length,
+        unknownAboveThresholdVoteOwnershipControllerCount: votingControl.unknownAboveThresholdVoteOwnershipControllerIds.length,
+        otherHolderVoteOperatorControllerCount: votingControl.otherHolderVoteOperatorControllerIds.length,
+        privilegedVoteCreation: votingControl.privilegedVoteCreation, forcedDelegation: votingControl.forcedDelegation,
+        censusReconciliationCount: votingControl.censusReconciliations.length,
+        unreconciledCensusCount: votingControl.censusReconciliations.filter((row) => row.state === "unreconciled").length,
+      },
+    };
+  }
+  let processSummary: SafetyScoreV9IssuanceSummary["process"];
+  if (process) {
+    const { nonGovernorDiscretionaryPathKeys, unclassifiedExpansionPathKeys, unknownRecipientPathKeys,
+      votingControl: _votingControl, diagnostics: processDiagnostics, evidenceRefIds, ...measurements } = process;
+    processSummary = {
+      ...measurements, nonGovernorDiscretionaryPathCount: nonGovernorDiscretionaryPathKeys.length,
+      unclassifiedExpansionPathCount: unclassifiedExpansionPathKeys.length, unknownRecipientPathCount: unknownRecipientPathKeys.length,
+      evidenceRefCount: evidenceRefIds.length, diagnosticCount: processDiagnostics.length,
+    };
+  }
+  return {
+    ...(governanceSummary ? { governance: governanceSummary } : {}),
+    ...(processSummary ? { process: processSummary } : {}),
+    diagnostics: [...grouped.entries()].sort(([left], [right]) => compareText(left, right)).map(([, group]) => ({
+      ...group.summary, controlRefs: [...group.controlRefs].sort((left, right) => compareText(left ?? "", right ?? "")),
+    })),
+  };
+}
+
 function projectControlBreakdown(
   input: V9PublicCardProjectionInput,
 ): NonNullable<V9UninternedPublicCard["breakdowns"]>["control"] {
@@ -453,12 +595,14 @@ function projectControlBreakdown(
   const excluded = input.scoreInput.pillars.control.aggregationDisposition === "excluded-a-b";
   const evaluatedScore = excluded ? null : control.score;
   const publishedScore = input.scoreInput.pillars.control.score;
+  const issuanceSummary = projectIssuanceSummary(control);
   return {
     evaluatedScore,
     publishedScore,
     ...pillarCauseFields(input, "control"),
     aggregationWeight: aggregationWeight(input, "control"),
     method: "minimum-binding-component",
+    ...(issuanceSummary ? { issuanceSummary } : {}),
     components: [...control.components]
       .sort((left, right) => compareText(left.componentKey, right.componentKey))
       .map((component) => ({
@@ -481,6 +625,7 @@ function projectControlBreakdown(
           .filter((fact) => component.controlKeys.includes(fact.controlKey))
           .map((fact) => ({
             controlKey: fact.controlKey,
+            controlRef: normalizeDeploymentId(fact.authority?.authorityKey ?? "") || null,
             authority: fact.authority,
             minimumCryptographicSignatures: effectiveAuthoritySignatureRequirement(fact.authority),
             executionScopeComplete: fact.executionScopeComplete ?? null,
@@ -1001,38 +1146,37 @@ function canonicalSourceGenerations(sourceGenerations: Readonly<Record<string, s
   return Object.fromEntries(Object.entries(sourceGenerations).sort(([left], [right]) => compareText(left, right)));
 }
 
-function assertConsistentResultIdentity(results: readonly V9PublicCardProjectionInput[]): void {
-  if (results.length === 0) throw new Error("Safety Score v9 publication requires at least one result");
-  const first = results[0]!.trace;
-  const firstSourceGenerations = JSON.stringify(canonicalSourceGenerations(first.sourceGenerations));
-  const seen = new Set<string>();
-  for (const { trace } of results) {
-    if (seen.has(trace.assetId)) throw new Error(`Duplicate Safety Score v9 result ${trace.assetId}`);
-    seen.add(trace.assetId);
-    for (const [label, actual, expected] of [
-      ["fact-set digest", trace.factSetDigest, first.factSetDigest],
-      ["base input generation", trace.baseInputGenerationId, first.baseInputGenerationId],
-      ["evaluation build", trace.evaluationBuildDigest, first.evaluationBuildDigest],
-      ["policy ID", trace.policyId, first.policyId],
-      ["policy digest", trace.policyDigest, first.policyDigest],
-      ["evidence clock", String(trace.asOfSec), String(first.asOfSec)],
-      [
-        "source generations",
-        JSON.stringify(canonicalSourceGenerations(trace.sourceGenerations)),
-        firstSourceGenerations,
-      ],
-    ] as const) {
-      if (actual !== expected) {
-        throw new Error(`Safety Score v9 publication mixes ${label}: ${actual} != ${expected}`);
-      }
+const V9_RESULT_IDENTITY_FIELDS = [
+  ["factSetDigest", "fact-set digest"],
+  ["baseInputGenerationId", "base input generation"],
+  ["evaluationBuildDigest", "evaluation build"],
+  ["policyId", "policy ID"],
+  ["policyDigest", "policy digest"],
+] as const;
+
+function assertMatchingResultIdentity(
+  first: V9PublicResultIdentity,
+  firstSourceGenerations: string,
+  trace: V9ProductionScoreTrace,
+): void {
+  for (const [key, label] of V9_RESULT_IDENTITY_FIELDS) {
+    if (trace[key] !== first[key]) {
+      throw new Error(`Safety Score v9 publication mixes ${label}: ${trace[key]} != ${first[key]}`);
     }
+  }
+  if (String(trace.asOfSec) !== String(first.asOfSec)) {
+    throw new Error(`Safety Score v9 publication mixes evidence clock: ${trace.asOfSec} != ${first.asOfSec}`);
+  }
+  const sourceGenerations = JSON.stringify(canonicalSourceGenerations(trace.sourceGenerations));
+  if (sourceGenerations !== firstSourceGenerations) {
+    throw new Error(`Safety Score v9 publication mixes source generations: ${sourceGenerations} != ${firstSourceGenerations}`);
   }
 }
 
 /** Pure publication projection: never regrades a group or reruns the scorer. */
 export function projectSafetyScoreV9CommonModeGroups(
   groups: readonly V9CommonModeGroup[],
-  results: readonly Pick<V9PublicCardProjectionInput, "trace">[],
+  results: readonly V9CommonModeProjectionResult[],
   cards: readonly SafetyScoreV9CurrentCard[],
 ): SafetyScoreV9CommonModeGroups {
   const resultById = new Map(results.map((result) => [result.trace.assetId, result]));
@@ -1113,80 +1257,124 @@ export class V9PublicCardProjectionError extends Error {
   }
 }
 
+/** Project owned rows incrementally without retaining their trace or scorer input graphs. */
+export function createSafetyScoreV9ResponseProjector(): V9PublicResponseProjector {
+  let identity: V9PublicResultIdentity | null = null;
+  let sourceGenerations = "";
+  const seen = new Set<string>();
+  const drafts = new Map<string, V9InternedPublicCardDraft>();
+  const failures = new Map<string, z.core.$ZodIssue[]>();
+  const commonModeResults: V9CommonModeProjectionResult[] = [];
+  return {
+    project(input) {
+      const { trace } = input;
+      if (seen.has(trace.assetId)) throw new Error(`Duplicate Safety Score v9 result ${trace.assetId}`);
+      seen.add(trace.assetId);
+      if (identity === null) {
+        identity = {
+          baseInputGenerationId: trace.baseInputGenerationId,
+          factSetDigest: trace.factSetDigest,
+          policyId: trace.policyId,
+          policyDigest: trace.policyDigest,
+          evaluationBuildDigest: trace.evaluationBuildDigest,
+          sourceGenerations: canonicalSourceGenerations(trace.sourceGenerations),
+          asOfSec: trace.asOfSec,
+        };
+        sourceGenerations = JSON.stringify(identity.sourceGenerations);
+      } else {
+        assertMatchingResultIdentity(identity, sourceGenerations, trace);
+      }
+      commonModeResults.push({ trace: {
+        assetId: trace.assetId,
+        structuralSignals: trace.structuralSignals,
+        caps: trace.caps,
+        deploymentAdjustments: trace.deploymentAdjustments,
+      } });
+      try {
+        const { card, foreignCauseGaps } = projectSafetyScoreV9Card(input);
+        const { foreignCauseGapRefs: _localRefs, ...draft } = card;
+        drafts.set(trace.assetId, { ...draft, foreignCauseGaps });
+      } catch (error) {
+        if (!(error instanceof z.ZodError)) throw error;
+        failures.set(trace.assetId, error.issues);
+      }
+    },
+    finalize(args) {
+      if (identity === null) throw new Error("Safety Score v9 publication requires at least one result");
+      const ids = [...seen].sort(compareText);
+      if (failures.size > 0) {
+        throw new V9PublicCardProjectionError(ids.flatMap((assetId, index) => {
+          const issues = failures.get(assetId);
+          return issues === undefined ? [] : [{
+            assetId,
+            issues: issues.map((issue) => ({ ...issue, path: ["cards", index, ...issue.path] })),
+          }];
+        }));
+      }
+      const resultDigest = typeof args.resultDigest === "function" ? args.resultDigest() : args.resultDigest;
+      const { cards, foreignCauseGaps } = finalizeV9PublicCauseGaps(ids.map((id) => drafts.get(id)!));
+      drafts.clear();
+      seen.clear();
+      const notRatedIds = cards.filter((card) => card.ratingStatus === "not-rated").map((card) => card.id);
+      const pipelineGapIds = cards.filter((card) => card.ratingStatus === "pipeline-gap").map((card) => card.id);
+      const commonModeGroups = args.commonModeGroups === undefined
+        ? undefined
+        : projectSafetyScoreV9CommonModeGroups(args.commonModeGroups, commonModeResults, cards);
+      commonModeResults.length = 0;
+      // Every owned card passed full admission before the foreign-reference remap.
+      // The envelope still validates chronology, membership and gap authority.
+      const admittedCards = new WeakSet<object>(cards);
+      const responseSchema = SafetyScoreV9CurrentResponseSchema.safeExtend({
+        cards: z.array(z.custom<SafetyScoreV9CurrentCard>((value) =>
+          value !== null && typeof value === "object" && admittedCards.has(value))),
+      });
+      return responseSchema.parse({
+        model: "v9-critical-path",
+        schemaVersion: 6,
+        lifecycle: "active",
+        candidateId: args.candidateId,
+        policyVersion: args.policyVersion,
+        publicationGenerationId: args.publicationGenerationId,
+        baseInputGenerationId: identity.baseInputGenerationId,
+        factSetDigest: identity.factSetDigest,
+        resultDigest,
+        policy: { id: identity.policyId, semanticDigest: identity.policyDigest },
+        evaluationBuildDigest: identity.evaluationBuildDigest,
+        sourceGenerations: identity.sourceGenerations,
+        asOfSec: identity.asOfSec,
+        publishedAtSec: args.publishedAtSec,
+        completeness: {
+          expectedCount: cards.length,
+          ratedCount: cards.length - notRatedIds.length - pipelineGapIds.length,
+          notRatedCount: notRatedIds.length,
+          notRatedIds,
+          pipelineGapCount: pipelineGapIds.length,
+          pipelineGapIds,
+        },
+        cards,
+        foreignCauseGaps,
+        ...(commonModeGroups === undefined ? {} : { commonModeGroups }),
+      });
+    },
+  };
+}
+
 export function buildSafetyScoreV9Response(args: BuildSafetyScoreV9ResponseArgs): SafetyScoreV9CurrentResponse {
-  // A producer transfers sole ownership of its array, so each result's graph is
-  // released as soon as its card is projected; arrays stay caller-owned.
+  // A producer transfers this list; compatibility/test lists remain caller-owned.
   const ordered: (V9PublicCardProjectionInput | undefined)[] =
     typeof args.results === "function" ? args.results() : [...args.results];
   args = { ...args, results: [] };
-  assertConsistentResultIdentity(ordered as V9PublicCardProjectionInput[]);
   ordered.sort((left, right) => compareText(left!.trace.assetId, right!.trace.assetId));
-  const traces = ordered.map((result) => result!.trace);
-  const first = traces[0]!;
-  const drafts = [];
-  const failures: V9PublicCardProjectionFailure[] = [];
+  const projector = createSafetyScoreV9ResponseProjector();
+  const compact: V9CompactScoreTrace[] = [];
   for (let index = 0; index < ordered.length; index++) {
     const result = ordered[index]!;
     ordered[index] = undefined;
-    try {
-      const { card, foreignCauseGaps: foreign } = projectSafetyScoreV9Card(result);
-      const { foreignCauseGapRefs: _localRefs, ...draft } = card;
-      drafts.push({ ...draft, foreignCauseGaps: foreign });
-    } catch (error) {
-      if (!(error instanceof z.ZodError)) throw error;
-      failures.push({ assetId: result.trace.assetId, issues: error.issues.map((issue) => ({
-        ...issue,
-        path: ["cards", index, ...issue.path],
-      })) });
-    }
+    projector.project(result);
+    compact.push(projectCompactV9ScoreTrace(result.trace));
   }
-  if (failures.length > 0) throw new V9PublicCardProjectionError(failures);
   ordered.length = 0;
-  const { cards, foreignCauseGaps } = finalizeV9PublicCauseGaps(drafts);
-  drafts.length = 0;
-  const notRatedIds = cards.filter((card) => card.ratingStatus === "not-rated").map((card) => card.id);
-  const pipelineGapIds = cards.filter((card) => card.ratingStatus === "pipeline-gap").map((card) => card.id);
-  const commonModeGroups = args.commonModeGroups === undefined
-    ? undefined
-    : projectSafetyScoreV9CommonModeGroups(args.commonModeGroups, traces.map((trace) => ({ trace })), cards);
-  const resultDigest = computeV9ResultDigest(traces);
-  // Projection and identity are complete. Release our working references
-  // without mutating the caller's results or argument object.
-  traces.length = 0;
-  // Each card passed the full single-card schema before the deterministic
-  // publication-wide foreign-reference remap. Admit those owned identities
-  // without cloning the complete graph again; envelope refinements still
-  // validate every reference against the publication's actual gap authority.
-  const admittedCards = new WeakSet<object>(cards);
-  const responseSchema = SafetyScoreV9CurrentResponseSchema.safeExtend({
-    cards: z.array(z.custom<SafetyScoreV9CurrentCard>((value) =>
-      value !== null && typeof value === "object" && admittedCards.has(value))),
-  });
-  return responseSchema.parse({
-    model: "v9-critical-path",
-    schemaVersion: 6,
-    lifecycle: "active",
-    candidateId: args.candidateId,
-    policyVersion: args.policyVersion,
-    publicationGenerationId: args.publicationGenerationId,
-    baseInputGenerationId: first.baseInputGenerationId,
-    factSetDigest: first.factSetDigest,
-    resultDigest,
-    policy: { id: first.policyId, semanticDigest: first.policyDigest },
-    evaluationBuildDigest: first.evaluationBuildDigest,
-    sourceGenerations: canonicalSourceGenerations(first.sourceGenerations),
-    asOfSec: first.asOfSec,
-    publishedAtSec: args.publishedAtSec,
-    completeness: {
-      expectedCount: cards.length,
-      ratedCount: cards.length - notRatedIds.length - pipelineGapIds.length,
-      notRatedCount: notRatedIds.length,
-      notRatedIds,
-      pipelineGapCount: pipelineGapIds.length,
-      pipelineGapIds,
-    },
-    cards,
-    foreignCauseGaps,
-    ...(commonModeGroups === undefined ? {} : { commonModeGroups }),
-  });
+  const response = projector.finalize({ ...args, resultDigest: () => computeV9CompactResultDigest(compact) });
+  compact.length = 0;
+  return response;
 }

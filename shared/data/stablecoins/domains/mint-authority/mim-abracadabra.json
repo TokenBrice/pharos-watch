@@ -2,7 +2,7 @@
   "id": "mim-abracadabra",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "manual-review",
     "summary": "The 13 issuer-native MIM deployments expose owner-controlled mint functions. Ethereum's owner is a 5/11 Safe with no modules or guard detected; the other 12 native owner Safes are enumerated with verified thresholds and empty module reads, while their guard status remains unverified. The Berachain LayerZero OFT representation is excluded from Mint Authority and remains in Bridge Risk.",
     "mintIncidents": [

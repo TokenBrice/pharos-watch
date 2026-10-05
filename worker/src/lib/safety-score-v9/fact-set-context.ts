@@ -10,7 +10,8 @@ import {
   type V9ResolvedEvidenceCause,
 } from "@shared/lib/safety-score-v9/evidence";
 import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
-import { compareText, deepFreeze, domainDigest } from "@shared/lib/safety-score-v9/primitives";
+import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
+import { deepFreeze } from "@shared/types/safety-score-v9-immutable";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type {
   V9EvidenceReferenceV2,

@@ -2,7 +2,7 @@
   "id": "xgz-goldzip",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "The Ethereum UUPS owner can mint, grant every role and replace mint logic. Its custom wallet permits one administrator signature; the alternative operator-plus-validator path does not remove that bypass.",
     "controls": [

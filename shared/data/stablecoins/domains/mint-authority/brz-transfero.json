@@ -2,7 +2,7 @@
   "id": "brz-transfero",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "At Ethereum block 26095794 on 2026-10-01, BRZ owner 0xaf24 is a 2-of-3 Safe and masterMinter 0x2c64 is a separate 2-of-4 Safe. Neither is itself a currently configured minter: owner can replace masterMinter, and masterMinter can authorize minters with arbitrary replenishable allowances. Proxy admin 0x478e is owned by the 0xaf24 owner Safe. Reviewed non-Ethereum controls include a current BSC owner contract 0xd66f and a current 1-of-2 Solana Token-2022 mint-authority multisig DzZjd6. Centralized issuance remains unbounded; no favorable authority-posture change is made.",
     "upgradeability": {

@@ -2,7 +2,7 @@
   "id": "cgusd-cygnus-finance",
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "cgUSD is a direct-deployed rebasing token on Base: its native mint(address,uint256) path takes the configured USDC asset, while issuer docs describe Axelar-assisted deposits from other chains. Cygnus controls the off-chain Treasury investment path and oracle-reported NAV rebase. The token and accounting oracle share a TimelockController owner with a 10-second delay and a 2-of-11 Safe proposer.",
     "upgradeability": {

@@ -2,7 +2,7 @@
   "id": "buck-bucket-protocol",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "BUCK is Bucket Protocol’s legacy Sui stablecoin. At checkpoint 328957880 all 40 reviewed V1 CDP mint ceilings are zero. The shared BucketProtocol still holds its TreasuryCap; AdminCaps remain with 0x169451… and the unrestricted policy-0, version-27 UpgradeCap with 0x938884…. Admin and upgrade powers remain in place.",
     "controls": [

@@ -2,7 +2,7 @@
   "id": "brsrv-blackrock",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "unknown",
     "summary": "Native fund issuance is privileged and administrator-controlled; current role-member independence and complete control closure are not publicly established.",
     "controls": [
@@ -145,7 +145,7 @@
     ],
     "economicCapSemantics": "unknown",
     "reconciliation": "unknown",
-    "supervision": "attestation-only",
+    "supervision": "prudential",
     "review": {
       "disposition": "unresolved",
       "sources": [
@@ -186,13 +186,17 @@
           "url": "https://docs.chroniclelabs.org/Products/VerifiedAssetOracle/proofOfAssets"
         },
         {
-          "label": "SEC-filed BRSRV prospectus and SAI: Deloitte audit oversight",
+          "label": "SEC 485BPOS July 31, 2026: BRSRV 1940 Act and Rule 2a-7 regime",
           "url": "https://www.sec.gov/Archives/edgar/data/844779/000119312526327203/d283147d485bpos.htm"
+        },
+        {
+          "label": "SEC EDGAR register: BlackRock Funds 40 Act file 811-05742, accession 0001193125-26-327203",
+          "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000844779&type=485BPOS&dateb=&owner=include&count=40"
         }
       ],
-      "evidence": "Ethereum block 26110197 native TrustService RoleAdded/RoleRemoved replay and getRole/code checks resolve one MASTER, six ISSUERs and one TRANSFER_AGENT. Four issuer contracts are ERC-1967 proxies, two with unverified implementations; full authorization/bypass closure is not established. MASTER can mint and immediately upgrade token and trust service. Solana account reads bind the authority to upgradeable program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP and ProgramData upgrade authority 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6, not a signing policy. Tempo execution and census remain unresolved. Wave-2 SEC 485BPOS prospectus/SAI review establishes product-specific independent financial oversight: Deloitte & Touche LLP serves as this Fund's independent registered public accounting firm and provides audit services; the Board reviews its reports. Supervision is attestation-only, not bank-style prudential supervision, and no completed audit, continuous token attestation or audit history is claimed. The SAI also says the transfer agent typically reconciles records with blockchain transactions at least daily, and BNY reconciles securities/cash with the custodian. These separate register and portfolio processes do not establish all on/off-chain token liabilities reconciled to backing on one common clock; reconciliation remains unknown. Chronicle BUIDL coverage cannot be inherited by this separate fund. The unverified Ethereum implementations, Tempo paths and Solana deployed-runtime correspondence remain independently unresolved.",
-      "reviewer": "Refine04 pinned EVM roles and Solana observations; W2R10 SEC product-specific audit-oversight review",
-      "reviewedAt": "2026-10-03",
+      "evidence": "Ethereum block 26110197 native TrustService RoleAdded/RoleRemoved replay and getRole/code checks resolve one MASTER, six ISSUERs and one TRANSFER_AGENT. Four issuer contracts are ERC-1967 proxies, two with unverified implementations; full authorization/bypass closure is not established. MASTER can mint and immediately upgrade token and trust service. Solana account reads bind the authority to upgradeable program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP and ProgramData upgrade authority 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6, not a signing policy. Tempo execution and census remain unresolved. The SEC 485BPOS filed 31 July 2026, accession 0001193125-26-327203, and its EDGAR register were independently verified on 2026-10-04: BlackRock Funds is an Investment Company Act of 1940 registered open-end management investment company (40 Act file 811-05742), and its issuing series BlackRock Daily Reinvestment Stablecoin Reserve Vehicle is a government money market fund under Rule 2a-7. The prospectus's Use of the Blockchain section expressly subjects this exact OnChain Shares class (CUSIP 09261A839, ticker RSVXX), including its native multi-network ownership records, to the same fund investment requirements. Ongoing SEC Rule 2a-7 quality, diversification, liquidity and maturity requirements over this issuing fund support prudential supervision; this is not a claim based on transfer-agent licensing, custodian regulation, BUIDL coverage, SEC endorsement or a reserve guarantee. Deloitte & Touche LLP is named independent accountant, but appointment does not establish a dated completed attestation or audit history. The SAI also says the transfer agent typically reconciles records with blockchain transactions at least daily, and BNY reconciles securities/cash with the custodian. These separate register and portfolio processes do not establish all on/off-chain token liabilities reconciled to backing on one common clock; reconciliation remains unknown. Chronicle BUIDL coverage cannot be inherited by this separate fund. The unverified Ethereum implementations, Tempo paths and Solana deployed-runtime correspondence remain independently unresolved.",
+      "reviewer": "Sol v10.06 availability-invariant campaign (BEvidence)",
+      "reviewedAt": "2026-10-04",
       "unresolvedQuestions": [
         "The whole Tempo native deployment's issuer/master role census remains unestablished.",
         "Complete issuance execution and upstream authorization paths of the four identified Ethereum ISSUER proxies remain unestablished, including unverified implementations 0x9394de9e0e1c7274da58a6b6ae246182a23c347f and 0x77305a8503a576f61f6c8639c8cb287b6b751840; no deployed-runtime equivalence proof to a verified reference closes those paths.",

@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { compileReviewedControlScope, effectiveAuthoritySignatureRequirement, minimumWeightedSignatures, partialControlScopeSemantics, reviewedControlScopeSemantics } from "../safety-score-v9/control-scope";
+import { compileReviewedControlScope, compileReviewedMintControlScopes, computeV1005AuthorityStateHash, effectiveAuthoritySignatureRequirement, minimumWeightedSignatures, partialControlScopeSemantics, reviewedControlScopeSemantics, v1005ProofIsClosed } from "../safety-score-v9/control-scope";
 import { applyMergedMintSignals } from "../safety-score-v9/control-mint-grade";
 import { evaluateV9EconomicControl } from "../safety-score-v9/control";
 import { deriveV9MintPosture } from "../safety-score-v9/control-primitives";
-import { V9ControlExecutionScopeSchema, V9WeightedQuorumSchema, type V9ControlExecutionScope } from "../../types/safety-score-v9-control-scope";
+import { V9ControlExecutionScopeSchema, V9InProcessControlExecutionScopeSchema, admitV9ControlExecutionScopeBatch, createV9ControlExecutionScopeRootReuse, isV9AdmittedControlExecutionScope, V9WeightedQuorumSchema, type V9ControlExecutionScope } from "../../types/safety-score-v9-control-scope";
+import type { MintAuthorityProfile } from "../../types/core";
+import type { V1005ExecutionCertificates } from "../../types/safety-score-v9-control-scope";
 import { V9_CANDIDATE_POLICY_V1, loadV9MethodologyPolicy } from "../safety-score-v9/policy";
 import { buildV9DependencyEvaluationPlan } from "../safety-score-v9/dependencies";
 import { minimalAsset } from "./safety-score-v9-facts.fixture-support";
@@ -13,6 +15,67 @@ const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.control;
 const compile = (scope = reviewedScope(), controller = SCOPE_CONTROLLER, clock = SCOPE_CLOCK) => compileReviewedControlScope(scope, controller, "alpha", clock, 90 * 86400);
 
 describe("V10 exact authority scope", () => {
+  it("reuses only structurally identical admitted book roots in one call-local cache", () => {
+    const reuse = createV9ControlExecutionScopeRootReuse();
+    const raw = reviewedScope();
+    expect(() => reuse(raw)).toThrow("immutable admission");
+    const first = V9InProcessControlExecutionScopeSchema.parse(raw);
+    const equal = V9InProcessControlExecutionScopeSchema.parse(structuredClone(raw));
+    expect(reuse(first)).toBe(first);
+    expect(reuse(equal)).toBe(first);
+    const changed = V9InProcessControlExecutionScopeSchema.parse(reviewedScope({ reviewer: "different-reviewer" }));
+    expect(reuse(changed)).toBe(changed);
+    expect(createV9ControlExecutionScopeRootReuse()(equal)).toBe(equal);
+    expect(Object.isFrozen(raw)).toBe(false);
+  });
+
+  it("strictly admits a scope batch with shared equal subtrees and rejects any invalid unbranded root", () => {
+    const first = reviewedScope(), second = reviewedScope({ controllerDeployment: "ethereum:0x2222222222222222222222222222222222222222" });
+    const [a, b, duplicate] = admitV9ControlExecutionScopeBatch([first, second, structuredClone(first)]);
+    expect(a).not.toBe(first);
+    expect(a).not.toBe(b);
+    expect(a).toBe(duplicate);
+    expect(a!.paths).toBe(b!.paths);
+    expect(a!.closure).toBe(b!.closure);
+    expect(V9InProcessControlExecutionScopeSchema.parse(a)).toBe(a);
+    expect(isV9AdmittedControlExecutionScope(a)).toBe(true);
+    expect(Object.isFrozen(a!.paths[0])).toBe(true);
+    expect(Object.isFrozen(first)).toBe(false);
+    const [readmittedA, readmittedB] = admitV9ControlExecutionScopeBatch([a, b]);
+    expect(readmittedA).toBe(a);
+    expect(readmittedB).toBe(b);
+    const invalid = structuredClone(b!);
+    invalid.paths[0]!.permissionChangeRefs = ["missing-path"];
+    expect(() => admitV9ControlExecutionScopeBatch([first, invalid])).toThrow();
+    expect(() => admitV9ControlExecutionScopeBatch([a, Object.freeze(invalid)])).toThrow();
+    expect(isV9AdmittedControlExecutionScope(first)).toBe(false);
+  });
+
+  it("retains strictly admitted immutable scope identity without accepting altered external copies", () => {
+    const raw = reviewedScope();
+    const admitted = V9InProcessControlExecutionScopeSchema.parse(raw);
+    expect(admitted).not.toBe(raw);
+    expect(Object.isFrozen(admitted.paths[0])).toBe(true);
+    expect(Reflect.set(admitted.paths[0]!, "permissionChangeRefs", ["missing-path"])).toBe(false);
+    expect(V9InProcessControlExecutionScopeSchema.parse(admitted)).toBe(admitted);
+    const copied = structuredClone(admitted);
+    expect(V9InProcessControlExecutionScopeSchema.parse(copied)).not.toBe(copied);
+    copied.paths[0]!.permissionChangeRefs = ["missing-path"];
+    expect(V9InProcessControlExecutionScopeSchema.safeParse(copied).success).toBe(false);
+    expect(V9ControlExecutionScopeSchema.safeParse(copied).success).toBe(false);
+  });
+
+  it("does not treat an unbranded frozen object as an admitted scope", () => {
+    const external = reviewedScope();
+    external.paths[0]!.permissionChangeRefs = ["missing-path"];
+    Object.freeze(external);
+    expect(isV9AdmittedControlExecutionScope(external)).toBe(false);
+    expect(V9InProcessControlExecutionScopeSchema.safeParse(external).success).toBe(false);
+    const admitted = V9InProcessControlExecutionScopeSchema.parse(reviewedScope());
+    expect(isV9AdmittedControlExecutionScope(admitted)).toBe(true);
+    expect(isV9AdmittedControlExecutionScope(structuredClone(admitted))).toBe(false);
+  });
+
   it("keeps chain-qualified identity and rejects changed runtime/signers, stale and future review relief", () => {
     expect(compile().complete).toBe(true);
     expect(compile(reviewedScope(), SCOPE_CONTROLLER.replace("ethereum", "arbitrum")).complete).toBe(false);
@@ -35,11 +98,11 @@ describe("V10 exact authority scope", () => {
     scope.paths[0]!.capSemantics = { kind: "unbounded", bound: null };
     scope.paths[0]!.claimImpairment = "unbounded";
     const adverse = { ...partial, ...partialControlScopeSemantics(legacy, compile(scope)) };
-    expect(deriveV9MintPosture(adverse, mint, false, policy.governedIssuance)).toBe("unbounded-unreconciled");
+    expect(deriveV9MintPosture(adverse, mint, false, V9_CANDIDATE_POLICY_V1.policy.semantic)).toBe("unbounded-adverse");
     expect(evaluate(adverse).score).toBeLessThan(evaluate(legacy).score!);
     scope.paths[0]!.activation = "disabled-final";
     const disabledPartial = { ...partial, ...partialControlScopeSemantics(legacy, compile(scope)) };
-    expect(deriveV9MintPosture(disabledPartial, mint, false, policy.governedIssuance)).toBe("unbounded-unreconciled");
+    expect(deriveV9MintPosture(disabledPartial, mint, false, V9_CANDIDATE_POLICY_V1.policy.semantic)).toBe("unbounded-adverse");
     expect(evaluate(disabledPartial).score).toBe(evaluate(adverse).score);
     scope.inventory = "complete"; scope.confidence = "verified";
     expect(reviewedControlScopeSemantics(compile(scope).paths).claimImpairment).toBe("none");
@@ -172,12 +235,12 @@ describe("V10 exact authority scope", () => {
     const baseline = evaluate(known);
     for (const review of [mint, { ...mint, status: boundedUnknown() }]) {
       const result = evaluate(adjacentUnknown, review);
-      expect(deriveV9MintPosture(adjacentUnknown, review, false, policy.governedIssuance)).toBe("unbounded-unreconciled");
+      expect(deriveV9MintPosture(adjacentUnknown, review, false, V9_CANDIDATE_POLICY_V1.policy.semantic)).toBe("unbounded-adverse");
       expect(result.structuralFailures).toContainEqual(expect.objectContaining({ kind: "centralized-mint", severity: "high" }));
       expect(result.score).toBe(baseline.score);
       expect(result.reasons.map((reason) => reason.code)).toContain(adverseField === "cap" ? "unknown-control-mint-ability" : "unknown-control-cap-authority");
     }
-    expect(deriveV9MintPosture({ ...adjacentUnknown, economicLossScope: "unknown" }, mint, false, policy.governedIssuance)).toBe("unknown");
+    expect(deriveV9MintPosture({ ...adjacentUnknown, economicLossScope: "unknown" }, mint, false, V9_CANDIDATE_POLICY_V1.policy.semantic)).toBe("unknown");
   });
 
   it("retains reconciled but unsupervised adverse mint evidence without clearing aggregate uncertainty", () => {
@@ -193,7 +256,10 @@ describe("V10 exact authority scope", () => {
     const unknownResult = evaluateV9EconomicControl(makeEconomicControlArgs({
       facts: makeEconomicControlFacts([control]), mint: reconciliationUnknown,
     }));
-    expect(result.score).toBe(unknownResult.score);
+    expect(unknownResult.score).toBe(25);
+    expect(unknownResult.components).toContainEqual(expect.objectContaining({
+      kind: "mint", posture: "unbounded-adverse", score: 25,
+    }));
     expect(result.components).toContainEqual(expect.objectContaining({
       kind: "mint", posture: "unbounded-reconciled", score: 52,
     }));
@@ -203,7 +269,7 @@ describe("V10 exact authority scope", () => {
     const friendly = makeDeploymentControl("mint:friendly", "mint");
     const unknown = makeDeploymentControl("mint:unreviewed", "mint", { authority: null, capSemantics: { kind: "unknown", bound: null }, claimImpairment: "unknown", economicLossScope: "unknown" });
     const mint = makeReviewedMintInput(friendly.controlKey);
-    expect(deriveV9MintPosture(unknown, mint, false, policy.governedIssuance)).toBe("unknown");
+    expect(deriveV9MintPosture(unknown, mint, false, V9_CANDIDATE_POLICY_V1.policy.semantic)).toBe("unknown");
     const result = evaluateV9EconomicControl(makeEconomicControlArgs({ facts: makeEconomicControlFacts([friendly, unknown]), mint }));
     expect(result.components.some((component) => component.posture === "unknown" && component.controlKeys.includes(unknown.controlKey))).toBe(true);
   });
@@ -258,4 +324,104 @@ describe("V10 weighted cryptographic quorum", () => {
     reordered.semantic.control.exactScope.activationStates.reverse();
     expect(loadV9MethodologyPolicy(reordered).semanticDigest).toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
   });
+});
+
+describe("v10.05 canonical authority state", () => {
+  it("pins sorted authority identity while excluding proof prose and dates", () => {
+    const graph = {
+      id: "g", liabilityBookId: "b", governorNodeId: "n1",
+      nodes: [{ id: "n1", deployment: "ethereum:0xabc", kind: "token-governor" as const, terminal: true,
+        authorityCensusIds: ["c2", "c1"], runtime: null, proofRef: "p" }], edges: [],
+    };
+    expect(computeV1005AuthorityStateHash(graph)).toBe("0x72d98843eacdea5e16559f996208e05f038e4132832b14f2bb0bda4cd5298859");
+    const reordered = { ...graph, nodes: [{ ...graph.nodes[0]!, authorityCensusIds: ["c1", "c2"], proofRef: "different-proof" }] };
+    expect(computeV1005AuthorityStateHash(reordered)).toBe(computeV1005AuthorityStateHash(graph));
+    expect(computeV1005AuthorityStateHash({ ...graph, nodes: [{ ...graph.nodes[0]!, kind: "multisig" }] })).not.toBe(computeV1005AuthorityStateHash(graph));
+  });
+});
+
+describe("v10.05 direct compact runtime variant admission", () => {
+  const blockHash: `0x${string}` = `0x${"ab".repeat(32)}`;
+  const codeHash: `0x${string}` = `0x${"cd".repeat(32)}`;
+  const implementationHash: `0x${string}` = `0x${"ef".repeat(32)}`;
+  const implementation = "ethereum:0x2222222222222222222222222222222222222222";
+  const pin = { chain: "ethereum", position: "100", hash: blockHash, timestamp: "2026-10-01T12:00:00Z" };
+  const review = { observedAt: "2026-10-01", reviewedAt: "2026-10-01", expiresAt: "2026-10-31", reviewer: "Modeled compact runtime fixture", pin };
+  const source = { label: "Modeled compact class source", url: "https://example.com/compact-runtime" };
+
+  function compactProfile(proxyKind: "none" | "eip1967" = "none"): MintAuthorityProfile {
+    const scopePin = { position: pin.position, hash: pin.hash, runtimeIdentity: codeHash, signerIdentity: "modeled-authority" };
+    const scope = reviewedScope({ pin: scopePin, observedState: scopePin });
+    const codeRead: V1005ExecutionCertificates["evidence"][number] = {
+      id: "member-code", pin, deployment: SCOPE_CONTROLLER, kind: "onchain-read", readType: "read-bundle",
+      function: "eth_getCode", selector: null, calldata: null, rawResult: null, captureHash: blockHash,
+      fieldReads: [{ field: "codeHash", function: "eth_getCode", selector: null, returnKind: "code-hash", target: "row-deployment", readType: "code", arguments: "none" }],
+      sourceUrl: source.url, sourceLocation: "modeled content-bound member table",
+      statement: "Modeled pinned code hash bound to this compact member row, not catalog evidence.", artificial: false,
+    };
+    const certificates: V1005ExecutionCertificates = {
+      schemaVersion: 1, liabilityBookId: "compact-book",
+      evidence: [codeRead, {
+        id: "source", pin, deployment: SCOPE_CONTROLLER, kind: "verified-source", readType: null,
+        function: "modeled executable source", selector: null, calldata: null, rawResult: null,
+        sourceUrl: source.url, sourceLocation: "modeled exact runtime correspondence",
+        statement: "The modeled source exactly matches the class executable and closes its path behavior.", artificial: false,
+      }, {
+        id: "implementation-code", pin, deployment: implementation, kind: "onchain-read", readType: "code",
+        function: "eth_getCode", selector: null, calldata: null, rawResult: null, codeHash: implementationHash, codeSize: 100,
+        sourceUrl: source.url, sourceLocation: "modeled implementation runtime",
+        statement: "Modeled pinned implementation bytes, not catalog evidence.", artificial: false,
+      }],
+      proofs: [
+        { id: "closed", conclusion: "closed", statement: "Modeled class behavior is closed.", evidenceRefIds: ["source"] },
+        { id: "runtime-source", conclusion: "closed", statement: "Modeled executable matches verified source.", evidenceRefIds: ["source", "member-code"] },
+        { id: "code-only", conclusion: "closed", statement: "Only observed code is established, not source correspondence.", evidenceRefIds: ["member-code"] },
+      ],
+      censuses: [], members: [],
+      classes: [{
+        id: "compact-class", review, memberRefs: [SCOPE_CONTROLLER], invariants: ["closed"], requiredConditions: [],
+        closure: scope.closure, sourcePathRefs: [{ controlRef: SCOPE_CONTROLLER, pathId: "issuance" }],
+        compactMembers: [{ deployment: SCOPE_CONTROLLER, codeHash, codeSize: 100, immutables: {}, state: {}, evidenceRefIds: ["member-code"] }],
+        runtimeVariants: [{
+          deployment: SCOPE_CONTROLLER, runtimeHash: codeHash, normalizedRuntimeHash: null, proxyKind,
+          implementation: proxyKind === "none" ? null : implementation,
+          implementationRuntimeHash: proxyKind === "none" ? null : implementationHash, normalizedImplementationRuntimeHash: null,
+          sourceRuntimeMatch: "exact", normalization: [], matchProofRef: "runtime-source",
+          evidenceRefIds: ["source", "member-code", "implementation-code"],
+        }],
+        paths: scope.paths.map(({ targetDeployment: _targetDeployment, activation: _activation, unavoidableDelaySec: _unavoidableDelaySec, affectedLiabilityIds: _affectedLiabilityIds, affectedDeployments: _affectedDeployments, ...template }) => ({ ...template, proofRef: "closed" })),
+      }],
+    };
+    return {
+      mintPath: "user-collateralized-governed", authorityPosture: "bounded-admin", confidence: "verified",
+      summary: "Modeled direct compact runtime admission.", economicCapSemantics: "bounded", reconciliation: "none", supervision: "none",
+      review: { reviewer: review.reviewer, reviewedAt: review.reviewedAt, evidence: "The modeled fixture closes every native issuance path at its evidence pin.", disposition: "scoreable", sources: [source] },
+      controls: [{ chain: "ethereum", address: SCOPE_CONTROLLER.split(":")[1], label: "Modeled compact minter",
+        role: "direct-minter", authorityType: "contract", directMintAbility: "direct", executionScope: scope, sources: [source] }],
+      executionCertificates: certificates,
+    };
+  }
+
+  it.each(["unmatched-source", "unknown-proxy", "missing-implementation-hash", "code-only-match-proof"] as const)(
+    "denies only the runtime admission gate for %s",
+    (failure) => {
+      const profile = compactProfile(failure === "missing-implementation-hash" ? "eip1967" : "none");
+      const positive = compileReviewedMintControlScopes(profile, "alpha", SCOPE_CLOCK, 90 * 86400)[0]!;
+      expect(positive.complete).toBe(true);
+      expect(positive.processDiagnostics).toEqual([]);
+      const certificates = profile.executionCertificates!, runtime = certificates.classes[0]!.runtimeVariants[0]!;
+      if (failure === "unmatched-source") runtime.sourceRuntimeMatch = "unmatched";
+      else if (failure === "unknown-proxy") runtime.proxyKind = "unknown";
+      else if (failure === "missing-implementation-hash") runtime.implementationRuntimeHash = null;
+      else runtime.matchProofRef = "code-only";
+      expect(v1005ProofIsClosed(certificates, runtime.matchProofRef, pin)).toBe(true);
+      const denied = compileReviewedMintControlScopes(profile, "alpha", SCOPE_CLOCK, 90 * 86400)[0]!;
+      expect(denied.processDiagnostics).toEqual([{
+        code: runtime.proxyKind === "none" ? "runtime-unmatched" : "implementation-unmatched", gate: "shared",
+        field: runtime.proxyKind === "none" ? "compactMembers.codeHash" : "compactMembers.implementation",
+        controlRef: SCOPE_CONTROLLER, pathId: "issuance", classId: "compact-class", memberRef: SCOPE_CONTROLLER,
+        evidenceRefIds: ["member-code"],
+      }]);
+    },
+  );
 });

@@ -2,7 +2,7 @@
   "id": "zarsc-supercoin",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "Native issuance remains under issuer authority. ZARsc uses a System Program Solana mint signer; Fireblocks custody does not prove an on-chain threshold.",
     "controls": [
@@ -45,7 +45,7 @@
       "observedAt": "2026-10-02"
     },
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "periodic",
     "supervision": "unknown",
     "review": {
       "sources": [
@@ -58,13 +58,17 @@
           "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf"
         },
         {
+          "label": "Moore monthly ZARsc AUP: July 31, 2026 snapshot, signed August 18, 2026",
+          "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6a854e37a0b02cf6fc733b82_ZARSC%20JULY%202026%20Stablecoin%20Attestation%2031072026%20FINAL%20SIGNED.pdf"
+        },
+        {
           "label": "Solana mint and authority observation",
           "url": "https://solscan.io/token/5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ"
         }
       ],
-      "evidence": "The sole native Solana mint authority and its ordinary-signature execution were independently re-read on 2026-10-03; issuer Fireblocks statements do not establish independent MPC operators, a cryptographic onchain quorum or hold period. The report archive links distinct May, June, July and August 2026 AUP comparisons of Absa cash to issued supply less management-designated treasury exclusions, documenting recurring reserve-to-management-defined-circulation comparisons. Earlier month labels repeat the same January report URL and are not counted as nine distinct engagements. AUP is not a financial assurance opinion or prudential authorization: those recurring factual comparisons do not establish independently assured total-holder-liability reconciliation or an independently pinned issuer-supervision regime. Reconciliation and supervision are therefore unknown rather than granting the periodic/attestation-only mint rung. Legal trust and bankruptcy protection remain unproved. Current issuer direct app redemption is not live; the two-business-day promise is future-only. Exchange liquidity and par execution are not guaranteed: the observed Orca pool was approximately USD16,000 with no observed 24-hour volume, and VALR volumes were small. Independent operators and Fireblocks key custody for the identified ordinary signer remain unverified; there is no onchain multisig threshold or timelock. Observed CoinGecko circulation differs from the historical report and issued total; retain fresh provider market cap rather than a raw minted-supply override. The requested 90-day chart covered only about nine days; ZAR FX normalization is required before depeg conclusions. FSP53458 remains an issuer/parent claim without an independently pinned regulator row. These key-custody, Backing, exit, market-data and supervision qualifications do not leave an unidentified native mint control.",
-      "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
-      "reviewedAt": "2026-10-03",
+      "evidence": "The sole native Solana mint authority and its ordinary-signature execution were independently re-read on 2026-10-03; issuer Fireblocks statements do not establish independent MPC operators, a cryptographic onchain quorum or hold period. Moore's monthly AUP reports reconcile independently obtained complete Absa reserve balances for Super Money SA (Pty) Ltd against the exhaustive native Solana ZARsc token-account population for mint 5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ. Four consecutive snapshots (1 June, 30 June, 31 July and 31 August 2026) establish recurring cadence; the July report was signed 18 August and the August report 16 September 2026, and the primary reports were independently verified on 2026-10-04. At the August snapshot, slot 443168735, Procedures 3, 8, 9, 11 and 12 match all 8,177,042 issued tokens to token accounts, then exclude 467,883.071866 issuer-controlled treasury tokens and an equal ZAR467,883.07 reserve allocation: ZAR7,944,582.89 remaining backing versus 7,709,158.928134 circulating liabilities, reported coverage 103.05%. Under the reviewed circulation-as-liability interpretation this supports periodic reconciliation over the sole native Solana issuance population; no other current issuance chain or bridged supply was identified in the reviewed documents. Treasury non-circulation and reserve attribution rely on signed management representations, not a technical transfer lock or independently bank-segregated allocation. Earlier month labels repeat the same January report URL and are not counted as distinct engagements. ISRS 4400 AUP gives factual findings, not an assurance opinion, and no prudential issuer mandate is established; supervision remains unknown. Legal trust and bankruptcy protection remain unproved. Current issuer direct app redemption is not live; the two-business-day promise is future-only. Exchange liquidity and par execution are not guaranteed: the observed Orca pool was approximately USD16,000 with no observed 24-hour volume, and VALR volumes were small. Independent operators and Fireblocks key custody for the identified ordinary signer remain unverified; there is no onchain multisig threshold or timelock. Observed CoinGecko circulation differs from the historical report and issued total; retain fresh provider market cap rather than a raw minted-supply override. The requested 90-day chart covered only about nine days; ZAR FX normalization is required before depeg conclusions. FSP53458 remains an issuer/parent claim without an independently pinned regulator row. These key-custody, Backing, exit, market-data and supervision qualifications do not leave an unidentified native mint control.",
+      "reviewer": "Sol v10.06 availability-invariant campaign (BEvidence)",
+      "reviewedAt": "2026-10-04",
       "disposition": "scoreable",
       "unresolvedQuestions": [],
       "scopedQuestions": [

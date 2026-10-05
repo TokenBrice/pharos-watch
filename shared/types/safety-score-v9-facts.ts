@@ -4,7 +4,9 @@ import { V9ReserveBoundedFactSchema } from "./reserve-bounded-facts";
 import { ReserveScopedAdmissionSchema } from "./safety-score-v9-reserve-scope";
 import { AdmittedProviderRowExclusionSchema } from "./safety-score-v9-supply-attribution";
 import { V9AccessClaimGraphSchema, v9AccessClaimGraphStatuses } from "./safety-score-v9-access-lookthrough";
-import { V9ControlExecutionScopeSchema, V9ExactControlPolicySchema, V9WeightedQuorumSchema } from "./safety-score-v9-control-scope";
+import { V9InProcessControlExecutionScopeSchema, V9ExactControlPolicySchema, V9WeightedQuorumSchema } from "./safety-score-v9-control-scope";
+import { createV9ValueInterner, deepFreeze } from "./safety-score-v9-immutable";
+import { DeploymentIdSchema } from "./stablecoin-meta-schemas";
 import { ReserveIntermediarySchema } from "./reserves";
 import {
   DependencyTypeSchema,
@@ -768,7 +770,131 @@ const V9ModulesOrGuardsSchema = z.enum(["present", "none-detected", "not-applica
 
 const V9IncidentStateSchema = z.enum(["none", "active", "resolved", "unknown"]);
 
-const V9IssuanceGovernanceSchema = z
+const V1005ProcessReasonSchema = z.enum([
+  "process-certificate-unavailable", "authority-census-incomplete", "execution-scope-unreviewed",
+  "runtime-unmatched", "implementation-unmatched", "instance-state-unmatched", "authority-state-changed", "authority-state-mismatch",
+  "execution-class-unmatched", "economic-reach-unclosed", "graph-reference-unresolved", "graph-cycle-unclosed",
+  "governor-control-missing", "governor-not-governance", "governor-without-issuance-path", "governor-without-veto-path",
+  "governor-carries-unbounded-path", "discretionary-root-independent", "delay-unproved", "delay-too-short",
+  "voting-power-inadmissible", "issuance-not-enumerable", "operational-path-unclassified", "operational-cap-unproved",
+  "operational-screen-failed", "operational-decision-rule-inadmissible", "formula-principal-unproved",
+  "formula-time-unproved", "formula-beneficiary-unproved", "rate-units-unproved", "interest-aggregate-unproved",
+  "keeper-activity-unproved", "aggregate-flow-unproved", "voting-control-unproved", "voting-affiliated-unilateral",
+  "shared-book-unresolved", "shared-book-mismatch", "shared-book-stale",
+  "voting-privilege-independent", "voting-census-unreconciled", "voting-provenance-unknown", "voting-other-holder-operator", "voting-origin-cycle-unclosed",
+  "review-incomplete", "review-future", "review-expired", "scoped-question-open", "active-incident",
+  "monetary-policy-path-unreviewed", "monetary-policy-path-inadmissible", "restructure-path-missing",
+  "restructure-reachable", "restructure-dependent-path-invalid",
+  "external-accounting-trust",
+]);
+const ProcessUint = z.string().regex(/^(0|[1-9][0-9]*)$/);
+const ProcessCount = z.number().finite().int().nonnegative().safe();
+export const V1005ProcessDiagnosticObjectSchema = z.object({
+  code: V1005ProcessReasonSchema, gate: z.enum(["shared", "D29", "D30", "D32", "H0", "H1", "H2", "H3", "H4"]),
+  controlRef: DeploymentIdSchema.nullable(), pathId: CanonicalTextSchema.nullable(),
+  classId: CanonicalTextSchema.nullable(), memberRef: DeploymentIdSchema.nullable(),
+  field: CanonicalTextSchema, evidenceRefIds: z.array(CanonicalTextSchema),
+  /** Evaluator diagnostics reference the asset process's complete evidence table instead of copying it. */
+  issuanceFactsRef: CanonicalTextSchema.optional(),
+}).strict();
+const V1005ProcessDiagnosticSchema = V1005ProcessDiagnosticObjectSchema.superRefine((row, ctx) => {
+  if (row.issuanceFactsRef !== undefined && row.evidenceRefIds.length !== 0) {
+    ctx.addIssue({ code: "custom", path: ["evidenceRefIds"], message: "Referenced process diagnostics cannot duplicate inline evidence" });
+  }
+});
+export const V1005CompiledVotingControlSchema = z.object({
+  observationState: z.enum(["known", "unknown"]), qualified: z.boolean(),
+  largestSingleControllerShareBps: z.number().int().min(0).max(10000).nullable(),
+  affiliatedAggregateShareBps: z.number().int().min(0).max(10000).nullable(),
+  affiliatedUnilateralRouteIds: z.array(CanonicalTextSchema),
+  unknownAboveThresholdVoteOwnershipControllerIds: z.array(CanonicalTextSchema),
+  otherHolderVoteOperatorControllerIds: z.array(CanonicalTextSchema),
+  privilegedVoteCreation: z.enum(["none", "governor-only", "independent", "unknown"]),
+  forcedDelegation: z.enum(["none", "governor-only", "independent", "unknown"]),
+  censusReconciliations: z.array(z.object({
+    routeId: CanonicalTextSchema, state: z.enum(["reconciled", "unreconciled"]),
+    accountedPowerRaw: ProcessUint.nullable(), residualUpperRaw: ProcessUint.nullable(),
+    totalVotingPowerRaw: ProcessUint.nullable(), pinnedVotingSupplyRaw: ProcessUint.nullable(),
+    unresolvedResidualCanPassAlone: z.union([z.boolean(), z.literal("unknown")]),
+    evidenceRefIds: z.array(CanonicalTextSchema),
+  }).strict()).min(1), diagnostics: z.array(V1005ProcessDiagnosticSchema),
+}).strict().superRefine((row, ctx) => {
+  for (const [index, reconciliation] of row.censusReconciliations.entries()) {
+    if (reconciliation.state === "reconciled" && (reconciliation.accountedPowerRaw === null || reconciliation.residualUpperRaw === null ||
+        reconciliation.totalVotingPowerRaw === null || reconciliation.pinnedVotingSupplyRaw === null ||
+        BigInt(reconciliation.accountedPowerRaw) + BigInt(reconciliation.residualUpperRaw) !== BigInt(reconciliation.totalVotingPowerRaw) ||
+        reconciliation.totalVotingPowerRaw !== reconciliation.pinnedVotingSupplyRaw)) {
+      ctx.addIssue({ code: "custom", path: ["censusReconciliations", index], message: "Reconciled voting census requires exact conserved pinned power" });
+    }
+  }
+  if (row.observationState === "known" && row.censusReconciliations.some((entry) => entry.state !== "reconciled" || entry.pinnedVotingSupplyRaw === "0" || entry.unresolvedResidualCanPassAlone === "unknown")) {
+    ctx.addIssue({ code: "custom", path: ["observationState"], message: "Known voting control requires complete reconciliations and residual thresholds" });
+  }
+  if (row.qualified && (row.observationState !== "known" || row.diagnostics.length !== 0 ||
+      row.affiliatedUnilateralRouteIds.length !== 0 || row.unknownAboveThresholdVoteOwnershipControllerIds.length !== 0 ||
+      row.otherHolderVoteOperatorControllerIds.length !== 0 || !["none", "governor-only"].includes(row.privilegedVoteCreation) ||
+      !["none", "governor-only"].includes(row.forcedDelegation) || row.censusReconciliations.some((entry) => entry.unresolvedResidualCanPassAlone !== false))) {
+    ctx.addIssue({ code: "custom", path: ["qualified"], message: "Qualified voting control cannot retain fatal or unresolved voting gates" });
+  }
+});
+export const V1005IssuanceProcessObjectSchema = z.object({
+  kind: z.literal("affirmative-operational-flow"), coverage: z.enum(["complete", "incomplete"]),
+  authorityCoverage: z.enum(["complete", "incomplete"]), executionCoverage: z.enum(["complete", "incomplete"]),
+  economicReachClosed: z.boolean(), inventoryComplete: z.boolean(),
+  memberCount: ProcessCount, matchedMemberCount: ProcessCount, unknownMemberCount: ProcessCount,
+  discretionaryPathCount: ProcessCount, operationalPathCount: ProcessCount, formulaPathCount: ProcessCount,
+  keeperInitialPathCount: ProcessCount, keeperRecurringPathCount: ProcessCount, fundedKeeperRecurringPathCount: ProcessCount, otherOperationalPathCount: ProcessCount,
+  envelopeTransitionPathCount: ProcessCount,
+  nonGovernorDiscretionaryPathKeys: z.array(CanonicalTextSchema), unclassifiedExpansionPathKeys: z.array(CanonicalTextSchema),
+  unknownRecipientPathKeys: z.array(CanonicalTextSchema),
+  minDiscretionaryPublicDelaySec: ProcessCount.nullable(), minEnvelopeRaisePublicDelaySec: ProcessCount.nullable(),
+  minOperationalExerciseDelaySec: ProcessCount.nullable(),
+  formulaQualified: z.boolean(), keeperQualified: z.boolean(), otherClassesQualified: z.boolean(),
+  maxAnnualInterestGrowthPpm: ProcessCount.nullable(), maxKeeperProportionalRewardPpm: ProcessCount.nullable(),
+  maxKeeperFixedRewardSupplyPpm: z.number().finite().nonnegative().nullable(),
+  minKeeperRecurringIntervalSec: ProcessCount.nullable(), maxKeeperRepeatRewardSupplyPpmPer86400Sec: ProcessCount.nullable(),
+  keeperSupplyScreenBasis: z.object({
+    nativeSupplyRaw: ProcessUint.nullable(), maxFixedRewardRaw: ProcessUint.nullable(),
+    maxRepeatRewardRawPer86400Sec: ProcessUint.nullable(), nativeUnits: CanonicalTextSchema,
+  }).strict().nullable(),
+  votingControl: V1005CompiledVotingControlSchema, diagnostics: z.array(V1005ProcessDiagnosticSchema),
+  evidenceRefIds: z.array(CanonicalTextSchema), sourceGenerationId: CanonicalTextSchema,
+  freshnessBudgetSec: ProcessCount, observedAtSec: ProcessCount.nullable(), expiresAtSec: ProcessCount.nullable(),
+}).strict();
+export const V1005IssuanceProcessSchema = V1005IssuanceProcessObjectSchema.superRefine((row, ctx) => {
+  if (row.matchedMemberCount + row.unknownMemberCount !== row.memberCount) ctx.addIssue({ code: "custom", path: ["memberCount"], message: "Process member counts must conserve the exact census" });
+  if (row.formulaPathCount + row.keeperInitialPathCount + row.keeperRecurringPathCount + row.otherOperationalPathCount !== row.operationalPathCount) ctx.addIssue({ code: "custom", path: ["operationalPathCount"], message: "Operational category counts must conserve paths" });
+  if (row.fundedKeeperRecurringPathCount > row.keeperRecurringPathCount) ctx.addIssue({ code: "custom", path: ["fundedKeeperRecurringPathCount"], message: "Funded recurrence is a subset of recurring paths" });
+  if (row.fundedKeeperRecurringPathCount === 0 && row.minKeeperRecurringIntervalSec !== null) ctx.addIssue({ code: "custom", path: ["minKeeperRecurringIntervalSec"], message: "Absent funded recurrence has no reward clock" });
+  if (row.envelopeTransitionPathCount === 0 && row.minEnvelopeRaisePublicDelaySec !== null) ctx.addIssue({ code: "custom", path: ["minEnvelopeRaisePublicDelaySec"], message: "Absent envelope transitions have no raise clock" });
+  const basis = row.keeperSupplyScreenBasis;
+  if (row.fundedKeeperRecurringPathCount === 0 && (basis?.maxRepeatRewardRawPer86400Sec != null && BigInt(basis.maxRepeatRewardRawPer86400Sec) > 0n ||
+      row.maxKeeperRepeatRewardSupplyPpmPer86400Sec !== null && row.maxKeeperRepeatRewardSupplyPpmPer86400Sec > 0)) ctx.addIssue({ code: "custom", path: ["fundedKeeperRecurringPathCount"], message: "No funded recurrence cannot retain a positive repeated reward upper" });
+  if (basis?.nativeSupplyRaw != null && BigInt(basis.nativeSupplyRaw) > 0n && basis.maxRepeatRewardRawPer86400Sec != null && row.maxKeeperRepeatRewardSupplyPpmPer86400Sec !== null) {
+    const denominator = BigInt(basis.nativeSupplyRaw);
+    const expected = (BigInt(basis.maxRepeatRewardRawPer86400Sec) * 1000000n + denominator - 1n) / denominator;
+    if (BigInt(row.maxKeeperRepeatRewardSupplyPpmPer86400Sec) !== expected) ctx.addIssue({ code: "custom", path: ["maxKeeperRepeatRewardSupplyPpmPer86400Sec"], message: "Repeat ppm must equal the upward exact raw-unit ratio" });
+  }
+  if (row.coverage === "complete" && (row.authorityCoverage !== "complete" || row.executionCoverage !== "complete" ||
+      !row.economicReachClosed || !row.inventoryComplete || row.unknownMemberCount !== 0 ||
+      row.discretionaryPathCount === 0 || row.operationalPathCount === 0 ||
+      row.nonGovernorDiscretionaryPathKeys.length !== 0 || row.unclassifiedExpansionPathKeys.length !== 0 ||
+      row.unknownRecipientPathKeys.length !== 0 || !row.formulaQualified || !row.keeperQualified || !row.otherClassesQualified ||
+      !row.votingControl.qualified || row.diagnostics.some((diagnostic) => diagnostic.code !== "external-accounting-trust") || row.minDiscretionaryPublicDelaySec === null ||
+      (row.envelopeTransitionPathCount > 0 && row.minEnvelopeRaisePublicDelaySec === null) || row.minOperationalExerciseDelaySec === null ||
+      (row.formulaPathCount > 0 && row.maxAnnualInterestGrowthPpm === null) ||
+      (row.keeperInitialPathCount + row.keeperRecurringPathCount > 0 && (row.maxKeeperProportionalRewardPpm === null ||
+        row.maxKeeperFixedRewardSupplyPpm === null || row.keeperSupplyScreenBasis?.nativeSupplyRaw == null)) ||
+      (row.fundedKeeperRecurringPathCount > 0 && row.minKeeperRecurringIntervalSec === null) ||
+      (row.keeperRecurringPathCount > 0 && row.maxKeeperRepeatRewardSupplyPpmPer86400Sec === null))) {
+    ctx.addIssue({ code: "custom", path: ["coverage"], message: "Complete process requires every structural proof and relevant measurement" });
+  }
+});
+export type V1005ProcessDiagnostic = z.output<typeof V1005ProcessDiagnosticSchema>;
+export type V1005CompiledVotingControl = z.output<typeof V1005CompiledVotingControlSchema>;
+export type V1005IssuanceProcess = z.output<typeof V1005IssuanceProcessSchema>;
+
+export const V9IssuanceGovernanceObjectSchema = z
   .object({
     coverage: z.enum(["complete", "incomplete"]),
     incompleteReasons: CanonicalStringArraySchema,
@@ -780,9 +906,11 @@ const V9IssuanceGovernanceSchema = z
     vetoOverride: z.enum(["none", "symmetric-vote-destruction", "insolvency-gated-restructure", "unknown"]).nullable(),
     enumerable: z.boolean(),
     nonGovernorUnboundedPathKeys: CanonicalStringArraySchema,
+    votingControl: V1005CompiledVotingControlSchema,
+    diagnostics: z.array(V1005ProcessDiagnosticSchema),
   })
-  .strict()
-  .superRefine((governance, ctx) => {
+  .strict();
+const V9IssuanceGovernanceSchema = V9IssuanceGovernanceObjectSchema.superRefine((governance, ctx) => {
     for (const field of ["vetoQuorumBps", "vetoOverride"] as const) {
       if ((governance.decisionRule === "affirmative-vote") !== (governance[field] === null)) {
         ctx.addIssue({
@@ -800,6 +928,37 @@ const V9IssuanceGovernanceSchema = z
       });
     }
   });
+
+/** Asset-wide proof data is serialized once; native control rows bind its exact identity. */
+const V1005AssetIssuanceFactsSchema = z.object({
+  ref: CanonicalTextSchema,
+  governance: V9IssuanceGovernanceSchema.optional(),
+  process: V1005IssuanceProcessSchema.optional(),
+  diagnostics: z.array(V1005ProcessDiagnosticSchema),
+}).strict().superRefine((facts, ctx) => {
+  if ((!facts.governance && !facts.process && facts.diagnostics.length === 0) ||
+      (facts.process && facts.governance?.decisionRule !== "affirmative-vote")) {
+    ctx.addIssue({ code: "custom", path: ["governance"], message: "Issuance facts need real governance or diagnostics; operational process requires affirmative governance" });
+  }
+});
+export type V1005AssetIssuanceFacts = z.output<typeof V1005AssetIssuanceFactsSchema>;
+
+const admittedIssuanceFacts = new WeakSet<object>();
+
+function isAdmittedIssuanceFacts(value: unknown): value is V1005AssetIssuanceFacts {
+  return value !== null && typeof value === "object" && Object.isFrozen(value) && admittedIssuanceFacts.has(value);
+}
+
+/** Keep the asset-wide proof graph shared across strict extension and compiled-asset admission. */
+export const V1005InProcessAssetIssuanceFactsSchema = z.union([
+  z.custom<V1005AssetIssuanceFacts>(isAdmittedIssuanceFacts),
+  V1005AssetIssuanceFactsSchema.transform((facts) => {
+    const admitted = createV9ValueInterner()(facts);
+    deepFreeze(admitted);
+    admittedIssuanceFacts.add(admitted);
+    return admitted;
+  }),
+]);
 
 /**
  * Reviewed control posture shared by the compiled control fact
@@ -831,14 +990,17 @@ export const V9DeploymentControlFactBaseSchema = z
     scopedQuestionFresh: z.boolean().optional(),
     keyCustody: V9KeyCustodySchema,
     modulesOrGuards: V9ModulesOrGuardsSchema,
-    executionScope: V9ControlExecutionScopeSchema.optional(),
+    executionScope: V9InProcessControlExecutionScopeSchema.optional(),
     /** Selected path on an execution-complete split fact; the full certificate still owns closure. */
     executionPathId: CanonicalTextSchema.optional(),
-    executionScopeContributors: z.array(z.object({ authorityKey: CanonicalTextSchema, scope: V9ControlExecutionScopeSchema.optional() }).strict()).min(1).optional(),
+    executionScopeContributors: z.array(z.object({ authorityKey: CanonicalTextSchema, scope: V9InProcessControlExecutionScopeSchema.optional() }).strict()).min(1).optional(),
     executionScopeComplete: z.boolean().optional(),
     scopeDiagnostics: CanonicalStringArraySchema.optional(),
     moduleImpact: V9ExactControlPolicySchema.shape.moduleImpactStates.element.optional(),
+    issuanceFactsRef: CanonicalTextSchema.optional(),
     issuanceGovernance: V9IssuanceGovernanceSchema.optional(),
+    issuanceProcess: V1005IssuanceProcessSchema.optional(),
+    processDiagnostics: z.array(V1005ProcessDiagnosticSchema).optional(),
     incidentState: V9IncidentStateSchema,
     failureDomains: CanonicalFailureDomainsSchema,
   })
@@ -852,6 +1014,11 @@ const V9DeploymentControlFactV2Schema = V9DeploymentControlFactBaseSchema
   })
   .strict()
   .superRefine((control, ctx) => {
+    if (control.issuanceFactsRef !== undefined &&
+        (control.controlKind === "bridge" || control.issuanceGovernance !== undefined ||
+          control.issuanceProcess !== undefined || control.processDiagnostics !== undefined)) {
+      ctx.addIssue({ code: "custom", path: ["issuanceFactsRef"], message: "Native issuance references cannot duplicate inline governance, process or diagnostics" });
+    }
     if (control.authority?.model === "multisig") {
       if (!control.authority.weightedQuorum && (!control.authority.threshold || control.authority.threshold.required > control.authority.threshold.total)) {
         ctx.addIssue({ code: "custom", path: ["authority", "threshold"], message: "Multisig threshold is invalid" });
@@ -1505,6 +1672,7 @@ const V9AssetFactsBaseFields = {
   exitRoutes: canonicalArrayBy(V9ExitRouteFactV2Schema, (route) => route.routeKey),
   controlStatus: V9FactStatusV2Schema,
   controls: canonicalArrayBy(V9DeploymentControlFactV2Schema, (control) => control.controlKey),
+  issuanceFacts: V1005InProcessAssetIssuanceFactsSchema.optional(),
   economicControlReview: V9EconomicControlReviewV2Schema,
   accessReview: V9AccessReviewV2Schema,
   peg: V9PegFactV2Schema,
@@ -1547,6 +1715,16 @@ type V9AssetFactsValidationInput = Omit<V9AssetFactsV2Object, "dependencies"> & 
 };
 
 function validateAssetFacts(asset: V9AssetFactsValidationInput, ctx: z.RefinementCtx): void {
+  for (const [index, control] of asset.controls.entries()) {
+    if (asset.issuanceFacts && control.controlKind !== "bridge" && control.issuanceFactsRef !== asset.issuanceFacts.ref) {
+      ctx.addIssue({ code: "custom", path: ["controls", index, "issuanceFactsRef"], message: "Every native control must bind the asset-wide issuance facts" });
+    }
+    if (control.issuanceFactsRef !== undefined &&
+        (control.issuanceFactsRef !== asset.issuanceFacts?.ref || control.controlKind === "bridge" ||
+          control.issuanceGovernance !== undefined || control.issuanceProcess !== undefined || control.processDiagnostics !== undefined)) {
+      ctx.addIssue({ code: "custom", path: ["controls", index, "issuanceFactsRef"], message: "Native issuance references require the exact asset facts and no duplicate inline process" });
+    }
+  }
   if (asset.mechanismRiskReview.review && asset.mechanismRiskReview.review.archetype !== asset.archetype) {
     ctx.addIssue({
       code: "custom",

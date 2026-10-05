@@ -2,7 +2,7 @@
   "id": "pusd-polymarket",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "PUSD has one authored Polygon-native UUPS-proxy ERC-20 deployment. The reviewed wrapper contracts deposit USDC or USDC.e before minting; three upgradeable market modules hold its separate minter role and mint against position-claim settlement in their current implementations. A 3-of-7 Safe controls the 12-hour Timelock. The newly identified PermissionedRamp holds wrapper role 2 and requires witness signatures. The token and all three module implementations have changed since the July observation. External transfer rails remain separately reviewed under Bridge Risk; PUSD does not create base USDC supply. D14 review 2026-10-03: verified CollateralToken implementation 0xce84e053301a82937f90ee2c2c1889cab1db25de exposes owner-only addMinter(address) and role-only mint(address,uint256) with no collateral transfer or cap check. The Safe can authorize an arbitrary recipient minter through its 43200-second timelock; deposit-backed ramps do not bound that independent token-local path. Economic semantics are unbounded; no token-governor D29 qualification is claimed.",
     "inheritedFrom": "usdc-circle",

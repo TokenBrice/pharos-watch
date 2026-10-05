@@ -7,9 +7,11 @@ import {
 } from "../schema";
 import { MintAuthorityProfileSchema, OracleRiskProfileSchema } from "../../../types/stablecoin-meta-control-schemas";
 import { V9DeploymentControlFactBaseSchema } from "../../../types/safety-score-v9-facts";
+import { STABLECOIN_STATUS_VALUES } from "../../../types/core";
 import { reviewedScope, SCOPE_CONTROLLER } from "../../__tests__/safety-score-v9-control-scope.test-support";
 import { CANONICAL_STABLECOIN_FLAGS, makeRawStablecoinMeta as makeCoin } from "./test-support";
 import { makeSafeControl } from "./schema.test-support";
+import { makeCompiledVotingControl } from "../../__tests__/safety-score-v9-fixtures.test-support";
 
 const baseFlags = CANONICAL_STABLECOIN_FLAGS;
 
@@ -148,6 +150,9 @@ function makeMintAuthority(overrides: Record<string, unknown> = {}): Record<stri
 function governedMintAuthority() {
   const executionScope = reviewedScope();
   executionScope.paths[0]!.capSemantics = { kind: "unbounded", bound: null };
+  const pin = { chain: "ethereum", position: "100", hash: `0x${"ab".repeat(32)}`, timestamp: "2026-10-01T00:00:00Z" };
+  const review = { observedAt: "2026-10-01", reviewedAt: "2026-10-01", expiresAt: "2026-10-31", reviewer: "Fixture Reviewer", pin };
+  const proofRef = "fixture-source-unknown";
   return MintAuthorityProfileSchema.parse(makeMintAuthority({
     authorityPosture: "unbounded-governed",
     economicCapSemantics: "unbounded",
@@ -160,11 +165,30 @@ function governedMintAuthority() {
       directMintAbility: "can-authorize",
       executionScope,
     }],
+    executionCertificates: { schemaVersion: 1, liabilityBookId: "fixture-book",
+      evidence: [{ id: proofRef, pin, deployment: SCOPE_CONTROLLER, kind: "verified-source", readType: null,
+        function: "modeled governor source", selector: null, calldata: null, rawResult: null, sourceUrl: mintAuthoritySource.url,
+        sourceLocation: "modeled authoring boundary", statement: "This authoring fixture identifies the source but deliberately leaves the state census unknown.", artificial: false }],
+      proofs: [{ id: proofRef, conclusion: "unknown", statement: "The authoring fixture does not assert a closed voting census or a positive process score.", evidenceRefIds: [proofRef] }],
+      censuses: [{ id: "fixture-census", review, targetDeployment: SCOPE_CONTROLLER, kind: "ward", role: "mint", coverage: "unknown",
+        authoritativeMembers: [], observations: [], discovery: { kind: "source-fixed-set", fromPosition: "0", throughPosition: "100", paginationEnd: null, proofRef }, completenessProofRef: proofRef }],
+      classes: [], members: [] },
+    authorityGraph: { id: "fixture-graph", review, liabilityBookId: "fixture-book", governorNodeId: "governor",
+      nodes: [{ id: "governor", deployment: SCOPE_CONTROLLER, kind: "token-governor", terminal: true, authorityCensusIds: ["fixture-census"], runtime: null, proofRef }],
+      edges: [], pathBindings: [{ path: { controlRef: SCOPE_CONTROLLER, pathId: "issuance" }, authorityNodeIds: ["governor"], provenanceNodeIds: [], closureProofRef: proofRef }], closureProofRef: proofRef },
     governedIssuance: {
       decisionRule: "affirmative-vote",
       governorControlRef: SCOPE_CONTROLLER,
       votingPower: "lock-escrowed",
       votingPowerEvidence: "Voting weight is escrowed for the entire voting and execution interval.",
+      votingControl: { id: "fixture-voting", governorNodeId: "governor", review, votingToken: SCOPE_CONTROLLER, totalVotingPowerRaw: null,
+        pinnedVotingSupply: { deployment: SCOPE_CONTROLLER, function: "totalSupply()", raw: null, proofRef }, controllerCensusProofRef: proofRef,
+        holderCensus: [], controllers: [], routes: [{ id: "fixture-approval", path: { controlRef: SCOPE_CONTROLLER, pathId: "issuance" },
+          kind: "affirmative-approval", totalVotingPowerRaw: null, unilateralThresholdRaw: null, thresholdComparator: "gt", thresholdProofRef: proofRef,
+          holderCensusRef: "holderCensus", controllerPowers: [], residualUpperRaw: null, residualProofRef: proofRef, affiliatedControllerIds: [],
+          affiliatedAggregatePowerRaw: null, affiliatedAggregateUnilateralThresholdRaw: null, affiliatedAggregateThresholdComparator: "gt",
+          affiliatedAggregateThresholdProofRef: proofRef, minorityProtectionProofRef: null }],
+        privilegedVoteCreation: { state: "unknown", pathRefs: [], proofRef }, forcedDelegation: { state: "unknown", pathRefs: [], proofRef } },
       enumerability: { authorizationEvents: ["MinterAuthorized(address)"], capacityReads: ["mintCapacity(address)"] },
       observedAt: "2026-10-01",
       observedBlock: 100,
@@ -323,8 +347,8 @@ describe("Mint authority D14/D29 evidence admission", () => {
       expect.objectContaining({ path: ["governedIssuance"] }),
     );
     expect(MintAuthorityProfileSchema.parse({
-      ...profile, authorityPosture: "unbounded-unreconciled", governedIssuance: undefined,
-    }).authorityPosture).toBe("unbounded-unreconciled");
+      ...profile, authorityPosture: "unbounded-adverse", governedIssuance: undefined,
+    }).authorityPosture).toBe("unbounded-adverse");
   });
 
   it("requires an explicit decision rule with no legacy default", () => {
@@ -344,7 +368,7 @@ describe("Mint authority D14/D29 evidence admission", () => {
   ] as const)("requires veto evidence iff the decision rule is %s", (decisionRule, vetoEvidence) => {
     const profile = governedMintAuthority();
     expect(MintAuthorityProfileSchema.safeParse({
-      ...profile, authorityPosture: "unbounded-unreconciled",
+      ...profile, authorityPosture: "unbounded-adverse",
       governedIssuance: { ...profile.governedIssuance!, decisionRule, veto: vetoEvidence },
     }).error?.issues).toContainEqual(expect.objectContaining({ path: ["governedIssuance", "veto"] }));
   });
@@ -519,7 +543,7 @@ describe("Mint authority D14/D29 evidence admission", () => {
     for (const overrides of [
       { authorityPosture: "compromised" },
       { authorityPosture: "compromised", mintIncidents: [{ ...incident, status: "resolved", resolvedAt: "2026-05-21" }] },
-      { authorityPosture: "unbounded-unreconciled", mintIncidents: [incident] },
+      { authorityPosture: "unbounded-adverse", mintIncidents: [incident] },
     ]) {
       expect(MintAuthorityProfileSchema.safeParse(makeMintAuthority(overrides)).error?.issues).toContainEqual(
         expect.objectContaining({ path: ["authorityPosture"] }),
@@ -530,11 +554,77 @@ describe("Mint authority D14/D29 evidence admission", () => {
     })).authorityPosture).toBe("partially-bounded-admin");
   });
 
-  it.each(["unknown", "unbounded-unreconciled"] as const)("admits %s for an unknown mint path", (authorityPosture) => {
+  it("admits genuinely unknown authority on an unknown mint path", () => {
     expect(MintAuthorityProfileSchema.parse(makeMintAuthority({
-      mintPath: "unknown", authorityPosture, confidence: "unknown", controls: [],
-    })).authorityPosture).toBe(authorityPosture);
+      mintPath: "unknown", authorityPosture: "unknown", confidence: "unknown", controls: [],
+    })).authorityPosture).toBe("unknown");
   });
+
+  it("admits an unknown mint path's adverse annotation only with known unbounded economics", () => {
+    const profile = makeMintAuthority({
+      mintPath: "unknown", authorityPosture: "unbounded-adverse", confidence: "unknown",
+    });
+    for (const economicCapSemantics of [undefined, "unknown", "bounded", "raiseable", "collateral-gated"]) {
+      expect(MintAuthorityProfileSchema.safeParse({ ...profile, economicCapSemantics }).error?.issues).toContainEqual(
+        expect.objectContaining({ path: ["authorityPosture"] }),
+      );
+    }
+    expect(MintAuthorityProfileSchema.parse({ ...profile, economicCapSemantics: "unbounded" }).authorityPosture)
+      .toBe("unbounded-adverse");
+  });
+
+  it.each([
+    { capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "bounded" },
+    { capSemantics: { kind: "bounded", bound: { amount: 0.1, unit: "supply-fraction" } }, claimImpairment: "unbounded" },
+  ] as const)("admits known unbounded execution economics without inventing aggregate semantics (%j)", (economics) => {
+    const executionScope = reviewedScope();
+    executionScope.paths[0] = { ...executionScope.paths[0]!, ...economics };
+    const profile = MintAuthorityProfileSchema.parse(makeMintAuthority({
+      mintPath: "unknown", authorityPosture: "unbounded-adverse", confidence: "manual-review",
+      controls: [{
+        chain: "ethereum", address: SCOPE_CONTROLLER.split(":")[1], label: "Reviewed issuer authority",
+        role: "direct-minter", authorityType: "contract", directMintAbility: "direct", executionScope,
+      }],
+    }));
+    expect(profile.authorityPosture).toBe("unbounded-adverse");
+    expect(profile.economicCapSemantics).toBeUndefined();
+  });
+
+  it.each(["unbounded-reconciliation-unknown", "unbounded-unreconciled"])(
+    "rejects retired posture %s in profiles, sidecars, and every listing status", (authorityPosture) => {
+      const mintAuthority = makeMintAuthority({
+        authorityPosture: "unbounded-adverse", economicCapSemantics: "unbounded",
+      });
+      expect(MintAuthorityProfileSchema.safeParse({ ...mintAuthority, authorityPosture }).error?.issues)
+        .toContainEqual(expect.objectContaining({ path: ["authorityPosture"] }));
+      expect(StablecoinMintAuthoritySidecarSchema.safeParse({
+        id: "fixture-usd", mintAuthority: { ...mintAuthority, authorityPosture },
+      }).error?.issues).toContainEqual(expect.objectContaining({ path: ["mintAuthority", "authorityPosture"] }));
+      for (const status of STABLECOIN_STATUS_VALUES) {
+        const coin = makeCoin({
+          status, mintAuthority,
+          ...(status === "frozen" ? {
+            frozenAt: "2026-05-24",
+            obituary: {
+              causeOfDeath: "abandoned", deathDate: "2026-05", epitaph: "The issuer ended issuance.",
+              obituary: "The fixture issuer wound down its native stablecoin.",
+              sourceUrl: mintAuthoritySource.url, sourceLabel: mintAuthoritySource.label,
+            },
+          } : {}),
+          ...(status === "quarantined" || status === "delisted" ? {
+            listingStatusReview: {
+              changedAt: "2026-05-24", reason: "The issuer's listing remains under review.",
+              reviewBy: "2026-06-24", source: mintAuthoritySource,
+            },
+          } : {}),
+        });
+        expect(() => parseStablecoinMetaAssets([coin], "fixture")).not.toThrow();
+        expect(() => parseStablecoinMetaAssets([
+          { ...coin, mintAuthority: { ...mintAuthority, authorityPosture } },
+        ], "fixture")).toThrow(/authorityPosture/);
+      }
+    },
+  );
 
   it("rejects a governed posture on an unknown mint path", () => {
     expect(MintAuthorityProfileSchema.safeParse({ ...governedMintAuthority(), mintPath: "unknown" }).error?.issues).toContainEqual(
@@ -579,6 +669,8 @@ describe("Compiled issuance governance contract", () => {
     decisionRule: "affirmative-vote",
     vetoQuorumBps: null,
     vetoOverride: null,
+    votingControl: makeCompiledVotingControl(),
+    diagnostics: [],
   };
 
   it("preserves absent evidence and a nullable minimum without inventing completeness", () => {
@@ -1182,10 +1274,42 @@ describe("StablecoinMeta schema — mint authority", () => {
     ], "fixture")).toThrow(/reconciliation continuous and supervision prudential/);
   });
 
-  it("leaves non-scoring reconciliation and supervision values unbound", () => {
-    // `unknown`, `not-applicable` and `none` record an absence rather than a
-    // claim, so they must stay authorable without an evidence sentence.
+  it.each([
+    [{ reconciliation: "continuous" }, "Continuous proofs reconcile all circulating native liabilities to independently verifiable backing."],
+    [{ reconciliation: "periodic" }, "Monthly attestations reconcile all circulating native liabilities to the stated segregated reserves."],
+    [{ reconciliation: "internal-ledger" }, "The issuer's internal ledger records all native issuance and liability settlement."],
+    [{ supervision: "prudential" }, "The named prudential regime supervises the issuer entity and all native token liabilities."],
+    [{ supervision: "attestation-only" }, "The named attestator reports reserves covering the issuer's entire native token liabilities."],
+  ] as const)("requires a review source and substantive evidence for positive process claim %j", (claim, evidence) => {
+    const review = {
+      sources: [mintAuthoritySource], evidence, reviewer: "Fixture Reviewer", reviewedAt: "2026-05-24",
+    };
+    const profile = makeMintAuthority({ ...claim, confidence: "manual-review", review });
+    expect(MintAuthorityProfileSchema.parse(profile).review.evidence).toBe(evidence);
+    expect(MintAuthorityProfileSchema.safeParse({
+      ...profile, review: { ...review, sources: [], sourceFreeRationale: "No claim-supporting primary source has been located." },
+    }).error?.issues).toContainEqual(expect.objectContaining({ path: ["review", "sources"] }));
+    for (const shortEvidence of [undefined, "The issuer operates this.", ` ${"x".repeat(39)} `]) {
+      expect(MintAuthorityProfileSchema.safeParse({
+        ...profile, review: { ...review, sources: [{ label: "Issuer homepage", url: "https://example.com" }], evidence: shortEvidence },
+      }).error?.issues).toContainEqual(expect.objectContaining({ path: ["review", "evidence"] }));
+    }
+    expect(MintAuthorityProfileSchema.parse({
+      ...profile, review: { ...review, evidence: ` ${evidence} ` },
+    }).review.evidence?.trim()).toBe(evidence);
+    if ("reconciliation" in claim && claim.reconciliation === "internal-ledger") {
+      const boundaryEvidence = "The ledger records every issued balance.";
+      expect(boundaryEvidence).toHaveLength(40);
+      expect(MintAuthorityProfileSchema.parse({
+        ...profile, review: { ...review, evidence: ` ${boundaryEvidence} ` },
+      }).review.evidence?.trim()).toBe(boundaryEvidence);
+    }
+  });
+
+  it("leaves reviewed absence, applicability, and unresolved process values unbound", () => {
+    // These states require no invented positive process evidence.
     for (const overrides of [
+      { reconciliation: "none" },
       { reconciliation: "not-applicable" },
       { reconciliation: "unknown" },
       { supervision: "none" },
@@ -1227,7 +1351,7 @@ describe("StablecoinMeta schema — mint authority", () => {
     ], "fixture")).not.toThrow();
   });
 
-  it("keeps unknown mint paths paired with unknown posture unless evidence supports unreconciled issuance", () => {
+  it("keeps unknown mint paths paired with unknown posture unless known unbounded authority is evidenced", () => {
     expect(() => parseStablecoinMetaAssets([
       makeCoin({
         id: "fixture-mint-unknown",

@@ -705,7 +705,7 @@ export const GOLDEN_SCENARIOS: Scenario[] = [
     },
   },
   {
-    id: "unbounded-unreconciled-mint-anchor",
+    id: "unbounded-adverse-mint-anchor",
     name: "Verified unbounded mint without reconciliation",
     archetype: "fiat-backed-anchor",
     description:
@@ -988,14 +988,14 @@ export const PAIRWISE_CONSTRAINTS: PairwiseConstraint[] = [
   },
   {
     higherId: "unverified-mint-anchor",
-    lowerId: "unbounded-unreconciled-mint-anchor",
+    lowerId: "unbounded-adverse-mint-anchor",
     minGap: 10,
     rationale:
       "An unverified control surface is at most as bad as a verified unbounded one: unverified caps at the control-unverified ceiling while verified-bad binds at the critical centralized-mint cap.",
   },
   {
     higherId: "reconciled-unbounded-mint-anchor",
-    lowerId: "unbounded-unreconciled-mint-anchor",
+    lowerId: "unbounded-adverse-mint-anchor",
     minGap: 4,
     rationale:
       "Provable supply reconciliation removes the critical 39 ceiling while leaving the same weak control posture; the smooth composite consequently lands one four-point band above the capped path.",

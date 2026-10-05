@@ -2,9 +2,9 @@
   "id": "meusd-mezo",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "manual-review",
-    "summary": "MUSD's only canonical native issuance route is on Mezo: BorrowerOperations opens BTC-collateralized troves at a 110% minimum collateral ratio and InterestRateManager mints accrued interest. The Mezo token owner's 5-of-9 Safe administers the canonical mintList and can authorize arbitrary additional Mezo minters, so canonical issuance remains unbounded-unreconciled. Ethereum and Base are Wormhole NTT burning-spoke representations; their bridge minting, burn, rate-limit, upgrade, peer, pause, and Guardian-attestation controls are assessed under bridgeRouteRisk.",
+    "summary": "MUSD's only canonical native issuance route is on Mezo: BorrowerOperations opens BTC-collateralized troves at a 110% minimum collateral ratio and InterestRateManager mints accrued interest. The Mezo token owner's 5-of-9 Safe administers the canonical mintList and can authorize arbitrary additional Mezo minters, so canonical issuance remains unbounded-adverse. Ethereum and Base are Wormhole NTT burning-spoke representations; their bridge minting, burn, rate-limit, upgrade, peer, pause, and Guardian-attestation controls are assessed under bridgeRouteRisk.",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [

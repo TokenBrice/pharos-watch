@@ -447,7 +447,7 @@ describe("coverage helpers", () => {
     expect(
       mintAuthorityCoverageFeature.resolve({
         mintPath: "permissioned-minter",
-        authorityPosture: "unbounded-unreconciled",
+        authorityPosture: "unbounded-adverse",
         confidence: "manual-review",
         controls: [
           {

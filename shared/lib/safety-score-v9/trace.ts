@@ -63,9 +63,11 @@ export function projectCompactV9ScoreTrace(trace: V9ProductionScoreTrace): V9Com
 }
 
 export function computeV9ResultDigest(traces: readonly V9ProductionScoreTrace[]): string {
-  const compact = [...traces]
-    .sort((left, right) => compareText(left.assetId, right.assetId))
-    .map(projectCompactV9ScoreTrace);
+  return computeV9CompactResultDigest(traces.map(projectCompactV9ScoreTrace));
+}
+
+export function computeV9CompactResultDigest(traces: readonly V9CompactScoreTrace[]): string {
+  const compact = [...traces].sort((left, right) => compareText(left.assetId, right.assetId));
   return sha256HexFromUtf8Chunks(
     stableJsonStringifyChunksV1({ domain: V9_RESULT_DIGEST_DOMAIN, results: compact }),
   );

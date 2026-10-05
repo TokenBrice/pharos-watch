@@ -4,6 +4,7 @@ import type { PegSummaryCoin, PegSummaryResponse } from "@shared/types";
 import { makePegSummaryCoin as makePegSummaryCoinBase } from "@/test-utils/peg-summary-fixtures";
 import { makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { makePublishedProcessDiagnostic } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
 import { buildStablecoinDetailViewModel } from "../stablecoin-detail-view-model";
 import {
   makeBuildStablecoinDetailViewModelParams,
@@ -752,5 +753,26 @@ describe("stablecoin detail view-model builder", () => {
 
     expect(viewModel.reserves?.mode).toBe("curated-fallback");
     expect(viewModel.reserveFetchError).toBeInstanceOf(Error);
+  });
+});
+
+describe("detail published mint evidence integration", () => {
+  it("keeps process-level screen diagnostics in the ready page even when the mint component is NR", () => {
+    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+    const card = makeV9Card({ id: coin.id });
+    const component = card.breakdowns!.control.components[0]!;
+    card.breakdowns!.control.components = [{ ...component, kind: "mint", score: null }];
+    card.breakdowns!.control.issuanceSummary = { diagnostics: [makePublishedProcessDiagnostic({
+      code: "operational-screen-failed", gate: "H3", controlRef: null, pathId: null,
+      classId: null, memberRef: null, field: "operationalExposurePpm", evidenceRefIds: ["exposure-proof"],
+    })] };
+    const view = buildStablecoinDetailViewModel(makeReadyDetailParams({ id: coin.id, coin,
+      queries: { reportCards: { data: { cards: [card] } as never } } }));
+    expect(view.status).toBe("ready");
+    if (view.status !== "ready") throw new Error("Expected a ready detail fixture");
+    expect(view.mintAuthority.score).toBeNull();
+    expect(view.mintAuthority.processDiagnostics).toContainEqual(expect.objectContaining({
+      gate: "H3", field: "operationalExposurePpm", statusLabel: "Failed screen",
+    }));
   });
 });

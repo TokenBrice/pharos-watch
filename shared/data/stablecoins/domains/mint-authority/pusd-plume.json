@@ -2,7 +2,7 @@
   "id": "pusd-plume",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "pUSD's Ethereum and Plume BoringVaults share a 3-of-6 Safe owner and RolesAuthority. The current authorized enter callers on both chains are the collateral-bound LayerZero Teller 0x16424e… and NestVaultOFT 0xf6aada…. The issuer-documented predicate proxy 0x6104fe… forwards deposits to the Teller; the former 0x41bdb4… label identified an unrelated Executor proxy. The Safe can call enter with zero assets, replace authorized callers, and upgrade the Nest native-deposit implementation without a timelock; bridge-credit powers are reviewed separately.",
     "upgradeability": {

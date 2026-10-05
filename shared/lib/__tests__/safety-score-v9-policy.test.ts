@@ -191,6 +191,42 @@ describe("Safety Score v9 methodology policy", () => {
     expect(() => loadV9MethodologyPolicy(excessive)).toThrow();
   });
 
+  it("keeps the generic mint uncertainty rung separate from known adverse authority", () => {
+    const semantic = V9_CANDIDATE_POLICY_V1.policy.semantic;
+    expect(semantic.control.mintPostureQuality).toMatchObject({
+      "unbounded-adverse": 25, unknown: 50, compromised: 25,
+      "unbounded-reconciled": 55, "unbounded-operationally-governed": 55,
+      "unbounded-governed": 60, "unbounded-veto-guarded": 70,
+    });
+    expect(v9UnknownRungLedger(semantic).filter(({ path }) => path.startsWith("control.mintPostureQuality.")))
+      .toEqual([{
+        path: "control.mintPostureQuality.unknown", polarity: "credit",
+        current: 45, value: 50, ordinaryMinimum: 50, required: 50,
+      }]);
+    expect(semantic.control.mintPostureGrading).toMatchObject({
+      prudentialReconciled: 80, attestationOnlyReconciled: 70,
+      seasonedCreditPoints: 10, seasonedCreditMinMonths: 60, adverseSeasonedCreditCeiling: 39,
+    });
+    expect(semantic.structural.signalLimits["centralized-mint"]).toMatchObject({
+      high: 59, moderate: 74, low: 83, critical: 39,
+    });
+  });
+
+  it.each(["unbounded-reconciliation-unknown", "unbounded-unreconciled"])(
+    "rejects retired quality key %s rather than aliasing it", (posture) => {
+      const policy = candidateClone();
+      Object.assign(policy.semantic.control.mintPostureQuality, { [posture]: 25 });
+      expect(() => loadV9MethodologyPolicy(policy)).toThrow();
+    },
+  );
+
+  it("requires the active adverse quality key", () => {
+    const policy = candidateClone();
+    const qualities = policy.semantic.control.mintPostureQuality as Partial<typeof policy.semantic.control.mintPostureQuality>;
+    delete qualities["unbounded-adverse"];
+    expect(() => loadV9MethodologyPolicy(policy)).toThrow();
+  });
+
   it("loads a changed withholding danger threshold with a distinct digest", () => {
     const changedPolicy = candidateClone();
     changedPolicy.semantic.formula.danger.withholdPegMultiplierFloor = 0.84;
@@ -397,8 +433,7 @@ describe("Safety Score v9 methodology policy", () => {
     const quality = V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintPostureQuality;
     expect(signalLimits.high).not.toBeNull();
     expect(signalLimits.moderate).not.toBeNull();
-    expect(quality["unbounded-unreconciled"] + formula.controlCompensabilityHeadroom).toBeLessThanOrEqual(signalLimits.high!);
-    expect(quality["unbounded-reconciliation-unknown"]).toBeLessThan(signalLimits.high!);
+    expect(quality["unbounded-adverse"] + formula.controlCompensabilityHeadroom).toBeLessThanOrEqual(signalLimits.high!);
     expect(quality["collateral-gated"]).toBeLessThan(signalLimits.moderate!);
     expect(quality["concentrated-admin"]).toBeLessThan(quality["unbounded-governed"]);
     expect(quality["unbounded-governed"]).toBeLessThan(quality["partially-bounded-admin"]);
@@ -408,5 +443,74 @@ describe("Safety Score v9 methodology policy", () => {
     );
     expect(quality["unbounded-veto-guarded"]).toBeLessThan(signalLimits.low!);
     expect(quality["unbounded-governed"]).toBeLessThan(signalLimits.moderate!);
+  });
+});
+
+describe("v10.05 operational governance policy", () => {
+  it.each([
+    "maxAnnualOperationalRatePpm", "maxKeeperProportionalRewardPpm",
+    "maxKeeperFixedRewardSupplyPpm", "minKeeperRepeatSec",
+  ] as const)("digests every mutable H screen %s", (field) => {
+    const changed = candidateClone();
+    changed.semantic.control.governedIssuance.operationalFlow[field]++;
+    expect(loadV9MethodologyPolicy(changed).semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+    const missing = candidateClone();
+    const flow = missing.semantic.control.governedIssuance.operationalFlow as Partial<typeof missing.semantic.control.governedIssuance.operationalFlow>;
+    delete flow[field];
+    expect(() => loadV9MethodologyPolicy(missing)).toThrow();
+  });
+
+  it("pins H units and the single55-to60 credit ladder without duplicate exposure/delay/ceiling keys", () => {
+    expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBe("10.06");
+    for (const field of ["annualWindowSec", "keeperWindowSec", "requiresLifetimeBudget"] as const) {
+      const changed = candidateClone();
+      const flow = changed.semantic.control.governedIssuance.operationalFlow;
+      Object.assign(flow, { [field]: field === "requiresLifetimeBudget" ? true : flow[field] + 1 });
+      expect(() => loadV9MethodologyPolicy(changed)).toThrow();
+    }
+    for (const [field, value] of [["unbounded-operationally-governed", 56], ["unbounded-governed", 61],
+      ["concentrated-admin", 56]] as const) {
+      const changed = candidateClone();
+      changed.semantic.control.mintPostureQuality[field] = value;
+      expect(() => loadV9MethodologyPolicy(changed)).toThrow();
+    }
+    const duplicate = candidateClone();
+    Object.assign(duplicate.semantic.control.governedIssuance.operationalFlow, { maxAggregateKeeperRepeatRewardSupplyPpmPer86400Sec: 1000 });
+    expect(() => loadV9MethodologyPolicy(duplicate)).toThrow();
+  });
+
+  it("accepts the annual-window exposure anchor equality and rejects one second above it", () => {
+    const changed = candidateClone();
+    const governed = changed.semantic.control.governedIssuance;
+    governed.minUnavoidableDelaySec = governed.operationalFlow.annualWindowSec;
+    expect(loadV9MethodologyPolicy(changed).policy.semantic.control.governedIssuance.minUnavoidableDelaySec)
+      .toBe(governed.operationalFlow.annualWindowSec);
+    governed.minUnavoidableDelaySec++;
+    expect(() => loadV9MethodologyPolicy(changed)).toThrow();
+  });
+
+  it("canonicalizes doctrine lists but rejects any weakening or duplicate", () => {
+    const reordered = candidateClone();
+    const doctrine = reordered.semantic.control.governedIssuance.votingControl;
+    doctrine.affiliatedKinds.reverse();
+    doctrine.admissiblePrivilegedVoteCreation.reverse();
+    doctrine.admissibleForcedDelegation.reverse();
+    expect(loadV9MethodologyPolicy(reordered).semanticDigest).toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+    for (const field of Object.keys(doctrine)) {
+      const missing = candidateClone();
+      const altered = missing.semantic.control.governedIssuance.votingControl as Record<string, unknown>;
+      delete altered[field];
+      expect(() => loadV9MethodologyPolicy(missing)).toThrow();
+    }
+    for (const change of [
+      { affiliatedKinds: ["issuer", "council"] }, { affiliatedKinds: ["issuer", "council", "team", "team"] },
+      { admissiblePrivilegedVoteCreation: ["none", "independent"] }, { admissibleForcedDelegation: ["none"] },
+      { maxAffiliatedUnilateralRouteCount: 1 }, { unknownBeneficialAffiliation: "deny" },
+      { ownLockedVotesAboveThreshold: "deny" }, { otherHolderKeyVotesAboveThreshold: "admit" },
+    ]) {
+      const changed = candidateClone();
+      Object.assign(changed.semantic.control.governedIssuance.votingControl, change);
+      expect(() => loadV9MethodologyPolicy(changed)).toThrow();
+    }
   });
 });

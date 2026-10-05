@@ -192,7 +192,7 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
 
   it("credits documented redemption without treating native savings unwind as measured", () => {
     const { fixed, meta } = nativeSavingsFixedAndMeta();
-    const baseline = buildSafetyScoreV9BaselineExtension(fixed, { metaById: meta });
+    const baseline = structuredClone(buildSafetyScoreV9BaselineExtension(fixed, { metaById: meta }));
     const asset = baseline.assets[0]!;
     asset.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha");
     asset.retainedRoutes = buildSafetyScoreV9RetainedRedemptionRoutes(fixed, "alpha");
@@ -349,6 +349,24 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     const right = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), reversed);
     expect(right).toEqual(left);
     expect(right.v9FactSetDigest).toBe(left.v9FactSetDigest);
+  });
+
+  it("keeps equal interned mechanism components' field-specific gaps independent", () => {
+    const reviewed = extension();
+    const review = reviewed.assets[0]!.mechanismRiskReview!;
+    if (review.archetype !== "fiat-cash") throw new Error("Expected fiat-cash fixture");
+    const bounded = { ...status(), observationState: "bounded-unknown" as const, gapIds: ["placeholder:gap"] };
+    for (const component of [review.claimAndSegregation, review.custodyContinuity, review.assuranceAndReconciliation]) {
+      component.status = structuredClone(bounded);
+      component.quality = null;
+    }
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), reviewed).assets[0]!;
+    const compiled = asset.mechanismRiskReview.review;
+    if (!compiled || compiled.archetype !== "fiat-cash") throw new Error("Expected compiled fiat-cash review");
+    for (const key of ["claimAndSegregation", "custodyContinuity", "assuranceAndReconciliation"] as const) {
+      expect(compiled[key].status.gapIds).toEqual([`alpha:gap:mechanism-review:${key}`]);
+      expect(review[key].status).toEqual(bounded);
+    }
   });
 
   it("rebinds non-measured metric evidence to mechanism-review evidence", () => {
@@ -520,7 +538,7 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     const fixed = exactFixedInput({ clockSec });
     const base = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(alphaMeta()) });
     expect(compileSafetyScoreV9FactSetFromFixedInput(fixed, base).assets[0]!.evidence.find((evidence) => evidence.evidenceId.includes(":route-valuation:"))).toMatchObject({ freshness: { state: "current", maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC } });
-    const staleExtension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(alphaMeta()) });
+    const staleExtension = structuredClone(buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(alphaMeta()) }));
     staleExtension.assets[0]!.routeReviews[0]!.output!.valuation!.observedAtSec = clockSec - V9_REVIEW_EVIDENCE_MAX_AGE_SEC - 1;
     expect(compileSafetyScoreV9FactSetFromFixedInput(fixed, staleExtension).assets[0]!.exitRoutes[0]!.output.status.observationState).toBe("stale");
     const compileMeasured = (adapterProfileId: string) => {

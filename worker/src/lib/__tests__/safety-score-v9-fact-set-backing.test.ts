@@ -383,13 +383,19 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
 
   function compileLivePartition(rows: ReserveSlice[]) {
     const fixed = makeV9FixedInput({ assetId: ASSET_ID, clockSec: NO_HISTORY_CLOCK_SEC, reserves: rows });
-    const extension = buildSafetyScoreV9BaselineExtension(fixed, {
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
       metaById: new Map([[ASSET_ID, { ...baseMeta(), reserves: rows }]]),
     });
     const tails = new Set(rows.filter(row => row.unclassifiedResidual).map(computeSafetyScoreV9ReserveExposureKey));
-    for (const classification of extension.assets[0]!.reserveClassifications) {
-      if (tails.has(classification.exposureKey)) classification.unclassifiedResidual = true;
-    }
+    const asset = baseline.assets[0]!;
+    const extension = {
+      ...baseline,
+      assets: [{
+        ...asset,
+        reserveClassifications: asset.reserveClassifications.map((classification) =>
+          tails.has(classification.exposureKey) ? { ...classification, unclassifiedResidual: true as const } : classification),
+      }],
+    };
     const input = normalizeSafetyScoreV9CompilerInput(fixed);
     return compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(input,
       materializeSafetyScoreV9FactSetExtension(input, extension));

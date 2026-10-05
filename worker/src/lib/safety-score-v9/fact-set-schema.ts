@@ -2,11 +2,13 @@ import { z } from "zod";
 import { ReserveBoundedFactSchema } from "@shared/types/reserve-bounded-facts";
 import { ReserveScopedAdmissionSchema } from "@shared/types/safety-score-v9-reserve-scope";
 import { AdmittedProviderRowExclusionSchema } from "@shared/types/safety-score-v9-supply-attribution";
+import { admitV9ControlExecutionScopeBatch, isV9AdmittedControlExecutionScope, type V9ControlExecutionScope, type V9ControlExecutionScopeRootReuse } from "@shared/types/safety-score-v9-control-scope";
 import { compareCodeUnits } from "@shared/lib/compare";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { isRecord } from "@shared/lib/type-guards";
 import { canonicalV9DependencyEdgeKey } from "@shared/lib/safety-score-v9/facts";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
+import { createV9ValueInterner, deepFreeze } from "@shared/types/safety-score-v9-immutable";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   defaultV9DependencyEconomicRole,
@@ -16,6 +18,7 @@ import {
   V9AccessReviewV2Schema,
   V9DependencyRejectionReasonsSchema,
   V9DeploymentControlFactBaseSchema,
+  V1005InProcessAssetIssuanceFactsSchema,
   V9EconomicControlReviewV2Schema,
   V9ExitRouteFactBaseSchema,
   V9ReserveAssetClassSchema,
@@ -455,6 +458,7 @@ const AssetExtensionSchema = z
       (row) => `${row.lane}:${row.observation.routeId}:${stableJsonStringifyV1(row.observation)}`,
     ),
     controlReview: ControlReviewSchema.nullable(),
+    issuanceFacts: V1005InProcessAssetIssuanceFactsSchema.optional(),
     economicControlReview: V9EconomicControlReviewV2Schema.nullable(),
     accessReview: V9AccessReviewV2Schema.nullable(),
     pegReference: PegReferenceSchema.nullable(),
@@ -472,6 +476,20 @@ const AssetExtensionSchema = z
   })
   .strict()
   .superRefine((asset, ctx) => {
+    if (asset.controlReview && "controls" in asset.controlReview) {
+      for (const [index, control] of asset.controlReview.controls.entries()) {
+        if (control.issuanceFactsRef !== undefined && (control.controlKind === "bridge" ||
+            control.issuanceFactsRef !== asset.issuanceFacts?.ref || control.issuanceGovernance !== undefined ||
+            control.issuanceProcess !== undefined || control.processDiagnostics !== undefined)) {
+          ctx.addIssue({ code: "custom", path: ["controlReview", "controls", index, "issuanceFactsRef"],
+            message: "Native issuance reference must resolve to the asset facts without inline governance/process/diagnostics" });
+        }
+        if (asset.issuanceFacts && control.controlKind !== "bridge" && control.issuanceFactsRef !== asset.issuanceFacts.ref) {
+          ctx.addIssue({ code: "custom", path: ["controlReview", "controls", index, "issuanceFactsRef"],
+            message: "Every native control must reference the canonical asset issuance facts" });
+        }
+      }
+    }
     for (const [field, review] of [
       ["wrapperAllocationReview", asset.wrapperAllocationReview],
       ["allocationScopeIdentityReview", asset.allocationScopeIdentityReview],
@@ -593,6 +611,67 @@ export const SafetyScoreV9FactSetExtensionV2Schema = z
 export type SafetyScoreV9FactSetExtensionV2 = z.infer<typeof SafetyScoreV9FactSetExtensionV2Schema>;
 export type AssetExtension = SafetyScoreV9FactSetExtensionV2["assets"][number];
 
+const admittedExtensionAssets = new WeakSet<object>();
+
+function isAdmittedExtensionAsset(value: unknown): value is AssetExtension {
+  return isRecord(value) && admittedExtensionAssets.has(value);
+}
+
+function sealAdmittedExtensionAsset(asset: AssetExtension): AssetExtension {
+  if (isAdmittedExtensionAsset(asset)) return asset;
+  // Strict parsing owns mutable subtrees; only branded immutable scopes and issuance bundles retain identity.
+  const admitted = createV9ValueInterner(undefined, isV9AdmittedControlExecutionScope)(asset);
+  deepFreeze(admitted);
+  admittedExtensionAssets.add(admitted);
+  return admitted;
+}
+
+function batchAdmitExtensionControlScopes(value: unknown, reuseScopeRoot?: V9ControlExecutionScopeRootReuse): unknown {
+  if (isAdmittedExtensionAsset(value) || !isRecord(value)) return value;
+  const review = value.controlReview;
+  if (!isRecord(review) || !Array.isArray(review.controls)) return value;
+  const controls = review.controls;
+  const scopes: unknown[] = [];
+  for (const control of controls) {
+    if (!isRecord(control)) continue;
+    if (control.executionScope !== undefined) scopes.push(control.executionScope);
+    if (Array.isArray(control.executionScopeContributors)) for (const contributor of control.executionScopeContributors) {
+      if (isRecord(contributor) && contributor.scope !== undefined) scopes.push(contributor.scope);
+    }
+  }
+  if (scopes.length === 0) return value;
+  let admittedScopes: V9ControlExecutionScope[];
+  try {
+    admittedScopes = admitV9ControlExecutionScopeBatch(scopes);
+    if (reuseScopeRoot) for (let index = 0; index < admittedScopes.length; index++) {
+      admittedScopes[index] = reuseScopeRoot(admittedScopes[index]!);
+    }
+  } catch (error) {
+    // Preserve the ordinary Asset parser's original field paths and R8 quarantine for invalid scopes.
+    if (error instanceof z.ZodError) return value;
+    throw error;
+  }
+  let index = 0;
+  return { ...value, controlReview: { ...review, controls: controls.map((control: unknown) => {
+    if (!isRecord(control)) return control;
+    const contributors = control.executionScopeContributors;
+    const hasContributors = Array.isArray(contributors) && contributors.some((row) => isRecord(row) && row.scope !== undefined);
+    if (control.executionScope === undefined && !hasContributors) return control;
+    return { ...control,
+      ...(control.executionScope === undefined ? {} : { executionScope: admittedScopes[index++] }),
+      ...(hasContributors ? { executionScopeContributors: contributors.map((row: unknown) =>
+        isRecord(row) && row.scope !== undefined ? { ...row, scope: admittedScopes[index++] } : row) } : {}),
+    };
+  }) } };
+}
+
+/** Strict admission once; immutable identity permits reuse without a second fact-graph clone. */
+export function admitSafetyScoreV9ExtensionAsset(value: unknown, compiledAtSec: number, reuseScopeRoot?: V9ControlExecutionScopeRootReuse): AssetExtension {
+  const assetId = salvage(CanonicalTextSchema, isRecord(value) ? value.assetId : undefined, null);
+  if (assetId === null) throw new Error("Safety Score v9 extension asset has no canonical assetId");
+  return admitExtensionAsset(batchAdmitExtensionControlScopes(value, reuseScopeRoot), assetId, compiledAtSec, (asset) => asset);
+}
+
 /** Envelope-only view: registry identity, clocks, freshness, and a non-empty asset list stay cohort-global. */
 const ExtensionEnvelopeSchema = z
   .object({
@@ -619,7 +698,7 @@ export function quarantinedSafetyScoreV9ExtensionAsset(
   quarantine: SafetyScoreV9AssetAdmissionQuarantine,
 ): AssetExtension {
   const record = isRecord(source) ? source : {};
-  return AssetExtensionSchema.parse({
+  return sealAdmittedExtensionAsset(AssetExtensionSchema.parse({
     assetId,
     assetIssuerKey: salvage(CanonicalTextSchema.nullable(), record.assetIssuerKey, null),
     archetype: salvage(V9ResolvedMechanismArchetypeSchema, record.archetype, "unresolved"),
@@ -642,7 +721,7 @@ export function quarantinedSafetyScoreV9ExtensionAsset(
       message:
         quarantine.message.trim().slice(0, 500).trim() || "Safety Score v9 asset extension could not be admitted",
     },
-  });
+  }));
 }
 
 function admitExtensionAsset(
@@ -661,12 +740,12 @@ function admitExtensionAsset(
       message: toErrorMessage(error),
     });
   }
-  const parsed = AssetExtensionSchema.safeParse(hydrated);
+  const parsed = isAdmittedExtensionAsset(hydrated) ? { success: true as const, data: hydrated } : AssetExtensionSchema.safeParse(hydrated);
   const issues: readonly { path: readonly PropertyKey[]; message: string }[] = parsed.success
     ? assetExtensionClockIssues(parsed.data, compiledAtSec)
     : parsed.error.issues;
   const [first, ...rest] = issues;
-  if (parsed.success && first === undefined) return parsed.data;
+  if (parsed.success && first === undefined) return sealAdmittedExtensionAsset(parsed.data);
   return quarantinedSafetyScoreV9ExtensionAsset(source, assetId, {
     code: "fact-validation-failed",
     path: first === undefined || first.path.length === 0 ? "asset" : first.path.map(String).join("."),

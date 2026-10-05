@@ -12,6 +12,7 @@ import {
   buildSafetyScoreV9Response,
   projectSafetyScoreV9Card,
   projectTopDriver,
+  V9PublicCardProjectionError,
 } from "../safety-score-v9/public";
 import type { V9ProductionScoreTrace } from "../safety-score-v9/score";
 import {
@@ -22,10 +23,12 @@ import {
   SafetyScoreV9PillarSchema,
 } from "../../types/safety-score-v9-public";
 import { V9_WRAPPER_LOCAL_FACT_KEYS } from "../../types/safety-score-v9-wrapper";
-import { makeDeploymentControl } from "./safety-score-v9-fixtures.test-support";
+import { makeDeploymentControl, makeCompiledVotingControl, makeOperationalIssuanceProcess } from "./safety-score-v9-fixtures.test-support";
 import { reviewedScope, weightedQuorum } from "./safety-score-v9-control-scope.test-support";
 import supplyAttributionReviews from "../../data/safety-score-v9/supply-attribution-reviews-v1.json";
 import { ReviewedProviderRowExclusionSchema } from "../../types/safety-score-v9-supply-attribution";
+import { isV9OperationallyGovernedIssuanceQualified } from "../safety-score-v9/control-primitives";
+import type { V1005ProcessDiagnostic } from "../../types/safety-score-v9-facts";
 
 const DIGESTS = {
   policy: "a".repeat(64),
@@ -1041,6 +1044,71 @@ describe("Safety Score v9 public projection", () => {
     });
   }
 
+  it.each(["C", "U"] as const)(
+    "publishes adverse mint quality with its own %s reconciliation gap without relabelling uncertainty as D",
+    (cause) => {
+      const assetId = `adverse-${cause.toLowerCase()}`;
+      const gapId = `${assetId}:gap:mint:reconciliation`;
+      const responsibility = cause === "C" ? "issuer-undisclosed" as const : "unresearched" as const;
+      const input = fixture(assetId, {
+        score: 59, grade: "C", qualityScore: 74.55,
+        pillars: { backing: 92, exit: 90, control: 25 },
+        caps: [cap({ source: "structural", kind: "signal:centralized-mint:high", limit: 59,
+          reason: "Known economically unbounded issuer mint authority.", binding: true })],
+      });
+      input.trace.weakestPillar = { pillar: "control", score: 25 };
+      input.trace.aggregation = { ...input.trace.aggregation!, weakestPillar: "control", weakestScore: 25 };
+      input.control = {
+        ...input.control!,
+        components: [{
+          ...input.control!.components[0]!,
+          posture: "unbounded-adverse", score: 25, cause, causeGapIds: [gapId],
+          scoringDisposition: "bounded-uncertainty",
+        }],
+      };
+      input.trace.unresolvedFacts = [{
+        code: "unresolved-control-identity", path: "control:mint:reconciliation",
+        reason: "Whole-supply reconciliation remains unanswered.",
+        critical: false, responsibility, sourceGapId: gapId, cause,
+        causeGapIds: [gapId], scoringDisposition: "bounded-uncertainty",
+      }];
+      input.trace.adverseAttribution = [{
+        source: "structural-signal", path: "structural:centralized-mint:high",
+        message: "Known economically unbounded issuer mint authority.",
+        responsibility: "measured-adverse",
+      }];
+      const response = SafetyScoreV9CurrentResponseSchema.parse(publish([
+        fixture("independent", { score: 91.8, grade: "A+" }), input,
+      ]));
+      const card = response.cards.find((entry) => entry.id === assetId)!;
+      const mint = card.breakdowns!.control.components[0]!;
+      expect(mint).toMatchObject({
+        posture: "unbounded-adverse", score: 25, cause, scoringDisposition: "bounded-uncertainty",
+      });
+      expect(mint.causeGapRefs!.map((ref) => resolveCauseGapId(response, card, ref))).toEqual([gapId]);
+      const [fact] = [...iterateEvidenceResponsibilityFacts(card.scoreTrace.evidenceResponsibility)];
+      expect(fact).toMatchObject({ 1: "control:mint:reconciliation", 3: responsibility, 4: false, 5: cause });
+      expect(fact![6].map((ref) => resolveCauseGapId(response, card, ref))).toEqual([gapId]);
+      expect(card.scoreTrace.adverseAttribution.items).toEqual(input.trace.adverseAttribution);
+      expect(card.scoreTrace.adverseAttribution.items.some((item) => item.path.includes("reconciliation"))).toBe(false);
+
+      const malformed = structuredClone(input);
+      malformed.control!.components = [{ ...malformed.control!.components[0]!, causeGapIds: [] }];
+      let projectionError: V9PublicCardProjectionError | undefined;
+      try {
+        publish([fixture("independent", { score: 91.8, grade: "A+" }), malformed]);
+      } catch (error) {
+        if (!(error instanceof V9PublicCardProjectionError)) throw error;
+        projectionError = error;
+      }
+      expect(projectionError).toBeInstanceOf(V9PublicCardProjectionError);
+      expect(projectionError!.failures.map((failure) => failure.assetId)).toEqual([assetId]);
+      expect(projectionError!.messageFor(assetId)).toContain("causal gaps");
+      const remainder = publish([fixture("independent", { score: 91.8, grade: "A+" })]);
+      expect(remainder.cards.map((entry) => entry.id)).toEqual(["independent"]);
+    },
+  );
+
   it("rejects empty publications", () => {
     expect(() => publish([])).toThrow(/at least one result/);
   });
@@ -1242,5 +1310,56 @@ describe("Safety Score v9 public NR cap suppression", () => {
       ...card,
       caps: card.caps.map((entry) => ({ ...entry, binding: true })),
     }).success).toBe(false);
+  });
+});
+
+describe("v10.05 published mint process evidence", () => {
+  it("unions compiler/evaluator failures with exact member/path identity and actual/discretionary clocks", () => {
+    const ref = "ethereum:0x1234567890123456789012345678901234567890";
+    const missing: V1005ProcessDiagnostic = { code: "runtime-unmatched", gate: "H0", controlRef: ref,
+      pathId: "keeper-redo", classId: "keeper-class", memberRef: ref, field: "runtimeHash", evidenceRefIds: ["code-read"] };
+    const issuanceFacts = {
+      ref: "modeled-issuance:process",
+      governance: { coverage: "incomplete" as const, incompleteReasons: ["runtime-unmatched"],
+        governorAuthorityKey: ref, decisionRule: "affirmative-vote" as const, minUnavoidableDelaySec: 0,
+        votingPower: "lock-escrowed" as const, vetoQuorumBps: null, vetoOverride: null, enumerable: true,
+        nonGovernorUnboundedPathKeys: [], votingControl: makeCompiledVotingControl(), diagnostics: [missing] },
+      process: makeOperationalIssuanceProcess({ coverage: "incomplete", diagnostics: [missing], maxAnnualInterestGrowthPpm: 500001,
+        evidenceRefIds: ["code-read", "source-proof", "observed-rate", "observed-native-supply"] }),
+      diagnostics: [{ ...missing, evidenceRefIds: ["source-proof"] }],
+    };
+    const fact = makeDeploymentControl("mint:process", "mint", {
+      authority: { authorityKey: ref, model: "governance", threshold: null },
+      capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
+      issuanceFactsRef: issuanceFacts.ref, scopeDiagnostics: ["runtime-unmatched:keeper-redo"],
+    });
+    const input = fixture("process-fixture", { score: 91, grade: "A+" });
+    input.control = { ...input.control!, controlFacts: [fact], issuanceFacts,
+      components: [{ ...input.control!.components[0]!, controlKeys: [fact.controlKey] }],
+      processDiagnostics: isV9OperationallyGovernedIssuanceQualified(fact, V9_CANDIDATE_POLICY_V1.policy.semantic, issuanceFacts).diagnostics };
+    const control = SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9Card(input).card).breakdowns!.control;
+    const details = control.components[0]!.controlDetails![0]!;
+    expect(details.controlRef).toBe(ref);
+    expect(details.diagnostics).toEqual(["runtime-unmatched:keeper-redo"]);
+    expect(control.issuanceSummary?.governance?.votingControl.largestSingleControllerShareBps).toBe(6000);
+    expect(control.issuanceSummary?.process).toMatchObject({ minOperationalExerciseDelaySec: 0,
+      minDiscretionaryPublicDelaySec: 172800, minEnvelopeRaisePublicDelaySec: 172800, memberCount: 3 });
+    expect(control.issuanceSummary?.diagnostics).toContainEqual(expect.objectContaining({
+      code: "runtime-unmatched", gate: "H0", count: 1, controlRefs: [ref],
+      exemplars: [{ ...missing, evidenceRefIds: ["code-read", "source-proof"], evidenceRefCount: 2 }],
+    }));
+    expect(control.issuanceSummary?.diagnostics).toContainEqual(expect.objectContaining({ code: "operational-screen-failed",
+      gate: "H2", controlRefs: [ref], field: "maxAnnualInterestGrowthPpm" }));
+    const exact = control.issuanceSummary!.diagnostics.find((diagnostic) => diagnostic.field === "maxAnnualInterestGrowthPpm")!.exemplars[0]!;
+    expect(exact.evidenceRefCount).toBe(4);
+    expect(exact.evidenceRefIds).toEqual([...issuanceFacts.process.evidenceRefIds].sort().slice(0, 3));
+    expect(exact).not.toHaveProperty("issuanceFactsRef");
+    const stale = input.control.processDiagnostics!.find((diagnostic) => diagnostic.field === "maxAnnualInterestGrowthPpm")!;
+    input.control.processDiagnostics = [{ ...stale, issuanceFactsRef: "different-book" }];
+    const unmatched = projectSafetyScoreV9Card(input).card.breakdowns!.control.issuanceSummary!.diagnostics
+      .find((diagnostic) => diagnostic.field === "maxAnnualInterestGrowthPpm")!.exemplars[0]!;
+    expect(unmatched.evidenceRefCount).toBe(0);
+    expect(unmatched.evidenceRefIds).toEqual([]);
+    expect(unmatched).not.toHaveProperty("issuanceFactsRef");
   });
 });

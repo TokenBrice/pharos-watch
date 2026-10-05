@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { V9DeploymentControlFactBaseSchema, type V9DeploymentControlFactV2, type V9FactStatusV2 } from "../../types/safety-score-v9-facts";
+import { V9DeploymentControlFactBaseSchema, type V9DeploymentControlFactV2, type V9FactStatusV2, type V1005CompiledVotingControl, type V1005IssuanceProcess } from "../../types/safety-score-v9-facts";
 import {
   evaluateV9EconomicControl,
   evaluateV9EconomicControlAssetFacts,
@@ -16,11 +16,12 @@ import type {
   V9MintSupervision,
   V9OracleControlReview,
 } from "../safety-score-v9/control-primitives";
-import { deriveV9MintPosture, isV9GovernedIssuanceQualified, isV9VetoGuardedIssuanceQualified } from "../safety-score-v9/control-primitives";
+import { deriveV9MintPosture, isV9GovernedIssuanceQualified, isV9VetoGuardedIssuanceQualified, isV9OperationallyGovernedIssuanceQualified } from "../safety-score-v9/control-primitives";
 import { loadV9MethodologyPolicy, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { scoreV9Input } from "../safety-score-v9/formula";
 import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
 import { applyMergedMintSignals, gradeVerifiedControlAuthority } from "../safety-score-v9/control-mint-grade";
+import { V9CauseContributionSchema } from "../../types/safety-score-v9-causes";
 import {
   boundedUnknown,
   makeEconomicControlArgs as args,
@@ -33,11 +34,17 @@ import {
   noOracleReview as noOracle,
   requiredKnown,
   stale,
+  makeCompiledVotingControl,
+  makeOperationalIssuanceProcess,
 } from "./safety-score-v9-fixtures.test-support";
 
 const CONTROL_POLICY = V9_CANDIDATE_POLICY_V1.policy.semantic.control;
+const SEMANTIC_POLICY = V9_CANDIDATE_POLICY_V1.policy.semantic;
+const QUALIFIED_VOTING_CONTROL = makeCompiledVotingControl();
 const MERGED_MINT_SIGNALS = CONTROL_POLICY.mintMergedSignals;
 const UNATTESTED_EOA_PENALTY = MERGED_MINT_SIGNALS.unattestedEoaPenalty;
+const RECONCILIATION_AVAILABILITY = ["not-applicable", "none", "unknown", "internal-ledger"] as const;
+const RECONCILIATIONS = ["continuous", "periodic", ...RECONCILIATION_AVAILABILITY] as const;
 /** Fine-ladder grade for the fixtures' default timelocked 2-of-3 multisig. */
 const TIMELOCKED_TWO_OF_THREE_QUALITY =
   CONTROL_POLICY.mintPostureQuality["concentrated-admin"] +
@@ -702,7 +709,7 @@ describe("Safety Score v9 economic control", () => {
       expect(quorum(2, 3, 86_400)).toBeLessThanOrEqual(quorum(3, 5));
       expect(quorum(3, 5, 86_400)).toBe(quorum(3, 5));
       // The ladder never invents a posture worse than the adverse rung.
-      expect(quorum(1, 31)).toBeGreaterThanOrEqual(CONTROL_POLICY.mintPostureQuality["unbounded-unreconciled"]);
+      expect(quorum(1, 31)).toBeGreaterThanOrEqual(CONTROL_POLICY.mintPostureQuality["unbounded-adverse"]);
     });
 
     it("applies the Safe module surface as a small modifier", () => {
@@ -781,13 +788,13 @@ describe("Safety Score v9 economic control", () => {
     expect(centralizedMint(prudential)).toBeUndefined();
 
     // The same not-applicable-reconciliation unbounded mint without prudential
-    // supervision stays unbounded-unreconciled (posture score 25) but, absent
+    // supervision stays unbounded-adverse (posture score 25) but, absent
     // an active incident, takes the high rung rather than the critical floor
     // (MINT-SOFTEN 2026-07-21).
     const unsupervised = evaluateV9EconomicControl(
       args({ facts: facts([mintControl]), mint: reviewFor("none", [mintControl]) }),
     );
-    expect(mintComponent(unsupervised)).toMatchObject({ posture: "unbounded-unreconciled", score: 25 });
+    expect(mintComponent(unsupervised)).toMatchObject({ posture: "unbounded-adverse", score: 25 });
     expect(centralizedMint(unsupervised)).toMatchObject({ severity: "high" });
 
     // An active mint incident stays critical even with prudential supervision,
@@ -802,7 +809,7 @@ describe("Safety Score v9 economic control", () => {
     expect(centralizedMint(compromised)).toMatchObject({ severity: "critical" });
   });
 
-  it("derives unbounded-reconciliation-unknown for unknown cadence without prudential supervision (9.32)", () => {
+  it("prices known adverse minting independently of unknown reconciliation", () => {
     const mintControl = control("mint:unknown-recon", "mint", {
       authority: { authorityKey: "authority:issuer", model: "issuer-backend", threshold: null },
       capSemantics: { kind: "unbounded", bound: null },
@@ -821,8 +828,8 @@ describe("Safety Score v9 economic control", () => {
       }),
     );
     expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
-      posture: "unbounded-reconciliation-unknown",
-      score: 55,
+      posture: "unbounded-adverse",
+      score: 25,
     });
     expect(result.structuralFailures.find((failure) => failure.kind === "centralized-mint")).toMatchObject({
       severity: "high",
@@ -857,7 +864,7 @@ describe("Safety Score v9 economic control", () => {
     });
   });
 
-  it("applies adverse-rung seasoning under the 9.32 ceiling rules", () => {
+  it.each(RECONCILIATION_AVAILABILITY)("seasons adverse minting at 60 implementation months with %s reconciliation", (reconciliation) => {
     const unboundedControl = control("mint:adverse-seasoned", "mint", {
       authority: { authorityKey: "authority:issuer", model: "issuer-backend", threshold: null },
       capSemantics: { kind: "unbounded", bound: null },
@@ -891,26 +898,25 @@ describe("Safety Score v9 economic control", () => {
       return { posture: component.posture, score: component.score };
     };
 
-    // Floor rung: 25+10 under the dedicated adverse ceiling 39 → 35.
-    expect(mintScore(unboundedControl, "not-applicable", 61)).toMatchObject({
-      posture: "unbounded-unreconciled",
-      score: 35,
+    expect(mintScore(unboundedControl, reconciliation, 59)).toMatchObject({
+      posture: "unbounded-adverse", score: 25,
     });
-    // Below the min-months gate: no credit.
-    expect(mintScore(unboundedControl, "not-applicable", 59)).toMatchObject({
-      posture: "unbounded-unreconciled",
-      score: 25,
+    expect(mintScore(unboundedControl, reconciliation, 60)).toMatchObject({
+      posture: "unbounded-adverse", score: 35,
     });
-    // Active compromise stays ineligible even with a long track record.
-    expect(
-      mintScore({ ...unboundedControl, incidentState: "active" }, "not-applicable", 61),
-    ).toMatchObject({
-      posture: "compromised",
-      score: 25,
+    expect(mintScore(unboundedControl, reconciliation, 120)).toMatchObject({
+      posture: "unbounded-adverse", score: 35,
     });
-    expect(mintScore(unboundedControl, "unknown", 61)).toMatchObject({
-      posture: "unbounded-reconciliation-unknown",
-      score: 59,
+    const singleKey = { ...unboundedControl, authority: { authorityKey: "issuer-key", model: "eoa" as const, threshold: null } };
+    expect(mintScore(singleKey, reconciliation, 59)).toMatchObject({ posture: "unbounded-adverse", score: 25 });
+    expect(mintScore(singleKey, reconciliation, 60)).toMatchObject({
+      posture: "unbounded-adverse", score: 35 - UNATTESTED_EOA_PENALTY,
+    });
+    const strongerPenalty = { ...CONTROL_POLICY, mintMergedSignals: { ...MERGED_MINT_SIGNALS, unattestedEoaPenalty: 20 } };
+    expect(applyMergedMintSignals(35, singleKey, undefined, strongerPenalty)).toBe(25);
+    // Compromise stays ineligible; reconciliation cannot soften its critical signal.
+    expect(mintScore({ ...unboundedControl, incidentState: "active" }, reconciliation, 60)).toMatchObject({
+      posture: "compromised", score: 25,
     });
   });
 
@@ -1024,66 +1030,39 @@ describe("Safety Score v9 economic control", () => {
       expect(trace.finalGrade).toBe(expectedGrade);
     });
 
-    // R4: an unresolved or unreconciled mint posture must never lift above its
-    // conservative rung. The fixture's mint key is an unattested EOA, so the
-    // merged grader's key-custody penalty applies wherever the rung has room.
-    const mintPostureCases: ReadonlyArray<{
-      name: string;
-      mintControl: V9DeploymentControlFactV2;
-      supervision: V9MintSupervision;
-      reconciliation: V9MintReconciliation;
-      posture: string;
-      score: number;
-    }> = [
-      ...(["none", "not-applicable"] as const).flatMap((reconciliation) =>
-        (["none", "unknown", "attestation-only"] as const).map((supervision) => ({
-          name: `confirmed-absent reconciliation (${reconciliation}) under ${supervision} supervision stays on the adverse floor`,
-          mintControl: unboundedMint(),
-          supervision,
-          reconciliation,
-          posture: "unbounded-unreconciled",
-          score: 25,
-        })),
-      ),
-      ...(["none", "unknown", "attestation-only"] as const).map((supervision) => ({
-        name: `unknown reconciliation under ${supervision} supervision takes the exposed rung (9.32)`,
-        mintControl: unboundedMint(),
-        supervision,
-        reconciliation: "unknown" as const,
-        posture: "unbounded-reconciliation-unknown",
-        score: 55 - UNATTESTED_EOA_PENALTY,
-      })),
-      {
-        name: "prudential supervision counts as reconciled even when cadence is unknown (9.32)",
-        mintControl: unboundedMint(),
-        supervision: "prudential",
-        reconciliation: "unknown",
-        posture: "unbounded-reconciled",
-        score: 55 - UNATTESTED_EOA_PENALTY,
-      },
-      {
-        name: "unresolved supervision with a reconciled mint stays at the flat conservative 55",
-        mintControl: unboundedMint(),
-        supervision: "none",
-        reconciliation: "periodic",
-        posture: "unbounded-reconciled",
-        score: 55 - UNATTESTED_EOA_PENALTY,
-      },
-      {
-        name: "concentrated-admin stays at the flat conservative 55",
-        mintControl: unboundedMint({
-          capSemantics: { kind: "not-applicable", bound: null },
-          claimImpairment: "bounded",
-        }),
-        supervision: "attestation-only",
-        reconciliation: "not-applicable",
-        posture: "concentrated-admin",
-        score: 55 - UNATTESTED_EOA_PENALTY,
-      },
-    ];
+    const availabilityMatrix = [
+      ["continuous", [80, 70, 55, 55]],
+      ["periodic", [80, 70, 55, 55]],
+      ["internal-ledger", [55, 25, 25, 25]],
+      ["unknown", [55, 25, 25, 25]],
+      ["none", [55, 25, 25, 25]],
+      ["not-applicable", [55, 25, 25, 25]],
+    ] as const;
+    it.each(availabilityMatrix.flatMap(([reconciliation, qualities]) =>
+      SUPERVISIONS.map((supervision, index) => ({ reconciliation, supervision, base: qualities[index]! })),
+    ))("grades $reconciliation/$supervision from positive assurance, not availability", ({ reconciliation, supervision, base }) => {
+      const clean = unboundedMint({
+        authority: { authorityKey: "issuer", model: "issuer-backend", threshold: null },
+        delaySec: null,
+      });
+      const posture = base === 25 ? "unbounded-adverse" : "unbounded-reconciled";
+      const severity = supervision === "prudential" ? null :
+        base === 70 ? "low" : "high";
+      expect(mintComponentOf(clean, supervision, reconciliation)).toMatchObject({ posture, score: base });
+      expect(mintComponentOf(unboundedMint(), supervision, reconciliation)).toMatchObject({
+        posture, score: Math.max(25, base - UNATTESTED_EOA_PENALTY),
+      });
+      expect(severityOf(clean, supervision, reconciliation)).toBe(severity);
+      expect(severityOf(unboundedMint(), supervision, reconciliation)).toBe(severity);
+    });
 
-    it.each(mintPostureCases)("$name", ({ mintControl, supervision, reconciliation, posture, score }) => {
-      expect(mintComponentOf(mintControl, supervision, reconciliation)).toMatchObject({ posture, score });
+    it("keeps concentrated administration at its conservative rung with independent single-key risk", () => {
+      const mintControl = unboundedMint({
+        capSemantics: { kind: "not-applicable", bound: null }, claimImpairment: "bounded",
+      });
+      expect(mintComponentOf(mintControl, "attestation-only", "not-applicable")).toMatchObject({
+        posture: "concentrated-admin", score: 55 - UNATTESTED_EOA_PENALTY,
+      });
     });
 
     it("never ranks a weaker supervision class above a stronger one for the same posture", () => {
@@ -2350,11 +2329,15 @@ describe("Safety Score v9 economic control", () => {
 });
 
 describe("cause-aware Control minima", () => {
-  function missing(cause: "A" | "B" | "C" | "U", id: string) {
+  function missing(cause: "A" | "B" | "C" | "U", id: string, factorKey?: string) {
     const gap = createV9FactGapV3({
       gapId: id, reasonCode: "unresolved-control-identity", ownerDomain: "control", policyRuleId: "control-proof",
       responsibility: "unresearched", observationState: "bounded-unknown",
       path: { kind: "local-component", componentKey: id }, message: "Scoped control datum.",
+      ...(factorKey === undefined ? {} : { causeScope: {
+        pillar: "control" as const, componentKey: "economic-control:mint", factorKey,
+        routeKey: null, exposureId: null, requiredDatum: factorKey,
+      } }),
       causeProof: cause === "A" ? { cause, producerState: "producer-failed", sourceId: "control-reader",
         sourceGenerationId: "capture", observedAtSec: 1, rejectionCode: "reader-failed", evidenceRefIds: ["attempt"] }
         : cause === "U" ? { cause, reason: "not-yet-researched", evidenceRefIds: [] }
@@ -2383,13 +2366,12 @@ describe("cause-aware Control minima", () => {
     }
   });
 
-  it("keeps ordinary known-only mint ladders independent of generic and reconciliation unknown rungs", () => {
+  it("keeps ordinary known-only mint ladders independent of the generic unknown rung", () => {
     const known = control("mint:known-ladder", "mint", {
       authority: { authorityKey: "contract", model: "contract", threshold: null }, delaySec: null,
       modulesOrGuards: "none-detected",
     });
-    const changed = { ...CONTROL_POLICY, mintPostureQuality: { ...CONTROL_POLICY.mintPostureQuality,
-      unknown: 56, "unbounded-reconciliation-unknown": 57 } };
+    const changed = { ...CONTROL_POLICY, mintPostureQuality: { ...CONTROL_POLICY.mintPostureQuality, unknown: 56 } };
     expect(applyMergedMintSignals(55, known, undefined, changed)).toBe(applyMergedMintSignals(55, known, undefined, CONTROL_POLICY));
   });
 
@@ -2519,8 +2501,8 @@ describe("cause-aware Control minima", () => {
     expect(result.reasons.every((reason) => !reason.critical)).toBe(true);
   });
 
-  it("compares unreconciled uncertainty only with the unbounded ordinary55 family", () => {
-    const gap = missing("C", "reconciliation");
+  it("retains a real reconciliation cause while pricing independently known adverse power", () => {
+    const gap = missing("C", "reconciliation", "reconciliation");
     const mintControl = control("mint:issuer", "mint", {
       authority: { authorityKey: "issuer", model: "issuer-backend", threshold: null },
       capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
@@ -2532,9 +2514,72 @@ describe("cause-aware Control minima", () => {
     }));
     const unknown = evaluate("unknown");
     const disclosed = evaluate("periodic");
-    expect(unknown.components.find((component) => component.kind === "mint")!.score).toBe(55);
+    expect(unknown.components.find((component) => component.kind === "mint")!).toMatchObject({
+      posture: "unbounded-adverse", score: 25, cause: "C", causeGapIds: [gap.gap.gapId],
+    });
     expect(disclosed.score).toBeGreaterThanOrEqual(unknown.score!);
     expect(unknown.components.find((component) => component.kind === "mint")!.cause).toBe("C");
+  });
+
+  it.each(["C", "U"] as const)("retains scoped %s reconciliation and topology gaps together", (cause) => {
+    const reconciliation = missing(cause, "z:reconciliation", "reconciliation");
+    const topology = missing("U", "a:topology", "topology");
+    const unrelated = missing("C", "other:inventory");
+    const mintControl = control("mint:scoped", "mint", {
+      authority: { authorityKey: "unknown-safe", model: "multisig", threshold: null },
+      capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded", delaySec: null,
+      factorStatuses: { topology: { ...topology.status, gapIds: [topology.gap.gapId, topology.gap.gapId] } },
+    });
+    for (const cadence of ["unknown", "internal-ledger"] as const) {
+      const result = evaluateV9EconomicControl(args({
+        facts: facts([mintControl], { gaps: [reconciliation.gap, topology.gap, unrelated.gap] }),
+        mint: makeReviewedMintInput(mintControl.controlKey, { reconciliation: cadence, supervision: "none",
+          factorStatuses: { reconciliation: reconciliation.status } }),
+      }));
+      const component = result.components.find((entry) => entry.kind === "mint")!;
+      expect(component).toMatchObject({ posture: "unbounded-adverse", score: 25, cause,
+        causeGapIds: [topology.gap.gapId, reconciliation.gap.gapId], scoringDisposition: "bounded-uncertainty" });
+      expect(reconciliation.gap.causeScope).toMatchObject({
+        pillar: "control", componentKey: "economic-control:mint", factorKey: "reconciliation", requiredDatum: "reconciliation",
+      });
+      expect(V9CauseContributionSchema.safeParse({ cause: component.cause, causeGapIds: component.causeGapIds,
+        score: component.score, scoringDisposition: component.scoringDisposition,
+        effectiveScoringWeight: component.effectiveScoringWeight }).success).toBe(true);
+      expect(result.structuralFailures).toContainEqual(expect.objectContaining({ kind: "centralized-mint", severity: "high" }));
+    }
+  });
+
+  it.each(["none", "not-applicable"] as const)("does not turn reviewed %s reconciliation into an unresearched cause", (reconciliation) => {
+    const unrelated = missing("U", "unrelated-inventory");
+    const row = control("mint:reviewed", "mint", {
+      authority: { authorityKey: "contract", model: "contract", threshold: null },
+      capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
+    });
+    const result = evaluateV9EconomicControl(args({
+      facts: facts([row], { gaps: [unrelated.gap] }),
+      mint: makeReviewedMintInput(row.controlKey, { reconciliation }),
+    }));
+    expect(result.components.find((entry) => entry.kind === "mint")).toMatchObject({
+      posture: "unbounded-adverse", score: 25, cause: null, causeGapIds: [], scoringDisposition: "included",
+    });
+  });
+
+  it("cannot satisfy a missing factor cause by borrowing unrelated diagnostic gaps", () => {
+    const unrelated = missing("U", "unrelated-inventory");
+    const row = control("mint:missing-factor", "mint", {
+      authority: { authorityKey: "issuer", model: "issuer-backend", threshold: null },
+      capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
+    });
+    const status = { ...boundedUnknown("mint.reconciliation"), gapIds: [] };
+    const result = evaluateV9EconomicControl(args({
+      facts: facts([row], { gaps: [unrelated.gap] }),
+      mint: makeReviewedMintInput(row.controlKey, { reconciliation: "unknown", factorStatuses: { reconciliation: status } }),
+    }));
+    const component = result.components.find((entry) => entry.kind === "mint")!;
+    expect(component).toMatchObject({ posture: "unbounded-adverse", score: 25, cause: "U", causeGapIds: [] });
+    expect(V9CauseContributionSchema.safeParse({ cause: component.cause, causeGapIds: component.causeGapIds,
+      score: component.score, scoringDisposition: component.scoringDisposition,
+      effectiveScoringWeight: component.effectiveScoringWeight }).success).toBe(false);
   });
 
   it("drops an A/B-only Control pillar with null scores, not a favorable neutral100", () => {
@@ -2563,6 +2608,7 @@ describe("D29 governed unbounded issuance", () => {
     vetoOverride: null,
     enumerable: true,
     nonGovernorUnboundedPathKeys: [],
+    votingControl: QUALIFIED_VOTING_CONTROL, diagnostics: [],
   };
   const governor = control("mint:governor", "mint", {
     authority: { authorityKey: governance.governorAuthorityKey, model: "governance", threshold: null },
@@ -2585,9 +2631,9 @@ describe("D29 governed unbounded issuance", () => {
     ["governance beats inapplicable reconciliation", "not-applicable", "none", "none", true, "unbounded-governed", 60],
     ["base reconciliation survives unqualified governance", "continuous", "none", "none", false, "unbounded-reconciled", 55],
     ["prudential supervision survives unqualified governance", "not-applicable", "prudential", "none", false, "unbounded-reconciled", 55],
-    ["unknown reconciliation survives unqualified governance", "unknown", "none", "none", false, "unbounded-reconciliation-unknown", 55],
-    ["internal-ledger stays unverified without governance", "internal-ledger", "none", "none", false, "unbounded-reconciliation-unknown", 55],
-    ["absent reconciliation stays unreconciled without governance", "none", "none", "none", false, "unbounded-unreconciled", 25],
+    ["unknown reconciliation does not lift failed governance", "unknown", "none", "none", false, "unbounded-adverse", 25],
+    ["internal-ledger does not lift failed governance", "internal-ledger", "none", "none", false, "unbounded-adverse", 25],
+    ["absent reconciliation does not lift failed governance", "none", "none", "none", false, "unbounded-adverse", 25],
   ] as const)("%s", (_name, reconciliation, supervision, incidentState, qualified, posture, score) => {
     const candidate = {
       ...governor,
@@ -2595,7 +2641,7 @@ describe("D29 governed unbounded issuance", () => {
       issuanceGovernance: qualified ? governance : undefined,
     };
     const mint = makeReviewedMintInput(candidate.controlKey, { reconciliation, supervision });
-    expect(deriveV9MintPosture(candidate, mint, false, CONTROL_POLICY.governedIssuance)).toBe(posture);
+    expect(deriveV9MintPosture(candidate, mint, false, SEMANTIC_POLICY)).toBe(posture);
     const result = evaluateV9EconomicControl(args({ facts: facts([candidate]), mint }));
     expect(result.components.find((component) => component.kind === "mint")).toMatchObject({ posture, score });
   });
@@ -2614,23 +2660,35 @@ describe("D29 governed unbounded issuance", () => {
       const candidate = { ...governor, issuanceGovernance: { ...governance, ...overrides } };
       const mint = makeReviewedMintInput(candidate.controlKey, { supervision: "none" });
       expect(isV9GovernedIssuanceQualified(candidate, CONTROL_POLICY.governedIssuance)).toBe(false);
-      expect(deriveV9MintPosture(candidate, mint, false, CONTROL_POLICY.governedIssuance)).toBe("unbounded-unreconciled");
-      expect(gradeVerifiedControlAuthority(candidate, CONTROL_POLICY)).toBe(25);
+      expect(deriveV9MintPosture(candidate, mint, false, SEMANTIC_POLICY)).toBe("unbounded-adverse");
+      expect(gradeVerifiedControlAuthority(candidate, SEMANTIC_POLICY)).toBe(25);
+      for (const reconciliation of RECONCILIATION_AVAILABILITY) {
+        for (const supervision of ["prudential", "attestation-only", "none", "unknown"] as const) {
+          const review = makeReviewedMintInput(candidate.controlKey, { reconciliation, supervision });
+          const result = evaluateV9EconomicControl(args({ facts: facts([candidate]), mint: review }));
+          expect(result.components.find((entry) => entry.kind === "mint")).toMatchObject({
+            posture: supervision === "prudential" ? "unbounded-reconciled" : "unbounded-adverse",
+            score: supervision === "prudential" ? 55 : 25,
+          });
+          expect(result.structuralFailures.find((failure) => failure.kind === "centralized-mint")?.severity ?? null)
+            .toBe(supervision === "prudential" ? null : "high");
+        }
+      }
     },
   );
 
   it("does not infer qualification from the authority model and controller delay without a compiled stamp", () => {
     const candidate = { ...governor, issuanceGovernance: undefined };
     expect(isV9GovernedIssuanceQualified(candidate, CONTROL_POLICY.governedIssuance)).toBe(false);
-    expect(gradeVerifiedControlAuthority(candidate, CONTROL_POLICY)).toBe(25);
+    expect(gradeVerifiedControlAuthority(candidate, SEMANTIC_POLICY)).toBe(25);
   });
 
   it.each(["lock-escrowed", "past-block-checkpoint"] as const)(
     "admits %s voting at the unavoidable-delay boundary and grades verified authority at 60", (votingPower) => {
       const candidate = { ...governor, issuanceGovernance: { ...governance, votingPower } };
       expect(isV9GovernedIssuanceQualified(candidate, CONTROL_POLICY.governedIssuance)).toBe(true);
-      expect(gradeVerifiedControlAuthority(candidate, CONTROL_POLICY)).toBe(60);
-      expect(gradeVerifiedControlAuthority({ ...candidate, incidentState: "active" }, CONTROL_POLICY)).toBe(25);
+      expect(gradeVerifiedControlAuthority(candidate, SEMANTIC_POLICY)).toBe(60);
+      expect(gradeVerifiedControlAuthority({ ...candidate, incidentState: "active" }, SEMANTIC_POLICY)).toBe(25);
     },
   );
 
@@ -2675,7 +2733,7 @@ describe("D29 governed unbounded issuance", () => {
 
   it.each([
     ["active", "compromised", "critical", "Minting authority is under an active incident."],
-    ["none", "unbounded-unreconciled", "high", "Economically effective minting is unbounded and unreconciled."],
+    ["none", "unbounded-adverse", "high", "Economically effective minting is unbounded without a qualified governance, reconciliation, or supervisory process."],
   ] as const)("preserves the %s-incident adverse mint signal", (incidentState, posture, severity, reason) => {
     const candidate = { ...governor, incidentState, issuanceGovernance: undefined };
     const result = evaluateV9EconomicControl(args({
@@ -2695,6 +2753,7 @@ describe("D30 minority-veto unbounded issuance", () => {
     decisionRule: "minority-veto", minUnavoidableDelaySec: 1_209_600,
     votingPower: "holding-period-weighted", vetoQuorumBps: 200,
     vetoOverride: "symmetric-vote-destruction", enumerable: true, nonGovernorUnboundedPathKeys: [],
+    votingControl: QUALIFIED_VOTING_CONTROL, diagnostics: [],
   };
   const governor = control("mint:veto-governor", "mint", {
     authority: { authorityKey: governance.governorAuthorityKey, model: "governance", threshold: null },
@@ -2729,9 +2788,21 @@ describe("D30 minority-veto unbounded issuance", () => {
       const candidate = { ...governor, issuanceGovernance: { ...governance, ...overrides } };
       expect(isV9VetoGuardedIssuanceQualified(candidate, CONTROL_POLICY.governedIssuance)).toBe(qualified);
       expect(isV9GovernedIssuanceQualified(candidate, CONTROL_POLICY.governedIssuance)).toBe(false);
-      expect(deriveV9MintPosture(candidate, mint, false, CONTROL_POLICY.governedIssuance))
-        .toBe(qualified ? "unbounded-veto-guarded" : "unbounded-unreconciled");
-      expect(gradeVerifiedControlAuthority(candidate, CONTROL_POLICY)).toBe(qualified ? 70 : 25);
+      expect(deriveV9MintPosture(candidate, mint, false, SEMANTIC_POLICY))
+        .toBe(qualified ? "unbounded-veto-guarded" : "unbounded-adverse");
+      expect(gradeVerifiedControlAuthority(candidate, SEMANTIC_POLICY)).toBe(qualified ? 70 : 25);
+      if (!qualified) {
+        for (const reconciliation of RECONCILIATION_AVAILABILITY) {
+          for (const supervision of ["prudential", "attestation-only", "none", "unknown"] as const) {
+            const review = makeReviewedMintInput(candidate.controlKey, { reconciliation, supervision });
+            const result = evaluateV9EconomicControl(args({ facts: facts([candidate]), mint: review }));
+            expect(result.components.find((entry) => entry.kind === "mint")).toMatchObject({
+              posture: supervision === "prudential" ? "unbounded-reconciled" : "unbounded-adverse",
+              score: supervision === "prudential" ? 55 : 25,
+            });
+          }
+        }
+      }
     },
   );
 
@@ -2749,13 +2820,13 @@ describe("D30 minority-veto unbounded issuance", () => {
 
   it("ranks minority veto above affirmative governance and never falls back to it", () => {
     const candidate = { ...governor, issuanceGovernance: { ...governance, votingPower: "lock-escrowed" as const } };
-    expect(deriveV9MintPosture(candidate, mint, false, CONTROL_POLICY.governedIssuance)).toBe("unbounded-veto-guarded");
+    expect(deriveV9MintPosture(candidate, mint, false, SEMANTIC_POLICY)).toBe("unbounded-veto-guarded");
     const affirmative = { ...candidate, issuanceGovernance: {
       ...candidate.issuanceGovernance, decisionRule: "affirmative-vote" as const, vetoQuorumBps: null, vetoOverride: null,
     } };
-    expect(deriveV9MintPosture(affirmative, mint, false, CONTROL_POLICY.governedIssuance)).toBe("unbounded-governed");
+    expect(deriveV9MintPosture(affirmative, mint, false, SEMANTIC_POLICY)).toBe("unbounded-governed");
     const failedVeto = { ...candidate, issuanceGovernance: { ...candidate.issuanceGovernance, vetoQuorumBps: 201 } };
-    expect(deriveV9MintPosture(failedVeto, mint, false, CONTROL_POLICY.governedIssuance)).toBe("unbounded-unreconciled");
+    expect(deriveV9MintPosture(failedVeto, mint, false, SEMANTIC_POLICY)).toBe("unbounded-adverse");
   });
 
   it.each([
@@ -2796,5 +2867,399 @@ describe("D30 minority-veto unbounded issuance", () => {
       ...governance, decisionRule, vetoQuorumBps, vetoOverride,
     });
     expect(parsed.error?.issues).toContainEqual(expect.objectContaining({ path: [field] }));
+  });
+});
+
+describe("H operational governance admission", () => {
+  const process = makeOperationalIssuanceProcess();
+  const governance: NonNullable<V9DeploymentControlFactV2["issuanceGovernance"]> = {
+    decisionRule: "affirmative-vote", governorAuthorityKey: "ethereum:0x1234567890123456789012345678901234567890",
+    coverage: "complete", incompleteReasons: [], minUnavoidableDelaySec: 0, votingPower: "lock-escrowed",
+    vetoQuorumBps: null, vetoOverride: null, enumerable: true,
+    nonGovernorUnboundedPathKeys: ["formula-interest", "keeper-compensation"],
+    votingControl: QUALIFIED_VOTING_CONTROL, diagnostics: [],
+  };
+  const candidate = control("mint:operational-governor", "mint", {
+    authority: { authorityKey: governance.governorAuthorityKey, model: "governance", threshold: null },
+    capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
+    delaySec: 0, issuanceGovernance: governance, issuanceProcess: process,
+  });
+  const mint = makeReviewedMintInput(candidate.controlKey, { reconciliation: "none", supervision: "none" });
+  const admission = (changes: Partial<V1005IssuanceProcess> = {}) =>
+    isV9OperationallyGovernedIssuanceQualified({ ...candidate, issuanceProcess: { ...process, ...changes } }, SEMANTIC_POLICY);
+
+  const processRows = [
+    { row: candidate, posture: "unbounded-operationally-governed", score: 55, severity: "moderate" },
+    { row: { ...candidate, issuanceProcess: undefined, issuanceGovernance: {
+      ...governance, minUnavoidableDelaySec: 172800, nonGovernorUnboundedPathKeys: [],
+    } }, posture: "unbounded-governed", score: 60, severity: "low" },
+    { row: { ...candidate, issuanceProcess: undefined, issuanceGovernance: {
+      ...governance, decisionRule: "minority-veto" as const, minUnavoidableDelaySec: 1209600,
+      vetoQuorumBps: 200, vetoOverride: "none" as const, nonGovernorUnboundedPathKeys: [],
+    } }, posture: "unbounded-veto-guarded", score: 70, severity: "low" },
+  ];
+  it.each(processRows.flatMap((processRow) => RECONCILIATIONS.flatMap((reconciliation) =>
+    (["prudential", "attestation-only", "none", "unknown"] as const).map((supervision) =>
+      ({ ...processRow, reconciliation, supervision })),
+  )))("preserves $posture under $reconciliation/$supervision", ({ row, posture, score, severity, reconciliation, supervision }) => {
+    const review = makeReviewedMintInput(row.controlKey, { reconciliation, supervision });
+    const result = evaluateV9EconomicControl(args({ facts: facts([row]), mint: review }));
+    const gradedReconciliation = (reconciliation === "continuous" || reconciliation === "periodic") &&
+      (supervision === "prudential" || supervision === "attestation-only");
+    expect(result.components.find((entry) => entry.kind === "mint")).toMatchObject({
+      posture: gradedReconciliation ? "unbounded-reconciled" : posture,
+      score: gradedReconciliation ? supervision === "prudential" ? 80 : 70 : score,
+    });
+    expect(result.structuralFailures.find((failure) => failure.kind === "centralized-mint")?.severity ?? null)
+      .toBe(gradedReconciliation ? supervision === "prudential" ? null : "low" : severity);
+  });
+
+  it.each([
+    { maxAnnualInterestGrowthPpm: 500001 }, { maxAnnualInterestGrowthPpm: null },
+    { maxKeeperProportionalRewardPpm: 1001 }, { maxKeeperProportionalRewardPpm: null },
+    { keeperSupplyScreenBasis: { ...process.keeperSupplyScreenBasis!, maxFixedRewardRaw: "11" } },
+    { maxKeeperFixedRewardSupplyPpm: null },
+    { minKeeperRecurringIntervalSec: 3599 }, { minKeeperRecurringIntervalSec: null },
+    { maxKeeperRepeatRewardSupplyPpmPer86400Sec: 25000,
+      keeperSupplyScreenBasis: { ...process.keeperSupplyScreenBasis!, maxRepeatRewardRawPer86400Sec: "25000" } },
+    { maxKeeperRepeatRewardSupplyPpmPer86400Sec: null },
+    { minDiscretionaryPublicDelaySec: 172799 }, { minDiscretionaryPublicDelaySec: null },
+    { minEnvelopeRaisePublicDelaySec: 172799 }, { minEnvelopeRaisePublicDelaySec: null },
+    { minOperationalExerciseDelaySec: null },
+  ] satisfies Partial<V1005IssuanceProcess>[])("falls from failed H screens to the availability-invariant matrix: %j", (change) => {
+    const row = { ...candidate, issuanceProcess: { ...process, ...change } };
+    expect(admission(change).qualified).toBe(false);
+    for (const reconciliation of RECONCILIATION_AVAILABILITY) {
+      for (const supervision of ["prudential", "attestation-only", "none", "unknown"] as const) {
+        const review = makeReviewedMintInput(row.controlKey, { reconciliation, supervision });
+        const result = evaluateV9EconomicControl(args({ facts: facts([row]), mint: review }));
+        expect(result.components.find((entry) => entry.kind === "mint")).toMatchObject({
+          posture: supervision === "prudential" ? "unbounded-reconciled" : "unbounded-adverse",
+          score: supervision === "prudential" ? 55 : 25,
+        });
+      }
+    }
+  });
+
+  it.each(["C", "U"] as const)("discloses real %s unknown-reconciliation factors on favorable process controls", (cause) => {
+    const gap = createV9FactGapV3({
+      gapId: `gap:mint-reconciliation:${cause}`, reasonCode: "unresolved-control-identity",
+      ownerDomain: "control", policyRuleId: "v9.control.reconciliation", responsibility: "unresearched",
+      observationState: "bounded-unknown", path: { kind: "local-component", componentKey: "economic-control:mint" },
+      message: "Whole-supply reconciliation has not been established.",
+      causeScope: { pillar: "control", componentKey: "economic-control:mint", factorKey: "reconciliation",
+        requiredDatum: "reconciliation", routeKey: null, exposureId: null },
+      causeProof: cause === "U" ? { cause, reason: "not-yet-researched", evidenceRefIds: [] } :
+        { cause, proofOrigin: "typed-review", classificationId: "reconciliation-review", reviewedAt: "2026-10-01",
+          sources: [{ url: "https://issuer.example/reconciliation", assertion: "Whole-supply reconciliation was researched." }],
+          evidenceRefIds: ["reconciliation-review"], assertion: "researched-nondisclosure", rationale: "Whole-supply cadence is not disclosed." },
+    });
+    const status = { ...boundedUnknown("mint.reconciliation"), gapIds: [gap.gapId] };
+    for (const { row, posture, score } of [
+      ...processRows,
+      { row: { ...candidate, issuanceProcess: undefined, issuanceGovernance: undefined },
+        posture: "unbounded-reconciled", score: 55 },
+    ]) {
+      const review = makeReviewedMintInput(row.controlKey, { reconciliation: "unknown",
+        supervision: posture === "unbounded-reconciled" ? "prudential" : "none",
+        factorStatuses: { reconciliation: status } });
+      const result = evaluateV9EconomicControl(args({ facts: facts([row], { gaps: [gap] }), mint: review }));
+      expect(result.components.find((entry) => entry.kind === "mint")).toMatchObject({
+        posture, score, cause, causeGapIds: [gap.gapId], scoringDisposition: "bounded-uncertainty",
+      });
+    }
+  });
+
+  it("derives 55 with a moderate74 cap while retaining actual immediate exercise", () => {
+    expect(admission()).toEqual({ qualified: true, diagnostics: [] });
+    expect(deriveV9MintPosture(candidate, mint, false, SEMANTIC_POLICY)).toBe("unbounded-operationally-governed");
+    expect(gradeVerifiedControlAuthority(candidate, SEMANTIC_POLICY)).toBe(55);
+    const result = evaluateV9EconomicControl(args({ facts: facts([candidate]), mint }));
+    expect(result.components.find((component) => component.kind === "mint")).toMatchObject({ posture: "unbounded-operationally-governed", score: 55 });
+    const signal = result.structuralFailures.find((failure) => failure.kind === "centralized-mint")!;
+    expect(signal).toMatchObject({ severity: "moderate", binding: true,
+      reason: "Discretionary expansion and operational-envelope changes require public token governance; formula interest and activity-bound compensation can execute immediately within reviewed envelopes. Economically unbounded." });
+    const trace = scoreV9Input({
+      assetId: "operational-flow-fixture", pillars: { backing: 95, exit: 95, control: 95 },
+      pegScore: 100, pegApplicable: true, evidenceLevel: "strong", trackRecordMonths: 60,
+      activeDepegBps: null, parentRequired: false, parentScore: null, unresolved: [],
+      structuralSignals: [{ kind: "centralized-mint", severity: signal.severity, reason: signal.reason,
+        responsibility: "measured-adverse", failureDomainKeys: [], evidence: [] }],
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(trace.bindingCap).toMatchObject({ kind: "signal:centralized-mint:moderate", limit: 74 });
+    expect(candidate.issuanceProcess?.minOperationalExerciseDelaySec).toBe(0);
+  });
+
+  it.each([[59, 55], [60, 59], [120, 59]] as const)("seasons %i months to %i through the shared ladder", (trackRecordMonths, score) => {
+    const result = evaluateV9EconomicControl(args({ facts: facts([candidate]), mint, trackRecordMonths }));
+    expect(result.components.find((component) => component.kind === "mint")).toMatchObject({ posture: "unbounded-operationally-governed", score });
+  });
+
+  it("keeps positive merged custody credit below60 and preserves negative/incident effects", () => {
+    const changed = structuredClone(V9_CANDIDATE_POLICY_V1.policy);
+    changed.semantic.control.mintMergedSignals.modulesOrGuardsAdjustment.noneDetectedCredit = 10;
+    const policy = loadV9MethodologyPolicy(changed);
+    const knownModules = { ...candidate, modulesOrGuards: "none-detected" as const };
+    expect(applyMergedMintSignals(55, knownModules, undefined, policy.policy.semantic.control)).toBe(59);
+    expect(applyMergedMintSignals(59, knownModules, undefined, policy.policy.semantic.control)).toBe(59);
+    expect(applyMergedMintSignals(55, { ...candidate, authority: { ...candidate.authority!, model: "eoa" } }, undefined, CONTROL_POLICY)).toBe(52);
+    expect(deriveV9MintPosture({ ...candidate, incidentState: "active" }, mint, false, SEMANTIC_POLICY)).toBe("compromised");
+    expect(gradeVerifiedControlAuthority({ ...candidate, incidentState: "active" }, SEMANTIC_POLICY)).toBe(25);
+  });
+
+  it.each([
+    ["maxAnnualInterestGrowthPpm", 500000, 500001],
+    ["maxKeeperProportionalRewardPpm", 1000, 1001],
+    ["minKeeperRecurringIntervalSec", 3600, 3599],
+  ] as const)("admits equality, rejects the nearest adverse unit and unknown %s", (field, equality, adverse) => {
+    expect(admission({ [field]: equality }).qualified).toBe(true);
+    for (const [measurement, code] of [[adverse, "operational-screen-failed"], [null, "operational-cap-unproved"]] as const) {
+      const result = admission({ [field]: measurement });
+      expect(result.qualified).toBe(false);
+      expect(result.diagnostics).toContainEqual(expect.objectContaining({ gate: "H2", code, field }));
+    }
+  });
+
+  it("compares fixed awards in exact raw units, not rounded display ppm", () => {
+    const exactBoundary = { ...process.keeperSupplyScreenBasis!, nativeSupplyRaw: "2000000",
+      maxFixedRewardRaw: "20", maxRepeatRewardRawPer86400Sec: "13792" };
+    expect(admission({ keeperSupplyScreenBasis: exactBoundary }).qualified).toBe(true);
+    for (const displayedPpm of [10.5, 10]) {
+      expect(admission({ keeperSupplyScreenBasis: { ...exactBoundary, maxFixedRewardRaw: "21" },
+        maxKeeperFixedRewardSupplyPpm: displayedPpm }).diagnostics)
+        .toContainEqual(expect.objectContaining({ code: "operational-screen-failed", field: "maxKeeperFixedRewardSupplyPpm" }));
+    }
+    expect(admission({ keeperSupplyScreenBasis: { ...process.keeperSupplyScreenBasis!, maxFixedRewardRaw: null } }).diagnostics)
+      .toContainEqual(expect.objectContaining({ code: "operational-cap-unproved", field: "maxKeeperFixedRewardSupplyPpm" }));
+    expect(admission({ maxKeeperFixedRewardSupplyPpm: null }).qualified).toBe(false);
+  });
+
+  it("requires interval proof only for funded recurring keeper paths", () => {
+    const unfunded: Partial<V1005IssuanceProcess> = { fundedKeeperRecurringPathCount: 0,
+      minKeeperRecurringIntervalSec: null, maxKeeperRepeatRewardSupplyPpmPer86400Sec: 0,
+      keeperSupplyScreenBasis: { ...process.keeperSupplyScreenBasis!, maxRepeatRewardRawPer86400Sec: "0" } };
+    expect(admission(unfunded).qualified).toBe(true);
+    expect(admission({ ...unfunded, fundedKeeperRecurringPathCount: 1 }).diagnostics)
+      .toContainEqual(expect.objectContaining({ gate: "H2", code: "operational-cap-unproved", field: "minKeeperRecurringIntervalSec" }));
+    expect(admission({ ...unfunded, fundedKeeperRecurringPathCount: 2 }).diagnostics)
+      .toContainEqual(expect.objectContaining({ gate: "H0", code: "process-certificate-unavailable" }));
+    expect(admission({ ...unfunded, maxKeeperRepeatRewardSupplyPpmPer86400Sec: 1,
+      keeperSupplyScreenBasis: { ...unfunded.keeperSupplyScreenBasis!, maxRepeatRewardRawPer86400Sec: "1" } }).diagnostics)
+      .toContainEqual(expect.objectContaining({ gate: "H0", code: "process-certificate-unavailable", field: "fundedKeeperRecurringPathCount" }));
+  });
+
+  it("uses separately upward-rounded interest/repeat terms at the reused 48h exposure boundary", () => {
+    const boundary: Partial<V1005IssuanceProcess> = {
+      maxAnnualInterestGrowthPpm: 365, maxKeeperRepeatRewardSupplyPpmPer86400Sec: 24999,
+      keeperSupplyScreenBasis: { ...process.keeperSupplyScreenBasis!, maxRepeatRewardRawPer86400Sec: "24999" },
+    };
+    expect(admission(boundary).qualified).toBe(true); // 2 + 49998 = 50000
+    expect(admission({ ...boundary, maxAnnualInterestGrowthPpm: 366 }).diagnostics)
+      .toContainEqual(expect.objectContaining({ code: "operational-screen-failed", gate: "H3", field: "operationalExposurePpm" }));
+    expect(admission({ ...boundary, maxKeeperRepeatRewardSupplyPpmPer86400Sec: 25000,
+      keeperSupplyScreenBasis: { ...boundary.keeperSupplyScreenBasis!, maxRepeatRewardRawPer86400Sec: "25000" } }).diagnostics)
+      .toContainEqual(expect.objectContaining({ code: "operational-screen-failed", gate: "H3" }));
+    expect(admission({ ...boundary, maxKeeperRepeatRewardSupplyPpmPer86400Sec: 25000,
+      keeperSupplyScreenBasis: { ...boundary.keeperSupplyScreenBasis!, nativeSupplyRaw: "2000000",
+        maxFixedRewardRaw: "20", maxRepeatRewardRawPer86400Sec: "49999" } }).diagnostics)
+      .toContainEqual(expect.objectContaining({ code: "operational-screen-failed", gate: "H3" }));
+    for (const changes of [
+      { maxKeeperRepeatRewardSupplyPpmPer86400Sec: null },
+      { keeperSupplyScreenBasis: { ...process.keeperSupplyScreenBasis!, maxRepeatRewardRawPer86400Sec: null } },
+      { maxAnnualInterestGrowthPpm: null },
+    ]) expect(admission(changes).diagnostics).toContainEqual(expect.objectContaining({ code: "aggregate-flow-unproved", gate: "H3" }));
+    const stricter = structuredClone(SEMANTIC_POLICY);
+    stricter.backing.structural.severityShares.moderate = 0.049999;
+    expect(isV9OperationallyGovernedIssuanceQualified({ ...candidate, issuanceProcess: { ...process, ...boundary } }, stricter).qualified).toBe(false);
+    stricter.backing.structural.severityShares.moderate = 0.05;
+    stricter.control.governedIssuance.minUnavoidableDelaySec++;
+    expect(isV9OperationallyGovernedIssuanceQualified({ ...candidate, issuanceProcess: { ...process, ...boundary,
+      minDiscretionaryPublicDelaySec: 172801, minEnvelopeRaisePublicDelaySec: 172801 } }, stricter).qualified).toBe(false);
+  });
+
+  it("admits the certified annual-window equality and denies only an anchor one second beyond it", () => {
+    const policy = structuredClone(SEMANTIC_POLICY);
+    const annualWindow = policy.control.governedIssuance.operationalFlow.annualWindowSec;
+    policy.control.governedIssuance.minUnavoidableDelaySec = annualWindow;
+    const annual = { ...candidate, issuanceProcess: { ...process,
+      minDiscretionaryPublicDelaySec: annualWindow + 1, minEnvelopeRaisePublicDelaySec: annualWindow + 1,
+      maxAnnualInterestGrowthPpm: 10000, fundedKeeperRecurringPathCount: 0, minKeeperRecurringIntervalSec: null,
+      maxKeeperRepeatRewardSupplyPpmPer86400Sec: 0,
+      keeperSupplyScreenBasis: { ...process.keeperSupplyScreenBasis!, maxRepeatRewardRawPer86400Sec: "0" } } };
+    expect(isV9OperationallyGovernedIssuanceQualified(annual, policy).qualified).toBe(true);
+    policy.control.governedIssuance.minUnavoidableDelaySec++;
+    expect(isV9OperationallyGovernedIssuanceQualified(annual, policy).diagnostics)
+      .toContainEqual(expect.objectContaining({ code: "aggregate-flow-unproved", gate: "H3", field: "operationalExposurePpm" }));
+    expect(deriveV9MintPosture(annual, mint, false, policy)).toBe("unbounded-adverse");
+    expect(gradeVerifiedControlAuthority(annual, policy)).toBe(25);
+  });
+
+  it.each(["minDiscretionaryPublicDelaySec", "minEnvelopeRaisePublicDelaySec"] as const)("requires public172800 and rejects unknown %s", (field) => {
+    expect(admission({ [field]: 172800 }).qualified).toBe(true);
+    expect(admission({ [field]: 172799 }).diagnostics).toContainEqual(expect.objectContaining({ gate: "H1", code: "delay-too-short", field }));
+    expect(admission({ [field]: null }).diagnostics).toContainEqual(expect.objectContaining({ gate: "H1", code: "delay-unproved", field }));
+  });
+
+  it("requires an envelope delay only when proved envelope-transition paths exist", () => {
+    expect(admission({ envelopeTransitionPathCount: 0, minEnvelopeRaisePublicDelaySec: null }).qualified).toBe(true);
+    expect(admission({ envelopeTransitionPathCount: 1, minEnvelopeRaisePublicDelaySec: null }).diagnostics)
+      .toContainEqual(expect.objectContaining({ gate: "H1", code: "delay-unproved", field: "minEnvelopeRaisePublicDelaySec" }));
+  });
+
+  it.each([
+    { inventoryComplete: false }, { authorityCoverage: "incomplete" }, { executionCoverage: "incomplete" },
+    { unknownMemberCount: 1, matchedMemberCount: 2 }, { nonGovernorDiscretionaryPathKeys: ["council#mint"] },
+    { formulaQualified: false }, { keeperQualified: false }, { otherClassesQualified: false },
+    { unknownRecipientPathKeys: ["callback#withdraw"] },
+  ] satisfies Partial<V1005IssuanceProcess>[])("does not grant a partial H rung for structural gate %j", (change) => {
+    const altered = { ...candidate, issuanceProcess: { ...process, ...change } };
+    expect(admission(change).qualified).toBe(false);
+    expect(deriveV9MintPosture(altered, mint, false, SEMANTIC_POLICY)).toBe("unbounded-adverse");
+    expect(gradeVerifiedControlAuthority(altered, SEMANTIC_POLICY)).toBe(25);
+    expect(altered.capSemantics).toEqual(candidate.capSemantics);
+    for (const reconciliation of RECONCILIATION_AVAILABILITY) {
+      const review = { ...mint, reconciliation };
+      const result = evaluateV9EconomicControl(args({ facts: facts([altered]), mint: review }));
+      expect(result.components.find((entry) => entry.kind === "mint"))
+        .toMatchObject({ posture: "unbounded-adverse", score: 25 });
+    }
+  });
+
+  it("preserves graded reconciliation and D30/D29 precedence above adverse fallback", () => {
+    const d29 = { ...candidate, issuanceGovernance: { ...governance, minUnavoidableDelaySec: 172800, nonGovernorUnboundedPathKeys: [] } };
+    const d30 = { ...d29, issuanceGovernance: { ...d29.issuanceGovernance, decisionRule: "minority-veto" as const,
+      minUnavoidableDelaySec: 1209600, vetoQuorumBps: 200, vetoOverride: "none" as const } };
+    expect(deriveV9MintPosture(d29, mint, false, SEMANTIC_POLICY)).toBe("unbounded-governed");
+    expect(deriveV9MintPosture(d30, mint, false, SEMANTIC_POLICY)).toBe("unbounded-veto-guarded");
+    expect(deriveV9MintPosture(candidate, { ...mint, reconciliation: "periodic", supervision: "prudential" }, false, SEMANTIC_POLICY)).toBe("unbounded-reconciled");
+    const missing = { ...candidate, issuanceProcess: undefined };
+    expect(deriveV9MintPosture(missing, { ...mint, reconciliation: "periodic" }, false, SEMANTIC_POLICY)).toBe("unbounded-reconciled");
+    expect(deriveV9MintPosture(missing, { ...mint, reconciliation: "unknown" }, false, SEMANTIC_POLICY)).toBe("unbounded-adverse");
+    const vetoAdmission = isV9OperationallyGovernedIssuanceQualified(d30, SEMANTIC_POLICY);
+    expect(vetoAdmission.diagnostics).toContainEqual(expect.objectContaining({ code: "operational-decision-rule-inadmissible", gate: "H0" }));
+    expect(isV9VetoGuardedIssuanceQualified(d30, CONTROL_POLICY.governedIssuance)).toBe(true);
+    expect(gradeVerifiedControlAuthority(d30, SEMANTIC_POLICY)).toBe(70);
+  });
+
+  it.each([
+    { affiliatedUnilateralRouteIds: ["own-lock-route"] },
+    { otherHolderVoteOperatorControllerIds: ["other-holder-key"] },
+    { unknownAboveThresholdVoteOwnershipControllerIds: ["unknown-owner"] },
+    { privilegedVoteCreation: "independent" }, { forcedDelegation: "unknown" },
+    { censusReconciliations: [{ ...QUALIFIED_VOTING_CONTROL.censusReconciliations[0]!, accountedPowerRaw: "99" }] },
+  ] satisfies Partial<V1005CompiledVotingControl>[])("requires uniformD32 even if an authored qualification flag remains true: %j", (failure) => {
+    const voting = { ...QUALIFIED_VOTING_CONTROL, ...failure };
+    const d29 = { ...candidate, issuanceGovernance: { ...governance, minUnavoidableDelaySec: 172800,
+      nonGovernorUnboundedPathKeys: [], votingControl: voting } };
+    const d30 = { ...d29, issuanceGovernance: { ...d29.issuanceGovernance, decisionRule: "minority-veto" as const,
+      minUnavoidableDelaySec: 1209600, vetoQuorumBps: 200, vetoOverride: "none" as const } };
+    expect(isV9GovernedIssuanceQualified(d29, CONTROL_POLICY.governedIssuance)).toBe(false);
+    expect(isV9VetoGuardedIssuanceQualified(d30, CONTROL_POLICY.governedIssuance)).toBe(false);
+    const result = isV9OperationallyGovernedIssuanceQualified(d29, SEMANTIC_POLICY);
+    expect(result.qualified).toBe(false);
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({ gate: "D32" }));
+    if ("unknownAboveThresholdVoteOwnershipControllerIds" in failure) {
+      expect(result.diagnostics).toContainEqual(expect.objectContaining({ gate: "D32", code: "voting-provenance-unknown" }));
+    }
+    for (const row of [d29, d30, { ...candidate, issuanceGovernance: { ...governance, votingControl: voting },
+      issuanceProcess: { ...process, votingControl: voting } }]) {
+      for (const reconciliation of RECONCILIATION_AVAILABILITY) {
+        const review = { ...mint, reconciliation };
+        expect(evaluateV9EconomicControl(args({ facts: facts([row]), mint: review }))
+          .components.find((entry) => entry.kind === "mint")).toMatchObject({ posture: "unbounded-adverse", score: 25 });
+      }
+    }
+  });
+
+  it("keeps D32 denial diagnostics and credit identical for shared versus independently decoded voting objects", () => {
+    const voting = { ...QUALIFIED_VOTING_CONTROL, qualified: false, otherHolderVoteOperatorControllerIds: ["operator-key"] };
+    const shared = { ...candidate, issuanceGovernance: { ...governance, votingControl: voting },
+      issuanceProcess: { ...process, votingControl: voting } };
+    const decoded = structuredClone(shared);
+    decoded.issuanceProcess.votingControl = structuredClone(decoded.issuanceGovernance.votingControl);
+    const result = isV9OperationallyGovernedIssuanceQualified(shared, SEMANTIC_POLICY);
+    expect(result.qualified).toBe(false);
+    expect(result.diagnostics.filter((diagnostic) => diagnostic.code === "voting-other-holder-operator")).toHaveLength(1);
+    expect(isV9OperationallyGovernedIssuanceQualified(decoded, SEMANTIC_POLICY)).toEqual(result);
+    expect(evaluateV9EconomicControl(args({ facts: facts([shared]), mint })).components.find((component) => component.kind === "mint"))
+      .toMatchObject({ posture: "unbounded-adverse", score: 25 });
+    expect(evaluateV9EconomicControl(args({ facts: facts([decoded]), mint })).processDiagnostics)
+      .toEqual(evaluateV9EconomicControl(args({ facts: facts([shared]), mint })).processDiagnostics);
+  });
+
+  it("retains typed D32 denial provenance instead of relabeling it as missing evidence", () => {
+    const diagnostic = { gate: "D32", code: "voting-other-holder-operator", controlRef: null,
+      pathId: "operator-vote-path", classId: null, memberRef: null,
+      field: "controller:other-holder-key", evidenceRefIds: ["ev:operator-control"] } as const;
+    const voting = { ...QUALIFIED_VOTING_CONTROL, qualified: false, diagnostics: [{ ...diagnostic, evidenceRefIds: [...diagnostic.evidenceRefIds] }] };
+    const denied = { ...candidate, issuanceGovernance: { ...governance, votingControl: voting },
+      issuanceProcess: { ...process, votingControl: voting } };
+    expect(isV9OperationallyGovernedIssuanceQualified(denied, SEMANTIC_POLICY).diagnostics).toContainEqual(diagnostic);
+  });
+
+  it("anchors measured policy denial to the normalized control identity", () => {
+    const controlRef = `ethereum:0x${"a".repeat(40)}`;
+    const denied = { ...candidate, authority: { ...candidate.authority!, authorityKey: `Ethereum:0x${"A".repeat(40)}` },
+      issuanceProcess: { ...process, minKeeperRecurringIntervalSec: 3599 } };
+    expect(isV9OperationallyGovernedIssuanceQualified(denied, SEMANTIC_POLICY).diagnostics)
+      .toContainEqual(expect.objectContaining({ code: "operational-screen-failed", gate: "H2", controlRef,
+        field: "minKeeperRecurringIntervalSec" }));
+  });
+
+  it("publishes evaluator screen failure without mutating complete compiler evidence", () => {
+    const failed = { ...candidate, issuanceProcess: { ...process, maxAnnualInterestGrowthPpm: 500001 } };
+    const before = structuredClone(failed);
+    const result = evaluateV9EconomicControl(args({ facts: facts([failed]), mint }));
+    expect(result.processDiagnostics).toContainEqual(expect.objectContaining({ code: "operational-screen-failed", field: "maxAnnualInterestGrowthPpm" }));
+    expect(result.components.find((component) => component.kind === "mint")?.score).toBe(25);
+    expect(failed).toEqual(before);
+    expect(failed.issuanceProcess.coverage).toBe("complete");
+  });
+
+  it("binds asset-wide issuance evidence exactly without copying it onto referenced rows", () => {
+    const issuanceFacts = { ref: "modeled-book:H", governance, process, diagnostics: [] };
+    const referenced = { ...candidate, issuanceFactsRef: issuanceFacts.ref,
+      issuanceGovernance: undefined, issuanceProcess: undefined, processDiagnostics: undefined };
+    expect(isV9OperationallyGovernedIssuanceQualified(referenced, SEMANTIC_POLICY, issuanceFacts).qualified).toBe(true);
+    expect(deriveV9MintPosture(referenced, mint, false, SEMANTIC_POLICY, issuanceFacts)).toBe("unbounded-operationally-governed");
+    expect(gradeVerifiedControlAuthority(referenced, SEMANTIC_POLICY, undefined, issuanceFacts)).toBe(55);
+    const result = evaluateV9EconomicControl(args({ facts: { ...facts([referenced]), issuanceFacts }, mint }));
+    expect(result.components.find((component) => component.kind === "mint")).toMatchObject({ posture: "unbounded-operationally-governed", score: 55 });
+    expect(result.issuanceFacts).toBe(issuanceFacts);
+    expect(result.controlFacts![0]!.issuanceFactsRef).toBe(issuanceFacts.ref);
+    expect(result.controlFacts![0]!.issuanceProcess).toBeUndefined();
+    for (const shared of [undefined, { ...issuanceFacts, ref: "different-book" }]) {
+      expect(isV9OperationallyGovernedIssuanceQualified(referenced, SEMANTIC_POLICY, shared).qualified).toBe(false);
+      expect(gradeVerifiedControlAuthority(referenced, SEMANTIC_POLICY, undefined, shared)).toBe(25);
+    }
+    expect(isV9OperationallyGovernedIssuanceQualified({ ...referenced, issuanceProcess: process },
+      SEMANTIC_POLICY, issuanceFacts).qualified).toBe(false);
+    const failed = isV9OperationallyGovernedIssuanceQualified(referenced, SEMANTIC_POLICY,
+      { ...issuanceFacts, process: { ...process, maxAnnualInterestGrowthPpm: 500001 } });
+    expect(failed.diagnostics).toContainEqual(expect.objectContaining({ code: "operational-screen-failed",
+      field: "maxAnnualInterestGrowthPpm", issuanceFactsRef: issuanceFacts.ref, evidenceRefIds: [] }));
+  });
+
+  it.each([
+    { decisionRule: "affirmative-vote" as const, delay: 172800, vetoQuorumBps: null, vetoOverride: null,
+      posture: "unbounded-governed", score: 60 },
+    { decisionRule: "minority-veto" as const, delay: 1209600, vetoQuorumBps: 200, vetoOverride: "none" as const,
+      posture: "unbounded-veto-guarded", score: 70 },
+  ])("retains $posture credit on exact shared governance and denies a mismatched bundle", (scenario) => {
+    const issuanceFacts = {
+      ref: "modeled-book:governance-only", diagnostics: [],
+      governance: { ...governance, decisionRule: scenario.decisionRule,
+        minUnavoidableDelaySec: scenario.delay, nonGovernorUnboundedPathKeys: [],
+        vetoQuorumBps: scenario.vetoQuorumBps, vetoOverride: scenario.vetoOverride },
+    };
+    const referenced = { ...candidate, issuanceFactsRef: issuanceFacts.ref,
+      issuanceGovernance: undefined, issuanceProcess: undefined, processDiagnostics: undefined };
+    const evaluate = (shared = issuanceFacts) => evaluateV9EconomicControl(
+      args({ facts: { ...facts([referenced]), issuanceFacts: shared }, mint }));
+    expect(evaluate().components.find((component) => component.kind === "mint"))
+      .toMatchObject({ posture: scenario.posture, score: scenario.score });
+    expect(evaluate({ ...issuanceFacts, ref: "different-book" }).components
+      .find((component) => component.kind === "mint"))
+      .toMatchObject({ posture: "unbounded-adverse", score: 25 });
   });
 });

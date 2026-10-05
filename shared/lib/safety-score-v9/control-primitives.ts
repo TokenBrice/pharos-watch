@@ -4,6 +4,9 @@ import type {
   V9EconomicControlReviewV2,
   V9FactStatusV2,
   V9FailureDomainRef,
+  V1005CompiledVotingControl,
+  V1005ProcessDiagnostic,
+  V1005AssetIssuanceFacts,
 } from "../../types/safety-score-v9-facts";
 import type { V9FactGapV3 } from "../../types/safety-score-v9-facts";
 import type { V9EvidenceCause, V9ScoringDisposition } from "../../types/safety-score-v9-causes";
@@ -13,8 +16,11 @@ import type {
   V9Severity,
   V9StructuralSignalKind,
   V9ValidatedPolicyEnvelope,
+  V9MethodologySemantic,
 } from "../../types/safety-score-v9";
-import { V9_EMPTY_ARRAY } from "./primitives";
+import { normalizeDeploymentId } from "../../types/deployment-id";
+import { V9_EMPTY_ARRAY } from "../../types/safety-score-v9-immutable";
+import { sortV1005ProcessDiagnostics } from "./control-scope";
 
 export type V9MintReconciliation = V9EconomicControlReviewV2["mint"]["reconciliation"];
 export type V9MintSupervision = V9EconomicControlReviewV2["mint"]["supervision"];
@@ -27,8 +33,8 @@ export type V9MintPosture =
   | "unbounded-reconciled"
   | "unbounded-governed"
   | "unbounded-veto-guarded"
-  | "unbounded-reconciliation-unknown"
-  | "unbounded-unreconciled"
+  | "unbounded-operationally-governed"
+  | "unbounded-adverse"
   | "compromised"
   | "unknown";
 export type V9OracleTier = OracleRiskTier;
@@ -67,6 +73,7 @@ export interface V9EconomicControlAssetFacts {
   archetype: V9AssetFactsBase["archetype"];
   controlStatus: V9AssetFactsBase["controlStatus"];
   controls: readonly V9DeploymentControlFactV2[];
+  issuanceFacts?: V1005AssetIssuanceFacts;
   gaps?: readonly V9FactGapV3[];
   supply: Pick<
     V9AssetFactsBase["supply"],
@@ -173,19 +180,190 @@ export interface V9EconomicControlResult {
   components: readonly V9ControlComponent[];
   /** Compiler facts used only for truthful public authority diagnostics. */
   controlFacts?: readonly V9DeploymentControlFactV2[];
+  processDiagnostics?: readonly V1005ProcessDiagnostic[];
+  issuanceFacts?: V1005AssetIssuanceFacts;
   reasons: readonly V9CompactControlReason[];
   structuralFailures: readonly V9ControlStructuralFailure[];
   failureDomains: readonly V9FailureDomainRef[];
+}
+
+/** D32 is shared by every favorable governance-process rung. */
+function isV1005VotingControlQualified(
+  voting: V1005CompiledVotingControl | undefined,
+  policy: V9GovernedIssuancePolicy,
+): boolean {
+  if (!voting || voting.observationState !== "known" || !voting.qualified ||
+      voting.affiliatedUnilateralRouteIds.length > policy.votingControl.maxAffiliatedUnilateralRouteCount ||
+      voting.unknownAboveThresholdVoteOwnershipControllerIds.length > 0 ||
+      voting.otherHolderVoteOperatorControllerIds.length > 0 ||
+      !policy.votingControl.admissiblePrivilegedVoteCreation.includes(voting.privilegedVoteCreation as "none" | "governor-only") ||
+      !policy.votingControl.admissibleForcedDelegation.includes(voting.forcedDelegation as "none" | "governor-only") ||
+      voting.diagnostics.length > 0 || voting.censusReconciliations.length === 0) return false;
+  return voting.censusReconciliations.every((row) => {
+    if (row.state !== "reconciled" || row.unresolvedResidualCanPassAlone !== false ||
+        row.accountedPowerRaw === null || row.residualUpperRaw === null ||
+        row.totalVotingPowerRaw === null || row.pinnedVotingSupplyRaw === null) return false;
+    const total = BigInt(row.totalVotingPowerRaw);
+    return total > 0n && BigInt(row.accountedPowerRaw) + BigInt(row.residualUpperRaw) === total &&
+      total === BigInt(row.pinnedVotingSupplyRaw);
+  });
+}
+
+/** Referenced proof data cannot be replaced or supplemented by inline row evidence. */
+function boundIssuanceFacts(control: V9DeploymentControlFactV2, facts?: V1005AssetIssuanceFacts): V1005AssetIssuanceFacts | undefined {
+  return facts && control.issuanceFactsRef === facts.ref &&
+    control.issuanceGovernance === undefined && control.issuanceProcess === undefined && control.processDiagnostics === undefined
+    ? facts : undefined;
+}
+
+/** Exact rational representation of a finite nonnegative policy scalar. */
+function decimalRatio(value: number): readonly [bigint, bigint] {
+  const [mantissa, exponentText] = value.toString().split("e");
+  const [whole, fraction = ""] = mantissa!.split(".");
+  const exponent = Number(exponentText ?? 0) - fraction.length;
+  const numerator = BigInt(whole! + fraction);
+  return exponent >= 0 ? [numerator * 10n ** BigInt(exponent), 1n] : [numerator, 10n ** BigInt(-exponent)];
+}
+
+/** H admission reads only neutral compiled facts; numerical failures do not alter their coverage. */
+export function isV9OperationallyGovernedIssuanceQualified(
+  control: V9DeploymentControlFactV2,
+  policy: V9MethodologySemantic,
+  issuanceFacts?: V1005AssetIssuanceFacts,
+): { qualified: boolean; diagnostics: readonly V1005ProcessDiagnostic[] } {
+  const referenced = control.issuanceFactsRef !== undefined;
+  const shared = referenced ? boundIssuanceFacts(control, issuanceFacts) : undefined;
+  const process = referenced ? shared?.process : control.issuanceProcess;
+  if (!process) return { qualified: false, diagnostics: [] };
+  const diagnostics: V1005ProcessDiagnostic[] = [];
+  const controlRef = normalizeDeploymentId(control.authority?.authorityKey ?? "") || null;
+  const fail = (code: V1005ProcessDiagnostic["code"], gate: V1005ProcessDiagnostic["gate"], field: string) => {
+    diagnostics.push({ code, gate, field, controlRef, pathId: null, classId: null, memberRef: null,
+      evidenceRefIds: shared ? [] : process.evidenceRefIds,
+      ...(shared ? { issuanceFactsRef: shared.ref } : {}) });
+  };
+  const governance = referenced ? shared?.governance : control.issuanceGovernance;
+  const governed = policy.control.governedIssuance;
+  const screens = governed.operationalFlow;
+  if (governance?.decisionRule !== "affirmative-vote") {
+    fail("operational-decision-rule-inadmissible", "H0", "issuanceGovernance.decisionRule");
+  }
+  if (control.incidentState === "active") fail("active-incident", "H0", "incidentState");
+  if (!isKnownRequired(control.status) || control.scopedQuestionFresh === true) {
+    fail(control.scopedQuestionFresh === true ? "scoped-question-open" : "review-incomplete", "H0", "status");
+  }
+  if (control.controlKind === "bridge" || control.economicLossScope === "unknown" ||
+      (control.capSemantics.kind !== "unbounded" && control.claimImpairment !== "unbounded") ||
+      process.coverage !== "complete" || process.authorityCoverage !== "complete" ||
+      process.executionCoverage !== "complete" || !process.economicReachClosed || !process.inventoryComplete ||
+      process.memberCount <= 0 || process.matchedMemberCount !== process.memberCount || process.unknownMemberCount !== 0 ||
+      process.discretionaryPathCount <= 0 || process.operationalPathCount <= 0 ||
+      process.formulaPathCount + process.keeperInitialPathCount + process.keeperRecurringPathCount +
+        process.otherOperationalPathCount !== process.operationalPathCount ||
+      !Number.isSafeInteger(process.fundedKeeperRecurringPathCount) || process.fundedKeeperRecurringPathCount < 0 ||
+      process.fundedKeeperRecurringPathCount > process.keeperRecurringPathCount ||
+      process.nonGovernorDiscretionaryPathKeys.length > 0 || process.unclassifiedExpansionPathKeys.length > 0 ||
+      process.unknownRecipientPathKeys.length > 0 || process.diagnostics.some((diagnostic) => diagnostic.code !== "external-accounting-trust")) {
+    fail("process-certificate-unavailable", "H0", "issuanceProcess.coverage");
+  }
+  if (!governance?.enumerable || !governed.admissibleVotingPower.includes(governance.votingPower as "lock-escrowed" | "past-block-checkpoint")) {
+    fail("voting-power-inadmissible", "H1", "issuanceGovernance.votingPower");
+  }
+  for (const voting of [governance?.votingControl, process.votingControl]) {
+    if (isV1005VotingControlQualified(voting, governed)) continue;
+    if (voting?.diagnostics.length) {
+      diagnostics.push(...voting.diagnostics);
+    } else if (voting?.affiliatedUnilateralRouteIds.length) {
+      fail("voting-affiliated-unilateral", "D32", "votingControl.affiliatedUnilateralRouteIds");
+    } else if (voting?.otherHolderVoteOperatorControllerIds.length) {
+      fail("voting-other-holder-operator", "D32", "votingControl.otherHolderVoteOperatorControllerIds");
+    } else if (voting?.unknownAboveThresholdVoteOwnershipControllerIds.length) {
+      fail("voting-provenance-unknown", "D32", "votingControl.unknownAboveThresholdVoteOwnershipControllerIds");
+    } else if (voting?.privilegedVoteCreation === "independent" || voting?.forcedDelegation === "independent") {
+      fail("voting-privilege-independent", "D32", "votingControl.votingPrivilege");
+    } else if (voting?.censusReconciliations.some((row) => row.state === "unreconciled" ||
+        (row.accountedPowerRaw !== null && row.residualUpperRaw !== null && row.totalVotingPowerRaw !== null &&
+          BigInt(row.accountedPowerRaw) + BigInt(row.residualUpperRaw) !== BigInt(row.totalVotingPowerRaw)))) {
+      fail("voting-census-unreconciled", "D32", "votingControl.censusReconciliations");
+    } else {
+      fail("voting-control-unproved", "D32", "votingControl");
+    }
+  }
+  for (const field of ["minDiscretionaryPublicDelaySec", "minEnvelopeRaisePublicDelaySec"] as const) {
+    if (field === "minEnvelopeRaisePublicDelaySec" && process.envelopeTransitionPathCount === 0) continue;
+    const delay = process[field];
+    if (delay === null) fail("delay-unproved", "H1", field);
+    else if (delay < governed.minUnavoidableDelaySec) fail("delay-too-short", "H1", field);
+  }
+  if (!process.formulaQualified) fail("formula-principal-unproved", "H2", "formulaQualified");
+  if (!process.keeperQualified) fail("keeper-activity-unproved", "H2", "keeperQualified");
+  if (!process.otherClassesQualified) fail("economic-reach-unclosed", "H4", "otherClassesQualified");
+  if (process.minOperationalExerciseDelaySec === null) fail("delay-unproved", "H2", "minOperationalExerciseDelaySec");
+  const maximum = (field: "maxAnnualInterestGrowthPpm" | "maxKeeperProportionalRewardPpm", bound: number) => {
+    const measured = process[field];
+    if (measured === null) fail("operational-cap-unproved", "H2", field);
+    else if (measured > bound) fail("operational-screen-failed", "H2", field);
+  };
+  if (process.formulaPathCount > 0) maximum("maxAnnualInterestGrowthPpm", screens.maxAnnualOperationalRatePpm);
+  const keeperCount = process.keeperInitialPathCount + process.keeperRecurringPathCount;
+  const basis = process.keeperSupplyScreenBasis;
+  if (process.fundedKeeperRecurringPathCount === 0 &&
+      ((process.maxKeeperRepeatRewardSupplyPpmPer86400Sec !== null && process.maxKeeperRepeatRewardSupplyPpmPer86400Sec !== 0) ||
+        (basis?.maxRepeatRewardRawPer86400Sec !== null && basis?.maxRepeatRewardRawPer86400Sec !== undefined &&
+          BigInt(basis.maxRepeatRewardRawPer86400Sec) > 0n))) {
+    fail("process-certificate-unavailable", "H0", "fundedKeeperRecurringPathCount");
+  }
+  if (keeperCount > 0) {
+    maximum("maxKeeperProportionalRewardPpm", screens.maxKeeperProportionalRewardPpm);
+    if (!basis || basis.nativeSupplyRaw === null || BigInt(basis.nativeSupplyRaw) <= 0n ||
+        basis.maxFixedRewardRaw === null || process.maxKeeperFixedRewardSupplyPpm === null) {
+      fail("operational-cap-unproved", "H2", "maxKeeperFixedRewardSupplyPpm");
+    } else {
+      const [numerator, denominator] = decimalRatio(screens.maxKeeperFixedRewardSupplyPpm);
+      if (BigInt(basis.maxFixedRewardRaw) * 1_000_000n * denominator > BigInt(basis.nativeSupplyRaw) * numerator) {
+        fail("operational-screen-failed", "H2", "maxKeeperFixedRewardSupplyPpm");
+      }
+    }
+  }
+  if (process.fundedKeeperRecurringPathCount !== 0) {
+    const interval = process.minKeeperRecurringIntervalSec;
+    if (interval === null) fail("operational-cap-unproved", "H2", "minKeeperRecurringIntervalSec");
+    else if (interval < screens.minKeeperRepeatSec) fail("operational-screen-failed", "H2", "minKeeperRecurringIntervalSec");
+  }
+  const annual = process.formulaPathCount > 0 ? process.maxAnnualInterestGrowthPpm : 0;
+  const recurring = process.keeperRecurringPathCount > 0;
+  if (governed.minUnavoidableDelaySec > screens.annualWindowSec) {
+    fail("aggregate-flow-unproved", "H3", "operationalExposurePpm");
+  } else if (annual === null || (recurring && (!basis || basis.nativeSupplyRaw === null ||
+      BigInt(basis.nativeSupplyRaw) <= 0n || basis.maxRepeatRewardRawPer86400Sec === null ||
+      process.maxKeeperRepeatRewardSupplyPpmPer86400Sec === null))) {
+    fail("aggregate-flow-unproved", "H3", "operationalExposurePpm");
+  } else {
+    const ceilRatio = (n: bigint, d: bigint) => (n + d - 1n) / d;
+    const window = BigInt(governed.minUnavoidableDelaySec);
+    const interest = ceilRatio(BigInt(annual) * window, BigInt(screens.annualWindowSec));
+    const repeatPpm = recurring ? ceilRatio(BigInt(basis!.maxRepeatRewardRawPer86400Sec!) * 1_000_000n,
+      BigInt(basis!.nativeSupplyRaw!)) : 0n;
+    const repeat = ceilRatio(repeatPpm * window, BigInt(screens.keeperWindowSec));
+    const [capNumerator, capDenominator] = decimalRatio(policy.backing.structural.severityShares.moderate);
+    if ((interest + repeat) * capDenominator > capNumerator * 1_000_000n) {
+      fail("operational-screen-failed", "H3", "operationalExposurePpm");
+    }
+  }
+  return { qualified: diagnostics.length === 0, diagnostics: sortV1005ProcessDiagnostics(diagnostics) };
 }
 /** Admit only complete, delayed, flash-resistant and enumerable governance issuance. */
 export function isV9GovernedIssuanceQualified(
   control: V9DeploymentControlFactV2,
   policy: V9GovernedIssuancePolicy,
+  issuanceFacts?: V1005AssetIssuanceFacts,
 ): boolean {
-  const governance = control.issuanceGovernance;
+  const governance = control.issuanceFactsRef === undefined
+    ? control.issuanceGovernance : boundIssuanceFacts(control, issuanceFacts)?.governance;
   const admissibleVotingPower: readonly string[] = policy.admissibleVotingPower;
   return governance !== undefined &&
     governance.decisionRule === "affirmative-vote" &&
+    isV1005VotingControlQualified(governance.votingControl, policy) &&
     governance.coverage === "complete" &&
     governance.incompleteReasons.length === 0 &&
     governance.nonGovernorUnboundedPathKeys.length === 0 &&
@@ -199,13 +377,16 @@ export function isV9GovernedIssuanceQualified(
 export function isV9VetoGuardedIssuanceQualified(
   control: V9DeploymentControlFactV2,
   policy: V9GovernedIssuancePolicy,
+  issuanceFacts?: V1005AssetIssuanceFacts,
 ): boolean {
-  const governance = control.issuanceGovernance;
+  const governance = control.issuanceFactsRef === undefined
+    ? control.issuanceGovernance : boundIssuanceFacts(control, issuanceFacts)?.governance;
   const vetoPolicy = policy.minorityVeto;
   const admissibleVotingPower: readonly string[] = vetoPolicy.admissibleVotingPower;
   const admissibleOverride: readonly string[] = vetoPolicy.admissibleOverride;
   return governance !== undefined &&
     governance.decisionRule === "minority-veto" &&
+    isV1005VotingControlQualified(governance.votingControl, policy) &&
     governance.coverage === "complete" &&
     governance.incompleteReasons.length === 0 &&
     governance.nonGovernorUnboundedPathKeys.length === 0 &&
@@ -224,8 +405,10 @@ export function deriveV9MintPosture(
   control: V9DeploymentControlFactV2 | null,
   mint: V9MintMechanismReview,
   immutableMechanism: boolean,
-  governedPolicy: V9GovernedIssuancePolicy,
+  policy: V9MethodologySemantic,
+  issuanceFacts?: V1005AssetIssuanceFacts,
 ): V9MintPosture {
+  const governedPolicy = policy.control.governedIssuance;
   if (control?.incidentState === "active") return "compromised";
   if (!control) return immutableMechanism ? "none-resolved" : "unknown";
   if (control.economicLossScope === "unknown") return "unknown";
@@ -236,15 +419,13 @@ export function deriveV9MintPosture(
     }
     // D30 minority-veto due process outranks D29 affirmative governance, but
     // neither process rung displaces independently graded reconciliation.
-    if (isV9VetoGuardedIssuanceQualified(control, governedPolicy)) return "unbounded-veto-guarded";
-    if (isV9GovernedIssuanceQualified(control, governedPolicy)) return "unbounded-governed";
+    if (isV9VetoGuardedIssuanceQualified(control, governedPolicy, issuanceFacts)) return "unbounded-veto-guarded";
+    if (isV9GovernedIssuanceQualified(control, governedPolicy, issuanceFacts)) return "unbounded-governed";
+    if (isV9OperationallyGovernedIssuanceQualified(control, policy, issuanceFacts).qualified) return "unbounded-operationally-governed";
     if (reconciled || mint.supervision === "prudential") return "unbounded-reconciled";
-    // An internal ledger process resolves the mint-process question, not
-    // reserve reconciliation: retain the unverified rung without supervision.
-    if (mint.reconciliation === "unknown" || mint.reconciliation === "internal-ledger") {
-      return "unbounded-reconciliation-unknown";
-    }
-    return "unbounded-unreconciled";
+    // Reconciliation availability does not change known adverse economics.
+    // Internal-ledger disclosure can resolve a process question, not earn a rung.
+    return "unbounded-adverse";
   }
   if (control.capSemantics.kind === "unknown" || control.claimImpairment === "unknown") return "unknown";
   if (control.claimImpairment === "none") return "none-resolved";

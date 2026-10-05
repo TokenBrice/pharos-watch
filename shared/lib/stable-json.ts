@@ -35,8 +35,9 @@ function assertPlainStableJsonValue(value: unknown, path: string): void {
   if (Object.getPrototypeOf(value) !== Object.prototype) {
     throw new TypeError(`Cannot serialize non-plain object at ${path}`);
   }
-  for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
-    assertPlainStableJsonValue(entry, `${path}.${key}`);
+  const record = value as Record<string, unknown>;
+  for (const key of Object.keys(record)) {
+    assertPlainStableJsonValue(record[key], `${path}.${key}`);
   }
 }
 

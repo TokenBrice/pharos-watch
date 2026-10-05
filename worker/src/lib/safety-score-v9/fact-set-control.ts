@@ -22,7 +22,7 @@ import {
   normalizeReviewedFactStatus,
   type AssetBuildContext,
 } from "./fact-set-context";
-import { compileReviewedControlScope, weightedReviewIsCurrent } from "@shared/lib/safety-score-v9/control-scope";
+import { compileReviewedControlScope, weightedReviewIsCurrent, sortV1005ProcessDiagnostics } from "@shared/lib/safety-score-v9/control-scope";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { DEPLOYMENT_MATERIAL_SHARE_THRESHOLD } from "./extension-shared";
 import { v9AccessClaimGraphStatuses } from "@shared/types/safety-score-v9-access-lookthrough";
@@ -66,7 +66,7 @@ export function buildControls(context: AssetBuildContext): {
   }
   // Each authority's own certificate is checked; a friendly sibling's proof
   // cannot close an unreviewed contributor on the same deployment.
-  review.controls = review.controls.map((control) => {
+  const reviewedControls = review.controls.map((control) => {
     if (!control.executionScope && !control.executionScopeContributors && !control.authority?.weightedQuorum) return control;
     const projections = control.executionScopeContributors
       ? control.executionScopeContributors.map((entry) => compileReviewedControlScope(entry.scope, entry.authorityKey, context.asset.assetId, context.fixedInput.clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC))
@@ -74,17 +74,21 @@ export function buildControls(context: AssetBuildContext): {
     return {
       ...control,
       ...(control.executionScope || control.executionScopeContributors ? {
-        executionScopeComplete: projections.every((projection) => projection.complete),
+        executionScopeComplete: control.executionScopeComplete !== false && projections.every((projection) => projection.complete),
         moduleImpact: projections.some((projection) => projection.moduleImpact === "relevant") ? "relevant" as const
           : projections.every((projection) => projection.moduleImpact === "verified-noninterfering" || projection.moduleImpact === "not-applicable") ? "verified-noninterfering" as const : "unresolved" as const,
-        scopeDiagnostics: [...new Set(projections.flatMap((projection) => projection.diagnostics))].sort(),
+        scopeDiagnostics: [...new Set([...(control.scopeDiagnostics ?? []), ...projections.flatMap((projection) => projection.diagnostics)])].sort(),
+      } : {}),
+      ...((control.issuanceGovernance || control.issuanceProcess || control.processDiagnostics) ? {
+        processDiagnostics: sortV1005ProcessDiagnostics([...(control.processDiagnostics ?? []),
+          ...(control.issuanceGovernance?.diagnostics ?? []), ...(control.issuanceProcess?.diagnostics ?? [])]),
       } : {}),
       ...(control.authority?.weightedQuorum && !weightedReviewIsCurrent(control.authority.weightedQuorum, context.fixedInput.clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC)
         ? { authority: { ...control.authority, weightedQuorum: { ...control.authority.weightedQuorum, status: "unknown" as const } } } : {}),
     };
   });
   // unresolved control without one keeps the hard reason.
-  const unresolvedControls = review.controls.filter((control) => !controlCanCarryKnownStatus(control));
+  const unresolvedControls = reviewedControls.filter((control) => !controlCanCarryKnownStatus(control));
   const allUnresolvedScoped =
     unresolvedControls.length > 0 &&
     unresolvedControls.every((control) => control.scopedQuestionFresh === true);
@@ -105,13 +109,13 @@ export function buildControls(context: AssetBuildContext): {
           observationState: "bounded-unknown",
           evidenceRefIds: evidenceIds,
         }).status;
-  const hasKnownControl = review.controls.some(controlCanCarryKnownStatus);
+  const hasKnownControl = reviewedControls.some(controlCanCarryKnownStatus);
   if (review.state === "reviewed-controls" || hasKnownControl) {
     assertKnownComponentEvidenceCurrent(context, "control", evidenceIds);
   }
   return {
     controlStatus: status,
-    controls: review.controls.map((control) => {
+    controls: reviewedControls.map((control) => {
       // Materiality bounds the charge, not our knowledge of the authority.
       const controlStatus = (!controlHasExactAuthorityReview(control) && control.economicLossScope === "access-only") || controlSemanticsAreKnown(control)
         ? createV9FactStatus({
@@ -251,6 +255,9 @@ function compileEconomicFactorStatuses(
         : `The ${factorKey} datum for ${componentKey}${routeKey ? ` route ${routeKey}` : ""} has not been established.`,
       causeScope: { pillar: "control", componentKey, factorKey, routeKey, exposureId: null, requiredDatum: factorKey },
     }).status;
+  // Reuse the same scoped factor-gap factory for an unanswered cadence and the
+  // internal ledger's whole-supply question. Neither gap changes known authority
+  // semantics; none/NA remain reviewed findings, not missing-factor defaults.
   // An internal ledger establishes the mint process, not reconciliation of
   // otherwise unbounded supply against reserves.
   const missingWholeSupplyReconciliation = review.mint.reconciliation === "internal-ledger" &&
@@ -434,7 +441,9 @@ export function buildAccessReview(
       },
     };
   }
-  const normalized = structuredClone(review);
+  const normalized: V9AccessReviewV2 = {
+    ...review, transfer: { ...review.transfer }, freeze: { ...review.freeze },
+  };
   const freezeDisposition = normalized.freeze.structuralDisposition;
   normalized.transfer.status = normalizeAccessStatus(context, normalized.transfer.status, "transfer");
   normalized.freeze.status = normalizeAccessStatus(context, normalized.freeze.status, "freeze", freezeDisposition);
@@ -442,8 +451,23 @@ export function buildAccessReview(
     ...freezeReview,
     status: normalizeAccessStatus(context, freezeReview.status, `freeze:${freezeReview.reviewKey}`, freezeDisposition),
   }));
-  const graph = normalized.freeze.claimGraph;
-  if (graph) {
+  const sourceGraph = normalized.freeze.claimGraph;
+  if (sourceGraph) {
+    // Interned equal statuses and empty arrays may be shared across fields.
+    // Copy only the rows/statuses/lists this compiler mutates; structuredClone
+    // preserves aliases and would let an unresolved push corrupt failure domains.
+    const copyStatus = <T extends { status: V9FactStatusV2 }>(row: T): T => ({
+      ...row, status: { ...row.status },
+    });
+    const graph = {
+      ...sourceGraph,
+      nodes: sourceGraph.nodes.map(copyStatus),
+      edges: sourceGraph.edges.map(copyStatus),
+      authorities: sourceGraph.authorities.map(copyStatus),
+      partitions: sourceGraph.partitions.map(copyStatus),
+      unresolved: sourceGraph.unresolved.map(copyStatus),
+    };
+    normalized.freeze.claimGraph = graph;
     const pricedScopes = (context.asset.reserveScopeAdmissions ?? []).filter((scope) => scope.admitted && scope.wholeAssetComposition && (scope.kind === "portfolio-observation" || scope.kind === "onchain-observation"));
     // Receiving-book fractions may cross unit claims, never a second reserve denominator.
     const receivingBookNodes = new Set([graph.rootNodeKey]);

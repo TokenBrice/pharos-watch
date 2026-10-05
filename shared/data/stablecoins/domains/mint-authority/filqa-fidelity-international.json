@@ -2,7 +2,7 @@
   "id": "filqa-fidelity-international",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "SygFactory authorization resolves to code-empty platform-admin, role-manager, operator and system accounts. The native token upgrade delay is one second; factory replacement takes 86400 seconds.",
     "controls": [
@@ -143,7 +143,7 @@
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
-    "supervision": "unknown",
+    "supervision": "prudential",
     "review": {
       "disposition": "scoreable",
       "sources": [
@@ -166,11 +166,19 @@
         {
           "label": "Deployed SygFactory authorization and upgrade implementation",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"
+        },
+        {
+          "label": "CIMA registered mutual fund search: Fidelity International Strategies Funds SPC reference 2259655",
+          "url": "https://www.cima.ky/search-entities-cima"
+        },
+        {
+          "label": "CIMA July 2020 NAV calculation rule for regulated mutual funds",
+          "url": "https://www.cima.ky/upimages/regulatorymeasures/Rule-CalculationofAssetsValues-RegulatedMutualFundsJuly2020_1594925861_1599582358.pdf"
         }
       ],
-      "evidence": "Block26110197 full factory events and live group/code reads resolve native groups[1,12,13], no custom group, four OPERATOR and two SYSTEM EOAs with direct mint canCall=true. Mint permission0xc0f permits roles0/1/5 under the two-bit role encoding; PLATFORM_ADMIN3 cannot directly mint. Both global group0 role-manager EOAs have factory-context updateMinterBurner canCall=true and can authorize native mint. Global platform-admin can call upgradeToken(address,bytes), and token _authorizeUpgrade requires the factory. Token/factory ERC-7201 timelock slot+1 reads are1/86400seconds. Thus conservative concentrated-admin native issuance is scoreable; organizational identities, key custody, independent reconciliation and relief-qualifying noninterference are not established and grant no benefit. Organizational identities, independence and MPC/HSM/signing policies of enumerated platform-admin, role-manager, operator and system EOAs remain undisclosed. Current independent token-to-fund financial reconciliation and any relief-qualifying whole-topology noninterference guarantee remain unestablished.",
-      "reviewer": "Refine04 pinned permission and timelock census",
-      "reviewedAt": "2026-10-03",
+      "evidence": "Block26110197 full factory events and live group/code reads resolve native groups[1,12,13], no custom group, four OPERATOR and two SYSTEM EOAs with direct mint canCall=true. Mint permission0xc0f permits roles0/1/5 under the two-bit role encoding; PLATFORM_ADMIN3 cannot directly mint. Both global group0 role-manager EOAs have factory-context updateMinterBurner canCall=true and can authorize native mint. Global platform-admin can call upgradeToken(address,bytes), and token _authorizeUpgrade requires the factory. Token/factory ERC-7201 timelock slot+1 reads are1/86400seconds. Thus conservative concentrated-admin native issuance is scoreable; organizational identities, key custody, independent reconciliation and relief-qualifying noninterference are not established and grant no benefit. Organizational identities, independence and MPC/HSM/signing policies of enumerated platform-admin, role-manager, operator and system EOAs remain undisclosed. Current independent token-to-fund financial reconciliation and any relief-qualifying whole-topology noninterference guarantee remain unestablished. CIMA's official register was independently queried on 2026-10-04 and returned reference 2259655, Fidelity International Strategies Funds SPC, Mutual Fund - Registered, effective 10-Apr-2026, status ACT. This is the exact issuer acting for USD Digital Liquidity Fund SP and its FILQ Token share classes. The 14 September 2026 prospectus, printed pages 37-38, identifies Mutual Funds Act section 4(3) supervision, annual audited-account filings, Part 3B tokenised-fund issuance/ownership-record confirmations and CIMA technology-inspection and intervention powers; CIMA's July 2020 NAV rule requires a fair, complete, verifiable NAV policy for section 4 funds. These ongoing fund-governance, NAV and token-record obligations support prudential supervision of the issuing SPC, not a claim based on custodian regulation or an affiliated manager's licence. CIMA reference 2259655 is distinct from Cayman company-registration number 429148 (MC-429148); the current regulator row resolves the prospectus's conflicting future-tense registration wording. CIMA does not supervise investment activities or portfolio constitution, and the regime supplies neither a reserve guarantee nor recurring whole-token liabilities-to-backing evidence; reconciliation remains unknown.",
+      "reviewer": "Sol v10.06 availability-invariant campaign (BEvidence)",
+      "reviewedAt": "2026-10-04",
       "unresolvedQuestions": [],
       "scopedQuestions": [
         {

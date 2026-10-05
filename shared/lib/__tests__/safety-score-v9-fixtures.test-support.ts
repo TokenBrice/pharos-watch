@@ -2,6 +2,9 @@ import type {
   V9DeploymentControlFactV2,
   V9FactStatusV2,
   V9FailureDomainRef,
+  V1005CompiledVotingControl,
+  V1005IssuanceProcess,
+  V1005ProcessDiagnostic,
 } from "../../types/safety-score-v9-facts";
 import {
   type EvaluateV9EconomicControlArgs,
@@ -11,6 +14,7 @@ import {
   type V9OracleControlReview,
 } from "../safety-score-v9/control-primitives";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { SafetyScoreV9IssuanceSummarySchema, type SafetyScoreV9IssuanceSummary } from "../../types/safety-score-v9-public-breakdowns";
 
 export function requiredKnown(rule = "fixture.required"): V9FactStatusV2 {
   return {
@@ -217,5 +221,75 @@ export function makeEconomicControlArgs(
     oracle: noOracleReview(),
     bridge: noBridgeReview(),
     ...overrides,
+  };
+}
+
+/** Modeled complete own-lock voting census; no claim about a deployed governor. */
+export function makeCompiledVotingControl(overrides: Partial<V1005CompiledVotingControl> = {}): V1005CompiledVotingControl {
+  return {
+    observationState: "known", qualified: true, largestSingleControllerShareBps: 6000,
+    affiliatedAggregateShareBps: 0, affiliatedUnilateralRouteIds: [],
+    unknownAboveThresholdVoteOwnershipControllerIds: [], otherHolderVoteOperatorControllerIds: [],
+    privilegedVoteCreation: "none", forcedDelegation: "none",
+    censusReconciliations: [{
+      routeId: "own-lock-route", state: "reconciled", accountedPowerRaw: "100",
+      residualUpperRaw: "0", totalVotingPowerRaw: "100", pinnedVotingSupplyRaw: "100",
+      unresolvedResidualCanPassAlone: false, evidenceRefIds: ["pinned-votes"],
+    }],
+    diagnostics: [], ...overrides,
+  };
+}
+
+/** Modeled neutral measurements at each H per-action boundary, not production evidence. */
+export function makeOperationalIssuanceProcess(overrides: Partial<V1005IssuanceProcess> = {}): V1005IssuanceProcess {
+  return {
+    kind: "affirmative-operational-flow", coverage: "complete", authorityCoverage: "complete",
+    executionCoverage: "complete", economicReachClosed: true, inventoryComplete: true,
+    memberCount: 3, matchedMemberCount: 3, unknownMemberCount: 0, discretionaryPathCount: 1,
+    operationalPathCount: 3, formulaPathCount: 1, keeperInitialPathCount: 1, keeperRecurringPathCount: 1,
+    fundedKeeperRecurringPathCount: 1,
+    envelopeTransitionPathCount: 1,
+    otherOperationalPathCount: 0, nonGovernorDiscretionaryPathKeys: [], unclassifiedExpansionPathKeys: [],
+    unknownRecipientPathKeys: [], minDiscretionaryPublicDelaySec: 172800, minEnvelopeRaisePublicDelaySec: 172800,
+    minOperationalExerciseDelaySec: 0, formulaQualified: true, keeperQualified: true, otherClassesQualified: true,
+    maxAnnualInterestGrowthPpm: 500000, maxKeeperProportionalRewardPpm: 1000,
+    maxKeeperFixedRewardSupplyPpm: 10, minKeeperRecurringIntervalSec: 3600,
+    maxKeeperRepeatRewardSupplyPpmPer86400Sec: 6896,
+    keeperSupplyScreenBasis: { nativeSupplyRaw: "1000000", maxFixedRewardRaw: "10",
+      maxRepeatRewardRawPer86400Sec: "6896", nativeUnits: "native" },
+    votingControl: makeCompiledVotingControl(), diagnostics: [], evidenceRefIds: ["process-proof"],
+    sourceGenerationId: "operational-flow-fixture", freshnessBudgetSec: 17280,
+    observedAtSec: 1791107172, expiresAtSec: 1791124452, ...overrides,
+  };
+}
+
+export function makePublishedProcessDiagnostic(
+  diagnostic: V1005ProcessDiagnostic,
+  overrides: Partial<SafetyScoreV9IssuanceSummary["diagnostics"][number]> = {},
+): SafetyScoreV9IssuanceSummary["diagnostics"][number] {
+  const evidenceRefIds = [...new Set(diagnostic.evidenceRefIds)].sort();
+  return {
+    code: diagnostic.code, gate: diagnostic.gate, classId: diagnostic.classId, field: diagnostic.field,
+    count: 1, controlRefs: [diagnostic.controlRef],
+    exemplars: [{ ...diagnostic, evidenceRefIds: evidenceRefIds.slice(0, 3), evidenceRefCount: evidenceRefIds.length }],
+    ...overrides,
+  };
+}
+
+export function makePublishedIssuanceSummary(
+  overrides: Partial<V1005IssuanceProcess> = {},
+  diagnostics: SafetyScoreV9IssuanceSummary["diagnostics"] = [],
+): SafetyScoreV9IssuanceSummary {
+  const process = makeOperationalIssuanceProcess(overrides);
+  return {
+    process: SafetyScoreV9IssuanceSummarySchema.shape.process.unwrap().strip().parse({
+      ...process,
+      nonGovernorDiscretionaryPathCount: process.nonGovernorDiscretionaryPathKeys.length,
+      unclassifiedExpansionPathCount: process.unclassifiedExpansionPathKeys.length,
+      unknownRecipientPathCount: process.unknownRecipientPathKeys.length,
+      evidenceRefCount: process.evidenceRefIds.length,
+      diagnosticCount: process.diagnostics.length,
+    }),
+    diagnostics,
   };
 }

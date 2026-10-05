@@ -2,7 +2,7 @@
   "id": "earnusd-lido",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "unknown",
     "inheritedFrom": "usdc-circle",
     "summary": "earnUSD is an upgradeable tokenized ShareManager for Lido/Mellow protocol strategies. Base USDC minting remains inherited from Circle; local queues/vault create shares and the observed 5-of-8 Proxy Admin Safe can replace share logic. The curator is currently 3-of-6, not the published 3-of-5.",

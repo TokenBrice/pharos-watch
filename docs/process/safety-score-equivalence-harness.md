@@ -279,6 +279,10 @@ A single empty diff is not authorization to activate. Two empty diffs across two
 
 A green deploy proves Worker activation, not that the newly-live code republishes the same numbers. Close that gap on the **first** post-cutover publication.
 
+Choose the branch by the reviewed release contract. A neutral release retains the pre-cutover comparison below; a release with intentional movers must instead prove **same-code accepted-publication equivalence** and evaluate pre-cutover movers separately.
+
+### Neutral release: pre-cutover comparison
+
 1. Wait for the first complete producer pair after the cutover Worker version is live: `prepare-safety-score-v9-input` (`16,46`) followed by `compute-safety-score-v9` (`22,52`).
 2. Export a post-cutover capture (step a) and fetch the publication that came from it:
 
@@ -309,6 +313,60 @@ A green deploy proves Worker activation, not that the newly-live code republishe
    ```
 
 Expect bit-identical numbers. An empty diff means the code now live republished exactly what the pre-cutover code would have produced from the same input. A non-empty diff is a production regression, not a harness artifact: treat it as a rollback decision, not a triage backlog item.
+
+### Intentional movers: accepted-publication equivalence, then attribution
+
+Do not compare the live publication with pre-cutover code using `--assert-empty`: reviewed methodology changes are expected to move numbers. That does not relax the empty-diff requirement between the **exact deployed code** and its accepted live publication.
+
+1. Retain the first complete producer pair starting after actual Worker activation: `prepare-safety-score-v9-input` (`16,46`), then `compute-safety-score-v9` (`22,52`). Record their Worker version, execution outcomes, and generation/publication metadata. Require the first accepted publication from that pair; a held, skipped, deferred, or failed cycle is not acceptance, and a later success does not erase it.
+2. At the exact deployed tree, export the accepted publication and its retained **base plus compute-time enrichment delta**, not the mutable prepare-time capture from step (a):
+
+   ```sh
+   # Read-only plan; credentials remain scoped to the subshell.
+   ( set -a; . ./.env.local; set +a
+     node --import tsx worker/scripts/compute-dependency-scenarios.ts \
+       --mode plan \
+       --out-dir agents/v9-captures/post-deploy-<stamp> )
+   ```
+
+   This saves `publication.json` and `capture.json` using `report-cards:v9:accepted-replay-base:v1` and `report-cards:v9:accepted-replay:v1`; see the [accepted-capture contract](../runbooks/dependency-network.md#offline-scenario-workflow). Plan fails closed if either retained row is absent or mismatched. Export promptly because only one accepted generation is retained. Require the capture's publication generation and fixed-input base generation to match the saved live identity and the recorded first pair. If the generation advances during collection, obtain a fresh matching pair but preserve the first-cycle evidence and report its equivalence check as unproven; never label a later capture as the first publication. Do not run scenario compute or publish merely to obtain this check.
+3. Verify exact deployed-code/live identity **outside the normalized-card diff**, which deliberately removes activation and digest fields. Require public `methodology.version` and `safetyScoreIdentity.policyVersion` to equal the deployed release version, and require `safetyScoreIdentity.evaluationBuildDigest`, `policy.id`, and `policy.semanticDigest` to equal the exact deployed tree's reviewed build and policy identities. Record the registry fingerprint, complete `sourceGenerations`, `publicationGenerationId`, `baseInputGenerationId`, `factSetDigest`, `resultDigest`, `asOfSec`, `publishedAtSec`, `source.candidateId`, and top-level `updatedAt`; correlate them with the accepted capture and the first pair. Use refreshed identities if review fixes changed the final deployed tree, not obsolete review-head digests.
+4. Replay that accepted capture at the **exact deployed commit**, preserving enrichment and transfer materiality and using `capture.json.fixedInput.clockSec` verbatim:
+
+   ```sh
+   npm run safety-score-v9:replay -- \
+     --input agents/v9-captures/post-deploy-<stamp>/capture.json \
+     --output agents/v9-captures/post-deploy-<stamp>/replay-deployed.json \
+     --published-at <captured-clockSec>
+   ```
+
+   Require replay candidate `publicationGenerationId`, `baseInputGenerationId`, `evaluationBuildDigest`, `candidateId`, `factSetDigest`, `resultDigest`, and `publishedAtSec` to equal the accepted live counterparts (the candidate/fact/result digests are also exposed under `source`, and the publication clock under `updatedAt`). Then project both sides to cards and require an empty normalized diff:
+
+   ```sh
+   jq '{pipeline:{candidate:{cards:.cards}}}' \
+     agents/v9-captures/post-deploy-<stamp>/publication.json \
+     > agents/v9-captures/post-deploy-<stamp>/live-cards.json
+   jq '{pipeline:{candidate:{cards:.pipeline.candidate.cards}}}' \
+     agents/v9-captures/post-deploy-<stamp>/replay-deployed.json \
+     > agents/v9-captures/post-deploy-<stamp>/replay-cards.json
+   npm run safety-score-v9:diff -- \
+     --baseline agents/v9-captures/post-deploy-<stamp>/replay-cards.json \
+     --candidate agents/v9-captures/post-deploy-<stamp>/live-cards.json \
+     --assert-empty
+   ```
+
+   Any same-code identity or normalized-card mismatch is a production regression and a rollback decision, not an expected methodology mover.
+5. Separately replay the accepted capture at the pre-cutover and deployed code/curation attribution boundaries, using the same captured clock and explicit registry handling for each tree (step b). Apply the reviewed [expected-movers gate](#expected-movers-gate-for-an-intentional-multi-grade-release), not a pre-cutover empty-diff assertion:
+
+   ```sh
+   npm run safety-score-v9:movers -- \
+     --before agents/v9-captures/post-deploy-<stamp>/replay-pre-cutover.json \
+     --after agents/v9-captures/post-deploy-<stamp>/replay-deployed.json \
+     --manifest agents/v9-captures/expected-movers-<stamp>.json \
+     --assert-declared
+   ```
+
+   Freeze declarations from reviewed methodology and attribution before inspecting live output; never declare an unexpected mover to turn the gate green. Resolve declared-but-absent moves and explain differences caused by the captured clock or market state rather than requiring historical capture totals forever. Report accepted-publication equivalence and reviewed mover attribution as separate results; neither substitutes for the other.
 
 ## Triaging a non-empty diff
 

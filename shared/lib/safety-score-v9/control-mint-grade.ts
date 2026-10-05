@@ -1,6 +1,7 @@
-import type { V9DeploymentControlFactV2, V9FactGapV3 } from "../../types/safety-score-v9-facts";
-import { isKnownRequired, isV9GovernedIssuanceQualified, isV9VetoGuardedIssuanceQualified, resolveV9StatusCauses, type V9ControlPolicy } from "./control-primitives";
+import type { V9DeploymentControlFactV2, V9FactGapV3, V1005AssetIssuanceFacts } from "../../types/safety-score-v9-facts";
+import { isKnownRequired, isV9GovernedIssuanceQualified, isV9VetoGuardedIssuanceQualified, isV9OperationallyGovernedIssuanceQualified, resolveV9StatusCauses, type V9ControlPolicy } from "./control-primitives";
 import { effectiveAuthoritySignatureRequirement } from "./control-scope";
+import type { V9MethodologySemantic } from "../../types/safety-score-v9";
 
 /**
  * A control row whose authority identity is fully reviewed: it is required-known,
@@ -21,13 +22,13 @@ export function isStaticallyVerifiedControl(control: V9DeploymentControlFactV2):
 
 /**
  * Ascending, de-duplicated ladder of known mint-component qualities.
- * Unknown rungs price uncertainty; they must not change the headroom granted
- * to an unchanged known posture by seasoned or merged-signal credits.
+ * The generic unknown rung prices uncertainty; it must not change headroom
+ * granted to an unchanged known posture by seasoned or merged-signal credits.
  */
 export function mintQualityLadder(controlPolicy: V9ControlPolicy): readonly number[] {
   const values = new Set<number>();
   for (const posture in controlPolicy.mintPostureQuality) {
-    if (posture !== "unknown" && posture !== "unbounded-reconciliation-unknown") {
+    if (posture !== "unknown") {
       values.add(controlPolicy.mintPostureQuality[posture as keyof V9ControlPolicy["mintPostureQuality"]]);
     }
   }
@@ -154,7 +155,7 @@ export function applyMergedMintSignals(
     const ceiling = nextRung === undefined ? base : nextRung - 1;
     score = Math.min(base + adjustment, Math.max(base, ceiling));
   } else if (adjustment < 0) {
-    score = Math.max(base + adjustment, controlPolicy.mintPostureQuality["unbounded-unreconciled"]);
+    score = Math.max(base + adjustment, controlPolicy.mintPostureQuality["unbounded-adverse"]);
   }
   if (mintControl.incidentState === "resolved") {
     score = Math.min(score, resolvedIncidentQualityCap(resolvedIncidentAgeMonths, controlPolicy));
@@ -167,7 +168,7 @@ export function applyMergedMintSignals(
  * instead of the bounded-unknown default. Derives strictly from the passed row
  * (wards / Safe threshold / timelock / authority.model), never from asset-generic
  * facts, and grades UP or DOWN relative to the 45 default: a live compromise or
- * unreconciled unbounded control grades below it; D29 qualified governance and
+ * unbounded adverse control grades below it; D29 qualified governance and
  * hardened bounded paths grade above it. Other issuer-backend / unknown rows
  * stay at the neutral default.
  *
@@ -179,14 +180,16 @@ export function applyMergedMintSignals(
  * which is strictly above this rung, so naming a validation domain can never lift
  * a control into the multisig class.
  */
-export function gradeVerifiedControlAuthority(control: V9DeploymentControlFactV2, controlPolicy: V9ControlPolicy, gaps?: readonly V9FactGapV3[]): number {
+export function gradeVerifiedControlAuthority(control: V9DeploymentControlFactV2, policy: V9MethodologySemantic, gaps?: readonly V9FactGapV3[], issuanceFacts?: V1005AssetIssuanceFacts): number {
+  const controlPolicy = policy.control;
   const quality = controlPolicy.mintPostureQuality;
   if (control.incidentState === "active") return quality.compromised;
   if (control.capSemantics.kind === "unbounded" || control.claimImpairment === "unbounded") {
-    if (isV9VetoGuardedIssuanceQualified(control, controlPolicy.governedIssuance)) return quality["unbounded-veto-guarded"];
-    return isV9GovernedIssuanceQualified(control, controlPolicy.governedIssuance)
-      ? quality["unbounded-governed"]
-      : quality["unbounded-unreconciled"];
+    if (isV9VetoGuardedIssuanceQualified(control, controlPolicy.governedIssuance, issuanceFacts)) return quality["unbounded-veto-guarded"];
+    if (isV9GovernedIssuanceQualified(control, controlPolicy.governedIssuance, issuanceFacts)) return quality["unbounded-governed"];
+    return isV9OperationallyGovernedIssuanceQualified(control, policy, issuanceFacts).qualified
+      ? quality["unbounded-operationally-governed"]
+      : quality["unbounded-adverse"];
   }
   const authority = control.authority;
   if (authority === null || authority.model === "unknown") return controlPolicy.boundedUnknownQuality;
@@ -213,7 +216,7 @@ export function gradeVerifiedControlAuthority(control: V9DeploymentControlFactV2
         multisigQuorumRawAdjustment(control, controlPolicy, gaps) +
         modulesOrGuardsAdjustment(control, controlPolicy);
       return Math.max(
-        quality["unbounded-unreconciled"],
+        quality["unbounded-adverse"],
         Math.min(graded, quality["partially-bounded-admin"]),
       );
     }
@@ -235,7 +238,7 @@ export function gradeVerifiedControlAuthority(control: V9DeploymentControlFactV2
         return controlPolicy.mintMergedSignals.attestedKeyCustodyQuality;
       }
       // A single externally-owned key is a weak control posture: grade below 45.
-      return quality["unbounded-unreconciled"];
+      return quality["unbounded-adverse"];
     default:
       return controlPolicy.boundedUnknownQuality;
   }

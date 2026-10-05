@@ -366,7 +366,7 @@ function reconstructResolutionInput(row: LockedVerdictRow): DdrResolveInput {
 
   if (k1) {
     coin.authorityPosture =
-      k1.severity === "severe" ? "unbounded-unreconciled" : "concentrated-admin";
+      k1.severity === "severe" ? "unbounded-adverse" : "concentrated-admin";
     coin.mintPath = "issuer-direct-mint";
   }
 
@@ -576,5 +576,21 @@ describe("locked DDR verdicts: recorded lock-time evidence plus synthetic regist
     expect(fingerprintFactorRows.map((row) => row.rowId)).not.toContain("ddrr-12");
     expect(fingerprintFactorRows.map((row) => row.rowId)).not.toContain("ddrr-18");
     expect(fingerprintFactorRows.map((row) => row.rowId)).not.toContain("ddrr-7");
+  });
+});
+
+describe("H does not relax recorded-context DDR scenarios", () => {
+  it("preserves every recorded-context tier, factor attribution and duration between the two unbounded postures", () => {
+    // Registry posture is not sealed evidence. Compare two synthetic unbounded
+    // reconstructions without inventing K1 attributions or changing lock-time data.
+    for (const row of fixture.rows) {
+      const input = reconstructResolutionInput(row);
+      const prior = resolveDepeg({ ...input, coin: { ...input.coin, authorityPosture: "unbounded-adverse" } });
+      const operational = resolveDepeg({ ...input, coin: { ...input.coin, authorityPosture: "unbounded-operationally-governed" } });
+      expect(operational.resolution.tier, row.rowId).toBe(prior.resolution.tier);
+      expect(operational.resolution.factors.map(({ code, severity }) => ({ code, severity })), row.rowId)
+        .toEqual(prior.resolution.factors.map(({ code, severity }) => ({ code, severity })));
+      expect(operational.duration, row.rowId).toEqual(prior.duration);
+    }
   });
 });

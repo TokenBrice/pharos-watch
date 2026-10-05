@@ -2,7 +2,7 @@
   "id": "usdf-astherus",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "USDF has one verified canonical BSC issuance deployment. AccessControl grants MINTER_AND_BURN_ROLE (0x144dc672...) to the USDFEarn UUPS proxy (0xc271fc70...), which mints USDF 1:1 on exact USDT deposits under the 500 million USDFMaxSupply check. The token's DEFAULT_ADMIN_ROLE and USDFEarn's immutable upgrade authority are the same 6-hour TimelockController; the current 4-of-7 Safe is its external proposer, executor, and canceller and separately holds USDFEarn's ADMIN_ROLE for direct cap changes. The co-located LayerZero OFT transfer rail, owner-controlled peer surface, and Endpoint delegate are assessed separately under Bridge Risk. D14 review 2026-10-03 supersedes the 2026-08-21 cap conclusion: verified USDF.mint(address,uint256) checks only MINTER_AND_BURN_ROLE and a positive amount, then calls _mint. The token DEFAULT_ADMIN_ROLE timelock can grant that role to a new caller, bypassing USDFEarn deposit and USDFMaxSupply checks without changing implementation. Its 21600-second delay and 4-of-7 Safe do not create an economic cap or token-governor D29 qualification. Economic semantics are unbounded; reconciliation remains unknown.",
     "upgradeability": {

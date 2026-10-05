@@ -219,10 +219,14 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
       capturedAtSec: replayInput.clockSec - 60,
       observationsByAssetId: { [assetId]: observationsFor(assetId) },
     });
-    const extension = buildSafetyScoreV9BaselineExtension(replayInput, {
+    const baseline = buildSafetyScoreV9BaselineExtension(replayInput, {
       metaById: new Map([[assetId, ACTIVE_META_BY_ID.get(assetId)!]]),
       transferMaterialityGeneration: exactGeneration,
     });
+    const extension = {
+      ...baseline,
+      assets: [{ ...baseline.assets[0]!, supplyReview: structuredClone(baseline.assets[0]!.supplyReview) }],
+    };
     const supplyReview = extension.assets[0]!.supplyReview!;
     corrupt(supplyReview);
     const materialized = materializeSafetyScoreV9FactSetExtension(replayInput, extension);

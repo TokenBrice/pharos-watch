@@ -469,19 +469,21 @@ describe("Reshape-v3 T5 — seasoned-issuer credit (R2)", () => {
     },
   );
 
-  it("keeps unreconciled seasoning under its dedicated ceiling rather than the ordinary ladder", () => {
-    const changedPolicy = structuredClone(POLICY.policy);
-    changedPolicy.semantic.control.mintPostureQuality["unbounded-unreconciled"] = 30;
-    const result = evaluateV9EconomicControl(makeEconomicControlArgs({
-      policy: loadV9MethodologyPolicy(changedPolicy),
-      facts: makeEconomicControlFacts([unbounded]),
-      mint: makeReviewedMintInput(unbounded.controlKey, { reconciliation: "none", supervision: "none" }),
-      trackRecordMonths: 60,
-    }));
-    expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
-      posture: "unbounded-unreconciled", score: 39,
-    });
-  });
+  it.each(["not-applicable", "none", "unknown", "internal-ledger"] as const)(
+    "keeps %s adverse seasoning under its configurable dedicated ceiling", (reconciliation) => {
+      const changedPolicy = structuredClone(POLICY.policy);
+      changedPolicy.semantic.control.mintPostureQuality["unbounded-adverse"] = 30;
+      const result = evaluateV9EconomicControl(makeEconomicControlArgs({
+        policy: loadV9MethodologyPolicy(changedPolicy),
+        facts: makeEconomicControlFacts([unbounded]),
+        mint: makeReviewedMintInput(unbounded.controlKey, { reconciliation, supervision: "none" }),
+        trackRecordMonths: 60,
+      }));
+      expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
+        posture: "unbounded-adverse", score: 39,
+      });
+    },
+  );
 
 
   it("does not award seasoning above the resolved no-mint top rung", () => {

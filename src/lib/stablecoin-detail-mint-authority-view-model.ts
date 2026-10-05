@@ -13,6 +13,8 @@ import {
 } from "@/lib/mint-authority-display";
 import { formatMintAuthorityCustodyAttestation } from "@/lib/stablecoin-detail-mint-authority-format";
 import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";
+import type { SafetyScoreV9IssuanceSummary } from "@shared/types/safety-score-v9-public-breakdowns";
+import { normalizeDeploymentId } from "@shared/types/deployment-id";
 /**
  * A single externally-owned key is presented as unverifiable custody unless the
  * review carries an MPC or HSM attestation. Safety 9.1 keeps the label local:
@@ -27,6 +29,16 @@ export type MintAuthorityPostureTone = "minimized" | "neutral" | "elevated";
 export interface MintAuthorityDetailSourceViewModel {
   label: string;
   url: string;
+}
+
+export type MintAuthorityProcessDiagnosticViewModel = SafetyScoreV9IssuanceSummary["diagnostics"][number] & {
+  key: string;
+  statusLabel: "Missing evidence" | "Failed screen" | "Failed gate" | "Analytical note";
+};
+
+export interface MintAuthorityProcessMetricViewModel {
+  label: string;
+  value: string;
 }
 
 export interface MintAuthorityDetailControlViewModel {
@@ -49,6 +61,7 @@ export interface MintAuthorityDetailControlViewModel {
   capDescription: string | null;
   modulesOrGuardsLabel: string | null;
   custodyLabel: string | null;
+  processDiagnostics: MintAuthorityProcessDiagnosticViewModel[];
 }
 
 export interface MintAuthorityDetailScoreCapViewModel {
@@ -106,6 +119,9 @@ export interface MintAuthorityDetailViewModel {
   mintIncidents: MintAuthorityDetailIncidentViewModel[];
   sourceFreeRationale: string | null;
   unresolvedQuestions: string[];
+  processEvidenceAvailable: boolean;
+  processDiagnostics: MintAuthorityProcessDiagnosticViewModel[];
+  processMetrics: MintAuthorityProcessMetricViewModel[];
 }
 
 const NOT_REVIEWED_MINT_AUTHORITY: MintAuthorityDetailViewModel = {
@@ -127,6 +143,9 @@ const NOT_REVIEWED_MINT_AUTHORITY: MintAuthorityDetailViewModel = {
   mintIncidents: [],
   sourceFreeRationale: null,
   unresolvedQuestions: [],
+  processEvidenceAvailable: false,
+  processDiagnostics: [],
+  processMetrics: [],
 };
 
 const MINT_PATH_LABELS: Record<string, string> = {
@@ -165,13 +184,13 @@ const AUTHORITY_POSTURE_LABELS: Record<string, string> = {
   "none-resolved-mint": "No privileged mint path",
   "bounded-admin": "Bounded admin",
   "partially-bounded-admin": "Partially bounded admin",
-  "unbounded-reconciled": "Unbounded, supervised & reconciled",
+  "unbounded-reconciled": "Unbounded, reconciled or prudentially supervised",
   "unbounded-governed": "Unbounded, governance-delayed",
   "unbounded-veto-guarded": "Unbounded, veto-guarded",
+  "unbounded-operationally-governed": "Unbounded, operationally governed",
   "concentrated-admin": "Concentrated admin",
   "collateral-gated": "Collateral-gated admin",
-  "unbounded-reconciliation-unknown": "Unbounded, reconciliation unverified",
-  "unbounded-unreconciled": "Unbounded, unreconciled",
+  "unbounded-adverse": "Unbounded, adverse authority",
   compromised: "Compromised (active incident)",
   unknown: "Unknown",
 };
@@ -183,15 +202,15 @@ const AUTHORITY_POSTURE_TONES: Record<string, MintAuthorityPostureTone> = {
   "none-resolved-mint": "minimized",
   "bounded-admin": "minimized",
   "partially-bounded-admin": "neutral",
-  // Same elevated tone as the rest of the unbounded/concentrated tier: the
-  // supervision is real, but the minting is still economically unbounded.
+  // Reconciliation or prudential supervision is real, but neither imposes
+  // an economic issuance bound.
   "unbounded-reconciled": "elevated",
   "unbounded-governed": "neutral",
   "unbounded-veto-guarded": "neutral",
+  "unbounded-operationally-governed": "neutral",
   "concentrated-admin": "elevated",
   "collateral-gated": "elevated",
-  "unbounded-reconciliation-unknown": "elevated",
-  "unbounded-unreconciled": "elevated",
+  "unbounded-adverse": "elevated",
   compromised: "elevated",
   unknown: "neutral",
 };
@@ -389,6 +408,7 @@ function buildMintAuthorityControlViewModel(
       : control.authorityType === "eoa"
         ? EOA_UNVERIFIED_CUSTODY_LABEL
         : null,
+    processDiagnostics: [],
   };
 }
 
@@ -396,6 +416,43 @@ function buildMintAuthorityControlViewModel(
 export interface PublishedMintProjection {
   mint: PublishedMintComponent | null;
   caps: readonly PublishedMintCap[];
+  issuanceSummary?: SafetyScoreV9IssuanceSummary | null;
+}
+
+function projectProcessMetrics(summary: SafetyScoreV9IssuanceSummary | null | undefined): MintAuthorityProcessMetricViewModel[] {
+  const metrics: MintAuthorityProcessMetricViewModel[] = [];
+  if (summary?.governance) {
+    const governance = summary.governance;
+    metrics.push({ label: "Actual governed-path delay", value: governance.minUnavoidableDelaySec === null ? "Unproved" : `${governance.minUnavoidableDelaySec} s` });
+    const concentration = governance.votingControl.largestSingleControllerShareBps;
+    metrics.push({ label: "Largest single voting controller", value: concentration === null ? "Unproved" : `${concentration / 100}% (diagnostic, not a concentration cap)` });
+    for (const reason of governance.incompleteReasonCounts) {
+      metrics.push({ label: `Governance coverage reason: ${reason.code}`, value: `${reason.count} occurrence(s)` });
+    }
+  }
+  if (summary?.process) {
+    const process = summary.process;
+    metrics.push(
+      { label: "Execution members matched", value: `${process.matchedMemberCount} / ${process.memberCount}; ${process.unknownMemberCount} unknown` },
+      { label: "Envelope-transition paths", value: `${process.envelopeTransitionPathCount}` },
+      { label: "Funded recurring keeper paths", value: `${process.fundedKeeperRecurringPathCount} / ${process.keeperRecurringPathCount}` },
+      { label: "Envelope-raise public delay", value: process.envelopeTransitionPathCount === 0
+        ? "Not applicable (no envelope-transition paths)"
+        : process.minEnvelopeRaisePublicDelaySec === null ? "Unproved" : `${process.minEnvelopeRaisePublicDelaySec} s` },
+      { label: "Minimum recurring keeper interval", value: process.fundedKeeperRecurringPathCount === 0
+        ? "Not applicable (no funded recurring paths)"
+        : process.minKeeperRecurringIntervalSec === null ? "Unproved" : `${process.minKeeperRecurringIntervalSec} s` },
+    );
+    for (const [label, measured, units] of [
+      ["Max annual interest growth", process.maxAnnualInterestGrowthPpm, "ppm / year"],
+      ["Max proportional keeper reward", process.maxKeeperProportionalRewardPpm, "ppm"],
+      ["Max fixed keeper award / native supply", process.maxKeeperFixedRewardSupplyPpm, "ppm"],
+      ["Max repeat awards / native supply", process.maxKeeperRepeatRewardSupplyPpmPer86400Sec, "ppm / 86400 s"],
+      ["Discretionary public delay", process.minDiscretionaryPublicDelaySec, "s"],
+      ["Actual operational exercise delay", process.minOperationalExerciseDelaySec, "s"],
+    ] as const) metrics.push({ label, value: measured === null ? "Unproved" : `${measured} ${units}` });
+  }
+  return metrics;
 }
 
 export function buildMintAuthorityDetailViewModel(
@@ -403,14 +460,38 @@ export function buildMintAuthorityDetailViewModel(
   published?: PublishedMintProjection | null,
 ): MintAuthorityDetailViewModel {
   const candidate = coin.mintAuthoritySummary;
-  if (!candidate) return NOT_REVIEWED_MINT_AUTHORITY;
+  const summary = published?.issuanceSummary;
+  const diagnostics: MintAuthorityProcessDiagnosticViewModel[] = (summary?.diagnostics ?? []).map((diagnostic) => ({
+    ...diagnostic,
+    key: JSON.stringify([diagnostic.gate, diagnostic.code, diagnostic.classId, diagnostic.field]),
+    statusLabel: diagnostic.code === "external-accounting-trust" ? "Analytical note"
+      : diagnostic.code === "operational-screen-failed" ? "Failed screen"
+        : ["delay-too-short", "governor-not-governance", "discretionary-root-independent",
+          "voting-affiliated-unilateral", "voting-other-holder-operator", "voting-privilege-independent",
+          "operational-decision-rule-inadmissible", "restructure-reachable"].includes(diagnostic.code)
+          ? "Failed gate" : "Missing evidence",
+  }));
+  const processEvidenceAvailable = summary != null;
+  if (!candidate) return {
+    ...NOT_REVIEWED_MINT_AUTHORITY, processEvidenceAvailable, processDiagnostics: diagnostics,
+    processMetrics: projectProcessMetrics(summary),
+  };
 
   // The producer flattens review.sources / review.reviewedAt and per-control /
   // per-incident sources onto the top-level summary, so there is no nested review
   // object to read here.
   const sources = candidate.sources ?? [];
   const mintIncidents = buildMintIncidentViewModels(candidate.mintIncidents);
-  const controlViewModels = (candidate.controls ?? []).map(buildMintAuthorityControlViewModel);
+  const matchedControlRefs = new Set<string>();
+  const controlViewModels = (candidate.controls ?? []).map((control, index) => {
+    const viewModel = buildMintAuthorityControlViewModel(control, index);
+    const ref = normalizeDeploymentId(`${control.chain ?? ""}:${control.address ?? ""}`);
+    if (ref) matchedControlRefs.add(ref);
+    return {
+      ...viewModel,
+      processDiagnostics: diagnostics.filter((diagnostic) => diagnostic.controlRefs.includes(ref)),
+    };
+  });
   const score = buildMintAuthorityScoreViewModel(
     resolveMintAuthorityScoreDisplay(published?.mint),
     published?.caps ?? [],
@@ -428,6 +509,10 @@ export function buildMintAuthorityDetailViewModel(
     summary: candidate.summary,
     inheritedFrom: candidate.inheritedFrom ?? null,
     controls: controlViewModels,
+    processEvidenceAvailable,
+    processMetrics: projectProcessMetrics(summary),
+    processDiagnostics: diagnostics.filter((diagnostic) => diagnostic.controlRefs.some((ref) =>
+      ref === null || !matchedControlRefs.has(ref))),
     sources,
     score,
     reviewedAt: candidate.reviewedAt ?? null,

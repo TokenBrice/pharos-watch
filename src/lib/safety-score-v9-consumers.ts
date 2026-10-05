@@ -8,6 +8,7 @@ import type {
 } from "@shared/types";
 import { getV9GradeRiskBucket, type V9GradeRiskBucket } from "@shared/lib/safety-grade-buckets";
 import type { PublishedMintComponent } from "@/lib/mint-authority-display";
+import type { SafetyScoreV9IssuanceSummary } from "@shared/types/safety-score-v9-public-breakdowns";
 import type { PortfolioHolding } from "@/lib/portfolio-codec";
 
 export type V9ConsumerResponse = ReportCardsV9CurrentResponse;
@@ -95,6 +96,11 @@ export function readV9CardMintComponent(card: SafetyScoreV9Card): PublishedMintC
   const breakdowns = "breakdowns" in card ? card.breakdowns : null;
   const component = breakdowns?.control?.components.find((entry) => entry.kind === "mint");
   return component && component.score !== null ? { score: component.score, posture: component.posture } : null;
+}
+
+/** Diagnostics remain readable when the mint score is NR; absence grants no process evidence. */
+export function readV9CardIssuanceSummary(card: SafetyScoreV9Card): SafetyScoreV9IssuanceSummary | null {
+  return card.breakdowns?.control.issuanceSummary ?? null;
 }
 
 export function buildV9SafetyTableRows(

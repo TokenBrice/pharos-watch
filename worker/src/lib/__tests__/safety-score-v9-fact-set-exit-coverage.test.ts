@@ -728,7 +728,7 @@ describe("compiled Control causal minimum regressions", () => {
       const gap = asset.gaps.find((gap) => status.gapIds.includes(gap.gapId))!;
       expect(gap.causeScope).toMatchObject({ pillar: "control", componentKey: "economic-control:mint",
         factorKey: "reconciliation", requiredDatum: "reconciliation" });
-      expect(mint).toMatchObject({ score: 52, cause: "U", causeGapIds: [gap.gapId], scoringDisposition: "bounded-uncertainty" });
+      expect(mint).toMatchObject({ score: 25, cause: "U", causeGapIds: [gap.gapId], scoringDisposition: "bounded-uncertainty" });
     } else {
       expect(mint).toMatchObject({ cause: null, scoringDisposition: "included" });
     }

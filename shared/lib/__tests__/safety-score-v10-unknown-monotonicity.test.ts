@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { applyMergedMintSignals } from "@shared/lib/safety-score-v9/control-mint-grade";
 import { evaluateV9EconomicControl } from "@shared/lib/safety-score-v9/control";
+import { deriveV9MintPosture } from "@shared/lib/safety-score-v9/control-primitives";
 import { evaluateV9Exit } from "@shared/lib/safety-score-v9/exit";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { scoreV9EvaluatedAsset } from "@shared/lib/safety-score-v9/score";
@@ -65,13 +66,35 @@ describe("unknown policy rung isolation and capacity classification", () => {
     });
   }
 
+  it.each(["not-applicable", "none", "unknown", "internal-ledger"] as const)(
+    "%s reconciliation never routes known unbounded power through generic unknown quality", (reconciliation) => {
+      const control = makeDeploymentControl("mint:known-adverse", "mint", {
+        capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
+      });
+      const mint = makeReviewedMintInput(control.controlKey, { reconciliation, supervision: "none" });
+      const semantic = V9_CANDIDATE_POLICY_V1.policy.semantic;
+      const posture = deriveV9MintPosture(control, mint, false, semantic);
+      expect(posture).toBe("unbounded-adverse");
+      expect(semantic.control.mintPostureQuality[posture]).toBe(25);
+      for (const unresolvedControl of [
+        null,
+        { ...control, economicLossScope: "unknown" as const },
+        { ...control, capSemantics: { kind: "unknown" as const, bound: null }, claimImpairment: "unknown" as const },
+      ]) {
+        const unresolvedPosture = deriveV9MintPosture(unresolvedControl, mint, false, semantic);
+        expect(unresolvedPosture).toBe("unknown");
+        expect(semantic.control.mintPostureQuality[unresolvedPosture]).toBe(50);
+      }
+    },
+  );
+
   it("keeps known merged-credit headroom independent of the unknown mint rung", () => {
     const mintControl = makeDeploymentControl("mint:credit", "mint", {
       authority: { authorityKey: "contract:credit", model: "contract", threshold: null },
       modulesOrGuards: "none-detected",
     });
     for (const base of Object.entries(V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintPostureQuality)
-      .filter(([posture]) => posture !== "unknown" && posture !== "unbounded-reconciliation-unknown")
+      .filter(([posture]) => posture !== "unknown")
       .map(([, quality]) => quality)) {
       const controlPolicy = structuredClone(V9_CANDIDATE_POLICY_V1.policy.semantic.control);
       controlPolicy.mintMergedSignals.modulesOrGuardsAdjustment.noneDetectedCredit = 10;

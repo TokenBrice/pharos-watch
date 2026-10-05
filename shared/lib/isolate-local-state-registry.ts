@@ -96,6 +96,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "The validated policy envelope, digest, and captured chain-maturity resolution identity are authoritative; the weak collections only attest local validation and preserve identity lookup.",
   },
   {
+    sourcePath: "worker/src/lib/safety-score-v9/fact-set-schema.ts",
+    stateNames: ["admittedExtensionAssets"],
+    owner: "Safety Score V9 immutable extension-asset admission",
+    kind: "cache",
+    resetOrTtl: "Weak object-identity brands for strictly admitted frozen extension assets; entries are garbage-collectable and disappear on isolate recycle.",
+    durableTruth: "Strictly validated immutable extension assets are authoritative; this per-isolate WeakSet only tags already-validated frozen objects, retains no asset data, and cannot leak cross-request data or transfer admission to a different object.",
+  },
+  {
     sourcePath: "worker/src/api/telegram-webhook.ts",
     stateNames: ["lastMissingBotTokenWarnAtMs"],
     owner: "Telegram webhook missing-token telemetry",

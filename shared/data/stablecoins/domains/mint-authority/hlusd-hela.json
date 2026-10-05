@@ -2,7 +2,7 @@
   "id": "hlusd-hela",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "manual-review",
     "summary": "HLUSD issuance is controlled by HeLa's on-chain governance roles: MintProposer initiates mint requests, MintVoter approval satisfies the configured quorum, and Admin configures role/quorum parameters.",
     "controls": [

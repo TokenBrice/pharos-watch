@@ -2,7 +2,7 @@
   "id": "ntbill-nest",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "manual-review",
     "summary": "nTBILL has reviewed native issuance on Ethereum, Plume, Arbitrum, and BNB Chain. Ethereum, Plume, and BNB Chain use NestVault deposit entrypoints plus the still-authorized Ethereum Teller path; Arbitrum's verified non-proxy BoringVault directly exposes an owner-authorized enter mint path through its own Safe and RolesAuthority. The current Nest registry and nTBILL integration guide omit Arbitrum from their supported-chain tables, but the deployed source, owner Safe, and auth graph establish a native liability route. The shared Nest admin contract controls the supported NestVault authority and upgradeable proxies; the Solana CCTP/LayerZero representation remains Bridge Risk.",
     "controls": [

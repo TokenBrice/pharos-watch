@@ -7,7 +7,7 @@ import {
   buildMintAuthorityDetailViewModel,
 } from "@/lib/stablecoin-detail-mint-authority-view-model";
 import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-hero-view-model";
-import { readV9CardMintComponent } from "@/lib/safety-score-v9-consumers";
+import { readV9CardMintComponent, readV9CardIssuanceSummary } from "@/lib/safety-score-v9-consumers";
 import {
   buildDetailFeatureSnapshot,
   buildDetailMarketSnapshot,
@@ -81,7 +81,7 @@ export function buildStablecoinDetailViewModel({
   const mintAuthority = buildMintAuthorityDetailViewModel(
     coin,
     reportCard
-      ? { mint: readV9CardMintComponent(reportCard), caps: reportCard.caps }
+      ? { mint: readV9CardMintComponent(reportCard), caps: reportCard.caps, issuanceSummary: readV9CardIssuanceSummary(reportCard) }
       : { mint: null, caps: [] },
   );
   const stressBand = featureAvailability.stressSignal && isThreatBand(featureAvailability.stressSignal.band)

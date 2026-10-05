@@ -22,7 +22,7 @@ const SIGNAL_ROWS = [
       signal: "Derived posture",
       effect: "Sets the base",
       meaning:
-        "Cap semantics, claim impairment, reconciliation cadence, supervisory regime, and qualified governance place the mint on a posture rung. The ladder distinguishes collateral-gated issuance, minority-veto and governance-delayed unbounded issuance, unbounded minting with unknown reconciliation, and a confirmed absence of reconciliation.",
+        "Cap semantics, claim impairment and positively qualified governance, recurring reconciliation or prudential supervision place the mint on a posture rung. Known unbounded authority without a qualifying process starts at 25 regardless of reconciliation availability. Unknown reconciliation is disclosed separately, not priced as a 55 grant or treated as proof of non-reconciliation. The ladder retains collateral-gated, minority-veto, governance-delayed and operationally governed issuance.",
     },
   },
   {
@@ -40,7 +40,7 @@ const SIGNAL_ROWS = [
       signal: "Seasoned track record",
       effect: "Bounded credit",
       meaning:
-        "After 60 months, eligible postures earn 10 points without crossing the next rung. Minority-veto issuance starts at 70 and clips at 79 below prudential reconciliation at 80, just like partially bounded administration. Governance-delayed issuance starts at 60 and clips at 69. Unbounded minting with unknown reconciliation has a 55-point base; seasoned and positive merged-signal credits from a 55-point base stop at 59. Unbounded, unreconciled issuance has a dedicated ceiling of 39. An active incident is ineligible.",
+        "After 60 months, eligible postures earn 10 points without crossing the next rung. Minority-veto issuance starts at 70 and clips at 79 below prudential reconciliation at 80, just like partially bounded administration. Governance-delayed issuance starts at 60 and clips at 69. Operationally governed issuance starts at 55 and clips seasoning and final positive merged credit at 59. Other eligible 55-base rows also stop at 59. Unbounded, adverse authority starts at 25 and becomes 35 after 60 implementation months under unchanged knobs, with a dedicated ceiling of 39 rather than an automatic 39 grant, regardless of reconciliation availability. An active incident is ineligible.",
     },
   },
   {
@@ -91,7 +91,7 @@ const BAND_ROWS = [
     id: "governed",
     cells: {
       band: V9_MINT_POSTURE_BANDS.governed.label,
-      posture: "Partially bounded admin or unbounded, veto-guarded (70), or unbounded, governance-delayed (60)",
+      posture: "Partially bounded admin or unbounded, veto-guarded (70), governance-delayed (60), or operationally governed (55)",
       meaning: V9_MINT_POSTURE_BANDS.governed.detail,
     },
   },
@@ -99,7 +99,7 @@ const BAND_ROWS = [
     id: "managed",
     cells: {
       band: V9_MINT_POSTURE_BANDS.managed.label,
-      posture: "Prudential-reconciled (80), attestation-reconciled (70), or unbounded-reconciled base (55)",
+      posture: "Prudential-reconciled (80), attestation-reconciled (70), or recurring reconciliation / prudential supervision alone (55)",
       meaning: V9_MINT_POSTURE_BANDS.managed.detail,
     },
   },
@@ -115,7 +115,7 @@ const BAND_ROWS = [
     id: "exposed",
     cells: {
       band: V9_MINT_POSTURE_BANDS.exposed.label,
-      posture: "Unknown reconciliation (55), or unbounded, unreconciled / compromised (25)",
+      posture: "Unbounded, adverse authority (25), or compromised by an active mint incident (25)",
       meaning: V9_MINT_POSTURE_BANDS.exposed.detail,
     },
   },
@@ -171,10 +171,10 @@ export function MintAuthorityScoreMethodologySection() {
         rows={SIGNAL_ROWS}
       />
       <p>
-        The governed rung covers economically unbounded issuance held only by delayed, flash-resistant on-chain token
-        governance. Every mint control must have a complete execution-scope certificate proving that all unbounded
-        issuance paths are governance-controlled and enforce an unavoidable delay of at least 48 hours. Qualifying
-        issuance starts at 60 and publishes in the Governed band.
+        The D29 governed rung covers economically unbounded issuance held only by delayed, flash-resistant on-chain
+        token governance. Every mint control needs a complete individual or class-expanded execution certificate and
+        typed authority closure proving that all unbounded issuance paths enforce at least 48 hours of unavoidable
+        public notice. Qualifying issuance starts at 60 and publishes in the Governed band.
       </p>
       <p>
         Safety Score v10.03 adds minority-veto due process (D30): when any holder or delegation group of at most 2%
@@ -185,18 +185,18 @@ export function MintAuthorityScoreMethodologySection() {
       </p>
       <MethodologyDetails summary="Minority-veto issuance: gates V1–V7 (Safety Score v10.03)">
         <ul className="list-disc space-y-2 pl-5">
-          <li>V1: complete runtime/signer-bound execution-scope certificates on every authored mint control,
-            a fresh closed review, no scoped question, and no active incident.</li>
+          <li>V1: complete runtime/state/typed-authority-bound individual or class-expanded execution-scope certificates
+            on every authored mint control, a fresh closed review, no scoped question, and no active incident.</li>
           <li>V2: an explicit minority-veto decision rule and a minimum, never summed, unavoidable public window
             of 1,209,600 seconds across every reachable unbounded issuance path.</li>
           <li>V3: a unilateral veto quorum at most 200 bps of total flash-resistant holding-period-weighted,
             lock-escrowed, or past-block-checkpoint votes; any override is none, symmetric vote destruction
             costing the caller an equal number of its own votes, or insolvency-gated restructure only while pinned
             equity is at least twice the threshold, retaining staleness headroom (D30-R).</li>
-          <li>V4: every unbounded path is rooted in the veto governor by structured signer identity naming only
-            authored contract execution hops, with no multisig, threshold, or signature phrasing. The governor
+          <li>V4: every unbounded path is rooted in the veto governor through a closed typed authority graph,
+            including all execution, permission, upgrade and reactivation alternatives, not signer prose. The governor
             itself carries no unbounded path. Only certified disabled-reactivatable restructure-dependent paths
-            are excluded while restructure is unreachable.</li>
+            are excluded while restructure is unreachable. Uniform D32 voting control also applies.</li>
           <li>V5: each guarded issuance controller is targeted by a certified active parameter-change veto path
             containing every declared exact selector; a dormant veto cannot qualify.</li>
           <li>V6: issuance is enumerable through authorization events and capacity reads.</li>
@@ -218,13 +218,129 @@ export function MintAuthorityScoreMethodologySection() {
           reachable governor-certificate path. Every dependent path must be dormant and reachable only through
           restructure; ordinary redemption cannot reduce governance-share supply to zero. Equity is in whole
           asset-token units, veto quorum in bps of pinned votes, and rate caps in annual ppm. Plain equal-cost
-          kamikaze remains symmetric vote destruction; cross-certificate reactivation causality remains an
-          evidence-backed residual risk.
+          kamikaze remains symmetric vote destruction; typed path bindings and reactivation edges must close
+          cross-control authority alternatives.
         </p>
         <p>
           The admission path carries the public veto window; already-admitted minters never inherit that delay.
           Their issuance paths carry their actual economic bound and exercise delay, often zero for an unbounded
           path, which fails the fourteen-day gate.
+        </p>
+      </MethodologyDetails>
+      <p>
+        Safety Score v10.05 adds D31 / rule H: &quot;Unbounded, operationally governed&quot; starts at 55 in the
+        Governed band, with a moderate centralized-mint signal (cap 74) and ordinary seasoning and final positive
+        merged credit clipped at 59. D29 at 60 and D30 at 70 take precedence. Discretionary expansion and
+        operational-envelope changes require public token governance; formula interest and activity-bound
+        compensation can execute immediately within reviewed envelopes. Economically unbounded.
+      </p>
+      <MethodologyDetails summary="Operationally governed issuance: H0–H4 and uniform D32 (Safety Score v10.05)">
+        <ul className="list-disc space-y-2 pl-5">
+          <li>H0: complete fresh reviewed reach, exact authorization/class/member census, executable runtime and
+            instance-state correspondence, typed authority and economic provenance closure, no scoped question
+            and no active compromise. Zero-current and latent/stopped-reactivatable controls remain in scope.</li>
+          <li>H1: every discretionary amount/recipient/admission/upgrade and envelope raise requires flash-resistant
+            affirmative token governance and at least 172,800 seconds of public code/calldata-bound notice.
+            All alternative routes must comply; proposal age and private cooldown are not public notice.
+            Actual operational exercise may remain zero seconds.</li>
+          <li>H2: formula interest has genuine conserved principal, monotone time, eligible beneficiaries and matched
+            liability accounting, with effective annual growth at most 500,000 ppm. Keeper compensation is
+            activity-bound: proportional coefficient at most 1,000 ppm, fixed award at most 10 ppm of unique
+            native supply, funded repeat interval at least 3,600 seconds. Initial-liquidation rewards require
+            debt-relative anti-farming and historical paid-fragment stock proofs; repeat awards need a
+            source-enforced whole-book in-flight bound.</li>
+          <li>H3: enumerable public authority/capacity and unique whole-book liabilities. Shared DAI/USDS conversions,
+            savings claims and wrappers cannot duplicate supply, principal or compensation budgets.
+            The 48-hour exposure anchor below replaces the former daily repeat ceiling.</li>
+          <li>H4: closed other operational classes and fresh source generations. Bounded delegated stock qualifies
+            only with a proved finite cap, every raise/reset/replacement requiring the public 172,800-second
+            governor route, and no fresh chosen-recipient issuance outside that stock. Downstream strategy/custody
+            losses belong in Backing; external strategy-target closure is not an extra H Mint gate.
+            A refillable flow bucket is not finite stock.</li>
+        </ul>
+        <p>
+          Over the 172,800-second public window, ceil(certified maximum annual interest growth ppm × 172,800 /
+          31,536,000) + ceil(repeat reward supply ppm per 86,400 seconds × 172,800 / 86,400) must be at most
+          50,000 ppm: the existing 5% moderate-exposure threshold. The interest term uses the asset&apos;s compiled
+          certified maximum. The certified time domain is 0 &lt; W ≤ T: the reused public-governance window W
+          (172,800 seconds) cannot exceed the annual window T (31,536,000 seconds). Out-of-domain anchors deny H;
+          this adds no separate threshold. No surplus floor, lifetime issuance budget or absolute daily initial-liquidation
+          turnover cap is required. Missing evidence denies H; known above-screen bounds are separately diagnosed.
+          There is no permanent partial rung. D14 and DDR&apos;s fragile/unbounded membership stay unchanged.
+        </p>
+        <p>
+          D32 applies uniformly to D29, D30 and H, using actual source-enforced unilateral route thresholds and exact
+          controller-plus-residual conservation to pinned voting supply. A controller able to pass alone may vote
+          its OWN locked/escrowed tokens unless positively identified issuer/team/council-affiliated; unknown
+          beneficial affiliation and concentration are diagnostics. A key casting OTHER holders&apos; votes, or able
+          to replace their caster without on-chain token-holder approval, is council control. A threshold-capable key
+          with actual other-holder casting/replacement authority fails even if its own stake alone suffices;
+          needing those votes to pass alone also denies. Nongovernance privileged/forced vote creation or delegation denies.
+          Controllers unable to pass alone need no identification. There is no universal concentration ceiling.
+        </p>
+        <p>
+          Class certificates compress repeated contract-type proofs, not evidence standards: exact deployed runtime,
+          proxy/implementation, immutable/storage conditions and complete membership must still match. Typed graphs
+          replace signer-prose rooting and traverse every authority/vote-operator alternative. One compact published
+          issuance summary shows grouped gate/class/field failures, complete control identities and whole-group
+          totals, with at most three explicitly sampled, non-exhaustive path/member/evidence exemplars per group.
+          Group totals are not per-control counts. Actual versus discretionary clocks and missing versus known screen
+          failures remain visible; the browser reads this summary once and never recalculates qualification.
+        </p>
+        <p>
+          ZCHF&apos;s separate D30-S envelope uses a minority-replaceable seven-day rate window and a uint24 nominal
+          annual-ppm domain (maximum 16,777,215 ppm), not H&apos;s 50% effective-growth cap. Its rationale is minority
+          correction plus D30-R closure, not a claim of modest maximum growth. Veto-only monetary-policy paths cannot
+          be relabeled as H; typed provenance and uniform D32 apply to both.
+        </p>
+        <p>
+          O0 corrects GHO fixed configured-pool first hops and ordinary public payload timing to 345,603 seconds,
+          distinguishes current versus legacy Sky LockstakeClipper Mom authority, and treats positive D3M
+          suck/grab fee/donation accounting as paired matched debt, not atomic heal or blanket loss replacement.
+          GHO stays mint 25 (historical captured total 42/D). Improvement requires removing the Council&apos;s
+          chosen-recipient direct mint, restricting it to genuinely reserve-backed issuance, or imposing a finite
+          aggregate token-governed budget; then test ordinary D29, without promising a future rating.
+        </p>
+      </MethodologyDetails>
+      <p>
+        Safety Score v10.06 adds D33: known economically unbounded mint authority is priced from its evidenced actor,
+        power and qualifying process, regardless of reconciliation availability. Without qualified governance,
+        recurring reconciliation or prudential supervision, it starts at 25 as &quot;Unbounded, adverse authority&quot;
+        in the Exposed band, with high centralized-mint severity (cap 59 under existing proof and scope gates).
+        This is removal of an unavailable-evidence grant, not new adverse findings; it does not establish reserve
+        impairment, a governance compromise, a new issuance event or measured non-reconciliation.
+      </p>
+      <MethodologyDetails summary="Availability-invariant mint fallback: D33 (Safety Score v10.06)">
+        <p>
+          An active mint incident overrides the ladder. Otherwise, for positively known unbounded authority,
+          continuous or periodic reconciliation plus prudential or attestation-only supervision ranks first at
+          80 or 70. Fully qualified minority-veto issuance (70), affirmative governance (60), then operational
+          governance (55) follow. Remaining recurring reconciliation or independently established prudential
+          supervision supports base 55; otherwise known unbounded adverse authority starts at 25.
+          The v10.05 certificate, typed-authority and D32 gates remain mandatory for each governance process.
+        </p>
+        <p>
+          At fixed positive actor/process facts, not-applicable, none, unknown and internal-ledger reconciliation
+          do not change that base rung. Unknown reconciliation remains an explicitly attributed C/U factor,
+          with its real scoped causal gaps and any topology gaps retained, even when a governance process or
+          prudential supervision qualifies. Unobserved values stay null. The known authority supplies any
+          adverse support separately; a missing reconciliation read cannot create an adverse finding.
+          Genuinely unresolved authority or economic semantics retains generic unknown quality 50.
+        </p>
+        <p>
+          Internal-ledger records an issuance/accounting workflow, not reserve-to-total-liability assurance.
+          It may clear the issuer-backend mint-control question but grants no standalone rung: recording
+          liabilities cannot constrain the same actor&apos;s unbounded issuance power. Backing assurance and
+          the non-prudential Control whole-supply question remain. Independently evidenced prudential supervision
+          alone retains 55, Managed and no centralized-mint signal, unless a higher-priority qualifying
+          governance process supplies its own band and signal. The public label is &quot;Unbounded, reconciled or
+          prudentially supervised&quot;; it does not claim both are established. Attestation-only alone grants no rung.
+        </p>
+        <p>
+          Adverse authority remains fragile and unbounded for DDR; K1 severe-surge and R1 recovery-anchor rules
+          are unchanged. Ordinary seasoning adds 10 once after 60 implementation months, producing 25 to 35
+          with unchanged knobs and a ceiling of 39. Merged penalties cannot cross the adverse 25 floor.
+          Active compromise never seasons; D29, D30 and H retain their existing ceilings and signals.
         </p>
       </MethodologyDetails>
       <WorkedExample summary="Worked example: a resolved mint incident on a reconciled issuer">

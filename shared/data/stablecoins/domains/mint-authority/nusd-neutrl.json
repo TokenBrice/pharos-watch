@@ -2,7 +2,7 @@
   "id": "nusd-neutrl",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "NUSD is a synthetic delta-neutral dollar whose token grants MINTER_ROLE to Neutrl's StableMinter and DEFAULT_ADMIN_ROLE to a separate admin; Ethereum native mint is routed through Neutrl's Router.sol into AssetReserve/StableMinter, while the LayerZero OFTAdapter and Arbitrum/Plasma representations are reviewed only under Bridge Risk and redemption is KYC-gated.",
     "upgradeability": {

@@ -23,11 +23,11 @@ export const V9_MINT_POSTURE_BANDS: Record<V9MintPostureBand, { label: string; d
   },
   governed: {
     label: "Governed",
-    detail: "A partially bounded administrator, or unbounded issuance protected by delayed token governance or public minority veto.",
+    detail: "Partially bounded administration, delayed governance or minority-veto issuance, or reviewed operational envelopes with token-governed expansion.",
   },
   managed: {
     label: "Managed",
-    detail: "Economically unbounded minting that is reconciled against reserves or a supervisory regime.",
+    detail: "Economically unbounded minting that is reconciled against reserves or prudentially supervised.",
   },
   concentrated: {
     label: "Concentrated",
@@ -35,7 +35,7 @@ export const V9_MINT_POSTURE_BANDS: Record<V9MintPostureBand, { label: string; d
   },
   exposed: {
     label: "Exposed",
-    detail: "Economically effective minting is unbounded — unreconciled, unverified, or under an active incident.",
+    detail: "Known economically unbounded minting without a qualified governance, reconciliation, or supervisory process, or an active mint incident. An unanswered reconciliation question is disclosed separately.",
   },
 };
 
@@ -48,7 +48,7 @@ export const V9_MINT_POSTURE_BAND_ORDER = [
   "exposed",
 ] as const satisfies readonly V9MintPostureBand[];
 
-// D29/D30 governance process rungs reuse the governed public band;
+// D29/D30/H governance process rungs reuse the governed public band;
 // filter values and screener URLs remain unchanged.
 const POSTURE_BANDS: Record<V9MintPosture, V9MintPostureBand | null> = {
   "none-resolved": "hardened",
@@ -56,11 +56,11 @@ const POSTURE_BANDS: Record<V9MintPosture, V9MintPostureBand | null> = {
   "partially-bounded-admin": "governed",
   "unbounded-governed": "governed",
   "unbounded-veto-guarded": "governed",
+  "unbounded-operationally-governed": "governed",
   "unbounded-reconciled": "managed",
   "concentrated-admin": "concentrated",
   "collateral-gated": "concentrated",
-  "unbounded-reconciliation-unknown": "exposed",
-  "unbounded-unreconciled": "exposed",
+  "unbounded-adverse": "exposed",
   compromised: "exposed",
   // An unresolved posture is not a band: it is the absence of a review.
   unknown: null,
@@ -151,8 +151,8 @@ const FRAGILE_MINT_POSTURES: ReadonlySet<string> = new Set<MintAuthorityPosture>
   "unbounded-reconciled",
   "unbounded-governed",
   "unbounded-veto-guarded",
-  "unbounded-reconciliation-unknown",
-  "unbounded-unreconciled",
+  "unbounded-operationally-governed",
+  "unbounded-adverse",
   "compromised",
 ]);
 
@@ -165,8 +165,8 @@ const UNBOUNDED_MINT_POSTURES: ReadonlySet<string> = new Set<MintAuthorityPostur
   "unbounded-reconciled",
   "unbounded-governed",
   "unbounded-veto-guarded",
-  "unbounded-reconciliation-unknown",
-  "unbounded-unreconciled",
+  "unbounded-operationally-governed",
+  "unbounded-adverse",
   "compromised",
 ]);
 

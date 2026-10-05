@@ -56,9 +56,10 @@ import {
   resolveV9PolicyChainMaturityIdentity,
   type V9PolicyChainMaturityIdentity,
 } from "./policy";
-import { compareText, deepFreeze, domainKey, uniqueSorted } from "./primitives";
+import { compareText, domainKey, uniqueSorted } from "./primitives";
+import { deepFreeze } from "../../types/safety-score-v9-immutable";
 import { projectV9DependencyScore } from "./score";
-import { computeV9ResultDigest } from "./trace";
+import { computeV9CompactResultDigest } from "./trace";
 
 export {
   projectV9EffectiveBackingPillarScore,
@@ -84,6 +85,9 @@ export interface V9EvaluatedSet {
   scoreResultDigest: string;
   evaluatedSetDigest: string;
 }
+
+/** Same cohort identity and digests, without retaining publication-consumed asset graphs. */
+export type V9ProjectedEvaluatedSet = Omit<V9EvaluatedSet, "assets">;
 
 function isUnknownArray(value: unknown): value is readonly unknown[] {
   return Array.isArray(value);
@@ -1111,7 +1115,24 @@ function commonModeSignalsByAsset(
   );
 }
 
-function evaluatedSetDigestPayload(result: Omit<V9EvaluatedSet, "evaluatedSetDigest">) {
+interface V9AssetDigestPayload extends Pick<V9EvaluatedAsset, "compactTrace" | "dependencyInputs" | "access" | "operationalResilience"> {
+  wrapperParentLimit: V9EvaluatedAsset["trace"]["wrapperParentLimit"];
+}
+
+function evaluatedAssetDigestPayload(asset: V9EvaluatedAsset): V9AssetDigestPayload {
+  return {
+    compactTrace: asset.compactTrace,
+    dependencyInputs: asset.dependencyInputs,
+    access: asset.access,
+    operationalResilience: asset.operationalResilience,
+    wrapperParentLimit: asset.trace.wrapperParentLimit,
+  };
+}
+
+function evaluatedSetDigestPayload(
+  result: Omit<V9EvaluatedSet, "assets" | "evaluatedSetDigest">,
+  assets: readonly V9AssetDigestPayload[],
+) {
   return {
     schemaVersion: result.schemaVersion,
     factSetDigest: result.factSetDigest,
@@ -1125,13 +1146,7 @@ function evaluatedSetDigestPayload(result: Omit<V9EvaluatedSet, "evaluatedSetDig
     dependencyPlanDigest: result.dependencyPlan.planDigest,
     evaluationOrder: result.evaluationOrder,
     scoreResultDigest: result.scoreResultDigest,
-    assets: result.assets.map((asset) => ({
-      compactTrace: asset.compactTrace,
-      dependencyInputs: asset.dependencyInputs,
-      access: asset.access,
-      operationalResilience: asset.operationalResilience,
-      wrapperParentLimit: asset.trace.wrapperParentLimit,
-    })),
+    assets,
   };
 }
 
@@ -1151,7 +1166,19 @@ function evaluateV9FactSetRead(
   factSetRead: V9WorkingFactSetRead,
   envelope: V9ValidatedPolicyEnvelope,
   interventions?: V9SetEvaluationInterventions,
-): Readonly<V9EvaluatedSet> {
+): Readonly<V9EvaluatedSet>;
+function evaluateV9FactSetRead(
+  factSetRead: V9WorkingFactSetRead,
+  envelope: V9ValidatedPolicyEnvelope,
+  interventions: V9SetEvaluationInterventions | undefined,
+  onAssetProjected: (asset: V9EvaluatedAsset) => void,
+): Readonly<V9ProjectedEvaluatedSet>;
+function evaluateV9FactSetRead(
+  factSetRead: V9WorkingFactSetRead,
+  envelope: V9ValidatedPolicyEnvelope,
+  interventions?: V9SetEvaluationInterventions,
+  onAssetProjected?: (asset: V9EvaluatedAsset) => void,
+): Readonly<V9EvaluatedSet | V9ProjectedEvaluatedSet> {
   assertV9ValidatedPolicyEnvelope(envelope);
   let factSet: V9EvaluationFactSetRead["factSet"] | null = factSetRead.factSet!;
   const assetsById = new Map(factSet.assets.map((asset) => [asset.assetId, asset]));
@@ -1166,6 +1193,25 @@ function evaluateV9FactSetRead(
   const downstreamEvaluatedById = interventions?.projectEvaluatedUpstream
     ? new Map<string, V9EvaluatedAsset>() : evaluatedById;
   const upstreamResultsById = new Map<string, V9UpstreamResult>();
+  const projection = onAssetProjected === undefined ? null : {
+    project: onAssetProjected,
+    assets: new Map<string, V9AssetDigestPayload>(),
+    upstreams: new Map<string, readonly string[]>(),
+    remainingReaders: new Map<string, number>(),
+  };
+  if (projection) {
+    for (const asset of factSet.assets) {
+      // Every evaluated upstream read comes from a dependency or a tracked reserve claim.
+      const upstreams = uniqueSorted([
+        ...asset.dependencies.edges.map((edge) => edge.upstreamAssetId),
+        ...asset.reserveExposures.flatMap((exposure) => exposure.trackedAssetId === null ? [] : [exposure.trackedAssetId]),
+      ]);
+      projection.upstreams.set(asset.assetId, upstreams);
+      for (const upstreamId of upstreams) {
+        projection.remainingReaders.set(upstreamId, (projection.remainingReaders.get(upstreamId) ?? 0) + 1);
+      }
+    }
+  }
   // Terminal unavailable-asset roots per evaluated asset, propagated in
   // topological order: an unavailable asset inherits the union of the roots of
   // its own unavailable upstreams, or is its own root when nothing upstream is
@@ -1261,15 +1307,42 @@ function evaluateV9FactSetRead(
       assetsById.delete(assetId);
       commonSignals.delete(assetId);
     }
+    // Projection is outside the evaluator's error wrapper: publication errors retain
+    // their existing global/asset-local boundary rather than becoming scoring errors.
+    if (projection) {
+      const evaluated = evaluatedById.get(assetId)!;
+      projection.assets.set(assetId, evaluatedAssetDigestPayload(evaluated));
+      projection.project(evaluated);
+      for (const upstreamId of projection.upstreams.get(assetId)!) {
+        const remaining = projection.remainingReaders.get(upstreamId)! - 1;
+        projection.remainingReaders.set(upstreamId, remaining);
+        if (remaining === 0) {
+          evaluatedById.delete(upstreamId);
+          upstreamResultsById.delete(upstreamId);
+          unavailabilityRootsById.delete(upstreamId);
+        }
+      }
+      projection.upstreams.delete(assetId);
+      if ((projection.remainingReaders.get(assetId) ?? 0) === 0) {
+        evaluatedById.delete(assetId);
+        upstreamResultsById.delete(assetId);
+        unavailabilityRootsById.delete(assetId);
+      }
+    }
   }
 
-  const assets = [...evaluatedById.values()].sort((left, right) => compareText(left.assetId, right.assetId));
+  const assets = projection === null
+    ? [...evaluatedById.values()].sort((left, right) => compareText(left.assetId, right.assetId))
+    : null;
+  const digestAssets = projection === null
+    ? assets!.map(evaluatedAssetDigestPayload)
+    : [...projection.assets.values()].sort((left, right) => compareText(left.compactTrace.assetId, right.compactTrace.assetId));
   evaluatedById.clear();
   if (downstreamEvaluatedById !== evaluatedById) downstreamEvaluatedById.clear();
   upstreamResultsById.clear();
   unavailabilityRootsById.clear();
   marketRanks.clear();
-  const core: Omit<V9EvaluatedSet, "evaluatedSetDigest"> = {
+  const core: Omit<V9EvaluatedSet, "assets" | "evaluatedSetDigest"> = {
     schemaVersion: 1,
     factSetDigest: identity.factSetDigest,
     baseInputGenerationId: identity.baseInputGenerationId,
@@ -1281,13 +1354,14 @@ function evaluateV9FactSetRead(
     sourceGenerations: identity.sourceGenerations,
     dependencyPlan,
     evaluationOrder: dependencyPlan.topologicalOrder,
-    assets,
-    scoreResultDigest: computeV9ResultDigest(assets.map((asset) => asset.trace)),
+    scoreResultDigest: computeV9CompactResultDigest(digestAssets.map((asset) => asset.compactTrace)),
   };
   const evaluatedSetDigest = sha256HexFromUtf8Chunks(
-    stableJsonStringifyChunksV1({ domain: V9_EVALUATED_SET_DIGEST_DOMAIN, result: evaluatedSetDigestPayload(core) }),
+    stableJsonStringifyChunksV1({ domain: V9_EVALUATED_SET_DIGEST_DOMAIN, result: evaluatedSetDigestPayload(core, digestAssets) }),
   );
-  return deepFreeze({ ...core, evaluatedSetDigest }) as Readonly<V9EvaluatedSet>;
+  return projection === null
+    ? deepFreeze({ ...core, assets: assets!, evaluatedSetDigest }) as Readonly<V9EvaluatedSet>
+    : deepFreeze({ ...core, evaluatedSetDigest });
 }
 
 /** Evaluate one untrusted compiled active-asset set after strict validation. */
@@ -1327,4 +1401,20 @@ export function evaluateValidatedV9FactSet(
   };
   factSet = null;
   return evaluateV9FactSetRead(read, envelope, interventions);
+}
+
+/** Project each publication row once, releasing it after its final downstream reader. */
+export function evaluateValidatedV9FactSetForPublication(
+  factSet: CompiledV9FactSetV3 | null,
+  envelope: V9ValidatedPolicyEnvelope,
+  project: (asset: V9EvaluatedAsset) => void,
+): Readonly<V9ProjectedEvaluatedSet> {
+  assertV9FactSetCompiledInProcess(factSet!);
+  const read: V9WorkingFactSetRead = {
+    sourceSchemaVersion: 4,
+    sourceFactSetDigest: factSet!.v9FactSetDigest,
+    factSet,
+  };
+  factSet = null;
+  return evaluateV9FactSetRead(read, envelope, undefined, project);
 }

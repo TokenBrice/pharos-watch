@@ -2,7 +2,7 @@
   "id": "usdsm-stable-mint",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "Two codeless EOAs hold native Etherlink MINTER_ROLE, and the default-admin EOA also controls the transparent proxy administrator. Native issuance has no reserve-gated numeric cap. MPC remains an issuer claim without disclosed signer independence or threshold. The additional adapter-only minter/burner and satellite representations are reviewed separately under Bridge Risk.",
     "upgradeability": {

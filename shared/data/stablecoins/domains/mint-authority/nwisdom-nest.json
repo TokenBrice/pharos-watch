@@ -2,7 +2,7 @@
   "id": "nwisdom-nest",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "manual-review",
     "summary": "nWISDOM has reviewed issuer-native local deposit/mint paths on Ethereum, Plume, and BNB Chain through NestVaultPredicateProxy and chain-local NestVault contracts. Solana is a LayerZero OFT representation: the issuer's archived integration guide routes USDC through CCTP to mint on Plume, then delivers SPL shares through OFT. Its 1-of-2 SPL authority and immediate program-admin path are preserved under Bridge Risk, not counted again as a native liability issuer. No hard aggregate native supply cap or independent whole-supply reconciliation is evidenced; the remaining native controls stay adverse.",
     "upgradeability": {

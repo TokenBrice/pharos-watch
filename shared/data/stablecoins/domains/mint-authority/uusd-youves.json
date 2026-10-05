@@ -2,7 +2,7 @@
   "id": "uusd-youves",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "uUSD is minted against XTZ, tzBTC, USDt, or SIRS vault collateral on Tezos. At level 15180739, token_id 0 authorizes nine engines. The 4-of-7 keyholder multisig administers every engine; the active Youves DAO V2 is also an administrator on eight engines, while the legacy XTZ V1 engine lists only the multisig. V3 contracts enforce emergency collateral ratios rather than the higher frontend target ratios. DAO co-administration does not remove the multisig's independent authority.",
     "controls": [

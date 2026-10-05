@@ -22,6 +22,7 @@ function makeControl(overrides: Partial<MintAuthorityDetailControlViewModel> = {
     capDescription: null,
     modulesOrGuardsLabel: null,
     custodyLabel: null,
+    processDiagnostics: [],
     ...overrides,
   };
 }

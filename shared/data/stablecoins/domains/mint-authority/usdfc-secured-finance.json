@@ -2,7 +2,7 @@
   "id": "usdfc-secured-finance",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "unknown",
     "summary": "BorrowerOperations issues USDFC against FIL Troves, but a live 2-of-3 Safe controls token ownership and the ProxyAdmin that can replace mint logic.",
     "upgradeability": {

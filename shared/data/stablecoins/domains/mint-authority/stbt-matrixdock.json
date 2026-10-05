@@ -2,7 +2,7 @@
   "id": "stbt-matrixdock",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "STBT's custom proxy has selector-specific timelock delays: 24-hour mint-logic/issuer replacement and four-hour mint/rebase scheduling, despite getMinDelay() returning zero. D14: The issuer can issue against its mutable reserve budget without an atomic collateral deposit; issuance is economically unbounded.",
     "controls": [

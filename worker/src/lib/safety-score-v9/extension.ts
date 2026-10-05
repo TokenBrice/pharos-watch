@@ -13,7 +13,7 @@ import type { V9AccessClaimGraph, V9AccessClaimGraphReview } from "@shared/types
 import { buildSafetyScoreV9AccessClaimGraph, computeSafetyScoreV9AccessClaimGraphReviewsDigest } from "./extension-access-lookthrough";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC, V9_SCOPED_QUESTION_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { compileReviewedControlScope, partialControlScopeSemantics, weightedReviewIsCurrent, type V9ReviewedControlProjection } from "@shared/lib/safety-score-v9/control-scope";
+import { compileReviewedMintControlScopes, resolveV1005MintAuthorityProfile, partialControlScopeSemantics, weightedReviewIsCurrent, sortV1005ProcessDiagnostics, v1005ProofIsClosed, v1005ReviewIsCurrent, type V9ReviewedControlProjection } from "@shared/lib/safety-score-v9/control-scope";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -33,7 +33,8 @@ import type {
   MintAuthorityEconomicCapSemantics,
   MintAuthorityProfile,
 } from "@shared/types/core";
-import type { V9FailureDomainRef } from "@shared/types/safety-score-v9-facts";
+import type { V9FailureDomainRef, V1005ProcessDiagnostic, V1005CompiledVotingControl } from "@shared/types/safety-score-v9-facts";
+import { V1005VotingControllerSchema, createV9ControlExecutionScopeRootReuse } from "@shared/types/safety-score-v9-control-scope";
 import type { StablecoinMeta } from "@shared/types";
 import {
   type ReserveSlice,
@@ -41,7 +42,7 @@ import {
 import {
   type SafetyScoreV9FactSetExtensionV2,
 } from "./fact-set";
-import { quarantinedSafetyScoreV9ExtensionAsset } from "./fact-set-schema";
+import { admitSafetyScoreV9ExtensionAsset, quarantinedSafetyScoreV9ExtensionAsset } from "./fact-set-schema";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { createReviewedAssetRegistry, ReviewedRegistryEntryError } from "./extension-reviewed-registry";
 import { SafetyScoreV9ReviewedTransferFactSchema } from "@shared/types/safety-score-v9-transfer-overlays";
@@ -393,6 +394,200 @@ function resolveMintControlDeploymentScopes(
   }));
 }
 
+function compileMintVotingControl(profile: MintAuthorityProfile, clockSec: number): V1005CompiledVotingControl {
+  const voting = profile.governedIssuance!.votingControl;
+  const certificates = profile.executionCertificates;
+  const graph = profile.authorityGraph;
+  const diagnostics: V1005ProcessDiagnostic[] = [];
+  const add = (code: V1005ProcessDiagnostic["code"], field: string, route?: typeof voting.routes[number]) => {
+    diagnostics.push({ code, gate: "D32", controlRef: route?.path.controlRef ?? null, pathId: route?.path.pathId ?? null,
+      classId: null, memberRef: null, field, evidenceRefIds: [] });
+  };
+  const closed = (ref: string) => v1005ProofIsClosed(certificates, ref, voting.review.pin);
+  const holders = new Map(voting.holderCensus.map((holder) => [holder.id, holder]));
+  const expandedControllers = voting.controllers.flatMap((row) => {
+    if (!("templateRef" in row)) return [row];
+    const template = voting.controllerTemplates?.find((entry) => entry.id === row.templateRef);
+    const holder = row.holderRowRef ? holders.get(row.holderRowRef) : undefined;
+    const { templateRef, holderRowRef, ...overrides } = row;
+    void templateRef; void holderRowRef;
+    const parsed = V1005VotingControllerSchema.safeParse({ ...template,
+      ...(holder?.provenance === "own" ? { accounts: [holder.deployment], votingPowerRaw: holder.votingPowerRaw, ownedPositionIds: [holder.id] } : {}),
+      ...overrides });
+    if (!template || row.holderRowRef && (holder?.provenance !== "own" || holder.ownerControllerId !== row.id) || !parsed.success) { add("voting-control-unproved", `controllers.${row.id}.templateRef`); return []; }
+    return [parsed.data];
+  });
+  const controllers = new Map(expandedControllers.map((controller) => [controller.id, controller]));
+  const affiliated = new Set(expandedControllers.filter((controller) => ["issuer", "council", "team"].includes(controller.affiliation)).map((controller) => controller.id));
+  if (holders.size !== voting.holderCensus.length) add("voting-census-unreconciled", "holderCensus");
+  const affiliatedRoutes = new Set<string>(), unknownOwnership = new Set<string>(), operators = new Set<string>();
+  const total = voting.totalVotingPowerRaw === null ? null : BigInt(voting.totalVotingPowerRaw);
+  const supply = voting.pinnedVotingSupply;
+  const supplyProof = certificates?.proofs.find((proof) => proof.id === supply.proofRef);
+  const joinedSupply = supply.raw !== null && closed(supply.proofRef) && supplyProof?.evidenceRefIds.some((id) => {
+    const row = certificates!.evidence.find((evidence) => evidence.id === id);
+    return row?.kind === "onchain-read" && row.deployment === supply.deployment && row.function === supply.function &&
+      row.rawResult != null && /^0x[0-9a-fA-F]+$/.test(row.rawResult) && BigInt(row.rawResult) === BigInt(supply.raw!);
+  });
+  if (!v1005ReviewIsCurrent(voting.review, clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC) || !closed(voting.controllerCensusProofRef) ||
+      !graph || graph.governorNodeId !== voting.governorNodeId || controllers.size !== voting.controllers.length) add("voting-control-unproved", "votingControl");
+  const passes = (power: bigint, threshold: string | null, comparator: "gte" | "gt" | "not-applicable"): boolean | "unknown" =>
+    threshold === null || comparator === "not-applicable" ? "unknown" : comparator === "gt" ? power > BigInt(threshold) : power >= BigInt(threshold);
+  const censusReconciliations: V1005CompiledVotingControl["censusReconciliations"] = [];
+  let largestDerived: bigint | null = 0n, affiliatedDerived: bigint | null = 0n;
+  for (const route of voting.routes) {
+    type Partition = { controllerId: string; powerRaw: string | null; ownPowerRaw: string | null; otherHoldersPowerRaw: string | null;
+      unknownPowerRaw: string | null; unilateralThresholdRaw: string | null; thresholdComparator: typeof route.thresholdComparator; thresholdProofRef: string };
+    const assignments = new Map<string, { controllerId: string; provenance: "own" | "other" | "unknown" }>();
+    let ownershipPartition = true;
+    const thresholds = new Map(route.controllerPowers.map((row) => [row.controllerId, row]));
+    if (thresholds.size !== route.controllerPowers.length) ownershipPartition = false;
+    for (const row of route.controllerPowers) for (const [field, provenance] of [["ownHolderRowIds", "own"], ["otherHolderRowIds", "other"], ["unknownProvenanceHolderRowIds", "unknown"]] as const) {
+      for (const id of row[field]) {
+        if (!holders.has(id) || assignments.has(id)) ownershipPartition = false;
+        assignments.set(id, { controllerId: row.controllerId, provenance });
+      }
+    }
+    const partition = new Map<string, { own: bigint; other: bigint; unknown: bigint; known: boolean }>();
+    for (const holder of voting.holderCensus) {
+      const assignment = assignments.get(holder.id) ?? { controllerId: holder.controllerId ?? holder.ownerControllerId, provenance: holder.provenance ?? "unknown" };
+      if (!assignment.controllerId) continue;
+      const powers = partition.get(assignment.controllerId) ?? { own: 0n, other: 0n, unknown: 0n, known: true };
+      if (holder.votingPowerRaw === null || !holder.evidenceRefIds.every((id) => certificates?.evidence.some((evidence) =>
+          evidence.id === id && !evidence.artificial && evidence.pin.hash === voting.review.pin.hash))) powers.known = false;
+      else {
+        const provenance = assignment.provenance === "own" && (holder.ownerControllerId !== assignment.controllerId ||
+          !controllers.get(assignment.controllerId)?.ownedPositionIds.includes(holder.id)) ? "unknown" : assignment.provenance;
+        powers[provenance] += BigInt(holder.votingPowerRaw);
+      }
+      partition.set(assignment.controllerId, powers);
+    }
+    const routePowers: Partition[] = [...partition].map(([controllerId, powers]) => {
+      const threshold = thresholds.get(controllerId);
+      return { controllerId, powerRaw: powers.known ? (powers.own + powers.other + powers.unknown).toString() : null,
+        ownPowerRaw: powers.known ? powers.own.toString() : null,
+        otherHoldersPowerRaw: powers.known ? powers.other.toString() : null,
+        unknownPowerRaw: powers.known ? powers.unknown.toString() : null,
+        unilateralThresholdRaw: threshold?.unilateralThresholdRaw ?? route.unilateralThresholdRaw,
+        thresholdComparator: threshold?.thresholdComparator ?? route.thresholdComparator,
+        thresholdProofRef: threshold?.thresholdProofRef ?? route.thresholdProofRef };
+    });
+    if (routePowers.some((row) => row.powerRaw === null)) { largestDerived = null; affiliatedDerived = null; }
+    else {
+      for (const row of routePowers) if (largestDerived !== null && BigInt(row.powerRaw!) > largestDerived) largestDerived = BigInt(row.powerRaw!);
+      const affiliatedPower = routePowers.filter((row) => affiliated.has(row.controllerId)).reduce((sum, row) => sum + BigInt(row.powerRaw!), 0n);
+      if (affiliatedDerived !== null && affiliatedPower > affiliatedDerived) affiliatedDerived = affiliatedPower;
+    }
+    let accounted: bigint | null = 0n;
+    const ids = new Set<string>();
+    for (const row of routePowers) {
+      const controller = controllers.get(row.controllerId);
+      if (!controller || ids.has(row.controllerId) || row.powerRaw === null) { accounted = null; ownershipPartition = false; continue; }
+      ids.add(row.controllerId);
+      if (accounted !== null) accounted += BigInt(row.powerRaw);
+      if (row.unknownPowerRaw === null) ownershipPartition = false;
+      if (route.kind === "public-minority-admission") {
+        if (row.unilateralThresholdRaw !== null || row.thresholdComparator !== "not-applicable") add("voting-control-unproved", "routes.controllerPowers.threshold", route);
+        continue;
+      }
+      const threshold = row.unilateralThresholdRaw ?? route.unilateralThresholdRaw;
+      const comparator = row.thresholdComparator === "not-applicable" ? route.thresholdComparator : row.thresholdComparator;
+      const unilateral = closed(row.thresholdProofRef) && closed(route.thresholdProofRef) ? passes(BigInt(row.powerRaw), threshold, comparator) : "unknown";
+      if (unilateral === "unknown") { add("voting-control-unproved", `routes.${route.id}.${controller.id}.threshold`, route); continue; }
+      if (!unilateral) continue;
+      if (affiliated.has(controller.id) && closed(controller.attributionProofRef)) {
+        affiliatedRoutes.add(route.id); add("voting-affiliated-unilateral", `controllers.${controller.id}.affiliation`, route);
+      } else if (affiliated.has(controller.id)) add("voting-control-unproved", `controllers.${controller.id}.attributionProofRef`, route);
+      if (row.ownPowerRaw === null || row.otherHoldersPowerRaw === null || row.unknownPowerRaw === null ||
+          BigInt(row.ownPowerRaw) > 0n && !closed(controller.ownVoteOwnershipProofRef) ||
+          BigInt(row.otherHoldersPowerRaw) > 0n && !closed(controller.otherHolderVoteAuthorityProofRef) ||
+          BigInt(row.ownPowerRaw) + BigInt(row.otherHoldersPowerRaw) + BigInt(row.unknownPowerRaw) !== BigInt(row.powerRaw)) {
+        unknownOwnership.add(controller.id); add("voting-control-unproved", `controllers.${controller.id}.voteOwnership`, route); continue;
+      }
+      const ownPasses = passes(BigInt(row.ownPowerRaw), threshold, comparator);
+      const knownPasses = passes(BigInt(row.ownPowerRaw) + BigInt(row.otherHoldersPowerRaw), threshold, comparator);
+      if (ownPasses === "unknown" || knownPasses === "unknown") { unknownOwnership.add(controller.id); add("voting-control-unproved", `controllers.${controller.id}.ownThreshold`, route); continue; }
+      if (!knownPasses && BigInt(row.unknownPowerRaw) > 0n) {
+        unknownOwnership.add(controller.id); add("voting-provenance-unknown", `controllers.${controller.id}.voteOwnership`, route); continue;
+      }
+      const visited = new Set<string>(), visiting = new Set<string>();
+      let keyAlternative = false, unresolved = false;
+      const visitVoteAuthority = (id: string): void => {
+        if (visiting.has(id)) { unresolved = true; add("voting-origin-cycle-unclosed", `controllers.${controller.id}.voteAuthority`, route); return; }
+        if (visited.has(id)) return;
+        const node = graph?.nodes.find((candidate) => candidate.id === id);
+        if (!node || !closed(node.proofRef)) { unresolved = true; return; }
+        if (["eoa", "multisig", "issuer-backend"].includes(node.kind)) keyAlternative = true;
+        visiting.add(id);
+        let hasAuthorityEdge = false;
+        for (const edge of graph?.edges ?? []) if (edge.from === id && edge.activation !== "disabled-final" &&
+            edge.pathRefs.some((ref) => ref.controlRef === route.path.controlRef && ref.pathId === route.path.pathId) &&
+            ["owner", "ward", "role", "admin", "upgrade", "delegatecall", "execution-hop", "permission-change", "envelope-raise",
+              "operator", "delegate", "vote-cast", "vote-replacement", "vote-origin", "reactivation"].includes(edge.kind) &&
+            !(id === voting.governorNodeId && node.kind === "token-governor" && (edge.kind === "vote-origin" || edge.kind === "vote-cast"))) {
+          hasAuthorityEdge = true;
+          if (!closed(edge.proofRef) || edge.activation === "unknown") unresolved = true;
+          visitVoteAuthority(edge.to);
+        }
+        if (!hasAuthorityEdge && (!node.terminal || node.kind === "unknown")) unresolved = true;
+        visiting.delete(id); visited.add(id);
+      };
+      for (const id of controller.voteAuthorityNodeIds) visitVoteAuthority(id);
+      if (unresolved) { unknownOwnership.add(controller.id); add("voting-control-unproved", `controllers.${controller.id}.voteAuthority`, route); }
+      if (BigInt(row.otherHoldersPowerRaw) > 0n) {
+        if (controller.voteReplacementApproval === "unknown") {
+          unknownOwnership.add(controller.id); add("voting-control-unproved", `controllers.${controller.id}.voteReplacementApproval`, route);
+        }
+        if (!ownPasses || controller.voteReplacementApproval === "key-discretion" || keyAlternative) {
+          operators.add(controller.id); add("voting-other-holder-operator", `controllers.${controller.id}.otherHoldersPowerRaw`, route);
+        }
+      }
+    }
+    const residual = route.residualUpperRaw === null ? null : BigInt(route.residualUpperRaw);
+    let residualCanPass: boolean | "unknown" = "unknown";
+    if (residual === 0n) residualCanPass = false;
+    else if (residual !== null && closed(route.residualProofRef)) residualCanPass = passes(residual, route.unilateralThresholdRaw, route.thresholdComparator);
+    if (route.kind === "public-minority-admission" && closed(route.minorityProtectionProofRef ?? "")) residualCanPass = false;
+    const routeTotal = route.totalVotingPowerRaw === null ? null : BigInt(route.totalVotingPowerRaw);
+    const reconciled = accounted !== null && residual !== null && total !== null && total > 0n && routeTotal === total &&
+      accounted + residual === total && supply.raw !== null && total === BigInt(supply.raw) && joinedSupply === true &&
+      closed(route.residualProofRef) && closed(voting.controllerCensusProofRef) && ownershipPartition;
+    if (!reconciled) add("voting-census-unreconciled", `routes.${route.id}.controllerPowers`, route);
+    if (residualCanPass !== false) add("voting-control-unproved", `routes.${route.id}.residualUpperRaw`, route);
+    censusReconciliations.push({ routeId: route.id, state: reconciled ? "reconciled" : "unreconciled", accountedPowerRaw: accounted?.toString() ?? null,
+      residualUpperRaw: route.residualUpperRaw, totalVotingPowerRaw: route.totalVotingPowerRaw, pinnedVotingSupplyRaw: supply.raw,
+      unresolvedResidualCanPassAlone: residualCanPass, evidenceRefIds: supplyProof?.evidenceRefIds ?? [] });
+    if (route.kind === "public-minority-admission") {
+      if (!closed(route.minorityProtectionProofRef ?? "") || route.unilateralThresholdRaw !== null || route.thresholdComparator !== "not-applicable") add("voting-control-unproved", `routes.${route.id}.minorityProtection`, route);
+    } else {
+      const expectedIds = [...affiliated].filter((id) => ids.has(id)).sort();
+      const actualIds = [...route.affiliatedControllerIds].sort();
+      const powers = routePowers.filter((row) => affiliated.has(row.controllerId));
+      const aggregate = powers.every((row) => row.powerRaw !== null) ? powers.reduce((sum, row) => sum + BigInt(row.powerRaw!), 0n) : null;
+      if (stableJsonStringifyV1(expectedIds) !== stableJsonStringifyV1(actualIds) || aggregate === null ||
+          route.affiliatedAggregatePowerRaw === null || aggregate !== BigInt(route.affiliatedAggregatePowerRaw) || !closed(route.affiliatedAggregateThresholdProofRef)) add("voting-control-unproved", `routes.${route.id}.affiliatedAggregate`, route);
+      else if (aggregate > 0n) {
+        const thresholdOutcome = passes(aggregate, route.affiliatedAggregateUnilateralThresholdRaw, route.affiliatedAggregateThresholdComparator);
+        if (thresholdOutcome === "unknown") add("voting-control-unproved", `routes.${route.id}.affiliatedThreshold`, route);
+        else if (thresholdOutcome) { affiliatedRoutes.add(route.id); add("voting-affiliated-unilateral", `routes.${route.id}.affiliatedAggregate`, route); }
+      }
+    }
+  }
+  for (const [field, privilege] of [["privilegedVoteCreation", voting.privilegedVoteCreation], ["forcedDelegation", voting.forcedDelegation]] as const) {
+    if (!closed(privilege.proofRef) || privilege.state === "unknown") add("voting-control-unproved", field);
+    else if (privilege.state === "independent") add("voting-privilege-independent", field);
+  }
+  const reconciled = censusReconciliations.every((row) => row.state === "reconciled" && row.unresolvedResidualCanPassAlone !== "unknown");
+  const largest = largestDerived;
+  const aggregate = affiliatedDerived;
+  return { observationState: reconciled ? "known" : "unknown", qualified: reconciled && diagnostics.length === 0,
+    largestSingleControllerShareBps: reconciled && total && largest !== null ? Number((largest * 10000n + total - 1n) / total) : null,
+    affiliatedAggregateShareBps: reconciled && total && aggregate !== null ? Number((aggregate * 10000n + total - 1n) / total) : null,
+    affiliatedUnilateralRouteIds: [...affiliatedRoutes].sort(), unknownAboveThresholdVoteOwnershipControllerIds: [...unknownOwnership].sort(),
+    otherHolderVoteOperatorControllerIds: [...operators].sort(), privilegedVoteCreation: voting.privilegedVoteCreation.state,
+    forcedDelegation: voting.forcedDelegation.state, censusReconciliations, diagnostics: sortV1005ProcessDiagnostics(diagnostics) };
+}
+
 function compileMintIssuanceGovernance(
   assetId: string,
   profile: MintAuthorityProfile,
@@ -405,12 +600,20 @@ function compileMintIssuanceGovernance(
   if (!governed) return undefined;
   const authoredControls = profile.controls ?? [];
   const incompleteReasons = new Set<string>();
-  if (!reviewComplete) incompleteReasons.add("review-incomplete");
-  if (hasFreshScopedQuestion) incompleteReasons.add("scoped-question-open");
-  if (profile.mintIncidents?.some((incident) => incident.status === "active")) incompleteReasons.add("active-incident");
+  const votingControl = compileMintVotingControl(profile, clockSec);
+  const diagnostics = sortV1005ProcessDiagnostics([...projections.flatMap((projection) => projection.processDiagnostics ?? []), ...votingControl.diagnostics]);
+  for (const diagnostic of diagnostics) incompleteReasons.add(`${diagnostic.code}${diagnostic.controlRef ? `:${diagnostic.controlRef}${diagnostic.pathId ? `#${diagnostic.pathId}` : ""}` : ""}`);
+  const fail = (code: V1005ProcessDiagnostic["code"], field: string, controlRef: string | null = null, pathId: string | null = null) => {
+    incompleteReasons.add(`${code}${controlRef ? `:${controlRef}${pathId ? `#${pathId}` : ""}` : ""}`);
+    diagnostics.push({ code, gate: governed.decisionRule === "minority-veto" ? "D30" : "D29",
+      controlRef, pathId, classId: null, memberRef: null, field, evidenceRefIds: [] });
+  };
+  if (!reviewComplete) fail("review-incomplete", "review");
+  if (hasFreshScopedQuestion) fail("scoped-question-open", "review.scopedQuestions");
+  if (profile.mintIncidents?.some((incident) => incident.status === "active")) fail("active-incident", "mintIncidents");
   const governedReviewSec = Date.parse(`${governed.reviewedAt}T00:00:00Z`) / 1000;
   if (governedReviewSec > clockSec || clockSec - governedReviewSec > V9_REVIEW_EVIDENCE_MAX_AGE_SEC) {
-    incompleteReasons.add("governed-review-expired");
+    fail(governedReviewSec > clockSec ? "review-future" : "review-expired", "governedIssuance.reviewedAt");
   }
   const governorIndexes = authoredControls.flatMap((control, index) =>
     control.chain != null && control.address != null &&
@@ -418,65 +621,63 @@ function compileMintIssuanceGovernance(
   const governorIndex = governorIndexes.length === 1 ? governorIndexes[0]! : -1;
   const governor = governorIndex >= 0 ? authoredControls[governorIndex] : undefined;
   if (!governor) {
-    incompleteReasons.add("governor-control-missing");
+    fail("governor-control-missing", "governedIssuance.governorControlRef", governed.governorControlRef);
   } else if (canonicalAuthorityType(assetId, governor)?.model !== "governance" ||
       ((governed.votingPower === "holding-period-weighted" || governed.votingPower === "lock-escrowed" ||
         governed.votingPower === "past-block-checkpoint") &&
         (governor.weightedQuorum != null || governor.threshold != null || governor.signerCount != null))) {
-    incompleteReasons.add("governor-not-governance");
+    fail("governor-not-governance", "governedIssuance.governorControlRef", governed.governorControlRef);
   }
   if (governed.decisionRule === "minority-veto") {
-    for (const control of authoredControls) {
-      if (!control.executionScope?.paths.some((path) =>
+    for (const [index, control] of authoredControls.entries()) {
+      if (!projections[index]?.paths.some((path) =>
         path.capSemantics.kind === "unbounded" || path.capSemantics.kind === "unknown" ||
         path.claimImpairment === "unbounded" || path.claimImpairment === "unknown")) continue;
       const deployment = control.chain != null && control.address != null
         ? normalizeDeploymentId(`${control.chain}:${control.address}`) : "";
       if (!governed.veto || !governor || !projections[governorIndex]!.complete ||
-          !governor.executionScope!.paths.some((path) =>
+          !projections[governorIndex]!.paths.some((path) =>
             path.activation === "active" && path.capabilities.includes("parameter-change") &&
             governed.veto!.entrypoints.every((entrypoint) => path.entrypoints.includes(entrypoint)) &&
             normalizeDeploymentId(path.targetDeployment) === deployment)) {
-        incompleteReasons.add(`governor-without-veto-path:${control.label}`);
+        for (const path of projections[index]!.paths) if (path.capSemantics.kind === "unbounded" || path.capSemantics.kind === "unknown" ||
+            path.claimImpairment === "unbounded" || path.claimImpairment === "unknown") fail("governor-without-veto-path", "governedIssuance.veto.entrypoints", deployment, path.id);
       }
     }
   } else if (governor && projections[governorIndex]!.complete &&
-      !governor.executionScope!.paths.some((path) => path.activation !== "disabled-final" &&
+      !projections[governorIndex]!.paths.some((path) => path.activation !== "disabled-final" &&
         path.capabilities.some((capability) => capability === "mint" || capability === "upgrade" || capability === "bridge-mint"))) {
-    incompleteReasons.add("governor-without-issuance-path");
+    fail("governor-without-issuance-path", "executionScope.paths", governed.governorControlRef);
   }
-  const authoredContractAuthorityKeys = new Set(authoredControls.flatMap((control) =>
-    control.authorityType === "contract" && control.chain != null && control.address != null
-      ? [`${control.chain}:${control.address.toLowerCase()}`] : []));
   const excludedRestructurePaths = new Set<string>();
   if (governed.decisionRule === "minority-veto") {
-    if (governor?.executionScope?.paths.some((path) =>
+    if (projections[governorIndex]?.paths.some((path) =>
       path.capSemantics.kind === "unbounded" || path.capSemantics.kind === "unknown" ||
       path.claimImpairment === "unbounded" || path.claimImpairment === "unknown")) {
-      incompleteReasons.add("governor-carries-unbounded-path");
+      for (const path of projections[governorIndex]!.paths) if (path.capSemantics.kind === "unbounded" || path.capSemantics.kind === "unknown" ||
+          path.claimImpairment === "unbounded" || path.claimImpairment === "unknown") fail("governor-carries-unbounded-path", "executionScope.paths", governed.governorControlRef, path.id);
     }
     const monetaryPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.control.governedIssuance.minorityVeto.monetaryPolicy;
     const admissibleRateChangeRules: readonly string[] = monetaryPolicy.admissibleRateChangeRules;
     for (const monetaryPath of governed.monetaryPolicyPaths ?? []) {
       const index = authoredControls.findIndex((control) => control.chain != null && control.address != null &&
         `${control.chain}:${control.address.toLowerCase()}` === monetaryPath.controlRef);
-      const control = authoredControls[index];
       const path = projections[index]?.complete
-        ? control?.executionScope?.paths.find((candidate) => candidate.id === monetaryPath.pathId && candidate.activation !== "disabled-final")
+        ? projections[index]?.paths.find((candidate) => candidate.id === monetaryPath.pathId && candidate.activation !== "disabled-final")
         : undefined;
       if (!path || path.capSemantics.kind !== "raiseable" || path.claimImpairment !== "bounded" ||
           monetaryPath.rateChangeDelaySec < monetaryPolicy.minRateChangeDelaySec ||
           !admissibleRateChangeRules.includes(monetaryPath.rateChangeRule)) {
-        incompleteReasons.add(`monetary-policy-path-inadmissible:${control?.label ?? monetaryPath.controlRef}:${monetaryPath.pathId}`);
+        fail("monetary-policy-path-inadmissible", "governedIssuance.monetaryPolicyPaths", monetaryPath.controlRef, monetaryPath.pathId);
       }
     }
-    for (const control of authoredControls) {
-      for (const path of control.executionScope?.paths ?? []) {
+    for (const [index, control] of authoredControls.entries()) {
+      for (const path of projections[index]?.paths ?? []) {
         if (path.activation !== "disabled-final" && path.capSemantics.kind === "raiseable" && path.claimImpairment !== "none" &&
             (path.capabilities.includes("mint") || path.capabilities.includes("bridge-mint")) &&
             !governed.monetaryPolicyPaths?.some((entry) => entry.pathId === path.id &&
               entry.controlRef === `${control.chain}:${control.address?.toLowerCase()}`)) {
-          incompleteReasons.add(`monetary-policy-path-unreviewed:${control.label}:${path.id}`);
+          fail("monetary-policy-path-unreviewed", "governedIssuance.monetaryPolicyPaths", normalizeDeploymentId(`${control.chain}:${control.address}`), path.id);
         }
       }
     }
@@ -484,18 +685,17 @@ function compileMintIssuanceGovernance(
     if (governed.veto?.override === "insolvency-gated-restructure" && restructure) {
       const multiple = V9_CANDIDATE_POLICY_V1.policy.semantic.control.governedIssuance.minorityVeto.restructureMinEquityMultiple;
       const unreachable = restructure.observedEquityUnits >= restructure.equityThresholdUnits * multiple;
-      if (!governor?.executionScope?.paths.some((path) => path.activation !== "disabled-final" &&
+      if (!projections[governorIndex]?.paths.some((path) => path.activation !== "disabled-final" &&
           restructure.entrypoints.every((entrypoint) => path.entrypoints.includes(entrypoint)))) {
-        incompleteReasons.add("restructure-path-missing");
+        fail("restructure-path-missing", "governedIssuance.veto.restructure.entrypoints", governed.governorControlRef);
       }
-      if (!unreachable) incompleteReasons.add("restructure-reachable");
+      if (!unreachable) fail("restructure-reachable", "governedIssuance.veto.restructure.observedEquityUnits", governed.governorControlRef);
       for (const dependentPath of restructure.dependentPaths) {
         const index = authoredControls.findIndex((control) => control.chain != null && control.address != null &&
           `${control.chain}:${control.address.toLowerCase()}` === dependentPath.controlRef);
-        const control = authoredControls[index];
-        const path = control?.executionScope?.paths.find((candidate) => candidate.id === dependentPath.pathId);
+        const path = projections[index]?.paths.find((candidate) => candidate.id === dependentPath.pathId);
         if (!path || path.activation !== "disabled-reactivatable") {
-          incompleteReasons.add(`restructure-dependent-path-invalid:${control?.label ?? dependentPath.controlRef}:${dependentPath.pathId}`);
+          fail("restructure-dependent-path-invalid", "governedIssuance.veto.restructure.dependentPaths", dependentPath.controlRef, dependentPath.pathId);
         } else if (unreachable) {
           excludedRestructurePaths.add(`${index}:${path.id}`);
         }
@@ -508,31 +708,25 @@ function compileMintIssuanceGovernance(
   for (const [index, control] of authoredControls.entries()) {
     const projection = projections[index]!;
     if (!projection.complete) {
-      incompleteReasons.add(`control-scope-incomplete:${control.label}`);
+      for (const code of projection.diagnostics) incompleteReasons.add(`${code}:${control.chain}:${control.address?.toLowerCase()}`);
       continue;
-    }
-    let governorRooted = index === governorIndex;
-    if (!governorRooted && governor != null && control.authorityType === "contract" && control.chain != null) {
-      const identity = control.executionScope!.pin.signerIdentity.toLowerCase();
-      if (!/\b\d+\s*(?:of|out\s+of|\/|-of-)\s*\d+\b|\b(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)(?:\s+|-)(?:of|out\s+of|signatures?\s+(?:of|from))(?:\s+|-)(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|\d+)\b|\b(?:safes?|multisigs?|multisignature|thresholds?|signers?|owners?|quorum|signatures?)\b/.test(identity)) {
-        const addresses: readonly string[] = identity.match(/(?<![0-9a-f])0x[0-9a-f]{40}(?![0-9a-f])/g) ?? [];
-        const authorityKeys = addresses.map((address) => `${control.chain}:${address}`);
-        governorRooted = authorityKeys.includes(governed.governorControlRef) &&
-          authorityKeys.every((key) => key === governed.governorControlRef || authoredContractAuthorityKeys.has(key));
-      }
     }
     for (const path of projection.paths) {
       if (excludedRestructurePaths.has(`${index}:${path.id}`)) continue;
       if (!(path.capSemantics.kind === "unbounded" || path.capSemantics.kind === "unknown" ||
             path.claimImpairment === "unbounded" || path.claimImpairment === "unknown")) continue;
-      if (path.unavoidableDelaySec === null) {
+      const pathKey = `${projection.scope?.controllerDeployment ?? normalizeDeploymentId(`${control.chain}:${control.address}`)}#${path.id}`;
+      const authority = projection.authorityPaths?.get(pathKey);
+      const publicDelaySec = path.unavoidableDelaySec === null || authority?.publicDelaySec == null
+        ? null : Math.min(path.unavoidableDelaySec, authority.publicDelaySec);
+      if (publicDelaySec === null) {
         hasNullDelay = true;
       } else {
         minUnavoidableDelaySec = minUnavoidableDelaySec === null
-          ? path.unavoidableDelaySec
-          : Math.min(minUnavoidableDelaySec, path.unavoidableDelaySec);
+          ? publicDelaySec
+          : Math.min(minUnavoidableDelaySec, publicDelaySec);
       }
-      if (!governorRooted) nonGovernorUnboundedPathKeys.add(`${control.label}:${path.id}`);
+      if (!authority?.closed || !authority.governorRooted) nonGovernorUnboundedPathKeys.add(pathKey);
     }
   }
   return {
@@ -546,6 +740,274 @@ function compileMintIssuanceGovernance(
     vetoOverride: governed.decisionRule === "minority-veto" ? governed.veto?.override ?? null : null,
     enumerable: governed.enumerability.authorizationEvents.length > 0 && governed.enumerability.capacityReads.length > 0,
     nonGovernorUnboundedPathKeys: [...nonGovernorUnboundedPathKeys].sort(compareText),
+    votingControl,
+    diagnostics: sortV1005ProcessDiagnostics(diagnostics),
+  };
+}
+
+function compileMintIssuanceProcess(
+  assetId: string, profile: MintAuthorityProfile, projections: readonly V9ReviewedControlProjection[],
+  reviewComplete: boolean, hasFreshScopedQuestion: boolean, clockSec: number,
+  governance: ControlOverlay["issuanceGovernance"],
+): ControlOverlay["issuanceProcess"] {
+  const operational = profile.operationalIssuance;
+  if (!operational || !governance) return undefined;
+  const certificates = profile.executionCertificates;
+  const graph = profile.authorityGraph;
+  const diagnostics = [...projections.flatMap((projection) => projection.processDiagnostics ?? []), ...(governance?.votingControl.diagnostics ?? [])];
+  for (const diagnostic of governance.diagnostics) if (diagnostic.code === "governor-control-missing" ||
+      diagnostic.code === "governor-not-governance" || diagnostic.code === "governor-without-issuance-path") diagnostics.push(diagnostic);
+  const add = (code: V1005ProcessDiagnostic["code"], gate: V1005ProcessDiagnostic["gate"], field: string, path?: { controlRef: string; pathId: string }) => {
+    diagnostics.push({ code, gate, controlRef: path?.controlRef ?? null, pathId: path?.pathId ?? null,
+      classId: null, memberRef: null, field, evidenceRefIds: [] });
+  };
+  const closed = (ref: string) => v1005ProofIsClosed(certificates, ref, operational.review.pin);
+  if (!reviewComplete) add("review-incomplete", "H0", "review");
+  if (hasFreshScopedQuestion) add("scoped-question-open", "H0", "review.scopedQuestions");
+  if (profile.mintIncidents?.some((incident) => incident.status === "active")) add("active-incident", "H0", "mintIncidents");
+  if (!v1005ReviewIsCurrent(operational.review, clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC)) add("review-expired", "H0", "operationalIssuance.review");
+  if (profile.governedIssuance?.decisionRule !== "affirmative-vote" || profile.economicCapSemantics !== "unbounded" ||
+      profile.inheritedFrom != null || profile.mintPath === "wrapped-or-variant-inherited") add("operational-decision-rule-inadmissible", "H0", "operationalIssuance");
+  if (!certificates || !graph || certificates.liabilityBookId !== operational.liabilityBookId || graph.liabilityBookId !== operational.liabilityBookId) add("economic-reach-unclosed", "H3", "liabilityBookId");
+  const paths = new Map(projections.flatMap((projection) => projection.paths.map((path) =>
+    [`${projection.scope?.controllerDeployment ?? ""}#${path.id}`, { path, projection }] as const)));
+  const classes = new Map<string, typeof operational.paths[number]>();
+  for (const entry of operational.paths) {
+    const key: `${string}#${string}` = `${entry.path.controlRef}#${entry.path.pathId}`;
+    if (classes.has(key) || !paths.has(key)) add("operational-path-unclassified", "H0", "operationalIssuance.paths", entry.path);
+    classes.set(key, entry);
+  }
+  const nonGovernor = new Set<string>(), unclassified = new Set<string>(), unknownRecipient = new Set<string>();
+  const discretionaryDelays: (number | null)[] = [], envelopeDelays: (number | null)[] = [], operationalDelays: (number | null)[] = [];
+  const envelopeTransitions = new Set<string>();
+  let discretionaryPathCount = 0, operationalPathCount = 0, formulaPathCount = 0, keeperInitialPathCount = 0, keeperRecurringPathCount = 0, fundedKeeperRecurringPathCount = 0, otherOperationalPathCount = 0;
+  let formulaQualified = true, keeperQualified = true, otherClassesQualified = true;
+  let authorityPathsClosed = graph != null;
+  const annualRates: (number | null)[] = [], coefficients: (number | null)[] = [], fixedRewards: (bigint | null)[] = [], recurringIntervals: (number | null)[] = [];
+  const formulaKeys = new Set<string>(), keeperKeys = new Set<string>(), recurringKeys = new Set<string>(), claims = new Set<string>();
+  const operationalIndex = new Map<string, typeof operational.paths[number]>();
+  for (const [key, { path, projection }] of paths) {
+    if (path.activation === "disabled-final" && projection.complete) continue;
+    const entry = classes.get(key);
+    const ref = { controlRef: projection.scope!.controllerDeployment, pathId: path.id };
+    const authority = projection.authorityPaths?.get(key);
+    if (authority?.closed !== true) authorityPathsClosed = false;
+    const delayedActivation = path.activation === "disabled-reactivatable" && authority?.governorRooted && authority.publicDelaySec !== null && authority.publicDelaySec > 0;
+    const relevant = path.capabilities.some((capability) => ["mint", "bridge-mint", "upgrade", "parameter-change", "custody-transfer"].includes(capability)) ||
+      path.claimImpairment === "unbounded" || path.claimImpairment === "unknown";
+    if (!entry || delayedActivation) {
+      if (!relevant) continue;
+      discretionaryPathCount++;
+      discretionaryDelays.push(authority?.publicDelaySec ?? null);
+      if (!authority?.closed || !authority.governorRooted) { nonGovernor.add(key); add("discretionary-root-independent", "H1", "authorityGraph", ref); }
+      if (authority?.publicDelaySec == null) add("delay-unproved", "H1", "publicDelaySec", ref);
+      if (!entry && path.capabilities.some((capability) => capability === "mint" || capability === "bridge-mint") &&
+          !authority?.governorRooted) { unclassified.add(key); add("operational-path-unclassified", "H0", "operationalIssuance.paths", ref); }
+      continue;
+    }
+    operationalPathCount++; operationalDelays.push(path.unavoidableDelaySec); operationalIndex.set(key, entry);
+    if (path.unavoidableDelaySec === null) add("delay-unproved", "H0", "operationalExerciseDelaySec", ref);
+    if (!authority?.closed || !authority.provenanceClosed) add("economic-reach-unclosed", "H0", "authorityGraph.provenance", ref);
+    const envelope = entry.envelope;
+    if (envelope) {
+      if (!closed(envelope.enforcementProofRef) || !closed(envelope.raiseClosureProofRef) ||
+          envelope.setterNodeIds.some((id) => !graph?.nodes.some((node) => node.id === id && closed(node.proofRef)))) add("operational-cap-unproved", "H1", "envelope", ref);
+      for (const raise of envelope.raisePathRefs) {
+        const raiseKey: `${string}#${string}` = `${raise.controlRef}#${raise.pathId}`;
+        envelopeTransitions.add(raiseKey);
+        const bound = paths.get(raiseKey)?.projection.authorityPaths?.get(raiseKey);
+        envelopeDelays.push(bound?.publicDelaySec ?? null);
+        if (!bound?.closed || !bound.governorRooted) { nonGovernor.add(raiseKey); add("discretionary-root-independent", "H1", "envelope.raisePathRefs", raise); }
+        if (bound?.publicDelaySec == null) add("delay-unproved", "H1", "envelope.raisePathRefs", raise);
+      }
+    }
+    if (entry.kind === "formula-interest") {
+      formulaPathCount++; formulaKeys.add(key); annualRates.push(entry.rate.operationalAnnualRatePpmUpper);
+      if (entry.principal.observedPrincipalRaw === null || !closed(entry.principal.proofRef)) { formulaQualified = false; add("formula-principal-unproved", "H2", "principal", ref); }
+      if (!closed(entry.time.proofRef)) { formulaQualified = false; add("formula-time-unproved", "H2", "time", ref); }
+      if (!closed(entry.beneficiaryProofRef) || !closed(entry.accountingProofRef)) { formulaQualified = false; unknownRecipient.add(key); add("formula-beneficiary-unproved", "H2", "beneficiaryProofRef", ref); }
+      if (entry.rate.rawCap === null || entry.rate.operationalAnnualRatePpmUpper === null || !closed(entry.rate.capProofRef) || !closed(entry.rate.unitsCompoundingProofRef) ||
+          entry.rate.yearSec !== 31536000 || entry.rate.convention === "other") { formulaQualified = false; add("rate-units-unproved", "H2", "rate", ref); }
+      if (claims.has(entry.principal.claimIdentity)) { formulaQualified = false; add("interest-aggregate-unproved", "H3", "principal.claimIdentity", ref); }
+      claims.add(entry.principal.claimIdentity);
+    } else if (entry.kind === "keeper-incentive") {
+      keeperKeys.add(key);
+      if (entry.lifecycle === "initial-kick") keeperInitialPathCount++;
+      else { keeperRecurringPathCount++; recurringKeys.add(key); }
+      coefficients.push(entry.proportionalRewardPpm); fixedRewards.push(entry.fixedRewardRaw === null ? null : BigInt(entry.fixedRewardRaw));
+      const rewardMayPay = entry.fixedRewardRaw === null || entry.proportionalRewardPpm === null || BigInt(entry.fixedRewardRaw) > 0n || entry.proportionalRewardPpm > 0;
+      const repeatGroups = operational.keeperAggregate?.repeatGroups.filter((group) => group.pathRefs.some((pathRef) => `${pathRef.controlRef}#${pathRef.pathId}` === key));
+      const funded = rewardMayPay && (!repeatGroups?.length || repeatGroups.some((group) => group.inFlightCapRaw === null || BigInt(group.inFlightCapRaw) > 0n));
+      if (entry.lifecycle !== "initial-kick" && funded) { fundedKeeperRecurringPathCount++; recurringIntervals.push(entry.minimumRepeatSec); }
+      if (entry.liabilityBookId !== operational.liabilityBookId || entry.fixedRewardRaw === null || entry.proportionalRewardPpm === null ||
+          !closed(entry.principalProvenanceProofRef) || !closed(entry.eligibilityProofRef) || !closed(entry.debtBookChargeProofRef) ||
+          entry.sameActivityMayRepeat === "unknown" || entry.lifecycle !== "initial-kick" && funded && entry.minimumRepeatSec === null) {
+        keeperQualified = false; add("keeper-activity-unproved", "H2", "keeper-incentive", ref);
+      }
+      if (entry.lifecycle === "initial-kick") {
+        const initial = entry.initialCompensation;
+        if (!initial || !closed(initial.newDebtReachProofRef) || !closed(initial.minimumAndPenaltyProofRef) || !closed(initial.historicalStockProofRef) ||
+            !closed(initial.oncePerLiquidationProofRef) || entry.sameActivityMayRepeat !== false ||
+            initial.historicalStockDebtRaw === null || initial.historicalPaidLiquidationCountUpper === null ||
+            initial.historicalDebtPositionCountUpper === null || initial.historicalStockKickRewardRawUpper === null ||
+            initial.newDebtAdmission === "unknown") { keeperQualified = false; add("keeper-activity-unproved", "H2", "initialCompensation", ref); }
+        else {
+          if (initial.newDebtAdmission === "immediate" && (initial.minimumNewPositionDebtRaw === null || BigInt(initial.minimumNewPositionDebtRaw) <= 0n ||
+              initial.rewardDebtRawAtMinimum === null || initial.liquidationPenaltyChargeRawAtMinimum === null ||
+              entry.fixedRewardRaw === null || entry.proportionalRewardPpm === null ||
+              BigInt(entry.fixedRewardRaw) + (BigInt(initial.rewardDebtRawAtMinimum) * BigInt(entry.proportionalRewardPpm) + 999999n) / 1000000n >
+                BigInt(initial.liquidationPenaltyChargeRawAtMinimum))) {
+            keeperQualified = false; add("keeper-activity-unproved", "H2", "initialCompensation.minimumAndPenalty", ref);
+          }
+          if (entry.fixedRewardRaw !== null && entry.proportionalRewardPpm !== null) {
+            const stock = BigInt(initial.historicalStockDebtRaw!), count = BigInt(initial.historicalPaidLiquidationCountUpper!);
+            const lower = (stock * BigInt(entry.proportionalRewardPpm) + 999999n) / 1000000n + BigInt(entry.fixedRewardRaw) * count;
+            if (BigInt(initial.historicalStockKickRewardRawUpper!) < lower) { keeperQualified = false; add("keeper-activity-unproved", "H2", "initialCompensation.historicalStockKickRewardRawUpper", ref); }
+          }
+        }
+      } else if (entry.initialCompensation !== null) { keeperQualified = false; add("keeper-activity-unproved", "H2", "initialCompensation", ref); }
+    } else {
+      otherOperationalPathCount++;
+      const stockTransitionsImpossible = path.controlRefs.length === 0 && path.reactivationRefs.length === 0 &&
+        path.permissionChangeRefs.length === 0 && path.upgradeRefs.length === 0 && path.bypassRefs.length === 0 &&
+        !graph?.edges.some((edge) => edge.activation !== "disabled-final" &&
+          ["reactivation", "permission-change", "upgrade", "envelope-raise"].includes(edge.kind) &&
+          edge.pathRefs.some((pathRef) => pathRef.controlRef === ref.controlRef && pathRef.pathId === ref.pathId));
+      if (!closed(entry.invariantProofRef) || !closed(entry.economicReachProofRef) ||
+          entry.kind === "bounded-stock" && (path.capSemantics.kind !== "bounded" || !path.capSemantics.bound || !entry.envelope && !stockTransitionsImpossible) ||
+          entry.kind === "collateral-gated" && path.capSemantics.kind !== "collateral-gated" ||
+          ["restriction-only", "no-issuance"].includes(entry.kind) && (path.capabilities.includes("mint") || path.claimImpairment === "unbounded")) {
+        otherClassesQualified = false; add("economic-reach-unclosed", "H4", "operationalIssuance.invariantProofRef", ref);
+      }
+      if (entry.kind === "paired-accounting" && entry.externalAccountingTrust === "strategy-reported-assets") add("external-accounting-trust", "H4", "externalAccountingTrust", ref);
+    }
+  }
+  const samePaths = (refs: readonly { controlRef: string; pathId: string }[], expected: Set<string>) => {
+    const actual = refs.map((ref) => `${ref.controlRef}#${ref.pathId}`);
+    return new Set(actual).size === actual.length && actual.length === expected.size && actual.every((key) => expected.has(key));
+  };
+  const interest = operational.interestAggregate;
+  if (formulaPathCount > 0) {
+    if (!interest || !samePaths(interest.pathRefs, formulaKeys) || interest.liabilityBookId !== operational.liabilityBookId ||
+        interest.principalRaw === null || interest.annualGrowthPpmUpper === null || new Set(interest.principalClaimIds).size !== interest.principalClaimIds.length ||
+        interest.principalClaimIds.length !== claims.size || interest.principalClaimIds.some((id) => !claims.has(id)) ||
+        !closed(interest.deduplicationProofRef) || !closed(interest.compoundingProofRef) || !closed(interest.scopeProofRef)) {
+      formulaQualified = false; add("interest-aggregate-unproved", "H3", "interestAggregate");
+    }
+    annualRates.push(interest?.annualGrowthPpmUpper ?? null);
+  } else if (interest !== null) { formulaQualified = false; add("interest-aggregate-unproved", "H3", "interestAggregate"); }
+  const keeper = operational.keeperAggregate;
+  let nativeSupply: bigint | null = null, repeatRaw: bigint | null = null;
+  let sourceDenominator: bigint | null = null;
+  if (keeper) {
+    const reads = keeper.denominatorEvidenceRefIds.flatMap((id) => {
+      const evidence = certificates?.evidence.find((row) => row.id === id);
+      return evidence?.kind === "onchain-read" && !evidence.artificial && evidence.pin.chain === operational.review.pin.chain &&
+        evidence.pin.position === operational.review.pin.position && evidence.pin.hash === operational.review.pin.hash &&
+        (evidence.readType === "evm-call" || evidence.readType === "storage") && /^0x[0-9a-fA-F]{64}$/.test(evidence.rawResult ?? "")
+        ? [{ id, deployment: evidence.deployment, function: evidence.function, raw: BigInt(evidence.rawResult!) }] : [];
+    });
+    if (keeper.denominatorTerms) {
+      const getters = new Set<string>();
+      let measured = 0n, complete = true;
+      for (const term of keeper.denominatorTerms) {
+        const getterKey = `${term.deployment}#${term.function}`, read = reads.find((row) => row.id === term.evidenceRefId && row.deployment === term.deployment && row.function === term.function);
+        const scale = BigInt(term.scaleNumerator), divisor = BigInt(term.scaleDenominator);
+        if (!read || getters.has(getterKey) || divisor === 0n || !closed(term.unitsProofRef) || read.raw * scale % divisor !== 0n) complete = false;
+        else measured += read.raw * scale / divisor;
+        getters.add(getterKey);
+      }
+      if (complete) sourceDenominator = measured;
+    } else if (reads.length === 1) sourceDenominator = reads[0]!.raw;
+  }
+  if (keeperKeys.size > 0) {
+    if (!keeper || !samePaths(keeper.pathRefs, keeperKeys) || keeper.liabilityBookId !== operational.liabilityBookId ||
+        keeper.denominatorRaw === null || sourceDenominator === null || sourceDenominator <= 0n || sourceDenominator !== BigInt(keeper.denominatorRaw) || keeper.rewardUnits !== keeper.denominatorUnits ||
+        keeper.windowSec !== 86400 || !closed(keeper.activityAntiFarmingProofRef) || !closed(keeper.deduplicationProofRef) ||
+        !closed(keeper.initialAndBoundaryProofRef) || !closed(keeper.scopeProofRef) ||
+        !keeper.denominatorEvidenceRefIds.every((id) => certificates?.evidence.some((row) => row.id === id && row.kind === "onchain-read" && !row.artificial && row.pin.hash === operational.review.pin.hash))) {
+      keeperQualified = false; add("aggregate-flow-unproved", "H3", "keeperAggregate");
+    } else {
+      nativeSupply = sourceDenominator;
+      const groups = new Map<string, { cap: bigint; independent: bigint; numerator: bigint; denominator: bigint }>();
+      const represented = new Set<string>();
+      let complete = true;
+      for (const group of keeper.repeatGroups) {
+        if (groups.has(group.id) || group.inFlightCapRaw === null || group.minimumPaidAuctionRaw === null || group.fixedRewardRawUpper === null ||
+            group.proportionalRewardPpmUpper === null || group.maxRepeatsPerWindow === null || !closed(group.capAndMultiplicityProofRef) || !closed(group.repeatAndBoundaryProofRef)) { complete = false; continue; }
+        const cap = BigInt(group.inFlightCapRaw), minimum = BigInt(group.minimumPaidAuctionRaw), tip = BigInt(group.fixedRewardRawUpper), chip = BigInt(group.proportionalRewardPpmUpper), repeats = BigInt(group.maxRepeatsPerWindow);
+        if (minimum <= 0n && cap > 0n) { complete = false; continue; }
+        for (const ref of group.pathRefs) {
+          const key = `${ref.controlRef}#${ref.pathId}`, entry = operationalIndex.get(key);
+          if (represented.has(key) || !recurringKeys.has(key) || entry?.kind !== "keeper-incentive" || entry.fixedRewardRaw === null ||
+              entry.proportionalRewardPpm === null || tip < BigInt(entry.fixedRewardRaw) || chip < BigInt(entry.proportionalRewardPpm) ||
+              cap > 0n && (tip > 0n || chip > 0n) && (entry.minimumRepeatSec === null || entry.minimumRepeatSec === 0 || Number(repeats) < Math.ceil(86400 / entry.minimumRepeatSec))) complete = false;
+          represented.add(key);
+        }
+        const denominator = minimum > 0n ? minimum * 1000000n : 1000000n;
+        const numerator = minimum > 0n ? repeats * (tip * 1000000n + chip * minimum) : 0n;
+        const independent = cap === 0n ? 0n : repeats * (tip * (cap / minimum) + (chip * cap + 999999n) / 1000000n);
+        groups.set(group.id, { cap, independent, numerator, denominator });
+      }
+      if (represented.size !== recurringKeys.size || [...recurringKeys].some((key) => !represented.has(key))) complete = false;
+      const coupled = new Set<string>();
+      let derived = 0n;
+      for (const coupling of keeper.repeatCouplingGroups) {
+        if (coupling.sharedInFlightCapRaw === null || !closed(coupling.capAndSlackProofRef) || coupling.repeatGroupIds.some((id) => coupled.has(id) || !groups.has(id))) { complete = false; continue; }
+        const ordered = coupling.repeatGroupIds.map((id) => ({ id, group: groups.get(id)! })).sort((a, b) => {
+          const left = a.group.numerator * b.group.denominator, right = b.group.numerator * a.group.denominator;
+          return left === right ? compareText(a.id, b.id) : left > right ? -1 : 1;
+        });
+        let remaining = BigInt(coupling.sharedInFlightCapRaw), numerator = 0n, denominator = 1n, independent = 0n;
+        for (const { id, group } of ordered) {
+          coupled.add(id); independent += group.independent;
+          const allocated = remaining < group.cap ? remaining : group.cap;
+          numerator = numerator * group.denominator + allocated * group.numerator * denominator;
+          denominator *= group.denominator; remaining -= allocated;
+        }
+        const greedy = (numerator + denominator - 1n) / denominator;
+        derived += greedy < independent ? greedy : independent;
+      }
+      for (const [id, group] of groups) if (!coupled.has(id)) derived += group.independent;
+      if (!complete || keeper.upperRepeatRewardRaw === null || BigInt(keeper.upperRepeatRewardRaw) < derived) {
+        keeperQualified = false; add("aggregate-flow-unproved", "H3", "keeperAggregate.repeatGroups");
+      } else repeatRaw = derived;
+    }
+  } else if (keeper !== null) { keeperQualified = false; add("aggregate-flow-unproved", "H3", "keeperAggregate"); }
+  const measuredMax = (values: readonly (number | null)[]): number | null => values.length === 0 || values.some((value) => value === null) ? null : Math.max(...values as number[]);
+  const measuredMin = (values: readonly (number | null)[]): number | null => values.length === 0 || values.some((value) => value === null) ? null : Math.min(...values as number[]);
+  const fixed = fixedRewards.length === 0 || fixedRewards.some((value) => value === null) ? null : fixedRewards.reduce<bigint>((max, value) => value! > max ? value! : max, 0n);
+  const fixedSharePpm = fixed !== null && nativeSupply ? Number((fixed * 1000000000000000000n + nativeSupply - 1n) / nativeSupply) / 1000000000000 : null;
+  const repeatPpm = repeatRaw !== null && nativeSupply ? (repeatRaw * 1000000n + nativeSupply - 1n) / nativeSupply : null;
+  if (repeatPpm !== null && repeatPpm > BigInt(Number.MAX_SAFE_INTEGER)) { keeperQualified = false; add("aggregate-flow-unproved", "H3", "keeperAggregate.repeatRatio"); }
+  const members = new Set(certificates?.censuses.filter((row) => row.kind !== "owner" && row.kind !== "admin").flatMap((row) => row.authoritativeMembers));
+  const unknownMembers = new Set(diagnostics.filter((row) => row.memberRef && members.has(row.memberRef)).map((row) => row.memberRef!));
+  const inventoryComplete = certificates != null && !diagnostics.some((row) => row.code === "authority-census-incomplete" || row.code === "process-certificate-unavailable");
+  const executionCoverage = projections.every((projection) => projection.complete) && !diagnostics.some((row) => ["execution-class-unmatched", "runtime-unmatched", "implementation-unmatched", "instance-state-unmatched"].includes(row.code)) ? "complete" as const : "incomplete" as const;
+  const authorityCoverage = authorityPathsClosed &&
+    !diagnostics.some((row) => ["graph-reference-unresolved", "graph-cycle-unclosed", "authority-state-mismatch", "governor-not-governance"].includes(row.code)) ? "complete" as const : "incomplete" as const;
+  const economicReachClosed = !diagnostics.some((row) => row.code === "economic-reach-unclosed");
+  const sorted = sortV1005ProcessDiagnostics(diagnostics);
+  const coverage = sorted.every((row) => row.code === "external-accounting-trust") && inventoryComplete && executionCoverage === "complete" &&
+    authorityCoverage === "complete" && economicReachClosed && governance?.votingControl.qualified && discretionaryPathCount > 0 && operationalPathCount > 0 &&
+    formulaQualified && keeperQualified && otherClassesQualified && unknownMembers.size === 0 ? "complete" as const : "incomplete" as const;
+  return {
+    kind: "affirmative-operational-flow", coverage, authorityCoverage, executionCoverage, economicReachClosed, inventoryComplete,
+    memberCount: members.size, matchedMemberCount: members.size - unknownMembers.size, unknownMemberCount: unknownMembers.size,
+    discretionaryPathCount, operationalPathCount, formulaPathCount, keeperInitialPathCount, keeperRecurringPathCount, fundedKeeperRecurringPathCount, otherOperationalPathCount,
+    envelopeTransitionPathCount: envelopeTransitions.size,
+    nonGovernorDiscretionaryPathKeys: [...nonGovernor].sort(), unclassifiedExpansionPathKeys: [...unclassified].sort(), unknownRecipientPathKeys: [...unknownRecipient].sort(),
+    minDiscretionaryPublicDelaySec: measuredMin(discretionaryDelays), minEnvelopeRaisePublicDelaySec: measuredMin(envelopeDelays),
+    minOperationalExerciseDelaySec: measuredMin(operationalDelays), formulaQualified, keeperQualified, otherClassesQualified,
+    maxAnnualInterestGrowthPpm: measuredMax(annualRates), maxKeeperProportionalRewardPpm: measuredMax(coefficients),
+    maxKeeperFixedRewardSupplyPpm: fixedSharePpm,
+    minKeeperRecurringIntervalSec: measuredMin(recurringIntervals), maxKeeperRepeatRewardSupplyPpmPer86400Sec: repeatPpm !== null && repeatPpm <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(repeatPpm) : null,
+    keeperSupplyScreenBasis: keeperKeys.size > 0 ? { nativeSupplyRaw: nativeSupply?.toString() ?? null, maxFixedRewardRaw: fixed?.toString() ?? null,
+      maxRepeatRewardRawPer86400Sec: repeatRaw?.toString() ?? null, nativeUnits: keeper?.denominatorUnits ?? "unknown" } : null,
+    votingControl: governance.votingControl, diagnostics: sorted, evidenceRefIds: certificates?.evidence.map((row) => row.id).sort() ?? [],
+    sourceGenerationId: domainDigest("v1005-issuance-process", { assetId, certificates, graph, operational, votingControl: profile.governedIssuance?.votingControl }),
+    freshnessBudgetSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC, observedAtSec: Date.parse(`${operational.review.observedAt}T00:00:00Z`) / 1000,
+    expiresAtSec: Date.parse(`${operational.review.expiresAt}T00:00:00Z`) / 1000,
   };
 }
 
@@ -561,11 +1023,11 @@ function adaptMintControl(
   supplyReview: ExtensionAsset["supplyReview"],
   clockSec: number,
   projection: V9ReviewedControlProjection,
-  issuanceGovernance: ControlOverlay["issuanceGovernance"],
+  issuanceFactsRef: string | undefined,
 ): ControlOverlay[] {
   const controlKind = mintControlKind(control);
   const coarseCapabilities = mintCapabilities(control, upgradeCapable);
-  const capabilities = control.executionScope && projection.complete
+  const capabilities = projection.scope && projection.complete
     ? [...new Set(projection.paths.flatMap((path) => path.capabilities))].sort(compareText)
     : [...new Set([...coarseCapabilities, ...projection.provenPaths.flatMap((path) => path.capabilities)])].sort(compareText);
   const hasMint = capabilities.includes("mint");
@@ -671,20 +1133,20 @@ function adaptMintControl(
     ...(scopedQuestionFresh ? { scopedQuestionFresh: true } : {}),
     keyCustody: control.keyCustodyAttestation?.kind ?? "unknown",
     modulesOrGuards: control.modulesOrGuardsStatus ?? "unknown",
-    ...(control.executionScope ? {
-      executionScope: control.executionScope,
+    ...(projection.scope ? {
+      executionScope: projection.scope,
       executionScopeComplete: projection.complete,
       scopeDiagnostics: projection.diagnostics.sort(compareText),
       moduleImpact: projection.moduleImpact,
     } : {}),
-    ...(issuanceGovernance ? { issuanceGovernance } : {}),
+    ...(issuanceFactsRef ? { issuanceFactsRef } : {}),
     incidentState,
     failureDomains: controlFailureDomains(assetId, control, controlKind),
     ...(control.weightedQuorum && !weightedReviewIsCurrent(control.weightedQuorum, clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC)
       ? { authority: { ...canonicalAuthorityType(assetId, control)!, weightedQuorum: { ...control.weightedQuorum, status: "unknown" as const } } }
       : {}),
   };
-  if (control.executionScope && projection.complete) {
+  if (projection.scope && projection.complete) {
     if (projection.paths.length === 0) return [{ ...globalControl, capabilities: [], capSemantics: { kind: "not-applicable", bound: null }, claimImpairment: "none", economicLossScope: "access-only" }];
     return projection.paths.flatMap((path) => {
       const localScopes = path.reach === "deployment" && path.economicLossScope === "deployment"
@@ -1507,6 +1969,7 @@ export function hasPublishedReserveReconciliationEvidence(
 
 function adaptMintReview(
   meta: V9ExtensionRegistryMeta,
+  metaById: ReadonlyMap<string, V9ExtensionRegistryMeta>,
   dependencies: PreparedDependency["dependency"],
   supplyReview: ExtensionAsset["supplyReview"],
   evidence: ReviewEvidenceBuilder,
@@ -1514,8 +1977,9 @@ function adaptMintReview(
 ): {
   review: NonNullable<ExtensionAsset["economicControlReview"]>["mint"];
   controls: ControlOverlay[];
+  issuanceFacts?: ExtensionAsset["issuanceFacts"];
 } {
-  const profile: MintAuthorityProfile | undefined = meta.mintAuthority;
+  let profile: MintAuthorityProfile | undefined = meta.mintAuthority;
   if (!profile) {
     return {
       review: {
@@ -1529,6 +1993,8 @@ function adaptMintReview(
       controls: [],
     };
   }
+  const resolvedBook = resolveV1005MintAuthorityProfile(profile, meta.id, metaById, clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC);
+  profile = resolvedBook.profile;
   const confidence = confidenceForResearch(profile.confidence);
   const reviewStale = researchReviewObservationState(profile.review.reviewedAt, clockSec) === "stale";
   const evidenceKeys = evidence.add({
@@ -1544,7 +2010,7 @@ function adaptMintReview(
     maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
   });
   const reviewComplete =
-    !reviewStale &&
+    !reviewStale && resolvedBook.diagnostics.length === 0 &&
     profile.review.disposition !== "unresolved" &&
     (profile.review.unresolvedQuestions?.length ?? 0) === 0 &&
     reviewedObservationState(confidence) === "known";
@@ -1561,11 +2027,20 @@ function adaptMintReview(
       .map((question) => question.controlRef.toLowerCase()),
   );
   const authoredControls = profile.controls ?? [];
-  const controlProjections = authoredControls.map((control) =>
-    compileReviewedControlScope(control.executionScope, `${control.chain ?? "chain-unresolved"}:${control.address ?? ""}`, meta.id, clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC));
+  const controlProjections = compileReviewedMintControlScopes(profile, meta.id, clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC).map((projection) =>
+    resolvedBook.diagnostics.length === 0 ? projection : { ...projection, processDiagnostics: sortV1005ProcessDiagnostics([...projection.processDiagnostics ?? [], ...resolvedBook.diagnostics]) });
   const issuanceGovernance = compileMintIssuanceGovernance(
     meta.id, profile, controlProjections, reviewComplete, freshScopedQuestionRefs.size > 0, clockSec,
   );
+  const issuanceProcess = compileMintIssuanceProcess(
+    meta.id, profile, controlProjections, reviewComplete, freshScopedQuestionRefs.size > 0, clockSec, issuanceGovernance,
+  );
+  const issuanceFacts: ExtensionAsset["issuanceFacts"] = issuanceGovernance || resolvedBook.diagnostics.length > 0 ? {
+    ref: domainDigest("v1005-asset-issuance-facts", { assetId: meta.id, issuanceGovernance, issuanceProcess, diagnostics: resolvedBook.diagnostics }),
+    ...(issuanceGovernance ? { governance: issuanceGovernance } : {}),
+    ...(issuanceProcess ? { process: issuanceProcess } : {}),
+    diagnostics: [...resolvedBook.diagnostics],
+  } : undefined;
   // An unresolved aggregate inventory does not erase controls that were
   // individually identified. Retain those controls in a partial review while
   // the unresolved deployment surfaces remain bounded and fail closed.
@@ -1589,9 +2064,10 @@ function adaptMintReview(
       supplyReview,
       clockSec,
       controlProjections[index]!,
-      issuanceGovernance,
+      issuanceFacts?.ref,
     ),
-  );
+  ).map((control) => resolvedBook.diagnostics.length === 0 ? control : { ...control, executionScopeComplete: false,
+    scopeDiagnostics: [...new Set([...control.scopeDiagnostics ?? [], ...resolvedBook.diagnostics.map((row) => row.code)])].sort() });
   const directMintControl =
     controls.find((control) => control.controlKind !== "bridge" && control.capabilities.includes("mint")) ?? null;
   const inheritedFrom = profile.inheritedFrom;
@@ -1668,9 +2144,9 @@ function adaptMintReview(
   // (2026-08-21): reviewed "none" is intentionally passed through here, and a
   // reviewer's EXPLICIT "unknown" on a reviewed non-issuer-backend mint control
   // now also passes through instead of being swallowed by the not-applicable
-  // inference — the reviewer looked and could not establish a cadence, which is
-  // limited evidence (the 9.27 scoped-question doctrine), priced at the
-  // unbounded-reconciliation-unknown rung rather than the confirmed floor.
+  // inference — the reviewer looked and could not establish a cadence. Preserve
+  // that scoped unanswered factor independently of the base rung determined by
+  // known economic authority and qualifying process evidence.
   // Issuer-backend, inherited-share-fallback, and absent-mint-control paths
   // keep the inference: PoR evidence may establish "periodic" for a backend
   // minter, a share wrapper's cadence is structurally not-applicable by the
@@ -1712,6 +2188,7 @@ function adaptMintReview(
         upgrade: { state: "not-applicable" as const, controlKey: null },
       },
       controls,
+      ...(issuanceFacts ? { issuanceFacts } : {}),
     };
   }
   const state = reviewStale
@@ -1742,6 +2219,7 @@ function adaptMintReview(
       upgrade,
     },
     controls,
+    ...(issuanceFacts ? { issuanceFacts } : {}),
   };
 }
 
@@ -1767,6 +2245,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
   options: BuildSafetyScoreV9BaselineExtensionOptions = {},
 ): SafetyScoreV9FactSetExtensionV2 {
   const metaById = options.metaById ?? ACTIVE_META_BY_ID;
+  const reuseScopeRoot = createV9ControlExecutionScopeRootReuse();
   const reviewedTransferFacts = options.reviewedTransferFacts && createReviewedAssetRegistry({
     rows: [...options.reviewedTransferFacts.values()],
     schema: SafetyScoreV9ReviewedTransferFactSchema,
@@ -1893,6 +2372,8 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       // dependents become unavailable, while the rest of the cohort proceeds to
       // the unchanged publication gate. Registry identity and the dependency
       // graph above stay cohort-global.
+      // Admit and seal before assembling the cohort: in-process materialization
+      // reuses these identities, while external overlays retain full validation.
       const admitted: Partial<ExtensionAsset> = {};
       let admissionPath = "dependencies";
       try {
@@ -2073,7 +2554,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         const chainRows = safetyScoreV9ChainRows(fixedInput, assetId);
         const deployedChainCount = Object.keys(chainRows).length;
         admissionPath = "economicControlReview.mint";
-        const mint = adaptMintReview(meta, prepared.dependency, supplyReview, reviewEvidence, clockSec);
+        const mint = adaptMintReview(meta, metaById, prepared.dependency, supplyReview, reviewEvidence, clockSec);
         admissionPath = "economicControlReview.oracle";
         const oracle = adaptOracleReview(meta, archetype, reviewEvidence, clockSec);
         admissionPath = "economicControlReview.bridge";
@@ -2133,7 +2614,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           getSafetyScoreV9OperationalResilienceOverlay(assetId, clockSec),
           reviewedIncidents,
         );
-        return {
+        return admitSafetyScoreV9ExtensionAsset({
           assetId,
           assetIssuerKey,
           archetype,
@@ -2155,6 +2636,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           ...(reserveScopeAdmissions.length > 0 ? { reserveScopeAdmissions } : {}),
           routeReviews,
           retainedRoutes,
+          ...(mint.issuanceFacts ? { issuanceFacts: mint.issuanceFacts } : {}),
           controlReview:
             controls.length > 0
               ? controlsFullyResolved
@@ -2202,7 +2684,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
               }
             : null,
           ...reviewedEvidence,
-        };
+        }, clockSec, reuseScopeRoot);
       } catch (error) {
         return quarantinedSafetyScoreV9ExtensionAsset(admitted, assetId, {
           code: "fact-build-failed",

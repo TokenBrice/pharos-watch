@@ -178,6 +178,7 @@ function buildAssetFacts(
     ...routes,
     exitRoutes,
     ...controls,
+    ...(context.asset.issuanceFacts === undefined ? {} : { issuanceFacts: context.asset.issuanceFacts }),
     economicControlReview,
     accessReview,
     peg,

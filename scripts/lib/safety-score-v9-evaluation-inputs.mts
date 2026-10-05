@@ -16,6 +16,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/data/safety-score-v9/chain-maturity-reviews-v1.ts",
   "shared/lib/compare.ts",
   "shared/types/deployment-id.ts",
+  "shared/types/deployment-amounts.ts",
   "shared/types/chain-identity.ts",
   "shared/lib/dependency-graph.ts",
   "shared/lib/exit-route-scoring.ts",
@@ -52,6 +53,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/lib/safety-score-v9/formula.ts",
   "shared/lib/safety-score-v9/gap-index.ts",
   "shared/lib/safety-score-v9/mechanism-profiles.ts",
+  "shared/lib/safety-score-v9/mint-posture.ts",
   "shared/lib/safety-score-v9/operational-market-depth.ts",
   "shared/lib/safety-score-v9/operational-resilience.ts",
   "shared/lib/safety-score-v9/policy.ts",
@@ -68,12 +70,14 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/types/safety-score-v9-control-scope.ts",
   "shared/types/safety-score-v9-fact-primitives.ts",
   "shared/types/safety-score-v9-facts.ts",
+  "shared/types/safety-score-v9-immutable.ts",
   "shared/types/safety-score-v9-operational-resilience.ts",
   "shared/types/safety-score-v9-public-facts.ts",
   "shared/types/safety-score-v9-public-internal.ts",
   "shared/types/safety-score-v9-public.ts",
   "shared/types/safety-score-v9-wrapper.ts",
   "shared/types/safety-score-v9.ts",
+  "shared/types/stablecoin-meta-schemas.ts",
 ] as const;
 
 /**

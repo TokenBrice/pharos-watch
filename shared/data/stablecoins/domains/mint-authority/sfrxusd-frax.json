@@ -2,7 +2,7 @@
   "id": "sfrxusd-frax",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-unreconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "sfrxUSD is native on Ethereum and Fraxtal, with the canonical deployments controlled by the Frax Safe. The live Ethereum implementation exposes authorized minter_mint issuance with no token-level numeric amount cap; the Ethereum lockbox is bridge machinery assessed separately under Bridge Risk, while the Fraxtal owner/control authority remains ABI-limited in this review.",
     "inheritedFrom": "frxusd-frax",

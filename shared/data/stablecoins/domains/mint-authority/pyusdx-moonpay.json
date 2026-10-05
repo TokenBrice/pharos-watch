@@ -2,7 +2,7 @@
   "id": "pyusdx-moonpay",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "MoonPay issuance uses a mutable IssuerGateway, while the earner manager can mint rewards directly to any account. The same issuer address controls token roles, rewards and ProxyAdmin on all four catalogued chains. A 300-second gateway delay does not constrain the reward or upgrade paths. An additional 0G native deployment has zero supply at block46024355 and is evidenced but not registered.",
     "controls": [
