@@ -39600,6 +39600,97 @@
         "https://docs.etherfuse.com/fees.md"
       ],
       "rationale": "The same-notional all-in cost of MXNe issuer redemption to fiat:MXN remains undisclosed. Brale depicts conversion to local pesos but publishes no applicable peso-payout fee/minimum schedule. Standard 0-bps movement, gas markup and U.S. ACH/RTP/wire tariffs are partial disclosures, not the complete Mexican payout cost. Legal terms defer fees to customer Services Agreements. Etherfuse Mexico ramp tiers lack an explicit applicability join to the captured Brale MXNe issuer rail; its MEXe is a different token. No generic zero-fee or USD 1:1-swap assumption is applied."
+    },
+    {
+      "id": "uw-filqa-fidelity-international-1e4515b2b9537070",
+      "assetId": "filqa-fidelity-international",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:19:16Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R36)",
+      "sources": [
+        {
+          "url": "https://www.fidelityinternational.com/legal/documents/en/hffs.en.xx.6470869.pdf",
+          "observedAt": "2026-10-05T00:07:52Z",
+          "datumAsOf": "2026-07-31",
+          "location": "July factsheet, p.2, Asset Allocation (% TNA); recovered through r.jina.ai",
+          "excerpt": "Commercial Paper 49.2",
+          "assertion": "The current regional product pages still link this July whole-fund allocation; it is outside the 38-day admission bound, not a current portfolio."
+        },
+        {
+          "url": "https://www.fidelity.lu/solutions/digital-assets/filq",
+          "observedAt": "2026-10-05T00:16:28Z",
+          "datumAsOf": null,
+          "location": "View token details link; identical document link on Singapore and UK pages",
+          "excerpt": "View token details",
+          "assertion": "Current primary distribution pages all link the same 6470869 July factsheet, not a newer reserve composition."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.fidelityinternational.com/filq",
+        "https://www.fidelity.lu/solutions/digital-assets/filq",
+        "https://www.fidelity.com.sg/investment/digital-assets/filq",
+        "https://professionals.fidelity.co.uk/solutions/digital-assets/filq",
+        "https://www.fidelityinternational.com/legal/documents/en/hffs.en.xx.6470869.pdf",
+        "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+        "https://www.sygnum.com/filq/",
+        "https://www.cima.ky/search-entities-cima"
+      ],
+      "rationale": "Recovered the actual PDF and all three current regional distribution pages through the alternate-text toolbox, rather than treating HTTP 403 as non-disclosure. All link the July 31 allocation; no newer dated whole-fund holdings/weights are published on these primary surfaces or located by exact-fund current-report search. September prospectus supplies permitted instruments, not measured current holdings; Sygnum supplies NAV/settlement, not portfolio weights. Current reserve composition remains undisclosed. The separate CAPTCHA-blocked regulator search is not the basis for this C."
+    },
+    {
+      "id": "uw-filqa-fidelity-international-c1afbeb3c36e16ba",
+      "assetId": "filqa-fidelity-international",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:19:16Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R36)",
+      "sources": [
+        {
+          "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+          "observedAt": "2026-10-05T00:07:52Z",
+          "datumAsOf": "2026-09-14",
+          "location": "Management and Governance, The Company; recovered through r.jina.ai",
+          "excerpt": "End of first financial year 31 August 2027",
+          "assertion": "The actual first accounting year ends in 2027, not 2026. No completed first-year audited reconciliation can be inferred."
+        },
+        {
+          "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+          "observedAt": "2026-10-05T00:07:52Z",
+          "datumAsOf": "2026-09-14",
+          "location": "Management and Governance, Auditor",
+          "excerpt": "The auditor provides independent review of the financial statements of the Company and all funds once a year.",
+          "assertion": "An annual financial-statement engagement is disclosed, but not exact on/off-chain token-supply-to-reserve reconciliation procedure and cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.fidelityinternational.com/filq",
+        "https://www.fidelity.lu/solutions/digital-assets/filq",
+        "https://www.fidelity.com.sg/investment/digital-assets/filq",
+        "https://professionals.fidelity.co.uk/solutions/digital-assets/filq",
+        "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+        "https://www.fidelityinternational.com/legal/documents/en/hffs.en.xx.6470869.pdf",
+        "https://www.sygnum.com/filq/",
+        "https://etherscan.io/address/0x54a4fc78431f9201824643e99bec891bb7462a1d#code",
+        "https://www.cima.ky/search-entities-cima"
+      ],
+      "rationale": "Full September prospectus is now recovered. Its annual token-record-maintenance confirmation, TA register, daily NAV and annual financial-statement audit are disclosed separately; none publishes a common-clock whole-supply token/register/mint-burn-to-backing reconciliation procedure and cadence. Regional fund pages, linked factsheet and Sygnum FAQ add no such procedure. Corrected chronology: first financial year ends August 2027. Preserve the locked mint sidecar's unknown reconciliation; this C describes missing financial process evidence, not an unread on-chain role."
     }
   ]
 }
