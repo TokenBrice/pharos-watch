@@ -46524,6 +46524,1029 @@
           "assertion": "Binds the published governance multisig to the exact Safe controlling StakedUSDx parameters, distinct from hot KMS operator accounts."
         }
       ]
+    },
+    {
+      "id": "uw-cscbusdc-clearstar-ff0a66fa3a9c69b1",
+      "assetId": "cscbusdc-clearstar",
+      "scope": {
+        "componentKey": "control:mint-meta:cscbusdc-clearstar:244260a3f59a9cfacdb7",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:40:33Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K08)",
+      "sources": [
+        {
+          "url": "https://www.clearstar.xyz/due-diligence/clearstar-due-diligence.html",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "General Due Diligence / Governance and Access Control",
+          "excerpt": "Multisig configuration and signer verification",
+          "assertion": "This is Clearstar\u2019s protocol assessment checklist, not custody/signing-policy assurance for its five exact cbAssets Safe controllers."
+        },
+        {
+          "url": "https://www.clearstar.xyz/legal/legal-notice.html",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "Company Information",
+          "excerpt": "Company disclosure for NovaFusion S.A. (Clearstar).",
+          "assertion": "Identifies the curator\u2019s operator, but supplies no controller-specific custody, beneficial signer independence or signing approval policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.clearstar.xyz/",
+        "https://www.clearstar.xyz/due-diligence/clearstar-due-diligence.html",
+        "https://www.clearstar.xyz/legal/terms-of-service.html",
+        "https://www.clearstar.xyz/legal/legal-notice.html",
+        "https://app.morpho.org/curator/clearstar",
+        "https://app.morpho.org/base/vault/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c",
+        "https://base.blockscout.com/api/v2/smart-contracts/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c",
+        "https://docs.morpho.org/curate/concepts/security-considerations/"
+      ],
+      "rationale": "The cbAssets owner, curator, sentinel and two allocator Safes are identified, but the issuer site, diligence framework, legal disclosures, exact vault, contract and protocol security surfaces publish no key-custody scheme, beneficial human independence or signing-policy boundary for those exact controllers. Public rosters/quorums and Clearstar\u2019s review checklist do not establish off-chain safeguards. Exact-address and issuer custody/MPC/HSM/provider searches yielded no such attestation."
+    },
+    {
+      "id": "uw-cscbusdc-clearstar-7f71af911ec8b68f",
+      "assetId": "cscbusdc-clearstar",
+      "scope": {
+        "componentKey": "control:mint-meta:cscbusdc-clearstar:51cff8b60925333f3cd9",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:40:33Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K08)",
+      "sources": [
+        {
+          "url": "https://www.clearstar.xyz/due-diligence/clearstar-due-diligence.html",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "General Due Diligence / Governance and Access Control",
+          "excerpt": "Multisig configuration and signer verification",
+          "assertion": "This is Clearstar\u2019s protocol assessment checklist, not custody/signing-policy assurance for its five exact cbAssets Safe controllers."
+        },
+        {
+          "url": "https://www.clearstar.xyz/legal/legal-notice.html",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "Company Information",
+          "excerpt": "Company disclosure for NovaFusion S.A. (Clearstar).",
+          "assertion": "Identifies the curator\u2019s operator, but supplies no controller-specific custody, beneficial signer independence or signing approval policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.clearstar.xyz/",
+        "https://www.clearstar.xyz/due-diligence/clearstar-due-diligence.html",
+        "https://www.clearstar.xyz/legal/terms-of-service.html",
+        "https://www.clearstar.xyz/legal/legal-notice.html",
+        "https://app.morpho.org/curator/clearstar",
+        "https://app.morpho.org/base/vault/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c",
+        "https://base.blockscout.com/api/v2/smart-contracts/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c",
+        "https://docs.morpho.org/curate/concepts/security-considerations/"
+      ],
+      "rationale": "The cbAssets owner, curator, sentinel and two allocator Safes are identified, but the issuer site, diligence framework, legal disclosures, exact vault, contract and protocol security surfaces publish no key-custody scheme, beneficial human independence or signing-policy boundary for those exact controllers. Public rosters/quorums and Clearstar\u2019s review checklist do not establish off-chain safeguards. Exact-address and issuer custody/MPC/HSM/provider searches yielded no such attestation."
+    },
+    {
+      "id": "uw-cscbusdc-clearstar-4465ae5fc0bd7f17",
+      "assetId": "cscbusdc-clearstar",
+      "scope": {
+        "componentKey": "control:mint-meta:cscbusdc-clearstar:5e045de5b5b7bab798a0",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:40:33Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K08)",
+      "sources": [
+        {
+          "url": "https://www.clearstar.xyz/due-diligence/clearstar-due-diligence.html",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "General Due Diligence / Governance and Access Control",
+          "excerpt": "Multisig configuration and signer verification",
+          "assertion": "This is Clearstar\u2019s protocol assessment checklist, not custody/signing-policy assurance for its five exact cbAssets Safe controllers."
+        },
+        {
+          "url": "https://www.clearstar.xyz/legal/legal-notice.html",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "Company Information",
+          "excerpt": "Company disclosure for NovaFusion S.A. (Clearstar).",
+          "assertion": "Identifies the curator\u2019s operator, but supplies no controller-specific custody, beneficial signer independence or signing approval policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.clearstar.xyz/",
+        "https://www.clearstar.xyz/due-diligence/clearstar-due-diligence.html",
+        "https://www.clearstar.xyz/legal/terms-of-service.html",
+        "https://www.clearstar.xyz/legal/legal-notice.html",
+        "https://app.morpho.org/curator/clearstar",
+        "https://app.morpho.org/base/vault/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c",
+        "https://base.blockscout.com/api/v2/smart-contracts/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c",
+        "https://docs.morpho.org/curate/concepts/security-considerations/"
+      ],
+      "rationale": "The cbAssets owner, curator, sentinel and two allocator Safes are identified, but the issuer site, diligence framework, legal disclosures, exact vault, contract and protocol security surfaces publish no key-custody scheme, beneficial human independence or signing-policy boundary for those exact controllers. Public rosters/quorums and Clearstar\u2019s review checklist do not establish off-chain safeguards. Exact-address and issuer custody/MPC/HSM/provider searches yielded no such attestation."
+    },
+    {
+      "id": "uw-cscbusdc-clearstar-0809fe22f7e8fd71",
+      "assetId": "cscbusdc-clearstar",
+      "scope": {
+        "componentKey": "control:mint-meta:cscbusdc-clearstar:9041d7dcbb7a957e071d",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:40:33Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K08)",
+      "sources": [
+        {
+          "url": "https://www.clearstar.xyz/due-diligence/clearstar-due-diligence.html",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "General Due Diligence / Governance and Access Control",
+          "excerpt": "Multisig configuration and signer verification",
+          "assertion": "This is Clearstar\u2019s protocol assessment checklist, not custody/signing-policy assurance for its five exact cbAssets Safe controllers."
+        },
+        {
+          "url": "https://www.clearstar.xyz/legal/legal-notice.html",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "Company Information",
+          "excerpt": "Company disclosure for NovaFusion S.A. (Clearstar).",
+          "assertion": "Identifies the curator\u2019s operator, but supplies no controller-specific custody, beneficial signer independence or signing approval policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.clearstar.xyz/",
+        "https://www.clearstar.xyz/due-diligence/clearstar-due-diligence.html",
+        "https://www.clearstar.xyz/legal/terms-of-service.html",
+        "https://www.clearstar.xyz/legal/legal-notice.html",
+        "https://app.morpho.org/curator/clearstar",
+        "https://app.morpho.org/base/vault/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c",
+        "https://base.blockscout.com/api/v2/smart-contracts/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c",
+        "https://docs.morpho.org/curate/concepts/security-considerations/"
+      ],
+      "rationale": "The cbAssets owner, curator, sentinel and two allocator Safes are identified, but the issuer site, diligence framework, legal disclosures, exact vault, contract and protocol security surfaces publish no key-custody scheme, beneficial human independence or signing-policy boundary for those exact controllers. Public rosters/quorums and Clearstar\u2019s review checklist do not establish off-chain safeguards. Exact-address and issuer custody/MPC/HSM/provider searches yielded no such attestation."
+    },
+    {
+      "id": "uw-cscbusdc-clearstar-499393e43c140646",
+      "assetId": "cscbusdc-clearstar",
+      "scope": {
+        "componentKey": "control:mint-meta:cscbusdc-clearstar:b0df5b536c4824390a51",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:40:33Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K08)",
+      "sources": [
+        {
+          "url": "https://www.clearstar.xyz/due-diligence/clearstar-due-diligence.html",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "General Due Diligence / Governance and Access Control",
+          "excerpt": "Multisig configuration and signer verification",
+          "assertion": "This is Clearstar\u2019s protocol assessment checklist, not custody/signing-policy assurance for its five exact cbAssets Safe controllers."
+        },
+        {
+          "url": "https://www.clearstar.xyz/legal/legal-notice.html",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "Company Information",
+          "excerpt": "Company disclosure for NovaFusion S.A. (Clearstar).",
+          "assertion": "Identifies the curator\u2019s operator, but supplies no controller-specific custody, beneficial signer independence or signing approval policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.clearstar.xyz/",
+        "https://www.clearstar.xyz/due-diligence/clearstar-due-diligence.html",
+        "https://www.clearstar.xyz/legal/terms-of-service.html",
+        "https://www.clearstar.xyz/legal/legal-notice.html",
+        "https://app.morpho.org/curator/clearstar",
+        "https://app.morpho.org/base/vault/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c",
+        "https://base.blockscout.com/api/v2/smart-contracts/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c",
+        "https://docs.morpho.org/curate/concepts/security-considerations/"
+      ],
+      "rationale": "The cbAssets owner, curator, sentinel and two allocator Safes are identified, but the issuer site, diligence framework, legal disclosures, exact vault, contract and protocol security surfaces publish no key-custody scheme, beneficial human independence or signing-policy boundary for those exact controllers. Public rosters/quorums and Clearstar\u2019s review checklist do not establish off-chain safeguards. Exact-address and issuer custody/MPC/HSM/provider searches yielded no such attestation."
+    },
+    {
+      "id": "uw-gtusdtp-gauntlet-77119e2761c32ffa",
+      "assetId": "gtusdtp-gauntlet",
+      "scope": {
+        "componentKey": "control:mint-meta:gtusdtp-gauntlet:0189ea255645dec36bc9",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:40:33Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K08)",
+      "sources": [
+        {
+          "url": "https://www.gauntlet.xyz/resources/inside-aria",
+          "observedAt": "2026-10-05T12:35:28Z",
+          "datumAsOf": "2026-10-05",
+          "location": "Customized permissions and access",
+          "excerpt": "Onchain execution is limited to one test EOA with zero permissions on any prod vaults.",
+          "assertion": "Latest security disclosure concerns a test agent, not gtUSDTp production owner/curator/sentinel/allocator custody. Its hardware-wallet testing reference does not bind those controllers."
+        },
+        {
+          "url": "https://vaultbook.gauntlet.xyz/vaults/morpho-vaults/v2-vaults/roles-and-capabilities.md",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "Suggested Key Setup",
+          "excerpt": "The patterns below are starting points, not requirements.",
+          "assertion": "The multisig/MPC suggestions are not custody attestations for gtUSDTp\u2019s owner, curator and three exact operational EOAs."
+        },
+        {
+          "url": "https://www.gauntlet.xyz/tos",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": "2023-11-08",
+          "location": "10.11 MultiSig",
+          "excerpt": "we do not authenticate or guarantee the advisability of any transaction except as otherwise provided for in this Agreement or pertinent Proposal",
+          "assertion": "Public contractual language does not disclose gtUSDTp\u2019s actual key technology, beneficial signers or approval policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vaultbook.gauntlet.xyz/llms.txt",
+        "https://vaultbook.gauntlet.xyz/vaults/morpho-vaults/v2-vaults/roles-and-capabilities.md",
+        "https://vaultbook.gauntlet.xyz/vaults/morpho-vaults/curation-methodology-and-risk-factor-overview/automated-risk-management-solutions.md",
+        "https://vaultbook.gauntlet.xyz/resources/disclosures.md",
+        "https://www.gauntlet.xyz/tos",
+        "https://www.gauntlet.xyz/resources/gauntlet-bug-bounty-program-announcement",
+        "https://www.gauntlet.xyz/resources/inside-aria",
+        "https://app.morpho.org/ethereum/vault/0xf3557ad5e984211ac8a0874a670344f2c3376471",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+      ],
+      "rationale": "For the exact USDT Prime V2 owner and curator Safes and operational sentinel/allocator EOAs, the public VaultBook role/security, risk-management, legal and contract surfaces disclose powers and optional key-setup recommendations, not actual custody technology, beneficial signer independence or transaction approval policy. Site/provider and exact-address searches found no role-bound MPC/HSM/SOC attestation. On-chain topology remains known and is not classified as non-disclosure."
+    },
+    {
+      "id": "uw-gtusdtp-gauntlet-3033a837c2f69373",
+      "assetId": "gtusdtp-gauntlet",
+      "scope": {
+        "componentKey": "control:mint-meta:gtusdtp-gauntlet:4734d2dd28b999ba68b3",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:40:33Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K08)",
+      "sources": [
+        {
+          "url": "https://www.gauntlet.xyz/resources/inside-aria",
+          "observedAt": "2026-10-05T12:35:28Z",
+          "datumAsOf": "2026-10-05",
+          "location": "Customized permissions and access",
+          "excerpt": "Onchain execution is limited to one test EOA with zero permissions on any prod vaults.",
+          "assertion": "Latest security disclosure concerns a test agent, not gtUSDTp production owner/curator/sentinel/allocator custody. Its hardware-wallet testing reference does not bind those controllers."
+        },
+        {
+          "url": "https://vaultbook.gauntlet.xyz/vaults/morpho-vaults/v2-vaults/roles-and-capabilities.md",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "Suggested Key Setup",
+          "excerpt": "The patterns below are starting points, not requirements.",
+          "assertion": "The multisig/MPC suggestions are not custody attestations for gtUSDTp\u2019s owner, curator and three exact operational EOAs."
+        },
+        {
+          "url": "https://www.gauntlet.xyz/tos",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": "2023-11-08",
+          "location": "10.11 MultiSig",
+          "excerpt": "we do not authenticate or guarantee the advisability of any transaction except as otherwise provided for in this Agreement or pertinent Proposal",
+          "assertion": "Public contractual language does not disclose gtUSDTp\u2019s actual key technology, beneficial signers or approval policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vaultbook.gauntlet.xyz/llms.txt",
+        "https://vaultbook.gauntlet.xyz/vaults/morpho-vaults/v2-vaults/roles-and-capabilities.md",
+        "https://vaultbook.gauntlet.xyz/vaults/morpho-vaults/curation-methodology-and-risk-factor-overview/automated-risk-management-solutions.md",
+        "https://vaultbook.gauntlet.xyz/resources/disclosures.md",
+        "https://www.gauntlet.xyz/tos",
+        "https://www.gauntlet.xyz/resources/gauntlet-bug-bounty-program-announcement",
+        "https://www.gauntlet.xyz/resources/inside-aria",
+        "https://app.morpho.org/ethereum/vault/0xf3557ad5e984211ac8a0874a670344f2c3376471",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+      ],
+      "rationale": "For the exact USDT Prime V2 owner and curator Safes and operational sentinel/allocator EOAs, the public VaultBook role/security, risk-management, legal and contract surfaces disclose powers and optional key-setup recommendations, not actual custody technology, beneficial signer independence or transaction approval policy. Site/provider and exact-address searches found no role-bound MPC/HSM/SOC attestation. On-chain topology remains known and is not classified as non-disclosure."
+    },
+    {
+      "id": "uw-gtusdtp-gauntlet-7fbaec8258c0f21a",
+      "assetId": "gtusdtp-gauntlet",
+      "scope": {
+        "componentKey": "control:mint-meta:gtusdtp-gauntlet:7d9b2881226f22894729",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:40:33Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K08)",
+      "sources": [
+        {
+          "url": "https://www.gauntlet.xyz/resources/inside-aria",
+          "observedAt": "2026-10-05T12:35:28Z",
+          "datumAsOf": "2026-10-05",
+          "location": "Customized permissions and access",
+          "excerpt": "Onchain execution is limited to one test EOA with zero permissions on any prod vaults.",
+          "assertion": "Latest security disclosure concerns a test agent, not gtUSDTp production owner/curator/sentinel/allocator custody. Its hardware-wallet testing reference does not bind those controllers."
+        },
+        {
+          "url": "https://vaultbook.gauntlet.xyz/vaults/morpho-vaults/v2-vaults/roles-and-capabilities.md",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "Suggested Key Setup",
+          "excerpt": "The patterns below are starting points, not requirements.",
+          "assertion": "The multisig/MPC suggestions are not custody attestations for gtUSDTp\u2019s owner, curator and three exact operational EOAs."
+        },
+        {
+          "url": "https://www.gauntlet.xyz/tos",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": "2023-11-08",
+          "location": "10.11 MultiSig",
+          "excerpt": "we do not authenticate or guarantee the advisability of any transaction except as otherwise provided for in this Agreement or pertinent Proposal",
+          "assertion": "Public contractual language does not disclose gtUSDTp\u2019s actual key technology, beneficial signers or approval policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vaultbook.gauntlet.xyz/llms.txt",
+        "https://vaultbook.gauntlet.xyz/vaults/morpho-vaults/v2-vaults/roles-and-capabilities.md",
+        "https://vaultbook.gauntlet.xyz/vaults/morpho-vaults/curation-methodology-and-risk-factor-overview/automated-risk-management-solutions.md",
+        "https://vaultbook.gauntlet.xyz/resources/disclosures.md",
+        "https://www.gauntlet.xyz/tos",
+        "https://www.gauntlet.xyz/resources/gauntlet-bug-bounty-program-announcement",
+        "https://www.gauntlet.xyz/resources/inside-aria",
+        "https://app.morpho.org/ethereum/vault/0xf3557ad5e984211ac8a0874a670344f2c3376471",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+      ],
+      "rationale": "For the exact USDT Prime V2 owner and curator Safes and operational sentinel/allocator EOAs, the public VaultBook role/security, risk-management, legal and contract surfaces disclose powers and optional key-setup recommendations, not actual custody technology, beneficial signer independence or transaction approval policy. Site/provider and exact-address searches found no role-bound MPC/HSM/SOC attestation. On-chain topology remains known and is not classified as non-disclosure."
+    },
+    {
+      "id": "uw-gtusdtp-gauntlet-35862df140d371a8",
+      "assetId": "gtusdtp-gauntlet",
+      "scope": {
+        "componentKey": "control:mint-meta:gtusdtp-gauntlet:94dd13ae8c38b39ebc13",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:40:33Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K08)",
+      "sources": [
+        {
+          "url": "https://www.gauntlet.xyz/resources/inside-aria",
+          "observedAt": "2026-10-05T12:35:28Z",
+          "datumAsOf": "2026-10-05",
+          "location": "Customized permissions and access",
+          "excerpt": "Onchain execution is limited to one test EOA with zero permissions on any prod vaults.",
+          "assertion": "Latest security disclosure concerns a test agent, not gtUSDTp production owner/curator/sentinel/allocator custody. Its hardware-wallet testing reference does not bind those controllers."
+        },
+        {
+          "url": "https://vaultbook.gauntlet.xyz/vaults/morpho-vaults/v2-vaults/roles-and-capabilities.md",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "Suggested Key Setup",
+          "excerpt": "The patterns below are starting points, not requirements.",
+          "assertion": "The multisig/MPC suggestions are not custody attestations for gtUSDTp\u2019s owner, curator and three exact operational EOAs."
+        },
+        {
+          "url": "https://www.gauntlet.xyz/tos",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": "2023-11-08",
+          "location": "10.11 MultiSig",
+          "excerpt": "we do not authenticate or guarantee the advisability of any transaction except as otherwise provided for in this Agreement or pertinent Proposal",
+          "assertion": "Public contractual language does not disclose gtUSDTp\u2019s actual key technology, beneficial signers or approval policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vaultbook.gauntlet.xyz/llms.txt",
+        "https://vaultbook.gauntlet.xyz/vaults/morpho-vaults/v2-vaults/roles-and-capabilities.md",
+        "https://vaultbook.gauntlet.xyz/vaults/morpho-vaults/curation-methodology-and-risk-factor-overview/automated-risk-management-solutions.md",
+        "https://vaultbook.gauntlet.xyz/resources/disclosures.md",
+        "https://www.gauntlet.xyz/tos",
+        "https://www.gauntlet.xyz/resources/gauntlet-bug-bounty-program-announcement",
+        "https://www.gauntlet.xyz/resources/inside-aria",
+        "https://app.morpho.org/ethereum/vault/0xf3557ad5e984211ac8a0874a670344f2c3376471",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+      ],
+      "rationale": "For the exact USDT Prime V2 owner and curator Safes and operational sentinel/allocator EOAs, the public VaultBook role/security, risk-management, legal and contract surfaces disclose powers and optional key-setup recommendations, not actual custody technology, beneficial signer independence or transaction approval policy. Site/provider and exact-address searches found no role-bound MPC/HSM/SOC attestation. On-chain topology remains known and is not classified as non-disclosure."
+    },
+    {
+      "id": "uw-gtusdtp-gauntlet-e9092261f529bced",
+      "assetId": "gtusdtp-gauntlet",
+      "scope": {
+        "componentKey": "control:mint-meta:gtusdtp-gauntlet:9fa027ed4247fb6ed240",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:40:33Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K08)",
+      "sources": [
+        {
+          "url": "https://www.gauntlet.xyz/resources/inside-aria",
+          "observedAt": "2026-10-05T12:35:28Z",
+          "datumAsOf": "2026-10-05",
+          "location": "Customized permissions and access",
+          "excerpt": "Onchain execution is limited to one test EOA with zero permissions on any prod vaults.",
+          "assertion": "Latest security disclosure concerns a test agent, not gtUSDTp production owner/curator/sentinel/allocator custody. Its hardware-wallet testing reference does not bind those controllers."
+        },
+        {
+          "url": "https://vaultbook.gauntlet.xyz/vaults/morpho-vaults/v2-vaults/roles-and-capabilities.md",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "Suggested Key Setup",
+          "excerpt": "The patterns below are starting points, not requirements.",
+          "assertion": "The multisig/MPC suggestions are not custody attestations for gtUSDTp\u2019s owner, curator and three exact operational EOAs."
+        },
+        {
+          "url": "https://www.gauntlet.xyz/tos",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": "2023-11-08",
+          "location": "10.11 MultiSig",
+          "excerpt": "we do not authenticate or guarantee the advisability of any transaction except as otherwise provided for in this Agreement or pertinent Proposal",
+          "assertion": "Public contractual language does not disclose gtUSDTp\u2019s actual key technology, beneficial signers or approval policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vaultbook.gauntlet.xyz/llms.txt",
+        "https://vaultbook.gauntlet.xyz/vaults/morpho-vaults/v2-vaults/roles-and-capabilities.md",
+        "https://vaultbook.gauntlet.xyz/vaults/morpho-vaults/curation-methodology-and-risk-factor-overview/automated-risk-management-solutions.md",
+        "https://vaultbook.gauntlet.xyz/resources/disclosures.md",
+        "https://www.gauntlet.xyz/tos",
+        "https://www.gauntlet.xyz/resources/gauntlet-bug-bounty-program-announcement",
+        "https://www.gauntlet.xyz/resources/inside-aria",
+        "https://app.morpho.org/ethereum/vault/0xf3557ad5e984211ac8a0874a670344f2c3376471",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+      ],
+      "rationale": "For the exact USDT Prime V2 owner and curator Safes and operational sentinel/allocator EOAs, the public VaultBook role/security, risk-management, legal and contract surfaces disclose powers and optional key-setup recommendations, not actual custody technology, beneficial signer independence or transaction approval policy. Site/provider and exact-address searches found no role-bound MPC/HSM/SOC attestation. On-chain topology remains known and is not classified as non-disclosure."
+    },
+    {
+      "id": "uw-pyusdx-moonpay-64ba797082a1bbdd",
+      "assetId": "pyusdx-moonpay",
+      "scope": {
+        "componentKey": "control:mint-meta:pyusdx-moonpay:67bde02b55a0a4836c75",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:40:33Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K08)",
+      "sources": [
+        {
+          "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "Access-control hierarchy",
+          "excerpt": "The earner manager can `setAccountInfo()` to configure earners, `distributeReward()` to mint to any account, and receives yield fees.",
+          "assertion": "Documents administrative/mint powers without naming key custody or human approval safeguards for the identified admin."
+        },
+        {
+          "url": "https://dev.enterprise.moonpay.com/issuance/pyusdx",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "How minting works",
+          "excerpt": "Mints equivalent PYUSDx tokens on-chain",
+          "assertion": "Discloses MoonPay\u2019s operational issuance flow, not custody/signing policy of 0x314160525f5ea6677d3908112ff9bd885f3bb78e."
+        },
+        {
+          "url": "https://www.moonpay.com/legal/pyusdx_terms",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "6 Wallet and Address Requirements",
+          "excerpt": "We do not manage, host, store, custody, or safeguard any Wallet, credential, or private key on your behalf.",
+          "assertion": "Customer-wallet disclaimer does not establish privileged issuer-key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md",
+        "https://docs.m0.org/resources/addresses/pyusdx-platform",
+        "https://docs.m0.org/pyusdx/quick-guide",
+        "https://dev.enterprise.moonpay.com/issuance/pyusdx",
+        "https://www.moonpay.com/legal/pyusdx_terms",
+        "https://www.moonpay.com/legal/licenses",
+        "https://www.moonpay.com/newsroom/pyusdx",
+        "https://etherscan.io/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+      ],
+      "rationale": "The identified issuer admin/earner-manager/ProxyAdmin-owner 0x314160525f5ea6677d3908112ff9bd885f3bb78e on Ethereum, Arbitrum, Monad and Base remains without a controller-bound custody or signing-policy disclosure. PYUSDx issuer terms, technical/security and deployment docs, announcement and regulatory-license surfaces describe roles and operations, not the exact key\u2019s MPC/HSM provider, beneficial signing humans or approval policy. General partner multisig recommendations and MoonPay custody products do not attest these issuance controllers."
+    },
+    {
+      "id": "uw-pyusdx-moonpay-1e3aa388d2c5921c",
+      "assetId": "pyusdx-moonpay",
+      "scope": {
+        "componentKey": "control:mint-meta:pyusdx-moonpay:8e13df2da57f0368b7a9",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:40:33Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K08)",
+      "sources": [
+        {
+          "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "Access-control hierarchy",
+          "excerpt": "The earner manager can `setAccountInfo()` to configure earners, `distributeReward()` to mint to any account, and receives yield fees.",
+          "assertion": "Documents administrative/mint powers without naming key custody or human approval safeguards for the identified admin."
+        },
+        {
+          "url": "https://dev.enterprise.moonpay.com/issuance/pyusdx",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "How minting works",
+          "excerpt": "Mints equivalent PYUSDx tokens on-chain",
+          "assertion": "Discloses MoonPay\u2019s operational issuance flow, not custody/signing policy of 0x314160525f5ea6677d3908112ff9bd885f3bb78e."
+        },
+        {
+          "url": "https://www.moonpay.com/legal/pyusdx_terms",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "6 Wallet and Address Requirements",
+          "excerpt": "We do not manage, host, store, custody, or safeguard any Wallet, credential, or private key on your behalf.",
+          "assertion": "Customer-wallet disclaimer does not establish privileged issuer-key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md",
+        "https://docs.m0.org/resources/addresses/pyusdx-platform",
+        "https://docs.m0.org/pyusdx/quick-guide",
+        "https://dev.enterprise.moonpay.com/issuance/pyusdx",
+        "https://www.moonpay.com/legal/pyusdx_terms",
+        "https://www.moonpay.com/legal/licenses",
+        "https://www.moonpay.com/newsroom/pyusdx",
+        "https://etherscan.io/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+      ],
+      "rationale": "The identified issuer admin/earner-manager/ProxyAdmin-owner 0x314160525f5ea6677d3908112ff9bd885f3bb78e on Ethereum, Arbitrum, Monad and Base remains without a controller-bound custody or signing-policy disclosure. PYUSDx issuer terms, technical/security and deployment docs, announcement and regulatory-license surfaces describe roles and operations, not the exact key\u2019s MPC/HSM provider, beneficial signing humans or approval policy. General partner multisig recommendations and MoonPay custody products do not attest these issuance controllers."
+    },
+    {
+      "id": "uw-pyusdx-moonpay-9f4f20d522271a3b",
+      "assetId": "pyusdx-moonpay",
+      "scope": {
+        "componentKey": "control:mint-meta:pyusdx-moonpay:c20810356a2b52e56c8b",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:40:33Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K08)",
+      "sources": [
+        {
+          "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "Access-control hierarchy",
+          "excerpt": "The earner manager can `setAccountInfo()` to configure earners, `distributeReward()` to mint to any account, and receives yield fees.",
+          "assertion": "Documents administrative/mint powers without naming key custody or human approval safeguards for the identified admin."
+        },
+        {
+          "url": "https://dev.enterprise.moonpay.com/issuance/pyusdx",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "How minting works",
+          "excerpt": "Mints equivalent PYUSDx tokens on-chain",
+          "assertion": "Discloses MoonPay\u2019s operational issuance flow, not custody/signing policy of 0x314160525f5ea6677d3908112ff9bd885f3bb78e."
+        },
+        {
+          "url": "https://www.moonpay.com/legal/pyusdx_terms",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "6 Wallet and Address Requirements",
+          "excerpt": "We do not manage, host, store, custody, or safeguard any Wallet, credential, or private key on your behalf.",
+          "assertion": "Customer-wallet disclaimer does not establish privileged issuer-key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md",
+        "https://docs.m0.org/resources/addresses/pyusdx-platform",
+        "https://docs.m0.org/pyusdx/quick-guide",
+        "https://dev.enterprise.moonpay.com/issuance/pyusdx",
+        "https://www.moonpay.com/legal/pyusdx_terms",
+        "https://www.moonpay.com/legal/licenses",
+        "https://www.moonpay.com/newsroom/pyusdx",
+        "https://etherscan.io/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+      ],
+      "rationale": "The identified issuer admin/earner-manager/ProxyAdmin-owner 0x314160525f5ea6677d3908112ff9bd885f3bb78e on Ethereum, Arbitrum, Monad and Base remains without a controller-bound custody or signing-policy disclosure. PYUSDx issuer terms, technical/security and deployment docs, announcement and regulatory-license surfaces describe roles and operations, not the exact key\u2019s MPC/HSM provider, beneficial signing humans or approval policy. General partner multisig recommendations and MoonPay custody products do not attest these issuance controllers."
+    },
+    {
+      "id": "uw-pyusdx-moonpay-abfb91324d6dc956",
+      "assetId": "pyusdx-moonpay",
+      "scope": {
+        "componentKey": "control:mint-meta:pyusdx-moonpay:d39f798502599ffef97a",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:40:33Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K08)",
+      "sources": [
+        {
+          "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "Access-control hierarchy",
+          "excerpt": "The earner manager can `setAccountInfo()` to configure earners, `distributeReward()` to mint to any account, and receives yield fees.",
+          "assertion": "Documents administrative/mint powers without naming key custody or human approval safeguards for the identified admin."
+        },
+        {
+          "url": "https://dev.enterprise.moonpay.com/issuance/pyusdx",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "How minting works",
+          "excerpt": "Mints equivalent PYUSDx tokens on-chain",
+          "assertion": "Discloses MoonPay\u2019s operational issuance flow, not custody/signing policy of 0x314160525f5ea6677d3908112ff9bd885f3bb78e."
+        },
+        {
+          "url": "https://www.moonpay.com/legal/pyusdx_terms",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "6 Wallet and Address Requirements",
+          "excerpt": "We do not manage, host, store, custody, or safeguard any Wallet, credential, or private key on your behalf.",
+          "assertion": "Customer-wallet disclaimer does not establish privileged issuer-key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md",
+        "https://docs.m0.org/resources/addresses/pyusdx-platform",
+        "https://docs.m0.org/pyusdx/quick-guide",
+        "https://dev.enterprise.moonpay.com/issuance/pyusdx",
+        "https://www.moonpay.com/legal/pyusdx_terms",
+        "https://www.moonpay.com/legal/licenses",
+        "https://www.moonpay.com/newsroom/pyusdx",
+        "https://etherscan.io/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+      ],
+      "rationale": "The identified issuer admin/earner-manager/ProxyAdmin-owner 0x314160525f5ea6677d3908112ff9bd885f3bb78e on Ethereum, Arbitrum, Monad and Base remains without a controller-bound custody or signing-policy disclosure. PYUSDx issuer terms, technical/security and deployment docs, announcement and regulatory-license surfaces describe roles and operations, not the exact key\u2019s MPC/HSM provider, beneficial signing humans or approval policy. General partner multisig recommendations and MoonPay custody products do not attest these issuance controllers."
+    },
+    {
+      "id": "uw-arcusdc-galaxy-239098b777532da3",
+      "assetId": "arcusdc-galaxy",
+      "scope": {
+        "componentKey": "control:mint-meta:arcusdc-galaxy:4161b8c41e216e2c1a8c",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:40:33Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K08)",
+      "sources": [
+        {
+          "url": "https://investor.galaxy.com/news-releases/news-release-details/galaxy-launches-institutional-vault-curator",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": "2026-07-16",
+          "location": "Institutional access through Fireblocks Earn",
+          "excerpt": "Through Fireblocks Earn, access runs through the same approval workflows, transaction signing, and policy controls institutions already use.",
+          "assertion": "This refers to client depositor workflows, not custody of Galaxy\u2019s exact Arc owner/curator keys."
+        },
+        {
+          "url": "https://app.morpho.org/arc/vault/0x8E357432CC12ff425c36432F312968aEb16112AF/galaxy-usdc",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "Core roles",
+          "excerpt": "0x032a292DE0127FdEf849EfF31b5b4DF7E5f069C0",
+          "assertion": "Exact owner and curator addresses are disclosed; their off-chain signing safeguards are not."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://curation.galaxy.com/",
+        "https://investor.galaxy.com/news-releases/news-release-details/galaxy-launches-institutional-vault-curator",
+        "https://app.morpho.org/arc/vault/0x8E357432CC12ff425c36432F312968aEb16112AF/galaxy-usdc",
+        "https://www.galaxy.com/newsroom/galaxy-curation-adds-two-institutional-vaults-on-kamino",
+        "https://docs.morpho.org/learn/concepts/vault-v2/"
+      ],
+      "rationale": "Galaxy\u2019s exact Arc vault owner 0x032a292de0127fdef849eff31b5b4df7e5f069c0 and curator 0xec1a7a08b538c685f5d188d81e3545d69f1b4178 lack public controller-bound custody, beneficial-human independence and signing approval-policy evidence after curation, newsroom, investor/legal disclaimer, exact vault and security/contract research. Fireblocks Earn distribution secures clients\u2019 transactions and is not an attestation for Galaxy\u2019s privileged vault keys. Empty EOA code does not reveal off-chain custody."
+    },
+    {
+      "id": "uw-arcusdc-galaxy-22ab97853fa2b521",
+      "assetId": "arcusdc-galaxy",
+      "scope": {
+        "componentKey": "control:mint-meta:arcusdc-galaxy:a7b70a9e0ff37c712886",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:40:33Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K08)",
+      "sources": [
+        {
+          "url": "https://investor.galaxy.com/news-releases/news-release-details/galaxy-launches-institutional-vault-curator",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": "2026-07-16",
+          "location": "Institutional access through Fireblocks Earn",
+          "excerpt": "Through Fireblocks Earn, access runs through the same approval workflows, transaction signing, and policy controls institutions already use.",
+          "assertion": "This refers to client depositor workflows, not custody of Galaxy\u2019s exact Arc owner/curator keys."
+        },
+        {
+          "url": "https://app.morpho.org/arc/vault/0x8E357432CC12ff425c36432F312968aEb16112AF/galaxy-usdc",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "Core roles",
+          "excerpt": "0x032a292DE0127FdEf849EfF31b5b4DF7E5f069C0",
+          "assertion": "Exact owner and curator addresses are disclosed; their off-chain signing safeguards are not."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://curation.galaxy.com/",
+        "https://investor.galaxy.com/news-releases/news-release-details/galaxy-launches-institutional-vault-curator",
+        "https://app.morpho.org/arc/vault/0x8E357432CC12ff425c36432F312968aEb16112AF/galaxy-usdc",
+        "https://www.galaxy.com/newsroom/galaxy-curation-adds-two-institutional-vaults-on-kamino",
+        "https://docs.morpho.org/learn/concepts/vault-v2/"
+      ],
+      "rationale": "Galaxy\u2019s exact Arc vault owner 0x032a292de0127fdef849eff31b5b4df7e5f069c0 and curator 0xec1a7a08b538c685f5d188d81e3545d69f1b4178 lack public controller-bound custody, beneficial-human independence and signing approval-policy evidence after curation, newsroom, investor/legal disclaimer, exact vault and security/contract research. Fireblocks Earn distribution secures clients\u2019 transactions and is not an attestation for Galaxy\u2019s privileged vault keys. Empty EOA code does not reveal off-chain custody."
+    },
+    {
+      "id": "uw-sxsrlusd-sentora-4bef616ea9108d95",
+      "assetId": "sxsrlusd-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:sxsrlusd-sentora:5bbd44669fbacc4c85e9",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:40:33Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K08)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-05T12:40:33Z",
+          "datumAsOf": null,
+          "location": "June 2026 terms, 3.5 / 8.2 and Appendix B-1",
+          "excerpt": "Sentora does not have access to your private keys, cannot sign transactions on your behalf",
+          "assertion": "User-wallet non-custody language is not privileged-controller custody evidence for the identified curator Safe or Sky governance execution chain."
+        },
+        {
+          "url": "https://framerusercontent.com/assets/08xLa1aeFGVivwQpVj2ZG2ToEQ.pdf",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "Section 2 governance layer",
+          "excerpt": "This framework is overseen by the Risk Committee, ensuring that any changes to exposure, capital deployment, or controls follow a governed and disciplined path.",
+          "assertion": "Names general risk governance, not custody or beneficial humans for the exact RLUSD curator Safe."
+        },
+        {
+          "url": "https://developers.skyeco.com/protocol/governance/ovreview/",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "Governance Components",
+          "excerpt": "The Governance Module has 3 core components consisting of the `Chief`, `Pause` and `Spell` contracts.",
+          "assertion": "Describes on-chain governance execution, not key custody/human independence of voting and execution participants."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/research/articles/how-human-coordination-failures-are-creating-defi-s-next-systemic-crisis",
+        "https://resources.vaults.sentora.com/llms.txt",
+        "https://resources.vaults.sentora.com/vault-details-and-risk-reports/vault-risk-reports.md",
+        "https://framerusercontent.com/assets/08xLa1aeFGVivwQpVj2ZG2ToEQ.pdf",
+        "https://resources.vaults.sentora.com/vault-details-and-risk-reports/vault-specifications-strategy-deposit-flow-and-risk-profile.md",
+        "https://developers.skyeco.com/protocol/governance/ovreview/",
+        "https://vote.sky.money/delegates",
+        "https://app.morpho.org/ethereum/vault/0xfc8c624b6080a0a780583799f2a862de936f6e22",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x929d9a1435662357f54adcf64dcee4d6b867a6f9"
+      ],
+      "rationale": "For the exact Sky-governed owner execution chain and curator Safe 0xff070333654aae76a0a77465e4f0fd101c57c03f, Sentora\u2019s full risk report/docs, Sky governance/delegate surfaces and exact contract/vault evidence do not name operational key custody, independent beneficial signing humans or transaction approval policy. Risk-committee and delegated-voting descriptions do not prove independent humans or MPC/HSM safeguards. Searches of issuer/provider and exact-address disclosures found no controller-bound attestation."
+    },
+    {
+      "id": "uw-sxsrlusd-sentora-385c2cbcb3bfb954",
+      "assetId": "sxsrlusd-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:sxsrlusd-sentora:f859e712e8c911a96558",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:40:33Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K08)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-05T12:40:33Z",
+          "datumAsOf": null,
+          "location": "June 2026 terms, 3.5 / 8.2 and Appendix B-1",
+          "excerpt": "Sentora does not have access to your private keys, cannot sign transactions on your behalf",
+          "assertion": "User-wallet non-custody language is not privileged-controller custody evidence for the identified curator Safe or Sky governance execution chain."
+        },
+        {
+          "url": "https://framerusercontent.com/assets/08xLa1aeFGVivwQpVj2ZG2ToEQ.pdf",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "Section 2 governance layer",
+          "excerpt": "This framework is overseen by the Risk Committee, ensuring that any changes to exposure, capital deployment, or controls follow a governed and disciplined path.",
+          "assertion": "Names general risk governance, not custody or beneficial humans for the exact RLUSD curator Safe."
+        },
+        {
+          "url": "https://developers.skyeco.com/protocol/governance/ovreview/",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": null,
+          "location": "Governance Components",
+          "excerpt": "The Governance Module has 3 core components consisting of the `Chief`, `Pause` and `Spell` contracts.",
+          "assertion": "Describes on-chain governance execution, not key custody/human independence of voting and execution participants."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/research/articles/how-human-coordination-failures-are-creating-defi-s-next-systemic-crisis",
+        "https://resources.vaults.sentora.com/llms.txt",
+        "https://resources.vaults.sentora.com/vault-details-and-risk-reports/vault-risk-reports.md",
+        "https://framerusercontent.com/assets/08xLa1aeFGVivwQpVj2ZG2ToEQ.pdf",
+        "https://resources.vaults.sentora.com/vault-details-and-risk-reports/vault-specifications-strategy-deposit-flow-and-risk-profile.md",
+        "https://developers.skyeco.com/protocol/governance/ovreview/",
+        "https://vote.sky.money/delegates",
+        "https://app.morpho.org/ethereum/vault/0xfc8c624b6080a0a780583799f2a862de936f6e22",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x929d9a1435662357f54adcf64dcee4d6b867a6f9"
+      ],
+      "rationale": "For the exact Sky-governed owner execution chain and curator Safe 0xff070333654aae76a0a77465e4f0fd101c57c03f, Sentora\u2019s full risk report/docs, Sky governance/delegate surfaces and exact contract/vault evidence do not name operational key custody, independent beneficial signing humans or transaction approval policy. Risk-committee and delegated-voting descriptions do not prove independent humans or MPC/HSM safeguards. Searches of issuer/provider and exact-address disclosures found no controller-bound attestation."
+    },
+    {
+      "id": "uw-brsrv-blackrock-6f621f1a6d361329",
+      "assetId": "brsrv-blackrock",
+      "scope": {
+        "componentKey": "control:mint-meta:brsrv-blackrock:287858f810434b36d107",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:40:33Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K08)",
+      "sources": [
+        {
+          "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Use of the Blockchain, printed pages 4\u20135",
+          "excerpt": "These smart contracts are designed, deployed, and maintained by the Transfer Agent.",
+          "assertion": "Names Securitize\u2019s operational responsibility, not key custody or human independence of the four identified Ethereum ISSUER proxy authorities."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf",
+        "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle-onchain-shares",
+        "https://www.blackrock.com/cash/en-us/press-release-t3",
+        "https://securitize.io/learn/press/blackrock-expands-tokenized-cash-bstbl-brsrv",
+        "https://investors.securitize.io/news/news-details/2026/BlackRock-Expands-Tokenized-Cash-Platform-with-BSTBLOnChainShares-and-BRSRV/default.aspx",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xc4ecf0307ff0c45c0546e0debedbbd0e47ac3354"
+      ],
+      "rationale": "BRSRV prospectus, fund documentation/reporting, BlackRock and Securitize issuer disclosures, regulatory/transfer-agent descriptions and exact Ethereum authority contract research do not name custody technology, beneficial human independence or signing approval policy for the four Ethereum ISSUER proxy authorities. Investor wallet custody and Securitize Markets securities custody are different roles. This C covers only keyCustody; independent mint/upgrade/upstream authorization and incident unknowns remain unchanged."
+    },
+    {
+      "id": "uw-zarsc-supercoin-4d809eabedda83b6",
+      "assetId": "zarsc-supercoin",
+      "scope": {
+        "componentKey": "control:mint-meta:zarsc-supercoin:03350eb1bdf3a5a6f213",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:40:33Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K08)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/6a43ab66ff171ec1aca79e9b/6a47cf673480e0371e2fc333_White_Paper_Supercoin_2026.pdf",
+          "observedAt": "2026-10-05T12:35:28Z",
+          "datumAsOf": null,
+          "location": "June 2026 v2 whitepaper, pages 9 and 12, Custody & Issuance / Mechanics",
+          "excerpt": "Mint and burn signing is performed through Fireblocks MPC custody and is tied strictly to verified fiat inflows and outflows.",
+          "assertion": "Primary whitepaper binds MPC to ZARsc issuance. General internal review/compliance language does not identify beneficial humans or the exact privileged key approval boundary."
+        },
+        {
+          "url": "https://www.supercoin.co.za/insights-news/every-zarsc-token-is-minted-held-and-redeemed-on-fireblocks-here-is-why-that-matters",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": "2026-08-17",
+          "location": "MPC issuance disclosure",
+          "excerpt": "Every ZARsc token is minted, held and redeemed through Fireblocks infrastructure.",
+          "assertion": "Establishes issuer mint-operation MPC custody, but not beneficial-human independence or the exact mint key\u2019s approval policy."
+        },
+        {
+          "url": "https://www.fireblocks.com/customers/supercoin",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": "2026-05-01",
+          "location": "Accelerating Multi-Market Stablecoin Issuance",
+          "excerpt": "Fireblocks allows Supercoin to secure issuance on Solana using industry-grade MPC wallets",
+          "assertion": "Provider names exact issuer/chain/issuance role; it does not disclose identities or approval boundaries for the identified mint signer."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.supercoin.co.za/terms-of-service",
+        "https://www.supercoin.co.za/insights-news/every-zarsc-token-is-minted-held-and-redeemed-on-fireblocks-here-is-why-that-matters",
+        "https://www.fireblocks.com/customers/supercoin",
+        "https://www.supercoin.co.za/tech",
+        "https://www.supercoin.co.za/assurance-reports",
+        "https://www.supercoin.co.za/compliance",
+        "https://cdn.prod.website-files.com/6a43ab66ff171ec1aca79e9b/6a47cf673480e0371e2fc333_White_Paper_Supercoin_2026.pdf",
+        "https://solscan.io/token/5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ"
+      ],
+      "rationale": "MPC custody for ZARsc\u2019s Solana issuance is now curated from direct issuer/provider statements. The retained, narrowed keyCustody question concerns the beneficial humans, their organizational independence and the approval-policy boundary of mint signer UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk. Issuer terms, technology/compliance/assurance pages and custody-provider story disclose no such facts. MPC\u2019s separated environments are not independent-human evidence. The compiler correctly retains unknown custody while this residual question remains."
+    },
+    {
+      "id": "uw-stbt-matrixdock-325981e9fb27ab5e",
+      "assetId": "stbt-matrixdock",
+      "scope": {
+        "componentKey": "control:mint-meta:stbt-matrixdock:a9f3138216978d847b44",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-05T12:40:33Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K08)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/Matrixdock-STBT/STBT-contracts/main/whitepaper/STBT%20White%20Paper.pdf",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": "2023-03-18",
+          "location": "Section 3.3.1 Security, page 9",
+          "excerpt": "Proposer/executor/canceller are three different EOA addresses, among which proposer and executor are Cactus custody addresses.",
+          "assertion": "Issuer names role-level custody, but no MPC/HSM binding for the proposer/executor keys."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/Matrixdock-STBT/STBT-contracts/main/whitepaper/STBT%20White%20Paper.pdf",
+          "observedAt": "2026-10-05T12:26:09Z",
+          "datumAsOf": "2023-03-18",
+          "location": "Section 3.3.1 Security, page 9",
+          "excerpt": "Canceler is one (or two) self-hosted hardware wallets, which can call the timelock controller to cancel operation that has been scheduled during the timelock period.",
+          "assertion": "Hardware-wallet custody is public but keyCustodyAttestation kinds are only mpc|hsm; historical disclosure does not certify current beneficial-human independence."
+        }
+      ]
     }
   ]
 }
