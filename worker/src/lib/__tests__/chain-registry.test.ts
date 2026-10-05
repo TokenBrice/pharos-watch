@@ -211,6 +211,21 @@ describe("buildChainRpcs", () => {
     }
   });
 
+  it("does not count state-only Alchemy census configs as registry RPC-readable", () => {
+    const chainRpcs = buildChainRpcs(ALCHEMY_KEY);
+    for (const chainId of ["berachain", "hyperevm", "ink", "linea", "scroll", "zksync", "abstract", "unichain", "worldchain", "megaeth", "stable"]) {
+      const config = chainRpcs.get(chainId);
+      expect(config, chainId).toBeDefined();
+      expect(hasRegistryRpc(config), chainId).toBe(false);
+      expect(primaryRpcUrl(config), chainId).toBeUndefined();
+      expect(registryRpcUrls(config), chainId).toEqual([]);
+      expect(logScanRpcEndpoints(config), chainId).toEqual([]);
+      expect(supplementalRpcEndpoints(config), chainId).toEqual([
+        expect.objectContaining({ operator: "alchemy", stateHistory: "archive", logsHistory: "none" }),
+      ]);
+    }
+  });
+
   it("creates supplemental-only configs for pin-only chains", () => {
     const chainRpcs = buildChainRpcs(undefined, undefined, { dwellirApiKey: DWELLIR_KEY });
 

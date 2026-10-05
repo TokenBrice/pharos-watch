@@ -352,13 +352,12 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
         candidateCoinIds: ["wtgxx-wisdomtree"],
       }),
     );
-    // The reviewed non-link only overlays the live slice once the reserve
-    // review's own date gate has opened, so the clock sits at or after
-    // `reserveReview.reviewedAt` (2026-10-03), after `compositionAsOf` (2026-08-12).
+    // W3R04 refreshed the review date without changing this non-link. Admit
+    // the current reviewed evidence rather than testing before its date gate.
     const classifications = buildReviewedReserveClassifications(
       [{ ...wtgxx, coinId: "wtgxx-wisdomtree", depType: "collateral" }],
       frax,
-      Date.parse("2026-10-03T00:00:00.000Z") / 1_000,
+      Date.parse(`${frax.reserveReview!.reviewedAt}T00:00:00.000Z`) / 1_000,
     );
     expect(classifications).toEqual([
       expect.objectContaining({

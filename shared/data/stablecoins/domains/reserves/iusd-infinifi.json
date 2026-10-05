@@ -168,6 +168,8 @@
       "name": "Aave USDC",
       "pct": 0,
       "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Aave V3 (Monad)",
       "riskFactors": [
