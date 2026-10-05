@@ -32,6 +32,16 @@
       "chain": "base",
       "address": "0xea953ea6634d55dac6697c436b1e81a679db5882",
       "decimals": 6
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x77a31a47e8a1dce18cb1772ae1c2157fa080cfde",
+      "decimals": 6
+    },
+    {
+      "chain": "mantle",
+      "address": "0x385c279445581a186a4182a5503094ebb652ec71",
+      "decimals": 6
     }
   ],
   "mechanismArchetype": "protocol-position",

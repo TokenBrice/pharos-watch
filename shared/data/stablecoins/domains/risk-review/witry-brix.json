@@ -9,7 +9,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "wiTRY uses LayerZero OFT Adapter infrastructure between Ethereum and MegaETH. Brix docs list an Ethereum wiTRY OFT Adapter and a MegaETH wiTRY OFT representation bridged through LayerZero messaging, so the route is external lock/mint rather than MegaETH canonical rollup bridging. Pinned owner reads on 2026-10-01 distinguish the immediate owners: Ethereum wiTRY is owned by contract 0x15bf1ac31c5b8c0e0960d656de02ba5593b19c47, whose owner is Brix Safe 0x7ac3bb10225a4ef27134bcf54454d545a1738662; MegaETH wiTRY is owned directly by that Safe. The former uniform-immediate-owner description is no longer current.",
+    "summary": "wiTRY uses LayerZero OFT Adapter infrastructure between canonical Ethereum shares and MegaETH representations; October 5 finalized identity and exhaustive peer histories additionally establish a live Robinhood representation omitted by the issuer deployment table. Ethereum wiTRY's intermediate owner and MegaETH's immediate Safe owner retain their prior observations below. The adapter locks equal share units; satellite rate limits and blacklist redistribution do not alter OFT amount/codec accounting. Current messaging-security/controller signing and fresh liability admission are not inferred from the additional census.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
     "confidence": "verified",
@@ -84,6 +84,36 @@
             "label": "wiTRY on Etherscan",
             "url": "https://etherscan.io/address/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee"
           }
+        ]
+      },
+      {
+        "id": "robinhood:0x15b271d9012b5820fc42b1c495b4c1e206547de5",
+        "destinationChain": "robinhood",
+        "contractAddress": "0x15b271d9012b5820fc42b1c495b4c1e206547de5",
+        "protocol": "Brix wiTRY Robinhood LayerZero representation",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At finalized Robinhood block 80715941 (hash 0xaa3181975b005b41d94e3d590510bd71923793839c057b5a00db1d254ecf92c8), eth_chainId is 4663, token() is self, decimals 18, sharedDecimals 6, EndpointV2 eid 30416, owner/delegate Brix Safe 0x7ac3bb10225a4ef27134bcf54454d545a1738662 and exact Ethereum-adapter/MegaETH reciprocal peers are pinned. LayerZero definitions @3.1.15 identify 30416 as ROBINHOOD_V2_MAINNET. Complete creation block 54288879 to finalized-pin history spans 27 contiguous million-block pages and only these two peers; both PeerSet logs have successful canonical receipt/header proofs. Nonzero supply is 945006706000000000000 raw share units, and the Ethereum source outbound nonce is 2. Whole runtime hex-text SHA256 e1a4bcd29f7d6d33bb4375fc63b6ba9e7a4e8f180aab27355c63a40f411b3c59 equals the live and Sourcify-verified MegaETH wiTRYOFT runtime. Its rate limits and blacklist recipient redistribution preserve standard OFT share amount/payload semantics. The issuer table omits Robinhood; no static materiality, complete signing/library/DVN closure or cross-chain iTRY redemption-liability equivalence is asserted.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-05",
+        "observedBlock": 80715941,
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "robinhood",
+        "controllerAddress": "0x7ac3bb10225a4ef27134bcf54454d545a1738662",
+        "failureDomainKeys": [
+          "protocol:brix-multichain",
+          "contract:robinhood:0x7ac3bb10225a4ef27134bcf54454d545a1738662"
+        ],
+        "sources": [
+          { "label": "Issuer canonical wiTRY and adapter deployments", "url": "https://docs.brix.money/resources/contracts" },
+          { "label": "Verified MegaETH wiTRYOFT source and whole runtime equal to Robinhood", "url": "https://sourcify.dev/server/v2/contract/4326/0x15b271d9012b5820fc42b1c495b4c1e206547de5?fields=all" },
+          { "label": "LayerZero primary Robinhood EID declaration", "url": "https://unpkg.com/@layerzerolabs/lz-definitions@3.1.15/dist/index.d.ts" },
+          { "label": "Robinhood finalized identity and exhaustive peer-history RPC", "url": "https://rpc.mainnet.chain.robinhood.com" }
         ]
       }
     ]
