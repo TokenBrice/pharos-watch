@@ -320,6 +320,20 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-05-24"),
     settlementModel: "days",
+    v9RouteReviewTerms: {
+      businessDayTerms: {
+        businessDays: 3, calendarId: "hong-kong-banking",
+        cutoff: { time: "08:00", timezone: "Asia/Hong_Kong" },
+        assurance: "target", conditional: true,
+        conditions: ["Completed KYC/KYB and account settings", "Universal redemption timing is a typically/up-to operational statement, not a binding guarantee"],
+        startEvent: "FUSD-paid universal redemption order; requests after 08:00 Hong Kong roll to the next business day",
+      },
+      reviewedAt: "2026-10-05",
+      docs: [
+        sourceRef("FinChain universal redemption", "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/redeem.md", ["settlement"]),
+        sourceRef("FinChain Hong Kong cutoff", "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/cut-off-time.md", ["settlement"]),
+      ],
+    },
     costModel: fixedFee(
       50,
       "FinChain's FUSD fees page states a 50 bps (0.5%) redemption fee is charged on each transaction and deducted from the FUSD redeemed. It does not cover bank or network charges and does not resolve the documented USDT payout identity",
