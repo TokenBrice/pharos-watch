@@ -40528,6 +40528,68 @@
         "https://sourcify.dev/server/v2/contract/56/0x6cb98d3d1a46941aecfa6aa9f048377b985e49df?fields=all"
       ],
       "rationale": "The exact whole-position liquidityHorizon of the sUSDC receipt backing SPUSD is not disclosed. Wrapper conversion is instant only into the same receipt; it is not final USDC realization. Lifecycle docs and the pinned current implementation restrict USDC redemption to an owner/operator and require sufficient reserves. Terms, strategy/security docs, monitoring and audit surfaces publish no contractual operator SLA or entire-book realization maximum. This C is for that undisclosed service/liquidity bound, not observable code, roles, balances or lock times."
+    },
+    {
+      "id": "uw-fusd-finchain-932d816b40694a51",
+      "assetId": "fusd-finchain",
+      "scope": {
+        "componentKey": "control:mint-meta:fusd-finchain:faff4face07e560f7df9",
+        "exposureId": null,
+        "factorKey": "economicLossScope",
+        "pillar": "control",
+        "requiredDatum": "economicLossScope",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T08:07:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (R06)",
+      "sources": [
+        {
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusdlp-token.md",
+          "observedAt": "2026-10-05T08:01:50Z",
+          "datumAsOf": null,
+          "location": "Opening definition and Solana deployment table",
+          "excerpt": "FUSDLP (FUSD Liquidity Provider) is the liquidity pool token for FUSD, representing a basket of RWA assets.",
+          "assertion": "The issuer discloses a separate LP product and lists mint 51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q; it does not identify which legal liability/loss perimeter that duplicate-listed mint carries."
+        },
+        {
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token.md",
+          "observedAt": "2026-10-05T08:01:50Z",
+          "datumAsOf": null,
+          "location": "Solana SPL row in FUSD deployment table",
+          "excerpt": "51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q",
+          "assertion": "The FUSD table assigns the same mint to FUSD. Duplicate issuer attribution is not an authoritative resolution of LP versus stablecoin liability reach."
+        },
+        {
+          "url": "https://api.mainnet-beta.solana.com",
+          "observedAt": "2026-10-05T08:03:46Z",
+          "datumAsOf": "2026-10-05",
+          "location": "Single finalized getMultipleAccounts context slot 453519477; metadata account G5gRiKMa56BuSNHr7WBgcVxdquMGGWioSrZrrMzTnZ6j",
+          "excerpt": "FinChain Dollar LP",
+          "assertion": "Decoded Metaplex strings remain FinChain Dollar LP and FUSDLP. Parsed token authority is the initialized 1-of-3 multisig. Executable authority is observable; canonical issuer-liability identity is not established by those bytes."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.finchain.global/terms-of-service",
+        "https://www.finchain.global/",
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token.md",
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/fusdlp-token.md",
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/structuring.md",
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/transparency.md",
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/risks/smart-contract-risks.md",
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/bridge.md",
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/faq.md",
+        "https://www.bma.bm/regulated-entities",
+        "https://fusd.finchain.global/",
+        "https://finchain.gitbook.io/finchain-docs/llms.txt",
+        "https://finchain.gitbook.io/finchain-docs/fusd/fusdlp-token.md",
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/mint.md",
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/redeem.md",
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/add-fusd-in-wallet.md",
+        "https://api.mainnet-beta.solana.com"
+      ],
+      "rationale": "D-24 C: the undisclosed datum is the issuer claim/loss perimeter of the duplicate-listed Solana mint, not its observable quorum or mint permissions. The issuer docs, LP conversion description, website, legal terms, transparency and contract observations disclose no authoritative canonical-FUSD versus FUSDLP liability mapping. Fresh single-slot mint/multisig/metadata reads retain the conflict. Keep economicLossScope unknown and retain adverse 1-of-3 exposure; never substitute global-claim, deployment or access-only."
     }
   ]
 }
