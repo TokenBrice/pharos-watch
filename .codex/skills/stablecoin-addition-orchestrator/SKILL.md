@@ -10,6 +10,9 @@ Read `docs/editorial-style.md` before writing and the current version from `shar
 
 `docs/process/adding-a-stablecoin.md` is the workflow and completion contract. This skill supplies prerequisite checks, generic metadata research, and specialist routing; it does not restate the phases.
 
+Use `npm run research:dwellir-rpc --` for supplemental pinned on-chain evidence reads; see `docs/process/agent-artifacts.md#pinned-on-chain-evidence`.
+Cite its provenance record (keyless URL, block, timestamp); never cite `latest` reads as evidence.
+
 ## Prerequisites
 
 1. Route the planned files and classify the asset as active or pre-launch under [Phase 0](../../../docs/process/adding-a-stablecoin.md#phase-0---decide-what-you-are-adding).

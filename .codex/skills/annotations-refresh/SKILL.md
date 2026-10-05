@@ -10,6 +10,9 @@ Read `docs/editorial-style.md`; its `technical-evidence` register governs prose.
 
 `npm run candidates:annotations` writes machine-found events to ignored `agents/annotation-candidates.{md,json}`. Editorially classify each row as promote, drop, or defer; never auto-publish a producer signal.
 
+Use `npm run research:dwellir-rpc --` for supplemental pinned on-chain evidence reads; see `docs/process/agent-artifacts.md#pinned-on-chain-evidence`.
+Cite its provenance record (keyless URL, block, timestamp); never cite `latest` reads as evidence.
+
 ## Recover The Backlog
 
 Scheduled runs retain full immutable `agent-maintenance-candidates-<run-id>-<attempt>` artifacts for 90 days, covering monthly review plus a missed monthly review. The issue contains excerpts and a download link, not the complete backlog. Before a sweep, download all retained runs since the last handoff (include failed runs with partial artifacts). From the repository root, with GitHub read access:

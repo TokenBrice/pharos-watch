@@ -10,6 +10,9 @@ description: Use when curating, refreshing, expiring, calibrating, or equivalenc
 Route V9 curation and score-affecting refreshes through reviewed evidence, replay, and fail-closed publication gates.
 Use owner documents for semantics; this skill coordinates queues, comparisons, artifacts, and handoff evidence.
 
+Use `npm run research:dwellir-rpc --` for supplemental pinned on-chain evidence reads; see `docs/process/agent-artifacts.md#pinned-on-chain-evidence`.
+Cite its provenance record (keyless URL, block, timestamp); never cite `latest` reads as evidence.
+
 ## Read first
 
 - `shared/data/safety-score-v9/AGENTS.md`

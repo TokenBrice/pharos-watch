@@ -10,6 +10,9 @@ Read `docs/editorial-style.md` before writing; its `technical-evidence` register
 
 Maintain `shared/data/funding/donations.json` for the `pharos-watch.eth` Safe at `0x5d698362edb8aea1c2b2483096bdee3265d860db` on Ethereum, Base, Optimism, Arbitrum, Polygon, and Gnosis. Never edit `shared/data/funding/costs.json` or historical donation rows without explicit approval. When an approved correction leaves an address with less than `$10` in qualifying stablecoin donations, the operator must also deactivate the `donor` API key issued to that address (`docs/api-reference-admin.md`); eligibility is checked only at claim time, so the ledger edit revokes nothing by itself. Preserve its claim row to prevent reissuance. Later Safety Score changes alone do not revoke already-issued keys.
 
+Use `npm run research:dwellir-rpc --` for supplemental pinned on-chain evidence reads; see `docs/process/agent-artifacts.md#pinned-on-chain-evidence`.
+Cite its provenance record (keyless URL, block, timestamp); never cite `latest` reads as evidence.
+
 ## Safety And Inputs
 
 - Check `ALCHEMY_API_KEY`, `ETHERSCAN_API_KEY`, and `COINGECKO_API_KEY` by name in the process environment, ignored root `.env.local`, and documented provider source. Never print, copy, execute, or place secrets in URLs/process arguments; use request headers or stdin.

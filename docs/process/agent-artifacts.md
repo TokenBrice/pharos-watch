@@ -79,6 +79,36 @@ Return: status, changed files, diff/LOC delta, verification output, blocker, nex
 - Next action and owner: <one sentence>.
 ```
 
+## Pinned On-Chain Evidence
+
+Use `npm run research:dwellir-rpc --` (or `node scripts/maintenance/dwellir-rpc.mjs`) for supplemental Dwellir evidence reads. The helper resolves Pharos chain IDs through `shared/lib/dwellir-chains.ts` and `shared/lib/dwellir-native-endpoints.ts`; it does not change runtime provider order or promote Dwellir ahead of incumbents. Keep generated evidence in ignored `agents/`.
+
+Set **`DWELLIR_API_KEY`** in the process environment or repo-root `.env.local` (environment wins). The helper parses the file without executing it, sends the key only in `X-Api-Key` to registered Dwellir HTTPS hosts, rejects redirects, and never emits the credential or a keyed endpoint URL. It does not recognize alternate credential spellings.
+
+```bash
+npm run research:dwellir-rpc -- --chain ethereum --method eth_call \
+  --params '[{"to":"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48","data":"0x18160ddd"}]' \
+  --block 24000000 --out agents/usdc-supply-evidence.json
+
+npm run research:dwellir-rpc -- --chain ethereum --method eth_getLogs \
+  --params '[{"address":"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48","fromBlock":"0x16e3600","toBlock":"0x16e39e8"}]' \
+  --block 24001000 --out agents/usdc-log-evidence.json
+```
+
+Every read requires `--block`. EVM state methods accept a decimal/hex number or a 32-byte hash; existing parameter pins must match and symbolic tags such as `latest` are rejected, not silently replaced. Hash pins resolve to a numeric state-call tag with header-hash validation. EVM block-header reads use the same pin. Log filters require explicit numeric `fromBlock`/`toBlock` (the end must match `--block`) or matching `blockHash`. Inclusive ranges split into at most 500 blocks per request, retaining chunk/provider order. Dwellir also caps log results per call: a `-32602` error containing `exceeds max results` splits the affected chunk again, using a valid suggested range upper bound or otherwise bisecting. Subchunks recurse down to a single block; if that block still exceeds the cap, `reason: "result-cap"` withholds the entire result. Split attempts and successful/error subchunks remain in the diagnostics. Any other failed chunk likewise withholds all results; completed chunk counts are not complete evidence.
+
+`--method batch --params '[{"method":"eth_getBalance","params":["0x..."]},...]'` accepts 1–100 EVM non-log reads sharing one pin. Requests split into ten-member batches, match responses by ID, and retain input order; an error in any member withholds all results. Each member records its own empty/ok state. All network requests, including result-cap subchunks, are serialized with at least 100 ms spacing per response member (10 responses/second). Only result-cap subdivision retries automatically; other failures are not retried or hidden by provider fallback.
+
+For Aptos/Movement, use `--method 'GET /accounts/<address>/resource/<type>' --params '{}' --block <ledger_version>`; other ledger-pinnable account/module/resource GET paths are supported. `--block` means **ledger version**, not block height, and a supplied `ledger_version` must match. The helper looks up the containing block for height/hash/timestamp provenance. Pruned versions fail closed. For Starknet, use `--method starknet_call --params '{"request":{"contract_address":"0x...","entry_point_selector":"0x...","calldata":[]}}' --block <number>`; a supplied numeric `block_id.block_number` must match.
+
+TRON `triggerconstantcontract` is recognized but returns `state: "error"` / `reason: "unsupported-pinned-state"` without sending a state read. Its [HTTP API](https://developers.tron.network/reference/triggerconstantcontract) simulates current/solidified state, not a chosen historical block; even TRON's [numeric/hash JSON-RPC call objects](https://developers.tron.network/reference/eth_call) execute latest state. A pin-capable provider API is the missing prerequisite; attaching a nearby header would fabricate provenance.
+
+The JSON record contains chain, keyless endpoint, effective method/params, requested pin, block number/hash/UTC timestamp, result, and `observedAt`; Move adds `ledgerVersion` and the keyless request URL, logs add range/start-header/chunk diagnostics. Headers are read before and after results; changed headers withhold evidence. Number/version fields use decimal strings to preserve integer precision. Top-level `state` is `ok`, `empty`, or `error`; non-ok records name a machine-readable `reason`, while log chunk diagnostics may also use `state: "split"` for a subdivided result-cap attempt. JSON-RPC errors retain the provider's code and message (with credential redaction) so curators can see the cause. Empty logs are **not proof of absence**, especially on hosts with incomplete historical log coverage. Failed reads have `result: null`, not a synthetic zero or empty list.
+
+Cite the provenance record's keyless URL, block/hash, block timestamp, and observation time; never cite a `latest` read as evidence. A pin identifies what was read, not an independent provider-parity proof. Usage errors exit 2, runtime failures exit 1, help exits 0; optional `--out` writes the same JSON emitted on stdout.
+
+If `--out` cannot be written, stdout instead reports `state: "error"` / `reason: "output-write-failed"` with `result: null` and exit 1; it never reports a successfully persisted evidence record.
+
 ## Agent Skills
 
 Project-local skill directories should contain Pharos-specific workflows only. Keep generic design, browser, vendor, or personal workflow skills in the user's global agent config instead of this repository.
