@@ -206,6 +206,8 @@ describe("complete independent-liability censuses", () => {
     row.provenance!.checkedAtSec = CLOCK;
     row.provenance!.heads[1].endpointOrigin = row.provenance!.heads[0].endpointOrigin;
     expect(packet("sfrxusd-frax", generation)).toBeNull();
+  });
+
   it("reads Nibiru's exact mainnet liability at the historical pin and retains authentic zero supply", async () => {
     const dependencies = censusDependencies();
     let nibiruPin: number | "latest" | undefined;

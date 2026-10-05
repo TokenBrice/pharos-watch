@@ -14,7 +14,6 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { REVIEWED_ECONOMIC_SUPPLY_PLANS, REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE, reviewedEconomicDeploymentAttributionValidationError } from "./supply-attribution-contract";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
-import { REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE } from "./supply-attribution-contract";
 
 export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY =
   "safety-score-v9:transfer-materiality-generation:v1";
