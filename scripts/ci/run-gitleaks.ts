@@ -284,6 +284,16 @@ export function runGitleaksConfigSelfTest(
       ["TN3cfcFhLrdNZhMdHZ", "VZ4z2XFWb7uB9CXg"].join(""),
       ["7bxM8cRFZpzonzZtzmrcW", "HNX1dijrEVU4VkjjtVyBmqE"].join(""),
     ];
+    const dlmmInputMints = [
+      ["JuprjznTrTSp2UFa3ZBUF", "gwdAmtZCq4MQCwysN55USD"].join(""),
+      ["EPjFWdd5AufqSSqeM2qN1", "xzybapC8G4wEGGkZwyTDt1v"].join(""),
+      ["Ex5DaKYMCN6QWFA4n67Tm", "MwsH8MJV68RX6YXTmVM532C"].join(""),
+      ["3uZLfBgY9XaLXG7C2DDdV", "jQWgS9x9kEb9VLpfe4yED4P"].join(""),
+      ["6FrrzDk5mQARGc1TDYoyV", "nSyRdds1t4PbtohCD6p3tgG"].join(""),
+      ["GArhnnDj3GYhmQeApKVXa", "Rv4TQFwhPcs3SNF6FXsTeXq"].join(""),
+      ["USDH1SM1ojwWUga67PGrg", "FWUHibbjqMvuMaDkRJTgkX"].join(""),
+      ["A1KLoBrKBde8Ty9qtNQUt", "q3C2ortoC3u7twggz7sEto6"].join(""),
+    ];
     const uniXautPair = [
       "UNI0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
       "XAUT0x68749665ff8d2d112fa859aa293f07a622782f38",
@@ -342,6 +352,33 @@ export function runGitleaksConfigSelfTest(
         path: evidenceGapPath,
         value: { url: `https://files.gitbook.com/a.pdf?alt=media&token=${uuid}` },
       })),
+      {
+        path: evidenceGapPath,
+        value: { url: `https://files.gitbook.com/a.pdf?alt=media&token=${["168abe3d-0650-454c", "-bfa5-592b7c08ad83"].join("")}` },
+      },
+      ...[
+        ["58c911b9-1ab7-495c", "-97ba-d379fe9c4e5e"].join(""),
+        ["9bfe7105-c648-406b", "-b51c-b9c4431bc335"].join(""),
+      ].map((uuid) => ({
+        path: "shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit.ts",
+        value: { url: `https://3475141875-files.gitbook.io/a.pdf?alt=media&token=${uuid}` },
+      })),
+      ...dlmmInputMints.map((mint) => ({
+        path: "worker/src/cron/dex-liquidity/__tests__/fixtures/meteora-dlmm-pinned.json",
+        value: { tokenMintIn: mint },
+      })),
+      ...["raydium-wave4-simulation", "solana-clmm-wave4-pinned"].map((fixture) => ({
+        path: `worker/src/cron/dex-liquidity/__tests__/fixtures/${fixture}.json`,
+        value: { tokenMintIn: dlmmInputMints[1] },
+      })),
+      {
+        path: "shared/data/stablecoins/domains/risk-review/feusd-felix.json",
+        value: { coreTokenId: ["0x88102bea0bbad5f3", "01f6e9e4dacdf979"].join("") },
+      },
+      {
+        path: "shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json",
+        value: { description: `Token runtime keccak256=${["0x511f4a291580f38c1482a112c65ac6fcc", "455169f9739e90e68713b41958e5d22"].join("")}; wrapper runtime unchanged.` },
+      },
       ...researchGldtMatches.map((match) => ({
         path: evidenceGapPath,
         value: { id: `uw-${match}` },
