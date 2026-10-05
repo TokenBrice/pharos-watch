@@ -290,12 +290,12 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Issuer registry and pinned RPC reads identify nOPAL on Arc, but native-versus-representation scope and mint/bridge control ownership are not settled. Proxy implementation and owner differ from legacy native BoringVault deployments.",
+        "reviewNote": "At Arc block 24299495, nOPAL is an EIP-1967 proxy with implementation 0x28206c5694f6dc228ef040990aab10e30bdf8758 and ProxyAdmin 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2. Token and ProxyAdmin ownership bind to the current 3-of-6 Safe. Owner-authorized zero-asset issuance, peer changes and immediate upgrades are proven by read-only execution. Complete native-versus-representation liability accounting, current peers/DVNs and incident-history closure remain unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "arc",
         "controllerAddress": "0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
-        "observedAt": "2026-10-01",
-        "observedBlock": 23673871,
+        "observedAt": "2026-10-04",
+        "observedBlock": 24299495,
         "sources": [
           {
             "label": "Nest current nOPAL registry",
@@ -304,6 +304,14 @@
           {
             "label": "Nest Arc deployment directory",
             "url": "https://docs.nest.credit/developers/smart-contracts"
+          },
+          {
+            "label": "Arc official mainnet RPC discovery",
+            "url": "https://docs.arc.io/arc/references/rpc-endpoints"
+          },
+          {
+            "label": "Arc pinned ownership, Safe and authorization traces",
+            "url": "https://rpc.drpc.mainnet.arc.io"
           }
         ]
       }
@@ -436,6 +444,69 @@
           }
         ],
         "evidence": "At Avalanche block 96511209 on 2026-10-01, owner() and ProxyAdmin.owner() both resolved to Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a, and getMinDelay() returned 172800 seconds. Correct EIP-1967 implementation and admin slots retained 0x03ff1b3d6c973b9de3f7916b8585a4065c53bb34 and 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2. Calls from the controller to setPeer and upgradeAndCall succeeded in read-only simulation, while an unrelated caller was rejected. These reads do not prove effective timelock enforcement or complete route configuration."
+      },
+      {
+        "id": "nopal-arc-oft-owner",
+        "label": "nOPAL Arc share owner and proxy administrator",
+        "routeRefs": [
+          "arc:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin",
+          "peer-config",
+          "upgrade"
+        ],
+        "controllerChain": "arc",
+        "controllerAddress": "0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0xfcabe7b2410d31d9516ac27d2992f040a1b29a90",
+            "0x4e1d7121544a586b0a1c35d7e196b0dd9ba7f572",
+            "0xcef3d04f13a6c1a7614657641ab574c2d29d4cc6",
+            "0x66a0c12a7bf3dd40dda33cd43beb553d2d7fbf7f",
+            "0x98be74d3d5604904d0686eef9b4267f681f9520a",
+            "0x6d303f4e0e3406c397855551a006c8b33d4f3240"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 24299495,
+          "observedAt": "2026-10-04",
+          "source": "onchain"
+        },
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:arc:0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
+          "contract:arc:0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "endpoint() returns 0x6f475642a6e85809b1c36fa62763669b1b48dd5b. setPeer simulations succeed from the owner. This is not a complete peer/DVN census.",
+          "pausersAdminsUpgraders": "Token and ProxyAdmin owner() both return the 3-of-6 Safe. upgradeAndCall using the current implementation succeeds from that owner and rejects an unrelated caller. A debug_traceCall of enter with zero deposited assets emits a mint Transfer for 1000000 raw shares; the unrelated caller is rejected.",
+          "unsupportedReason": "Complete Arc liability/representation accounting, effective LayerZero validation configuration, authority reach and incident history remain unclosed."
+        },
+        "observedAt": "2026-10-04",
+        "observedBlock": 24299495,
+        "sources": [
+          {
+            "label": "Nest exact nOPAL deployment registry",
+            "url": "https://api.nest.credit/v1/vaults/nest-opal-vault"
+          },
+          {
+            "label": "Arc official mainnet RPC documentation",
+            "url": "https://docs.arc.io/arc/references/rpc-endpoints"
+          },
+          {
+            "label": "Arc block-pinned state and read-only mint/upgrade traces",
+            "url": "https://rpc.drpc.mainnet.arc.io"
+          }
+        ],
+        "evidence": "At Arc block 24299495 (hash 0xc911b5ae96f7a6f64d1d7782d6599bbf3c426b40d398616689824659a4d4493e), exact proxy slots, owner calls and successful read-only upgradeAndCall bind immediate implementation replacement to the 3-of-6 Safe. debug_traceCall proves owner-authorized issuance of 1000000 raw shares with zero deposited assets; no collateral gate or fixed cap is claimed. Safe v1.3.0 returned six owners, threshold 3, no enabled modules and zero guard. Fallback handler is 0x017062a1de2fe6b99be3d9d37841fed19f573804; exhaustive fallback/noninterference and incident closure are not certified."
       }
     ]
   }
