@@ -159,27 +159,31 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
         note: "This config covers only UsdcVault redeem into USDC through sUSDS redemption and the PSM. The alternate exit() payout in sUSDS is not registered or conflated with this endpoint; current PSM fees, enablement and USDC liquidity must be measured.",
       },
     ],
-    ({ id: _id, outputAsset, sourceUrl, note }) => defineStablecoinRedeemConfig({
-      capacityModel: { kind: "unquantified" },
-      outputAssets: [outputAsset],
-      executionModel: "rules-based-nav",
-      routeExitCorrelation: "wrapper-to-parent-dependency",
-      costModel: documentedVariableFee(
-        "Pinned convertToAssets/previewRedeem and the actual synchronous underlying receipt quantify the withdrawal haircut; no static fee or cost ceiling is assumed. Network gas is excluded as for exact DEX routes.",
-        "formula",
-      ),
-      reviewedAt: "2026-10-05",
-      v9RouteReviewTerms: {
-        settlementModel: "atomic",
-        settlementDelaySec: 0,
-        scoringDisposition: "bounded-terms-gap",
-        missingScoringFields: ["capacity", "cost"],
-        rationale: "Source-confirmed synchronous underlying redemption is a real route, but only a fresh admitted execution certificate quantifies same-notional capacity and cost.",
+    ({ id: _id, outputAsset, sourceUrl, note }) => {
+      const docs = [sourceRef("Reviewed synchronous underlying redemption implementation", sourceUrl, ["route", "access", "settlement", "fees", "capacity"])];
+      return defineStablecoinRedeemConfig({
+        capacityModel: { kind: "unquantified" },
+        outputAssets: [outputAsset],
+        executionModel: "rules-based-nav",
+        routeExitCorrelation: "wrapper-to-parent-dependency",
+        costModel: documentedVariableFee(
+          "Pinned convertToAssets/previewRedeem and the actual synchronous underlying receipt quantify the withdrawal haircut; no static fee or cost ceiling is assumed. Network gas is excluded as for exact DEX routes.",
+          "formula",
+        ),
         reviewedAt: "2026-10-05",
-      },
-      docs: [sourceRef("Reviewed synchronous underlying redemption implementation", sourceUrl, ["route", "access", "settlement", "fees", "capacity"])],
-      notes: [note, "Without a certified execution observation, immediate, scoring and eventual capacity remain null; neither token supply, an idle balance nor an absent observation is substituted for full or zero capacity."],
-    }),
+        v9RouteReviewTerms: {
+          settlementModel: "atomic",
+          settlementDelaySec: 0,
+          scoringDisposition: "bounded-terms-gap",
+          missingScoringFields: ["capacity", "cost"],
+          rationale: "Source-confirmed synchronous underlying redemption is a real route, but only a fresh admitted execution certificate quantifies same-notional capacity and cost.",
+          reviewedAt: "2026-10-05",
+          docs,
+        },
+        docs,
+        notes: [note, "Without a certified execution observation, immediate, scoring and eventual capacity remain null; neither token supply, an idle balance nor an absent observation is substituted for full or zero capacity."],
+      });
+    },
   ),
   "onyc-onre": defineStablecoinRedeemConfig({
     outputAssets: ["usdg-paxos"],

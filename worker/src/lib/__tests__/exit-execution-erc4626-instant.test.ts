@@ -7,6 +7,7 @@ import { observeReviewedExitExecutionRoutes } from "../exit-execution/runtime";
 import { selectV9ExitStressRequest, resolveV9ExitCapacityAtRequest } from "@shared/lib/safety-score-v9/exit";
 import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { getRedemptionBackstopConfig, validateRedemptionOutputIdentity } from "@shared/lib/redemption-backstops";
+import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
 import { resolveCapacityBasis, resolveRedemptionCapacity } from "../redemption-backstop/capacity";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import type { StablecoinsCacheLoadOk } from "../stablecoins-cache";
@@ -155,6 +156,7 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
   });
   it.each(["steakusdg-steakhouse", "krusdc-keyrock", "steakeurcv-steakhouse", "susdc-spark-v1"])("keeps %s scheduled baseline capacity unquantified without an execution receipt", async (assetId) => {
     const config = getRedemptionBackstopConfig(assetId)!;
+    expect(RedemptionBackstopConfigSchema.safeParse(config).success).toBe(true);
     const db = { prepare() { throw new Error("unquantified baseline must not read an invented capacity"); } } as unknown as D1Database;
     const capacity = await resolveRedemptionCapacity(db, assetId, config.capacityModel, 1_000_000_000, CLOCK);
     expect(resolveCapacityBasis(config.routeFamily, config.capacityModel, capacity.capacityConfidence)).toBeUndefined();

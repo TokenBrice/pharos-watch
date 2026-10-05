@@ -44,6 +44,30 @@ const SCOREABLE_REDEMPTION_FRESHNESS_KINDS = new Set<RedemptionLiveFreshnessKind
 export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPolicyEntry[] = [
   {
     kind: "unused-live-redemption-telemetry",
+    stablecoinId: "krusdc-keyrock",
+    reason:
+      "Arc VaultV2 reserve-derived withdrawal liquidity is not a hash-bound same-notional redeem receipt. The reviewed USDC route deliberately uses an unquantified baseline; only its separately admitted execution observations quantify capacity, and missing or failed execution reads must not fall back to reserve telemetry.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-10-05",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "steakusdg-steakhouse",
+    reason:
+      "Robinhood VaultV2 reserve-derived withdrawal liquidity is not a hash-bound same-notional redeem receipt. The reviewed USDG route deliberately uses an unquantified baseline; only its separately admitted execution observations quantify capacity, without substituting idle assets or supply for an actual withdrawal.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-10-05",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "steakeurcv-steakhouse",
+    reason:
+      "EURCV-denominated VaultV2 reserve telemetry does not establish same-notional executable USD capacity. The unquantified route requires both a real redeem receipt and fresh admissible EURCV valuation; neither nominal EURCV, USD parity nor reserve telemetry substitutes for those execution inputs.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-10-05",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
     stablecoinId: "usdr-rise",
     reason:
       "The M-wrapper producer measures native-M backing and a sampled approved-swapper cohort, not executable wM output through the reviewed same-chain holder route. Native-M telemetry must not be attributed to the configured USDR-to-wM route; exact wM output capacity requires separate producer evidence.",

@@ -15,6 +15,7 @@ import {
   liveSnapshot,
 } from "./redemption-backstop-sources.test-support";
 import { readRedemptionBackstopLiveMetadata } from "../redemption-backstop/live-metadata";
+import { makeAsset } from "../../test-helpers/__shared/fixtures";
 
 const { getReserveSyncStateMock, getLatestSuccessfulReserveSnapshotMetadataMock } = vi.hoisted(() => ({
   getReserveSyncStateMock: vi.fn(),
@@ -88,6 +89,7 @@ describe("buildRedemptionBackstopEntry", () => {
         feeBps: 0, feeConfidence: "fixed" } },
   ] as const;
 
+  // These fixtures cover terms/reserve telemetry; exact-execution reviews are explicit opt-ins.
   const buildEntry = (
     stablecoinId: string,
     config: RedemptionConfig,
@@ -101,7 +103,7 @@ describe("buildRedemptionBackstopEntry", () => {
     supplyUsd,
     dexScore,
     nowSec: now,
-    options,
+    options: { exitExecutionReviews: [], ...options },
   });
 
   beforeAll(async () => {
@@ -259,7 +261,6 @@ describe("buildRedemptionBackstopEntry", () => {
   it.each([
     "usdfr-forest-road",
     "usdx-axis",
-    "susdc-spark-v1",
     "mantrausd-mantra",
   ])("withholds the %s entry when no honest exact-route capacity model exists", async (id) => {
     const entry = await resolveRedemptionBackstopEntry(mockD1Strict([]), { id } as StablecoinData, null, now);
@@ -269,6 +270,28 @@ describe("buildRedemptionBackstopEntry", () => {
       disposition: "defer",
       reasonCode: "capacity-unpublished",
     });
+  });
+
+  it("publishes the reviewed legacy Spark USDC route with unquantified capacity when no execution receipt exists", async () => {
+    const asset = makeAsset({ id: "susdc-spark-v1", circulating: { peggedUSD: 100_000_000 } });
+    const entry = await resolveRedemptionBackstopEntry(mockD1Strict([]), asset, null, now, {
+      exitExecutionReviews: [],
+    });
+
+    expect(entry).toMatchObject({
+      routeFamily: "stablecoin-redeem",
+      outputAssetType: "stable-single",
+      resolutionState: "missing-capacity",
+      immediateCapacityUsd: null,
+      immediateCapacityRatio: null,
+      capacityScore: null,
+      score: null,
+      eventualRedeemabilityScore: null,
+    });
+    expect(entry?.capacityProfile).toMatchObject({
+      immediateUsd: null, scoringUsd: null, eventualUsd: null, scoringHorizon: "unknown",
+    });
+    expect(entry?.capacityProfile?.exitRouteObservations ?? []).toEqual([]);
   });
 
   it("resolves supply-full capacity with valid supply", async () => {
