@@ -176,6 +176,9 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   // VeChainThor's official EVM proxy uses mainnet chain ID 100009. No pool
   // provider is registered here; canonical identity alone proves no token route.
   vechain:        { name: "VeChain",          explorerUrl: "https://explore.vechain.org",                   evmChainId: 100009,   type: "evm",   logoPath: "/chains/vechain.png"          },
+  // exSat mainnet identity re-read from its official RPC at block 62726859.
+  // Identity does not establish token-pool provider coverage or a local logo.
+  exsat:          { name: "exSat",            explorerUrl: "https://scan.exsat.network",                    evmChainId: 7200,     type: "evm",   logoPath: ""                            },
 };
 
 /**
