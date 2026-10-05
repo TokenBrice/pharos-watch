@@ -386,6 +386,7 @@
         {
           "controlRef": "ethereum:0x314160525f5ea6677d3908112ff9bd885f3bb78e",
           "question": "Issuer key custody and signer safeguards are undisclosed for this identified Ethereum issuer admin, earner manager and token ProxyAdmin owner. What MPC/HSM controls, beneficial signing authority and signing policy govern its mint-capable key?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement Refine03",
           "sources": [{"label": "Exact Ethereum native token and issuer roles", "url": "https://etherscan.io/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"}, {"label": "PYUSDx compliance controls", "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"}]
@@ -393,6 +394,7 @@
         {
           "controlRef": "arbitrum:0x314160525f5ea6677d3908112ff9bd885f3bb78e",
           "question": "Issuer key custody and signer safeguards are undisclosed for this identified Arbitrum issuer admin, earner manager and token ProxyAdmin owner. What MPC/HSM controls, beneficial signing authority and signing policy govern its mint-capable key?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement Refine03",
           "sources": [{"label": "Exact Arbitrum native token and issuer roles", "url": "https://arbiscan.io/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"}, {"label": "PYUSDx compliance controls", "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"}]
@@ -400,6 +402,7 @@
         {
           "controlRef": "monad:0x314160525f5ea6677d3908112ff9bd885f3bb78e",
           "question": "Issuer key custody and signer safeguards are undisclosed for this identified Monad issuer admin, earner manager and token ProxyAdmin owner. What MPC/HSM controls, beneficial signing authority and signing policy govern its mint-capable key?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement Refine03",
           "sources": [{"label": "Exact Monad native token and issuer roles", "url": "https://monadscan.com/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"}, {"label": "PYUSDx compliance controls", "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"}]
@@ -407,6 +410,7 @@
         {
           "controlRef": "base:0x314160525f5ea6677d3908112ff9bd885f3bb78e",
           "question": "Issuer key custody and signer safeguards are undisclosed for this identified Base issuer admin, earner manager and token ProxyAdmin owner. What MPC/HSM controls, beneficial signing authority and signing policy govern its mint-capable key?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement Refine03",
           "sources": [{"label": "Exact Base native token and issuer roles", "url": "https://basescan.org/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d#code"}, {"label": "PYUSDx compliance controls", "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"}]

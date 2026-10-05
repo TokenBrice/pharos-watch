@@ -578,6 +578,7 @@
         {
           "controlRef": "base:0x239d4a24efa36a8987b86184c080ace26b3a8968",
           "question": "Does Crown’s disclosed Fireblocks virtual-asset custody infrastructure protect this specific native issuance or mint-logic upgrade key, and under which MPC/HSM and approval policy? The September 18 terms name the provider but do not bind it to this address.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2VMisc02)",
           "sources": [
@@ -590,6 +591,7 @@
         {
           "controlRef": "base:0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea",
           "question": "Does Crown’s disclosed Fireblocks virtual-asset custody infrastructure protect this specific native issuance or mint-logic upgrade key, and under which MPC/HSM and approval policy? The September 18 terms name the provider but do not bind it to this address.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2VMisc02)",
           "sources": [
@@ -602,6 +604,7 @@
         {
           "controlRef": "base:0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a",
           "question": "Does Crown’s disclosed Fireblocks virtual-asset custody infrastructure protect this specific native issuance or mint-logic upgrade key, and under which MPC/HSM and approval policy? The September 18 terms name the provider but do not bind it to this address.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2VMisc02)",
           "sources": [
@@ -614,6 +617,7 @@
         {
           "controlRef": "base:0x548634f237eae194f5e20982c9819d917fe17f04",
           "question": "Does Crown’s disclosed Fireblocks virtual-asset custody infrastructure protect this specific native issuance or mint-logic upgrade key, and under which MPC/HSM and approval policy? The September 18 terms name the provider but do not bind it to this address.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2VMisc02)",
           "sources": [
@@ -626,6 +630,7 @@
         {
           "controlRef": "base:0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f",
           "question": "Does Crown’s disclosed Fireblocks virtual-asset custody infrastructure protect this specific native issuance or mint-logic upgrade key, and under which MPC/HSM and approval policy? The September 18 terms name the provider but do not bind it to this address.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2VMisc02)",
           "sources": [

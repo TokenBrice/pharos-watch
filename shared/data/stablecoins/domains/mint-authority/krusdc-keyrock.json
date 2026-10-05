@@ -247,6 +247,7 @@
         {
           "controlRef": "arc:0x3ab74ecc34760c0a81f55e0001be6068dcf1cc04",
           "question": "For this identified Keyrock Prime USDC owner parameter authority controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [
@@ -279,6 +280,7 @@
         {
           "controlRef": "arc:0x26a17b96e9ca28d84c4e78f22b83a1ccea28ad21",
           "question": "For this identified Keyrock Prime USDC curator and allocator parameter authority controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [
@@ -295,6 +297,7 @@
         {
           "controlRef": "arc:0x4795276a961845eaabd98ad2595aed3c68aab37d",
           "question": "For this identified Keyrock Prime USDC sentinel 0x4795276a961845eaabd98ad2595aed3c68aab37d controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [

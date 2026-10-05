@@ -238,6 +238,7 @@
         {
           "controlRef": "BRSRV Ethereum native issuance service surface",
           "question": "Organizational key custody and human independence for the four identified Ethereum ISSUER proxy authorities remain unestablished. This custody observation does not close their separate mint/upgrade execution and upstream-authorization unknowns, which remain aggregate unresolvedQuestions.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine04 calibration v2",
           "sources": [

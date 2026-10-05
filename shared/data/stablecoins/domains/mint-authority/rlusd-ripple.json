@@ -3474,18 +3474,21 @@
         {
           "controlRef": "xrpl:rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
           "question": "The complete weighted roster establishes a minimum cryptographic signer count, but independent human or organizational controllers are not established. Obtain a key-controller attestation before treating these addresses as independent people.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol owner rulings 2026-10-01 (RuleC01)"
         },
         {
           "controlRef": "ethereum:0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e",
           "question": "The complete weighted roster establishes a minimum cryptographic signer count, but independent human or organizational controllers are not established. Obtain a key-controller attestation before treating these addresses as independent people.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol owner rulings 2026-10-01 (RuleC01)"
         },
         {
           "controlRef": "ethereum:0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
           "question": "The complete weighted roster establishes a minimum cryptographic signer count, but independent human or organizational controllers are not established. Obtain a key-controller attestation before treating these addresses as independent people.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol owner rulings 2026-10-01 (RuleC01)"
         }

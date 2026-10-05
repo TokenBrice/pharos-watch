@@ -141,6 +141,7 @@
         {
           "controlRef": "CUMIU default administrator",
           "question": "Organizational ownership, human independence and MPC/HSM/signing policy of this identified default-admin EOA are not publicly attested; on-chain role identity and immediate mint/upgrade powers are established.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine04 calibration v2",
           "sources": [{"label": "Verified native authorization and upgrade implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"}]
@@ -148,6 +149,7 @@
         {
           "controlRef": "CUMIU second default administrator",
           "question": "Organizational ownership, human independence and MPC/HSM/signing policy of this identified second default-admin EOA are not publicly attested; its on-chain role identity is established.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine04 calibration v2",
           "sources": [{"label": "Verified native authorization and upgrade implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"}]
@@ -155,6 +157,7 @@
         {
           "controlRef": "CUMIU first delegated minter",
           "question": "Organizational ownership, human independence and MPC/HSM/signing policy of this identified delegated-minter EOA remain unattested, notwithstanding its verified native MINTER_ROLE membership.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine04 calibration v2",
           "sources": [{"label": "Verified native mint and NAV implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"}]
@@ -162,6 +165,7 @@
         {
           "controlRef": "CUMIU second delegated minter",
           "question": "Organizational ownership, human independence and MPC/HSM/signing policy of this identified second delegated-minter EOA remain unattested; source and pinned role membership establish its on-chain mint authority only.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine04 calibration v2",
           "sources": [{"label": "Verified native mint and NAV implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"}]

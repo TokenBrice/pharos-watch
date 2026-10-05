@@ -518,6 +518,7 @@
         {
           "controlRef": "ethereum:0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537",
           "question": "For this identified KPK USDC Prime owner parameter authority controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address and Safe quorum/owner inventory is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [
@@ -554,6 +555,7 @@
         {
           "controlRef": "ethereum:0xf8182e5827c06a47a985ec565a3bcd56437a97be",
           "question": "For this identified KPK USDC Prime curator parameter authority controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address and Safe quorum/owner inventory is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [
@@ -602,6 +604,7 @@
         {
           "controlRef": "ethereum:0x331d9c769185ae25233314859d53c2b9203a1204",
           "question": "For this identified KPK USDC Prime allocator 0x331d9c769185ae25233314859d53c2b9203a1204 controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [
@@ -618,6 +621,7 @@
         {
           "controlRef": "ethereum:0xaf150c6d108d0c2c96bbfc3cef9b4848b5d99440",
           "question": "For this identified KPK USDC Prime allocator 0xaf150c6d108d0c2c96bbfc3cef9b4848b5d99440 controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [
@@ -634,6 +638,7 @@
         {
           "controlRef": "ethereum:0xf0cf1e3ec6264b03241826f5b2abda17b4352a75",
           "question": "For this identified KPK USDC Prime allocator 0xf0cf1e3ec6264b03241826f5b2abda17b4352a75 controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [
@@ -650,6 +655,7 @@
         {
           "controlRef": "ethereum:0xb11fabcf8024a1961bde291a4ddd128bb3a8ae60",
           "question": "Dedicated signer-vault custody and absence of manual key access are disclosed, but exact service-operator/recovery authority is not identified. At block 26124896 the rebalancer's wildcard call-only grants reach both the immutable root VaultV2 and separate live legacy MetaMorphoV1_1 liability (reallocate). Condition payloads are not missing: all 27 prior permission reads are unchanged. A complete joint-liability authorization certificate, including mutable permission ownership and Safe delegate/fallback/reconfiguration paths, has not been established.",
+          "subject": "execution-scope",
           "reviewedAt": "2026-10-05",
           "reviewer": "R07 exact legacy-target and current permission review",
           "sources": [
@@ -675,6 +681,7 @@
         {
           "controlRef": "ethereum:0xc9efbf808c8d1e853c6671a13a06826543d3d94c",
           "question": "Dedicated signer-vault custody and absence of manual key access are disclosed, but exact service-operator/recovery authority is not identified. At block 26124896 the shutdown agent has wildcard call-only submitCap and updateWithdrawQueue grants on the separate live legacy vault, not merely cap-zero automation: cap increases are scheduled behind the legacy 259201-second timelock and queue removal can recognize loss. Joint-liability cap/queue/pending-state and permission-owner reactivation/delegate/fallback closure remains uncertified; no independent signer or irreversible shutdown is inferred.",
+          "subject": "execution-scope",
           "reviewedAt": "2026-10-05",
           "reviewer": "R07 exact legacy-target and current permission review",
           "sources": [
@@ -700,6 +707,7 @@
         {
           "controlRef": "ethereum:0x3e1c3f4bef3b61ebb497e333c540b0ae19f97935",
           "question": "Dedicated signer-vault custody and absence of manual key access are disclosed, but exact service-operator/recovery authority is not identified. The monitoring EOA demonstrably executed the exact Prime June 21 penalty mitigation through Zodiac and MultiSend. Its root submit(bytes) grant is wildcard call-only, not parameter-conditioned; setIsAllocator currently has zero selector delay, so allocator authorization can be scheduled without the advertised blanket governance delay. Complete pending-state, mutable permission-owner, Safe delegate/fallback and reactivation closure remains uncertified.",
+          "subject": "execution-scope",
           "reviewedAt": "2026-10-05",
           "reviewer": "R07 exact monitoring execution and current selector-delay review",
           "sources": [

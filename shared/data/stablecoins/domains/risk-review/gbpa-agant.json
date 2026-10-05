@@ -390,6 +390,7 @@
       {
         "controlRef": "gbpa-solana-tempo-message-validation",
         "question": "What are the Solana Store-specific receive-library/DVN and peer configurations with deployed-executable correspondence, and the complete Tempo adapter replacement/authorization and route-limit closure? The October 5 atomic Solana pin retains unchanged Store and ELF bytes, but program-specific OSEC status reports unverified with no source repository/commit. The new Tempo pin retains unchanged executable and proxy owners; exact CID retrieval still fails on Sourcify and multiple IPFS gateways.",
+        "subject": "execution-scope",
         "reviewedAt": "2026-10-05",
         "reviewer": "Unknown-resolver wave 3 (W3R05)",
         "sources": [

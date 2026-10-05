@@ -324,6 +324,7 @@
         {
           "controlRef": "bbqUSDC curator",
           "question": "Independent human control, operational key custody and signing policy of the identified bbqUSDC curator at ethereum:0x827e86072b06674a077f592a531dce4590adecdb are not publicly established; enumerated owners/threshold or a codeless EOA do not certify these safeguards.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine07 calibration v2 2026-10-03",
           "sources": [
@@ -364,6 +365,7 @@
         {
           "controlRef": "bbqUSDC supervisor owner Safe",
           "question": "Independent human control, operational key custody and signing policy of the identified bbqUSDC supervisor owner Safe at ethereum:0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd are not publicly established; enumerated owners/threshold or a codeless EOA do not certify these safeguards.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine07 calibration v2 2026-10-03",
           "sources": [

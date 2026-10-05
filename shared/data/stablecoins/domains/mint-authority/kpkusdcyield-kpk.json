@@ -506,6 +506,7 @@
         {
           "controlRef": "ethereum:0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537",
           "question": "For this identified KPK USDC Yield V2 owner parameter authority controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address and Safe quorum/owner inventory is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [
@@ -542,6 +543,7 @@
         {
           "controlRef": "ethereum:0x7e43df1c1c5a2245858b60d4655fda83704e4171",
           "question": "For this identified KPK USDC Yield V2 curator parameter authority controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address and Safe quorum/owner inventory is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [
@@ -590,6 +592,7 @@
         {
           "controlRef": "ethereum:0x331d9c769185ae25233314859d53c2b9203a1204",
           "question": "For this identified KPK USDC Yield allocator 0x331d9c769185ae25233314859d53c2b9203a1204 controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [
@@ -606,6 +609,7 @@
         {
           "controlRef": "ethereum:0xaf150c6d108d0c2c96bbfc3cef9b4848b5d99440",
           "question": "For this identified KPK USDC Yield allocator 0xaf150c6d108d0c2c96bbfc3cef9b4848b5d99440 controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [
@@ -622,6 +626,7 @@
         {
           "controlRef": "ethereum:0xf0cf1e3ec6264b03241826f5b2abda17b4352a75",
           "question": "For this identified KPK USDC Yield allocator 0xf0cf1e3ec6264b03241826f5b2abda17b4352a75 controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [
@@ -638,6 +643,7 @@
         {
           "controlRef": "ethereum:0x7a35f5dcd3faa4bd617b7d7c3cc9b9ea6353291f",
           "question": "For this identified KPK USDC Yield Zodiac MORPHO_REBALANCER_AGENT controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [
@@ -658,6 +664,7 @@
         {
           "controlRef": "ethereum:0x769605006f6feee3494c72236130067526af848f",
           "question": "For this identified KPK USDC Yield Zodiac MORPHO_SHUTDOWN_AGENT controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [
@@ -678,6 +685,7 @@
         {
           "controlRef": "ethereum:0x393d8d9c3dae91b2d0530673c57e9c7e13ff4c9a",
           "question": "For this identified KPK USDC Yield Zodiac MORPHO_MONITORING_AGENT controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [

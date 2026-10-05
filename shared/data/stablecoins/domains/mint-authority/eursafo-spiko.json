@@ -2604,6 +2604,7 @@
         {
           "controlRef": "Spiko daily-operator backend (current addresses unresolved)",
           "question": "Which principals control native EURSAFO minting on each non-Ethereum deployment, and which exact current signing addresses are covered by Dfns-managed custody or other documented key protections? Ethereum PermissionManager groups 0, 2, 9 and 10 were recovered from complete filtered event history and current reads at block 26098764. Group 10 initiates and group 9 approves the Minter's pending operations; those rosters are no longer unknown. The reach of the five other-token group-2 contracts must remain token-bound in any cross-fund capability analysis.",
+          "subject": "authority-semantics",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoEur)",
           "sources": [
