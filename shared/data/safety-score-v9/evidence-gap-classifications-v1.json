@@ -39655,6 +39655,53 @@
         "https://www.cima.ky/search-entities-cima"
       ],
       "rationale": "Full September prospectus is now recovered. Its annual token-record-maintenance confirmation, TA register, daily NAV and annual financial-statement audit are disclosed separately; none publishes a common-clock whole-supply token/register/mint-burn-to-backing reconciliation procedure and cadence. Regional fund pages, linked factsheet and Sygnum FAQ add no such procedure. Corrected chronology: first financial year ends August 2027. Preserve the locked mint sidecar's unknown reconciliation; this C describes missing financial process evidence, not an unread on-chain role."
+    },
+    {
+      "id": "uw-nect-beraborrow-07d835c70486a638",
+      "assetId": "nect-beraborrow",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:f7f9343b61974652762cc551",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:25:59Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R38)",
+      "sources": [
+        {
+          "url": "https://docs.solv.finance/llms-full.txt",
+          "observedAt": "2026-10-05T00:08:14Z",
+          "datumAsOf": null,
+          "location": "xSolvBTC / Minting, Redemption & Rebalancing; SolvBTC / Minting & Redemption",
+          "excerpt": "Processing occurs the next Monday\u2014shifts to the following business day if Monday is a holiday.",
+          "assertion": "The accessible issuer documentation describes xSolvBTC-to-SolvBTC conversion and subsequent scheduled redemption, not a maximum whole-position USD realization horizon for Beraborrow's Berachain collateral."
+        },
+        {
+          "url": "https://r.jina.ai/https://docs.solv.finance/legal/terms-of-use",
+          "observedAt": "2026-10-05T00:08:57Z",
+          "datumAsOf": "2024-07-05",
+          "location": "Terms of Use, section 1, Liquidity Risk",
+          "excerpt": "Virtual Asset may have limited liquidity which may make it difficult or impossible for you to sell or exit a position when you wish to do so.",
+          "assertion": "Recovered governing terms remove the previous legal-access blocker and expressly preserve liquidity uncertainty; they supply no exact Berachain whole-position realization maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://solv.finance/",
+        "https://docs.solv.finance/llms.txt",
+        "https://docs.solv.finance/llms-full.txt",
+        "https://docs.solv.finance/key-products/xsolvbtc/supported-blockchains",
+        "https://docs.solv.finance/key-products/xsolvbtc/xsolvbtc-asset-flow/deposit-and-withdraw-process",
+        "https://docs.solv.finance/legal/terms-of-use",
+        "https://r.jina.ai/https://docs.solv.finance/legal/terms-of-use",
+        "https://beraborrow.gitbook.io/docs/llms-full.txt",
+        "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses",
+        "https://berascan.com/address/0xe357b38f9871da3f8320e132e272d93721aa6582"
+      ],
+      "rationale": "Recovered full issuer product documentation and governing legal terms overcome the prior 403 blocker. The previously pinned exact collateral is xSolvBTC. Instant conversion produces SolvBTC, not final USD; subsequent BTC redemption follows next-Monday/holiday processing, without an assured complete realization maximum. The xSolvBTC supported-chain table also omits Berachain. No exact whole-position liquidityHorizon for this Beraborrow collateral is published in the reviewed product, legal, bridge and collateral surfaces."
     }
   ]
 }
