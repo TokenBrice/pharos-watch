@@ -1073,6 +1073,11 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
       }
       if (row.read.kind === "solana-mint" && !SOLANA_BLOCK_HASH_RE.test(observation.anchorHash)) return null;
       if (row.read.kind === "xrpl-issued-currency" && !SHA256_RE.test(observation.anchorHash)) return null;
+      if (row.read.kind === "move-fa-supply" &&
+        (!RAW_SUPPLY_RE.test(observation.anchor) || !SHA256_RE.test(observation.anchorHash) ||
+          observation.anchorHash !== observation.responseSha256)) return null;
+      if (row.read.kind === "ton-jetton-supply" &&
+        (!/^[1-9][0-9]*$/.test(observation.anchor) || !/^[A-Za-z0-9+/]{43}=$/.test(observation.anchorHash))) return null;
     }
     if (row.decimals !== null && !RAW_SUPPLY_RE.test(observation.amount)) return null;
     let value = economicDecimal(observation.amount, row.decimals);

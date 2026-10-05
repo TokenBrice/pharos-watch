@@ -16,6 +16,7 @@ import { getPublicRpcUrl } from "../public-rpc-registry";
 import { decodeEvmUint256, fetchSafetyScoreV9SolanaRpc, rewindEvmBlockHeaderToScoringClock, type SafetyScoreV9SolanaRpcFetcher } from "./supply-observation-primitives";
 import { buildReviewedEconomicDeploymentInventory, deriveReviewedEconomicDeploymentPartition, economicProviderSupplyContradictionChain, economicSupplyInputDeploymentObservation, economicSupplyInputReferencePrice, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
 import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
+import { fetchMoveFungibleAssetSupply, fetchTonJettonSupply } from "../../cron/reserve-adapters/token-supply";
 
 /** Finalized mint snapshot, case-preserved identity, pinned chronology and response hash. */
 export async function observeEconomicSolanaMint(input: {
@@ -437,6 +438,26 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
       } else if (row.read.kind === "solana-mint" && row.chainId === "solana" && row.address !== null && row.decimals !== null) {
         const result = await observeEconomicSolanaMint({ address: row.address, decimals: row.decimals, programOwner: row.read.programOwner, clockSec: input.scoringClockSec, chainRpcs: input.chainRpcs, signal: input.signal, requireExactContextSlot: true });
         if (result) observation = { id: row.deploymentKey, deploymentKey: row.deploymentKey, amount: result.amount, observedAtSec: result.observedAtSec, anchor: result.slot, anchorHash: result.blockHash, responseSha256: result.responseSha256 };
+      } else if (row.read.kind === "move-fa-supply" && ["aptos", "movement"].includes(row.chainId) && row.address !== null && row.decimals !== null) {
+        const url = input.chainRpcs.get(row.chainId)?.endpoints[0]?.url ?? getPublicRpcUrl(row.chainId);
+        if (url) {
+          const result = await fetchMoveFungibleAssetSupply(row.address, input.signal ?? new AbortController().signal, url, undefined, {
+            clockSec: input.scoringClockSec, expectedChainId: row.read.ledgerChainId,
+            identityKind: row.read.identityKind, expectedMetadataAddress: row.read.metadataAddress, expectedDecimals: row.decimals,
+          });
+          if (result?.ledgerTimestampSec !== undefined && result.metadataAddress === row.read.metadataAddress && result.responseSha256) {
+            observation = { id: row.deploymentKey, deploymentKey: row.deploymentKey, amount: result.rawSupply.toString(),
+              observedAtSec: result.ledgerTimestampSec, anchor: result.ledgerVersion,
+              anchorHash: result.responseSha256, responseSha256: result.responseSha256 };
+          }
+        }
+      } else if (row.read.kind === "ton-jetton-supply" && row.chainId === "ton" && row.address !== null && row.decimals !== null) {
+        const result = await fetchTonJettonSupply(row.address, input.signal ?? new AbortController().signal, row.read.apiUrl, {
+          clockSec: input.scoringClockSec, expectedDecimals: row.decimals,
+        });
+        if (result) observation = { id: row.deploymentKey, deploymentKey: row.deploymentKey, amount: result.rawSupply.toString(),
+          observedAtSec: result.blockTimestampSec, anchor: String(result.masterchainSeqno),
+          anchorHash: result.blockHash, responseSha256: result.responseSha256 };
       } else if (row.read.kind === "xrpl-issued-currency" && row.chainId === "xrpl") {
         const url = input.chainRpcs.get("xrpl")?.endpoints[0]?.url ?? getPublicRpcUrl("xrpl");
         if (url) {

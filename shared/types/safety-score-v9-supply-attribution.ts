@@ -32,6 +32,8 @@ const ReadSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("evm-total-supply"), safeBlockLag: z.number().int().positive() }),
   z.strictObject({ kind: z.literal("evm-balance"), safeBlockLag: z.number().int().positive(), account: z.string().regex(/^0x[0-9a-f]{40}$/) }),
   z.strictObject({ kind: z.literal("solana-mint"), programOwner: CanonicalTextSchema }),
+  z.strictObject({ kind: z.literal("move-fa-supply"), identityKind: z.enum(["metadata-address", "oft-package"]), metadataAddress: z.string().regex(/^0x[0-9a-f]{1,64}$/), ledgerChainId: z.number().int().positive() }),
+  z.strictObject({ kind: z.literal("ton-jetton-supply"), apiUrl: z.string().url().refine(url => url.startsWith("https://")) }),
   z.strictObject({ kind: z.literal("xrpl-issued-currency"), currency: CanonicalTextSchema, issuer: CanonicalTextSchema }),
   z.strictObject({ kind: z.literal("native-from-aggregate"), safeBlockLag: z.number().int().positive() }),
 ]);
@@ -45,6 +47,14 @@ const CensusRowSchema = z.strictObject({
   const expected = row.holdingKind === "native-gas" ? `${row.chainId}:native:${row.address}` : `${row.chainId}:${row.address}`;
   if (row.address === null || row.deploymentKey !== expected) ctx.addIssue({ code: "custom", message: "Holding identity must use its exact economic deployment key" });
   if ((row.amountBasis === "fixed-token-units") !== (row.decimals !== null)) ctx.addIssue({ code: "custom", message: "Only fixed token units have fixed decimals" });
+  if (row.read.kind === "move-fa-supply" &&
+    (!["aptos", "movement"].includes(row.chainId) || row.amountBasis !== "fixed-token-units" ||
+      row.decimals === null || row.decimals > 30 || !/^0x[0-9a-f]{1,64}$/.test(row.address ?? "") ||
+      row.read.ledgerChainId !== (row.chainId === "aptos" ? 1 : 126) ||
+      (row.read.identityKind === "metadata-address" && row.read.metadataAddress !== row.address))) ctx.addIssue({ code: "custom", message: "Move supply must bind exact chain, metadata identity and fixed decimals" });
+  if (row.read.kind === "ton-jetton-supply" &&
+    (row.chainId !== "ton" || row.amountBasis !== "fixed-token-units" || row.decimals === null ||
+      !/^(?:-?[0-9]+:[0-9a-f]{64}|[EU]Q[A-Za-z0-9_-]{46})$/.test(row.address ?? ""))) ctx.addIssue({ code: "custom", message: "TON supply must bind its exact jetton master and fixed decimals" });
   if (row.read.kind === "xrpl-issued-currency" &&
     (row.chainId !== "xrpl" || row.amountBasis !== "issued-currency-decimal" ||
       row.address !== `${row.read.currency}.${row.read.issuer}`)) ctx.addIssue({ code: "custom", message: "XRPL identity must bind exact currency and issuer; no fixed decimals" });
