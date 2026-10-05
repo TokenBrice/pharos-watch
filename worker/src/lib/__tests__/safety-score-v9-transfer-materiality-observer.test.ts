@@ -98,7 +98,9 @@ describe("complete independent-liability censuses", () => {
 
   it("keeps new Alchemy census readers state-only and outside log-scan inventories", () => {
     const configured = input().chainRpcs;
-    for (const chain of ["berachain", "hyperevm", "ink", "linea", "scroll", "zksync", "abstract", "unichain", "worldchain", "megaeth", "stable"]) {
+    // Berachain and Ink Alchemy endpoints were promoted to reviewed full-log registry
+    // readers for CCIP history (wave-4 P2); the remaining census readers stay state-only.
+    for (const chain of ["hyperevm", "linea", "scroll", "zksync", "abstract", "unichain", "worldchain", "megaeth", "stable"]) {
       expect(configured.get(chain)?.endpoints.find(endpoint => endpoint.operator === "alchemy"), chain)
         .toMatchObject({ position: "supplemental", stateHistory: "archive", logsHistory: "none" });
       expect(logScanRpcEndpoints(configured.get(chain)), chain).toEqual([]);
