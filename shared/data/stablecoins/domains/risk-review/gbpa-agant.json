@@ -361,9 +361,10 @@
         "sources": [
           {"label": "Agant complete native deployment registry", "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"},
           {"label": "Exact Solana OFT Store", "url": "https://explorer.solana.com/address/2Z1jwnD78v1q4Nt6suH5YkgskqRgNySdbPbdYWcYxug4"},
-          {"label": "Exact Tempo transfer adapter", "url": "https://explore.tempo.xyz/address/0x5575151bf6076129d0729c0f40d967d41df34a63"}
+          {"label": "Exact Tempo transfer adapter", "url": "https://explore.tempo.xyz/address/0x5575151bf6076129d0729c0f40d967d41df34a63"},
+          {"label": "Exact Solana OFT program executable verification status", "url": "https://verify.osec.io/status/Cxb1kfkcNVWEBhxC6R76He8orpfYyCE2j1pps3t6FVuM"}
         ],
-        "evidence": "The original five-route contributor is split without dropping any route or capability: its EVM three-chain validation model is now observed, while this contributor retains the two unresolved lanes. Tempo block 42641088 pins all four peers and four required DVNs, each quorum one with one signer, but the adapter's deployed executable/upgrade closure remains unverified. The Solana Store/program/programData/mint/multisig/upgrade wallet were fetched atomically at finalized slot 453406766; the live upgrade authority is separately inventoried. Solana receive-library/DVN configuration and deployed executable correspondence remain unresolved."
+        "evidence": "The original five-route contributor is split without dropping any route or capability: its EVM three-chain validation model is observed, while this contributor retains two unresolved lanes. Tempo block 42641088 pins all four peers and four required DVNs, each quorum one with one signer. A new October 5 block 42697239 pin confirms unchanged implementation/admin slots, adapter/admin owners and exact runtime; source retrieval still fails, so executable mint authorization and replacement closure remain unverified. A new atomic finalized Solana slot 453525562 binds Store/program/programData/mint/multisig/upgrade wallet and retains the same 1-of-2 mint multisig and live upgrade wallet. Store bytes and the 636736-byte deployed ELF equal the prior pin; ELF SHA-256 is 838d4306aa77c07906c0190e0b319426bb6bd3e161bf4f55394fa5f1c40e34e6. The program-specific OSEC verification endpoint states is_verified=false with no repository or commit. Solana Store-specific receive-library/DVN configuration and executable correspondence remain unresolved; no absence or favorable validation claim is made."
       },
       {
         "id": "gbpa-solana-oft-program-upgrade",
@@ -388,7 +389,7 @@
     "scopedQuestions": [
       {
         "controlRef": "gbpa-solana-tempo-message-validation",
-        "question": "What are the Solana Store-specific receive-library/DVN and peer configurations with deployed-executable correspondence, and the complete Tempo adapter replacement/authorization and route-limit closure?",
+        "question": "What are the Solana Store-specific receive-library/DVN and peer configurations with deployed-executable correspondence, and the complete Tempo adapter replacement/authorization and route-limit closure? The October 5 atomic Solana pin retains unchanged Store and ELF bytes, but program-specific OSEC status reports unverified with no source repository/commit. The new Tempo pin retains unchanged executable and proxy owners; exact CID retrieval still fails on Sourcify and multiple IPFS gateways.",
         "reviewedAt": "2026-10-05",
         "reviewer": "Unknown-resolver wave 3 (W3R05)",
         "sources": [
