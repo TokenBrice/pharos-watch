@@ -5,7 +5,7 @@ export const SAFETY_SCORE_V10: readonly MethodologyChangelogEntry[] = [
     version: "10.08",
     title: "Authenticated bridge in-flight accounting, exact vault unwinds and honest control questions",
     date: "2026-10-05",
-    effectiveAt: 1791226920,
+    effectiveAt: 1791222720,
     summary:
       "Safety Score v10.08 removes engineering blockers behind facts published as Not yet researched: authenticated pending-message readers for CCIP, LayerZero OFT and canonical rollup bridges, exact-complete instant ERC-4626 unwind certificates, applicable perpetual maturity, reviewed business-day calendars, weighted quorums, conservative maximal-reach control scopes and new census, identity and DEX shadow producers. It also stops ignoring fresh reviewer questions on controls. On the accepted production capture of 2026-10-05 (clock 1791184659) published Not yet researched facts fall from 1,476 to 1,446 and researched non-disclosure rises from 1,211 to 1,364; further producer closures follow the first production runs. Six scores move, none quarantined.",
     impact: [
