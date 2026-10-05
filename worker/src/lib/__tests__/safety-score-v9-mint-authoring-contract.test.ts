@@ -400,6 +400,33 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     expect(asset.control.structuralFailures).not.toContainEqual(expect.objectContaining({ kind: "centralized-mint" }));
   });
 
+  it("keeps Axis's KMS-disclosed operator custody unresolved without an HSM attestation", () => {
+    const assetId = "usdx-axis";
+    const meta = ACTIVE_META_BY_ID.get(assetId)!;
+    const operatorAddress = "0xdeca86926d2aec9c3b0eeeb54aacfde6d0249370";
+    const authoredOperator = meta.mintAuthority!.controls!.find((control) => control.address === operatorAddress);
+    expect(authoredOperator).toBeDefined();
+    expect(authoredOperator!.keyCustodyAttestation).toBeUndefined();
+    const input = fixedInput([assetId], {}, {
+      clockSec: REGISTRY_FIXTURE_CLOCK_SEC,
+      capturedAt: REGISTRY_FIXTURE_CAPTURED_AT,
+    });
+    const extension = buildSafetyScoreV9BaselineExtension(input, { metaById: new Map([[assetId, meta]]) });
+    const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
+    const asset = compiled.assets.find((candidate) => candidate.assetId === assetId)!;
+    const operator = asset.controls.find((control) =>
+      control.authority?.authorityKey === `ethereum:${operatorAddress}`,
+    )!;
+    expect(operator.keyCustody).toBe("unknown");
+    expect(operator.factorStatuses?.keyCustody?.observationState).toBe("missing");
+    const gapIds = operator.factorStatuses?.keyCustody?.gapIds ?? [];
+    expect(gapIds.length).toBeGreaterThan(0);
+    for (const gapId of gapIds) {
+      const gap = asset.gaps.find((candidate) => candidate.gapId === gapId)!;
+      expect(gap.causeProof).toMatchObject({ cause: "B", assertion: "required-data-public" });
+    }
+  });
+
   // Premise rewritten, not re-valued: the 2026-08-08 C-wave review resolved both
   // questions this test used to hold open (the RecoveryModeTriggerModule
   // representation and the scoped historical mint-incident review), so DUSD's

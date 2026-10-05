@@ -43990,48 +43990,36 @@
         "requiredDatum": "keyCustody",
         "routeKey": null
       },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-05T12:26:50Z",
-      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-05T20:27:31Z",
+      "reviewer": "AxisFix primary-source custody residency review",
       "sources": [
         {
           "url": "https://docs.axis.to/reference/contract-addresses.md",
-          "observedAt": "2026-10-05T12:26:50Z",
+          "observedAt": "2026-10-05T20:27:31Z",
           "datumAsOf": null,
           "location": "Governance, upgrade authority & operators; Mint operator",
           "excerpt": "Settles signed mint orders (KMS-secured)",
-          "assertion": "Binds KMS-secured custody to exact mint operator 0xDEca86926d2AEc9C3B0eEEB54AAcfDe6d0249370."
+          "assertion": "Public custody disclosure binds KMS-secured operation to exact mint operator 0xDEca86926d2AEc9C3B0eEEB54AAcfDe6d0249370 and live gapId usdx-axis:gap:control:mint-meta:usdx-axis:31ba20b1b4bb0d83b120:keyCustody observed in the AxisFix replay. It names KMS without establishing signing-key residency, non-exportability or use of KMS Sign; these remain open questions without HSM or independence credit."
         },
         {
           "url": "https://docs.axis.to/backing-reserves-and-transparency/security.md",
-          "observedAt": "2026-10-05T12:26:50Z",
+          "observedAt": "2026-10-05T20:27:31Z",
           "datumAsOf": null,
           "location": "Key management",
           "excerpt": "Key material is managed with **AWS KMS**.",
-          "assertion": "Names the operator key-management service; hardware-wallet multisig disclosure is distinct."
+          "assertion": "Publicly names AWS KMS for key management, not the operator's asymmetric key type or signing API. Hardware-wallet multisig disclosure is distinct. No HSM-resident custody or independent authorization follows."
         },
         {
-          "url": "https://docs.aws.amazon.com/kms/latest/developerguide/data-protection.html",
-          "observedAt": "2026-10-05T12:26:50Z",
+          "url": "https://docs.aws.amazon.com/kms/latest/APIReference/API_GenerateDataKeyPair.html",
+          "observedAt": "2026-10-05T20:27:31Z",
           "datumAsOf": null,
-          "location": "Protecting key material generated in AWS KMS",
-          "excerpt": "To safeguard key material for KMS keys, AWS KMS relies on a distributed fleet of FIPS 140-3 Security Level 3\u2013validated hardware security modules (HSMs).",
-          "assertion": "Provider supports curated hsm custody attestation; customer controls authorization policies, which do not follow from HSM storage."
+          "location": "GenerateDataKeyPair operation description",
+          "excerpt": "This operation returns a plaintext public key, a plaintext private key, and a copy of the private key that is encrypted under the symmetric encryption KMS key you specify. You can use the data key pair to perform asymmetric cryptography and implement digital signatures outside of AWS KMS.",
+          "assertion": "AWS KMS supports exportable private data keys and signing outside KMS. This is a counterexample to inferring HSM-resident signing from the service name, not evidence that Axis uses this operation."
         }
-      ],
-      "searchedSurfaces": [
-        "https://docs.axis.to/llms.txt",
-        "https://docs.axis.to/backing-reserves-and-transparency/security.md",
-        "https://docs.axis.to/backing-reserves-and-transparency/audits.md",
-        "https://docs.axis.to/reference/contract-addresses.md",
-        "https://docs.axis.to/reference/access-control.md",
-        "https://docs.axis.to/technical-and-architecture/governance.md",
-        "https://docs.axis.to/risk/risk-management.md",
-        "https://docs.axis.to/resources-and-legal/compliance.md",
-        "https://docs.aws.amazon.com/kms/latest/developerguide/data-protection.html"
-      ],
-      "rationale": "Curated the directly disclosed AWS KMS HSM-backed custody model for the exact mint operator using issuer and provider evidence. The remaining scoped datum is controller-specific IAM signing/approval policy, operator independence and recovery arrangements. No such policy or independence proof is published in the indexed issuer surfaces. HSM protection does not establish who can authorize Sign. Keep the narrowed typed custody question; its compiler gap therefore remains eligible for C rather than falsely KNOWN."
+      ]
     },
     {
       "id": "uw-xgz-goldzip-da2a33d5e5c3c3e6",

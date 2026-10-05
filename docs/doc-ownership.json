@@ -397,6 +397,7 @@
         "shared/types/digest*.ts",
         "shared/data/safety-score-v9/**",
         "worker/src/lib/safety-score-v9/**",
+        "worker/src/cron/sync-v9-supply-attribution.ts",
         "worker/src/lib/digest-safety-map.ts",
         "worker/src/cron/daily-digest.ts",
         "worker/src/cron/daily-digest/**",
@@ -419,6 +420,9 @@
       ],
       "docs": [
         { "path": "docs/report-cards.md", "anchor": "v10-model" },
+        { "path": "docs/report-cards.md", "anchor": "supply-attribution-and-in-flight-accounting" },
+        { "path": "docs/report-cards.md", "anchor": "bridge-in-flight-accounting" },
+        { "path": "docs/report-cards.md", "anchor": "scoped-evidence-and-exit-evaluation" },
         { "path": "docs/report-cards.md", "anchor": "dependency-coverage" },
         { "path": "docs/report-cards.md", "anchor": "canonical-publication" },
         { "path": "docs/mint-authority-scoring.md", "anchor": "mint-authority-entry" },
