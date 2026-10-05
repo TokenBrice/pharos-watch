@@ -1125,6 +1125,124 @@ describe("evm-rpc helpers", () => {
     warnSpy.mockRestore();
   });
 
+  it("preserves call order through sequential single-object requests on no-batch endpoints", async () => {
+    const url = "https://single-rpc.example";
+    const chainRpcs = chainRpcsWith("pharos", [{ ...registryEndpoint(url), noBatch: true }]);
+    fetchWithRetryMock
+      .mockResolvedValueOnce(rpcResponse({ jsonrpc: "2.0", id: 1, result: "0x64" }))
+      .mockResolvedValueOnce(rpcResponse({ jsonrpc: "2.0", id: 2, result: "0x6" }));
+    const calls = [
+      { method: "eth_getCode", params: ["0xToken", { blockHash: "0xPinned", requireCanonical: true }] },
+      { method: "eth_call", params: [{ to: "0xToken", data: "0x313ce567" }, { blockHash: "0xPinned", requireCanonical: true }] },
+    ];
+    const beforeRequest = vi.fn(() => true);
+
+    await expect(fetchEvmRpcBatch("pharos", calls, { chainRpcs, beforeRequest, maxRetries: 0 }))
+      .resolves.toEqual(["0x64", "0x6"]);
+    expect(fetchWithRetryMock.mock.calls.map(([, init]) => JSON.parse(init.body))).toEqual([
+      { jsonrpc: "2.0", id: 1, ...calls[0] },
+      { jsonrpc: "2.0", id: 2, ...calls[1] },
+    ]);
+    expect(beforeRequest.mock.calls).toEqual([[url], [url]]);
+  });
+
+  it("preserves per-call errors in detailed no-batch results", async () => {
+    const chainRpcs = chainRpcsWith("pharos", [{ ...registryEndpoint("https://single-rpc.example"), noBatch: true }]);
+    fetchWithRetryMock
+      .mockResolvedValueOnce(rpcResponse({ jsonrpc: "2.0", id: 1, result: "0x64" }))
+      .mockResolvedValueOnce(rpcResponse({ jsonrpc: "2.0", id: 2, error: { code: 3, message: "execution reverted" } }));
+
+    await expect(fetchEvmRpcBatchDetailed("pharos", [
+      { method: "eth_blockNumber", params: [] }, { method: "eth_call", params: [] },
+    ], { chainRpcs, maxRetries: 0 })).resolves.toEqual({
+      results: ["0x64", undefined], errors: [{ index: 1, code: 3, message: "execution reverted" }],
+    });
+  });
+
+  it.each([
+    { jsonrpc: "2.0", id: 1, result: "duplicate" },
+    { jsonrpc: "2.0", id: 3, result: "wrong" },
+    [{ jsonrpc: "2.0", id: 2, result: "array" }],
+  ])("rejects a mismatched single response without exposing a partial group: %j", async body => {
+    const chainRpcs = chainRpcsWith("pharos", [{ ...registryEndpoint("https://single-rpc.example"), noBatch: true }]);
+    fetchWithRetryMock
+      .mockResolvedValueOnce(rpcResponse({ jsonrpc: "2.0", id: 1, result: "first" }))
+      .mockResolvedValueOnce(rpcResponse(body));
+    await expect(fetchEvmRpcBatch("pharos", [
+      { method: "eth_blockNumber", params: [] }, { method: "eth_chainId", params: [] },
+    ], { chainRpcs, maxRetries: 0 })).resolves.toBeNull();
+  });
+
+  it("restarts the entire call group on fallback after a partial single-call transport failure", async () => {
+    const first = "https://single-rpc.example", fallback = "https://batch-rpc.example";
+    const chainRpcs = chainRpcsWith("pharos", [
+      { ...registryEndpoint(first), noBatch: true }, registryEndpoint(fallback),
+    ]);
+    fetchWithRetryMock
+      .mockResolvedValueOnce(rpcResponse({ jsonrpc: "2.0", id: 1, result: "discarded" }))
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(rpcResponse([
+        { jsonrpc: "2.0", id: 2, result: "second" }, { jsonrpc: "2.0", id: 1, result: "first" },
+      ]));
+    await expect(fetchEvmRpcBatch("pharos", [
+      { method: "eth_blockNumber", params: [] }, { method: "eth_chainId", params: [] },
+    ], { chainRpcs, maxRetries: 0 })).resolves.toEqual(["first", "second"]);
+    expect(attemptedUrls()).toEqual([first, first, fallback]);
+    expect(Array.isArray(JSON.parse(fetchWithRetryMock.mock.calls[2]![1].body))).toBe(true);
+  });
+
+  it("checks the request guard before every single call and discards an incomplete group", async () => {
+    const chainRpcs = chainRpcsWith("pharos", [{ ...registryEndpoint("https://single-rpc.example"), noBatch: true }]);
+    const beforeRequest = vi.fn().mockReturnValueOnce(true).mockReturnValueOnce(false);
+    fetchWithRetryMock.mockResolvedValueOnce(rpcResponse({ jsonrpc: "2.0", id: 1, result: "first" }));
+    await expect(fetchEvmRpcBatch("pharos", [
+      { method: "eth_blockNumber", params: [] }, { method: "eth_chainId", params: [] },
+    ], { chainRpcs, beforeRequest, maxRetries: 0 })).resolves.toBeNull();
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
+    expect(beforeRequest).toHaveBeenCalledTimes(2);
+  });
+
+  it("bounds every single call by the absolute deadline and discards a timed-out group", async () => {
+    let nowMs = 1000, id = 0;
+    vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+    const chainRpcs = chainRpcsWith("pharos", [{ ...registryEndpoint("https://single-rpc.example"), noBatch: true }]);
+    fetchWithRetryMock.mockImplementation(async () => {
+      nowMs += 600;
+      return rpcResponse({ jsonrpc: "2.0", id: ++id, result: "0x64" });
+    });
+    await expect(fetchEvmRpcBatch("pharos", [
+      { method: "eth_blockNumber", params: [] }, { method: "eth_chainId", params: [] }, { method: "eth_gasPrice", params: [] },
+    ], { chainRpcs, maxRetries: 0, deadlineMs: 2000, timeoutMs: 10_000 })).resolves.toBeNull();
+    expect(fetchWithRetryMock.mock.calls.map(call => call[3])).toEqual([
+      { timeoutMs: 1000, retryMode: "network-only" }, { timeoutMs: 400, retryMode: "network-only" },
+    ]);
+  });
+
+  it("meters each physical single call rather than charging for an unsent group", async () => {
+    const endpoint = { ...dwellirEndpoint("https://api-pharos-mainnet.n.dwellir.com"), noBatch: true };
+    const chainRpcs = chainRpcsWith("pharos", [endpoint]);
+    fetchWithRetryMock
+      .mockResolvedValueOnce(rpcResponse({ jsonrpc: "2.0", id: 1, result: "first" }))
+      .mockResolvedValueOnce(rpcResponse({ jsonrpc: "2.0", id: 2, result: "second" }));
+    await expect(fetchEvmRpcBatch("pharos", [
+      { method: "eth_blockNumber", params: [] }, { method: "eth_chainId", params: [] },
+    ], { chainRpcs, maxRetries: 0 })).resolves.toEqual(["first", "second"]);
+    expect(recordDwellirCreditsMock.mock.calls).toEqual([[1], [1]]);
+  });
+
+  it.each([1000, 1001])("honors inclusive endpoint log spans at %i blocks without changing other providers", async span => {
+    const limited = "https://limited-rpc.example", fallback = "https://unlimited-rpc.example";
+    const chainRpcs = chainRpcsWith("pharos", [
+      { ...registryEndpoint(limited), maxLogBlockSpan: 1000 }, registryEndpoint(fallback),
+    ]);
+    fetchWithRetryMock.mockResolvedValue(rpcResponse([{ jsonrpc: "2.0", id: 1, result: [] }]));
+    await expect(fetchEvmRpcBatch("pharos", [{
+      method: "eth_getLogs", params: [{ fromBlock: "0x64", toBlock: `0x${(100 + span - 1).toString(16)}` }],
+    }], { chainRpcs, maxRetries: 0 })).resolves.toEqual([[]]);
+    expect(attemptedUrls()).toEqual([span === 1000 ? limited : fallback]);
+    expect(Array.isArray(JSON.parse(fetchWithRetryMock.mock.calls[0]![1].body))).toBe(true);
+  });
+
   it("caps each batch attempt to the remaining deadline and stops when it is exhausted", async () => {
     let nowMs = 1_000;
     const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => nowMs);
