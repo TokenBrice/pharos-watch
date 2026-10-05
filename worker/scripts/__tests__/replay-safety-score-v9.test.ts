@@ -24,6 +24,12 @@ import { createR2MeasurementsClient } from "../../../scripts/lib/r2-measurements
 import { v9TestClockSec } from "../../src/test-helpers/v9-fixed-input";
 import { localRegistrySnapshot, registrySnapshotFingerprint } from "../lib/safety-score-v9-registry";
 import { createReplayFixedInput } from "./safety-score-v9-replay.test-support";
+import { runReportCardsFixedInputCaptureCli } from "../capture-report-cards-fixed-input";
+import { buildSafetyScoreV9PublicationReplayCapture } from "../../src/lib/safety-score-v9/publication-replay-capture";
+import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "../../src/lib/safety-score-v9/publication-codec";
+import { createSafetyScoreV9TransferMaterialityGeneration } from "../../src/lib/safety-score-v9/transfer-materiality";
+import { makeWorkerSafetyScoreV9Publication } from "../../src/test-helpers/report-cards-v9";
+import { makeV9FixedInput } from "../../src/test-helpers/v9-fixed-input";
 
 const CLOCK_SEC = v9TestClockSec();
 const PUBLISHED_AT_SEC = CLOCK_SEC + 10;
@@ -39,6 +45,63 @@ function exactFixedInput() {
 }
 
 describe("Safety Score v9 deterministic replay CLI", () => {
+  it("exports and replays an accepted retained pair with rejected transfer observations and embedded registry", async () => {
+    const dir = mkdtempSync(resolve(tmpdir(), "pharos-v9-accepted-capture-"));
+    try {
+      const base = makeV9FixedInput({ assetId: "wm-m0", clockSec: CLOCK_SEC, aggregateCirculating: { peggedUSD: 87_020_618.58982982 } });
+      const publication = makeWorkerSafetyScoreV9Publication({
+        baseInputGenerationId: base.baseInputGenerationId, publishedAtSec: base.clockSec,
+        publicationGenerationId: "report-cards:v9:fixture-accepted",
+      });
+      const transfer = createSafetyScoreV9TransferMaterialityGeneration({
+        schemaVersion: 1, kind: "safety-score-v9-transfer-materiality-generation",
+        sourceBaseInputGenerationId: base.baseInputGenerationId, registryFingerprint: base.registryFingerprint,
+        capturedAtSec: base.clockSec, observationsByAssetId: {
+          "wm-m0": [{ deploymentKey: "solana:fixture", rawTokenUnits: null, decimals: null,
+            blockNumber: null, observedAtSec: null, status: "rejected" }],
+        },
+      });
+      const baseEntry = await buildReportCardsFixedInputCacheEntry(base);
+      const delta = await buildSafetyScoreV9PublicationReplayCapture(publication, base, transfer);
+      const raw = resolve(dir, "raw.json");
+      const capturePath = resolve(dir, "capture.json");
+      const replayPath = resolve(dir, "replay.json");
+      writeFileSync(raw, JSON.stringify([{ success: true, results: [
+        { key: SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, value: delta.value, updated_at: base.clockSec },
+        { key: SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, value: baseEntry.value, updated_at: base.clockSec },
+      ] }]));
+      await runReportCardsFixedInputCaptureCli(["--accepted-cache-export", raw, "--output", capturePath]);
+      const capture = JSON.parse(readFileSync(capturePath, "utf8"));
+      expect(capture.kind).toBe("safety-score-v9-accepted-publication-capture");
+      expect(capture.publicationGenerationId).toBe(publication.publicationGenerationId);
+      expect(capture.fixedInput.safetyScoreV9SupplyAttributionById).toEqual(base.safetyScoreV9SupplyAttributionById);
+      expect(capture.transferMaterialityGeneration).toEqual(transfer);
+      expect(capture.registrySnapshot.fingerprint).toBe(base.registryFingerprint);
+      const args = ["--input", capturePath, "--output", replayPath, "--published-at", String(base.clockSec), "--allow-future-reviews"];
+      await runSafetyScoreV9ReplayCli(args);
+      const expected = buildSafetyScoreV9ReplayArtifact({
+        fixedInput: base, registrySnapshot: capture.registrySnapshot, transferMaterialityGeneration: transfer,
+        publishedAtSec: base.clockSec,
+      });
+      expect(readFileSync(replayPath, "utf8")).toBe(serializeSafetyScoreV9ReplayArtifact(expected));
+      capture.registrySnapshot.fingerprint = "0".repeat(64);
+      writeFileSync(capturePath, JSON.stringify(capture));
+      await expect(runSafetyScoreV9ReplayCli(args)).rejects.toThrow("snapshot fingerprint does not match");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 60_000);
+
+  it("refuses lossy or ambiguous accepted-capture CLI modes", async () => {
+    await expect(runReportCardsFixedInputCaptureCli(["--output", "unused"])).rejects.toThrow("Exactly one");
+    await expect(runReportCardsFixedInputCaptureCli([
+      "--output", "unused", "--exact-cache-export", "base", "--accepted-cache-export", "pair",
+    ])).rejects.toThrow("Exactly one");
+    await expect(runReportCardsFixedInputCaptureCli([
+      "--output", "unused", "--accepted-cache-export", "pair", "--normalized-only",
+    ])).rejects.toThrow("--normalized-only cannot be combined");
+  });
+
   it("parses raw exact JSON and the production cache envelope through equivalent paths", async () => {
     const fixedInput = exactFixedInput();
     const cacheEntry = await buildReportCardsFixedInputCacheEntry(fixedInput);

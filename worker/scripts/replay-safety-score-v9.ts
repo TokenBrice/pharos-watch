@@ -365,7 +365,7 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
   const raw = await readReplayInput(values.input);
   const capture = raw as { kind?: string; fixedInput?: unknown; registrySnapshot?: SafetyScoreV9RegistrySnapshot; transferMaterialityGeneration?: unknown };
   const acceptedCapture = capture.kind === "safety-score-v9-accepted-publication-capture";
-  const embedded = capture.kind === "safety-score-v9-registry-capture" ? capture.registrySnapshot : undefined;
+  const embedded = capture.kind === "safety-score-v9-registry-capture" || acceptedCapture ? capture.registrySnapshot : undefined;
   assertCliUsage(
     !(values["registry-ref"] !== undefined && values["allow-registry-mismatch"] === true),
     "--registry-ref cannot be combined with --allow-registry-mismatch",

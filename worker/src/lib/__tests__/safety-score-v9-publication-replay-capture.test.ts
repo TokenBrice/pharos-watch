@@ -2,10 +2,11 @@ import "../../test-helpers/reviewed-deployment-catalog.test-support";
 import { describe, expect, it } from "vitest";
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
 import { makeV9FixedInput, withV9WmReviewedDeploymentAttribution } from "../../test-helpers/v9-fixed-input";
-import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "../safety-score-v9/publication-codec";
+import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "../safety-score-v9/publication-codec";
 import {
   buildSafetyScoreV9PublicationReplayCapture,
   parseSafetyScoreV9PublicationReplayCapture,
+  parseSafetyScoreV9PublicationReplayCacheRows,
   SafetyScoreV9ReplayCaptureIdentityError,
 } from "../safety-score-v9/publication-replay-capture";
 import { createRuntimeGapVerdict } from "../safety-score-v9/fact-set-context";
@@ -21,6 +22,32 @@ const publication = makeWorkerSafetyScoreV9Publication({
 });
 
 describe("Safety Score V9 accepted-publication replay capture", () => {
+  const retainedRows = () => [
+    { key: SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, value: "base", updated_at: base.clockSec },
+    { key: SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, value: "delta", updated_at: base.clockSec },
+  ];
+
+  it("selects the atomic retained pair by key, not SQL row order", () => {
+    expect(parseSafetyScoreV9PublicationReplayCacheRows([{ success: true, results: retainedRows().reverse() }]))
+      .toEqual({ baseValue: "base", deltaValue: "delta", retainedAtSec: base.clockSec });
+  });
+
+  it.each([
+    ["missing delta", () => retainedRows().slice(0, 1), "requires-one-base-and-delta"],
+    ["duplicate base", () => [...retainedRows(), retainedRows()[0]!], "requires-one-base-and-delta"],
+    ["mixed retention clocks", () => retainedRows().map((row, index) => ({ ...row, updated_at: row.updated_at + index })), "retention-clock-mismatch"],
+  ])("rejects %s in a retained-row export", (_label, rows, reason) => {
+    expect(() => parseSafetyScoreV9PublicationReplayCacheRows([{ success: true, results: rows() }])).toThrow(reason);
+  });
+
+  it("requires one successful query result rather than independently acquired rows", () => {
+    expect(() => parseSafetyScoreV9PublicationReplayCacheRows([
+      { success: true, results: retainedRows().slice(0, 1) },
+      { success: true, results: retainedRows().slice(1) },
+    ])).toThrow();
+    expect(() => parseSafetyScoreV9PublicationReplayCacheRows([{ success: false, results: retainedRows() }])).toThrow();
+  });
+
   it("restores the compute-time enrichment the stripped base cache lacks", async () => {
     expect(base.safetyScoreV9SupplyAttributionById["wm-m0"]).toBeUndefined();
     const entry = await buildSafetyScoreV9PublicationReplayCapture(publication, enriched, null);
