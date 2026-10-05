@@ -39321,6 +39321,92 @@
         "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/"
       ],
       "rationale": "No binding end-to-end maximum for the standard offchain redemption is published in recovered issuer timing disclosures. Product footnote 3 explicitly disclaims a timing guarantee and makes completion dependent on Strategy Manager funding. Generic 1\u20137 business-day processing and mGLOBAL monthly NAV settlement are not final funded completion maxima. This decision does not classify inaccessible holdings or infer a calendar-day SLA."
+    },
+    {
+      "id": "uw-armusdcs-wintermute-27eec68ddc7c9b37",
+      "assetId": "armusdcs-wintermute",
+      "scope": {
+        "componentKey": "economic-control:oracle:collateral-parameter",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "economic-control:oracle:collateral-parameter",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-04T23:55:20Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R26)",
+      "sources": [
+        {
+          "url": "https://sourcify.dev/server/v2/contract/1/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb?fields=all",
+          "observedAt": "2026-10-04T23:40:48Z",
+          "datumAsOf": null,
+          "location": "Runtime exact_match; src/Morpho.sol, createMarket; current six-market census at Ethereum block 26122339 in pinned-reads.json",
+          "excerpt": "idToMarketParams[id] = marketParams;",
+          "assertion": "All six pinned markets have immutable LLTVs in idToMarketParams. Atomic branch confidence is not representable: extension-oracle.ts:226 inherits the limited aggregate pricing confidence."
+        },
+        {
+          "url": "https://armitage.wintermute.com/docs/llms-full.txt",
+          "observedAt": "2026-10-04T23:47:12Z",
+          "datumAsOf": null,
+          "location": "Select, Markets, USDC vault table; all six pinned market IDs are listed",
+          "excerpt": "| [PT-USDat-14JAN2027 / USDC](https://app.morpho.org/ethereum/market/0xc7e49dd404825da16988955201ed22ecf8a7b25f0337db8a698d70d7a9f343ea) | 91.5% |",
+          "assertion": "Issuer publishes 86% for cbBTC, WBTC, wstETH and v-wmtUSDC; 91.5% for both PT markets. Pinned adapter has six markets, excluding the separately documented direct reUSD market. Compiler lacks independently reviewable collateral-parameter confidence."
+        }
+      ]
+    },
+    {
+      "id": "uw-armusdcs-wintermute-187268cc1fb7f77c",
+      "assetId": "armusdcs-wintermute",
+      "scope": {
+        "componentKey": "economic-control:oracle:liquidation",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "economic-control:oracle:liquidation",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-04T23:43:30Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R26)",
+      "sources": [
+        {
+          "url": "https://sourcify.dev/server/v2/contract/1/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb?fields=all",
+          "observedAt": "2026-10-04T23:40:48Z",
+          "datumAsOf": null,
+          "location": "Runtime exact_match; src/Morpho.sol, liquidate; current six-market census at Ethereum block 26122339 in pinned-reads.json",
+          "excerpt": "require(!_isHealthy(marketParams, id, borrower, collateralPrice), ErrorsLib.HEALTHY_POSITION);",
+          "assertion": "Exact runtime-matched Morpho liquidate implementation applies to all six pinned markets. Independent liquidation admission is blocked by shared profile confidence at extension-oracle.ts:226."
+        }
+      ]
+    },
+    {
+      "id": "uw-armusdcs-wintermute-f53fa625a5eadae9",
+      "assetId": "armusdcs-wintermute",
+      "scope": {
+        "componentKey": "economic-control:oracle:shutdown-bad-debt",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "economic-control:oracle:shutdown-bad-debt",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-04T23:43:30Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R26)",
+      "sources": [
+        {
+          "url": "https://sourcify.dev/server/v2/contract/1/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb?fields=all",
+          "observedAt": "2026-10-04T23:40:48Z",
+          "datumAsOf": null,
+          "location": "Runtime exact_match; src/Morpho.sol, liquidate; current six-market census at Ethereum block 26122339 in pinned-reads.json",
+          "excerpt": "market[id].totalSupplyAssets -= badDebtAssets.toUint128();",
+          "assertion": "Exact runtime-matched Morpho liquidate writes off lender assets after zero collateral for every pinned market. Cannot admit this atomic fact while retaining honest limited confidence for unclosed nested pricing paths."
+        }
+      ]
     }
   ]
 }
