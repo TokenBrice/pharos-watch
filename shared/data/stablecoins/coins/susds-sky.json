@@ -55,6 +55,11 @@
       "chain": "arbitrum",
       "address": "0xddb46999f8891663a8f2828d25298f70416d7610",
       "decimals": 18
+    },
+    {
+      "chain": "unichain",
+      "address": "0xa06b10db9f390990364a3984c04fadf1c13691b5",
+      "decimals": 18
     }
   ],
   "collateralQuality": "rwa",

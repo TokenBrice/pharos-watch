@@ -357,6 +357,10 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
       ? await readReviewedApiAmount(plan.referencePriceSource, input.signal)
       : economicSupplyInputReferencePrice(input.fixedInput, input.assetId);
     if (!referencePrice || Number(referencePrice.value) <= 0) return { status: "rejected", rejectionCode: "packet-reconciliation-failed", failedRouteId: plan.sourceId };
+    const finalizedOftChains = new Set([
+      plan.liabilityInFlightSource, ...plan.escrows.map(escrow => escrow.inFlightSource),
+    ].flatMap(source => source && "kind" in source && source.kind === "evm-layerzero-oft-pending"
+      ? source.sides.map(side => side.chainId) : []));
     const headers = new Map<string, EvmBlockHeader>();
     const cosmosPins = new Map<string, CosmosBankPin>();
     const readCosmos = async (row: ReviewedEconomicSupplyPlan["deployments"][number], id: string, account?: string): Promise<EconomicSupplyObservation | null> => {
@@ -408,8 +412,13 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
         const lag = Math.max(...plan.deployments.filter(other => other.chainId === row.chainId).map(other =>
           "safeBlockLag" in other.read ? other.read.safeBlockLag : 0));
         if (head === null || lag <= 0 || head < lag) return null;
+        // A reviewed lag is not a finality proof: rollup finalized heads can
+        // trail it. Holdings and OFT history must share an actually finalized pin.
+        const finalized = finalizedOftChains.has(row.chainId)
+          ? await fetchEvmBlockHeader(row.chainId, "finalized", options) : null;
+        if (finalizedOftChains.has(row.chainId) && !finalized) return null;
         const block = await rewindEvmBlockHeaderToScoringClock({
-          initialBlockNumber: head - lag, scoringClockSec: input.scoringClockSec, signal: input.signal,
+          initialBlockNumber: Math.min(head - lag, finalized?.number ?? head - lag), scoringClockSec: input.scoringClockSec, signal: input.signal,
           fetchHeader: number => fetchEvmBlockHeader(row.chainId, number, options),
         });
         if (!block) return null;
@@ -611,7 +620,7 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
         } else {
           pending = await readPendingState(escrow.inFlightSource, escrow);
         }
-        if (!pending) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: escrow.id };
+        if (!pending) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId };
         inFlight.push(pending);
       } else {
         const pending = await readReviewedApiAmount(escrow.inFlightSource, input.signal);

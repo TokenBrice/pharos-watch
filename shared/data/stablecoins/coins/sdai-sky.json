@@ -46,6 +46,11 @@
       "chain": "optimism",
       "address": "0x2218a117083f5b482b0bb821d27056ba9c04b1d3",
       "decimals": 18
+    },
+    {
+      "chain": "worldchain",
+      "address": "0x859dbe24b90c9f2f7742083d3cf59ca41f55be5d",
+      "decimals": 18
     }
   ],
   "collateralQuality": "rwa",

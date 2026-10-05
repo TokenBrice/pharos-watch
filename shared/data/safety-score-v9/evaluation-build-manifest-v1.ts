@@ -722,7 +722,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/economic-supply-observer.ts",
-      "sha256": "35cf0ac7d6523908f0bf3c1af71165a6f56706332c3998903378d83ff45477c6"
+      "sha256": "e59a637be25e1d37f65cdbe3583115628c4ec8a936448d7f17d556a7fab0f89e"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-access-lookthrough.ts",
@@ -883,7 +883,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-05-block-26125584-shock-coverage.json.gz"
     }
   ],
-  "digest": "12c5e9b664d60e3fb746f9a59c1c45f1fc58ae73ee535c3fe54c1bf6cff9fba6"
+  "digest": "6ca12e0873249655fe0f926ee9ead06716b6b3e58503f3276268ca7d3280b17a"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

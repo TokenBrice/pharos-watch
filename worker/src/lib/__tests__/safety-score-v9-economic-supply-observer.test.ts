@@ -342,13 +342,62 @@ describe("reviewed economic supply observation", () => {
       })],
     } });
   });
+  it.each([false, true])("caps the shared OFT holding pin at the actual finalized head for liability=%s", async liability => {
+    const f = oftFixture(liability);
+    vi.mocked(evmRpc.fetchEvmBlockNumber).mockResolvedValue(110);
+    const result = await f.run();
+    expect(result).toMatchObject({ status: "accepted", attribution: {
+      observations: expect.arrayContaining([expect.objectContaining({ anchor: "100" })]),
+      inFlight: [expect.objectContaining({ layerZeroOftPendingProof: expect.objectContaining({
+        pins: [expect.objectContaining({ anchor: 100 }), expect.objectContaining({ anchor: 100 })],
+      }) })],
+    } });
+    expect(evmRpc.fetchEvmBlockHeader).not.toHaveBeenCalledWith(expect.anything(), 108, expect.anything());
+  });
+
+  it("rejects an unavailable finalized OFT head without reading a synthetic zero holding", async () => {
+    const f = oftFixture();
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
+      number === "finalized" ? null : { number, timestamp: CLOCK - 60, hash: HASH });
+    expect(await f.run()).toEqual({
+      status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: f.plan.deployments[0]!.deploymentKey,
+    });
+    expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
+  });
+
+  it("retains the escrow OFT history-incomplete cause after successful holding and identity reads", async () => {
+    const f = oftFixture(), original = vi.mocked(evmRpc.fetchEvmRpcBatch).getMockImplementation()!;
+    vi.mocked(evmRpc.fetchEvmBlockNumber).mockResolvedValue(17002);
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) => {
+      const height = number === "finalized" ? 17000 : number;
+      return { number: height, timestamp: CLOCK - 60, hash: word(BigInt(height)) };
+    });
+    vi.mocked(evmRpc.fetchEvmRpcBatch).mockImplementation(async (chain, calls, options) => {
+      const results = await original(chain, calls, options);
+      if (!results) throw new Error("Expected OFT fixture state");
+      return calls.map((call, index) => {
+        const query = call.params[0], block = call.params[1];
+        if (call.method === "eth_call" && query && typeof query === "object" && "data" in query &&
+          typeof query.data === "string" && query.data.startsWith(toFunctionSelector("outboundNonce(address,uint32,bytes32)")) &&
+          block && typeof block === "object" && "blockHash" in block) {
+          return word(block.blockHash === word(99n) ? 0n : 1n);
+        }
+        return results[index];
+      });
+    });
+    expect(await f.run()).toEqual({
+      status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: "in-flight:bridge:history-incomplete",
+    });
+    expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledTimes(8);
+  });
 
   it.each([false, true])("fails closed on unauthenticated OFT runtime for liability=%s", async liability => {
     const f = oftFixture(liability);
     vi.mocked(evmRpc.fetchEvmRpcBatch).mockResolvedValue(["0x6001"]);
     expect(await f.run()).toEqual({
       status: "rejected", rejectionCode: "deployment-state-unavailable",
-      failedRouteId: liability ? "in-flight:liability:runtime-mismatch" : "bridge",
+      failedRouteId: liability ? "in-flight:liability:runtime-mismatch" : "in-flight:bridge:runtime-mismatch",
     });
   });
 
