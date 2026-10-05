@@ -115,4 +115,25 @@ describe("bounded reserve facts", () => {
     const conflict = compiled({ ...liquid(100), factKey: "conflict" });
     expect(resolveV9ReserveFactorBounds(reserve, [whole, conflict], policy, clock, baseline).liquidity).toBe(45);
   });
+  it("scores open-ended maturity from policy rather than underlying portfolio tenor or redemption speed", () => {
+    const openEnded = ReserveBoundedFactSchema.parse({ ...base, kind: "maturity-applicability", conclusion: "open-ended",
+      claimId: "fund:class-a", governingInstrument: "Fund Class A prospectus clause V", allInScope: true });
+    const underlying = ReserveBoundedFactSchema.parse({ ...base, factKey: "underlying", kind: "observed-portfolio-maturity",
+      coveredGrossValue: 100, totalGrossValue: 100, coverageAsOfSec: clock, denomination: "USD", observedMaximumDays: 30,
+      instruments: [{ instrumentId: "bill", maturityAtSec: clock + 30 * 86400, grossMarkedValue: 100, denomination: "USD" }] });
+    const row = { ...reserve, assetClass: "fund-share" as const, maturityDaysMax: null };
+    const result = resolveV9ReserveFactorBounds(row, [compiled(openEnded), compiled(underlying)], policy, clock, { liquidity: 55, maturity: 48 });
+    expect(result).toMatchObject({ maturity: 48, maturityCoveredShare: 1, maturityCoveredQuality: 48, liquidity: 55, liquidityCoveredShare: 0 });
+    const changedPolicy = { ...policy, reserve: { ...policy.reserve, maturityBands: policy.reserve.maturityBands.map(band =>
+      band.maxDaysInclusive === null ? { ...band, score: 42 } : band) } };
+    expect(resolveV9ReserveFactorBounds(row, [compiled(openEnded)], changedPolicy, clock, { liquidity: 55, maturity: 48 }).maturity).toBe(42);
+    expect(ReserveBoundedFactSchema.safeParse({ ...openEnded, scope: { kind: "reserve-envelope" } }).success).toBe(false);
+    expect(ReserveBoundedFactSchema.safeParse({ ...openEnded, maximumTerm: { value: 0, unit: "days" } }).success).toBe(false);
+  });
+  it("leaves finite contractual maximum scoring unchanged", () => {
+    const finite = ReserveBoundedFactSchema.parse({ ...base, kind: "contractual-maturity-maximum", claimId: "bill",
+      legallyBinding: true, allInScope: true, maximumTerm: { value: 30, unit: "days" } });
+    const result = resolveV9ReserveFactorBounds({ ...reserve, maturityDaysMax: null }, [compiled(finite)], policy, clock, { liquidity: 55, maturity: 48 });
+    expect(result).toMatchObject({ maturity: 94, maturityCoveredShare: 1, maturityCoveredQuality: 94 });
+  });
 });

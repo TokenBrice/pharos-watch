@@ -10,7 +10,7 @@ import {
   collateralExposureV9Path,
   createV9FactGapV3,
 } from "@shared/lib/safety-score-v9/reasons";
-import { v9MaturityNotApplicableBoundFact } from "@shared/lib/safety-score-v9/reserve-bound-facts";
+import { v9MaturityNotApplicableBoundFact, v9OpenEndedMaturityBoundFact } from "@shared/lib/safety-score-v9/reserve-bound-facts";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
@@ -693,6 +693,8 @@ export function buildReserves(context: AssetBuildContext): {
       V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.maturityNotApplicableClasses.includes(assetClass);
     const maturityNotApplicableBound = maturityDaysMax === null && !maturityNotApplicableClass
       ? v9MaturityNotApplicableBoundFact(exposureKey, reserveBoundFacts, context.fixedInput.clockSec) : undefined;
+    const openEndedMaturityBound = !maturityNotApplicableClass
+      ? v9OpenEndedMaturityBoundFact(exposureKey, reserveBoundFacts, context.fixedInput.clockSec) : undefined;
     const factorStatuses: NonNullable<V9ReserveExposureFactV2["factorStatuses"]> = {};
     for (const [factorKey, requiredDatum, missing] of [
       ["assetClass", "assetClass", assetClass === null],
@@ -700,6 +702,14 @@ export function buildReserves(context: AssetBuildContext): {
       ["maturity", "maturityDaysMax", maturityDaysMax === null],
       ["obligorConcentration", "issuerOrObligorKey", issuerOrObligorKey === null],
     ] as const) {
+      if (factorKey === "maturity" && status.observationState !== "stale" && openEndedMaturityBound !== undefined) {
+        factorStatuses.maturity = createV9FactStatus({
+          applicability: requiredV9Applicability("v9.backing.reserve-classification"),
+          observationState: "known",
+          evidenceRefIds: [...new Set([...evidenceIds, ...openEndedMaturityBound.status.evidenceRefIds])],
+        });
+        continue;
+      }
       if (factorKey === "maturity" && status.observationState !== "stale" &&
         (maturityNotApplicableClass || maturityNotApplicableBound !== undefined)) {
         factorStatuses.maturity = createV9FactStatus({

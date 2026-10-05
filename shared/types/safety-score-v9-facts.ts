@@ -1864,7 +1864,12 @@ export const V9AssetFactsV3Schema = V9AssetFactsV3ObjectSchema.superRefine((asse
       ["obligorConcentration", exposure.issuerOrObligorKey === null],
     ] as const) {
       const status = exposure.factorStatuses?.[key];
-      if (missing && (!status || (status.observationState === "known" && status.applicability.state !== "not-applicable"))) {
+      const openEndedMaturity = key === "maturity" && asset.reserveBoundFacts?.some((row) =>
+        row.fact.kind === "maturity-applicability" && row.fact.conclusion === "open-ended" && row.fact.allInScope &&
+        row.fact.scope.kind === "exposure" && row.fact.scope.exposureKey === exposure.exposureKey &&
+        row.status.observationState === "known" && row.rejectionReason === null &&
+        row.status.evidenceRefIds.some(id => status?.evidenceRefIds.includes(id)));
+      if (missing && !openEndedMaturity && (!status || (status.observationState === "known" && status.applicability.state !== "not-applicable"))) {
         ctx.addIssue({ code: "custom", path: ["reserveExposures", index, "factorStatuses", key], message: "Unknown reserve subfield requires its own cause-bearing status" });
       }
     }
