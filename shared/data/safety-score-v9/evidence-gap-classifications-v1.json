@@ -39160,6 +39160,53 @@
         "https://eth.blockscout.com/api/v2/smart-contracts/0xf95e5722226a1018d058cd757b75f1d10289e967"
       ],
       "rationale": "Exact native syrupUSDG queue-redeem end-to-end maximum settlement is not guaranteed. Legal \u00a72.3 expressly disclaims any maximum; FIFO processing is liquidity- and redeemer-dependent. FAQ says 30 days, but that conflicts with governing risk terms and is not a guaranteed funded SLA. Verified exact queue source supplies no deadline forcing full request completion."
+    },
+    {
+      "id": "uw-sofid-sofi-fc25d48c36f5ef08",
+      "assetId": "sofid-sofi",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:redemption:sofid-sofi:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T23:49:07Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R19)",
+      "sources": [
+        {
+          "url": "https://www.bitgo.com/legal/bitgo-additional-terms/",
+          "observedAt": "2026-10-04T23:49:06Z",
+          "datumAsOf": "2026-03-25",
+          "location": "Fiat Referenced Coins / SoFiUSD / Fees",
+          "excerpt": "Fees: [http://app.bitgo.com/my/mint/fees](http://app.bitgo.com/my/mint/fees)",
+          "assertion": "Exact SoFiUSD fee schedule is linked only to institutional platform, which redirects to login; no public numerical redemption fee is shown."
+        },
+        {
+          "url": "https://developers.bitgo.com/docs/mint-redeem-tokens",
+          "observedAt": "2026-10-04T23:49:07Z",
+          "datumAsOf": null,
+          "location": "2. List Supported Tokens; 3. List Asset Pairs",
+          "excerpt": "View the tokens available to your enterprise, including burn minimums, fees, and your role for each token.",
+          "assertion": "Burn fees and pair basis points are enterprise-authenticated data; USD1 testnet example numbers are not SoFiUSD terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.sofi.com/crypto/sofiusd/",
+        "https://www.sofi.com/crypto/legal/sofid-terms/",
+        "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SOFID-Terms-of-Use-1.pdf",
+        "https://www.sofi.com/crypto/legal/crypto-fee-sheet",
+        "https://www.bitgo.com/products/mint/",
+        "https://www.bitgo.com/legal/bitgo-coin-minting-services-terms/",
+        "https://www.bitgo.com/legal/bitgo-additional-terms/",
+        "https://app.bitgo.com/my/mint/fees",
+        "https://developers.bitgo.com/docs/mint-redeem-tokens",
+        "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SoFiUSD-Stablecoin-Attestation-Report-8.31.2026.pdf"
+      ],
+      "rationale": "The exact institutional BitGo/SoFi SOFID redemption cost is not publicly quantified. May 27 SoFi terms permit issuance/redemption fees disclosed separately; June retail trading tiers do not price this institutional rail. SoFiUSD-specific BitGo Additional Terms send Fees to a login-only platform; Burn Tokens docs expose enterprise fee fields, not public SOFID values. General mint terms make the displayed transaction fee controlling. Reserve attestations do not supply a tariff; zero and USD1 testnet examples are unsupported."
     }
   ]
 }
