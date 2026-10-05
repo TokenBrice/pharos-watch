@@ -15409,51 +15409,6 @@
       "rationale": "The 22 exact native minter/admin/upgrader questions ask for deployed HSM signing quorum, independent operators and recovery policy. Public token rules require internal thresholds and redundant recovery keys; technical/provider disclosures describe HSM/MPC but publish no controller-specific production threshold, independence or recovery authorization. Contract role gating cannot expose backend policy. These indispensable safeguards remain undisclosed. This does not assert incident absence or resolve the separate Hedera/Solana census."
     },
     {
-      "id": "uw-frnt-wyoming-e020b2986abcb1e7",
-      "assetId": "frnt-wyoming",
-      "scope": {
-        "componentKey": "control:mint-meta:frnt-wyoming:9a473d512b36b990e515",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:frnt-wyoming:9a473d512b36b990e515",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:12:11Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R92)",
-      "sources": [
-        {
-          "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js",
-          "observedAt": "2026-10-03T23:09:35Z",
-          "datumAsOf": null,
-          "location": "Fireblocks partner disclosure",
-          "excerpt": "Operational keys live in FIPS 140-2 Level 3 hardware security modules with policy-bound key export disabled.",
-          "assertion": "HSM storage is disclosed, but no deployed controller-specific quorum, independent operator roster or recovery authorization threshold."
-        },
-        {
-          "url": "https://stabletoken.wyo.gov/assets/media/token.pdf",
-          "observedAt": "2026-10-03T23:09:35Z",
-          "datumAsOf": "2026-01-14",
-          "location": "Chapter 2 section 3(a)(iv), p.7",
-          "excerpt": "Define key signing ceremony procedures and determine key signing thresholds for authorizing minting, burning, token transfers, compliance actions, and smart contract updates or changes.",
-          "assertion": "Requires internal signing thresholds; does not publish the actual thresholds or map them to the 22 identified production minter/admin/upgrader authorities."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js",
-        "https://stabletoken.wyo.gov/assets/media/token.pdf",
-        "https://stabletoken.wyo.gov/assets/media/reserves.pdf",
-        "https://dashboard.ledgerlens.io/c/wystc",
-        "https://github.com/wyostable/audits",
-        "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol",
-        "https://www.fireblocks.com/blog/first-u-s-state-issued-stablecoin-launches-with-fireblocks-infrastructure",
-        "https://www.prnewswire.com/news-releases/wyoming-stable-token-commission-migrates-to-chainlink-ccip-for-enhanced-operational-security-302854502.html"
-      ],
-      "rationale": "The 22 exact native minter/admin/upgrader questions ask for deployed HSM signing quorum, independent operators and recovery policy. Public token rules require internal thresholds and redundant recovery keys; technical/provider disclosures describe HSM/MPC but publish no controller-specific production threshold, independence or recovery authorization. Contract role gating cannot expose backend policy. These indispensable safeguards remain undisclosed. This does not assert incident absence or resolve the separate Hedera/Solana census."
-    },
-    {
       "id": "uw-frnt-wyoming-6a484ea06919c179",
       "assetId": "frnt-wyoming",
       "scope": {
@@ -39527,6 +39482,55 @@
           "assertion": "The five-day rule uses the Luxembourg banking calendar; condition 7.1 also requires completed KYC and delivery into the burn wallet. Preserve those prerequisites rather than promise an unconditional request-to-cash bound."
         }
       ]
+    },
+    {
+      "id": "uw-frnt-wyoming-f6983b2ebdd5a42e",
+      "assetId": "frnt-wyoming",
+      "scope": {
+        "componentKey": "control:mint-meta:frnt-wyoming:bbb96471937f91b897ed",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:frnt-wyoming:bbb96471937f91b897ed",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T23:50:02Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R03)",
+      "sources": [
+        {
+          "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Fireblocks partner disclosure; unchanged current bundle rechecked in wave 3",
+          "excerpt": "Operational keys live in FIPS 140-2 Level 3 hardware security modules with policy-bound key export disabled.",
+          "assertion": "Storage controls are disclosed, not the operator identities, their independence or the deployed Solana recovery authorization policy. This does not classify the now-known on-chain one-of-two quorum as undisclosed."
+        },
+        {
+          "url": "https://stabletoken.wyo.gov/assets/media/token.pdf",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": "2026-01-14",
+          "location": "Chapter 2 section 3(a)(iv), PDF p.7",
+          "excerpt": "Define key signing ceremony procedures and determine key signing thresholds for authorizing minting, burning, token transfers, compliance actions, and smart contract updates or changes.",
+          "assertion": "Requires internal key-signing procedures but does not publish the operator and recovery policies for either exact Solana signer. One-of-two cryptographic topology is independently curated from finalized RPC data."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://stabletoken.wyo.gov/",
+        "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js",
+        "https://stabletoken.wyo.gov/assets/media/token.pdf",
+        "https://stabletoken.wyo.gov/assets/media/reserves.pdf",
+        "https://stabletoken.wyo.gov/assets/media/terms.pdf",
+        "https://stabletoken.wyo.gov/assets/media/risk.pdf",
+        "https://stabletoken.wyo.gov/assets/media/factbook.pdf",
+        "https://stabletoken.wyo.gov/assets/meetingsData-CjaX94FC.js",
+        "https://dashboard.ledgerlens.io/c/wystc",
+        "https://api.github.com/repos/wyostable/audits/commits?per_page=5",
+        "https://api.mainnet-beta.solana.com",
+        "https://www.linkedin.com/pulse/why-wyoming-stable-token-commission-migrated-frnt-from-keith-lawhorn-jcdpe"
+      ],
+      "rationale": "The exact Solana authority is an initialized native Token-2022 one-of-two multisig, not an opaque backend; that public cryptographic identity is curated. Current Commission rules, technology bundle, legal terms, factbook, meeting materials and audit chronology do not identify its two operators, their independence or private recovery authorization. These indispensable private-policy questions remain researched non-disclosure. The incident question remains separately U; this is not an incident-free finding."
     }
   ]
 }
