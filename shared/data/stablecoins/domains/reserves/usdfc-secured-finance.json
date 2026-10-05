@@ -2,6 +2,7 @@
   "id": "usdfc-secured-finance",
   "reserves": [
     {
+      "sourceKey": "liquity-native-active-pool:0x8637ac7fdbb4c763b72e26504afb659df71c7803",
       "name": "Native FIL",
       "pct": 100,
       "risk": "medium",
@@ -13,17 +14,21 @@
         "smart-contract",
         "concentration"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-04",
+    "reviewer": "Unknown-resolver wave 3 (W3R11)",
     "confidence": "verified",
     "sources": [
       {
         "label": "Secured Finance FIL-only CDP overview",
         "url": "https://docs.secured.finance/usdfc-stablecoin/overview"
+      },
+      {
+        "label": "USDFC conditional FIL redemption and partial fills",
+        "url": "https://docs.secured.finance/usdfc-stablecoin/core-mechanics/redemption"
       },
       {
         "label": "Filecoin mainnet contract graph",
@@ -34,7 +39,7 @@
         "url": "https://api.node.glif.io/rpc/v1"
       }
     ],
-    "rationale": "Only native FIL collateral is permitted. Composition is 100% FIL, distinct from the reserve-to-debt collateralization ratio.",
+    "rationale": "The current issuer overview identifies FIL as Filecoin's native asset and the sole collateral. The exact captured ActivePool source key binds this cryptoasset classification and network identity without changing measured weights or composition date. Redemption releases FIL subject to collateral-ratio and partial-redemption restrictions; no whole-position final USD liquidity maximum is established, so the earlier immediate label is withdrawn.",
     "compositionBasis": "FIL-only protocol rules, corroborated by pinned ActivePool and DefaultPool reads at Filecoin block 6422489.",
     "compositionAsOf": "2026-10-02",
     "scope": "full-composition",

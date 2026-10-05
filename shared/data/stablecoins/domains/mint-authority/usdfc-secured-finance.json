@@ -169,14 +169,18 @@
         {
           "label": "Secured Finance live underlying-strategy incident warning",
           "url": "https://vaults.secured.finance/"
+        },
+        {
+          "label": "Secured Finance September 7–18 incident-response thread",
+          "url": "https://x.com/Secured_Fi/status/2097897896549179583"
         }
       ],
-      "evidence": "At Filecoin block 6425379 on 2026-10-03, the token EIP-1967 implementation remains 0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b; token owner() and ProxyAdmin owner() both return the same recorded 2-of-3 Safe, whose threshold and three owners were re-read at that pin. Sourcify match 11586794 verifies the deployed implementation's executable runtime against DebtToken.sol compiled with solc 0.7.6, optimizer 100; runtimeMatch is match, not an exact metadata match. Its mint() invokes _requireCallerIsBorrowerOperations(), which requires msg.sender == borrowerOperationsAddress. This resolves the earlier source-to-executable correspondence question without claiming identical compiler metadata. Published September 2026 upgrades demonstrate exercised Safe authority; code audits do not establish signer independence or financial reserve reconciliation. The live SF Yield Vault warns of an investigation into underlying strategies and lists a USDFC vault. This is not proof that core USDFC mint/Trove contracts were exploited; incident impact on those exact controls remains unresolved, so no incident-free fact is inferred. Financial reserve reconciliation is not applicable to native FIL collateral.",
-      "reviewer": "Unknown resolver W1R08 primary-source review",
-      "reviewedAt": "2026-10-03",
+      "evidence": "At Filecoin block 6425379 on 2026-10-03, the token EIP-1967 implementation remains 0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b; token owner() and ProxyAdmin owner() both return the same recorded 2-of-3 Safe, whose threshold and three owners were re-read at that pin. Sourcify match 11586794 verifies the deployed implementation's executable runtime against DebtToken.sol compiled with solc 0.7.6, optimizer 100; runtimeMatch is match, not an exact metadata match. Its mint() invokes _requireCallerIsBorrowerOperations(), which requires msg.sender == borrowerOperationsAddress. This resolves the earlier source-to-executable correspondence question without claiming identical compiler metadata. Published September 2026 upgrades demonstrate exercised Safe authority; code audits do not establish signer independence or financial reserve reconciliation. Wave 3 recovered the official September 7–18 incident thread: the September 8 update identifies an order-book accounting flaw allowing unfilled orders to create invalid balances; September 11 reports Quantstamp reproduction and a verified fix, and September 18 says lending markets and TokenVaults remain paused pending validation. These establish affected lending infrastructure and ongoing remediation, not an exhaustive abnormal-issuance or affected-contract review for core USDFC BorrowerOperations and its owner/ProxyAdmin-owner Safe. No core incident-free state is inferred. Financial reserve reconciliation is not applicable to native FIL collateral.",
+      "reviewer": "Unknown resolver W1R08; wave 3 W3R11 incident-source recheck",
+      "reviewedAt": "2026-10-04",
       "disposition": "unresolved",
       "unresolvedQuestions": [
-        "What impact, if any, does Secured Finance's currently disclosed underlying-strategy security incident have on the exact USDFC BorrowerOperations mint path and owner/ProxyAdmin-owner Safe? The primary live warning does not identify affected contracts or resolve core USDFC control impact; no incident-free state is inferred from separate core code audits or the now-established executable source match."
+        "The recovered official September 7–18 incident thread identifies an order-book accounting flaw, confirmed lending losses and ongoing TokenVault remediation, but supplies no exhaustive affected-contract or abnormal-mint review for USDFC BorrowerOperations and its owner/ProxyAdmin-owner Safe. What exact primary or complete on-chain evidence establishes the impact on those core mint controls?"
       ],
       "scopedQuestions": [
         {

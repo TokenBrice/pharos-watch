@@ -39207,6 +39207,49 @@
         "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SoFiUSD-Stablecoin-Attestation-Report-8.31.2026.pdf"
       ],
       "rationale": "The exact institutional BitGo/SoFi SOFID redemption cost is not publicly quantified. May 27 SoFi terms permit issuance/redemption fees disclosed separately; June retail trading tiers do not price this institutional rail. SoFiUSD-specific BitGo Additional Terms send Fees to a login-only platform; Burn Tokens docs expose enterprise fee fields, not public SOFID values. General mint terms make the displayed transaction fee controlling. Reserve attestations do not supply a tariff; zero and USD1 testnet examples are unsupported."
+    },
+    {
+      "id": "uw-usdfc-secured-finance-632809a5ff70300b",
+      "assetId": "usdfc-secured-finance",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:36402232aa97e2110c2025f6",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T23:47:41Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R11)",
+      "sources": [
+        {
+          "url": "https://docs.secured.finance/usdfc-stablecoin/core-mechanics/redemption",
+          "observedAt": "2026-10-04T23:47:41Z",
+          "datumAsOf": null,
+          "location": "How it works / partial redemption",
+          "excerpt": "A redemption cannot leave a Trove's net debt below the 200 USDFC minimum.",
+          "assertion": "FIL payout is conditional and can stop partially; this does not disclose a whole-collateral final USD realization maximum."
+        },
+        {
+          "url": "https://docs.secured.finance/resources/legal/risk-disclaimer",
+          "observedAt": "2026-10-04T23:47:41Z",
+          "datumAsOf": null,
+          "location": "No Guarantee or Advice",
+          "excerpt": "without any warranties",
+          "assertion": "User terms disclaim availability rather than establish a native-FIL whole-position liquidity bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.secured.finance/usdfc-stablecoin/overview",
+        "https://docs.secured.finance/usdfc-stablecoin/core-mechanics/redemption",
+        "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts",
+        "https://docs.secured.finance/resources/legal/risk-disclaimer",
+        "https://docs.secured.finance/resources/legal/terms-of-use",
+        "https://docs.secured.finance/llms.txt"
+      ],
+      "rationale": "No whole-position final USD liquidityHorizon is disclosed for Native FIL in the ActivePool/DefaultPool book. The current issuer rules describe conditional FIL release and partial fills, not a complete USD sale/settlement deadline; contract/audit inventory, documentation index and recovered February 20 user terms supply no such guarantee. Native transfer speed is not all-position USD realizability."
     }
   ]
 }
