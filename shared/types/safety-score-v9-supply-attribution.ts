@@ -3,6 +3,7 @@ import candidatePolicy from "../data/safety-score-v9/methodology-policy-candidat
 import { BaseInputGenerationIdSchema, CanonicalChainIdSchema, CanonicalTextSchema, NonNegativeFiniteSchema, Sha256Schema, StrictIsoDateSchema, UnixSecondsSchema, uniqueKeyedCollectionSchema } from "./safety-schema-primitives";
 import { CHAIN_META } from "./chain-identity";
 import { NativeBankDenomSchema } from "./stablecoin-meta-schemas";
+import { L2MessengerPendingReadSchema, L2MessengerPendingProofSchema } from "./safety-score-v9-l2-messenger-pending";
 
 const vocabulary = candidatePolicy.semantic.supplyAttribution;
 function vocabularySchema(values: string[]) { return z.enum(values as [string, ...string[]]); }
@@ -269,7 +270,7 @@ const CcipPendingProofSchema = z.strictObject({
     amount: z.string().regex(/^(0|[1-9][0-9]*)$/).max(78),
   })).min(1).max(128),
 });
-const PendingAmountReadSchema = z.union([ApiAmountReadSchema, EvmPendingStateReadSchema, CurveLzPendingReadSchema, LayerZeroOftPendingReadSchema, CcipPendingReadSchema]);
+const PendingAmountReadSchema = z.union([ApiAmountReadSchema, EvmPendingStateReadSchema, CurveLzPendingReadSchema, L2MessengerPendingReadSchema, LayerZeroOftPendingReadSchema, CcipPendingReadSchema]);
 export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
   assetId: CanonicalTextSchema, reviewer: CanonicalTextSchema, reviewedAtSec: UnixSecondsSchema, expiresAtSec: UnixSecondsSchema,
   evidenceUrls: z.array(z.string().url()).min(1), economicScope: CanonicalTextSchema, sourceId: CanonicalTextSchema,
@@ -327,6 +328,15 @@ export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
               row.claimUnit !== canonical?.claimUnit ||
               (row.read.kind !== "evm-total-supply" && row.read.kind !== "evm-balance");
           })) ctx.addIssue({ code: "custom", message: "Curve pending directions must bind the exact escrow and same-unit pinned satellite receipts" });
+      } else if (escrow.inFlightSource.kind === "evm-l2-messenger-pending") {
+        const source = escrow.inFlightSource;
+        if (escrow.account !== source.escrowAddress || canonical?.address !== source.l1Token ||
+          escrow.receiptDeploymentKeys.length !== 1 || escrow.receiptDeploymentKeys.some(key => {
+            const row = plan.deployments.find(deployment => deployment.deploymentKey === key);
+            return !row || row.chainId !== source.l2ChainId || row.address !== source.l2Token ||
+              row.decimals !== canonical?.decimals || row.claimUnit !== canonical?.claimUnit ||
+              (row.read.kind !== "evm-total-supply" && row.read.kind !== "evm-balance");
+          })) ctx.addIssue({ code: "custom", message: "Canonical messenger pending must bind the exact token pair, escrow and pinned same-unit receipt" });
       }
       if (escrow.inFlightSource.kind === "evm-layerzero-oft-pending") {
         const source = escrow.inFlightSource;
@@ -447,6 +457,7 @@ const EconomicSupplyObservationSchema = z.strictObject({
   id: CanonicalTextSchema, deploymentKey: CanonicalTextSchema, amount: DecimalSchema,
   observedAtSec: UnixSecondsSchema, anchor: CanonicalTextSchema, anchorHash: CanonicalTextSchema, responseSha256: Sha256Schema,
   curvePendingProof: CurvePendingProofSchema.optional(),
+  l2MessengerPendingProof: L2MessengerPendingProofSchema.optional(),
   layerZeroOftPendingProof: LayerZeroOftPendingProofSchema.optional(),
   ccipPendingProof: CcipPendingProofSchema.optional(),
 });

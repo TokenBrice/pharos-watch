@@ -1178,7 +1178,7 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
     observation: EconomicSupplyObservation,
   ): boolean => {
     const proof = observation.layerZeroOftPendingProof;
-    if (!proof || observation.curvePendingProof !== undefined || observation.ccipPendingProof !== undefined ||
+    if (!proof || observation.curvePendingProof !== undefined || observation.l2MessengerPendingProof !== undefined || observation.ccipPendingProof !== undefined ||
       proof.sourceDigest !== sha256Hex(stableJsonStringifyV1(source)) ||
       proof.pins.length !== source.sides.length || proof.pathways.length !== source.pathways.length ||
       proof.pins.some((pin, index) => {
@@ -1231,7 +1231,7 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
           pendingObservation.observedAtSec !== observation.observedAtSec) return null;
         if (escrow.inFlightSource.kind === "evm-curve-lz-pending") {
           const source = escrow.inFlightSource, proof = pendingObservation.curvePendingProof;
-          if (!proof || pendingObservation.layerZeroOftPendingProof !== undefined || pendingObservation.ccipPendingProof !== undefined ||
+          if (!proof || pendingObservation.l2MessengerPendingProof !== undefined || pendingObservation.layerZeroOftPendingProof !== undefined || pendingObservation.ccipPendingProof !== undefined ||
             proof.sourceDigest !== sha256Hex(stableJsonStringifyV1(source)) ||
             proof.pins.length !== source.sides.length ||
             proof.pins.some((pin, index) => {
@@ -1245,12 +1245,28 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
                 });
             }) ||
             pendingObservation.responseSha256 !== sha256Hex(stableJsonStringifyV1({ proof, amount: pendingObservation.amount }))) return null;
+        } else if (escrow.inFlightSource.kind === "evm-l2-messenger-pending") {
+          const source = escrow.inFlightSource, proof = pendingObservation.l2MessengerPendingProof;
+          if (!proof || pendingObservation.curvePendingProof !== undefined || pendingObservation.layerZeroOftPendingProof !== undefined ||
+            pendingObservation.ccipPendingProof !== undefined || proof.sourceDigest !== sha256Hex(stableJsonStringifyV1(source)) ||
+            BigInt(proof.depositAmount) + BigInt(proof.withdrawalAmount) !== BigInt(pendingObservation.amount) ||
+            proof.pins.some((pin, index) => {
+              const chainId = index === 0 ? source.chainId : source.l2ChainId;
+              const start = index === 0 ? source.l1StartBlock : source.l2StartBlock;
+              const holdings = input.plan.deployments.filter(row => row.chainId === chainId);
+              return pin.chainId !== chainId || pin.anchor < start || holdings.length === 0 || holdings.some(row => {
+                const observed = observations.get(row.deploymentKey);
+                return !observed || observed.anchor !== String(pin.anchor) || observed.anchorHash !== pin.anchorHash ||
+                  observed.observedAtSec !== pin.observedAtSec;
+              });
+            }) || pendingObservation.responseSha256 !== sha256Hex(stableJsonStringifyV1({ proof, amount: pendingObservation.amount }))) return null;
         } else if (escrow.inFlightSource.kind === "evm-layerzero-oft-pending") {
           if (!validOftPending(escrow.inFlightSource, pendingObservation)) return null;
         } else if (escrow.inFlightSource.kind === "evm-ccip-pending") {
-          if (pendingObservation.curvePendingProof !== undefined || pendingObservation.layerZeroOftPendingProof !== undefined ||
+          if (pendingObservation.curvePendingProof !== undefined || pendingObservation.l2MessengerPendingProof !== undefined ||
+            pendingObservation.layerZeroOftPendingProof !== undefined ||
             !authenticateCcipPendingObservation(escrow.inFlightSource, pendingObservation, input.observations, input.plan.deployments)) return null;
-        } else if (pendingObservation.curvePendingProof !== undefined ||
+        } else if (pendingObservation.curvePendingProof !== undefined || pendingObservation.l2MessengerPendingProof !== undefined ||
           pendingObservation.layerZeroOftPendingProof !== undefined || pendingObservation.ccipPendingProof !== undefined) return null;
       }
       const pending: EconomicFraction | null | undefined = escrow.inFlightSource === null && input.plan.inFlightTreatment === "atomic-native-wrapper"

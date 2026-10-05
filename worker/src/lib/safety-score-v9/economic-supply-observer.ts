@@ -16,6 +16,7 @@ import { getPublicRpcUrl } from "../public-rpc-registry";
 import { decodeEvmUint256, fetchSafetyScoreV9SolanaRpc, rewindEvmBlockHeaderToScoringClock, type SafetyScoreV9SolanaRpcFetcher } from "./supply-observation-primitives";
 import { buildReviewedEconomicDeploymentInventory, deriveReviewedEconomicDeploymentPartition, economicProviderSupplyContradictionChain, economicSupplyInputDeploymentObservation, economicSupplyInputReferencePrice, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
 import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
+import { observeL2MessengerPending } from "./l2-messenger-pending-observer";
 import { observeLayerZeroOftPending } from "./layerzero-oft-pending-observer";
 import { observeEconomicCosmosBank, pinEconomicCosmosBank, type CosmosBankPin } from "./cosmos-bank-observer";
 import { fetchMoveFungibleAssetSupply, fetchTonJettonSupply } from "../../cron/reserve-adapters/token-supply";
@@ -595,6 +596,16 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
           pending = { id: `in-flight:${escrow.id}`, deploymentKey: escrow.canonicalDeploymentKey, amount: result.amount,
             observedAtSec: header.timestamp, anchor: String(header.number), anchorHash: header.hash,
             responseSha256: result.responseSha256, curvePendingProof: result.proof };
+        } else if (escrow.inFlightSource.kind === "evm-l2-messenger-pending") {
+          const source = escrow.inFlightSource;
+          const pins = [headers.get(source.chainId), headers.get(source.l2ChainId)];
+          if (pins.some(pin => pin === undefined)) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `${escrow.id}:pin-missing` };
+          const result = await observeL2MessengerPending({ source, headers: pins as EvmBlockHeader[], chainRpcs: input.chainRpcs, signal: input.signal, db: input.db });
+          if (result.status !== "accepted") return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `${escrow.id}:${result.reason}` };
+          const header = pins[0]!;
+          pending = { id: `in-flight:${escrow.id}`, deploymentKey: escrow.canonicalDeploymentKey, amount: result.amount,
+            observedAtSec: header.timestamp, anchor: String(header.number), anchorHash: header.hash,
+            responseSha256: result.responseSha256, l2MessengerPendingProof: result.proof };
         } else if (escrow.inFlightSource.kind === "evm-layerzero-oft-pending") {
           pending = await readOftPending(escrow.inFlightSource, `in-flight:${escrow.id}`, escrow.canonicalDeploymentKey);
         } else {
