@@ -19,6 +19,23 @@
         "canRaiseCap": false,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
+        "keyCustodyAttestation": {
+          "kind": "mpc",
+          "sources": [
+            {
+              "label": "Issuer whitepaper pages 9 and 12 explicitly bind ZARsc Solana mint/burn signing to Fireblocks MPC",
+              "url": "https://cdn.prod.website-files.com/6a43ab66ff171ec1aca79e9b/6a47cf673480e0371e2fc333_White_Paper_Supercoin_2026.pdf"
+            },
+            {
+              "label": "Issuer explicitly binds ZARsc minting to Fireblocks MPC infrastructure",
+              "url": "https://www.supercoin.co.za/insights-news/every-zarsc-token-is-minted-held-and-redeemed-on-fireblocks-here-is-why-that-matters"
+            },
+            {
+              "label": "Fireblocks confirms Supercoin Solana issuance uses MPC wallets",
+              "url": "https://www.fireblocks.com/customers/supercoin"
+            }
+          ]
+        },
         "observedAt": "2026-10-03",
         "observedBlock": 452860529,
         "sources": [
@@ -74,10 +91,17 @@
       "scopedQuestions": [
         {
           "controlRef": "Solana Token-2022 mint authority",
-          "question": "Which independently verifiable human-independence, Fireblocks key-custody/MPC and signing-policy arrangements protect the identified ordinary Solana mint signer? Its onchain account enforces neither a multisig quorum nor a timelock.",
+          "question": "Issuer and Fireblocks disclosures establish MPC custody for ZARsc Solana issuance, but do not identify the beneficial human signing operators, their organizational independence, or the approval-policy boundary for the exact ordinary mint signer UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk. Which people and approval policy govern this key? MPC key-share separation does not itself establish independent humans; the on-chain account still enforces neither a multisig quorum nor a timelock.",
           "subject": "key-custody-independence",
-          "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
-          "sources": [{"label": "Supercoin Fireblocks and custody terms", "url": "https://www.supercoin.co.za/terms-of-service"}, {"label": "Exact Solana mint and signer", "url": "https://solscan.io/token/5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ"}]
+          "reviewedAt": "2026-10-05",
+          "reviewer": "Pharos wave-4 scoped custody research (K08)",
+          "sources": [
+            {"label": "Issuer whitepaper: exact Solana mint/burn MPC and general oversight, not beneficial-human independence", "url": "https://cdn.prod.website-files.com/6a43ab66ff171ec1aca79e9b/6a47cf673480e0371e2fc333_White_Paper_Supercoin_2026.pdf"},
+            {"label": "Issuer ZARsc minting and MPC custody disclosure", "url": "https://www.supercoin.co.za/insights-news/every-zarsc-token-is-minted-held-and-redeemed-on-fireblocks-here-is-why-that-matters"},
+            {"label": "Custody provider confirms Solana issuance MPC wallets", "url": "https://www.fireblocks.com/customers/supercoin"},
+            {"label": "Supercoin Fireblocks and custody terms", "url": "https://www.supercoin.co.za/terms-of-service"},
+            {"label": "Exact Solana mint and signer", "url": "https://solscan.io/token/5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ"}
+          ]
         }
       ]
     }
