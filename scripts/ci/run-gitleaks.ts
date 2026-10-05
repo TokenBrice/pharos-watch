@@ -356,6 +356,10 @@ export function runGitleaksConfigSelfTest(
         path: evidenceGapPath,
         value: { url: `https://files.gitbook.com/a.pdf?alt=media&token=${["168abe3d-0650-454c", "-bfa5-592b7c08ad83"].join("")}` },
       },
+      {
+        path: evidenceGapPath,
+        value: { componentKey: `control:mint-meta:krusdc-keyrock:${["fe24dc6831", "77afe51d19"].join("")}` },
+      },
       ...[
         ["58c911b9-1ab7-495c", "-97ba-d379fe9c4e5e"].join(""),
         ["9bfe7105-c648-406b", "-b51c-b9c4431bc335"].join(""),
