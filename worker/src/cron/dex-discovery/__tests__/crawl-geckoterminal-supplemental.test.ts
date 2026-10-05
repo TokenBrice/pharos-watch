@@ -34,6 +34,51 @@ function target(stablecoinId: string, chain: string): ContractDeployment {
 }
 
 describe("supplemental GeckoTerminal deployment discovery", () => {
+  it.each([true, false])(
+    "queries the exact Arc token and certifies empty only when pagination is complete (%s)",
+    async (complete) => {
+      const deployment: ContractDeployment = {
+        chain: "arc",
+        address: "0x8e357432cc12ff425c36432f312968aeb16112af",
+        decimals: 18,
+      };
+      const fetchPools = vi.fn<typeof fetchGtTokenPools>(async () => ({
+        rows: [],
+        complete,
+        cappedAtMaxPages: false,
+        failedAfterRows: complete ? null : 0,
+      }));
+      const stage = await crawlGeckoTerminalPoolsStage({
+        coinTargets: [deployment],
+        cgPriceObservationTargets: new Set(),
+        context: context("arcusdc-galaxy"),
+        dependencies: {
+          crawlTokenPools,
+          fetchGtTokenPools: fetchPools,
+          sleepWithSignal: vi.fn<typeof sleepWithSignal>(async () => {}),
+        },
+      });
+      expect(fetchPools.mock.calls.map(([address, network]) => [address, network])).toEqual([
+        [deployment.address, "arc"],
+      ]);
+      const outcomes = classifyDexDeploymentOutcomes({
+        stablecoinId: "arcusdc-galaxy",
+        deployments: [deployment],
+        pools: [],
+        providerChecks: stage.providerChecks,
+        nowSec: 1_800_000_000,
+      });
+      expect(outcomes).toEqual([
+        expect.objectContaining({
+          chain: "arc",
+          address: deployment.address,
+          outcome: complete ? "verified_no_pools" : "provider_inaccessible",
+          providers: ["geckoterminal"],
+        }),
+      ]);
+    },
+  );
+
   it("queries fixed supplemental chain identities without admitting an IBC denom as EVM", async () => {
     const targets: ContractDeployment[] = [
       { chain: "starknet", address: "0xAbC", decimals: 6 },

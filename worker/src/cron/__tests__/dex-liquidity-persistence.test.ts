@@ -12,6 +12,7 @@ vi.mock("../../lib/db", async (importOriginal) => {
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
+import { computeDexDeploymentSupplyCoverage } from "../../lib/report-cards-snapshot-inputs";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { initMetrics } from "../dex-liquidity/pool-helpers";
 import {
@@ -55,6 +56,7 @@ function makeDb(options: {
   currentGenerationRows?: number;
   newerCurrentRows?: number;
   deploymentOutcomeRows?: DexDeploymentCensusRow[];
+  onCensusRead?: () => void;
   currentRouteRows?: Array<{ stablecoin_id: string; score_components_json: string | null }>;
   orphanIds?: string[];
 } = {}): DexPersistenceMockDb {
@@ -85,6 +87,7 @@ function makeDb(options: {
           };
         }
         if (sql.includes("FROM dex_deployment_outcomes")) {
+          options.onCensusRead?.();
           return {
             results: (options.deploymentOutcomeRows ?? []) as T[],
             success: true,
@@ -425,6 +428,7 @@ describe("dex-liquidity persistence", () => {
     const meta = ACTIVE_STABLECOINS.find((coin) => coin.id === "aa-falconx-mev-capital");
     if (!meta) throw new Error("expected aa-falconx-mev-capital in active registry");
     const nowSec = 1_800_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
     const deploymentOutcomeRows: DexDeploymentCensusRow[] = [
       ...(meta.contracts ?? []),
       ...(meta.tradedContracts ?? []),
@@ -478,6 +482,102 @@ describe("dex-liquidity persistence", () => {
       },
     });
   });
+
+  it.each([
+    { caseName: "discovery completed after the quote stage", observedOffset: -60, outage: false, state: "complete-empty", reason: null },
+    { caseName: "a true future discovery observation", observedOffset: 1, outage: false, state: "validation-failure", reason: "deploymentCensusInvalidOutcome" },
+    { caseName: "a real provider outage after the quote stage", observedOffset: -60, outage: true, state: "provider-outage", reason: "deploymentCensusProviderOutage" },
+    { caseName: "a genuinely stale discovery observation", observedOffset: -172_801, outage: false, state: "discovery-deferral", reason: "deploymentCensusStaleOutcome" },
+  ].flatMap((fixture) => [false, true].map((scored) => ({ ...fixture, scored }))))(
+    "classifies $caseName at read completion (scored=$scored)",
+    async ({ observedOffset, outage, state, reason, scored }) => {
+      const meta = ACTIVE_STABLECOINS.find((coin) => coin.id === "bbqusdc-steakhouse");
+      if (!meta) throw new Error("expected bbqusdc-steakhouse in active registry");
+      const quoteSourceAtSec = 1_800_000_000;
+      const readCompletedAtSec = quoteSourceAtSec + 600;
+      const observedAtSec = readCompletedAtSec + observedOffset;
+      const clock = vi.spyOn(Date, "now").mockReturnValue(quoteSourceAtSec * 1000);
+      const deploymentOutcomeRows: DexDeploymentCensusRow[] = [
+        ...(meta.contracts ?? []),
+        ...(meta.tradedContracts ?? []),
+      ].map((deployment) => ({
+        stablecoin_id: meta.id,
+        chain: deployment.chain,
+        contract_address: deployment.address,
+        outcome: outage ? "provider_inaccessible" : "verified_no_pools",
+        provider_set_json: JSON.stringify(["coingecko", "geckoterminal", "dexscreener", "curve"]),
+        reason: outage
+          ? "Provider request failed"
+          : "A provider completed the direct-token query with no eligible pool",
+        observed_pool_count: 0,
+        observed_at: observedAtSec,
+        discovery_last_crawl_at: observedAtSec - 30,
+      }));
+      const db = makeDb({
+        deploymentOutcomeRows,
+        onCensusRead: () => clock.mockReturnValue(readCompletedAtSec * 1000),
+      });
+      await persistScores(
+        db,
+        scored ? new Map([[meta.id, initMetrics(meta.id, meta.symbol)]]) : new Map(),
+        scored ? new Map([[meta.id, makeFullScoreResult({
+          exitRouteObservations: [],
+          exitRouteObservationCoverage: {
+            ...makeDexRouteObservationCoverage(),
+            retainedPoolCount: 0,
+            observationCount: 0,
+            scoreEligibleObservationCount: 0,
+            scoreEligiblePoolCount: 0,
+            scoreEligibleCapabilityPoolCount: 0,
+          },
+        } as Partial<FullScoreResult>)]]) : new Map(),
+        {
+          totalTvl: 0, totalVol24h: 0, totalVol7d: 0,
+          volumeAvailability: makeCompleteVolumeAvailability(0, 0),
+          poolCount: 0, chainCount: 0, protocolTvl: {}, chainTvl: {},
+        },
+        quoteSourceAtSec,
+      );
+      const row = extractDexLiquidityRunRows(
+        getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows"),
+      ).find((candidate) => candidate[1] === meta.id);
+      const details = JSON.parse(String(row?.[21]));
+      expect(details.dexDeploymentCensus).toMatchObject({
+        state,
+        generationId: buildDexLiquidityPublicationGenerationId(quoteSourceAtSec),
+        publishedAtSec: quoteSourceAtSec,
+        quoteSourceAtSec,
+        censusReadCompletedAtSec: readCompletedAtSec,
+        oldestObservedAtSec: observedAtSec,
+        newestObservedAtSec: observedAtSec,
+        maxAgeSec: 172_800,
+      });
+      expect(details.exitRouteObservationCoverage.status).toBe(state === "complete-empty" ? "populated" : "unknown");
+      if (reason) {
+        expect(details.exitRouteObservationCoverage.unsupportedReasons[reason]).toBe(deploymentOutcomeRows.length);
+      } else {
+        expect(details.exitRouteObservationCoverage.unsupportedReasons).toEqual({});
+        // A successful pool census does not resolve a same-chain liability
+        // partition. Supply admission must still fail closed independently.
+        const supply = computeDexDeploymentSupplyCoverage({
+          contracts: [
+            ...(meta.contracts ?? []),
+            { chain: "ethereum", address: "0x1111111111111111111111111111111111111111", decimals: 18 },
+          ],
+          chainCirculating: { ethereum: { current: 100 } },
+        }, deploymentOutcomeRows.map((outcome) => ({
+          chain: outcome.chain,
+          contractAddress: outcome.contract_address,
+          outcome: outcome.outcome,
+          observedAt: outcome.observed_at,
+        })), new Map(), { asOfSec: readCompletedAtSec, maxOutcomeAgeSec: 172_800 });
+        expect(supply).toMatchObject({ unknownSupplyUsd: 100, unknownSupplyRatio: 1 });
+      }
+      expect(row?.[29]).toBe(quoteSourceAtSec);
+      expect(deploymentOutcomeRows.every((outcome) => outcome.observed_at === observedAtSec)).toBe(true);
+      expect(db.getHistory().filter(({ sql }) => sql.includes("FROM dex_deployment_outcomes"))).toHaveLength(1);
+    },
+  );
 
   it("classifies the deployment census for a scored row that retained no pool", async () => {
     // Shape under test (formerly the hlusd-hela fixture, now quarantined): an

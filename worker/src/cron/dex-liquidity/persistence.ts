@@ -725,6 +725,9 @@ export async function persistScores(
   }
   const deploymentCensusById = new Map<string, DexDeploymentCensusRow[]>();
   let deploymentCensusAvailable = true;
+  // This snapshot is read during publication, independently of the older
+  // scoring stage. Never judge live discovery rows against the quote clock.
+  let deploymentCensusReadCompletedAtSec: number;
   try {
     throwIfAborted(signal);
     const censusRows = await db
@@ -741,6 +744,7 @@ export async function persistScores(
           ORDER BY outcome.stablecoin_id, outcome.chain, outcome.contract_address`,
       )
       .all<DexDeploymentCensusRow>();
+    deploymentCensusReadCompletedAtSec = Math.floor(Date.now() / 1000);
     throwIfAborted(signal);
     for (const row of censusRows.results ?? []) {
       const rows = deploymentCensusById.get(row.stablecoin_id) ?? [];
@@ -750,6 +754,7 @@ export async function persistScores(
   } catch (error) {
     rethrowIfAborted(error, signal);
     deploymentCensusAvailable = false;
+    deploymentCensusReadCompletedAtSec = Math.floor(Date.now() / 1000);
     logWorkerEvent({
       scope: "lib",
       level: "warn",
@@ -852,7 +857,7 @@ export async function persistScores(
               classification: classifyDexPlaceholderCoverage({
                 deployments: censusDeployments(activeMetaById.get(id)),
                 outcomeRows: deploymentCensusById.get(id) ?? [],
-                nowSec,
+                nowSec: deploymentCensusReadCompletedAtSec,
                 censusAvailable: deploymentCensusAvailable,
               }),
               generationId,
@@ -928,7 +933,7 @@ export async function persistScores(
         const coverage = classifyDexPlaceholderCoverage({
           deployments: censusDeployments(meta),
           outcomeRows: deploymentCensusById.get(meta.id) ?? [],
-          nowSec,
+          nowSec: deploymentCensusReadCompletedAtSec,
           censusAvailable: deploymentCensusAvailable,
         });
         deploymentCensusById.delete(meta.id);

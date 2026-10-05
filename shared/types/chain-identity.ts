@@ -159,11 +159,9 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   gatelayer:      { name: "Gate Layer",      explorerUrl: "https://www.gatescan.org/gatelayer",             evmChainId: 10088,    type: "evm",   logoPath: "/chains/gatelayer.png"      },
   // Arc is Circle's USDC-native L1 (chain ID 5042, mainnet live 2026-09-16).
   // The chain ID was read back live from the network's own RPC via eth_chainId
-  // and the explorer comes from the chain's registry entry. No `providers`
-  // block: no token-pool provider registration was sourced for Arc, so its
-  // deployments read "no registered token-pool provider supports this chain"
-  // rather than claiming a query that cannot run.
-  arc:            { name: "Arc",             explorerUrl: "https://arc.etherscan.io",                       evmChainId: 5042,     type: "evm",   logoPath: "/chains/arc.png"              },
+  // and the explorer comes from the chain's registry entry. GeckoTerminal's
+  // network catalogue and exact-token pool endpoint use the `arc` slug.
+  arc:            { name: "Arc",             explorerUrl: "https://arc.etherscan.io",                       evmChainId: 5042,     type: "evm",   logoPath: "/chains/arc.png", providers: { geckoTerminal: "arc" } },
   // Mainnet IDs read from each official RPC via eth_chainId (2026-10-03).
   // RISE has no verified token-pool provider registration, so its deployments
   // read "no registered token-pool provider supports this chain" rather than
