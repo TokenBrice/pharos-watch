@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import usdt from "@shared/data/stablecoins/coins/usdt-tether.json";
 import {
   adaptTetherTransparency,
   type TetherTransparencyParams,
@@ -20,19 +21,14 @@ const TETHER_ENDPOINT = "https://app.tether.to/transparency.json";
 // exercised against the capture rather than against wall-clock drift.
 const FIXTURE_NOW_SEC = 1_783_555_140 + 3_600;
 
-const USDT_PARAMS: TetherTransparencyParams = {
-  currencyIso: "usdt",
-  slices: [
-    { name: "Direct & indirect U.S. Treasury Bills", pct: 73.5, risk: "very-low" },
-    { name: "Physical gold bars", pct: 10.4, risk: "very-low" },
-    { name: "Bitcoin", pct: 3.7, risk: "medium" },
-    {
-      name: "Other reserves (cash & equivalents, secured loans, corporate bonds, other investments)",
-      pct: 12.4,
-      risk: "medium",
-    },
-  ],
-};
+const USDT_PARAMS = parseLiveReserveAdapterParams(
+  "tether-transparency", usdt.liveReservesConfig.params,
+) as Extract<TetherTransparencyParams, { currencyIso: "usdt" }>;
+// BDO report page 4 (PDF page 9), 2026-06-30, in report row order.
+const REPORT_DOLLARS = [
+  114960963604, 18625552412, 6993428950, 22374689, 40307440,
+  8711171, 18838357171, 5801630681, 3761438892, 5244911675, 13453749726,
+];
 
 const XAUT_PARAMS: TetherTransparencyParams = {
   currencyIso: "xaut",
@@ -46,33 +42,94 @@ function withChains(blockChains: unknown): TetherTransparencyResponse {
 }
 
 describe("adaptTetherTransparency", () => {
-  it.each(["2026-02-30", "2026-6-30", "not-a-date"])("rejects unsupported composition date %s", (compositionAsOf) => {
-    expect(() => parseLiveReserveAdapterParams("tether-transparency", {
-      ...USDT_PARAMS,
-      compositionAsOf,
-    })).toThrow();
+  it("conserves all eleven signed-report integer rows without percentage rounding", () => {
+    const packet = USDT_PARAMS.reviewedComposition;
+    expect(packet.rows.map((row) => row.dollars)).toEqual(REPORT_DOLLARS);
+    expect(packet.rows.reduce((sum, row) => sum + row.dollars, 0)).toBe(187751426411);
+    const result = adaptTetherTransparency(TETHER_TRANSPARENCY_FIXTURE, USDT_PARAMS);
+    expect(result.slices).toHaveLength(11);
+    for (const slice of result.slices) {
+      const row = packet.rows.find((row) => row.sourceKey === slice.sourceKey)!;
+      expect(slice.pct).toBe(row.dollars * 100 / 187751426411);
+      expect(slice).not.toHaveProperty("dollars");
+    }
+    expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBe(100);
+    expect(result.slices.reduce((sum, slice) => sum + slice.pct / 100, 0)).toBe(1);
+    expect(result.metadata?.diag?.rawSumDeviation).toBe(0);
+    const reordered = adaptTetherTransparency(TETHER_TRANSPARENCY_FIXTURE, {
+      ...USDT_PARAMS, reviewedComposition: { ...packet, rows: [...packet.rows].reverse() },
+    });
+    expect(reordered.slices).toEqual(result.slices);
   });
 
-  it("keeps reviewed composition precision and date independent of balance-sheet freshness", () => {
-    const params: TetherTransparencyParams = {
-      currencyIso: "usdt",
-      compositionAsOf: "2026-06-30",
-      slices: [
-        { name: "Treasury bills", pct: 99.995359, risk: "very-low" },
-        { name: "Corporate bonds", pct: 0.00464, risk: "high" },
-      ],
-    };
-    const result = adaptTetherTransparency(TETHER_TRANSPARENCY_FIXTURE, params);
-    expect(result.slices.find((slice) => slice.name === "Corporate bonds")?.pct).toBe(0.00464);
-    expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(99.999999, 6);
+  it("keeps the signed composition denominator and clock separate from live totals", () => {
+    const result = adaptTetherTransparency(TETHER_TRANSPARENCY_FIXTURE, USDT_PARAMS);
     expect(result.metadata?.details).toMatchObject({
-      compositionSource: "reviewed-config",
+      compositionSource: "reviewed-report-dollars",
       compositionAsOf: "2026-06-30",
+      compositionSourceUrl: USDT_PARAMS.reviewedComposition.sourceUrl,
+      compositionTotalAssetsUsd: 187751426411,
+      compositionRows: USDT_PARAMS.reviewedComposition.rows.map(({ sourceKey, dollars }) => ({ sourceKey, dollars })),
     });
     expect(result.metadata?.sourceTimestamp).toBe(1783555140);
+    expect(result.metadata?.totalAssetsUsd).toBe(189761994736.8062);
+    const changedTotals = {
+      data_formatted: TETHER_TRANSPARENCY_FIXTURE.data_formatted!.map((entry) => ({
+        ...entry, total_assets: 200_000_000_000, id: 1783558740,
+      })),
+    };
+    const changed = adaptTetherTransparency(changedTotals, USDT_PARAMS);
+    expect(changed.slices).toEqual(result.slices);
+    expect(changed.metadata?.sourceTimestamp).toBe(1783558740);
+    expect(changed.metadata?.details?.compositionAsOf).toBe("2026-06-30");
     const xaut = adaptTetherTransparency(TETHER_TRANSPARENCY_FIXTURE, XAUT_PARAMS);
     expect(xaut.metadata?.details?.compositionAsOf).toBeUndefined();
     expect(xaut.metadata?.sourceTimestamp).toBeDefined();
+  });
+
+  it.each([
+    ["missing category", (rows: typeof USDT_PARAMS.reviewedComposition.rows) => rows.slice(1)],
+    ["duplicate identity", (rows: typeof USDT_PARAMS.reviewedComposition.rows) =>
+      rows.map((row, index) => index === 1 ? { ...row, sourceKey: rows[0].sourceKey } : row)],
+    ["missing dollars", (rows: typeof USDT_PARAMS.reviewedComposition.rows) =>
+      rows.map(({ dollars, ...row }, index) => index === 0 ? row : { ...row, dollars })],
+    ["genuine partial book", (rows: typeof USDT_PARAMS.reviewedComposition.rows) =>
+      rows.map((row, index) => index === 0 ? { ...row, dollars: row.dollars - 1_000_000 } : row)],
+    ["one-dollar mismatch", (rows: typeof USDT_PARAMS.reviewedComposition.rows) =>
+      rows.map((row, index) => index === 0 ? { ...row, dollars: row.dollars - 1 } : row)],
+    ["fractional dollars", (rows: typeof USDT_PARAMS.reviewedComposition.rows) =>
+      rows.map((row, index) => index === 0 ? { ...row, dollars: row.dollars - 0.5 } : row)],
+  ])("rejects %s instead of normalizing a partial book", (_label, changeRows) => {
+    const params = {
+      ...USDT_PARAMS,
+      reviewedComposition: { ...USDT_PARAMS.reviewedComposition, rows: changeRows(USDT_PARAMS.reviewedComposition.rows) },
+    };
+    expect(() => parseLiveReserveAdapterParams("tether-transparency", params)).toThrow();
+    expect(() => adaptTetherTransparency(TETHER_TRANSPARENCY_FIXTURE, params)).toThrow();
+  });
+
+  it.each([
+    { totalAssetsUsd: 187751426410 },
+    { totalAssetsUsd: 189761994736.8062 },
+    { asOf: "2026-07-01" },
+    { asOf: "2026-02-30" },
+    { sourceUrl: "https://tether.to/en/transparency" },
+  ])("rejects signed-report denominator, source or date mismatch %j", (change) => {
+    const params = { ...USDT_PARAMS, reviewedComposition: { ...USDT_PARAMS.reviewedComposition, ...change } };
+    expect(() => adaptTetherTransparency(TETHER_TRANSPARENCY_FIXTURE, params)).toThrow();
+  });
+
+  it("does not admit the old rounded USDT packet or reinterpret it as full dollars", () => {
+    expect(() => adaptTetherTransparency(TETHER_TRANSPARENCY_FIXTURE, {
+      currencyIso: "usdt", compositionAsOf: "2026-06-30",
+      slices: [{ name: "Partial Treasury book", pct: 99, risk: "very-low" }],
+    })).toThrow();
+  });
+
+  it.each(["2026-02-30", "2026-6-30", "not-a-date"])("rejects unsupported legacy composition date %s", (compositionAsOf) => {
+    expect(() => parseLiveReserveAdapterParams("tether-transparency", {
+      ...XAUT_PARAMS, compositionAsOf,
+    })).toThrow();
   });
 
   it("selects the usdt entry, computes the honest ratio, and persists USD-denominated totals", () => {

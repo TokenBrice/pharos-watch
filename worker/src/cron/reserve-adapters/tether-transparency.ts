@@ -1,6 +1,6 @@
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonAdapterInput,
@@ -112,16 +112,15 @@ function buildChainDetails(blockChains: unknown): {
   return { chains, chainsReason: null };
 }
 
-export interface TetherTransparencyParams {
-  currencyIso: "usdt" | "xaut" | "mxnt";
-  slices: ReserveSlice[];
-  compositionAsOf?: string;
-}
+export type TetherTransparencyParams = LiveReserveAdapterParamsByKey["tether-transparency"];
 
 export function adaptTetherTransparency(
   payload: TetherTransparencyResponse,
-  params: TetherTransparencyParams,
+  paramsInput: Record<string, unknown> | undefined,
 ): AdapterResult {
+  // Validate direct calls as well as the fetch path before any favorable
+  // composition claim. USDT never falls back to rounded percentage params.
+  const params = parseLiveReserveAdapterParams(ADAPTER_NAME, paramsInput);
   const entries = payload.data_formatted;
   if (!Array.isArray(entries) || entries.length === 0) {
     throw new Error(`${ADAPTER_NAME} payload is missing data_formatted entries`);
@@ -156,15 +155,22 @@ export function adaptTetherTransparency(
       ),
     );
   }
-  assertFiniteNonNegativeReserveRows(params.slices, (slice) => slice.pct, `${ADAPTER_NAME} configured reserve composition`);
-  const compositionTotal = params.slices.reduce((sum, slice) => sum + slice.pct, 0);
+  // Canonical keyed order makes emission independent of report-row ordering.
+  const slices = params.currencyIso === "usdt"
+    ? params.reviewedComposition.rows.map(({ dollars, ...slice }) => ({
+        ...slice,
+        pct: dollars * 100 / params.reviewedComposition.totalAssetsUsd,
+      })).sort((left, right) => left.sourceKey < right.sourceKey ? -1 : left.sourceKey > right.sourceKey ? 1 : 0)
+    : params.slices;
+  assertFiniteNonNegativeReserveRows(slices, (slice) => slice.pct, `${ADAPTER_NAME} configured reserve composition`);
+  const compositionTotal = slices.reduce((sum, slice) => sum + slice.pct, 0);
   if (compositionTotal <= 0 || Math.abs(compositionTotal - 100) > 1.5) {
     throw new Error(`${ADAPTER_NAME} configured reserve composition must sum to 100% ± 1.5%`);
   }
 
   return {
     // Keep positive sub-display-precision categories without allocating a rounding residual.
-    slices: params.slices.filter((slice) => slice.pct > 0),
+    slices: slices.filter((slice) => slice.pct > 0),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       diag: { rawSumDeviation: Math.abs(compositionTotal - 100) },
@@ -179,8 +185,18 @@ export function adaptTetherTransparency(
         : {}),
       details: {
         ...chainDetails,
-        compositionSource: "reviewed-config",
-        ...(params.compositionAsOf ? { compositionAsOf: params.compositionAsOf } : {}),
+        ...(params.currencyIso === "usdt"
+          ? {
+              compositionSource: "reviewed-report-dollars",
+              compositionAsOf: params.reviewedComposition.asOf,
+              compositionSourceUrl: params.reviewedComposition.sourceUrl,
+              compositionTotalAssetsUsd: params.reviewedComposition.totalAssetsUsd,
+              compositionRows: params.reviewedComposition.rows.map(({ sourceKey, dollars }) => ({ sourceKey, dollars })),
+            }
+          : {
+              compositionSource: "reviewed-config",
+              ...(params.compositionAsOf ? { compositionAsOf: params.compositionAsOf } : {}),
+            }),
       },
     },
   };
@@ -193,6 +209,5 @@ export async function fetchTetherTransparencyReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const payload = await fetchJsonAdapterInput<TetherTransparencyResponse>(config, ADAPTER_NAME, signal, 12_000, ctx);
-  const params = parseLiveReserveAdapterParams("tether-transparency", config.params);
-  return adaptTetherTransparency(payload, params);
+  return adaptTetherTransparency(payload, config.params);
 }
