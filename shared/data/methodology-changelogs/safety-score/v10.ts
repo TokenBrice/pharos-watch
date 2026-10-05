@@ -5,7 +5,7 @@ export const SAFETY_SCORE_V10: readonly MethodologyChangelogEntry[] = [
     version: "10.06",
     title: "Availability-invariant mint fallback",
     date: "2026-10-05",
-    effectiveAt: 1791170520,
+    effectiveAt: 1791177720,
     summary:
       "Safety Score v10.06 implements owner ruling D33: positively known economically unbounded native issuance or claim impairment is priced from its evidenced actor, power and qualifying process, regardless of reconciliation availability. This is removal of an unavailable-evidence grant, not new adverse findings. Unknown reconciliation stays an explicitly attributed unanswered factor, never a 55-point grant or a finding of measured non-reconciliation. On two production captures (clockSec 1791137823 and 1791152224, 396 cards each) the code change moves 71 cards down by 1 to 18 points (median 8) with 52 grade changes; no card rises and none is quarantined.",
     impact: [
@@ -27,7 +27,7 @@ export const SAFETY_SCORE_V10: readonly MethodologyChangelogEntry[] = [
     version: "10.05",
     title: "Operationally governed issuance and uniform voting control",
     date: "2026-10-05",
-    effectiveAt: 1791170520,
+    effectiveAt: 1791177720,
     summary:
       "Safety Score v10.05 adds D31 / rule H for positively certified affirmative operational-flow governance: discretionary expansion and envelope changes require public token governance, while formula interest and activity-bound compensation may execute immediately within reviewed envelopes. Issuance stays economically unbounded. D32 voting-control doctrine applies uniformly to D29, D30 and H; class certificates, typed authority roots and per-control diagnostics replace signer-prose admission. On two production captures, DAI moves from 53 (C-) to 74 (B) and USDS from 44 (D) to 71 (B) under the new rung; crvUSD falls from 69 (B-) to 44 (D) because Convex's 3-of-5 Safe can replace the caster of 54.1% of veCRV.",
     impact: [
