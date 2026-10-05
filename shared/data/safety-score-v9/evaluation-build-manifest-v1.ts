@@ -582,7 +582,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-supply-attribution.ts",
-      "sha256": "89260dfefa86ca48bf6dd7f6d49b92982b9455b5fc86c737c1ac9e33a4c8a490"
+      "sha256": "bfea7d0e7bf59175722cde6d5c003749bebd0216ef4fa6a3a65cddb05acff3a1"
     },
     {
       "path": "shared/types/safety-score-v9-transfer-overlays.ts",
@@ -706,7 +706,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/economic-supply-observer.ts",
-      "sha256": "b6047e825aaeca8a6f73e44837ff3891c69aed399bd7ef79a2cf610ef657b604"
+      "sha256": "35cf0ac7d6523908f0bf3c1af71165a6f56706332c3998903378d83ff45477c6"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-access-lookthrough.ts",
@@ -814,7 +814,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution-contract.ts",
-      "sha256": "ecbd2944645fafc383fe1823b43f4fa675b61b35bbf63d024e00d88ac7787b7b"
+      "sha256": "cd7612bbf83ff3c81722efe06aa90a644df8bb76cba0d9db8cf7e1cd0cb887d9"
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution-generation.ts",
@@ -867,7 +867,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-03-block-26110811-shock-coverage.json.gz"
     }
   ],
-  "digest": "d93015bc17320fe6d35daec755d30b931829ee3b5302e1453549a3a069b1aeac"
+  "digest": "b91c4187948ae67de9b1792555dab78f855e73d6f86b39ff20ab7a04bcb2af1a"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
