@@ -384,6 +384,7 @@ function routeChain(routeId: string): string | null {
 }
 
 function normalizeAddress(chainId: string, address: string): string {
+  if (CHAIN_META[chainId]?.nativeDenomRail && !/^0x[0-9a-fA-F]{40}$/.test(address)) return address;
   return CHAIN_META[chainId]?.type === "evm" ? address.toLowerCase() : address;
 }
 
@@ -947,6 +948,8 @@ export function buildReviewedEconomicDeploymentInventory(
     registeredKeys.add(key);
     if (!keys.has(key) && !excluded.has(key)) return null;
     const row = plan.deployments.find(row => row.deploymentKey === key);
+    if (row && ((contract.kind === "native-denom" && row.read.kind !== "cosmos-bank-supply" && row.read.kind !== "provider-chain") ||
+      (row.read.kind === "cosmos-bank-supply" && CHAIN_META[chain]?.type === "evm" && contract.kind !== "native-denom"))) return null;
     if (row && ((isFixedDecimalDeployment(contract) && row.decimals !== contract.decimals) ||
       (!isFixedDecimalDeployment(contract) && row.decimals !== null))) return null;
   }
@@ -1073,6 +1076,13 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
       }
       if (row.read.kind === "solana-mint" && !SOLANA_BLOCK_HASH_RE.test(observation.anchorHash)) return null;
       if (row.read.kind === "xrpl-issued-currency" && !SHA256_RE.test(observation.anchorHash)) return null;
+      if (row.read.kind === "cosmos-bank-supply") {
+        if (!/^[1-9][0-9]*$/.test(observation.anchor) || !SHA256_RE.test(observation.anchorHash)) return null;
+        const anchor = `${observation.anchor}:${observation.anchorHash}:${observation.observedAtSec}`;
+        const previous = chainAnchors.get(row.chainId);
+        if (previous !== undefined && previous !== anchor) return null;
+        chainAnchors.set(row.chainId, anchor);
+      }
     }
     if (row.decimals !== null && !RAW_SUPPLY_RE.test(observation.amount)) return null;
     let value = economicDecimal(observation.amount, row.decimals);

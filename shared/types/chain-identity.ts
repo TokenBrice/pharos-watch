@@ -16,6 +16,8 @@ export interface ChainMeta {
   type: "evm" | "tron" | "other";
   logoPath: string;
   darkInvert?: boolean;
+  /** Additional Cosmos bank rail; never changes the chain's EVM classification. */
+  nativeDenomRail?: { ledgerChainId: string; bech32Prefix: string };
   /** Provider network slugs (CoinGecko onchain, DexScreener, etc.). Present when the chain is wired into price/liquidity discovery. */
   providers?: ChainProviders;
 }
@@ -113,14 +115,14 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   polkadot:  { name: "Polkadot",  explorerUrl: "https://polkadot.subscan.io",     evmChainId: null,  type: "other", logoPath: "/chains/polkadot.png"  },
   xrpl:      { name: "XRP Ledger",explorerUrl: "https://xrpscan.com",             evmChainId: null,  type: "other", logoPath: "/chains/xrpl.png"      },
   xpr:       { name: "XPR Network",explorerUrl: "https://explorer.xprnetwork.org", evmChainId: null,  type: "other", logoPath: "/chains/xpr.png"       },
-  kava:      { name: "Kava",     explorerUrl: "https://kavascan.com",             evmChainId: 2222,  type: "evm",   logoPath: "/chains/kava.png",      providers: { coingecko: "kava", dexscreener: "kava", geckoTerminal: "kava" } },
+  kava:      { name: "Kava",     explorerUrl: "https://kavascan.com",             evmChainId: 2222,  type: "evm",   logoPath: "/chains/kava.png",      nativeDenomRail: { ledgerChainId: "kava_2222-10", bech32Prefix: "kava" }, providers: { coingecko: "kava", dexscreener: "kava", geckoTerminal: "kava" } },
   tezos:     { name: "Tezos",   explorerUrl: "https://tzkt.io",                  evmChainId: null,  type: "other", logoPath: "/chains/tezos.png"     },
   cardano:   { name: "Cardano", explorerUrl: "https://cardanoscan.io",           evmChainId: null,  type: "other", logoPath: "/chains/cardano.png",   providers: { coingecko: "cardano", dexscreener: "cardano", geckoTerminal: "cardano" } },
   icp:       { name: "Internet Computer", explorerUrl: "https://dashboard.internetcomputer.org", evmChainId: null, type: "other", logoPath: "/chains/icp.png", providers: { coingecko: "icp", dexscreener: "icp", geckoTerminal: "icp" } },
   iota:      { name: "IOTA",    explorerUrl: "https://iotascan.com",             evmChainId: null,  type: "other", logoPath: "/chains/iota.svg",      providers: { coingecko: "iota", geckoTerminal: "iota" } },
   "iota-evm":{ name: "IOTA EVM", explorerUrl: "https://explorer.evm.iota.org",   evmChainId: 8822,  type: "evm",   logoPath: "/chains/iota.svg",      providers: { coingecko: "iota-evm", geckoTerminal: "iota-evm" } },
   noble:     { name: "Noble",   explorerUrl: "https://www.mintscan.io/noble",    evmChainId: null,  type: "other", logoPath: "/chains/noble.png"     },
-  osmosis:   { name: "Osmosis", explorerUrl: "https://www.mintscan.io/osmosis",  evmChainId: null,  type: "other", logoPath: "/chains/osmosis.png"   },
+  osmosis:   { name: "Osmosis", explorerUrl: "https://www.mintscan.io/osmosis",  evmChainId: null,  type: "other", logoPath: "/chains/osmosis.png", nativeDenomRail: { ledgerChainId: "osmosis-1", bech32Prefix: "osmo" } },
   mantra:    { name: "MANTRA",  explorerUrl: "https://www.mintscan.io/mantra",   evmChainId: null,  type: "other", logoPath: "/chains/mantra.png"    },
   secret:    { name: "Secret Network", explorerUrl: "https://www.mintscan.io/secret", evmChainId: null, type: "other", logoPath: "/chains/secret.png" },
   provenance:{ name: "Provenance",explorerUrl: "https://www.mintscan.io/provenance", evmChainId: null, type: "other", logoPath: "/chains/provenance.png" },

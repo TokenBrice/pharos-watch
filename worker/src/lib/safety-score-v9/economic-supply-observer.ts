@@ -16,6 +16,7 @@ import { getPublicRpcUrl } from "../public-rpc-registry";
 import { decodeEvmUint256, fetchSafetyScoreV9SolanaRpc, rewindEvmBlockHeaderToScoringClock, type SafetyScoreV9SolanaRpcFetcher } from "./supply-observation-primitives";
 import { buildReviewedEconomicDeploymentInventory, deriveReviewedEconomicDeploymentPartition, economicProviderSupplyContradictionChain, economicSupplyInputDeploymentObservation, economicSupplyInputReferencePrice, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
 import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
+import { observeEconomicCosmosBank, pinEconomicCosmosBank, type CosmosBankPin } from "./cosmos-bank-observer";
 
 /** Finalized mint snapshot, case-preserved identity, pinned chronology and response hash. */
 export async function observeEconomicSolanaMint(input: {
@@ -353,6 +354,19 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
       : economicSupplyInputReferencePrice(input.fixedInput, input.assetId);
     if (!referencePrice || Number(referencePrice.value) <= 0) return { status: "rejected", rejectionCode: "packet-reconciliation-failed", failedRouteId: plan.sourceId };
     const headers = new Map<string, EvmBlockHeader>();
+    const cosmosPins = new Map<string, CosmosBankPin>();
+    const readCosmos = async (row: ReviewedEconomicSupplyPlan["deployments"][number], id: string, account?: string): Promise<EconomicSupplyObservation | null> => {
+      if (row.read.kind !== "cosmos-bank-supply" || row.address !== row.read.denom) return null;
+      const key = `${row.chainId}:${row.read.restUrl}`;
+      let pin = cosmosPins.get(key);
+      if (!pin) {
+        const result = await pinEconomicCosmosBank({ source: row.read, chainId: row.chainId, clockSec: input.scoringClockSec, signal: input.signal });
+        if (!result) return null;
+        pin = result; cosmosPins.set(key, pin);
+      }
+      const result = await observeEconomicCosmosBank({ source: row.read, chainId: row.chainId, pin, clockSec: input.scoringClockSec, account, signal: input.signal });
+      return result ? { id, deploymentKey: row.deploymentKey, ...result } : null;
+    };
     const readEvm = async (row: ReviewedEconomicSupplyPlan["deployments"][number], id: string, account?: string): Promise<EconomicSupplyObservation | null> => {
       if (CHAIN_META[row.chainId]?.type !== "evm" || row.address === null) return null;
       let header = headers.get(row.chainId);
@@ -432,6 +446,8 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
       let observation: EconomicSupplyObservation | null = null;
       if (row.read.kind === "provider-chain" || row.read.kind === "native-from-aggregate") {
         observation = economicSupplyInputDeploymentObservation({ fixedInput: input.fixedInput, plan, row, referencePrice });
+      } else if (row.read.kind === "cosmos-bank-supply") {
+        observation = await readCosmos(row, row.deploymentKey);
       } else if (row.read.kind === "evm-total-supply" || row.read.kind === "evm-balance") {
         observation = await readEvm(row, row.deploymentKey, row.read.kind === "evm-balance" ? row.read.account : undefined);
       } else if (row.read.kind === "solana-mint" && row.chainId === "solana" && row.address !== null && row.decimals !== null) {
@@ -465,7 +481,8 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
     for (const rule of [...plan.exclusions, ...plan.escrows.map(escrow => ({ id: escrow.id, deploymentKey: escrow.canonicalDeploymentKey, account: escrow.account }))]) {
       const row = plan.deployments.find(row => row.deploymentKey === rule.deploymentKey)!;
       failedRouteId = row.routeId ?? row.deploymentKey;
-      const observation = await readEvm(row, rule.id, rule.account);
+      const observation = row.read.kind === "cosmos-bank-supply"
+        ? await readCosmos(row, rule.id, rule.account) : await readEvm(row, rule.id, rule.account);
       if (!observation) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId };
       observations.push(observation);
     }

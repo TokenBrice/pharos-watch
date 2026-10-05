@@ -787,6 +787,7 @@ export function buildTelegramMiniAppCatalogOutput({
   };
 }
 
+/** @returns {import("../../shared/lib/stablecoins/worker-runtime-registry").WorkerRuntimeStablecoinMeta} */
 export function projectWorkerRuntimeCoin(coin, index) {
   if (typeof coin?.id !== "string" || coin.id.length === 0) {
     throw new Error(`[client-registry] Worker runtime entry ${index}: invalid or missing id`);
@@ -828,7 +829,8 @@ export function projectWorkerRuntimeCoin(coin, index) {
     projected.status = coin.status;
   }
   if (Array.isArray(coin.contracts)) {
-    projected.contracts = coin.contracts.map(({ chain, address, decimals, amountEncoding }) => ({
+    projected.contracts = coin.contracts.map(({ kind, chain, address, decimals, amountEncoding }) => ({
+      ...(kind != null ? { kind } : {}),
       chain,
       address,
       decimals,
@@ -836,7 +838,8 @@ export function projectWorkerRuntimeCoin(coin, index) {
     }));
   }
   if (Array.isArray(coin.tradedContracts)) {
-    projected.tradedContracts = coin.tradedContracts.map(({ chain, address, decimals, amountEncoding }) => ({
+    projected.tradedContracts = coin.tradedContracts.map(({ kind, chain, address, decimals, amountEncoding }) => ({
+      ...(kind != null ? { kind } : {}),
       chain,
       address,
       decimals,

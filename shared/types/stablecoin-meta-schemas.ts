@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { DeploymentAmountEncodingSchema } from "./deployment-amounts";
+import { CHAIN_META } from "./chain-identity";
 import { ReserveReportCoverageSchema, ReserveObservationEnvelopeSchema } from "./safety-score-v9-reserve-scope";
 import {
   ATTESTOR_TIER_VALUES,
@@ -227,18 +228,31 @@ export type StablecoinLink = z.infer<typeof StablecoinLinkSchema>;
 export type MechanismArchetypeReview = z.infer<typeof MechanismArchetypeReviewSchema>;
 export type ProofOfReserves = z.infer<typeof ProofOfReservesSchema>;
 export type ProofOfReservesLatestReport = NonNullable<ProofOfReserves["latestReport"]>;
-export const ContractDeploymentSchema = z
-  .object({
+/** Case-sensitive Cosmos bank identity, not a token contract or native gas. */
+export const NativeBankDenomSchema = z.string().min(3).max(128)
+  .regex(/^[a-zA-Z][a-zA-Z0-9/:._-]*$/)
+  .refine(value => !value.startsWith("0x"), "Native bank denoms cannot be EVM addresses");
+export const ContractDeploymentSchema = z.union([
+  z.object({
+    kind: z.literal("contract").optional(),
     chain: z.string(),
     address: z.string(),
     decimals: ContractDecimalsSchema.nullable(),
     amountEncoding: DeploymentAmountEncodingSchema.optional(),
-  })
-  .strict()
-  .superRefine((deployment, ctx) => {
+  }).strict(),
+  z.object({
+    kind: z.literal("native-denom"),
+    chain: z.string().refine(chain => CHAIN_META[chain]?.nativeDenomRail !== undefined, "Chain has no registered native denom rail"),
+    address: NativeBankDenomSchema,
+    // Identity may be known before the denomination's display exponent is.
+    // Quantitative consumers still require a positively verified fixed scale.
+    decimals: ContractDecimalsSchema.nullable(),
+    amountEncoding: DeploymentAmountEncodingSchema.optional(),
+  }).strict(),
+]).superRefine((deployment, ctx) => {
     const issued = deployment.amountEncoding?.kind === "xrpl-issued-currency";
-    if (issued ? deployment.chain !== "xrpl" || deployment.decimals !== null : deployment.decimals === null) {
-      ctx.addIssue({ code: "custom", message: "Only explicit native XRPL issued amounts use null decimals" });
+    if (issued ? deployment.chain !== "xrpl" || deployment.decimals !== null : deployment.kind !== "native-denom" && deployment.decimals === null) {
+      ctx.addIssue({ code: "custom", message: "Null decimals require an explicit native bank denom or native XRPL issued amount" });
     }
     if (deployment.chain === "xrpl" && deployment.amountEncoding?.kind === "fixed-decimal") {
       ctx.addIssue({ code: "custom", message: "XRPL issued deployments cannot claim fixed decimals" });
