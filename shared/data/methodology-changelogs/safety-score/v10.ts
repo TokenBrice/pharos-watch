@@ -5,7 +5,7 @@ export const SAFETY_SCORE_V10: readonly MethodologyChangelogEntry[] = [
     version: "10.07",
     title: "Stable route research binding and source-specific evidence corrections",
     date: "2026-10-05",
-    effectiveAt: 1791190320,
+    effectiveAt: 1791181320,
     summary:
       "Safety Score v10.07 preserves researched exit-route classifications across producer runs, admits independently proved immutable wrapper roots for contract mutability, and corrects source-specific reserve, DEX, redemption, supply and price evidence. On capture 20261004-2107, restored route research changes seven scores; wrapper mutability admission changes no score. Producer corrections require fresh admitted observations rather than rewriting the frozen capture.",
     impact: [
