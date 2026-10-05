@@ -136,7 +136,9 @@ describe("buildChainRpcs", () => {
       for (const config of chainRpcs.values()) {
         expect(config.endpoints.some((endpoint) => endpoint.operator === "dwellir")).toBe(false);
         expect(config.endpoints.some((endpoint) => endpoint.url.includes(".n.dwellir.com"))).toBe(false);
-        expect(supplementalRpcEndpoints(config)).toEqual([]);
+        for (const endpoint of supplementalRpcEndpoints(config)) {
+          expect(endpoint).toMatchObject({ operator: "alchemy", stateHistory: "archive", logsHistory: "none" });
+        }
       }
     }
   });
@@ -190,12 +192,15 @@ describe("buildChainRpcs", () => {
         verifiedAt: entry.verifiedAt,
       });
       expect(
-        endpoints.slice(0, -1).some((endpoint) => endpoint.position === "supplemental"),
+        endpoints.slice(0, -1).some((endpoint) => endpoint.operator === "dwellir"),
         entry.chainId,
       ).toBe(false);
 
       const supplemented = supplementalRpcEndpoints(config);
-      expect(supplemented, entry.chainId).toHaveLength(1);
+      expect(supplemented.filter((endpoint) => endpoint.operator === "dwellir"), entry.chainId).toHaveLength(1);
+      expect(supplemented, entry.chainId).toHaveLength(
+        supplementalRpcEndpoints(withoutKey.get(entry.chainId)).length + 1,
+      );
       expect(endpoints.slice(-supplemented.length), entry.chainId).toEqual(supplemented);
     }
 

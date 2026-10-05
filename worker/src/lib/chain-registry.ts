@@ -57,6 +57,21 @@ export const ALCHEMY_CHAINS: Record<string, string> = {
   bsc: "bnb-mainnet",
 };
 
+/** Numbered supply/decimals probes verified 2026-10-05; state reads only. */
+const CENSUS_STATE_ALCHEMY_CHAINS: Record<string, string> = {
+  berachain: "berachain-mainnet",
+  hyperevm: "hyperliquid-mainnet",
+  ink: "ink-mainnet",
+  linea: "linea-mainnet",
+  scroll: "scroll-mainnet",
+  zksync: "zksync-mainnet",
+  abstract: "abstract-mainnet",
+  unichain: "unichain-mainnet",
+  worldchain: "worldchain-mainnet",
+  megaeth: "megaeth-mainnet",
+  stable: "stable-mainnet",
+};
+
 export type RpcAuthProvider = "alchemy" | "dwellir";
 
 // Keep auth separate from the URL so request/log metadata never contains the API key.
@@ -385,6 +400,30 @@ export function buildChainRpcs(
   for (const config of configs) {
     map.set(config.chainId, config);
   }
+  if (alchemyApiKey) {
+    for (const [chainId, slug] of Object.entries(CENSUS_STATE_ALCHEMY_CHAINS)) {
+      const endpoint: RpcEndpoint = {
+        url: buildAlchemyRpcUrl(slug, alchemyApiKey),
+        operator: "alchemy",
+        keyed: true,
+        position: "supplemental",
+        stateHistory: "archive",
+        logsHistory: "none",
+        verifiedAt: "2026-10-05",
+      };
+      const existing = map.get(chainId);
+      if (existing) {
+        existing.endpoints = [...existing.endpoints, endpoint];
+      } else {
+        const meta = CHAIN_META[chainId]!;
+        map.set(chainId, {
+          chainId, chainName: meta.name, type: "evm",
+          endpoints: [endpoint], explorerUrl: meta.explorerUrl,
+        });
+      }
+    }
+  }
+
 
   const dwellirApiKey = options?.dwellirApiKey;
   if (typeof dwellirApiKey === "string" && dwellirApiKey.length > 0) {

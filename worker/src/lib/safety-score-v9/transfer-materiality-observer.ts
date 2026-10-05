@@ -1,7 +1,8 @@
 import { CHAIN_META, resolveChainId } from "@shared/types/chain-identity";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { SUPPLY_RPC_DEFAULTS } from "@shared/lib/chain-rpc-registry";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
-import { hasRegistryRpc, type ChainRpcConfig, type RpcEndpoint } from "../chain-registry";
+import { hasRegistryRpc, supplementalRpcEndpoints, registryRpcUrls, type ChainRpcConfig, type RpcEndpoint } from "../chain-registry";
 import { fetchEvmBlockHeader, fetchEvmMulticall3Aggregate3AtBlock, resolveClosestBlockAtOrBeforeTimestamp } from "../evm-rpc";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../evm-selectors";
 import { getPublicRpcUrl, getSecondaryFallbackRpcUrl } from "../public-rpc-registry";
@@ -10,12 +11,14 @@ import { decodeEvmUint256 } from "./supply-observation-primitives";
 import { SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS, createSafetyScoreV9TransferMaterialityGeneration, type SafetyScoreV9TransferMaterialityGeneration, type SafetyScoreV9TransferMaterialityObservation } from "./transfer-materiality";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { observeEconomicSolanaMint } from "./economic-supply-observer";
+import { fetchMoveFungibleAssetSupply } from "../../cron/reserve-adapters/token-supply";
 
 interface ObserverDependencies {
   fetchEvmBlockHeader: typeof fetchEvmBlockHeader;
   fetchEvmMulticall3Aggregate3AtBlock: typeof fetchEvmMulticall3Aggregate3AtBlock;
   resolveClosestBlockAtOrBeforeTimestamp: typeof resolveClosestBlockAtOrBeforeTimestamp;
   observeEconomicSolanaMint: typeof observeEconomicSolanaMint;
+  fetchMoveFungibleAssetSupply: typeof fetchMoveFungibleAssetSupply;
 }
 
 const DEFAULT_DEPENDENCIES: ObserverDependencies = {
@@ -23,6 +26,7 @@ const DEFAULT_DEPENDENCIES: ObserverDependencies = {
   fetchEvmMulticall3Aggregate3AtBlock,
   resolveClosestBlockAtOrBeforeTimestamp,
   observeEconomicSolanaMint,
+  fetchMoveFungibleAssetSupply,
 };
 
 function rejected(deploymentKey: string): SafetyScoreV9TransferMaterialityObservation {
@@ -34,6 +38,8 @@ function rejected(deploymentKey: string): SafetyScoreV9TransferMaterialityObserv
  * that are absent from the global `PUBLIC_RPC_URLS` map. Do not fold these
  * into reserve-adapter RPC resolution: they exist only so an already-wired
  * independent-liability packet can observe its long-tail legs.
+ * Added endpoints passed numbered totalSupply/decimals probes on 2026-10-05.
+ * This proves historical read capability, not freshness of a stopped ledger.
  */
 const TRANSFER_MATERIALITY_EXTRA_RPCS: Record<string, { rpcUrl: string; fallbackRpcUrl?: string }> = {
   fraxtal: { rpcUrl: "https://rpc.frax.com", fallbackRpcUrl: "https://fraxtal.drpc.org" },
@@ -42,6 +48,19 @@ const TRANSFER_MATERIALITY_EXTRA_RPCS: Record<string, { rpcUrl: string; fallback
   xlayer: { rpcUrl: "https://rpc.xlayer.tech" },
   katana: { rpcUrl: "https://rpc.katana.network", fallbackRpcUrl: "https://rpc.katanarpc.com" },
   sonic: { rpcUrl: "https://rpc.soniclabs.com", fallbackRpcUrl: "https://sonic-rpc.publicnode.com" },
+  aurora: { rpcUrl: "https://mainnet.aurora.dev" },
+  "polygon-zkevm": { rpcUrl: "https://zkevm-rpc.com" },
+  pharos: { rpcUrl: "https://api.zan.top/public/pharos-mainnet" },
+  berachain: SUPPLY_RPC_DEFAULTS.berachain,
+  hyperevm: SUPPLY_RPC_DEFAULTS.hyperevm,
+  ink: SUPPLY_RPC_DEFAULTS.ink,
+  linea: { rpcUrl: SUPPLY_RPC_DEFAULTS.linea.rpcUrl },
+  scroll: SUPPLY_RPC_DEFAULTS.scroll,
+  zksync: SUPPLY_RPC_DEFAULTS.zksync,
+  abstract: { rpcUrl: "https://api.mainnet.abs.xyz" },
+  unichain: SUPPLY_RPC_DEFAULTS.unichain,
+  worldchain: SUPPLY_RPC_DEFAULTS.worldchain,
+  megaeth: SUPPLY_RPC_DEFAULTS.megaeth,
 };
 
 export function transferMaterialityObserverResolvesRpc(
@@ -66,9 +85,10 @@ function publicRegistryEndpoints(...urls: readonly (string | undefined)[]): RpcE
 }
 
 function rpcConfig(chainId: string, configured: Map<string, ChainRpcConfig>): Map<string, ChainRpcConfig> | null {
-  // Only a registry endpoint makes the chain RPC-readable; a config carrying just a
-  // supplemental (Dwellir) endpoint falls through to the observer-local public RPC.
-  if (hasRegistryRpc(configured.get(chainId))) return configured;
+  // Archive supplemental-only configs are usable by the state-read lane.
+  // Do not discard their credentials or upgrade near-head endpoints to archive.
+  if (hasRegistryRpc(configured.get(chainId)) ||
+      supplementalRpcEndpoints(configured.get(chainId), { historicalBlock: true }).length > 0) return configured;
   const meta = CHAIN_META[chainId];
   const extra = TRANSFER_MATERIALITY_EXTRA_RPCS[chainId];
   const rpcUrl = extra?.rpcUrl ?? getPublicRpcUrl(chainId);
@@ -77,10 +97,10 @@ function rpcConfig(chainId: string, configured: Map<string, ChainRpcConfig>): Ma
     chainId,
     chainName: meta.name,
     type: "evm",
-    endpoints: publicRegistryEndpoints(
-      rpcUrl,
-      extra?.fallbackRpcUrl ?? getSecondaryFallbackRpcUrl(chainId),
-    ),
+    endpoints: [
+      ...publicRegistryEndpoints(rpcUrl, extra?.fallbackRpcUrl ?? getSecondaryFallbackRpcUrl(chainId)),
+      ...(configured.get(chainId)?.endpoints ?? []),
+    ],
     explorerUrl: meta.explorerUrl,
   });
 }
@@ -117,6 +137,40 @@ async function observeChainDeployments(
     }
     return rows;
   }
+  if (chainId === "aptos" || chainId === "movement") {
+    const rows = rejectedRows();
+    const urls = [...new Set([
+      ...registryRpcUrls(chainRpcs.get(chainId)),
+      getPublicRpcUrl(chainId),
+    ].filter((url): url is string => typeof url === "string" && url.length > 0))];
+    for (const target of targets) {
+      if (!/^0x[0-9a-fA-F]{64}$/.test(target.address)) continue;
+      for (const url of urls) {
+        try {
+          const supply = await dependencies.fetchMoveFungibleAssetSupply(
+            target.address, signal ?? new AbortController().signal, url, undefined, {
+              clockSec: scoringClockSec, expectedChainId: chainId === "aptos" ? 1 : 126,
+              identityKind: target.assetId === "sfrxusd-frax" ? "oft-package" : "metadata-address",
+            },
+          );
+          if (!supply || supply.decimals !== target.expectedDecimals || supply.ledgerTimestampSec === undefined ||
+              !/^(0|[1-9][0-9]*)$/.test(supply.ledgerVersion) || supply.rawSupply < 0n ||
+              supply.ledgerTimestampSec > scoringClockSec || reviewedDeploymentObservationTimingIssue({
+                clockSec: scoringClockSec, captureStartedAtSec: supply.ledgerTimestampSec,
+                captureEndedAtSec: supply.ledgerTimestampSec, observedAtSec: supply.ledgerTimestampSec,
+                deployments: [{ routeId: target.deploymentKey, blockTimeSec: supply.ledgerTimestampSec }],
+              }) !== null) continue;
+          rows.set(target.deploymentKey, {
+            deploymentKey: target.deploymentKey, rawTokenUnits: supply.rawSupply.toString(),
+            decimals: supply.decimals, blockNumber: supply.ledgerVersion,
+            observedAtSec: supply.ledgerTimestampSec, status: "accepted",
+          });
+          break;
+        } catch (error) { rethrowIfAborted(error, signal); }
+      }
+    }
+    return rows;
+  }
   const resolvedRpcs = rpcConfig(chainId, chainRpcs);
   if (!resolvedRpcs) return rejectedRows();
   try {
@@ -134,7 +188,14 @@ async function observeChainDeployments(
       { label: `${target.deploymentKey}:total-supply`, target: target.address, callData: TOTAL_SUPPLY_SELECTOR, allowFailure: true },
       { label: `${target.deploymentKey}:decimals`, target: target.address, callData: DECIMALS_SELECTOR, allowFailure: true },
     ]);
-    const results = await dependencies.fetchEvmMulticall3Aggregate3AtBlock(chainId, calls, blockNumber, options);
+    let results = await dependencies.fetchEvmMulticall3Aggregate3AtBlock(chainId, calls, blockNumber, options);
+    if (results === null) {
+      // A failed aggregate is not zero. The existing fallback reads directly
+      // only after proving Multicall3 absent, and authenticates the block hash.
+      results = await dependencies.fetchEvmMulticall3Aggregate3AtBlock(chainId, calls, blockNumber, {
+        ...options, multicallFallbackBlockHash: header.hash,
+      });
+    }
     if (!results || results.length !== calls.length) return rejectedRows();
     const rows = new Map<string, SafetyScoreV9TransferMaterialityObservation>();
     for (const [index, target] of targets.entries()) {
@@ -200,7 +261,7 @@ export async function observeSafetyScoreV9TransferMaterialityGeneration(input: {
     for (const deployment of meta?.contracts ?? []) {
       const chainId = resolveChainId(deployment.chain);
       if (chainId === null || !isFixedDecimalDeployment(deployment) ||
-        (CHAIN_META[chainId]?.type !== "evm" && chainId !== "solana")) {
+        (CHAIN_META[chainId]?.type !== "evm" && chainId !== "solana" && chainId !== "aptos" && chainId !== "movement")) {
         rows.push(rejected(`${deployment.chain}:${normalizeReviewedDeploymentAddress(chainId ?? deployment.chain, deployment.address)}`));
         continue;
       }
@@ -212,7 +273,11 @@ export async function observeSafetyScoreV9TransferMaterialityGeneration(input: {
     }
     observationsByAssetId[assetId] = rows;
   }
-  const chainTargets = [...targetsByChainId.entries()];
+  // Finalized Solana account snapshots cannot be rewound. Capture them before
+  // the bounded historical-capable EVM/Move tasks, while finality is still
+  // behind the scoring clock; their actual block timestamps remain mandatory.
+  const chainTargets = [...targetsByChainId.entries()].sort(([left], [right]) =>
+    left === "solana" ? -1 : right === "solana" ? 1 : 0);
   for (let offset = 0; offset < chainTargets.length; offset += 3) {
     throwIfAborted(input.signal);
     const batch = chainTargets.slice(offset, offset + 3);
