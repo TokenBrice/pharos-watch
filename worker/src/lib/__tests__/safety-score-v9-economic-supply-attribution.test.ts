@@ -714,3 +714,109 @@ describe("reviewed same-chain provider partition", () => {
     expect(ReviewedEconomicSupplyPlanSchema.safeParse(whole).success).toBe(true);
   });
 });
+
+describe("reviewed XGLD, srUSD and wiTRY OFT supply plans", () => {
+  function cohortFixture(assetId: "xgld-unitas" | "srusd-reservoir" | "witry-brix"): EconomicFixture {
+    const plan = structuredClone(REVIEWED_ECONOMIC_SUPPLY_PLANS.get(assetId)!);
+    const meta = ACTIVE_META_BY_ID.get(assetId)!;
+    const clockSec = plan.reviewedAtSec + 60;
+    const source = plan.liabilityInFlightSource ?? plan.escrows[0]!.inFlightSource!;
+    if (!("kind" in source) || source.kind !== "evm-layerzero-oft-pending") throw new Error("Expected reviewed OFT pending source");
+    const observations = plan.deployments.map((row, index): EconomicSupplyObservation => ({
+      id: row.deploymentKey, deploymentKey: row.deploymentKey,
+      amount: ((index === 0 ? 100n : index === 1 ? 20n : 0n) * 10n ** BigInt(row.decimals!)).toString(),
+      observedAtSec: clockSec - 60, anchor: String(source.sides[index]!.deploymentBlock + 100),
+      anchorHash: `0x${String(index + 1).repeat(64)}`, responseSha256: "b".repeat(64),
+    }));
+    if (assetId === "xgld-unitas") observations[3]!.amount = "1";
+    const canonical = observations[0]!;
+    for (const escrow of plan.escrows) observations.push({ ...canonical, id: escrow.id, amount: observations[1]!.amount });
+    const proof: NonNullable<EconomicSupplyObservation["layerZeroOftPendingProof"]> = {
+      sourceDigest: sha256Hex(stableJsonStringifyV1(source)), checkpointDigest: "f".repeat(64),
+      pins: source.sides.map((side, index) => ({
+        chainId: side.chainId, eid: side.eid, anchor: Number(observations[index]!.anchor),
+        anchorHash: observations[index]!.anchorHash, observedAtSec: observations[index]!.observedAtSec,
+      })),
+      pathways: source.pathways.map(path => ({
+        ...path, sentNonce: "0", inboundNonce: "0", lazyInboundNonce: "0", pendingCount: 0, pendingAmountSD: "0",
+      })),
+    };
+    const pending: EconomicSupplyObservation = {
+      ...canonical, id: plan.liabilityInFlightSource ? "in-flight:liability" : `in-flight:${plan.escrows[0]!.id}`,
+      amount: "0", layerZeroOftPendingProof: proof,
+      responseSha256: sha256Hex(stableJsonStringifyV1({ proof, amount: "0" })),
+    };
+    return {
+      plan, meta, clockSec, baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
+      sourceGeneration: "live-aggregate", registryFingerprint: "d".repeat(64),
+      aggregate: { supplyUsd: 100, sourceGeneration: "live-aggregate", observedAtSec: clockSec - 60 },
+      referencePrice: { sourceId: plan.sourceId, sourceGeneration: "independent-price", observedAtSec: clockSec - 60, value: "4000", responseSha256: "e".repeat(64) },
+      conversions: [], observations, inFlight: [pending],
+    };
+  }
+
+  it("rejects the issuer's two-chain XGLD subset despite an otherwise valid pending schema", () => {
+    const input = cohortFixture("xgld-unitas");
+    const source = input.plan.liabilityInFlightSource!;
+    if (!("kind" in source) || source.kind !== "evm-layerzero-oft-pending") throw new Error("Expected OFT");
+    input.plan.deployments = input.plan.deployments.slice(0, 2);
+    source.sides = source.sides.slice(0, 2);
+    source.pathways = source.pathways.filter(path => path.sourceIndex < 2 && path.destinationIndex < 2);
+    expect(ReviewedEconomicSupplyPlanSchema.safeParse(input.plan).success).toBe(true);
+    expect(buildReviewedEconomicDeploymentInventory(input.plan.assetId, input.plan, input.meta)).toBeNull();
+  });
+
+  it("retains XGLD's measured Ethereum zero and Mantle dust without treating missing pending as zero", () => {
+    const input = cohortFixture("xgld-unitas");
+    const packet = deriveReviewedEconomicDeploymentPartition(input)!;
+    expect(packet.aggregate.supplyUsd).toBe(100);
+    expect(packet.deployments[2]!.currentSupplyUsd).toBe(0);
+    expect(packet.deployments[3]!.currentSupplyUsd).toBeGreaterThan(0);
+    expect(packet.deployments.reduce((sum, row) => sum + row.currentSupplyUsd, 0)).toBeCloseTo(100);
+    input.inFlight = [];
+    expect(deriveReviewedEconomicDeploymentPartition(input)).toBeNull();
+  });
+
+  it.each(["missing holding", "different holding pin", "missing pathway", "different price source"] as const)(
+    "rejects XGLD's %s rather than granting control materiality", failure => {
+      const input = cohortFixture("xgld-unitas");
+      if (failure === "missing holding") input.observations.pop();
+      if (failure === "different holding pin") input.observations[3]!.anchorHash = `0x${"a".repeat(64)}`;
+      if (failure === "missing pathway") input.inFlight[0]!.layerZeroOftPendingProof!.pathways.pop();
+      if (failure === "different price source") input.referencePrice.sourceId = "gold-par";
+      expect(deriveReviewedEconomicDeploymentPartition(input)).toBeNull();
+    },
+  );
+
+  it("subtracts srUSD backing once and retains authenticated in-flight shares as unattributed", () => {
+    const input = cohortFixture("srusd-reservoir");
+    const pending = input.inFlight[0]!, proof = pending.layerZeroOftPendingProof!;
+    Object.assign(proof.pathways[0]!, { sentNonce: "1", pendingCount: 1, pendingAmountSD: "1000000" });
+    pending.amount = "1000000000000000000";
+    pending.responseSha256 = sha256Hex(stableJsonStringifyV1({ proof, amount: pending.amount }));
+    input.observations[2]!.amount = "21000000000000000000";
+    const packet = deriveReviewedEconomicDeploymentPartition(input)!;
+    expect(packet.deployments.map(row => row.currentSupplyUsd)).toEqual([79, 20]);
+    expect(packet.unattributedSupplyUsd).toBe(1);
+    input.observations[2]!.amount = "20000000000000000000";
+    expect(deriveReviewedEconomicDeploymentPartition(input)).toBeNull();
+  });
+
+  it("rejects a srUSD receipt or escrow balance from a different same-chain state", () => {
+    const input = cohortFixture("srusd-reservoir");
+    expect(deriveReviewedEconomicDeploymentPartition(input)!.deployments.map(row => row.currentSupplyUsd)).toEqual([80, 20]);
+    input.observations[2]!.anchor = String(Number(input.observations[2]!.anchor) - 1);
+    expect(deriveReviewedEconomicDeploymentPartition(input)).toBeNull();
+  });
+
+  it("joins both wiTRY spokes to one canonical escrow and rejects an omitted Robinhood share holding", () => {
+    const input = cohortFixture("witry-brix");
+    input.observations[2]!.amount = "10000000000000000000";
+    input.observations[3]!.amount = "30000000000000000000";
+    const packet = deriveReviewedEconomicDeploymentPartition(input)!;
+    expect(packet.deployments.map(row => row.currentSupplyUsd)).toEqual([70, 20, 10]);
+    expect(packet.unattributedSupplyUsd).toBe(0);
+    input.observations.splice(2, 1);
+    expect(deriveReviewedEconomicDeploymentPartition(input)).toBeNull();
+  });
+});

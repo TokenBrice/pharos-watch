@@ -67,6 +67,11 @@
       "chain": "megaeth",
       "address": "0x15b271d9012b5820fc42b1c495b4c1e206547de5",
       "decimals": 18
+    },
+    {
+      "chain": "robinhood",
+      "address": "0x15b271d9012b5820fc42b1c495b4c1e206547de5",
+      "decimals": 18
     }
   ],
   "collateralQuality": "rwa",

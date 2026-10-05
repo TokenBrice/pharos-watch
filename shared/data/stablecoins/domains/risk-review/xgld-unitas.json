@@ -94,7 +94,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "BNB native issuance and Base OFT routes are inventoried. At BNB block 125441304 and Base block 52110904, endpoint delegates equal the token owners; exact send/receive libraries and ULN DVN requirements are read. Controller signing/bypass policy and current economic liability partition remain unresolved.",
+    "summary": "BNB native issuance and Base OFT routes retain their October 3 configuration review. October 5 finalized identity and creation-to-pin PeerSet censuses additionally identify Ethereum and Mantle XGLD OFTs omitted by the issuer's two-chain table; all four token runtimes match exactly. Controller signing/bypass policy and fresh economic liability admission remain unresolved.",
     "reviewedAt": "2026-10-03",
     "reviewer": "Refine06 primary-source and pinned RPC review",
     "confidence": "manual-review",
@@ -186,6 +186,64 @@
             "url": "https://bscscan.com/address/0xe60106a5cab7e7c64830919d36ab20caaf50ac91"
           }
         ]
+      },
+      {
+        "id": "ethereum:0x77a31a47e8a1dce18cb1772ae1c2157fa080cfde",
+        "sourceChain": "bsc",
+        "destinationChain": "ethereum",
+        "canonicalChain": "bsc",
+        "contractAddress": "0x77a31a47e8a1dce18cb1772ae1c2157fa080cfde",
+        "protocol": "XGLDToken standard LayerZero V2 OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At finalized Ethereum block 26125488 (hash 0x8016a21c410460b072fd1ef10d0cb9118609f90f135b5923a118d626c120a2eb), name Unitas Gold, symbol XGLD, decimals 6, token() self, EndpointV2 eid 30101, owner/delegate 0x5777a1e27dbc0959777e4e9aa158fbcd0d07161d and reciprocal BSC/Base/Mantle peers are pinned. Its entire runtime hex-text SHA256 877e88dcdf877380ae73ce8656f03b89b0c3ae5b2246eaf3e295dca22e8495b7 equals all other XGLD tokens and the exact-match Sourcify BSC XGLDToken runtime. Creation block 25219689 through this pin has three PeerSet events, solely those three peers. Supply is observed zero at this pin, not assumed permanently absent. Issuer docs omit this deployment; no independent Ethereum native-issuance entitlement, signer policy, full messaging-security closure or fixed materiality is inferred.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-05",
+        "observedBlock": 26125488,
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x77a31a47e8a1dce18cb1772ae1c2157fa080cfde",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:ethereum:0x77a31a47e8a1dce18cb1772ae1c2157fa080cfde"
+        ],
+        "sources": [
+          { "label": "Issuer XGLD mechanism and documented native BNB issuance", "url": "https://docs.unitas.so/overview/xgld.md" },
+          { "label": "Exact-match BSC XGLDToken source and onchain runtime", "url": "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=all" },
+          { "label": "Ethereum finalized identity, runtime, peer history and nonce reads", "url": "https://ethereum-rpc.publicnode.com" }
+        ]
+      },
+      {
+        "id": "mantle:0x385c279445581a186a4182a5503094ebb652ec71",
+        "sourceChain": "bsc",
+        "destinationChain": "mantle",
+        "canonicalChain": "bsc",
+        "contractAddress": "0x385c279445581a186a4182a5503094ebb652ec71",
+        "protocol": "XGLDToken standard LayerZero V2 OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At finalized Mantle block 101532003 (hash 0xb478b2712cc46411cbba42a5b2b9db5fdbc05f965fd05ec1069ac87c24a7b30e), name Unitas Gold, symbol XGLD, decimals 6, token() self, EndpointV2 eid 30181, owner/delegate 0xbb984ce670100aa855f6152f88b26ee57f4ea82a and reciprocal BSC/Base/Ethereum peers are pinned. Its entire runtime hex-text SHA256 877e88dcdf877380ae73ce8656f03b89b0c3ae5b2246eaf3e295dca22e8495b7 equals all other XGLD tokens and the exact-match Sourcify BSC XGLDToken runtime. A complete contiguous 600-page 10000-block RPC census spans creation block 95532694 through this pin and identifies only the BSC/Base/Ethereum peers. Nonzero totalSupply 545 raw six-decimal units and Base outbound nonce 1 prove this cannot be omitted as an unused configured address. Issuer docs omit this deployment; native mint entitlement, full messaging-security/controller closure and economic materiality remain unasserted.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-05",
+        "observedBlock": 101532003,
+        "controllerChain": "mantle",
+        "controllerAddress": "0x385c279445581a186a4182a5503094ebb652ec71",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:mantle:0x385c279445581a186a4182a5503094ebb652ec71"
+        ],
+        "sources": [
+          { "label": "Issuer XGLD mechanism and documented native BNB issuance", "url": "https://docs.unitas.so/overview/xgld.md" },
+          { "label": "Exact-match BSC XGLDToken source and onchain runtime", "url": "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=all" },
+          { "label": "Mantle finalized identity and exhaustive historical peer RPC census", "url": "https://rpc.mantle.xyz" }
+        ]
       }
     ],
     "controls": [
@@ -262,6 +320,48 @@
           "pausersAdminsUpgraders": "Token owner and endpoint delegate are 0xbb984ce670100aa855f6152f88b26ee57f4ea82a. Its complete signing policy, mutable peer/library/receive-timeout paths and bypass closure remain unverified."
         },
         "evidence": "Issuer documents LayerZero OFT. Current BNB and Base runtimes are byte-for-byte equal, with reciprocal exact remote peer bindings; endpoint and owner are directly read. No locked collateral conservation, immutable cap or favorable signer policy is inferred."
+      },
+      {
+        "id": "xgld-ethereum-oft",
+        "label": "XGLD Ethereum OFT bridge runtime",
+        "routeRefs": ["ethereum:0x77a31a47e8a1dce18cb1772ae1c2157fa080cfde"],
+        "capabilities": ["bridge-mint", "bridge-burn", "peer-config"],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x77a31a47e8a1dce18cb1772ae1c2157fa080cfde",
+        "authorityType": "contract",
+        "observedAt": "2026-10-05",
+        "observedBlock": 26125488,
+        "sources": [
+          { "label": "Exact-match BSC XGLDToken source, byte-identical to Ethereum", "url": "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=all" },
+          { "label": "Ethereum finalized identity and peer history RPC reads", "url": "https://ethereum-rpc.publicnode.com" }
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "At finalized block 26125488, EndpointV2 eid 30101 and exact reciprocal BSC/Base/Mantle peer words are pinned; creation-to-pin PeerSet history contains only those peers.",
+          "rateLimits": "No current token-specific rate-limit or immutable supply cap is established.",
+          "pausersAdminsUpgraders": "Owner and endpoint delegate are 0x5777a1e27dbc0959777e4e9aa158fbcd0d07161d. The byte-identical XGLDToken source permits owner changes to peers, delegate and mint/burn roles; complete signing, library/DVN administration and bypass reach remain unverified."
+        },
+        "evidence": "Whole-runtime equality to the exact-match BSC source establishes standard OFT burn/debit and mint/credit entrypoints, not independent native issuance or a complete execution certificate. The current zero token supply does not remove the deployment or its bridge controls."
+      },
+      {
+        "id": "xgld-mantle-oft",
+        "label": "XGLD Mantle OFT bridge runtime",
+        "routeRefs": ["mantle:0x385c279445581a186a4182a5503094ebb652ec71"],
+        "capabilities": ["bridge-mint", "bridge-burn", "peer-config"],
+        "controllerChain": "mantle",
+        "controllerAddress": "0x385c279445581a186a4182a5503094ebb652ec71",
+        "authorityType": "contract",
+        "observedAt": "2026-10-05",
+        "observedBlock": 101532003,
+        "sources": [
+          { "label": "Exact-match BSC XGLDToken source, byte-identical to Mantle", "url": "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=all" },
+          { "label": "Mantle finalized identity and complete historical peer RPC census", "url": "https://rpc.mantle.xyz" }
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "At finalized block 101532003, EndpointV2 eid 30181 and exact reciprocal BSC/Base/Ethereum peer words are pinned; 600 contiguous historical RPC pages identify only those peers.",
+          "rateLimits": "No current token-specific rate-limit or immutable supply cap is established.",
+          "pausersAdminsUpgraders": "Owner and endpoint delegate are 0xbb984ce670100aa855f6152f88b26ee57f4ea82a. The byte-identical XGLDToken source permits owner changes to peers, delegate and mint/burn roles; complete signing, library/DVN administration and bypass reach remain unverified."
+        },
+        "evidence": "Whole-runtime equality to the exact-match BSC source establishes standard OFT burn/debit and mint/credit entrypoints. Nonzero raw supply and an authenticated source outbound nonce require inclusion, however small; no permanent dust exclusion or favorable execution certificate is asserted."
       }
     ]
   }
