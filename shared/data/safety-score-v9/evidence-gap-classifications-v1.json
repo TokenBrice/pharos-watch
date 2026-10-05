@@ -38763,6 +38763,77 @@
         "https://base.blockscout.com/api/v2/addresses/0x39C9106E9bE3622104A1aB97F3fCC88B65874213/token-balances"
       ],
       "rationale": "No exact liquidityHorizon for either the Ethereum AUSD dust holding or Base USDC-Morpho dust holding is published. Issuer docs, legal agreements, reserve/proof APIs and published core/custodian addresses disclose symbols, values and aggregate On-chain Liquidity Same day, not exact wallet/token/vault bindings or realization guarantees for those leaves. Newly found Agora/SharpByte AUSD integration is on Monad, not the Ethereum reserve leaf. Public addresses checked do not resolve this offchain reserve-to-wallet designation. Do not infer leaf withdrawability from class turnover."
+    },
+    {
+      "id": "uw-uscc-superstate-dd1a5fda253cd806",
+      "assetId": "uscc-superstate",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:fdc45afb487699e7b5f6038b",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T23:46:16Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R13)",
+      "sources": [
+        {
+          "url": "https://bitwise-materials.s3.us-east-1.amazonaws.com/public/fact-sheets/Fact-Sheet_USCC_Bitwise-Crypto-Carry-Fund.pdf",
+          "observedAt": "2026-10-04T23:45:14Z",
+          "datumAsOf": "2026-08-31",
+          "location": "p.1 Fund Details, liquidity footnote",
+          "excerpt": "The redemption program may be modified or terminated at any time, in which case investors may not be able to redeem shares in the future.",
+          "assertion": "Daily dealing is disclosed but is not a guaranteed whole-fund-share realization bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://superstate.com/assets/uscc",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
+        "https://docs.superstate.com/investors/tokenized-funds/redeem",
+        "https://superstate.com/terms",
+        "https://bitwiseinvestments.com/crypto-funds/uscc",
+        "https://bitwise-materials.s3.us-east-1.amazonaws.com/public/fact-sheets/Fact-Sheet_USCC_Bitwise-Crypto-Carry-Fund.pdf",
+        "https://docs.superstate.com/investors/smart-contracts"
+      ],
+      "rationale": "The exact liquidityHorizon for the entire captured fund-share position is not published. Public T+1/T+2 ordinary redemption schedules and daily liquidity describe requests, while the latest linked factsheet permits terminating redemptions. None supplies a maximum for full-position realization; no one-day/seven-day bucket is inferred."
+    },
+    {
+      "id": "uw-uscc-superstate-4305f42e35615461",
+      "assetId": "uscc-superstate",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:fdc45afb487699e7b5f6038b",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T23:46:16Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R13)",
+      "sources": [
+        {
+          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
+          "observedAt": "2026-10-04T23:46:16Z",
+          "datumAsOf": null,
+          "location": "Fund information and Documents",
+          "excerpt": "Shares of the fund are issued as USCC tokens on Ethereum, Solana, and Plume, or held in book-entry by Superstate.",
+          "assertion": "The scoped instrument is a fund share; portfolio futures expiries do not establish share maturity."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://superstate.com/assets/uscc",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
+        "https://superstate.com/terms",
+        "https://bitwiseinvestments.com/crypto-funds/uscc",
+        "https://bitwise-materials.s3.us-east-1.amazonaws.com/public/fact-sheets/Fact-Sheet_USCC_Bitwise-Crypto-Carry-Fund.pdf",
+        "https://docs.superstate.com/investors/smart-contracts"
+      ],
+      "rationale": "No maturityDaysMax, fixed expiry or governing perpetual/open-ended clause for the USCC fund-share claim is publicly supplied by the issuer fund page, latest linked factsheet, investor terms or public contract documentation. Offering materials are provided to qualified offerees, not linked publicly. Do not substitute underlying dated futures maturities or write zero."
     }
   ]
 }
