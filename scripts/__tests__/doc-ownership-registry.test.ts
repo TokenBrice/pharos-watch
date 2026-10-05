@@ -91,6 +91,24 @@ describe("doc-ownership registry integrity", () => {
       .every((mapping) => mapping.checks === undefined)).toBe(true);
   });
 
+  it.each([
+    "worker/src/cron/sync-v9-supply-attribution.ts",
+    "worker/src/lib/safety-score-v9/supply-attribution.ts",
+    "worker/src/lib/safety-score-v9/economic-supply-observer.ts",
+    "worker/src/lib/safety-score-v9/ccip-pending-observer.ts",
+    "worker/src/lib/safety-score-v9/layerzero-oft-pending-observer.ts",
+    "worker/src/lib/safety-score-v9/l2-messenger-pending-observer.ts",
+    "worker/src/lib/safety-score-v9/transfer-materiality.ts",
+  ])("routes supply producers to attribution and in-flight accounting: %s", (file) => {
+    const primaryDocs = mappings
+      .filter((mapping) => matchesAny(file, mapping.sources))
+      .flatMap((mapping) => mapping.docs.map(normalizeDoc));
+    expect(primaryDocs).toEqual(expect.arrayContaining([
+      { path: "docs/report-cards.md", anchor: "supply-attribution-and-in-flight-accounting" },
+      { path: "docs/report-cards.md", anchor: "bridge-in-flight-accounting" },
+    ]));
+  });
+
   const references: Array<{ path: string; anchor?: string }> = [
     ...(ownership.baseDocs ?? []).map((path) => ({ path })),
     ...mappings.flatMap((mapping) => [

@@ -244,7 +244,8 @@ export const CcipPendingReadSchema = z.strictObject({
 });
 export type CcipPendingRead = z.infer<typeof CcipPendingReadSchema>;
 export const CcipPendingCheckpointSchema = z.strictObject({
-  schemaVersion: z.literal(1), sourceDigest: Sha256Schema,
+  schemaVersion: z.literal(2), sourceDigest: Sha256Schema,
+  nextChainIndex: z.number().int().nonnegative().max(31),
   lanes: z.array(z.strictObject({
     id: CanonicalTextSchema, sent: CurveHistoryCursorSchema, executed: CurveHistoryCursorSchema,
     initialSequence: NonceSchema, lastSequence: NonceSchema,
