@@ -129,7 +129,63 @@ const CurvePendingProofSchema = z.strictObject({
     sentNonce: NonceSchema, receivedNonce: NonceSchema,
   })).length(2),
 });
-const PendingAmountReadSchema = z.union([ApiAmountReadSchema, EvmPendingStateReadSchema, CurveLzPendingReadSchema]);
+// EndpointV2 OFT v1 messages. Each directed pathway starts before its first
+// send; the initial pinned outbound nonce must be zero, never an inferred floor.
+const LayerZeroOftSideSchema = z.strictObject({
+  chainId: CanonicalChainIdSchema, eid: z.number().int().positive().max(4294967295),
+  oappAddress: EvmAddressSchema, oappRuntimeCodeSha256: Sha256Schema,
+  tokenAddress: EvmAddressSchema, localDecimals: z.number().int().min(0).max(36),
+  endpointAddress: EvmAddressSchema, endpointRuntimeCodeSha256: Sha256Schema,
+  deploymentBlock: z.number().int().positive(),
+});
+export const LayerZeroOftPendingReadSchema = z.strictObject({
+  kind: z.literal("evm-layerzero-oft-pending"), sourceId: CanonicalTextSchema,
+  chainId: CanonicalChainIdSchema, finality: z.literal("finalized"),
+  sharedDecimals: z.number().int().min(0).max(36), localDecimals: z.number().int().min(0).max(36),
+  sides: z.array(LayerZeroOftSideSchema).min(2).max(32),
+  pathways: z.array(z.strictObject({
+    sourceIndex: z.number().int().nonnegative(), destinationIndex: z.number().int().nonnegative(),
+  })).min(1).max(1024),
+}).superRefine((source, ctx) => {
+  const keys = source.pathways.map(path => `${path.sourceIndex}:${path.destinationIndex}`);
+  if (source.sides[0]?.chainId !== source.chainId || source.localDecimals < source.sharedDecimals ||
+    source.sides.some(side => side.localDecimals < source.sharedDecimals) ||
+    new Set(source.sides.map(side => `${side.chainId}:${side.oappAddress}`)).size !== source.sides.length ||
+    new Set(source.sides.map(side => side.eid)).size !== source.sides.length ||
+    new Set(keys).size !== keys.length ||
+    source.pathways.some(path => path.sourceIndex === path.destinationIndex ||
+      !source.sides[path.sourceIndex] || !source.sides[path.destinationIndex])) {
+    ctx.addIssue({ code: "custom", message: "OFT pending requires unique exact directed pathways and compatible token units" });
+  }
+});
+export type LayerZeroOftPendingRead = z.infer<typeof LayerZeroOftPendingReadSchema>;
+const LayerZeroOftMessageSchema = z.strictObject({
+  nonce: NonceSchema, guid: EvmWordSchema, recipient: EvmAddressSchema,
+  amountSD: NonceSchema, payload: z.string().regex(/^0x[0-9a-f]+$/).max(8194),
+  transactionHash: EvmWordSchema, sourceBlock: z.number().int().nonnegative(), sourceBlockHash: EvmWordSchema,
+});
+export const LayerZeroOftPendingCheckpointSchema = z.strictObject({
+  schemaVersion: z.literal(1), sourceDigest: Sha256Schema,
+  pathways: z.array(z.strictObject({
+    sent: CurveHistoryCursorSchema, sentNonce: NonceSchema,
+    destinationAnchor: z.number().int().nonnegative().nullable(), destinationAnchorHash: EvmWordSchema.nullable(),
+    messages: z.array(LayerZeroOftMessageSchema).max(512),
+  })).min(1).max(1024),
+});
+export type LayerZeroOftPendingCheckpoint = z.infer<typeof LayerZeroOftPendingCheckpointSchema>;
+const LayerZeroOftPendingProofSchema = z.strictObject({
+  sourceDigest: Sha256Schema, checkpointDigest: Sha256Schema,
+  pins: z.array(z.strictObject({
+    chainId: CanonicalChainIdSchema, eid: z.number().int().positive(),
+    anchor: z.number().int().nonnegative(), anchorHash: EvmWordSchema, observedAtSec: UnixSecondsSchema,
+  })).min(2).max(32),
+  pathways: z.array(z.strictObject({
+    sourceIndex: z.number().int().nonnegative(), destinationIndex: z.number().int().nonnegative(),
+    sentNonce: NonceSchema, inboundNonce: NonceSchema, lazyInboundNonce: NonceSchema,
+    pendingCount: z.number().int().nonnegative().max(512), pendingAmountSD: z.string().regex(/^(0|[1-9][0-9]*)$/).max(78),
+  })).min(1).max(1024),
+});
+const PendingAmountReadSchema = z.union([ApiAmountReadSchema, EvmPendingStateReadSchema, CurveLzPendingReadSchema, LayerZeroOftPendingReadSchema]);
 export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
   assetId: CanonicalTextSchema, reviewer: CanonicalTextSchema, reviewedAtSec: UnixSecondsSchema, expiresAtSec: UnixSecondsSchema,
   evidenceUrls: z.array(z.string().url()).min(1), economicScope: CanonicalTextSchema, sourceId: CanonicalTextSchema,
@@ -138,7 +194,7 @@ export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
   deployments: z.array(CensusRowSchema).min(1).max(64),
   conversionSources: z.array(ApiAmountReadSchema).max(64),
   referencePriceSource: ApiAmountReadSchema.nullable(),
-  liabilityInFlightSource: ApiAmountReadSchema.nullable(),
+  liabilityInFlightSource: PendingAmountReadSchema.nullable(),
   excludedRegistryDeploymentKeys: z.array(CanonicalTextSchema), exclusions: z.array(BalanceRuleSchema).max(64),
   escrows: z.array(z.strictObject({
     id: CanonicalTextSchema, canonicalDeploymentKey: CanonicalTextSchema, account: CanonicalTextSchema,
@@ -178,6 +234,29 @@ export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
               (row.read.kind !== "evm-total-supply" && row.read.kind !== "evm-balance");
           })) ctx.addIssue({ code: "custom", message: "Curve pending directions must bind the exact escrow and same-unit pinned satellite receipts" });
       }
+      if (escrow.inFlightSource.kind === "evm-layerzero-oft-pending") {
+        const source = escrow.inFlightSource;
+        if (escrow.account !== source.sides[0]?.oappAddress || source.localDecimals !== canonical?.decimals ||
+          source.sides[0]?.tokenAddress !== canonical?.address || source.sides[0]?.localDecimals !== canonical?.decimals ||
+          source.sides.some(side => !plan.deployments.some(row => row.chainId === side.chainId &&
+            row.address === side.tokenAddress && row.decimals === side.localDecimals &&
+            row.claimUnit === canonical?.claimUnit &&
+            (row.read.kind === "evm-total-supply" || row.read.kind === "evm-balance")))) {
+          ctx.addIssue({ code: "custom", message: "OFT paths must bind the escrow and every exact same-claim pinned token holding" });
+        }
+      }
+    }
+  }
+  if (plan.liabilityInFlightSource !== null && "kind" in plan.liabilityInFlightSource) {
+    const source = plan.liabilityInFlightSource, canonical = plan.deployments[0];
+    if (source.kind !== "evm-layerzero-oft-pending" || canonical?.chainId !== source.chainId ||
+      canonical?.decimals !== source.localDecimals || canonical?.address !== source.sides[0]?.tokenAddress ||
+      canonical?.decimals !== source.sides[0]?.localDecimals ||
+      source.sides.some(side => !plan.deployments.some(row => row.chainId === side.chainId &&
+        row.address === side.tokenAddress && row.decimals === side.localDecimals &&
+        row.claimUnit === canonical.claimUnit &&
+        (row.read.kind === "evm-total-supply" || row.read.kind === "evm-balance")))) {
+      ctx.addIssue({ code: "custom", message: "On-chain liability pending must bind an exact pinned OFT census in canonical token units" });
     }
   }
   if (plan.inFlightTreatment === "atomic-native-wrapper" &&
@@ -240,6 +319,7 @@ const EconomicSupplyObservationSchema = z.strictObject({
   id: CanonicalTextSchema, deploymentKey: CanonicalTextSchema, amount: DecimalSchema,
   observedAtSec: UnixSecondsSchema, anchor: CanonicalTextSchema, anchorHash: CanonicalTextSchema, responseSha256: Sha256Schema,
   curvePendingProof: CurvePendingProofSchema.optional(),
+  layerZeroOftPendingProof: LayerZeroOftPendingProofSchema.optional(),
 });
 // eslint-disable-next-line security/detect-unsafe-regex -- anchored linear unsigned-decimal shape; groups cannot overlap.
 const EconomicSupplyReferenceSchema = z.strictObject({ sourceId: CanonicalTextSchema, sourceGeneration: CanonicalTextSchema, observedAtSec: UnixSecondsSchema, value: z.string().regex(/^[0-9]+(\.[0-9]+)?$/).refine(value => Number(value) > 0 && Number.isFinite(Number(value))), responseSha256: Sha256Schema });

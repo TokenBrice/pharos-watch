@@ -1056,7 +1056,7 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
   const apiObservationIds = new Set([
     ...input.plan.escrows.flatMap(escrow => escrow.receiptClaimSources.map(source => `receipt:${escrow.id}:${source.deploymentKey}`)),
     ...input.plan.escrows.filter(escrow => escrow.inFlightSource !== null && !("kind" in escrow.inFlightSource)).map(escrow => `in-flight:${escrow.id}`),
-    ...(input.plan.liabilityInFlightSource === null ? [] : ["in-flight:liability"]),
+    ...(input.plan.liabilityInFlightSource === null || "kind" in input.plan.liabilityInFlightSource ? [] : ["in-flight:liability"]),
   ]);
   const convert = (key: string, observation: EconomicSupplyObservation): EconomicFraction | null => {
     const row = input.plan.deployments.find(row => row.deploymentKey === key);
@@ -1083,6 +1083,33 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
       value = { n: value.n * rate.n, d: value.d * rate.d };
     }
     return value;
+  };
+  const validOftPending = (
+    source: Extract<NonNullable<ReviewedEconomicSupplyPlan["liabilityInFlightSource"]>, { kind: "evm-layerzero-oft-pending" }>,
+    observation: EconomicSupplyObservation,
+  ): boolean => {
+    const proof = observation.layerZeroOftPendingProof;
+    if (!proof || observation.curvePendingProof !== undefined ||
+      proof.sourceDigest !== sha256Hex(stableJsonStringifyV1(source)) ||
+      proof.pins.length !== source.sides.length || proof.pathways.length !== source.pathways.length ||
+      proof.pins.some((pin, index) => {
+        const side = source.sides[index]!;
+        const holding = observations.get(`${side.chainId}:${side.tokenAddress}`);
+        return pin.chainId !== side.chainId || pin.eid !== side.eid || pin.anchor < side.deploymentBlock ||
+          !holding || holding.anchor !== String(pin.anchor) || holding.anchorHash !== pin.anchorHash ||
+          holding.observedAtSec !== pin.observedAtSec;
+      }) || proof.pathways.some((path, index) => {
+        const reviewed = source.pathways[index]!;
+        return path.sourceIndex !== reviewed.sourceIndex || path.destinationIndex !== reviewed.destinationIndex ||
+          BigInt(path.lazyInboundNonce) > BigInt(path.inboundNonce) || BigInt(path.inboundNonce) > BigInt(path.sentNonce) ||
+          (path.pendingCount === 0 && BigInt(path.pendingAmountSD) !== 0n);
+      })) return false;
+    const canonical = proof.pins[0]!;
+    const amount = proof.pathways.reduce((sum, path) => sum + BigInt(path.pendingAmountSD), 0n) *
+      10n ** BigInt(source.localDecimals - source.sharedDecimals);
+    return observation.amount === amount.toString() && observation.anchor === String(canonical.anchor) &&
+      observation.anchorHash === canonical.anchorHash && observation.observedAtSec === canonical.observedAtSec &&
+      observation.responseSha256 === sha256Hex(stableJsonStringifyV1({ proof, amount: observation.amount }));
   };
   try {
     for (const row of input.plan.deployments) {
@@ -1128,7 +1155,9 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
                 });
             }) ||
             pendingObservation.responseSha256 !== sha256Hex(stableJsonStringifyV1({ proof, amount: pendingObservation.amount }))) return null;
-        } else if (pendingObservation.curvePendingProof !== undefined) return null;
+        } else if (escrow.inFlightSource.kind === "evm-layerzero-oft-pending") {
+          if (!validOftPending(escrow.inFlightSource, pendingObservation)) return null;
+        } else if (pendingObservation.curvePendingProof !== undefined || pendingObservation.layerZeroOftPendingProof !== undefined) return null;
       }
       const pending: EconomicFraction | null | undefined = escrow.inFlightSource === null && input.plan.inFlightTreatment === "atomic-native-wrapper"
         ? { n: 0n, d: 1n } : pendingObservation && convert(escrow.canonicalDeploymentKey, pendingObservation);
@@ -1153,6 +1182,10 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
     }
     if (input.plan.liabilityInFlightSource !== null) {
       const pendingObservation = observations.get("in-flight:liability");
+      if (input.plan.liabilityInFlightSource !== null && "kind" in input.plan.liabilityInFlightSource) {
+        if (input.plan.liabilityInFlightSource.kind !== "evm-layerzero-oft-pending" || !pendingObservation ||
+          !validOftPending(input.plan.liabilityInFlightSource, pendingObservation)) return null;
+      } else if (pendingObservation?.layerZeroOftPendingProof !== undefined) return null;
       const pending = pendingObservation && convert(input.plan.deployments[0]!.deploymentKey, pendingObservation);
       if (!pending) return null;
       remainder = addEconomicUnits(remainder, pending);
