@@ -6,11 +6,13 @@ import { CcipPendingReadSchema, type CcipPendingCheckpoint, type CcipPendingRead
 import { observeCcipPending, authenticateCcipPendingObservation } from "../safety-score-v9/ccip-pending-observer";
 import { fetchEvmBlockHeader, fetchEvmRpcBatch } from "../evm-rpc";
 import { fetchJsonWithRetry } from "../fetch-retry";
+import { getCache, setCache } from "../db-cache";
 import type { StablecoinMeta } from "@shared/types/core";
 import { deriveReviewedEconomicDeploymentPartition } from "../safety-score-v9/supply-attribution-contract";
 
 vi.mock("../evm-rpc", () => ({ fetchEvmBlockHeader: vi.fn(), fetchEvmRpcBatch: vi.fn() }));
 vi.mock("../fetch-retry", () => ({ fetchJsonWithRetry: vi.fn() }));
+vi.mock("../db-cache", () => ({ getCache: vi.fn(), setCache: vi.fn() }));
 type SendLog = { address: string; topics: string[]; data: `0x${string}`; blockNumber: string; blockHash: string; transactionHash: string; logIndex: string; removed: boolean };
 const addr = (n: number) => `0x${n.toString(16).padStart(40, "0")}` as `0x${string}`;
 const word = (n: number | bigint) => `0x${n.toString(16).padStart(64, "0")}` as `0x${string}`;
@@ -94,6 +96,7 @@ beforeEach(() => {
   protocol = "1.6";
   peersRemoved = false;
   pinNumber = 105; finalized = 20000; indexed = []; receiptLogs = undefined; logRanges = [];
+  vi.mocked(getCache).mockResolvedValue(null);
   vi.mocked(fetchEvmBlockHeader).mockImplementation(async (_chain, number) => {
     const n = number === "finalized" ? finalized : Number(number);
     return { number: n, timestamp: 1000, hash: word(n) };
@@ -221,6 +224,61 @@ describe("authenticated CCIP pending quantities", () => {
     expect(resumed).toMatchObject({ status: "accepted", amount: "30", proof: { lanes: [{ pendingCount: 2, lastSequence: "2" }] } });
     expect(logRanges.filter(range => range.chain === "ethereum")).toEqual([{ chain: "ethereum", from: 16100, to: 16105 }]);
   });
+  it("persists authenticated bootstrap before a later lane aborts and resumes only incomplete history", async () => {
+    const read = source(), template = read.lanes[0]!;
+    read.lanes.push({ ...template, id: "later-lane", onRampAddress: addr(34), offRampAddress: addr(35) });
+    sent = [send(1), { ...send(1), address: addr(34), logIndex: "0x2" }];
+    pinNumber = 16105;
+    let saved: string | null = null;
+    const writes: CcipPendingCheckpoint[] = [];
+    vi.mocked(getCache).mockImplementation(async () => saved === null ? null : { value: saved, updatedAt: 1000 });
+    vi.mocked(setCache).mockImplementation(async (_db, _key, value) => {
+      saved = value; writes.push(JSON.parse(value) as CcipPendingCheckpoint);
+    });
+    const db = {} as D1Database, controller = new AbortController(), timeout = new Error("asset-timeout");
+    const baseMock = vi.mocked(fetchEvmRpcBatch).getMockImplementation()!;
+    vi.mocked(fetchEvmRpcBatch).mockImplementation(async (chain, requests, options) => {
+      if (requests.some(request => request.method === "eth_getCode" && request.params[0] === addr(34))) {
+        controller.abort(timeout); throw timeout;
+      }
+      return baseMock(chain, requests, options);
+    });
+    await expect(observeCcipPending({ ...input(read), db, signal: controller.signal })).rejects.toBe(timeout);
+    expect(writes).toHaveLength(1);
+    expect(writes[0]!.lanes).toHaveLength(1);
+    expect(writes[0]!.lanes[0]!.sent).toMatchObject({ nextBlock: 100, anchor: 99, anchorHash: word(99) });
+    expect(logRanges).toHaveLength(0);
+
+    vi.mocked(fetchEvmRpcBatch).mockImplementation(baseMock);
+    vi.mocked(fetchEvmRpcBatch).mockClear();
+    pinNumber += 900;
+    const resumed = await observeCcipPending({ ...input(read), db });
+    expect(resumed).toMatchObject({ status: "rejected", reason: "history-incomplete" });
+    expect(resumed).not.toHaveProperty("amount");
+    const latest = writes[writes.length - 1]!;
+    expect(latest.lanes).toHaveLength(2);
+    expect(latest.lanes.every(lane => lane.sent.nextBlock > 100)).toBe(true);
+    expect(vi.mocked(fetchEvmRpcBatch).mock.calls.some(([, requests]) => requests.some(request => {
+      const block = request.params[1];
+      return request.method === "eth_getCode" && request.params[0] === addr(30) &&
+        block !== null && typeof block === "object" && "blockHash" in block && block.blockHash === word(99);
+    }))).toBe(false);
+
+    const corrupted = writes[0]!;
+    corrupted.lanes[0]!.sent.anchorHash = word(9999);
+    expect(await observeCcipPending(input(read, corrupted))).toMatchObject({ status: "rejected", reason: "checkpoint-reorg" });
+  });
+  it("re-authenticates runtime at a new attempt's pin instead of trusting the checkpoint", async () => {
+    const first = await observeCcipPending(input());
+    if (first.status !== "accepted") throw new Error(first.reason);
+    const baseMock = vi.mocked(fetchEvmRpcBatch).getMockImplementation()!;
+    vi.mocked(fetchEvmRpcBatch).mockImplementation(async (chain, requests, options) => {
+      const values = await baseMock(chain, requests, options);
+      return values?.map((value, i) => requests[i]!.method === "eth_getCode" && requests[i]!.params[0] === addr(11) ? "0x6002" : value) ?? null;
+    });
+    pinNumber++;
+    expect(await observeCcipPending(input(source(), first.checkpoint))).toMatchObject({ status: "rejected", reason: "runtime-mismatch" });
+  });
   it.each([5, 12, 24, 42])("converges %i independent histories despite advancing finalized pins", async laneCount => {
     const read = source(), template = read.lanes[0]!;
     read.lanes = Array.from({ length: laneCount }, (_, i) => ({ ...template, id: `lane-${i}`,
@@ -235,6 +293,11 @@ describe("authenticated CCIP pending quantities", () => {
     expect(first.checkpoint.lanes).toHaveLength(laneCount);
     expect(first.checkpoint.lanes.every(lane => lane.sent.nextBlock === 16100)).toBe(true);
     expect(logRanges).toHaveLength(8);
+    const pinnedRequests = vi.mocked(fetchEvmRpcBatch).mock.calls.flatMap(([chain, requests]) => requests
+      .filter(request => request.method === "eth_call" || request.method === "eth_getCode")
+      .map(request => stableJsonStringifyV1({ chain, request })));
+    expect(new Set(pinnedRequests).size).toBe(pinnedRequests.length);
+    expect(vi.mocked(fetchJsonWithRetry).mock.calls).toHaveLength(1);
     pinNumber += 900; logRanges = [];
     const result = await observeCcipPending(input(read, first.checkpoint));
     expect(result.status).toBe("accepted");

@@ -198,15 +198,61 @@ export async function observeCcipPending(input: {
     if (decoded !== null && !(typeof decoded === "object" && "schemaVersion" in decoded && decoded.schemaVersion === 1)) {
       const parsed = CcipPendingCheckpointSchema.safeParse(decoded);
       if (!parsed.success || parsed.data.sourceDigest !== sourceDigest || parsed.data.nextChainIndex >= chains.length ||
-        parsed.data.lanes.length !== input.source.lanes.length || parsed.data.lanes.some((lane, i) => lane.id !== input.source.lanes[i]!.id)) fail("checkpoint-invalid");
+        parsed.data.lanes.length > input.source.lanes.length || parsed.data.lanes.some((lane, i) => lane.id !== input.source.lanes[i]!.id)) fail("checkpoint-invalid");
       checkpoint = parsed.data;
     } else {
       checkpoint = { schemaVersion: 2, sourceDigest, nextChainIndex: 0, lanes: [] };
     }
+    // Repeated migrated lanes share exact immutable, hash-pinned reads within
+    // this attempt. Never reuse runtime/state authentication across attempts.
+    const pinnedReads = new Map<string, unknown>();
     const rpc = async (chain: string, requests: Parameters<typeof fetchEvmRpcBatch>[1]) => {
-      const result = await fetchEvmRpcBatch(chain, requests, options);
-      if (!result || result.length !== requests.length || result.some(value => value === undefined || value === null)) fail("rpc-unavailable");
-      return result;
+      const keys = requests.map(request => {
+        const block = request.params[1];
+        return (request.method === "eth_call" || request.method === "eth_getCode") &&
+          block !== null && typeof block === "object" && "blockHash" in block && "requireCanonical" in block && block.requireCanonical === true
+          ? `${chain}:${stableJsonStringifyV1(request)}` : null;
+      });
+      const values: unknown[] = [], missing: Parameters<typeof fetchEvmRpcBatch>[1][number][] = [], positions: number[] = [];
+      for (let i = 0; i < requests.length; i++) {
+        const key = keys[i]!;
+        if (key !== null && pinnedReads.has(key)) values[i] = pinnedReads.get(key);
+        else { missing.push(requests[i]!); positions.push(i); }
+      }
+      if (missing.length > 0) {
+        const result = await fetchEvmRpcBatch(chain, missing, options);
+        if (!result || result.length !== missing.length || result.some(value => value === undefined || value === null)) fail("rpc-unavailable");
+        for (let i = 0; i < result.length; i++) {
+          const position = positions[i]!, key = keys[position]!;
+          values[position] = result[i];
+          if (key !== null) pinnedReads.set(key, result[i]);
+        }
+      }
+      return values;
+    };
+    const identityHeaders = new Map<string, EvmBlockHeader>(chains.map(chain => {
+      const pin = input.headers.get(chain)!;
+      return [`${chain}:${pin.number}`, pin] as const;
+    }));
+    const identityHeader = async (chain: string, number: number) => {
+      const key = `${chain}:${number}`, cached = identityHeaders.get(key);
+      if (cached) return cached;
+      const header = await fetchEvmBlockHeader(chain, number, options);
+      if (header) identityHeaders.set(key, header);
+      return header;
+    };
+    const discoveryBodies = new Map<string, unknown>();
+    const discover = async (url: string, maxResponseBytes: number) => {
+      if (discoveryBodies.has(url)) return discoveryBodies.get(url);
+      const response = await fetchJsonWithRetry<unknown>(url, { signal: input.signal }, 0, { maxResponseBytes, timeoutMs: 10000 });
+      if (response) discoveryBodies.set(url, response.body);
+      return response?.body;
+    };
+    const persistCheckpoint = async () => {
+      if (!input.db) return;
+      const saved = stableJsonStringifyV1(checkpoint);
+      if (saved.length > MAX_CHECKPOINT_BYTES) fail("checkpoint-capacity");
+      await setCache(input.db, cacheKey, saved, input.signal);
     };
     const state = async (lane: Lane, messages: readonly Pick<Message, "sequence" | "messageId">[]) => {
       const pin = input.headers.get(lane.destination.chainId)!;
@@ -237,7 +283,7 @@ export async function observeCcipPending(input: {
         const args = encodeAbiParameters(parseAbiParameters("uint64"), [BigInt(remote.chainSelector)]);
         let peerBlock = block;
         if (side.peerBindingPin) {
-          const binding = await fetchEvmBlockHeader(side.chainId, side.peerBindingPin.number, options);
+          const binding = await identityHeader(side.chainId, side.peerBindingPin.number);
           if (!binding || binding.number > pin.number || binding.timestamp > pin.timestamp ||
             binding.hash !== side.peerBindingPin.hash) fail("peer-binding-pin-invalid");
           peerBlock = { blockHash: binding.hash, requireCanonical: true };
@@ -289,8 +335,9 @@ export async function observeCcipPending(input: {
         if (row.chainSelector !== BigInt(lane.destination.chainSelector) || row.sourceChainSelector !== BigInt(lane.source.chainSelector) || row.onRamp.toLowerCase() !== lane.onRampAddress) fail("lane-identity-mismatch");
       }
       const nextCall = nextSequenceCall(lane);
-      if (!checkpoint.lanes[i]) {
-        const previous = await fetchEvmBlockHeader(lane.source.chainId, lane.sourceStartBlock - 1, options);
+      const initializing = !checkpoint.lanes[i];
+      if (initializing) {
+        const previous = await identityHeader(lane.source.chainId, lane.sourceStartBlock - 1);
         if (!previous) fail("history-unavailable");
         const block = { blockHash: previous.hash, requireCanonical: true };
         const code = await rpc(lane.source.chainId, [lane.onRampAddress, lane.source.tokenPoolAddress].map(address => ({ method: "eth_getCode", params: [address, block] })));
@@ -302,7 +349,8 @@ export async function observeCcipPending(input: {
           initialSequence = BigInt(next[0]).toString();
         }
         checkpoint.lanes.push({ id: lane.id, initialSequence, lastSequence: (BigInt(initialSequence) - 1n).toString(), messages: [],
-          sent: { nextBlock: lane.sourceStartBlock, anchor: null, anchorHash: null, digest: sha256Hex("ccip-send-history-v1") },
+          sent: { nextBlock: lane.sourceStartBlock, anchor: previous.number, anchorHash: previous.hash,
+            digest: sha256Hex(stableJsonStringifyV1({ domain: "ccip-send-history-v1", previous, initialSequence, code })) },
           // A pinned exhaustive state read, not a negative indexer/log claim,
           // supplies the initial destination baseline. Later logs scan deltas.
           executed: { nextBlock: destPin.number + 1, anchor: destPin.number, anchorHash: destPin.hash, digest: sha256Hex(stableJsonStringifyV1(destPin)) },
@@ -319,17 +367,15 @@ export async function observeCcipPending(input: {
         if (cursor.nextBlock > pin.number + 1 || (cursor.anchor === null) !== (cursor.anchorHash === null) ||
           (cursor.anchor === null ? cursor !== cp.sent || cursor.nextBlock !== lane.sourceStartBlock : cursor.nextBlock !== cursor.anchor + 1) || cp.sent.nextBlock < lane.sourceStartBlock) fail("history-gap");
         if (cursor.anchor !== null) {
-          const anchor = await fetchEvmBlockHeader(side.chainId, cursor.anchor, options);
+          const anchor = await identityHeader(side.chainId, cursor.anchor);
           if (!anchor || anchor.hash !== cursor.anchorHash) fail("checkpoint-reorg");
         }
       }
-      const api = await fetchJsonWithRetry<unknown>(`${API_BASE}/messages?sourceChainSelector=${lane.source.chainSelector}&destChainSelector=${lane.destination.chainSelector}&sourceTokenAddress=${lane.source.tokenAddress}&limit=${DISCOVERY_LIMIT}`, { signal: input.signal }, 0, { maxResponseBytes: 128 * 1024, timeoutMs: 10000 });
-      const discovery = DiscoverySchema.safeParse(api?.body);
+      const discovery = DiscoverySchema.safeParse(await discover(`${API_BASE}/messages?sourceChainSelector=${lane.source.chainSelector}&destChainSelector=${lane.destination.chainSelector}&sourceTokenAddress=${lane.source.tokenAddress}&limit=${DISCOVERY_LIMIT}`, 128 * 1024));
       if (!discovery.success) fail("indexer-unavailable");
       discoveryDigest = sha256Hex(stableJsonStringifyV1({ previous: discoveryDigest, lane: lane.id, discovery: discovery.data }));
       for (const discovered of discovery.data.data) {
-        const detail = await fetchJsonWithRetry<unknown>(`${API_BASE}/messages/${discovered.messageId}`, { signal: input.signal }, 0, { maxResponseBytes: 64 * 1024, timeoutMs: 10000 });
-        const identity = DiscoveryDetailSchema.safeParse(detail?.body);
+        const identity = DiscoveryDetailSchema.safeParse(await discover(`${API_BASE}/messages/${discovered.messageId}`, 64 * 1024));
         if (!identity.success) fail("indexer-invalid");
         if (identity.data.onramp !== lane.onRampAddress) continue; // Another history, never this lane's evidence.
         const tx = identity.data.sendTransactionHash;
@@ -346,10 +392,13 @@ export async function observeCcipPending(input: {
         });
         if (!found) fail("indexer-send-unproved");
         if (height <= sourcePin.number) {
-          const header = await fetchEvmBlockHeader(lane.source.chainId, height, options);
+          const header = await identityHeader(lane.source.chainId, height);
           if (!header || header.hash !== row.blockHash) fail("indexer-send-unproved");
         }
       }
+      // Bootstrap is durable before authenticating the next lane. A later
+      // cancellation can resume this prefix, never admit it as a census.
+      if (initializing) await persistCheckpoint();
     }
     type Scan = { lane: Lane; cp: CcipPendingCheckpoint["lanes"][number]; sent: boolean; topic: `0x${string}` };
     const scansByChain = chains.map(chain => input.source.lanes.flatMap((lane, i): Scan[] => {
@@ -441,11 +490,7 @@ export async function observeCcipPending(input: {
         cursor.nextBlock = end + 1; cursor.anchor = end; cursor.anchorHash = endHeader.hash;
       }
       pages++;
-      if (input.db) {
-        const saved = stableJsonStringifyV1(checkpoint);
-        if (saved.length > MAX_CHECKPOINT_BYTES) fail("checkpoint-capacity");
-        await setCache(input.db, cacheKey, saved, input.signal);
-      }
+      await persistCheckpoint();
     }
     for (let i = 0; i < input.source.lanes.length; i++) {
       const lane = input.source.lanes[i]!, cp = checkpoint.lanes[i]!, sourcePin = input.headers.get(lane.source.chainId)!;
@@ -475,7 +520,7 @@ export async function observeCcipPending(input: {
     }
     const serialized = stableJsonStringifyV1(checkpoint);
     if (serialized.length > MAX_CHECKPOINT_BYTES) fail("checkpoint-capacity");
-    // Pins are rechecked before even an incomplete checkpoint is persisted.
+    // Recheck every holding pin before final admission or incomplete return.
     for (const chain of chains) {
       const pin = input.headers.get(chain)!, rechecked = await fetchEvmBlockHeader(chain, pin.number, options);
       if (!rechecked || rechecked.hash !== pin.hash || rechecked.timestamp !== pin.timestamp) fail("pin-reorg");
