@@ -4,6 +4,9 @@ import { MintAuthoritySection } from "../mint-authority-section";
 import type { MintAuthorityDetailViewModel } from "@/lib/stablecoin-detail-mint-authority-view-model";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { makePublishedProcessDiagnostic } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { buildStablecoinDetailClientCoin } from "@/lib/stablecoin-detail-client-coin";
+import { buildMintAuthorityDetailViewModel } from "@/lib/stablecoin-detail-mint-authority-view-model";
 
 const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
   status: "reviewed",
@@ -134,6 +137,24 @@ describe("MintAuthoritySection", () => {
     // safety-score identity rather than the retired mint-authority lane.
     expect(html).toContain(`Methodology ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}`);
     expect(html).not.toContain("Methodology v1.3");
+  });
+
+  it.each([
+    { id: "dai-makerdao", total: 149, omitted: 137 },
+    { id: "usds-sky", total: 19, omitted: 7 },
+  ])("discloses the full $id census count while rendering only the bounded controls", ({ id, total, omitted }) => {
+    const coin = TRACKED_META_BY_ID.get(id)!;
+    const view = buildMintAuthorityDetailViewModel(buildStablecoinDetailClientCoin(coin));
+    const html = renderToStaticMarkup(<MintAuthoritySection profile={view} symbol={coin.symbol} />);
+
+    expect(html.match(/<li class="px-3 py-2\.5">/g)).toHaveLength(12);
+    expect(html).toContain(`Showing 12 of ${total} primary controls; and ${omitted} more controls.`);
+    expect(html).toContain(`Primary controls</span>`);
+    expect(html).toContain(`>(${total})</span>`);
+    expect(html).toContain(`through ${total} controls`);
+    expect(html).toContain(`+${total - 3} more controls (full census linked below)`);
+    expect(html).toContain(`href="${view.controlCensusUrl}"`);
+    expect(html).toMatch(/href="\/methodology\/?#mint-authority-score"/);
   });
 
   it("renders incident caps and custody context when present", () => {

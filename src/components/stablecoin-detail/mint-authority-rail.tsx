@@ -137,6 +137,7 @@ export function MintAuthorityRail({
   postureLabel,
   postureTone,
   controls,
+  totalControlCount = controls.length,
 }: {
   symbol: string;
   mintPathShortLabel: string;
@@ -145,15 +146,16 @@ export function MintAuthorityRail({
   postureLabel: string;
   postureTone: MintAuthorityPostureTone;
   controls: readonly MintAuthorityDetailControlViewModel[];
+  totalControlCount?: number;
 }) {
   if (controls.length === 0 || mintPathShortLabel === "Unknown") return null;
   const railControls = controls.slice(0, MAX_RAIL_CONTROLS);
-  const hiddenControlCount = controls.length - railControls.length;
+  const hiddenControlCount = totalControlCount - railControls.length;
 
   return (
     <div
       role="img"
-      aria-label={`Mint path: ${mintPathShortLabel} mints ${symbol} through ${controls.length === 1 ? "one control" : `${controls.length} controls`}; posture ${postureLabel}.`}
+      aria-label={`Mint path: ${mintPathShortLabel} mints ${symbol} through ${totalControlCount === 1 ? "one control" : `${totalControlCount} controls`}; posture ${postureLabel}.`}
       className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3"
     >
       <div className="flex min-w-0 flex-col gap-0.5">
@@ -181,7 +183,9 @@ export function MintAuthorityRail({
               }}
               className="pharos-focus-ring rounded-sm text-[10px] text-muted-foreground underline decoration-dashed underline-offset-2 transition-colors hover:text-foreground"
             >
-              +{hiddenControlCount} more in Primary controls
+              +{hiddenControlCount}{totalControlCount > controls.length
+                ? " more controls (full census linked below)"
+                : " more in Primary controls"}
             </button>
           ) : null}
         </span>

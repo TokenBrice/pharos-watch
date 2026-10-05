@@ -13,6 +13,7 @@ import { buildStablecoinDetailClientCoin, type StablecoinDetailCoinMeta } from "
 import { makePublishedIssuanceSummary, makePublishedProcessDiagnostic } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
 import type { V1005ProcessDiagnostic } from "@shared/types/safety-score-v9-facts";
 
+import { MAX_MINT_AUTHORITY_DETAIL_CONTROLS } from "../stablecoin-detail-mint-authority-client";
 function makeMintAuthorityCoin(
   summary: MintAuthorityClientSummary,
   overrides: Partial<StablecoinDetailCoinMeta> = {},
@@ -68,6 +69,55 @@ describe("mint-authority detail view-model builder", () => {
     }
     expect(clientCoin.mintAuthoritySummary).toBeDefined();
     expect(buildMintAuthorityDetailViewModel(clientCoin).status).toBe("reviewed");
+  });
+
+  it.each(["dai-makerdao", "usds-sky"])("bounds %s before the client boundary without shipping execution evidence", (id) => {
+    const fullCoin = TRACKED_META_BY_ID.get(id)!;
+    const clientCoin = buildStablecoinDetailClientCoin(fullCoin);
+    const summary = clientCoin.mintAuthoritySummary!;
+    const view = buildMintAuthorityDetailViewModel(clientCoin);
+
+    expect(summary.controls).toHaveLength(MAX_MINT_AUTHORITY_DETAIL_CONTROLS);
+    expect(summary.totalControlCount).toBe(fullCoin.mintAuthority!.controls!.length);
+    expect(summary.controlCensusUrl).toContain(`/mint-authority/${id}.json`);
+    expect(view.controls).toHaveLength(MAX_MINT_AUTHORITY_DETAIL_CONTROLS);
+    expect(view.totalControlCount).toBe(summary.totalControlCount);
+    expect(view.controlCensusUrl).toBe(summary.controlCensusUrl);
+    for (const serverOnlyField of ["executionCertificates", "authorityGraph", "executionClassRef", "evidenceRefIds"]) {
+      expect(JSON.stringify(clientCoin)).not.toContain(`"${serverOnlyField}"`);
+    }
+  });
+
+  it("preserves ordinary control order and omits overflow metadata", () => {
+    const fullCoin = TRACKED_META_BY_ID.get("usdc-circle")!;
+    const clientCoin = buildStablecoinDetailClientCoin(fullCoin);
+    const view = buildMintAuthorityDetailViewModel(clientCoin);
+    expect(clientCoin.mintAuthoritySummary!.controls!.map((control) => control.label))
+      .toEqual(fullCoin.mintAuthority!.controls!.map((control) => control.label));
+    expect(view.controls.map((control) => control.label)).toEqual(fullCoin.mintAuthority!.controls!.map((control) => control.label));
+    expect(clientCoin.mintAuthoritySummary).not.toHaveProperty("totalControlCount");
+    expect(view).not.toHaveProperty("totalControlCount");
+  });
+
+  it("prioritizes direct minting in overflowing view models and retains omitted-control diagnostics", () => {
+    const controls: MintAuthorityClientControlSummary[] = Array.from({ length: MAX_MINT_AUTHORITY_DETAIL_CONTROLS }, (_, index) => ({
+      label: `Non-minting control ${index}`, role: "other", authorityType: "contract", directMintAbility: "none",
+      chain: "ethereum", address: `0x${index.toString(16).padStart(40, "0")}`,
+    }));
+    const omittedRef = `ethereum:${controls.at(-1)!.address}`;
+    controls.push({ label: "Direct minter", role: "direct-minter", authorityType: "contract", directMintAbility: "direct",
+      chain: "ethereum", address: `0x${"a".repeat(40)}` });
+    const diagnostic = makePublishedProcessDiagnostic({ code: "runtime-unmatched", gate: "H0", controlRef: omittedRef,
+      pathId: null, classId: "omitted-class", memberRef: omittedRef, field: "runtimeHash", evidenceRefIds: [] });
+    const view = buildMintAuthorityDetailViewModel(makeMintAuthorityCoin({
+      mintPath: "permissioned-minter", authorityPosture: "unknown", confidence: "manual-review",
+      summary: "Large reviewed control census.", controls,
+    }), { mint: null, caps: [], issuanceSummary: makePublishedIssuanceSummary({}, [diagnostic]) });
+    expect(view.controls).toHaveLength(MAX_MINT_AUTHORITY_DETAIL_CONTROLS);
+    expect(view.controls[0]!.label).toBe("Direct minter");
+    expect(view.totalControlCount).toBe(controls.length);
+    expect(view.processDiagnostics).toContainEqual(expect.objectContaining({ classId: "omitted-class" }));
+    expect(controls[0]!.label).toBe("Non-minting control 0");
   });
 
   it("renders the published V9 mint component instead of a curated recomputation", () => {

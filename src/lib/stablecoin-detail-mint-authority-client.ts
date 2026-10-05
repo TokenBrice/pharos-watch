@@ -15,6 +15,28 @@ import { dedupeStablecoinLinksByUrl, readStablecoinLinks } from "@/lib/stablecoi
 type MintAuthorityClientControlSummary = NonNullable<MintAuthorityClientSummary["controls"]>[number];
 type MintAuthorityClientSourceSummary = NonNullable<MintAuthorityClientSummary["sources"]>[number];
 
+export const MAX_MINT_AUTHORITY_DETAIL_CONTROLS = 12;
+
+const CONTROL_DISPLAY_PRIORITY: Record<MintAuthorityClientControlSummary["directMintAbility"], number> = {
+  direct: 0,
+  "can-authorize": 1,
+  unknown: 2,
+  "cap-limited": 3,
+  "upgrade-only": 4,
+  "parameter-only": 5,
+  none: 6,
+};
+
+/** Only overflowing censuses change order; ordinary reviews keep their authored presentation. */
+export function selectMintAuthorityDetailControls(
+  controls: MintAuthorityClientControlSummary[],
+): MintAuthorityClientControlSummary[] {
+  if (controls.length <= MAX_MINT_AUTHORITY_DETAIL_CONTROLS) return controls;
+  return controls.toSorted((a, b) =>
+    CONTROL_DISPLAY_PRIORITY[a.directMintAbility] - CONTROL_DISPLAY_PRIORITY[b.directMintAbility],
+  ).slice(0, MAX_MINT_AUTHORITY_DETAIL_CONTROLS);
+}
+
 /**
  * Validates a string against an enum's allowlist before narrowing it. The
  * source profile is Zod-validated at build time, but a future schema migration
@@ -151,7 +173,13 @@ export function projectMintAuthorityClientSummary(coin: StablecoinMeta): MintAut
         .map(buildControlSummary)
         .filter((control): control is MintAuthorityClientControlSummary => control !== null)
     : [];
-  if (controls.length > 0) summary.controls = controls;
+  if (controls.length > 0) {
+    summary.controls = selectMintAuthorityDetailControls(controls);
+    if (controls.length > summary.controls.length) {
+      summary.totalControlCount = controls.length;
+      summary.controlCensusUrl = `https://github.com/TokenBrice/pharos-watch/blob/main/shared/data/stablecoins/domains/mint-authority/${coin.id}.json`;
+    }
+  }
 
   const sources: MintAuthorityClientSourceSummary[] = [];
   const seenUrls = new Set<string>();

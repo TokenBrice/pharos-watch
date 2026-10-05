@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { CircleCheck, CircleDashed, ExternalLink, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -235,6 +236,8 @@ export function MintAuthoritySection({
   const isReviewed = profile.status === "reviewed";
   const score = profile.score;
   const railControls = profile.controls ?? [];
+  const totalControlCount = profile.totalControlCount ?? railControls.length;
+  const omittedControlCount = totalControlCount - railControls.length;
   const hasRail = Boolean(symbol) && railControls.length > 0 && profile.mintPathShortLabel !== "Unknown";
   const hasSpectrum = score != null && score.bandKey != null && score.bandKey !== "nr";
   const scoreTriggerLabel = score
@@ -292,6 +295,7 @@ export function MintAuthoritySection({
                 postureLabel={profile.authorityPostureLabel}
                 postureTone={profile.authorityPostureTone}
                 controls={railControls}
+                totalControlCount={totalControlCount}
               />
             ) : null}
 
@@ -350,7 +354,7 @@ export function MintAuthoritySection({
             {score ? <MintAuthorityScoreBreakdown score={score} /> : null}
 
             {railControls.length > 0 ? (
-              <ModuleDisclosure id="mint-primary-controls" label="Primary controls" count={railControls.length}>
+              <ModuleDisclosure id="mint-primary-controls" label="Primary controls" count={totalControlCount}>
                 <div className="mt-2 space-y-3">
                   {hasVerificationGaps ? (
                     <div className="rounded-lg border border-amber-500/25 bg-amber-500/8 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
@@ -372,6 +376,24 @@ export function MintAuthoritySection({
                       <MintAuthorityControlRow key={control.key} control={control} />
                     ))}
                   </ul>
+                  {omittedControlCount > 0 ? (
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      Showing {railControls.length} of {totalControlCount} primary controls; and {omittedControlCount} more controls.{" "}
+                      {profile.controlCensusUrl ? (
+                        <a
+                          href={profile.controlCensusUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="pharos-focus-ring rounded-sm text-foreground underline underline-offset-2"
+                        >
+                          Full control census and execution evidence
+                        </a>
+                      ) : null}{" "}
+                      <Link href="/methodology/#mint-authority-score" className="pharos-focus-ring rounded-sm text-foreground underline underline-offset-2">
+                        Mint authority methodology
+                      </Link>
+                    </p>
+                  ) : null}
                 </div>
               </ModuleDisclosure>
             ) : (

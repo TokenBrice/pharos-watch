@@ -15,6 +15,7 @@ import { formatMintAuthorityCustodyAttestation } from "@/lib/stablecoin-detail-m
 import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";
 import type { SafetyScoreV9IssuanceSummary } from "@shared/types/safety-score-v9-public-breakdowns";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
+import { selectMintAuthorityDetailControls } from "@/lib/stablecoin-detail-mint-authority-client";
 /**
  * A single externally-owned key is presented as unverifiable custody unless the
  * review carries an MPC or HSM attestation. Safety 9.1 keeps the label local:
@@ -113,6 +114,8 @@ export interface MintAuthorityDetailViewModel {
   summary: string;
   inheritedFrom: string | null;
   controls: MintAuthorityDetailControlViewModel[];
+  totalControlCount?: number;
+  controlCensusUrl?: string;
   sources: MintAuthorityDetailSourceViewModel[];
   score: MintAuthorityDetailScoreViewModel | null;
   reviewedAt: string | null;
@@ -483,7 +486,9 @@ export function buildMintAuthorityDetailViewModel(
   const sources = candidate.sources ?? [];
   const mintIncidents = buildMintIncidentViewModels(candidate.mintIncidents);
   const matchedControlRefs = new Set<string>();
-  const controlViewModels = (candidate.controls ?? []).map((control, index) => {
+  const controls = selectMintAuthorityDetailControls(candidate.controls ?? []);
+  const totalControlCount = candidate.totalControlCount ?? candidate.controls?.length ?? 0;
+  const controlViewModels = controls.map((control, index) => {
     const viewModel = buildMintAuthorityControlViewModel(control, index);
     const ref = normalizeDeploymentId(`${control.chain ?? ""}:${control.address ?? ""}`);
     if (ref) matchedControlRefs.add(ref);
@@ -509,6 +514,10 @@ export function buildMintAuthorityDetailViewModel(
     summary: candidate.summary,
     inheritedFrom: candidate.inheritedFrom ?? null,
     controls: controlViewModels,
+    ...(totalControlCount > controlViewModels.length ? {
+      totalControlCount,
+      controlCensusUrl: candidate.controlCensusUrl,
+    } : {}),
     processEvidenceAvailable,
     processMetrics: projectProcessMetrics(summary),
     processDiagnostics: diagnostics.filter((diagnostic) => diagnostic.controlRefs.some((ref) =>
