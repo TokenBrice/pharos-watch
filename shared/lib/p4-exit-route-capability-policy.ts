@@ -20,7 +20,7 @@ import {
   type DexMeasuredExecutionObservationHistory,
   type DexMeasuredExecutionPublicProfile,
 } from "../types/measured-execution";
-import { UNISWAP_V4_DEPLOYMENT } from "./measured-execution-deployment-policies";
+import { UNISWAP_V4_DEPLOYMENT, UNISWAP_V4_SHADOW_DEPLOYMENTS } from "./measured-execution-deployment-policies";
 import type { ExitExecutionAdmission } from "./safety-score-v9/exit-execution";
 
 export const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.9";
@@ -141,7 +141,7 @@ export const DEX_EXECUTION_CAPABILITY_REGISTRY: readonly DexExecutionCapabilityR
     platform: "evm",
     lifecycle: "active",
     eligibleChains: ["ethereum"],
-    shadowChains: ["bsc", "base", "arbitrum", "polygon"],
+    shadowChains: UNISWAP_V4_SHADOW_DEPLOYMENTS.map((deployment) => deployment.chain),
     proofKind: "evm-state-and-call-proof",
   }),
   capabilityRegistration({
@@ -349,7 +349,7 @@ export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] 
   },
   {
     id: "uniswap-v4-hook-free-measured-exact",
-    sourceFamilies: ["dl"],
+    sourceFamilies: ["dl", "cg_onchain", "gecko_terminal", "dexscreener", "direct_api"],
     model: "measured-quote",
     tokenIdentity: "exact",
     exactBalancesOrReserves: "absent",

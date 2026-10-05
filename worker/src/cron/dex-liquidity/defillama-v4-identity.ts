@@ -26,7 +26,7 @@ export function attachDefiLlamaV4PoolIdentities(pools: LlamaPool[], payload: unk
     }
     const tokens = tokenSet(row.underlyingTokens);
     const match = typeof row.pool_old === "string"
-      ? /^(0x[0-9a-f]{64})-(ethereum|bsc|base|arbitrum|polygon)-uniswap-v4$/i.exec(row.pool_old)
+      ? /^(0x[0-9a-f]{64})-(ethereum|bsc|base|arbitrum|polygon|unichain|tempo)-uniswap-v4$/i.exec(row.pool_old)
       : null;
     byUuid.set(row.pool,
       row.project === "uniswap-v4" && typeof row.chain === "string" && match &&
