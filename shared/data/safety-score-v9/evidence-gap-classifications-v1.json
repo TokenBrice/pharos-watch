@@ -40473,6 +40473,61 @@
         "https://www.sec.gov/Archives/edgar/data/2056038/000205603825000001/xslFormDX01/primary_doc.xml"
       ],
       "rationale": "No ACRED-specific end-to-end maximum settlement time is published for the issuer queue to delivered USDC/USDG. The rendered offering lists quarterly frequency and monthly redemptions during a quarterly notice period, then expressly says full redemptions are not guaranteed and may be delayed. Client-rendered transfer-agent and broker terms contain no ACRED completion SLA. The SEC reader exposed the exact feeder filing index, not filing text; no filing-based timing claim is made. Underlying Apollo repurchase rules cannot guarantee this feeder's final payout."
+    },
+    {
+      "id": "uw-spusd-soulpeg-603c636d27d721cc",
+      "assetId": "spusd-soulpeg",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:3c132b5a1cb7aeea74e6183d",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:23:10Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R48)",
+      "sources": [
+        {
+          "url": "https://docs.soulpeg.io/docs/protocol/token-lifecycle",
+          "observedAt": "2026-10-05T00:20:00Z",
+          "datumAsOf": null,
+          "location": "5. Redemption",
+          "excerpt": "This process is strictly owner-controlled and requires the protocol to hold sufficient USDC reserves.",
+          "assertion": "sUSDC-to-USDC redemption is discretionary and reserve-dependent; no whole-position completion maximum is stated."
+        },
+        {
+          "url": "https://www.soulpeg.io/terms",
+          "observedAt": "2026-10-05T00:18:49Z",
+          "datumAsOf": "2026-08-17",
+          "location": "2. Description of Service",
+          "excerpt": "SoulPeg is a decentralized staking protocol that allows users to lock USDC tokens and receive sUSDC (soulbound USDC) tokens in return.",
+          "assertion": "The governing service terms describe the receipt, not an enforceable full-receipt realization or reserve-unwind SLA."
+        },
+        {
+          "url": "https://sourcify.dev/server/v2/contract/56/0x6cb98d3d1a46941aecfa6aa9f048377b985e49df?fields=all",
+          "observedAt": "2026-10-05T00:11:35Z",
+          "datumAsOf": null,
+          "location": "contracts/StakeableAssetImpl.sol:252-264; BSC block 125770233",
+          "excerpt": "function earlyRedeem(address user,uint256 amount) external onlyOperatorOrOwner nonReentrant",
+          "assertion": "Current proxy implementation/runtime was pinned and matched; the redemption call is privileged, not a holder-enforceable settlement maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.soulpeg.io/",
+        "https://www.soulpeg.io/terms",
+        "https://www.soulpeg.io/privacy",
+        "https://docs.soulpeg.io/docs/spusd/overview",
+        "https://docs.soulpeg.io/docs/protocol/token-lifecycle",
+        "https://docs.soulpeg.io/docs/protocol/contract-design",
+        "https://docs.soulpeg.io/docs/protocol/analytics-monitoring",
+        "https://docs.soulpeg.io/docs/whitepaper/security-model",
+        "https://docs.soulpeg.io/docs/faq/audit-status",
+        "https://sourcify.dev/server/v2/contract/56/0x6cb98d3d1a46941aecfa6aa9f048377b985e49df?fields=all"
+      ],
+      "rationale": "The exact whole-position liquidityHorizon of the sUSDC receipt backing SPUSD is not disclosed. Wrapper conversion is instant only into the same receipt; it is not final USDC realization. Lifecycle docs and the pinned current implementation restrict USDC redemption to an owner/operator and require sufficient reserves. Terms, strategy/security docs, monitoring and audit surfaces publish no contractual operator SLA or entire-book realization maximum. This C is for that undisclosed service/liquidity bound, not observable code, roles, balances or lock times."
     }
   ]
 }

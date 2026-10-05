@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "frxUSD exposure through productive Curve LP collateral",
-      "pct": 10.38,
+      "pct": 6.121029238299012,
       "risk": "low",
       "coinId": "frxusd-frax",
       "depType": "collateral",
@@ -16,14 +16,14 @@
         "liquidity",
         "concentration"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Other productive DeFi collateral (Curve LP tokens, Pendle PTs, and related LP/yield positions)",
-      "pct": 89.62,
+      "pct": 93.87897076170099,
       "risk": "high",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Tangent markets, Curve, Pendle, and related DeFi protocols",
+      "unclassifiedResidual": true,
+      "residualReason": "insufficient-evidence",
       "riskFactors": [
         "smart-contract",
         "market",
@@ -36,8 +36,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-31",
-    "reviewer": "OpenAI Codex reserve and dependency review",
+    "reviewedAt": "2026-10-05",
+    "reviewer": "Pharos unknown-resolver W3R48 pinned collateral-book review",
     "confidence": "verified",
     "sources": [
       {
@@ -51,22 +51,50 @@
       {
         "label": "Ethereum block 25874387",
         "url": "https://etherscan.io/block/25874387"
+      },
+      {
+        "label": "Exact verified USG runtime and all issuance entrypoints",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xb1c2db5d6ca03fce73dbd304d320bf76c55ae1b1?fields=all"
+      },
+      {
+        "label": "Exact verified MarketCreator registration and market-created events",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x214C8A1023B30032a2Eded109146658C6D6F2781?fields=all"
+      },
+      {
+        "label": "Former authorized MarketCreator verified source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x51c88d507e0df0d54daae6fea5b037ae39f4f76d"
+      },
+      {
+        "label": "Exact verified ControlTower market-creator authorization events",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xf3f7669dceed2f985815011c19ed68f667267215?fields=all"
+      },
+      {
+        "label": "MarketViewer collateral and accrued-debt USD valuation semantics",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x05aFEe1B483DdA7273be250f93219b607EA2477D?fields=all"
+      },
+      {
+        "label": "PegKeeper prefunded self-token inventory versus provided debt",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xf89615f75c8161dc185c03020240905f6b66bad9?fields=all"
+      },
+      {
+        "label": "Same-block market, Curve stored-rate, debt, supply and PegKeeper observations",
+        "url": "https://etherscan.io/block/26122502"
       }
     ],
-    "rationale": "At Ethereum block 25874387, Tangent's documented market contracts reported $4,630,952.96 of borrower collateral at each market's own oracle price. Decomposing the active frxUSD/sUSDS, frxUSD/sDOLA, frxUSD/scrvUSD, and frxUSD/OUSD Curve LP balances at their stored rates attributes $480,640.43, or 10.3789%, to frxUSD. The remaining 89.6211% stays aggregated because a complete tracked-asset look-through review was outside this correction; the separately documented USG/frxUSD Peg Keeper is a stabilization counterparty and is not counted as borrower collateral.",
-    "compositionBasis": "Pinned on-chain Tangent market collateral, oracle, Curve pool balance, and stored-rate reads at Ethereum block 25874387",
-    "scope": "selected-slices",
-    "knownUnknownExposure": "The remaining productive DeFi collateral has not been decomposed into tracked-asset and exogenous-asset slices in this focused frxUSD review.",
-    "knownUnknownExposurePct": 89.62,
+    "rationale": "At Ethereum block 26122502 (0x5e5c1e4770c8f64feec76d239b3c55b5afc785bfd5a762fa715ae00a10be1e08), a creation-to-pin authorization/event census recovered exactly two MarketCreators: the former creator emitted no markets during its authorized period, and the current creator registered all 16 current minters. USG, ControlTower and current MarketCreator runtimes match their verified onchain bytecode. All 16 markets were read at this same pin: totalCollateral, collatDecimals and collatOracle.latestAnswer(true) measure $5,121,357.835756121 of protocol-oracle-marked borrower collateral. For each of the four frxUSD Curve pools, the corresponding market mark is attributed by frxUSD balance times stored rate divided by the sum of both pool balances times stored rates. These four contributions total $313,479.810524550, or 6.121029238299012% of the whole marked collateral denominator. All remaining 93.87897076170099% is an explicit unclassified look-through residual; no known-only normalization or assumed basket is used. Both authorized PegKeepers hold exactly 20M prefunded USG and report debt()=0, so these self-token inventories are not external collateral. TotalSupply 43,817,570.730966665 minus that 40M equals 3,817,570.730966665 circulating units; current market debt 3,817,694.296691635 includes unminted interest and a remaining 95.486099911734909 USG debt/supply difference after removing that interest. This measured collateral envelope does not certify financial reconciliation, legal custody, whole-position realization, or the residual's underlying composition.",
+    "compositionBasis": "Complete same-block borrower-collateral market census, valued at each deployed market's USD oracle; exact Curve stored-rate proportional frxUSD attribution and measured disjoint residual. Prefunded PegKeeper self-token inventory is separately observed and excluded, not treated as backing.",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The measured 93.87897076170099% remaining borrower collateral is identified at its 16-market position inventory but lacks complete underlying tracked-asset/obligor look-through. It remains an explicit insufficient-evidence residual; current economic reconciliation and whole-slice liquidity are not inferred.",
+    "knownUnknownExposurePct": 93.87897076170099,
     "nonLinkDispositions": [
       {
         "reserveIndex": 1,
         "reserveName": "Other productive DeFi collateral (Curve LP tokens, Pendle PTs, and related LP/yield positions)",
-        "pct": 89.62,
+        "pct": 93.87897076170099,
         "disposition": "insufficient-evidence",
-        "rationale": "This focused correction measured frxUSD look-through exposure; the other Tangent market collateral still needs a complete per-asset dependency review."
+        "rationale": "The complete current marked collateral denominator is measured at block 26122502; the four frxUSD rate-weighted contributions are separated without normalizing known holdings. All other underlying exposures remain unclassified pending full per-asset look-through."
       }
     ],
-    "compositionAsOf": "2026-08-31"
+    "compositionAsOf": "2026-10-05"
   }
 }
