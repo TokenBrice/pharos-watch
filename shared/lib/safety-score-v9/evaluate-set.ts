@@ -1403,18 +1403,22 @@ export function evaluateValidatedV9FactSet(
   return evaluateV9FactSetRead(read, envelope, interventions);
 }
 
-/** Project each publication row once, releasing it after its final downstream reader. */
+/**
+ * Take publication ownership through a mutable holder, not a raw call argument.
+ * The caller's argument register otherwise retains the entire fact graph until
+ * evaluation returns, even after its local fact-set variable is cleared.
+ */
 export function evaluateValidatedV9FactSetForPublication(
-  factSet: CompiledV9FactSetV3 | null,
+  owner: { factSet: CompiledV9FactSetV3 | null },
   envelope: V9ValidatedPolicyEnvelope,
   project: (asset: V9EvaluatedAsset) => void,
 ): Readonly<V9ProjectedEvaluatedSet> {
-  assertV9FactSetCompiledInProcess(factSet!);
+  assertV9FactSetCompiledInProcess(owner.factSet!);
   const read: V9WorkingFactSetRead = {
     sourceSchemaVersion: 4,
-    sourceFactSetDigest: factSet!.v9FactSetDigest,
-    factSet,
+    sourceFactSetDigest: owner.factSet!.v9FactSetDigest,
+    factSet: owner.factSet,
   };
-  factSet = null;
+  owner.factSet = null;
   return evaluateV9FactSetRead(read, envelope, undefined, project);
 }

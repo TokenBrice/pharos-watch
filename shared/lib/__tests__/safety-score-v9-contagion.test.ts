@@ -18,7 +18,9 @@ describe("hypothetical V9 contagion reruns", () => {
     const { compiled, input } = fixture();
     const full = evaluateValidatedV9FactSet(compiled, input.policy);
     const rows = new Map<string, string>();
-    const projected = evaluateValidatedV9FactSetForPublication(compiled, input.policy, (asset) => {
+    const owner = { factSet: compiled as typeof compiled | null };
+    const projected = evaluateValidatedV9FactSetForPublication(owner, input.policy, (asset) => {
+      expect(owner.factSet).toBeNull();
       rows.set(asset.assetId, stableJsonStringifyV1(asset));
     });
     const { assets, ...identity } = full;
@@ -26,6 +28,7 @@ describe("hypothetical V9 contagion reruns", () => {
     expect([...rows.keys()].sort()).toEqual(assets.map((asset) => asset.assetId));
     for (const asset of assets) expect(rows.get(asset.assetId)).toBe(stableJsonStringifyV1(asset));
     expect(projected).not.toHaveProperty("assets");
+    expect(owner.factSet).toBeNull();
   });
 
   it("preserves full-set score, grade and pillar parity with zero shocks", () => {

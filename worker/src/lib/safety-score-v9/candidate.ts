@@ -695,11 +695,6 @@ function buildSafetyScoreV9CandidatePipeline(
   let quarantines = compilation.quarantines;
   let publicationFacts = projectCandidatePublicationFacts(compiledFacts, quarantines, input);
   compilation = null;
-  const takeEvaluationFacts = () => {
-    const facts = compiledFacts!;
-    if (!retainIntermediates) compiledFacts = null;
-    return facts;
-  };
   let evaluatedSet: Readonly<V9EvaluatedSet> | null = null;
   let publication: {
     candidate: SafetyScoreV9CurrentResponse;
@@ -711,11 +706,13 @@ function buildSafetyScoreV9CandidatePipeline(
   while (true) {
     try {
       if (retainIntermediates) {
-        evaluatedSet = evaluateValidatedV9FactSet(takeEvaluationFacts(), policy);
+        evaluatedSet = evaluateValidatedV9FactSet(compiledFacts!, policy);
         publication = publishEvaluatedCandidate();
       } else {
         const projector = createSafetyScoreV9ResponseProjector();
-        const projected = evaluateValidatedV9FactSetForPublication(takeEvaluationFacts(), policy, (asset) => {
+        const factOwner = { factSet: compiledFacts };
+        compiledFacts = null;
+        const projected = evaluateValidatedV9FactSetForPublication(factOwner, policy, (asset) => {
           projector.project(publicProjectionInput(asset));
           publicationFacts.displayByAssetId.delete(asset.assetId);
           publicationFacts.dependencyMetadataByAssetId.delete(asset.assetId);
