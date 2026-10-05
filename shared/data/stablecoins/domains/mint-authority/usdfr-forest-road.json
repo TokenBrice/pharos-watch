@@ -98,16 +98,16 @@
     "supervision": "unknown",
     "review": {
       "disposition": "unresolved",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U11BoundedB)",
+      "reviewedAt": "2026-10-04",
+      "reviewer": "Pharos unknown-resolver wave 3 (W3R21), partial governance and oracle pin review",
       "sources": [
         {
           "label": "Complete USDfr token role history, 175 logs through pagination end",
           "url": "https://eth.blockscout.com/api/v2/addresses/0xcc07e7c4e5e35affd47b351e420a22c667d7f83d/logs"
         },
         {
-          "label": "Complete attester role history and current threshold ABI",
-          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x870deb459512099e70e9a640cf3140a0d969fc18"
+          "label": "Canonical AttestationOracle proxy role history",
+          "url": "https://eth.blockscout.com/api/v2/addresses/0xb53977a70d755a56d3ce26926acb4c33f7861c61/logs"
         },
         {
           "label": "Forest Road USDfr and credit-book mechanism",
@@ -142,9 +142,9 @@
           "url": "https://forestroadvault.com/transparency"
         }
       ],
-      "evidence": "Exact USDfr grant/revoke event replay identifies only MintRedeemController 0x50ac018eb6400f247ffe0fa7f1d4e0e900cdb47c as MINTER and the timelock 0x28b36b6a48ed3f7409464c811a9ed538a824120e as DEFAULT_ADMIN/UPGRADER. The complete AttestationOracle history and membership checks at block 26110192 identify two attester keys, 0x759c2cd90594fdb114c5d37c5c3ea78a0033ed35 and 0xe2e544eded1189b8a5bda86a6f474011a397efb0; threshold is one for kinds 0/1 and two for kinds 2-9. Continuous ledger reconciliation is accounting, not financial assurance of receivables. The on-chain ReserveManager invariant and issuer-approved loan marks establish internal-ledger accounting only, not independent reconciliation of the material offchain book to total token liabilities, so no continuous financial-reconciliation rung is credited. Rechecked security disclosure includes Medium/Open LMV-18 from Round 75, in addition to LMV-09, LMV-11 and LMV-12..16. LMV-17 was withdrawn/refuted and is not a confirmed High finding. No remediation/retest closure is claimed. Attester key custody remains unverified despite the observed two-key roster and thresholds. Executed offchain collateral and token holder-priority instruments, and independent remediation/retest evidence for open economic findings, remain unavailable; these are backing/economic-loss gaps rather than an incomplete token mint-role census. Upstream governance-treasury/operations Safe signer and bypass closure remains incomplete: these upstream controllers have not been enumerated, so the complete mint/upgrade control census remains unresolved despite the named downstream governance timelock. D14 review 2026-10-03: verified USDfr.mint(address,uint256) is onlyRole(MINTER_ROLE) but performs _mint without the ReserveManager backing check used by the present controller. DEFAULT_ADMIN_ROLE grantRole can authorize a different minter once accrual is idle. This minter-authorization path, not UUPS upgrade alone or oracle admission, makes economic cap unbounded. The fallback is unbounded-adverse; internal-ledger accounting does not qualify for a reconciliation uplift. Existing unresolved upstream root/custody questions remain; no D29 certificate is authored.",
+      "evidence": "The earlier USDfr grant/revoke replay identifies MintRedeemController 0x50ac018eb6400f247ffe0fa7f1d4e0e900cdb47c as MINTER and timelock 0x28b36b6a48ed3f7409464c811a9ed538a824120e as DEFAULT_ADMIN/UPGRADER. New Ethereum block 26122339 research resolves the previously suspected oracle address conflict: ClaimBridge.modules() binds proxy 0xb53977a70d755a56d3ce26926acb4c33f7861c61, whose EIP-1967 implementation is the previously cited 0x870deb459512099e70e9a640cf3140a0d969fc18. Complete proxy RoleGranted/RoleRevoked logs over deployment block 26006832 through 26122339 identify attesters 0x759c2cd90594fdb114c5d37c5c3ea78a0033ed35 and 0xe2e544eded1189b8a5bda86a6f474011a397efb0; proxy threshold reads return one for kinds 0/1 and two for kinds 2-9. Timelock role logs over the same complete interval identify only the timelock itself as DEFAULT_ADMIN, FRGovernor 0x6cbb4ca6769dd4b57f51d1e62a000110b7fd2d1b as proposer/canceller, and address zero as open executor. Pinned membership confirms the initial admin 0x89575b4fcfe2cf6833e96de71765c6ad15eac11b is revoked; getMinDelay is 172800. Treasury Safe 0x0687a13c490b2573d4666fb3a7c21826a621215e is 2-of-4 and getModulesPaginated reaches the terminal sentinel with an empty list at this pin. This resolves current topology, not complete historical incident or governor/vote-source bypass review. Continuous ledger reconciliation remains internal-ledger accounting, not independent assurance of offchain receivables against liabilities. Open security findings are fork-testing findings, not evidence of live mint compromise or absence. Existing unbounded minter-authorization economics are preserved: USDfr.mint is role-gated without the controller's reserve check, and DEFAULT_ADMIN can authorize another minter. No remediation, signer independence, incident-free posture or D29 execution certificate is asserted.",
       "unresolvedQuestions": [
-        "Complete the unenumerated upstream governance-treasury/operations Safe signer and bypass census for the governance timelock's mint-logic replacement path."
+        "Current timelock root roles, treasury Safe topology and canonical oracle proxy binding are now pinned. Complete the historical USDfr issuance/upgrade incident review and the governor plus mutable sGROVE vote-source permission/bypass inventory before asserting aggregate reviewComplete or incidentState none."
       ],
       "scopedQuestions": [
         {
@@ -152,7 +152,7 @@
           "question": "Establish key-custody and signing-policy evidence for the two observed oracle attester keys whose marks authorize backing/yield accounting used by this mint controller; the current key roster and per-kind thresholds do not attest human independence.",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine05 mint-authority calibration v2",
-          "sources": [{"label": "Verified current oracle authorization and thresholds", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x870deb459512099e70e9a640cf3140a0d969fc18"}, {"label": "Mint controller, authenticated marks and yield path", "url": "https://forestroadvault.com/docs/overview"}]
+          "sources": [{"label": "Canonical oracle proxy role history", "url": "https://eth.blockscout.com/api/v2/addresses/0xb53977a70d755a56d3ce26926acb4c33f7861c61/logs"}, {"label": "Verified oracle implementation threshold ABI", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x870deb459512099e70e9a640cf3140a0d969fc18"}, {"label": "Mint controller, authenticated marks and yield path", "url": "https://forestroadvault.com/docs/overview"}]
         }
       ]
     }

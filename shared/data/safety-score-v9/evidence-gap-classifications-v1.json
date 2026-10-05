@@ -40154,6 +40154,52 @@
         "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000006/fcc-20251231.htm"
       ],
       "rationale": "Recovered the previously inaccessible full June 30 10-Q and Exhibit 99.1 via Jina. They disclose itemized qualified assets, unsecured liabilities, paid parent contributions and support through September 2027, not a certificate default waterfall or independently verified funded stress resources. Annual KPMG assurance remains December 2025; the current quarter is unaudited. These disclosures cannot renew expired assurance or establish whole-component recovery quality. Existing report dates and measured siblings are untouched."
+    },
+    {
+      "id": "uw-apyusd-apyx-5a8f6a8fabf4cacf",
+      "assetId": "apyusd-apyx",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:redemption:apyusd-apyx:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:13:40Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R21)",
+      "sources": [
+        {
+          "url": "https://docs.apyx.fi/technical-overview/unlocking.md",
+          "observedAt": "2026-10-05T00:08:33Z",
+          "datumAsOf": null,
+          "location": "Flexible Unlocks for apyUSD, included in llms-full.txt",
+          "excerpt": "Unlocks become claimable after 3 days, with an early unlock fee that declines linearly over time from 3.5% down to just 0.1%.",
+          "assertion": "Claimability after a minimum wait is disclosed, not a final completion maximum for the retained queue rail. The same page still describes cooldown-resetting legacy UnlockToken claims."
+        },
+        {
+          "url": "https://docs.apyx.fi/resources/terms-of-service.md",
+          "observedAt": "2026-10-05T00:08:33Z",
+          "datumAsOf": null,
+          "location": "Section 1.5, included in llms-full.txt",
+          "excerpt": "WE MAKE NO WARRANTY THAT THE SITE OR PROTOCOL WILL MEET YOUR REQUIREMENTS OR BE AVAILABLE ON AN UNINTERRUPTED, SECURE, OR ERROR-FREE BASIS.",
+          "assertion": "Governing terms do not promise end-to-end delivered-asset settlement by a maximum deadline; operational access and interruption are expressly not warranted."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://apyx.fi/",
+        "https://docs.apyx.fi/llms-full.txt",
+        "https://docs.apyx.fi/product-overview/apyusd-overview.md",
+        "https://docs.apyx.fi/technical-overview/unlocking.md",
+        "https://docs.apyx.fi/resources/faq.md",
+        "https://docs.apyx.fi/resources/terms-of-service.md",
+        "https://docs.apyx.fi/collateral-and-custody/third-party-attestation.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x93775e2dfa4e716c361a1f53f212c7ae031bf4e6",
+        "https://docs.apyx.fi/resources/smart-contract-addresses.md"
+      ],
+      "rationale": "The retained apyUSD queue route has no published final settlement maximum. Primary corpus, FAQ, legal terms and exact UnlockToken source disclose claim-after-cooldown mechanics, not a completion SLA. At Ethereum 26122339 the official legacy UnlockToken reports unlockingDelay=1728000 seconds and paused=false; these are current timing/state, not guaranteed future completion. New NFT text advertises claimability after three days while legacy resettable-cooldown text remains. Neither promise is an end-to-end maximum; no scalar SLA or zero-delay completion is inferred."
     }
   ]
 }
