@@ -409,7 +409,8 @@
       "pct": 0.1,
       "risk": "very-high",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "Velodrome Finance"
+      "issuerOrObligor": "Velodrome Finance",
+      "liquidityHorizon": "over-seven-days"
     },
     {
       "sourceKey": "frax-balance-sheet:wavax",
@@ -465,7 +466,8 @@
       "pct": 0,
       "risk": "very-high",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "Thena vote escrow"
+      "issuerOrObligor": "Thena vote escrow",
+      "liquidityHorizon": "over-seven-days"
     },
     {
       "sourceKey": "frax-balance-sheet:sdt",
@@ -481,7 +483,8 @@
       "pct": 0,
       "risk": "very-high",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "Ramses vote escrow"
+      "issuerOrObligor": "Ramses vote escrow",
+      "liquidityHorizon": "over-seven-days"
     },
     {
       "sourceKey": "frax-balance-sheet:bnb",
@@ -557,8 +560,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Unknown-wave W1R53 classification review; W2R28 exact axlfrxETH and ZZ issuer-identity review",
+    "reviewedAt": "2026-10-04",
+    "reviewer": "Unknown-wave W1R53 classification; W2R28 issuer identities; W3R04 pinned VELO, THE and RAM lock liquidity",
     "confidence": "verified",
     "sources": [
       {
@@ -604,9 +607,21 @@
       {
         "label": "Exact Ethereum ZZ contract, verified ZigZagToken and decoded ZigZag/ZZ constructor; observed 2026-10-03",
         "url": "https://etherscan.io/address/0xc91a71a1ffa3d8b22ba615ba1b9c01b2bbbf55ad#code"
+      },
+      {
+        "label": "Exact Velodrome V2 escrow source; NFT 4976 pinned at Optimism block 157779268",
+        "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0xfaf8fd17d9840595845582fcb047df13f006787d"
+      },
+      {
+        "label": "Exact Thena escrow source; NFT 20521 pinned at BSC block 125766088",
+        "url": "https://sourcify.dev/server/v2/contract/56/0xfBBF371C9B0B994EebFcC977CEf603F7f31c070D?fields=sources,abi"
+      },
+      {
+        "label": "Exact Ramses escrow implementation; NFTs 14 and 1906 and implementation slot pinned at Arbitrum block 511756169",
+        "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xdd4eDE1d1bE835887f1C4CAF22F091f49EB5a0De"
       }
     ],
-    "rationale": "The 2026-08-12 full-composition scaffold and its percentages are preserved as history, not refreshed holdings. On 2026-10-03 the official balance-sheet API identified additional exact token/position rows: native and wrapped volatile cryptoassets, Agora AUSD, USCC fund shares, Curve LP, staked AAVE, bridged frxETH and vote-escrow positions for Chronos, Multichain, Ramses, Stake DAO and Thena. Added zero-percent source-keyed metadata rows join those live categories without asserting any new composition weight. USCC contract identity and current Bitwise fund-share issuer are independently confirmed by Superstate documentation. W2R28 binds axlfrxETH to the exact Fraxtal BurnableMintableCappedERC20 created by Axelar Gateway and ZZ to the exact Ethereum ZigZagToken with decoded ZigZag/ZZ constructor. These are technical issuing-system identities, not invented legal redemption promises. Contract locks and LP placement do not prove a whole-position liquidation horizon; no zero maturity or immediate liquidity is inferred.",
+    "rationale": "Historical 2026-08-12 weights and compositionAsOf are preserved, not refreshed holdings. W1R53's 2026-10-03 API classifications and W2R28's exact axlfrxETH/ZZ technical issuer identities remain unchanged. W3R04 fetched the 2026-10-04T23:23:47Z API position census and pinned exact escrow state: Velodrome V2 NFT 4976 at Optimism 157779268 is normal, non-permanent, voted and locked until 2028-11-16; Thena NFT 20521 at BSC 125766088 is voted, unattached and locked until 2027-01-28; at Arbitrum 511756169, Ramses NFT 14 is voted with two attachments and expires 2027-03-11, while NFT 1906 is not voted with zero attachments and expires 2027-04-15. Ramses EIP-1967 implementation matches the verified implementation source. The exact withdrawal code requires expiry and clearing vote/attachment restrictions. Every inventoried position in each of these three source-keyed slices is locked beyond seven days, so only the adverse over-seven-days liquidity tier is authored; it is not a promise of realization at expiry or proof of an NFT secondary-market buyer. Other whole-position liquidation routes remain unresolved; no scalar maturity or immediate liquidity is inferred.",
     "compositionBasis": "Official Frax balance-sheet asset rows aggregated by symbol at the response's pinned multi-chain observation blocks",
     "compositionAsOf": "2026-08-12",
     "scope": "full-composition",
