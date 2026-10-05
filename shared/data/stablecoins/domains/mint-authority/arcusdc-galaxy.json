@@ -247,6 +247,7 @@
         {
           "controlRef": "Galaxy USDC owner parameter authority",
           "question": "Independent human control, operational key custody and signing policy of the identified Galaxy USDC owner parameter authority at arc:0x032a292de0127fdef849eff31b5b4df7e5f069c0 are not publicly established; enumerated owners/threshold or a codeless EOA do not certify these safeguards.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine07 calibration v2 2026-10-03",
           "sources": [
@@ -275,6 +276,7 @@
         {
           "controlRef": "Galaxy USDC curator parameter authority",
           "question": "Independent human control, operational key custody and signing policy of the identified Galaxy USDC curator parameter authority at arc:0xec1a7a08b538c685f5d188d81e3545d69f1b4178 are not publicly established; enumerated owners/threshold or a codeless EOA do not certify these safeguards.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine07 calibration v2 2026-10-03",
           "sources": [

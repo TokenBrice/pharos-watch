@@ -318,6 +318,38 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
     })]);
   });
 
+  it("publishes an applicable open-ended claim at the longest maturity band without inventing a finite term", () => {
+    const asset = compileWithMaturityBound(maturityApplicability({ conclusion: "open-ended", governingInstrument: "Exact Class A share" }));
+    const exposure = asset.reserveExposures[0]!;
+    expect(exposure.maturityDaysMax).toBeNull();
+    expect(exposure.factorStatuses!.maturity).toMatchObject({
+      observationState: "known", gapIds: [], applicability: { state: "required" },
+    });
+    expect(asset.gaps.filter(gap => gap.causeScope?.requiredDatum === "maturityDaysMax")).toEqual([]);
+    expect(V9AssetFactsV3Schema.safeParse(asset).success).toBe(true);
+    expect(V9AssetFactsV3Schema.safeParse({ ...asset, reserveBoundFacts: [] }).success).toBe(false);
+    const unbound = { ...asset, reserveExposures: [{ ...exposure, factorStatuses: {
+      ...exposure.factorStatuses, maturity: { ...exposure.factorStatuses!.maturity!, evidenceRefIds: [] },
+    } }] };
+    expect(V9AssetFactsV3Schema.safeParse(unbound).success).toBe(false);
+    const backing = evaluateV9ReserveExposures({ ...asset, resolvedUpstreamExposures: [], asOfSec: NO_HISTORY_CLOCK_SEC }, V9_CANDIDATE_POLICY_V1);
+    const factors = backing.contributions.find(entry => entry.componentKey === `reserve:${exposure.exposureKey}`)!.factors!
+      .filter(entry => entry.componentKey.startsWith(`reserve:${exposure.exposureKey}:maturity`));
+    expect(factors).toEqual([expect.objectContaining({ score: 48, cause: null, scoringDisposition: "included" })]);
+  });
+
+  it.each([
+    { label: "stale", overrides: { asOfSec: NO_HISTORY_CLOCK_SEC - 400 * 86_400 } },
+    { label: "wrong exposure", overrides: { scope: { kind: "exposure", exposureKey: "fixture:other" } } },
+    { label: "partial exposure", overrides: { allInScope: false } },
+  ])("keeps open-ended maturity unknown when $label", ({ overrides }) => {
+    const asset = compileWithMaturityBound(maturityApplicability({ conclusion: "open-ended", ...overrides }));
+    const status = asset.reserveExposures[0]!.factorStatuses!.maturity!;
+    expect(status.observationState).not.toBe("known");
+    expect(status.applicability.state).toBe("required");
+    expect(asset.gaps.find(gap => gap.gapId === status.gapIds[0])!.causeProof.cause).toBe("U");
+  });
+
   it.each([
     { label: "an unelapsed review day", fact: () => maturityApplicability({ provenance: { kind: "reviewed-research", reviewer: "fixture", reviewedAt: "2026-08-01", confidence: "high" } }) },
     { label: "an expired snapshot", fact: () => maturityApplicability({ asOfSec: NO_HISTORY_CLOCK_SEC - 400 * 86_400 }) },

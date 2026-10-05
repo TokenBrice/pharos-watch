@@ -199,6 +199,7 @@
         {
           "controlRef": "hyperevm:0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227",
           "question": "At HyperEVM block 47393693, this address has no deployed code and retains DEFAULT_ADMIN_ROLE on MidasAccessControl. Midas's archived wallet-security disclosure states that all collateral assets and smart contracts use Fordefi and Fireblocks MPC key management, but does not identify this address or attest its current policy quorum. Does that MPC disclosure cover this exact native-mint role administrator today?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2WMisc06)",
           "sources": [

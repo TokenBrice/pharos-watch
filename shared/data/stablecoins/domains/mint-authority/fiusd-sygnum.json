@@ -158,37 +158,57 @@
         {
           "label": "Verified deployed Arbitrum implementation",
           "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7616b08676117e1aab542e53fe3f7b12f7596d37"
+        },
+        {
+          "label": "Exact zkSync Safe singleton published verification artifact, independently runtime-matched at block 72339465",
+          "url": "https://zksync2-mainnet-explorer.zksync.io/contract_verification/info/0x1727c2c531cf966f902e5927b98490fdfb3b2b70"
+        },
+        {
+          "label": "Exact administered FIUSD EraVM proxy runtime and creation data without verified source",
+          "url": "https://zksync.blockscout.com/api/v2/smart-contracts/0x2ab105a3ead22731082b790ca9a00d9a3a7627f9"
+        },
+        {
+          "label": "Sygnum institutional custody disclosure: not a named mint-key signing-policy attestation",
+          "url": "https://www.sygnum.com/custody/"
+        },
+        {
+          "label": "Pinned current zkSync control and Safe reads",
+          "url": "https://mainnet.era.zksync.io"
         }
       ],
       "reviewer": "Refine05 primary-source and pinned-RPC review; W1R65 exact issuer-supervision review",
       "reviewedAt": "2026-10-03",
-      "evidence": "Current registry mutation history and positive member reads close the operator/admin/system/relay roster on both chains, and verified zkSync implementation/registry artifacts exactly match deployed bytes. Native operator minting is not collateral-capped; Arbitrum proxy administration is a single EOA while zkSync has a 3-of-6 Safe. Sygnum's disclosed daily CBS/database/blockchain report supports internal-ledger semantics only. The 2480-unit provider/native supply contradiction and independently signed token-to-unit reconciliation remain unresolved; no financial assurance or human/key independence is claimed. Issuer key custody and native cross-chain reallocation/burn-conservation policy remain unpublished. W2R22 at block 72324383 closes the Safe extension-address census: zero guard, no modules, verified CompatibilityFallbackHandler and identified singleton. Exact proxy-wrapper executable correspondence and full reachable execution/noninterference proof remain unresolved: the administered FIUSD zkSync proxy verification endpoints return no artifact. The umbrella therefore remains unresolved and no incident-free posture is inferred. W1R65 reviewed the FINMA register dated 3 October 2026, which lists exact issuer Sygnum Bank AG in Zurich as an authorised Bank, category 5; issuer application E.3 establishes prudential supervision, not direct FIUSD product approval or token-to-unit reconciliation.",
+      "evidence": "Current registry mutation history and positive member reads close the operator/admin/system/relay roster on both chains, and verified zkSync implementation/registry artifacts exactly match deployed bytes. Native operator minting is not collateral-capped; Arbitrum proxy administration is a single EOA while zkSync has a 3-of-6 Safe. Sygnum's disclosed daily CBS/database/blockchain report supports internal-ledger semantics only. The 2480-unit provider/native supply contradiction and independently signed token-to-unit reconciliation remain unresolved; no financial assurance or human/key independence is claimed. Issuer key custody and native cross-chain reallocation/burn-conservation policy remain unpublished. W2R22 at block 72324383 closes the Safe extension-address census: zero guard, no modules, verified CompatibilityFallbackHandler and identified singleton. R12 independently re-verified the same Safe owners, threshold, module pagination end, zero guard, handler and singleton at zkSync block 72339465 on 2026-10-05, and the singleton's 66016-byte runtime exactly matches the published GnosisSafeL2 verification artifact. Current zkSync and Arbitrum block 511866752 EIP-1967 slots retain the identified implementations and administrators. The distinct 14496-byte administered FIUSD EraVM proxy wrapper remains without verified source or deployed executable correspondence in Blockscout, legacy verification and Sourcify; published generic EVM repository source cannot substitute. Full reachable execution/noninterference proof remains unresolved. Institutional FIPS/HSM/MPC custody disclosures do not bind the named registry/proxy-admin keys or independent Safe signers. The umbrella therefore remains unresolved and no incident-free posture is inferred. W1R65 reviewed the FINMA register dated 3 October 2026, which lists exact issuer Sygnum Bank AG in Zurich as an authorised Bank, category 5; issuer application E.3 establishes prudential supervision, not direct FIUSD product approval or token-to-unit reconciliation.",
       "unresolvedQuestions": [
-        "Verify full noninterference and reachable execution paths of the identified zkSync Safe singleton and CompatibilityFallbackHandler; the W2R22 pinned guard/fallback/module address census is complete, but an exact execution certificate has not been established.",
+        "Verify full noninterference and reachable execution paths of the identified zkSync Safe singleton and CompatibilityFallbackHandler; the guard/fallback/module address census and singleton's exact 66016-byte deployed-source correspondence are independently re-verified at block 72339465, but these ingredients do not establish a complete execution certificate.",
         "Verify the administered FIUSD zkSync proxy runtime's upgrade/bypass implementation beyond its current EIP-1967 slots; verified implementation/registry artifact matches do not verify the proxy wrapper."
       ],
       "scopedQuestions": [
         {
           "controlRef": "FIUSD zksync operators registry",
           "question": "Establish issuer key-custody and signing-policy evidence for the identified zkSync registry operator/admin EOAs; the complete on-chain member census does not attest beneficial key independence.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Refine05 mint-authority calibration v2",
           "sources": [{"label": "Verified exact zkSync operator registry", "url": "https://zksync2-mainnet-explorer.zksync.io/contract_verification/info/0x159d8a100d5a869edda532626fde7737056c06c5"}, {"label": "Issuer CBS and client mint-accounting process", "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"}]
         },
         {
           "controlRef": "FIUSD arbitrum operators registry",
           "question": "Establish issuer key-custody and signing-policy evidence for the identified Arbitrum registry operator/admin EOAs; the complete on-chain member census does not attest beneficial key independence.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Refine05 mint-authority calibration v2",
           "sources": [{"label": "Verified exact Arbitrum operator registry", "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xbf9060880363a61e7462039aa8a4aa98fe486067"}, {"label": "Issuer CBS and client mint-accounting process", "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"}]
         },
         {
           "controlRef": "FIUSD Arbitrum proxy-admin EOA",
           "question": "Establish issuer key-custody and signing-policy evidence for the identified single Arbitrum proxy-admin EOA; a no-code account and direct upgrade authority do not attest independent or hardened key custody.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Refine05 mint-authority calibration v2",
           "sources": [{"label": "Verified exact Arbitrum administered proxy", "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xcded6b899edba762d793f44ed295248049440e1e"}, {"label": "Pinned Arbitrum admin and code reads", "url": "https://arb1.arbitrum.io/rpc"}]
         },
         {
           "controlRef": "FIUSD zkSync proxy-admin Safe",
           "question": "Establish independent key custody, human signer independence and signing policy for the identified zkSync 3-of-6 proxy-admin Safe signers; observed owners and threshold do not attest beneficial key separation.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Refine05 mint-authority calibration v2",
           "sources": [{"label": "Pinned exact zkSync admin slot and Safe owners/threshold", "url": "https://mainnet.era.zksync.io"}, {"label": "Exact administered FIUSD proxy", "url": "https://era.zksync.network/address/0x2ab105a3ead22731082b790ca9a00d9a3a7627f9"}]
         }

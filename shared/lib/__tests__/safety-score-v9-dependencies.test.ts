@@ -17,6 +17,7 @@ import {
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { evaluateV9ReserveExposures } from "../safety-score-v9/backing";
 import { asset as reserveAsset, exposure } from "./safety-score-v9-backing.test-support";
+import { createV9FactGapV3 } from "../safety-score-v9/reasons";
 
 const domain = (kind: "reserve-custodian" | "mint-control", key: string) => ({ kind, key }) as const;
 
@@ -701,6 +702,65 @@ describe("buildV9DependencyEvaluationPlan", () => {
       }),
     ).toThrow(/requires evidence attribution/);
   });
+});
+
+describe("reserve-projected dependency causal bindings", () => {
+  const gap = createV9FactGapV3({
+    gapId: "child:gap:effective-dependencies",
+    reasonCode: "unreviewed-dependency-relationships",
+    ownerDomain: "dependency",
+    policyRuleId: "v9.dependencies.effective-set",
+    responsibility: "unresearched",
+    observationState: "missing",
+    path: { kind: "local-component", componentKey: "effective-dependencies" },
+    causeScope: { pillar: "backing", componentKey: "effective-dependencies", factorKey: null,
+      exposureId: null, routeKey: null, requiredDatum: "effective-dependencies" },
+    message: "The measured reserve's dependency identity is unresolved.",
+  });
+  const rows = [
+    exposure({ key: "savings-claim", weight: 0.99, trackedAssetId: "savings-parent" }),
+    exposure({ key: "serial-parent-dust", weight: 0.01, trackedAssetId: "serial-parent" }),
+  ];
+
+  it("binds a real retained dependency gap without dropping the reserve claim or serial parent", () => {
+    const result = evaluateV9ReserveExposures({
+      ...reserveAsset(rows, [gap]),
+      seriallyResolvedUpstreamAssetIds: ["serial-parent"],
+      unresolvedUpstreamProjectionAttributions: [
+        { causalKey: gap.gapId, responsibility: gap.responsibility },
+      ],
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(result.unresolved).toContainEqual(expect.objectContaining({
+      code: "material-dependency-unavailable",
+      pathKey: "reserve:savings-claim",
+      causalKey: gap.gapId,
+      cause: "U",
+      causeGapIds: [gap.gapId],
+    }));
+    expect(result.contributions).toContainEqual(expect.objectContaining({
+      componentKey: "reserve:savings-claim", normalizedWeight: 0.99, upstreamAssetId: "savings-parent",
+    }));
+    expect(rows.map((row) => row.weight)).toEqual([0.99, 0.01]);
+    expect(result.unresolved.some((reason) => reason.pathKey === "reserve:serial-parent-dust" &&
+      reason.code === "nonmaterial-dependency-unavailable")).toBe(false);
+  });
+
+  it.each(["dependency-projection:unattributed", "absent:gap", "local:gap"])(
+    "keeps %s unbound when no actual dependency-owned witness exists", (causalKey) => {
+      const unrelated = { ...gap, gapId: "local:gap", ownerDomain: "backing" as const };
+      const result = evaluateV9ReserveExposures({
+        ...reserveAsset(rows, [unrelated]),
+        seriallyResolvedUpstreamAssetIds: ["serial-parent"],
+        unresolvedUpstreamProjectionAttributions: [
+          { causalKey, responsibility: "method-unsupported" },
+        ],
+      }, V9_CANDIDATE_POLICY_V1);
+      expect(result.unresolved).toContainEqual(expect.objectContaining({
+        code: "material-dependency-unavailable", causalKey, cause: "U", causeGapIds: [],
+      }));
+      expect(result.contributions.find((row) => row.componentKey === "reserve:savings-claim")!.normalizedWeight).toBe(0.99);
+    },
+  );
 });
 
 

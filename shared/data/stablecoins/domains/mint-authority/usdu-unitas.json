@@ -269,6 +269,7 @@
         {
           "controlRef": "solana:9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy",
           "question": "Does the issuer-listed upgradeable USDu Program control the mint through a PDA signer, and what current source/binary verification and authority account establish that path? At finalized slot 452346328 its upgrade authority is 3UWMx8oCchy53x48aSb25SeSobqLfqF8U6eiCyUSdeVB; operator identity and key custody remain unverified.",
+          "subject": "execution-scope",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2WStrategy)",
           "sources": [
@@ -281,6 +282,7 @@
         {
           "controlRef": "bsc:0x0a6db8e8f0b79ba5b9f5ac7f5728843b830bb1c8",
           "question": "What operational signer-key custody and off-chain authorization safeguards govern the current 3-of-5 UnitasMintingV2 admin Safe?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (CurB01USDU)",
           "sources": [

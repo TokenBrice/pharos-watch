@@ -69,10 +69,10 @@
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine05 primary-source and pinned-RPC review",
           "confidence": "limited",
-          "rationale": "At block 511230438 getPriceFeedOracle() returns a verified TokenFactory, not a working AggregatorV3: description, decimals and latestRoundData revert. Zero current native supply does not establish oracle non-applicability or final disabled issuance. Exact operative NAV authority/configuration for this deployment remains missing.",
+          "rationale": "The unresolved configuration was independently re-verified on 2026-10-05 at Arbitrum block 511866752: exact token getPriceFeedOracle() still returns TokenFactory 0x1953c28d04a0107725309908a3719e8cb46c92d6; token getAssetPrice() itself and target description(), decimals() and latestRoundData() revert. Verified SygnumTokenLatest reaches CLPriceFeedConnector.latestRoundData() without a fallback; TokenFactory's included creation dependency is not an AggregatorV3 implementation. The issuer's NAV subscription/redemption description does not establish this deployment's disabled-path exemption or alternative operative NAV authority. Zero native supply does not establish non-applicability. Current zkSync block 72339465 token price/feed calls work, but cannot substitute for this independent path.",
           "sources": [
             { "label": "Exact Arbitrum configured target is TokenFactory", "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x1953c28d04a0107725309908a3719e8cb46c92d6" },
-            { "label": "Arbitrum pinned token getter and target call failures", "url": "https://arb1.arbitrum.io/rpc" }
+            { "label": "Arbitrum pinned token getter/price and target call failures independently re-verified at block 511866752", "url": "https://arb1.arbitrum.io/rpc" }
           ]
         }
       }

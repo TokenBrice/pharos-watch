@@ -65,7 +65,12 @@ export function expandIds(
 export function cloneRedemptionBackstopConfig(config: RedemptionBackstopConfig): RedemptionBackstopConfig {
   return {
     ...config,
-    capacityModel: { ...config.capacityModel },
+    capacityModel: {
+      ...config.capacityModel,
+      ...(config.capacityModel.kind === "reserve-sync-metadata" && config.capacityModel.requiredOutputAssetKeys
+        ? { requiredOutputAssetKeys: [...config.capacityModel.requiredOutputAssetKeys] }
+        : {}),
+    },
     costModel: { ...config.costModel },
     ...(config.v9RouteCostTerms ? { v9RouteCostTerms: { ...config.v9RouteCostTerms } } : {}),
     ...(config.v9RouteReviewTerms

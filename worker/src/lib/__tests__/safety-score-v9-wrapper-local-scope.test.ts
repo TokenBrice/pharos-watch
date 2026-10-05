@@ -16,6 +16,7 @@ import { computeV9FactSetDigest } from "@shared/lib/safety-score-v9/facts";
 import { buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
 import { makeV9RoleExtension, makeV9TwoAssetFixedInput, makeV9QueuedRedemptionFixedInput, v9Status } from "../../test-helpers/v9-fixed-input";
 import { alphaMeta, localControl, metaMap, rebuildFixed, type FixedInput } from "./safety-score-v9-fact-set.test-support";
+import type { SafetyScoreV9WrapperLocalReview } from "@shared/types/safety-score-v9-wrapper-local-review";
 
 interface WrapperFixture {
   fixed: FixedInput;
@@ -220,6 +221,111 @@ describe("independent immutable wrapper roots", () => {
     expect([...context.evidence.values()].some((evidence) =>
       evidence.sourceId === "safety-score-v9.wrapper-immutable-root-identity")).toBe(false);
   });
+});
+
+function independentLocalFixture(kind: SafetyScoreV9WrapperLocalReview["kind"]) {
+  const fixture = immutableRootFixture();
+  const identity = structuredClone(fixture.wrapper.allocationScopeIdentityReview!);
+  const sourceUrl = identity.deployments[0]!.sourceUrl;
+  const fields = {
+    assetId: "alpha", reviewer: "Exact local fixture", identity,
+    reviewedAt: new Date((fixture.fixed.clockSec - 50) * 1_000).toISOString(),
+    observedAtSec: fixture.fixed.clockSec - 100, expiresAtSec: fixture.fixed.clockSec + 100,
+    rationale: "Exact independently reviewed local fact, not an aggregate review.",
+    sources: [{ label: "Exact contract", url: sourceUrl }],
+    observations: [{ sourceUrl, description: "Exact code and holder instrument at the reviewed pin." }],
+  };
+  fixture.wrapper.wrapperLocalReviews = [kind === "accounting"
+    ? { ...fields, kind, mechanism: "vault-v2-share-accounting" }
+    : { ...fields, kind, entitlement: "no-public-holder-withdrawal-or-unwrap" }];
+  fixture.asset.economicControlReview.oracle.status = v9Status("missing", "v9.control.oracle-review");
+  fixture.asset.economicControlReview.oracle.tier = null;
+  fixture.asset.peg.status = v9Status("missing", "v9.peg.review");
+  fixture.asset.exitRoutes = [];
+  fixture.asset.exitStatus = v9Status("missing", "v9.exit.routes");
+  return fixture;
+}
+
+describe("independent wrapper accounting and holder entitlement", () => {
+  it.each(["accounting", "holder-entitlement"] as const)("admits one exact current %s review without changing other facts", (kind) => {
+    const fixture = independentLocalFixture(kind);
+    const reviews = fixture.wrapper.wrapperLocalReviews!;
+    delete fixture.wrapper.wrapperLocalReviews;
+    const before = fixture.build();
+    fixture.wrapper.wrapperLocalReviews = reviews;
+    const borrowerBefore = structuredClone(fixture.asset.economicControlReview);
+    const { facts, context } = fixture.build();
+    const key = kind === "accounting" ? "shareAccountingNavOracle" : "withdrawalTerms";
+    expect(facts.facts[key]).toMatchObject({
+      disposition: "reviewed", assessment: kind === "accounting" ? "moderate" : "critical",
+    });
+    expect(context.gaps.has(`alpha:gap:wrapper-local:${key}`)).toBe(false);
+    for (const other of Object.keys(facts.facts) as (keyof typeof facts.facts)[]) {
+      if (other !== key) expect(facts.facts[other]).toEqual(before.facts.facts[other]);
+    }
+    expect(fixture.asset.economicControlReview).toEqual(borrowerBefore);
+    expect(fixture.asset.exitRoutes).toEqual([]);
+    expect(facts.form).toBe("strategy-vault");
+    const evidence = context.evidence.get(facts.facts[key].evidenceRefIds[0]!)!;
+    expect(evidence).toMatchObject({
+      sourceId: "safety-score-v9.wrapper-local-review",
+      sourceGenerationId: fixture.extension.sources.researchOverlays.generationId,
+      observedAtSec: reviews[0]!.observedAtSec,
+      freshness: { state: "current", maxAgeSec: 200 },
+    });
+  });
+
+  it("admits independently reviewed fixed-face accounting without claiming a NAV oracle", () => {
+    const fixture = independentLocalFixture("accounting");
+    const review = fixture.wrapper.wrapperLocalReviews![0]!;
+    if (review.kind !== "accounting") throw new Error("Expected accounting review");
+    review.mechanism = "fixed-face-accounting";
+    expect(fixture.build().facts.facts.shareAccountingNavOracle).toMatchObject({
+      disposition: "reviewed", assessment: "none", signals: expect.arrayContaining(["wrapper-local-accounting:fixed-face-accounting"]),
+    });
+  });
+
+  it("binds current proxy implementation identity and rejects a changed implementation", () => {
+    const fixture = independentLocalFixture("accounting");
+    const review = fixture.wrapper.wrapperLocalReviews![0]!;
+    const deployment = {
+      ...review.identity.deployments[0]!, codeKind: "proxy" as const,
+      implementation: "0x2222222222222222222222222222222222222222",
+    };
+    review.identity.deployments = [deployment];
+    fixture.wrapper.allocationScopeIdentityReview!.deployments = [structuredClone(deployment)];
+    expect(fixture.build().facts.facts.shareAccountingNavOracle).toMatchObject({ disposition: "reviewed", assessment: "moderate" });
+    const retained = fixture.wrapper.allocationScopeIdentityReview!.deployments[0]!;
+    if (retained.codeKind !== "proxy") throw new Error("Expected proxy identity");
+    retained.implementation = "0x3333333333333333333333333333333333333333";
+    expect(fixture.build().facts.facts.shareAccountingNavOracle).toMatchObject({ disposition: "unresearched", assessment: null });
+  });
+
+  for (const kind of ["accounting", "holder-entitlement"] as const) {
+    it.each(["expired", "future-review", "future-observation", "stale-pin", "wrong-asset", "wrong-address",
+      "partial-roster", "changed-implementation", "duplicate-kind", "missing-identity"] as const)(
+      `rejects ${kind} %s without converting missing proof into a known fact`, (rejection) => {
+        const fixture = independentLocalFixture(kind);
+        const review = fixture.wrapper.wrapperLocalReviews![0]!;
+        const root = review.identity.deployments[0]!;
+        if (rejection === "expired") review.expiresAtSec = fixture.fixed.clockSec;
+        if (rejection === "future-review") review.reviewedAt = new Date((fixture.fixed.clockSec + 1) * 1_000).toISOString();
+        if (rejection === "future-observation") review.observedAtSec = fixture.fixed.clockSec + 1;
+        if (rejection === "stale-pin") root.observedAtSec = fixture.fixed.clockSec -
+          V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec - 1;
+        if (rejection === "wrong-asset") review.assetId = "beta";
+        if (rejection === "wrong-address") root.address = "0x2222222222222222222222222222222222222222";
+        if (rejection === "partial-roster") fixture.wrapper.allocationScopeIdentityReview!.registeredDeploymentKeys.push("ethereum:missing");
+        if (rejection === "changed-implementation") review.identity.deployments[0] = {
+          ...root, codeKind: "proxy", implementation: "0x2222222222222222222222222222222222222222",
+        };
+        if (rejection === "duplicate-kind") fixture.wrapper.wrapperLocalReviews!.push(structuredClone(review));
+        if (rejection === "missing-identity") delete fixture.wrapper.allocationScopeIdentityReview;
+        const key = kind === "accounting" ? "shareAccountingNavOracle" : "withdrawalTerms";
+        expect(fixture.build().facts.facts[key]).toMatchObject({ disposition: "unresearched", assessment: null });
+      },
+    );
+  }
 });
 
 const slashingControl = () => localControl({

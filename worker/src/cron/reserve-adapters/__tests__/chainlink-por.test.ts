@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 
@@ -21,6 +21,8 @@ import {
 import { makePorCoin, makePorSupply } from "./chainlink-por.test-support";
 const POR_FEED_ENDPOINT = "https://api.backed.fi/graphql";
 const TRON_SUPPLY_ENDPOINT = "https://api.trongrid.io/wallet/triggerconstantcontract";
+
+afterEach(() => vi.restoreAllMocks());
 
 function encodeLatestRoundData(answer: bigint, updatedAt: number): `0x${string}` {
   const word = (value: bigint) => value.toString(16).padStart(64, "0");
@@ -75,6 +77,7 @@ function runPor(
   network: AdapterNetworkSpec,
   nowSec: number,
 ) {
+  vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
   return runAdapter("chainlink-por", { ...coin, liveReservesConfig: config }, {
     network,
     nowSec,
@@ -922,6 +925,7 @@ describe("fetchChainlinkPorReserves with TUSD's reviewed liability scope", () =>
   const EXPECTED_RATIO = 501_928_900.88 / 494_515_082.75;
 
   function tusdNetwork(options: { tronSupply?: bigint | null; withBridgedReads?: boolean } = {}) {
+    vi.spyOn(Date, "now").mockReturnValue(SUPPLY_READ_AT * 1000);
     const evmSupply: Record<string, bigint> = {
       ...NATIVE_SUPPLY,
       ...(options.withBridgedReads ? BRIDGED_SUPPLY : {}),

@@ -18,7 +18,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "FUSD's Ethereum, Avalanche, Sonic, and Monad deployments have issuer-native state and additional CCIP BurnMintTokenPool and TokenBridgeSender transfer machinery. The cataloged Solana mint has a verified 1-of-3 authority and freeze key, but its metadata names FinChain Dollar LP / FUSDLP while both issuer token pages list the same address. Its existing native route is retained pending liability-identity adjudication. External CCIP validation and shared FinChain EOA and ProxyAdmin failure domains remain reviewed at external-validated-network.",
+    "summary": "FUSD's Ethereum, Avalanche, Sonic, Monad, and exSat deployments have issuer-native state and additional TokenBridgeSender transfer machinery; the four previously reviewed EVM chains also have CCIP BurnMintTokenPool controls. exSat has the same issuer EOA and immediate ProxyAdmin failure domains, but a different contract pauser whose signing topology is not established. The cataloged Solana mint has a verified 1-of-3 authority and freeze key, but its metadata names FinChain Dollar LP / FUSDLP while both issuer token pages list the same address. Its existing native route is retained pending liability-identity adjudication. External CCIP validation and shared FinChain EOA and ProxyAdmin failure domains remain reviewed at external-validated-network.",
     "reviewedAt": "2026-09-21",
     "reviewer": "Claude curation campaign 2026-09-21 (Ctrl8)",
     "confidence": "verified",
@@ -57,6 +57,10 @@
       {
         "label": "Monad mainnet RPC fixed-block reads",
         "url": "https://rpc.monad.xyz"
+      },
+      {
+        "label": "exSat mainnet RPC at block 62726859, hash 0x4d0937eeed38b5ced7ffbc6bfc107ff89d2fe4bfc557c70ff219e5bc6c4eb8aa",
+        "url": "https://evm.exsat.network/"
       }
     ],
     "routes": [
@@ -157,6 +161,43 @@
         ]
       },
       {
+        "id": "exsat:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+        "destinationChain": "exsat",
+        "canonicalChain": "exsat",
+        "contractAddress": "0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+        "protocol": "FinChain native issuance with issuer-operated bridge transfer machinery",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Reverified exSat block 62726859 (hash 0x4d0937eeed38b5ced7ffbc6bfc107ff89d2fe4bfc557c70ff219e5bc6c4eb8aa) on 2026-10-05 returns FinChain Dollar / FUSD, 18 decimals, and exactly two token MINTER_ROLE members: FUSDGateway and TokenBridgeSender. Token, gateway and sender runtimes exactly match their verified Ethereum implementations. Gateway DEFAULT_ADMIN local mint and MINTER_ROLE fresh-message-ID mint simulations succeed without collateral or authenticated-message proof. This is issuer-native issuance, not an independently validated CCIP representation; no current CCIP token minter is present.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-05",
+        "observedBlock": 62726859,
+        "controllerChain": "exsat",
+        "controllerAddress": "0xc61f22aa3a6469f4f90994421f4570459217c215",
+        "failureDomainKeys": [
+          "eoa:finchain:0xc61f22aa3a6469f4f90994421f4570459217c215",
+          "contract:multichain:0x29a48097055d6779e6832355680b7c7bf0d43c53"
+        ],
+        "sources": [
+          {
+            "label": "Issuer FUSD deployment table naming exSat",
+            "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
+          },
+          {
+            "label": "exSat mainnet pinned token identity, role census, proxy slots and mint simulations",
+            "url": "https://evm.exsat.network/"
+          },
+          {
+            "label": "Verified FUSDGateway source with exact exSat runtime correspondence",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3a4b7d8e5dc20788c52d3d5102d8ea3f2358c95f"
+          }
+        ]
+      },
+      {
         "id": "solana:51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q",
         "destinationChain": "solana",
         "canonicalChain": "solana",
@@ -199,6 +240,83 @@
       }
     ],
     "controls": [
+      {
+        "id": "fusd-exsat-token-bridge-sender",
+        "label": "FUSD exSat TokenBridgeSender transfer and configuration proxy",
+        "routeRefs": [
+          "exsat:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "admin",
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "exsat",
+        "controllerAddress": "0x2f36c915af812ff06742468f206030fcad4c4242",
+        "failureDomainKeys": [
+          "protocol:finchain-cross-chain",
+          "contract:multichain:0x2f36c915af812ff06742468f206030fcad4c4242",
+          "eoa:finchain:0xc61f22aa3a6469f4f90994421f4570459217c215",
+          "contract:exsat:0x7854615523363bfd37bf309c7cc90572325735db"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "lockboxOrEscrow": "The verified current sender transfers supplied tokens to the configured router or burns supplied tokens and emits a custom message for issuer-backend destination minting. It contains no native FUSD.mint call. No escrow-minus-receipts or pending-message amount is inferred.",
+          "trustedPeerOrRemote": "DEFAULT_ADMIN_ROLE can change the router, supported tokens, CCIP selectors, custom chain IDs and custom fee quoter. Full configured remote inventory and end-to-end custom message authorization remain unreviewed; code compatibility with CCIP does not establish an active or independently validated exSat CCIP route.",
+          "rateLimits": "No independent issuance bound is established: destination gateway mintWithMessageId checks a minter role and unused caller-supplied ID, not collateral or authenticated source-chain proof.",
+          "pausersAdminsUpgraders": "At block 62726859 the sole sender DEFAULT_ADMIN_ROLE member is the shared codeless issuer EOA 0xc61f22aa3a6469f4f90994421f4570459217c215. PAUSER_ROLE is contract 0x7854615523363bfd37bf309c7cc90572325735db, also the token/gateway pauser and distinct from sibling-chain pausers. Its threshold, owners, modules and human independence are not established. The EIP-1967 admin is the shared immediate issuer-owned ProxyAdmin."
+        },
+        "capDescription": "The present sender burns or transfers existing FUSD; its nominal token MINTER_ROLE does not create a current mint entrypoint. Custom destination issuance is an issuer-key path, not independent validation. Immediate implementation replacement remains a separate upgrade contingency.",
+        "canRaiseCap": false,
+        "observedAt": "2026-10-05",
+        "observedBlock": 62726859,
+        "sources": [
+          {
+            "label": "Verified TokenBridgeSender implementation exactly matching pinned exSat runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdce67f4154c54b72d0243218f50c253a61a6d3d2"
+          },
+          {
+            "label": "exSat block 62726859 sender roles, runtime and proxy-slot reads",
+            "url": "https://evm.exsat.network/"
+          }
+        ],
+        "evidence": "On 2026-10-05, exact exSat block 62726859 and hash 0x4d0937eeed38b5ced7ffbc6bfc107ff89d2fe4bfc557c70ff219e5bc6c4eb8aa reconfirm the sender token role and implementation 0xdce67f4154c54b72d0243218f50c253a61a6d3d2. Its runtime exactly equals the Ethereum Blockscout verified deployed_bytecode. Current burn/transfer, mutable routing and pause powers are recorded without a complete execution-scope or incident-absence claim."
+      },
+      {
+        "id": "fusd-exsat-bridge-proxy-admin",
+        "label": "FUSD exSat bridge immediate ProxyAdmin",
+        "routeRefs": [
+          "exsat:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "exsat",
+        "controllerAddress": "0x29a48097055d6779e6832355680b7c7bf0d43c53",
+        "failureDomainKeys": [
+          "contract:multichain:0x29a48097055d6779e6832355680b7c7bf0d43c53",
+          "eoa:finchain:0xc61f22aa3a6469f4f90994421f4570459217c215"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "observedAt": "2026-10-05",
+        "observedBlock": 62726859,
+        "sources": [
+          {
+            "label": "exSat pinned sender admin slot and ProxyAdmin owner",
+            "url": "https://evm.exsat.network/"
+          },
+          {
+            "label": "Verified shared ProxyAdmin onlyOwner upgrade semantics",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x29a48097055d6779e6832355680b7c7bf0d43c53"
+          }
+        ],
+        "evidence": "At exSat block 62726859, TokenBridgeSender's admin slot resolves to this ProxyAdmin and owner() resolves to codeless issuer EOA 0xc61f22aa3a6469f4f90994421f4570459217c215. The shared admin can immediately replace current transfer-only sender logic, including with mint-capable logic because the sender already holds token MINTER_ROLE. This bridge upgrade contingency is not a second current native minter or an independent failure domain."
+      },
       {
         "id": "fusd-token-bridge-sender",
         "label": "FUSD TokenBridgeSender cross-chain transfer proxy",

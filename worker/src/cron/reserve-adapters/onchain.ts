@@ -458,16 +458,17 @@ interface TronTriggerConstantContractResponse {
 }
 
 /**
- * TRC-20 totalSupply() via TronGrid's wallet/triggerconstantcontract endpoint.
- * Mirrors fetchErc20TotalSupply's fail-closed contract: any read failure
- * (bad address, HTTP error, contract revert) resolves to null rather than
- * throwing, so callers can fold it into the same success/failure aggregation.
+ * Latest-state TRC-20 totalSupply() via TronGrid wallet/triggerconstantcontract.
+ * It cannot honor a TRON observedBlock; such requests fail closed. A pin on a
+ * different chain is not a pin for this read. Other read failures resolve to
+ * null so callers can retain their success/failure aggregation.
  */
 export async function fetchTronErc20TotalSupply(
   contractAddress: string,
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<bigint | null> {
+  if (ctx?.observedBlock?.chain === "tron") return null;
   const contractHex = await tronBase58ToHex(contractAddress);
   if (!contractHex) return null;
   const contractHex41 = `41${contractHex.slice(2)}`;

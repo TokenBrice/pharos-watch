@@ -148,6 +148,7 @@
         {
           "controlRef": "Falcon Safe local sUSDf ProxyAdmin owner",
           "question": "What human signer independence, signing policy and key-custody assurance support the identified Falcon 4-of-6 Safe owners? The verified owner addresses, threshold, empty modules and zero guard do not establish these custody facts.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine13)",
           "sources": [

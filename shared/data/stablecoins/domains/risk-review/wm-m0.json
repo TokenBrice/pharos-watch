@@ -242,9 +242,9 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Pinned linea block 32208392: underlying M portal() is 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd; the supported default adapter to Ethereum (chain 1) is Hyperlane 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 with peer equal to that address and domain 1. Portal send/receive pause flags are false. DEFAULT_ADMIN is Safe 0x48670b46380fe1645f0e3e821a25162db2589d19 (3-of-5); OPERATOR/PAUSER is 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. The observed M-to-M path is not enabled; all tested paths involving wM are false. These reads establish addressed controls, not full route viability: active holder transfer semantics, all optional adapters, Mailbox default ISM controls, and aggregate limits remain unresolved. Retain unknown route classification, not a fabricated safe bridge tier.",
+        "reviewNote": "Control review at Linea block 32235398 on 2026-10-05: Hyperlane inherits default ISM 0xd9c340f695f4970db784a66e05e48df3c49fc4e2, requiring both unpaused PausableIsm 0x0cedb173a71139d0ff5ec08eadaf3eb5d6932aaf and routing ISM 0x729a93c47ef1115960cf0af49b5e696437eaea03. Mailbox/routing owner 0x999bd2da1f24aece8c558e54350fb06ef8cefe5c is an ICA account, not an EOA: reproduced account derivation binds Ethereum origin 1, router 0xc00b94c115742f711a6f9ea90373c33e9b72a4a9 and remote owner Safe 0x562dfaac27a84be6c96273f5c9594da1681c0da7 (6-of-10, no enabled modules at Ethereum block 26124934). All three historically configured origins remain supported: Ethereum uses two alternative 6-of-9 validator modules, BSC two 4-of-6 modules, and Monad two 2-of-2 modules. PausableIsm owner is separately 0x60cc386c85717cb51c2827a75e14826883df5da4. Indexed wM Transfer history returns no events and pinned wM supply is zero; neither revokes mint/validation powers. Earlier Portal role/send-path observations remain in adjacent controls. Remote-governance, all-origin receipts and OrderBook execution still lack complete coverage; no complete execution certificate or incident-free claim is made.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
+        "observedAt": "2026-10-05",
         "sources": [
           {
             "label": "Current M0 platform deployment directory",
@@ -253,9 +253,17 @@
           {
             "label": "Current M0 Portal V2 cross-chain overview",
             "url": "https://docs.m0.org/raw/build/cross-chain.md"
+          },
+          {
+            "label": "Pinned Hyperlane Linea deployment registry",
+            "url": "https://raw.githubusercontent.com/hyperlane-xyz/hyperlane-registry/fe66faf5680744ff2f11254277aebb43c538db2e/chains/linea/addresses.yaml"
+          },
+          {
+            "label": "Verified Hyperlane ICA execution source",
+            "url": "https://soneium.blockscout.com/api/v2/smart-contracts/0xc08c1451979e9958458da3387e92c9feb1571f9c"
           }
         ],
-        "observedBlock": 32208392
+        "observedBlock": 32235398
       },
       {
         "id": "bsc:0x437cc33344a0b27a429f795ff6b469c72698b291",
@@ -272,9 +280,9 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Pinned bsc block 125256534: underlying M portal() is 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd; the supported default adapter to Ethereum (chain 1) is Hyperlane 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 with peer equal to that address and domain 1. Portal send/receive pause flags are false. DEFAULT_ADMIN is Safe 0x48670b46380fe1645f0e3e821a25162db2589d19 (3-of-5); OPERATOR/PAUSER is 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. The observed M-to-M path is not enabled; all tested paths involving wM are false. These reads establish addressed controls, not full route viability: active holder transfer semantics, all optional adapters, Mailbox default ISM controls, and aggregate limits remain unresolved. Retain unknown route classification, not a fabricated safe bridge tier.",
+        "reviewNote": "Control review at BSC block 125834170 on 2026-10-05: the Hyperlane adapter inherits Mailbox default ISM 0x9ec844699657b983c529382b0f00a605a53ed600, a 2-of-2 aggregation of PausableIsm 0x76cf9ddf1141806f40f73250d1e9d788ef3b045b and routing ISM 0xc4c211467af655e256b7e5f06f01cdb7b1722d75. Mailbox and routing owner 0x7379d7bb2cca68982e467632b6554fd4e72e9431 is a local 6-of-10 Safe with no enabled modules, distinct from M0's 3-of-5 Portal admin; signer independence and guard/fallback non-interference are not inferred. PausableIsm owner is 0x60cc386c85717cb51c2827a75e14826883df5da4 and the pause flag is false. Ethereum-origin routing selects aggregation 0x2457cc3ba3ebc56d25662efe32790d111bda4122. Authenticated pinned reads resolve these authorities after public endpoints lost the checkpoint. Earlier Portal roles, nonzero wM liabilities and disabled tested wM send paths do not establish complete ingress or receipt history. Full historical adapters, mutable Mailbox/routing configuration reach, legacy wrapper receipts and OrderBook execution remain required before route/incident admission. No complete execution certificate or incident-free claim is made.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
+        "observedAt": "2026-10-05",
         "sources": [
           {
             "label": "Current M0 platform deployment directory",
@@ -283,9 +291,13 @@
           {
             "label": "Current M0 Portal V2 cross-chain overview",
             "url": "https://docs.m0.org/raw/build/cross-chain.md"
+          },
+          {
+            "label": "Pinned Hyperlane BSC deployment registry",
+            "url": "https://raw.githubusercontent.com/hyperlane-xyz/hyperlane-registry/fe66faf5680744ff2f11254277aebb43c538db2e/chains/bsc/addresses.yaml"
           }
         ],
-        "observedBlock": 125256534
+        "observedBlock": 125834170
       },
       {
         "id": "hyperevm:0x437cc33344a0b27a429f795ff6b469c72698b291",
@@ -302,9 +314,9 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Pinned hyperevm block 47449269: underlying M portal() is 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd; the supported default adapter to Ethereum (chain 1) is Hyperlane 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 with peer equal to that address and domain 1. Portal send/receive pause flags are false. DEFAULT_ADMIN is Safe 0x48670b46380fe1645f0e3e821a25162db2589d19 (3-of-5); OPERATOR/PAUSER is 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. The observed M-to-M path is not enabled; all tested paths involving wM are false. These reads establish addressed controls, not full route viability: active holder transfer semantics, all optional adapters, Mailbox default ISM controls, and aggregate limits remain unresolved. Retain unknown route classification, not a fabricated safe bridge tier. Independent verification at block 47450364 also found supportedBridgeAdapter(1,0x77ef4e9d37524069f81890c537a5c5d390bb4b4d)=true. The default adapter's Mailbox 0x3a464f746d23ab22155710f44db16dca53e0775e returned defaultIsm 0xcc8aaa232674c735f17015540e22e73854052ef5, whose moduleType was 2. These bounded identities do not certify the alternative adapter or the ISM's full security configuration.",
+        "reviewNote": "Control review at HyperEVM block 47713601 on 2026-10-05: Hyperlane and LayerZero adapter 0x77ef4e9d37524069f81890c537a5c5d390bb4b4d both remain supported for origin 1. Hyperlane default ISM 0xcc8aaa232674c735f17015540e22e73854052ef5 requires unpaused PausableIsm 0x4ff6160bf045bf121ec022a73c5075691f87edc0 and routing ISM 0xe57058e711b1e774b7750f33272999e395df58e5; Ethereum routing selects two alternative 6-of-9 validator modules. Mailbox/routing owner 0xd50d4e42f41392d5c7e9526423d3dc38a8d1f875 is an ICA account: reproduced account derivation on router 0x1cf975c9bf2df76c43a14405066007f8393142e9 binds Ethereum Safe 0x562dfaac27a84be6c96273f5c9594da1681c0da7 (6-of-10, no enabled modules at Ethereum block 26124934). This does not establish signer independence or complete execution reach. PausableIsm owner is separately 0x60cc386c85717cb51c2827a75e14826883df5da4. Zero wM supply does not revoke these powers. Indexed explorer history is unavailable and prior RPC returned Portal code at block zero. Trustworthy deployment history, LayerZero DVN/delegate configuration, remote governance and receipts remain required; no complete execution certificate or incident-free claim is made.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
+        "observedAt": "2026-10-05",
         "sources": [
           {
             "label": "Current M0 platform deployment directory",
@@ -313,9 +325,17 @@
           {
             "label": "Current M0 Portal V2 cross-chain overview",
             "url": "https://docs.m0.org/raw/build/cross-chain.md"
+          },
+          {
+            "label": "Pinned Hyperlane HyperEVM deployment registry",
+            "url": "https://raw.githubusercontent.com/hyperlane-xyz/hyperlane-registry/fe66faf5680744ff2f11254277aebb43c538db2e/chains/hyperevm/addresses.yaml"
+          },
+          {
+            "label": "Verified Hyperlane ICA execution source",
+            "url": "https://soneium.blockscout.com/api/v2/smart-contracts/0xc08c1451979e9958458da3387e92c9feb1571f9c"
           }
         ],
-        "observedBlock": 47449269
+        "observedBlock": 47713601
       },
       {
         "id": "soneium:0x437cc33344a0b27a429f795ff6b469c72698b291",
@@ -332,9 +352,9 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Pinned soneium block 28896580: underlying M portal() is 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd; the supported default adapter to Ethereum (chain 1) is Hyperlane 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 with peer equal to that address and domain 1. Portal send/receive pause flags are false. DEFAULT_ADMIN is Safe 0x8c645e201dd944677864479357f8255ea943b18b (3-of-5); OPERATOR/PAUSER is 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. The observed M-to-M path is not enabled; all tested paths involving wM are false. These reads establish addressed controls, not full route viability: active holder transfer semantics, all optional adapters, Mailbox default ISM controls, and aggregate limits remain unresolved. Retain unknown route classification, not a fabricated safe bridge tier.",
+        "reviewNote": "Control review at Soneium block 29026632 on 2026-10-05: indexed Portal V2 support history confirms only Hyperlane for origin 1. Default ISM 0x5f7d51ef1a99820dc37174aa276d86ff37c730f2 requires unpaused PausableIsm 0x304d0ba161d2d93adeb00c0c6ee70560f2ac5c2a and routing ISM 0xe57058e711b1e774b7750f33272999e395df58e5; Ethereum routing selects two alternative 6-of-9 validator modules. Mailbox/routing owner 0x6af23eb68a6223a4af9f056e10d93ef4d960da05 is an ICA account. Its creation event and reproduced account derivation bind origin 1, Ethereum router 0xc00b94c115742f711a6f9ea90373c33e9b72a4a9 and remote owner Safe 0x562dfaac27a84be6c96273f5c9594da1681c0da7 (6-of-10, no enabled modules at Ethereum block 26124934). PausableIsm owner is separately 0x60cc386c85717cb51c2827a75e14826883df5da4. Twenty-eight indexed wM Transfer events include a retrieved mint receipt at block 14919348, before Portal V2 creation at 21322419. The V2 adapter census cannot certify the extension's full incident history. Earlier M0 Portal roles remain in adjacent controls. Legacy wrapper/bridge migrations, remote-governance execution and OrderBook history remain unreviewed; no complete execution certificate or incident-free claim is made.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
+        "observedAt": "2026-10-05",
         "sources": [
           {
             "label": "Current M0 platform deployment directory",
@@ -343,9 +363,17 @@
           {
             "label": "Current M0 Portal V2 cross-chain overview",
             "url": "https://docs.m0.org/raw/build/cross-chain.md"
+          },
+          {
+            "label": "Pinned Hyperlane Soneium deployment registry",
+            "url": "https://raw.githubusercontent.com/hyperlane-xyz/hyperlane-registry/fe66faf5680744ff2f11254277aebb43c538db2e/chains/soneium/addresses.yaml"
+          },
+          {
+            "label": "Verified Hyperlane ICA execution source",
+            "url": "https://soneium.blockscout.com/api/v2/smart-contracts/0xc08c1451979e9958458da3387e92c9feb1571f9c"
           }
         ],
-        "observedBlock": 28896580
+        "observedBlock": 29026632
       },
       {
         "id": "plasma:0x437cc33344a0b27a429f795ff6b469c72698b291",
@@ -362,9 +390,9 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Pinned plasma block 33986960: underlying M portal() is 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd; the supported default adapter to Ethereum (chain 1) is Hyperlane 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 with peer equal to that address and domain 1. Portal send/receive pause flags are false. DEFAULT_ADMIN is Safe 0x48670b46380fe1645f0e3e821a25162db2589d19 (3-of-5); OPERATOR/PAUSER is 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. The observed M-to-M path is not enabled; all tested paths involving wM are false. These reads establish addressed controls, not full route viability: active holder transfer semantics, all optional adapters, Mailbox default ISM controls, and aggregate limits remain unresolved. Retain unknown route classification, not a fabricated safe bridge tier.",
+        "reviewNote": "Control review at Plasma block 34246807 on 2026-10-05: indexed history identifies three Portal support changes, including LayerZero adapter 0x77ef4e9d37524069f81890c537a5c5d390bb4b4d enabled at 18757284 and disabled at 19721871. Current Hyperlane default ISM 0x3c1671770ccf6ec0fd18811ff2676e2b3aec7d04 requires unpaused PausableIsm 0x5ea855669fd4106e5427d83e6e25503a4b40bef8 and routing ISM 0x6edba216bec39639ca7a5ee7d0e064426ad395bc, with two alternative 6-of-9 Ethereum validator modules. Mailbox/routing owner 0xd7e64ba7bb6bee321d5e0c42a966fdc97f70a92f is an ICA account: creation event and reproduced account derivation bind Ethereum router 0xc00b94c115742f711a6f9ea90373c33e9b72a4a9 and remote owner Safe 0x562dfaac27a84be6c96273f5c9594da1681c0da7 (6-of-10, no enabled modules at Ethereum block 26124934). PausableIsm owner is separately 0x60cc386c85717cb51c2827a75e14826883df5da4. A retrieved wM mint at block 8895029 predates Portal V2 creation at 17650161. Complete legacy/LayerZero receipts, remote-governance execution and OrderBook history remain required; a disabled current send path is not incident absence. No complete execution certificate or incident-free claim is made.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
+        "observedAt": "2026-10-05",
         "sources": [
           {
             "label": "Current M0 platform deployment directory",
@@ -373,9 +401,17 @@
           {
             "label": "Current M0 Portal V2 cross-chain overview",
             "url": "https://docs.m0.org/raw/build/cross-chain.md"
+          },
+          {
+            "label": "Pinned Hyperlane Plasma deployment registry",
+            "url": "https://raw.githubusercontent.com/hyperlane-xyz/hyperlane-registry/fe66faf5680744ff2f11254277aebb43c538db2e/chains/plasma/addresses.yaml"
+          },
+          {
+            "label": "Verified Hyperlane ICA execution source",
+            "url": "https://soneium.blockscout.com/api/v2/smart-contracts/0xc08c1451979e9958458da3387e92c9feb1571f9c"
           }
         ],
-        "observedBlock": 33986960
+        "observedBlock": 34246807
       },
       {
         "id": "citrea:0x437cc33344a0b27a429f795ff6b469c72698b291",
@@ -392,9 +428,9 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Pinned citrea block 13412716: underlying M portal() is 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd; the supported default adapter to Ethereum (chain 1) is Hyperlane 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 with peer equal to that address and domain 1. Portal send/receive pause flags are false. DEFAULT_ADMIN is Safe 0x8c645e201dd944677864479357f8255ea943b18b (3-of-5); OPERATOR/PAUSER is 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. The observed M-to-M path is enabled; all tested paths involving wM are false. These reads establish addressed controls, not full route viability: active holder transfer semantics, all optional adapters, Mailbox default ISM controls, and aggregate limits remain unresolved. Retain unknown route classification, not a fabricated safe bridge tier.",
+        "reviewNote": "Control review at Citrea block 13542765 on 2026-10-05: indexed history contains six Portal support changes, including historical LayerZero 0x77ef4e9d37524069f81890c537a5c5d390bb4b4d and Wormhole 0xacffec28c4eee21c889a4e6c0704c540ed9d4fdd ingress, now disabled. Hyperlane support entries exist for origins 1 and 0, but origin 0 has zero bridge-domain/peer mappings and its routing ISM rejects with No ISM found for origin: 0; it is not established as executable ingress. Default ISM 0x1ebd3841770ff9e656c2eb6664f064d6aa199395 requires unpaused PausableIsm 0x81347d697bf42561f7de6fe10d9190b901e044ab and routing ISM 0xbb2719c78c0fefb8c48b33dd7fcbbac23e105c3c; Ethereum routing selects two alternative 6-of-9 validator modules. Mailbox/routing owner 0x4fc003a348d6b244b01170d08cf69373c11fbf01 is an ICA account: creation event and reproduced account derivation bind Ethereum Safe 0x562dfaac27a84be6c96273f5c9594da1681c0da7 (6-of-10, no enabled modules at Ethereum block 26124934). PausableIsm owner is separately 0x60cc386c85717cb51c2827a75e14826883df5da4. Sixteen indexed wM Transfer events include a retrieved mint at 2466737, before Portal V2 creation at 5447610. Legacy receipts, historical disabled-adapter implementation intervals and remote-governance/OrderBook history still lack complete coverage. Audit replay findings are not evidence of a deployed exploit or incident absence.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
+        "observedAt": "2026-10-05",
         "sources": [
           {
             "label": "Current M0 platform deployment directory",
@@ -403,9 +439,17 @@
           {
             "label": "Current M0 Portal V2 cross-chain overview",
             "url": "https://docs.m0.org/raw/build/cross-chain.md"
+          },
+          {
+            "label": "Pinned Hyperlane Citrea deployment registry",
+            "url": "https://raw.githubusercontent.com/hyperlane-xyz/hyperlane-registry/fe66faf5680744ff2f11254277aebb43c538db2e/chains/citrea/addresses.yaml"
+          },
+          {
+            "label": "Verified Hyperlane ICA execution source",
+            "url": "https://soneium.blockscout.com/api/v2/smart-contracts/0xc08c1451979e9958458da3387e92c9feb1571f9c"
           }
         ],
-        "observedBlock": 13412716
+        "observedBlock": 13542765
       },
       {
         "id": "monad:0x437cc33344a0b27a429f795ff6b469c72698b291",
@@ -422,9 +466,9 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Pinned monad block 109840715: underlying M portal() is 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd; the supported default adapter to Ethereum (chain 1) is Hyperlane 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 with peer equal to that address and domain 1. Portal send/receive pause flags are false. DEFAULT_ADMIN is Safe 0x48670b46380fe1645f0e3e821a25162db2589d19 (3-of-5); OPERATOR/PAUSER is 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. The observed M-to-M path is not enabled; all tested paths involving wM are false. These reads establish addressed controls, not full route viability: active holder transfer semantics, all optional adapters, Mailbox default ISM controls, and aggregate limits remain unresolved. Retain unknown route classification, not a fabricated safe bridge tier. Independent verification at block 109844192 also found supportedBridgeAdapter(1,0xacffec28c4eee21c889a4e6c0704c540ed9d4fdd)=true. The default adapter's Mailbox 0x3a464f746d23ab22155710f44db16dca53e0775e returned defaultIsm 0x2a3ec2f98ca5840061567fe38428bac697281fe1, whose moduleType was 2. These bounded identities do not certify the alternative adapter or the ISM's full security configuration.",
+        "reviewNote": "Control review at Monad block 110701588 on 2026-10-05: Hyperlane and Wormhole adapter 0xacffec28c4eee21c889a4e6c0704c540ed9d4fdd both remain supported for origin 1. Hyperlane default ISM 0x2a3ec2f98ca5840061567fe38428bac697281fe1 requires unpaused PausableIsm 0x2e3049c52fa232ebff6ab0c1e2a4e48fcb629a1b and routing ISM 0x512a1ee58a5f0335ade0198646935b95cf142457; Ethereum routing selects two alternative 6-of-9 validator modules. Mailbox/routing owner 0x9126696d9c3c44dc1273352ce171e359b1802560 is an ICA account: reproduced account derivation on router 0x8452363d5c78bf95538614441dc8b465e03a89ca binds Ethereum origin 1, router 0xc00b94c115742f711a6f9ea90373c33e9b72a4a9 and remote owner Safe 0x562dfaac27a84be6c96273f5c9594da1681c0da7 (6-of-10, no enabled modules at Ethereum block 26124934). PausableIsm owner is separately 0x60cc386c85717cb51c2827a75e14826883df5da4. Earlier M0 Portal roles include a separately delegated EIP-7702 operator, not replaced by the Hyperlane governance Safe. Current/historical Wormhole execution, operator delegation, remote governance and complete legacy receipts remain unreviewed. Indexed explorer returned 403 and archive history remains incomplete. No complete execution certificate or incident-free claim is made.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
+        "observedAt": "2026-10-05",
         "sources": [
           {
             "label": "Current M0 platform deployment directory",
@@ -433,9 +477,17 @@
           {
             "label": "Current M0 Portal V2 cross-chain overview",
             "url": "https://docs.m0.org/raw/build/cross-chain.md"
+          },
+          {
+            "label": "Pinned Hyperlane Monad deployment registry",
+            "url": "https://raw.githubusercontent.com/hyperlane-xyz/hyperlane-registry/fe66faf5680744ff2f11254277aebb43c538db2e/chains/monad/addresses.yaml"
+          },
+          {
+            "label": "Verified Hyperlane ICA execution source",
+            "url": "https://soneium.blockscout.com/api/v2/smart-contracts/0xc08c1451979e9958458da3387e92c9feb1571f9c"
           }
         ],
-        "observedBlock": 109840715
+        "observedBlock": 110701588
       }
     ],
     "controls": [

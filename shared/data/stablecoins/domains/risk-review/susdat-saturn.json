@@ -356,6 +356,7 @@
       {
         "controlRef": "susdat-ethereum-ccip-lockbox",
         "question": "What complete current peer, rate-limit, owner and validator inventory constrains the canonical sUSDat escrow and both representation pools?",
+        "subject": "execution-scope",
         "reviewedAt": "2026-10-03",
         "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
         "sources": [{ "label": "Exact sUSDat CCIP directory", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" }]
@@ -363,6 +364,7 @@
       {
         "controlRef": "susdat-bsc-representation-admin",
         "question": "What is the complete current destination admin/proposer/executor census, including alternate representation mint authorities and emergency bypasses?",
+        "subject": "execution-scope",
         "reviewedAt": "2026-10-03",
         "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
         "sources": [{ "label": "Representation source and admin roles", "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol" }]
@@ -370,6 +372,7 @@
       {
         "controlRef": "susdat-monad-representation-admin",
         "question": "What is the complete current Monad admin/proposer/executor census, including alternate representation mint authorities and emergency bypasses?",
+        "subject": "execution-scope",
         "reviewedAt": "2026-10-03",
         "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
         "sources": [{ "label": "Representation source and admin roles", "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol" }]

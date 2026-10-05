@@ -50,7 +50,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "wsrUSD has one native Ethereum ERC-4626 wrapper and 20 reviewed LayerZero/Solana bridge representations. The Ethereum MyOFTAdapter locks the canonical wrapper while LayerZero OFTs burn and mint on remote routes; the shared Reservoir owner can configure peers, delegates, and LayerZero OApp settings. Berachain source/destination peer asymmetry and unresolved endpoint validator configuration keep this bridge review at manual-review confidence, and the adapter lockbox balance must not be added to destination supplies.",
+    "summary": "wsrUSD has native Ethereum ERC-4626 issuance and 20 catalogued bridge representations. Rechecked 2026-10-05: all 18 remote EVM OFT runtimes remain equivalent to the verified direct OFT after compiler-identified immutable normalization. Their owner is Reservoir EOA 0xb7570e32... and EndpointV2 delegates are independently code-empty EOA 0xadc0e55b.... The correct Berachain EID 30362 reciprocates with Ethereum; Plume's Ethereum-side peer remains zero. Endpoint owners, message-library/DVN administration, Solana/Tempo bridge execution and generation-bound materiality are not exhaustively closed, so manual-review confidence and partial certificates remain.",
     "reviewedAt": "2026-09-21",
     "reviewer": "Claude curation campaign 2026-09-21 (Ctrl7)",
     "confidence": "manual-review",
@@ -1122,9 +1122,9 @@
         ],
         "authorityType": "eoa",
         "routeChecks": {
-          "trustedPeerOrRemote": "Reservoir EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 is the verified owner of the Ethereum adapter and historically reviewed EVM OFTs. At Ethereum block 26098752, all 20 issuer-disclosed remote endpoint IDs were checked: 19 source-side peers are populated, including Berachain EID 30362, and Plume EID 30318 is zero. The prior Berachain zero-peer claim used the wrong endpoint ID 30181. The Solana peer is populated but its Ethereum message libraries are blockedMessageLib; a configured peer alone is not proof of an executable route.",
-          "pausersAdminsUpgraders": "The historically reviewed EVM OFTs and Ethereum adapter are non-proxy code. At Ethereum block 26098752, adapter owner remains 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 and its current EndpointV2 delegate is EOA 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; verified source independently authorizes the delegate to configure the OApp. The complete 20-remote Ethereum peer/library roster and effective validator settings are now pinned in the adapter review. Destination settings, executor settings, enforced options and message inspector/pre-crime remain outside these observations; neither EOA's key custody is established.",
-          "unsupportedReason": "The common owner, Ethereum delegate and complete Ethereum-side remote peer/library roster are identified, including XDC verification requiring one mandatory DVN plus three of four optional DVNs and the blocked Solana message library. Destination endpoint validation, delegate custody, executor and enforced-option settings remain unverified; a complete source-side census does not establish all-chain equivalence."
+          "trustedPeerOrRemote": "Rechecked 2026-10-05 at independently pinned blocks on every catalogued EVM OFT and Ethereum adapter. Census uses official LayerZero V2 endpoint IDs, including Berachain 30362 and Pharos 30407, and reads peers plus SEND/SEND_AND_CALL enforced options for each disclosed remote. Ethereum block 26124870 has 19 populated remote peers and zero Plume peer; every inspected remote EVM OFT has the Ethereum adapter as its sole populated peer among the disclosed EIDs. This is not a creation-to-pin PeerSet event census, nor proof that all configured libraries can execute a lane.",
+          "pausersAdminsUpgraders": "Verified OFT/adapter source enumerates setPeer, setDelegate, setEnforcedOptions, setMsgInspector, setPreCrime, transferOwnership and renounceOwnership. All 18 remote EVM OFT executable runtimes remain source-equivalent; owner() returns EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 and EndpointV2 delegates(app) independently returns EOA 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0. Inspector and pre-crime are zero in successful pinned reads. The actual Plume endpoint is 0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36, not the current metadata endpoint. Independent EndpointV2 owners are runtime-present contracts, not inferred Safes. Their governance, library/DVN administration, historical peer inventory and all mutable-target reach are not closed.",
+          "unsupportedReason": "Source-equivalent OFT code and current owner/delegate/known-EID settings do not prove complete execution scope. EndpointV2 permits an independent delegate to change libraries/configuration and clear/skip/nilify/burn queued messages. Ethereum endpoint owner OneSig 0xbe010a7e3686fdf65e93344ab664d065a0b02478 has verified source exactly matching pinned runtime and current 5-of-7 threshold with executorRequired=true at block 26124870. Its arbitrary-call authority and all per-chain endpoint/library/DVN controllers require complete execution inventory; endpoint quorum does not constrain the independently authorized Reservoir EOA delegate. No protective custody, irreversible shutdown or conservation conclusion is inferred."
         },
         "capDescription": "This EOA administers the LayerZero transfer-rail configuration for the adapter and EVM representations; it does not replace the immutable native wrapper or create a second canonical issuance path.",
         "canRaiseCap": false,
@@ -1142,6 +1142,14 @@
           {
             "label": "Reservoir official contract addresses",
             "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+          },
+          {
+            "label": "Exact-match Base OFT source and compiler immutable offsets rechecked 2026-10-05",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all"
+          },
+          {
+            "label": "Fully verified Ethereum endpoint-owner OneSig source/runtime rechecked 2026-10-05",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbe010a7e3686fdf65e93344ab664d065a0b02478"
           }
         ],
         "executionScope": {
@@ -1190,7 +1198,12 @@
               "entrypointKind": "evm-selector",
               "entrypoints": [
                 "0x3400288b",
-                "0xca5eb5e1"
+                "0xca5eb5e1",
+                "0xb98bd070",
+                "0x6fc1b31e",
+                "0xd4243885",
+                "0xf2fde38b",
+                "0x715018a6"
               ],
               "callMode": "call",
               "capabilities": [
@@ -1217,7 +1230,7 @@
             }
           ]
         },
-        "evidence": "At the reviewed Ethereum block 25771270 and current destination heads on 2026-08-16, owner reads identify Reservoir EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 as the common controller of the Ethereum MyOFTAdapter and the EVM wsrUSD OFTs. Its peer/delegate/OApp configuration powers remain Bridge Risk; the route contract identities remain separate failure domains, and no native wrapper upgrade or privileged net-claim mint authority is attributed to this EOA through the wsrUSD bridge profile."
+        "evidence": "Rechecked 2026-10-05: canonical adapter bytecode exactly matches fully verified WsrusdOftAdapter at Ethereum block 26124870 (SHA256 3276abd4a85bcb70eee7e36eda2a6f72907b6cab33919f15fb9adef604ab5965). All 18 remote EVM OFT runtimes remain equal to the W3R16 captures and source-equivalent to the exact-match Base reference after only compiler-labelled immutable/metadata normalization. Pinned owner and EndpointV2 delegate reads identify two separate code-empty EOAs, b757… and adc0…, on every remote with successful reads. The source enumerates all seven owner setters, but independent endpoint/validator authorities, historical peer inventory and complete cross-chain liability reach remain outside the partial certificate. Administrative powers remain Bridge Risk, not native wrapper mint authority."
       },
       {
         "id": "wsrusd-solana-oft-program",
@@ -1334,9 +1347,13 @@
           {
             "label": "Ethereum PublicNode delegate read and setSendLibrary simulation at block 26099924",
             "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Fully verified Ethereum endpoint-owner OneSig source/runtime rechecked 2026-10-05",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbe010a7e3686fdf65e93344ab664d065a0b02478"
           }
         ],
-        "evidence": "At Ethereum block 26099924 (2026-10-01T20:41:47Z), EndpointV2 delegates(0xbb431abd156b960e5b77cc45c75f107e3991258a) returned 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0 and eth_getCode(delegate) returned 0x. Verified EndpointV2 authorizes the OApp or its delegate, not its owner EOA directly. setSendLibrary(adapter,30106,address(0)) simulated successfully from the delegate, while the owner EOA call reverted. This is an active independent single-key bridge-configuration path, not native issuance. No transaction was broadcast; key custody, destination reach, other endpoint powers, bypasses and economic materiality remain unresolved.",
+        "evidence": "Rechecked 2026-10-05 at Ethereum block 26124870: adapter delegates() still returns code-empty EOA 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0. The pinned EndpointV2 runtime exactly matches fully verified source. _assertAuthorized accepts the OApp or its delegate; source enumerates library/configuration setters plus clear, skip, nilify and burn of message-channel state. The old setSendLibrary permission simulation is retained as historical evidence, not a complete execution proof. The independent endpoint owner and message-library/DVN controllers still prevent exhaustive bypass and liability closure.",
         "executionScope": {
           "controllerDeployment": "ethereum:0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0",
           "reviewedAt": "2026-10-01",
@@ -1382,7 +1399,14 @@
               "targetDeployment": "ethereum:0x1a44076050125825900e736c501f859c50fe728c",
               "entrypointKind": "evm-selector",
               "entrypoints": [
-                "0x9535ff30"
+                "0x9535ff30",
+                "0x6a14d715",
+                "0x183c834f",
+                "0x6dbd9f90",
+                "0x2a56c1b0",
+                "0xd70b8902",
+                "0x2e80fbf3",
+                "0x40f80683"
               ],
               "callMode": "call",
               "capabilities": [

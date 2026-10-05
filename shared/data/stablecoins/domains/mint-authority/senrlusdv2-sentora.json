@@ -228,13 +228,119 @@
         ],
         "label": "Sentora allocator 0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1",
         "role": "other",
-        "authorityType": "contract",
+        "authorityType": "eoa",
         "directMintAbility": "parameter-only",
         "canRaiseCap": false,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-05",
+        "observedBlock": 26124911,
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-05",
+          "expiresAt": "2027-01-01",
+          "reviewer": "B03MaximalReach: independently re-pinned R10 root arbitrary execution adverse upper envelope",
+          "confidence": "verified",
+          "sources": [
+            {
+              "label": "Verified EIP-7702 root arbitrary-call executor source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x63c0c19a282a1b52b07dd5a65b58948a07dae32b"
+            },
+            {
+              "label": "Pinned Ethereum block and allocator role bindings",
+              "url": "https://etherscan.io/block/26124911"
+            }
+          ],
+          "pin": {
+            "position": "26124911",
+            "hash": "0x4928625841961c8196aa5e3af36affd63e85b5f4495912f739e3953bf24be7bb",
+            "runtimeIdentity": "sha256:7652a45dda6a3f58cf50f4b74a64b449053dba0d37db5c509169b6447b03dcd8",
+            "signerIdentity": "EIP-7702 root EOA ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1"
+          },
+          "observedState": {
+            "position": "26124911",
+            "hash": "0x4928625841961c8196aa5e3af36affd63e85b5f4495912f739e3953bf24be7bb",
+            "runtimeIdentity": "sha256:7652a45dda6a3f58cf50f4b74a64b449053dba0d37db5c509169b6447b03dcd8",
+            "signerIdentity": "EIP-7702 root EOA ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1"
+          },
+          "inventory": "complete",
+          "closure": {
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
+          },
+          "paths": [
+            {
+              "id": "maximal-execution",
+              "targetDeployment": "ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x5c1c6dcd",
+                "0xe9ae5c53",
+                "0xd691c964"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "senrlusdv2-sentora"
+              ],
+              "affectedDeployments": [],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1",
+                "executorDeployment": "ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1",
+                "sourceDeployment": "ethereum:0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
+                "targets": "any-address",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "26124911",
+                  "hash": "0x4928625841961c8196aa5e3af36affd63e85b5f4495912f739e3953bf24be7bb",
+                  "runtimeIdentity": "sha256:7652a45dda6a3f58cf50f4b74a64b449053dba0d37db5c509169b6447b03dcd8",
+                  "signerIdentity": "EIP-7702 root EOA ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1"
+                },
+                "sourceRuntimeIdentity": "sha256:deb51590e22cdf9f70292f763d6d3aea8b078148aae082f3af1eca19bf0aa58c",
+                "observedSourceRuntimeIdentity": "sha256:deb51590e22cdf9f70292f763d6d3aea8b078148aae082f3af1eca19bf0aa58c",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
+                  "location": "EIP7702DeleGatorCore.sol:197-277 execute/executeFromExecutor; EIP7702StatelessDeleGator._isValidSignature; arbitrary single/batch CALL with root EOA authorization, no executor delay"
+                }
+              }
+            }
+          ]
+        },
         "sources": [
           {
             "label": "Sentora RLUSD Main exact vault",
@@ -265,11 +371,11 @@
             "url": "https://sentora.com/legal/terms-of-use"
           },
           {
-            "label": "Exact RegistryList verified source; subregistry authority remains unresolved",
+            "label": "Exact RegistryList verified source",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e"
           }
         ],
-        "evidence": "At pinned block 26107702, full deployment-history role logs and current mapping reads establish allocator and sentinel authority. Allocator can allocate/deallocate within caps, change liquidityAdapter/data and maxRate without delay; this can affect future fee accrual and cash-exit routing but is not arbitrary share minting. Sentinel can deallocate, reduce caps and revoke pending changes. Pinned EIP-7702 delegation designator 0xef010063c0c19a282a1b52b07dd5a65b58948a07dae32b; delegated authorization is not closed."
+        "evidence": "Ethereum block 26124911/hash 0x4928625841961c8196aa5e3af36affd63e85b5f4495912f739e3953bf24be7bb independently re-verifies the allocator role and EIP-7702 designator 0xef010063c0c19a282a1b52b07dd5a65b58948a07dae32b. Exact verified EIP7702StatelessDeleGator source/runtime recovers the root account EOA and permits arbitrary target/value/calldata single and batch CALLs through root self execution and signed contexts. The execution scope is a conservative adverse global upper envelope with every capability, unbounded loss and zero executor delay; it is not a claim that VaultV2 permits arbitrary unbacked share minting. Actual immutable deposit/fee accounting bounds remain separately documented. No outstanding-delegation enumeration, exact EntryPoint closure, key-custody, signer-independence or incident credit is inferred."
       },
       {
         "chain": "ethereum",
@@ -316,7 +422,7 @@
             "url": "https://sentora.com/legal/terms-of-use"
           },
           {
-            "label": "Exact RegistryList verified source; subregistry authority remains unresolved",
+            "label": "Exact RegistryList verified source",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e"
           }
         ],
@@ -367,11 +473,68 @@
             "url": "https://sentora.com/legal/terms-of-use"
           },
           {
-            "label": "Exact RegistryList verified source; subregistry authority remains unresolved",
+            "label": "Exact RegistryList verified source",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e"
           }
         ],
         "evidence": "At pinned block 26107702, full deployment-history role logs and current mapping reads establish sentinel authority. Allocator can allocate/deallocate within caps, change liquidityAdapter/data and maxRate without delay; this can affect future fee accrual and cash-exit routing but is not arbitrary share minting. Sentinel can deallocate, reduce caps and revoke pending changes. Pinned account code is empty."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xcba28b38103307ec8da98377fff9816c164f9afa",
+        "deploymentRefs": [
+          "ethereum:0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
+        ],
+        "label": "Morpho RegistryList administrator 6-of-10 Safe",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 6,
+        "signerCount": 10,
+        "safe": {
+          "owners": [
+            "0xad0e1b385a6e2d5aa4c72f37dcdd4dafd63ced8f",
+            "0xe0aeb6811d33df42a09066857cdafca16b506086",
+            "0x84d3e4ee550dd5f99e76a548ac59a6be1c8dcf79",
+            "0xc100c251bdd297a66795112f04356e6ba5f89d80",
+            "0x264c86dbbd2e4165fbbf0c35b0ddf0e00aec6b31",
+            "0x30e7c016fc702cde9a50720a469d418490b7b652",
+            "0x8f02b4a44eacd9b8ee7739aa0ba58833dd45d002",
+            "0xcf263cee139763114faafc5f52865135412f50ec",
+            "0x69fcefde2b48503d675181448b3d4272128bca9c",
+            "0x13ca8756e9470b71b8e998352c8741706217f963"
+          ],
+          "threshold": 6,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 26124911,
+          "observedAt": "2026-10-05",
+          "source": "onchain"
+        },
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "timelockDelaySec": 0,
+        "observedAt": "2026-10-05",
+        "observedBlock": 26124911,
+        "sources": [
+          {
+            "label": "RegistryList exact verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e"
+          },
+          {
+            "label": "Registry administrator Safe",
+            "url": "https://etherscan.io/address/0xcba28b38103307ec8da98377fff9816c164f9afa"
+          },
+          {
+            "label": "Registry Safe compatibility fallback source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4"
+          },
+          {
+            "label": "Pinned current Ethereum control observation",
+            "url": "https://etherscan.io/block/26124911"
+          }
+        ],
+        "evidence": "Ethereum block 26124911: RegistryList.owner is this 6-of-10 Safe. Nine owner addresses have empty code; the tenth is a 1-of-2 Safe whose two owners have empty code. Both Safes have terminal empty module lists, zero guards and source/runtime-matched standard CompatibilityFallbackHandlers and singletons. This proves address/signature topology, not organizational independence or attested key custody. Source-bound RegistryList permits immediate addSubRegistry and ownership transfer, but no removal of existing registries, vault upgrade, cap change or share mint. Current four immutable subregistries and five immutable factories use append-only creation/indexing. The curator must separately install an adapter and increase vault allocation caps; registry approval does not bypass that authority or the immutable asset-backed share accounting. Aggregate delegation and incident review remain open."
       }
     ],
     "economicCapSemantics": "bounded",
@@ -411,21 +574,33 @@
           "url": "https://sentora.com/legal/terms-of-use"
         },
         {
-          "label": "Exact RegistryList verified source; subregistry authority remains unresolved",
+          "label": "Exact RegistryList verified source; current subregistry mutation paths reviewed",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e"
+        },
+        {
+          "label": "EIP7702StatelessDeleGator exact source and embedded authorization core",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x63c0c19a282a1b52b07dd5a65b58948a07dae32b"
+        },
+        {
+          "label": "DelegationManager exact source; permissionContexts are calldata, not an active-delegate registry",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdb9b1e94b5b69df7e401ddbede43491141047db3"
+        },
+        {
+          "label": "Ethereum control and registry recheck block 26124911",
+          "url": "https://etherscan.io/block/26124911"
         }
       ],
-      "evidence": "Pinned block 26107702 confirms native asset, immutable source, zero proxy slots, separate 1-of-1 owner/curator Safes, empty signer EOA code, no modules and zero guards. performanceFee=100000000000000000; managementFee=0 (contract-native units). Fee-share issuance is not omitted; zero-delay fee and deposit-gate parameter changes remain concentrated economic controls. Parent reserve reports are not exact-vault financial reconciliation. Rechecked 2026-10-03 at the same pin: owner and curator each have threshold 1 and one owner; getModulesPaginated(0x1,100) reaches sentinel 0x1 with no modules. addAdapter and increaseAbsoluteCap delays are 259200s; setPerformanceFee, setManagementFee and setSendAssetsGate delays are zero. The sendAssetsGate restricts deposit/mint, not withdrawal/redeem; receiveAssetsGate and share-gate setters are permanently abdicated. Sentora terms assert non-custody but do not negate on-chain allocation and fee authority. Complete constructor-to-pin SetIsAllocator/SetIsSentinel log scan, followed by isAllocator/isSentinel reads, establishes allocators [0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1, 0x9e396de3312d373b87f9bd8763fb48184b42aac0, 0xc4ba4e822c420452fe2bab93211208d3ccbd79d3] and sentinels [0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1, 0x9e396de3312d373b87f9bd8763fb48184b42aac0, 0x74d1672d0b90f6e7c322dec9d5396ff6ace61618]. Registry 0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e has owner 0xcba28b38103307ec8da98377fff9816c164f9afa and current subregistries [0xa31788949d0fe443d3d1033222fc9479499bc3f5, 0xcef9ee779ef9428f50bb7a21b3e3b4efdbc33844, 0xca38e878439e02f2feb364a2b36b52789f983727, 0xfb4d38d93736a040993c50aaac776a2be2cff8be]. Calibration v1 moved signer/key-custody nondisclosure outside the aggregate mint-closure flag; v2 records it on each identified owner/curator Safe as a sourced scoped question: Who controls the two sole signer EOAs organizationally, and what independently attested key custody protects them? Sentora terms do not identify the key holders. Calibration v2 restores the unresolved registry/subregistry authorization and any delegated allocator execution census to unresolvedQuestions; known controller types are not relabeled unknown. Reconciliation remains not-applicable to native asset-backed share/fee accounting; exact-vault financial assurance and holder recovery are Backing gaps. Supervision remains none, so no prudential or attestation-only credit is claimed. D14/A7/A10 review 2026-10-03, pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). The pinned immutable VaultV2 source routes deposit/mint through enter(), which transfers underlying assets before createShares(). Curator increaseAbsoluteCap/increaseRelativeCap and addAdapter govern allocation limits, not arbitrary recipient minting; owner/curator, deposit-gate and fee-recipient settings cannot bypass this accounting. accrueInterest() separately creates fee shares under immutable MAX_PERFORMANCE_FEE (50% of interest) and MAX_MANAGEMENT_FEE (5% annualized) limits, not discretionary arbitrary-share issuance. There is no local upgrade entrypoint. Inherited controls concern rlusd-ripple, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
-      "reviewedAt": "2026-10-03",
+      "evidence": "Prior pinned reviews at Ethereum blocks 26107702 and 26113624 establish immutable VaultV2 asset-backed deposit/mint and separately bounded accrued-fee shares; zero proxy slots; owner and curator separate 1-of-1 Safes; performanceFee=100000000000000000 and managementFee=0. MAX_PERFORMANCE_FEE is 50% of interest and MAX_MANAGEMENT_FEE is 5% annualized. Owner appoints curator/sentinels; allocator changes liquidityAdapter/data and maxRate; sentinel deallocates, reduces caps and revokes pending changes. Fee and sendAssetsGate setters have zero delay; addAdapter/increaseAbsoluteCap have 259200-second delays. receiveAssetsGate and share-gate setters are permanently abdicated; sendAssetsGate affects deposits, not withdrawals. Underlying issuance is inherited from rlusd-ripple; parent reports are not exact-vault reconciliation or holder assurance. On 2026-10-05 at block 26124911, current vault owner, curator, sole adapter, RegistryList and delegated allocator role/designator were re-read. RegistryList owner topology, nested Safe/fallbacks, four subregistries and five referenced factories now have runtime-bound permission evidence and an explicit administrator control. The registry can append a subregistry or change its owner immediately but cannot install adapters, alter caps, replace vault bytecode or mint shares. This answers the prior unidentified-registry mutation question without certifying a complete execution scope. Delegator and DelegationManager runtimes match verified sources; their signed permissionContext/caveat inventory and EntryPoint/reauthorization bypass review remain incomplete. Original owner/curator scoped signer-custody questions remain unchanged; no independence, incident-free, prudential-supervision or favorable economic-control closure is asserted.",
+      "reviewer": "R10 wave-4 pinned registry and delegation research; retaining prior D14/A7/A10 evidence",
+      "reviewedAt": "2026-10-05",
       "unresolvedQuestions": [
-        "Current role census is complete, but registry owner 0xcba28b38103307ec8da98377fff9816c164f9afa and subregistry authority/bypass closure across [0xa31788949d0fe443d3d1033222fc9479499bc3f5, 0xcef9ee779ef9428f50bb7a21b3e3b4efdbc33844, 0xca38e878439e02f2feb364a2b36b52789f983727, 0xfb4d38d93736a040993c50aaac776a2be2cff8be] is not established.",
-        "Allocator 0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1 is an EIP-7702 delegated account pointing to 0x63c0c19a282a1b52b07dd5a65b58948a07dae32b; delegated runtime authorization and signing/bypass census remains unreviewed."
+        "The allocator root EOA, EIP-7702 designator and arbitrary single/batch CALL implementation were re-verified at Ethereum block 26124911. Conservative maximal reach now records complete adverse global execution without enumerating signed permission contexts, EntryPoint bypasses or future root reauthorization. Those routes receive no exclusions or benign-target credit. Independently attested human/organizational key custody and asset incident review remain unresolved; no cryptographic signer-independence or absence-of-incident claim is made."
       ],
       "scopedQuestions": [
         {
           "controlRef": "ethereum:0xe8c9c99ecad0686a14a00d8521c572281e938008",
           "question": "The identified 1-of-1 Safe has sole signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9; the human or organizational key controller, independence from other Sentora role signers, and independently attested key custody/signing policy are undisclosed. Sentora terms do not identify the key holder.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine10)",
           "sources": [
@@ -466,6 +641,7 @@
         {
           "controlRef": "ethereum:0x9e396de3312d373b87f9bd8763fb48184b42aac0",
           "question": "The identified 1-of-1 Safe has sole signer 0x992592e073aa9b98daed79ee05c4af832e1d0abe; the human or organizational key controller, independence from other Sentora role signers, and independently attested key custody/signing policy are undisclosed. Sentora terms do not identify the key holder.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine10)",
           "sources": [

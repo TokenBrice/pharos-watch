@@ -502,6 +502,12 @@ describe("evaluateV9Exit", () => {
       V9_CANDIDATE_POLICY_V1,
     );
     expect(withDiagnosticRoute.reasons).toEqual(["missing-same-notional-route", "unsupported-same-notional-route"]);
+    expect(withDiagnosticRoute.primaryRouteKey).toBeNull();
+    expect(withDiagnosticRoute.routes[0]).toMatchObject({
+      included: false, score: null, capacityPoint: null,
+      exclusionReason: "unsupported-same-notional-route",
+    });
+    expect(withDiagnosticRoute.reasons).not.toContain("no-viable-exit-path");
 
     const withoutAnyRoute = evaluateV9Exit(
       { circulatingUsd: 20_000_000, portfolioStatus: "incomplete", routes: [] },

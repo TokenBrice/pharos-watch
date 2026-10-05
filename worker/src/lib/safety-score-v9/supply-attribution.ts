@@ -36,6 +36,7 @@ import {
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS,
   type SafetyScoreV9SupplyAttributionInput,
 } from "./supply-attribution-source";
+import { runBudgetedSupplyAttributionAssets } from "./supply-attribution-capture-budget";
 
 export { SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS } from "./supply-attribution-source";
 
@@ -304,6 +305,7 @@ async function runSupplyAttributionAssetCapture(input: {
   observationClockSec: (attemptedAtSec: number) => number;
   attributionById: V9SupplyAttributionById;
   journalRecords: SupplyAttributionJournalV1[];
+  rejectionCode?: SupplyAttributionRejectionCode;
 }): Promise<void> {
   const attemptedAtSec = Math.floor(Date.now() / 1_000);
   const scoringClockSec = input.observationClockSec(attemptedAtSec);
@@ -311,7 +313,9 @@ async function runSupplyAttributionAssetCapture(input: {
   let outcome: SupplyAttributionObservationAttempt;
   try {
     outcome =
-      input.chainRpcs && input.chainRpcs.size > 0
+      input.rejectionCode
+        ? { status: "rejected", rejectionCode: input.rejectionCode, failedRouteId: null }
+        : input.chainRpcs && input.chainRpcs.size > 0
         ? await input.descriptor.observe({
             fixedInput: input.fixedInput,
             aggregateSupplyUsd: aggregateSupplyUsd(
@@ -420,19 +424,40 @@ export async function captureSafetyScoreV9SupplyAttribution(
   const attributionById: V9SupplyAttributionById = {};
   const journalRecords: SupplyAttributionJournalV1[] = [];
 
-  for (const descriptor of supplyAttributionAssetDescriptors()) {
-    if (!expectedAssetIdSet.has(descriptor.assetId)) continue;
-    await runSupplyAttributionAssetCapture({
-      descriptor,
-      fixedInput,
-      chainRpcs,
-      signal,
-      executionWindow: options.executionWindow,
-      db: options.db,
-      observationClockSec,
-      attributionById,
-      journalRecords,
-    });
+  const descriptors = supplyAttributionAssetDescriptors().filter(
+    descriptor => expectedAssetIdSet.has(descriptor.assetId),
+  );
+  const results = await runBudgetedSupplyAttributionAssets(
+    descriptors,
+    async (descriptor, assetSignal) => {
+      const assetAttributionById: V9SupplyAttributionById = {};
+      const assetJournalRecords: SupplyAttributionJournalV1[] = [];
+      await runSupplyAttributionAssetCapture({
+        descriptor, fixedInput, chainRpcs, signal: assetSignal,
+        executionWindow: options.executionWindow, db: options.db,
+        observationClockSec, attributionById: assetAttributionById,
+        journalRecords: assetJournalRecords,
+      });
+      return { attributionById: assetAttributionById, journalRecords: assetJournalRecords };
+    },
+    { signal, executionWindow: options.executionWindow },
+  );
+  for (let index = 0; index < descriptors.length; index++) {
+    const result = results[index];
+    if (result.status === "completed") {
+      Object.assign(attributionById, result.value.attributionById);
+      journalRecords.push(...result.value.journalRecords);
+    } else {
+      // Every expected asset still receives an exact attempt outcome. Neither
+      // timeout nor exhaustion is an empty inventory or a positive zero.
+      await runSupplyAttributionAssetCapture({
+        descriptor: descriptors[index], fixedInput, signal, observationClockSec,
+        attributionById, journalRecords,
+        rejectionCode: result.reason === "observer-failed"
+          ? "deployment-state-unavailable"
+          : "deployment-observation-window-insufficient",
+      });
+    }
   }
 
   return {

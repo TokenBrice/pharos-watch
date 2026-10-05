@@ -151,6 +151,7 @@
         {
           "controlRef": "HeLa MintProposer/MintVoter quorum",
           "question": "What are the current MintProposer and MintVoter holder addresses and the configured mint quorum on the HeLa runtime? The mint action itself is established (Action::Mint is gated on Role::MintVoter with no supply-cap check), but the roster and quorum value are readable only through oasis-node runtime queries and no public endpoint exposes them.",
+          "subject": "authority-semantics",
           "reviewedAt": "2026-09-01",
           "reviewer": "ODR-A6 lane Q",
           "sources": [
@@ -167,6 +168,7 @@
         {
           "controlRef": "HeLa Admin role",
           "question": "Which addresses hold the HeLa Admin role and what config quorum governs role and quorum changes? The Admin propose-vote model is documented and present in the public runtime source, but the live holder set and configured quorum values are not publicly enumerable.",
+          "subject": "authority-semantics",
           "reviewedAt": "2026-09-01",
           "reviewer": "ODR-A6 lane Q",
           "sources": [
@@ -183,6 +185,7 @@
         {
           "controlRef": "HeLa runtime upgrade authority (unresolved)",
           "question": "Which address or governance executor can upgrade the HLUSD runtime logic, and what threshold and delay govern that action? Governance, architecture, tokenomics, whitepaper and public repository review still publish no runtime bytecode-upgrade executor, and the deployed build (oasis/hela-mainnet-20251014-git4f94f25) is absent from the public repositories.",
+          "subject": "authority-semantics",
           "reviewedAt": "2026-09-01",
           "reviewer": "ODR-A6 lane Q",
           "sources": [

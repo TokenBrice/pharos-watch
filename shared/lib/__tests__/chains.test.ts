@@ -94,6 +94,16 @@ describe("resolveChainId", () => {
     expect(GT_CHAIN_MAP.vechain).toBeUndefined();
   });
 
+  it("joins exSat provider labels and mainnet IDs without inventing pool coverage", () => {
+    for (const identity of ["exSat", " EXSAT ", "exsat", 7200]) {
+      expect(resolveChainId(identity)).toBe("exsat");
+      expect(normalizeChainId(identity)).toBe("exsat");
+    }
+    expect(resolveChainId(7201)).toBeNull();
+    expect(CG_CHAIN_MAP.exsat).toBeUndefined();
+    expect(GT_CHAIN_MAP.exsat).toBeUndefined();
+  });
+
   it("maps IOTA EVM to CoinGecko Onchain's verified network id", () => {
     expect(CG_CHAIN_MAP["iota-evm"]).toBe("iota-evm");
   });

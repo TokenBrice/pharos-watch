@@ -420,6 +420,7 @@
         {
           "controlRef": "Chancery issued-token mint-authority PDA",
           "question": "What are the complete active principal/executor permissions, pathway limits and legacy-migration bounds, including current reserve-outflow settings?",
+          "subject": "authority-semantics",
           "reviewedAt": "2026-09-15",
           "reviewer": "Codex replacement USDv control review",
           "sources": [

@@ -299,6 +299,7 @@
         {
           "controlRef": "USDR token ProxyAdmin owner",
           "question": "Independent human control, operational key custody and signing policy of the identified USDR token ProxyAdmin owner at rise:0xc588c10a90c942ee3476877c4bac3d798e724856 are not publicly established; enumerated owners/threshold or a codeless EOA do not certify these safeguards.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine07 calibration v2 2026-10-03",
           "sources": [
@@ -331,6 +332,7 @@
         {
           "controlRef": "USDR operational DEFAULT_ADMIN Safe",
           "question": "Independent human control, operational key custody and signing policy of the identified USDR operational DEFAULT_ADMIN Safe at rise:0xb0ea3203b80d67c58f6709779c5fbac641aab769 are not publicly established; enumerated owners/threshold or a codeless EOA do not certify these safeguards.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine07 calibration v2 2026-10-03",
           "sources": [

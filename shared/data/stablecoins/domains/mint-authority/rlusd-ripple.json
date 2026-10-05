@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
-    "summary": "All six catalogued native RLUSD holder surfaces retain technically unbounded issuer mint authority. Ethereum and Base minters remain uniform 2-of-32, and Optimism, Ink and Unichain minters remain uniform 2-of-30. Each EVM role-admin/upgrader has the exact eleven-address weighted roster with quorum 7 (minimum three cryptographic signatures); deployed MultiSign signing logic was matched to verified executable source at each pinned controller. XRPL ledger 107364064 records quorum 25 with eight weight-24 and eighteen weight-1 signers (minimum two), disabled master and absent RegularKey. Weighted facts establish neither independent people nor per-key custody. Native and NTT controls now carry partial execution certificates with exact controller, entrypoint and runtime/signing pins; no complete inventory, deployment-local economic exclusion or liability partition is claimed. Five EVM burning-mode NTT/13-of-19 Guardian domains remain separately recorded under Bridge Risk. The issuer also names XRPL EVM Sidechain, which remains outside the supported catalog chain registry and prevents an exhaustive all-chain claim. The singular upgradeability object stays Ethereum-scoped; other deployment upgrade authorities remain separate controls.",
+    "summary": "All six catalogued native RLUSD holder surfaces retain technically unbounded issuer mint authority. Ethereum and Base minters remain uniform 2-of-32, and Optimism, Ink and Unichain minters remain uniform 2-of-30. Each EVM role-admin/upgrader has the exact eleven-address weighted roster with quorum 7 (minimum three cryptographic signatures); deployed MultiSign signing logic was matched to verified executable source at each pinned controller. XRPL ledger 107364064 records quorum 25 with eight weight-24 and eighteen weight-1 signers (minimum two), disabled master and absent RegularKey. Weighted facts establish neither independent people nor per-key custody. Fifteen EVM native MultiSign controls and five NTT issuer administrations now carry complete conservative maximal-reach certificates from independently re-verified arbitrary-call source/runtime and signer pins. Every control capability is retained with adverse global unbounded semantics and zero delay; no exact downstream target census, deployment-local exclusion or liability partition is claimed. XRPL execution stays partial because the exact rippled 3.4.1 deployed-build/source identity remains unproved; NTT Guardian validation scopes stay partial. Five EVM burning-mode NTT/13-of-19 Guardian domains remain separately recorded under Bridge Risk. The issuer also names XRPL EVM Sidechain, which remains outside the supported catalog chain registry and prevents an exhaustive all-chain claim. The singular upgradeability object stays Ethereum-scoped; other deployment upgrade authorities remain separate controls.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -51,11 +51,11 @@
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-04",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
-          "confidence": "partial",
+          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Ethereum: RLUSD token contract",
@@ -64,76 +64,52 @@
             {
               "label": "Ethereum: Ripple MultiSign contract (Blockscout verified)",
               "url": "https://eth.blockscout.com/address/0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591"
+            },
+            {
+              "label": "Re-verified arbitrary MultiSign executor source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591"
             }
           ],
           "pin": {
-            "position": "26098939",
-            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "position": "26122338",
+            "hash": "0xac239e018e42b9633be3a606d49dbeb37745d6a4bdd1515e9efc2e1d08a7d304",
             "runtimeIdentity": "sha256:8f32eb0b4b83b5cdf14d42a3d4f53a40223c0c999c0bee3d27b1aaf777e00e7c",
             "signerIdentity": "sha256:628414319f4de6ce46027bb2381263e4944a0cca9bbeb228a1eefa99f3903827"
           },
           "observedState": {
-            "position": "26098939",
-            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "position": "26122338",
+            "hash": "0xac239e018e42b9633be3a606d49dbeb37745d6a4bdd1515e9efc2e1d08a7d304",
             "runtimeIdentity": "sha256:8f32eb0b4b83b5cdf14d42a3d4f53a40223c0c999c0bee3d27b1aaf777e00e7c",
             "signerIdentity": "sha256:628414319f4de6ce46027bb2381263e4944a0cca9bbeb228a1eefa99f3903827"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
-              "id": "native-authority",
-              "targetDeployment": "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
-              "entrypointKind": "evm-selector",
-              "entrypoints": [
-                "0x40c10f19"
-              ],
-              "callMode": "call",
-              "capabilities": [
-                "mint"
-              ],
-              "capSemantics": {
-                "kind": "unbounded",
-                "bound": null
-              },
-              "claimImpairment": "unbounded",
-              "economicLossScope": "global-claim",
-              "unavoidableDelaySec": 0,
-              "activation": "active",
-              "affectedLiabilityIds": [
-                "rlusd-ripple"
-              ],
-              "affectedDeployments": [
-                "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
-              ],
-              "reach": "root",
-              "controlRefs": [
-                "signer-config"
-              ],
-              "reactivationRefs": [],
-              "permissionChangeRefs": [
-                "signer-config"
-              ],
-              "upgradeRefs": [],
-              "bypassRefs": []
-            },
-            {
-              "id": "signer-config",
+              "id": "maximal-execution",
               "targetDeployment": "ethereum:0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591",
               "entrypointKind": "evm-selector",
               "entrypoints": [
-                "0x7460837f"
+                "0x11858c7a"
               ],
               "callMode": "call",
               "capabilities": [
+                "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
                 "parameter-change"
               ],
               "capSemantics": {
@@ -147,15 +123,37 @@
               "affectedLiabilityIds": [
                 "rlusd-ripple"
               ],
-              "affectedDeployments": [
-                "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
-              ],
+              "affectedDeployments": [],
               "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
-              "bypassRefs": []
+              "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "ethereum:0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591",
+                "executorDeployment": "ethereum:0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591",
+                "sourceDeployment": "ethereum:0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591",
+                "targets": "any-contract",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "26122338",
+                  "hash": "0xac239e018e42b9633be3a606d49dbeb37745d6a4bdd1515e9efc2e1d08a7d304",
+                  "runtimeIdentity": "sha256:8f32eb0b4b83b5cdf14d42a3d4f53a40223c0c999c0bee3d27b1aaf777e00e7c",
+                  "signerIdentity": "sha256:628414319f4de6ce46027bb2381263e4944a0cca9bbeb228a1eefa99f3903827"
+                },
+                "sourceRuntimeIdentity": "sha256:8f32eb0b4b83b5cdf14d42a3d4f53a40223c0c999c0bee3d27b1aaf777e00e7c",
+                "observedSourceRuntimeIdentity": "sha256:8f32eb0b4b83b5cdf14d42a3d4f53a40223c0c999c0bee3d27b1aaf777e00e7c",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591",
+                  "location": "src/contracts/MultiSign.sol:execute and setSigners; signed arbitrary destination.call(data), self-call-only signer changes, no target/selector allowlist or executor delay"
+                }
+              }
             }
           ]
         },
@@ -450,11 +448,11 @@
         "authorityType": "multisig",
         "executionScope": {
           "controllerDeployment": "ethereum:0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-04",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
-          "confidence": "partial",
+          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Ethereum: RLUSD proxy creation transaction",
@@ -467,42 +465,52 @@
             {
               "label": "Ethereum PublicNode RPC",
               "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Re-verified arbitrary MultiSign executor source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e"
             }
           ],
           "pin": {
-            "position": "26098939",
-            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "position": "26122338",
+            "hash": "0xac239e018e42b9633be3a606d49dbeb37745d6a4bdd1515e9efc2e1d08a7d304",
             "runtimeIdentity": "sha256:9019e664c8ea27713d9cf5813a070f3b91170917708aa68f510164cb20124496",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "26098939",
-            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "position": "26122338",
+            "hash": "0xac239e018e42b9633be3a606d49dbeb37745d6a4bdd1515e9efc2e1d08a7d304",
             "runtimeIdentity": "sha256:9019e664c8ea27713d9cf5813a070f3b91170917708aa68f510164cb20124496",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
-              "id": "native-authority",
-              "targetDeployment": "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+              "id": "maximal-execution",
+              "targetDeployment": "ethereum:0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e",
               "entrypointKind": "evm-selector",
               "entrypoints": [
-                "0x2f2ff15d",
-                "0xd547741f"
+                "0x11858c7a"
               ],
               "callMode": "call",
               "capabilities": [
                 "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
                 "parameter-change"
               ],
               "capSemantics": {
@@ -516,51 +524,37 @@
               "affectedLiabilityIds": [
                 "rlusd-ripple"
               ],
-              "affectedDeployments": [
-                "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
-              ],
-              "reach": "root",
-              "controlRefs": [
-                "signer-config"
-              ],
-              "reactivationRefs": [],
-              "permissionChangeRefs": [
-                "signer-config"
-              ],
-              "upgradeRefs": [],
-              "bypassRefs": []
-            },
-            {
-              "id": "signer-config",
-              "targetDeployment": "ethereum:0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e",
-              "entrypointKind": "evm-selector",
-              "entrypoints": [
-                "0x7460837f"
-              ],
-              "callMode": "call",
-              "capabilities": [
-                "parameter-change"
-              ],
-              "capSemantics": {
-                "kind": "unbounded",
-                "bound": null
-              },
-              "claimImpairment": "unbounded",
-              "economicLossScope": "global-claim",
-              "unavoidableDelaySec": 0,
-              "activation": "active",
-              "affectedLiabilityIds": [
-                "rlusd-ripple"
-              ],
-              "affectedDeployments": [
-                "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
-              ],
+              "affectedDeployments": [],
               "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
-              "bypassRefs": []
+              "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "ethereum:0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e",
+                "executorDeployment": "ethereum:0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e",
+                "sourceDeployment": "ethereum:0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e",
+                "targets": "any-contract",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "26122338",
+                  "hash": "0xac239e018e42b9633be3a606d49dbeb37745d6a4bdd1515e9efc2e1d08a7d304",
+                  "runtimeIdentity": "sha256:9019e664c8ea27713d9cf5813a070f3b91170917708aa68f510164cb20124496",
+                  "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+                },
+                "sourceRuntimeIdentity": "sha256:9019e664c8ea27713d9cf5813a070f3b91170917708aa68f510164cb20124496",
+                "observedSourceRuntimeIdentity": "sha256:9019e664c8ea27713d9cf5813a070f3b91170917708aa68f510164cb20124496",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e",
+                  "location": "src/contracts/MultiSign.sol:execute and setSigners; signed arbitrary destination.call(data), self-call-only signer changes, no target/selector allowlist or executor delay"
+                }
+              }
             }
           ]
         },
@@ -671,11 +665,11 @@
         "authorityType": "multisig",
         "executionScope": {
           "controllerDeployment": "ethereum:0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-04",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
-          "confidence": "partial",
+          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Ethereum: RLUSD proxy creation transaction",
@@ -688,77 +682,52 @@
             {
               "label": "Ethereum PublicNode RPC",
               "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Re-verified arbitrary MultiSign executor source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x863c8754c298d3efec3863f2a46f1c71a355ce6c"
             }
           ],
           "pin": {
-            "position": "26098939",
-            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "position": "26122338",
+            "hash": "0xac239e018e42b9633be3a606d49dbeb37745d6a4bdd1515e9efc2e1d08a7d304",
             "runtimeIdentity": "sha256:86d0cef73ba7671005bbcbe2904d6c6f25eb4bd1d503746f513b209a7afad687",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "26098939",
-            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "position": "26122338",
+            "hash": "0xac239e018e42b9633be3a606d49dbeb37745d6a4bdd1515e9efc2e1d08a7d304",
             "runtimeIdentity": "sha256:86d0cef73ba7671005bbcbe2904d6c6f25eb4bd1d503746f513b209a7afad687",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
-              "id": "native-authority",
-              "targetDeployment": "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+              "id": "maximal-execution",
+              "targetDeployment": "ethereum:0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
               "entrypointKind": "evm-selector",
               "entrypoints": [
-                "0x4f1ef286"
+                "0x11858c7a"
               ],
               "callMode": "call",
               "capabilities": [
                 "mint",
-                "upgrade"
-              ],
-              "capSemantics": {
-                "kind": "unbounded",
-                "bound": null
-              },
-              "claimImpairment": "unbounded",
-              "economicLossScope": "global-claim",
-              "unavoidableDelaySec": 0,
-              "activation": "active",
-              "affectedLiabilityIds": [
-                "rlusd-ripple"
-              ],
-              "affectedDeployments": [
-                "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
-              ],
-              "reach": "root",
-              "controlRefs": [
-                "signer-config"
-              ],
-              "reactivationRefs": [],
-              "permissionChangeRefs": [
-                "signer-config"
-              ],
-              "upgradeRefs": [],
-              "bypassRefs": []
-            },
-            {
-              "id": "signer-config",
-              "targetDeployment": "ethereum:0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
-              "entrypointKind": "evm-selector",
-              "entrypoints": [
-                "0x7460837f"
-              ],
-              "callMode": "call",
-              "capabilities": [
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
                 "parameter-change"
               ],
               "capSemantics": {
@@ -772,15 +741,37 @@
               "affectedLiabilityIds": [
                 "rlusd-ripple"
               ],
-              "affectedDeployments": [
-                "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
-              ],
+              "affectedDeployments": [],
               "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
-              "bypassRefs": []
+              "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "ethereum:0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
+                "executorDeployment": "ethereum:0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
+                "sourceDeployment": "ethereum:0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
+                "targets": "any-contract",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "26122338",
+                  "hash": "0xac239e018e42b9633be3a606d49dbeb37745d6a4bdd1515e9efc2e1d08a7d304",
+                  "runtimeIdentity": "sha256:86d0cef73ba7671005bbcbe2904d6c6f25eb4bd1d503746f513b209a7afad687",
+                  "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+                },
+                "sourceRuntimeIdentity": "sha256:86d0cef73ba7671005bbcbe2904d6c6f25eb4bd1d503746f513b209a7afad687",
+                "observedSourceRuntimeIdentity": "sha256:86d0cef73ba7671005bbcbe2904d6c6f25eb4bd1d503746f513b209a7afad687",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
+                  "location": "src/contracts/MultiSign.sol:execute and setSigners; signed arbitrary destination.call(data), self-call-only signer changes, no target/selector allowlist or executor delay"
+                }
+              }
             }
           ]
         },
@@ -891,11 +882,11 @@
         ],
         "executionScope": {
           "controllerDeployment": "base:0x9b8a83e875023c3fefd8354044e011d8bc847a34",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-04",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
-          "confidence": "partial",
+          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -912,76 +903,52 @@
             {
               "label": "base current RLUSD implementation",
               "url": "https://base.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            },
+            {
+              "label": "Re-verified arbitrary MultiSign executor source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x9b8a83e875023c3fefd8354044e011d8bc847a34"
             }
           ],
           "pin": {
-            "position": "52043057",
-            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "position": "52183926",
+            "hash": "0x31bd474ff9fb6d865cc3383747b3cc0f35921cf0ce1f6c761efccac81c40d004",
             "runtimeIdentity": "sha256:9d04dd2daa5bb61a47546503fefcf3cbadaaec9698ce43a58b4e5f2bd4fc9fbb",
             "signerIdentity": "sha256:628414319f4de6ce46027bb2381263e4944a0cca9bbeb228a1eefa99f3903827"
           },
           "observedState": {
-            "position": "52043057",
-            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "position": "52183926",
+            "hash": "0x31bd474ff9fb6d865cc3383747b3cc0f35921cf0ce1f6c761efccac81c40d004",
             "runtimeIdentity": "sha256:9d04dd2daa5bb61a47546503fefcf3cbadaaec9698ce43a58b4e5f2bd4fc9fbb",
             "signerIdentity": "sha256:628414319f4de6ce46027bb2381263e4944a0cca9bbeb228a1eefa99f3903827"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
-              "id": "native-authority",
-              "targetDeployment": "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
-              "entrypointKind": "evm-selector",
-              "entrypoints": [
-                "0x40c10f19"
-              ],
-              "callMode": "call",
-              "capabilities": [
-                "mint"
-              ],
-              "capSemantics": {
-                "kind": "unbounded",
-                "bound": null
-              },
-              "claimImpairment": "unbounded",
-              "economicLossScope": "global-claim",
-              "unavoidableDelaySec": 0,
-              "activation": "active",
-              "affectedLiabilityIds": [
-                "rlusd-ripple"
-              ],
-              "affectedDeployments": [
-                "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
-              "reach": "root",
-              "controlRefs": [
-                "signer-config"
-              ],
-              "reactivationRefs": [],
-              "permissionChangeRefs": [
-                "signer-config"
-              ],
-              "upgradeRefs": [],
-              "bypassRefs": []
-            },
-            {
-              "id": "signer-config",
+              "id": "maximal-execution",
               "targetDeployment": "base:0x9b8a83e875023c3fefd8354044e011d8bc847a34",
               "entrypointKind": "evm-selector",
               "entrypoints": [
-                "0x7460837f"
+                "0x11858c7a"
               ],
               "callMode": "call",
               "capabilities": [
+                "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
                 "parameter-change"
               ],
               "capSemantics": {
@@ -995,15 +962,37 @@
               "affectedLiabilityIds": [
                 "rlusd-ripple"
               ],
-              "affectedDeployments": [
-                "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
+              "affectedDeployments": [],
               "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
-              "bypassRefs": []
+              "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "base:0x9b8a83e875023c3fefd8354044e011d8bc847a34",
+                "executorDeployment": "base:0x9b8a83e875023c3fefd8354044e011d8bc847a34",
+                "sourceDeployment": "base:0x9b8a83e875023c3fefd8354044e011d8bc847a34",
+                "targets": "any-contract",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "52183926",
+                  "hash": "0x31bd474ff9fb6d865cc3383747b3cc0f35921cf0ce1f6c761efccac81c40d004",
+                  "runtimeIdentity": "sha256:9d04dd2daa5bb61a47546503fefcf3cbadaaec9698ce43a58b4e5f2bd4fc9fbb",
+                  "signerIdentity": "sha256:628414319f4de6ce46027bb2381263e4944a0cca9bbeb228a1eefa99f3903827"
+                },
+                "sourceRuntimeIdentity": "sha256:9d04dd2daa5bb61a47546503fefcf3cbadaaec9698ce43a58b4e5f2bd4fc9fbb",
+                "observedSourceRuntimeIdentity": "sha256:9d04dd2daa5bb61a47546503fefcf3cbadaaec9698ce43a58b4e5f2bd4fc9fbb",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://base.blockscout.com/api/v2/smart-contracts/0x9b8a83e875023c3fefd8354044e011d8bc847a34",
+                  "location": "src/contracts/MultiSign.sol:execute and setSigners; signed arbitrary destination.call(data), self-call-only signer changes, no target/selector allowlist or executor delay"
+                }
+              }
             }
           ]
         },
@@ -1050,11 +1039,11 @@
         ],
         "executionScope": {
           "controllerDeployment": "base:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-04",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
-          "confidence": "partial",
+          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -1071,42 +1060,52 @@
             {
               "label": "base current RLUSD implementation",
               "url": "https://base.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            },
+            {
+              "label": "Re-verified arbitrary MultiSign executor source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9"
             }
           ],
           "pin": {
-            "position": "52043057",
-            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "position": "52183926",
+            "hash": "0x31bd474ff9fb6d865cc3383747b3cc0f35921cf0ce1f6c761efccac81c40d004",
             "runtimeIdentity": "sha256:1d19a0427fc0e76b7c9acec4b9b8d197e29fff8bd4f27d99fd6a658093c32f07",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "52043057",
-            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "position": "52183926",
+            "hash": "0x31bd474ff9fb6d865cc3383747b3cc0f35921cf0ce1f6c761efccac81c40d004",
             "runtimeIdentity": "sha256:1d19a0427fc0e76b7c9acec4b9b8d197e29fff8bd4f27d99fd6a658093c32f07",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
-              "id": "native-authority",
-              "targetDeployment": "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+              "id": "maximal-execution",
+              "targetDeployment": "base:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
               "entrypointKind": "evm-selector",
               "entrypoints": [
-                "0x2f2ff15d",
-                "0xd547741f"
+                "0x11858c7a"
               ],
               "callMode": "call",
               "capabilities": [
                 "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
                 "parameter-change"
               ],
               "capSemantics": {
@@ -1120,51 +1119,37 @@
               "affectedLiabilityIds": [
                 "rlusd-ripple"
               ],
-              "affectedDeployments": [
-                "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
-              "reach": "root",
-              "controlRefs": [
-                "signer-config"
-              ],
-              "reactivationRefs": [],
-              "permissionChangeRefs": [
-                "signer-config"
-              ],
-              "upgradeRefs": [],
-              "bypassRefs": []
-            },
-            {
-              "id": "signer-config",
-              "targetDeployment": "base:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
-              "entrypointKind": "evm-selector",
-              "entrypoints": [
-                "0x7460837f"
-              ],
-              "callMode": "call",
-              "capabilities": [
-                "parameter-change"
-              ],
-              "capSemantics": {
-                "kind": "unbounded",
-                "bound": null
-              },
-              "claimImpairment": "unbounded",
-              "economicLossScope": "global-claim",
-              "unavoidableDelaySec": 0,
-              "activation": "active",
-              "affectedLiabilityIds": [
-                "rlusd-ripple"
-              ],
-              "affectedDeployments": [
-                "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
+              "affectedDeployments": [],
               "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
-              "bypassRefs": []
+              "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "base:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+                "executorDeployment": "base:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+                "sourceDeployment": "base:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+                "targets": "any-contract",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "52183926",
+                  "hash": "0x31bd474ff9fb6d865cc3383747b3cc0f35921cf0ce1f6c761efccac81c40d004",
+                  "runtimeIdentity": "sha256:1d19a0427fc0e76b7c9acec4b9b8d197e29fff8bd4f27d99fd6a658093c32f07",
+                  "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+                },
+                "sourceRuntimeIdentity": "sha256:1d19a0427fc0e76b7c9acec4b9b8d197e29fff8bd4f27d99fd6a658093c32f07",
+                "observedSourceRuntimeIdentity": "sha256:1d19a0427fc0e76b7c9acec4b9b8d197e29fff8bd4f27d99fd6a658093c32f07",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://base.blockscout.com/api/v2/smart-contracts/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+                  "location": "src/contracts/MultiSign.sol:execute and setSigners; signed arbitrary destination.call(data), self-call-only signer changes, no target/selector allowlist or executor delay"
+                }
+              }
             }
           ]
         },
@@ -1288,11 +1273,11 @@
         ],
         "executionScope": {
           "controllerDeployment": "base:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-04",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
-          "confidence": "partial",
+          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -1309,77 +1294,52 @@
             {
               "label": "base current RLUSD implementation",
               "url": "https://base.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            },
+            {
+              "label": "Re-verified arbitrary MultiSign executor source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
             }
           ],
           "pin": {
-            "position": "52043057",
-            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "position": "52183926",
+            "hash": "0x31bd474ff9fb6d865cc3383747b3cc0f35921cf0ce1f6c761efccac81c40d004",
             "runtimeIdentity": "sha256:b71cc8ff4396e6cfa40ddd5a8c3bfd2ba090ad203c515c716bd5981358a039ea",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "52043057",
-            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "position": "52183926",
+            "hash": "0x31bd474ff9fb6d865cc3383747b3cc0f35921cf0ce1f6c761efccac81c40d004",
             "runtimeIdentity": "sha256:b71cc8ff4396e6cfa40ddd5a8c3bfd2ba090ad203c515c716bd5981358a039ea",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
-              "id": "native-authority",
-              "targetDeployment": "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+              "id": "maximal-execution",
+              "targetDeployment": "base:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
               "entrypointKind": "evm-selector",
               "entrypoints": [
-                "0x4f1ef286"
+                "0x11858c7a"
               ],
               "callMode": "call",
               "capabilities": [
                 "mint",
-                "upgrade"
-              ],
-              "capSemantics": {
-                "kind": "unbounded",
-                "bound": null
-              },
-              "claimImpairment": "unbounded",
-              "economicLossScope": "global-claim",
-              "unavoidableDelaySec": 0,
-              "activation": "active",
-              "affectedLiabilityIds": [
-                "rlusd-ripple"
-              ],
-              "affectedDeployments": [
-                "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
-              "reach": "root",
-              "controlRefs": [
-                "signer-config"
-              ],
-              "reactivationRefs": [],
-              "permissionChangeRefs": [
-                "signer-config"
-              ],
-              "upgradeRefs": [],
-              "bypassRefs": []
-            },
-            {
-              "id": "signer-config",
-              "targetDeployment": "base:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
-              "entrypointKind": "evm-selector",
-              "entrypoints": [
-                "0x7460837f"
-              ],
-              "callMode": "call",
-              "capabilities": [
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
                 "parameter-change"
               ],
               "capSemantics": {
@@ -1393,15 +1353,37 @@
               "affectedLiabilityIds": [
                 "rlusd-ripple"
               ],
-              "affectedDeployments": [
-                "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
+              "affectedDeployments": [],
               "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
-              "bypassRefs": []
+              "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "base:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+                "executorDeployment": "base:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+                "sourceDeployment": "base:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+                "targets": "any-contract",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "52183926",
+                  "hash": "0x31bd474ff9fb6d865cc3383747b3cc0f35921cf0ce1f6c761efccac81c40d004",
+                  "runtimeIdentity": "sha256:b71cc8ff4396e6cfa40ddd5a8c3bfd2ba090ad203c515c716bd5981358a039ea",
+                  "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+                },
+                "sourceRuntimeIdentity": "sha256:b71cc8ff4396e6cfa40ddd5a8c3bfd2ba090ad203c515c716bd5981358a039ea",
+                "observedSourceRuntimeIdentity": "sha256:b71cc8ff4396e6cfa40ddd5a8c3bfd2ba090ad203c515c716bd5981358a039ea",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://base.blockscout.com/api/v2/smart-contracts/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+                  "location": "src/contracts/MultiSign.sol:execute and setSigners; signed arbitrary destination.call(data), self-call-only signer changes, no target/selector allowlist or executor delay"
+                }
+              }
             }
           ]
         },
@@ -1528,11 +1510,11 @@
         ],
         "executionScope": {
           "controllerDeployment": "optimism:0x6e36e38910c0145cafaa96516083c160049fe3e6",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-04",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
-          "confidence": "partial",
+          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -1549,76 +1531,52 @@
             {
               "label": "optimism current RLUSD implementation",
               "url": "https://explorer.optimism.io/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            },
+            {
+              "label": "Re-verified arbitrary MultiSign executor source",
+              "url": "https://explorer.optimism.io/api/v2/smart-contracts/0x6e36e38910c0145cafaa96516083c160049fe3e6"
             }
           ],
           "pin": {
-            "position": "157638342",
-            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "position": "157779211",
+            "hash": "0xf178bc4399e591865bcaac618dc202182cd732c2aa8cb7bade1b38107f91bbe9",
             "runtimeIdentity": "sha256:ab2950a037df73696d0783d0fb2aefc3fdfc76acf46c5ad6ef7afc177971532a",
             "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
           },
           "observedState": {
-            "position": "157638342",
-            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "position": "157779211",
+            "hash": "0xf178bc4399e591865bcaac618dc202182cd732c2aa8cb7bade1b38107f91bbe9",
             "runtimeIdentity": "sha256:ab2950a037df73696d0783d0fb2aefc3fdfc76acf46c5ad6ef7afc177971532a",
             "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
-              "id": "native-authority",
-              "targetDeployment": "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
-              "entrypointKind": "evm-selector",
-              "entrypoints": [
-                "0x40c10f19"
-              ],
-              "callMode": "call",
-              "capabilities": [
-                "mint"
-              ],
-              "capSemantics": {
-                "kind": "unbounded",
-                "bound": null
-              },
-              "claimImpairment": "unbounded",
-              "economicLossScope": "global-claim",
-              "unavoidableDelaySec": 0,
-              "activation": "active",
-              "affectedLiabilityIds": [
-                "rlusd-ripple"
-              ],
-              "affectedDeployments": [
-                "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
-              "reach": "root",
-              "controlRefs": [
-                "signer-config"
-              ],
-              "reactivationRefs": [],
-              "permissionChangeRefs": [
-                "signer-config"
-              ],
-              "upgradeRefs": [],
-              "bypassRefs": []
-            },
-            {
-              "id": "signer-config",
+              "id": "maximal-execution",
               "targetDeployment": "optimism:0x6e36e38910c0145cafaa96516083c160049fe3e6",
               "entrypointKind": "evm-selector",
               "entrypoints": [
-                "0x7460837f"
+                "0x11858c7a"
               ],
               "callMode": "call",
               "capabilities": [
+                "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
                 "parameter-change"
               ],
               "capSemantics": {
@@ -1632,15 +1590,37 @@
               "affectedLiabilityIds": [
                 "rlusd-ripple"
               ],
-              "affectedDeployments": [
-                "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
+              "affectedDeployments": [],
               "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
-              "bypassRefs": []
+              "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "optimism:0x6e36e38910c0145cafaa96516083c160049fe3e6",
+                "executorDeployment": "optimism:0x6e36e38910c0145cafaa96516083c160049fe3e6",
+                "sourceDeployment": "optimism:0x6e36e38910c0145cafaa96516083c160049fe3e6",
+                "targets": "any-contract",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "157779211",
+                  "hash": "0xf178bc4399e591865bcaac618dc202182cd732c2aa8cb7bade1b38107f91bbe9",
+                  "runtimeIdentity": "sha256:ab2950a037df73696d0783d0fb2aefc3fdfc76acf46c5ad6ef7afc177971532a",
+                  "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
+                },
+                "sourceRuntimeIdentity": "sha256:ab2950a037df73696d0783d0fb2aefc3fdfc76acf46c5ad6ef7afc177971532a",
+                "observedSourceRuntimeIdentity": "sha256:ab2950a037df73696d0783d0fb2aefc3fdfc76acf46c5ad6ef7afc177971532a",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://explorer.optimism.io/api/v2/smart-contracts/0x6e36e38910c0145cafaa96516083c160049fe3e6",
+                  "location": "src/contracts/MultiSign.sol:execute and setSigners; signed arbitrary destination.call(data), self-call-only signer changes, no target/selector allowlist or executor delay"
+                }
+              }
             }
           ]
         },
@@ -1687,11 +1667,11 @@
         ],
         "executionScope": {
           "controllerDeployment": "optimism:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-04",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
-          "confidence": "partial",
+          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -1708,42 +1688,52 @@
             {
               "label": "optimism current RLUSD implementation",
               "url": "https://explorer.optimism.io/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            },
+            {
+              "label": "Re-verified arbitrary MultiSign executor source",
+              "url": "https://explorer.optimism.io/api/v2/smart-contracts/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9"
             }
           ],
           "pin": {
-            "position": "157638342",
-            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "position": "157779211",
+            "hash": "0xf178bc4399e591865bcaac618dc202182cd732c2aa8cb7bade1b38107f91bbe9",
             "runtimeIdentity": "sha256:0c16118ed74f9ae68306505d21ad07a5265e313e5aed0e5f3993dbd81b7d6ac5",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "157638342",
-            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "position": "157779211",
+            "hash": "0xf178bc4399e591865bcaac618dc202182cd732c2aa8cb7bade1b38107f91bbe9",
             "runtimeIdentity": "sha256:0c16118ed74f9ae68306505d21ad07a5265e313e5aed0e5f3993dbd81b7d6ac5",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
-              "id": "native-authority",
-              "targetDeployment": "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+              "id": "maximal-execution",
+              "targetDeployment": "optimism:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
               "entrypointKind": "evm-selector",
               "entrypoints": [
-                "0x2f2ff15d",
-                "0xd547741f"
+                "0x11858c7a"
               ],
               "callMode": "call",
               "capabilities": [
                 "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
                 "parameter-change"
               ],
               "capSemantics": {
@@ -1757,51 +1747,37 @@
               "affectedLiabilityIds": [
                 "rlusd-ripple"
               ],
-              "affectedDeployments": [
-                "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
-              "reach": "root",
-              "controlRefs": [
-                "signer-config"
-              ],
-              "reactivationRefs": [],
-              "permissionChangeRefs": [
-                "signer-config"
-              ],
-              "upgradeRefs": [],
-              "bypassRefs": []
-            },
-            {
-              "id": "signer-config",
-              "targetDeployment": "optimism:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
-              "entrypointKind": "evm-selector",
-              "entrypoints": [
-                "0x7460837f"
-              ],
-              "callMode": "call",
-              "capabilities": [
-                "parameter-change"
-              ],
-              "capSemantics": {
-                "kind": "unbounded",
-                "bound": null
-              },
-              "claimImpairment": "unbounded",
-              "economicLossScope": "global-claim",
-              "unavoidableDelaySec": 0,
-              "activation": "active",
-              "affectedLiabilityIds": [
-                "rlusd-ripple"
-              ],
-              "affectedDeployments": [
-                "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
+              "affectedDeployments": [],
               "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
-              "bypassRefs": []
+              "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "optimism:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+                "executorDeployment": "optimism:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+                "sourceDeployment": "optimism:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+                "targets": "any-contract",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "157779211",
+                  "hash": "0xf178bc4399e591865bcaac618dc202182cd732c2aa8cb7bade1b38107f91bbe9",
+                  "runtimeIdentity": "sha256:0c16118ed74f9ae68306505d21ad07a5265e313e5aed0e5f3993dbd81b7d6ac5",
+                  "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+                },
+                "sourceRuntimeIdentity": "sha256:0c16118ed74f9ae68306505d21ad07a5265e313e5aed0e5f3993dbd81b7d6ac5",
+                "observedSourceRuntimeIdentity": "sha256:0c16118ed74f9ae68306505d21ad07a5265e313e5aed0e5f3993dbd81b7d6ac5",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://explorer.optimism.io/api/v2/smart-contracts/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+                  "location": "src/contracts/MultiSign.sol:execute and setSigners; signed arbitrary destination.call(data), self-call-only signer changes, no target/selector allowlist or executor delay"
+                }
+              }
             }
           ]
         },
@@ -1925,11 +1901,11 @@
         ],
         "executionScope": {
           "controllerDeployment": "optimism:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-04",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
-          "confidence": "partial",
+          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -1946,77 +1922,52 @@
             {
               "label": "optimism current RLUSD implementation",
               "url": "https://explorer.optimism.io/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            },
+            {
+              "label": "Re-verified arbitrary MultiSign executor source",
+              "url": "https://explorer.optimism.io/api/v2/smart-contracts/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
             }
           ],
           "pin": {
-            "position": "157638342",
-            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "position": "157779211",
+            "hash": "0xf178bc4399e591865bcaac618dc202182cd732c2aa8cb7bade1b38107f91bbe9",
             "runtimeIdentity": "sha256:3dea8b1b7940ad2e487119c3510589e95c9bd26bec54812615ac7980bbf75653",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "157638342",
-            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "position": "157779211",
+            "hash": "0xf178bc4399e591865bcaac618dc202182cd732c2aa8cb7bade1b38107f91bbe9",
             "runtimeIdentity": "sha256:3dea8b1b7940ad2e487119c3510589e95c9bd26bec54812615ac7980bbf75653",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
-              "id": "native-authority",
-              "targetDeployment": "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+              "id": "maximal-execution",
+              "targetDeployment": "optimism:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
               "entrypointKind": "evm-selector",
               "entrypoints": [
-                "0x4f1ef286"
+                "0x11858c7a"
               ],
               "callMode": "call",
               "capabilities": [
                 "mint",
-                "upgrade"
-              ],
-              "capSemantics": {
-                "kind": "unbounded",
-                "bound": null
-              },
-              "claimImpairment": "unbounded",
-              "economicLossScope": "global-claim",
-              "unavoidableDelaySec": 0,
-              "activation": "active",
-              "affectedLiabilityIds": [
-                "rlusd-ripple"
-              ],
-              "affectedDeployments": [
-                "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
-              "reach": "root",
-              "controlRefs": [
-                "signer-config"
-              ],
-              "reactivationRefs": [],
-              "permissionChangeRefs": [
-                "signer-config"
-              ],
-              "upgradeRefs": [],
-              "bypassRefs": []
-            },
-            {
-              "id": "signer-config",
-              "targetDeployment": "optimism:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
-              "entrypointKind": "evm-selector",
-              "entrypoints": [
-                "0x7460837f"
-              ],
-              "callMode": "call",
-              "capabilities": [
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
                 "parameter-change"
               ],
               "capSemantics": {
@@ -2030,15 +1981,37 @@
               "affectedLiabilityIds": [
                 "rlusd-ripple"
               ],
-              "affectedDeployments": [
-                "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
+              "affectedDeployments": [],
               "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
-              "bypassRefs": []
+              "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "optimism:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+                "executorDeployment": "optimism:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+                "sourceDeployment": "optimism:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+                "targets": "any-contract",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "157779211",
+                  "hash": "0xf178bc4399e591865bcaac618dc202182cd732c2aa8cb7bade1b38107f91bbe9",
+                  "runtimeIdentity": "sha256:3dea8b1b7940ad2e487119c3510589e95c9bd26bec54812615ac7980bbf75653",
+                  "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+                },
+                "sourceRuntimeIdentity": "sha256:3dea8b1b7940ad2e487119c3510589e95c9bd26bec54812615ac7980bbf75653",
+                "observedSourceRuntimeIdentity": "sha256:3dea8b1b7940ad2e487119c3510589e95c9bd26bec54812615ac7980bbf75653",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://explorer.optimism.io/api/v2/smart-contracts/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+                  "location": "src/contracts/MultiSign.sol:execute and setSigners; signed arbitrary destination.call(data), self-call-only signer changes, no target/selector allowlist or executor delay"
+                }
+              }
             }
           ]
         },
@@ -2165,11 +2138,11 @@
         ],
         "executionScope": {
           "controllerDeployment": "ink:0xa2eea193444b16fe2d18cfe977aceeea6dd9c367",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-04",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
-          "confidence": "partial",
+          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -2186,76 +2159,52 @@
             {
               "label": "ink current RLUSD implementation",
               "url": "https://explorer.inkonchain.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            },
+            {
+              "label": "Re-verified arbitrary MultiSign executor source",
+              "url": "https://explorer.inkonchain.com/api/v2/smart-contracts/0xa2eea193444b16fe2d18cfe977aceeea6dd9c367"
             }
           ],
           "pin": {
-            "position": "57377051",
-            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "position": "57658788",
+            "hash": "0x9e7e5e2c947062d671ffdc32ad47f59712934d81274f65483e12bcd1301e78ef",
             "runtimeIdentity": "sha256:5705705405fefa4e3a6b00d33211ef59504dfac938ed2d6938ab8f7927e6dd0b",
             "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
           },
           "observedState": {
-            "position": "57377051",
-            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "position": "57658788",
+            "hash": "0x9e7e5e2c947062d671ffdc32ad47f59712934d81274f65483e12bcd1301e78ef",
             "runtimeIdentity": "sha256:5705705405fefa4e3a6b00d33211ef59504dfac938ed2d6938ab8f7927e6dd0b",
             "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
-              "id": "native-authority",
-              "targetDeployment": "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
-              "entrypointKind": "evm-selector",
-              "entrypoints": [
-                "0x40c10f19"
-              ],
-              "callMode": "call",
-              "capabilities": [
-                "mint"
-              ],
-              "capSemantics": {
-                "kind": "unbounded",
-                "bound": null
-              },
-              "claimImpairment": "unbounded",
-              "economicLossScope": "global-claim",
-              "unavoidableDelaySec": 0,
-              "activation": "active",
-              "affectedLiabilityIds": [
-                "rlusd-ripple"
-              ],
-              "affectedDeployments": [
-                "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
-              "reach": "root",
-              "controlRefs": [
-                "signer-config"
-              ],
-              "reactivationRefs": [],
-              "permissionChangeRefs": [
-                "signer-config"
-              ],
-              "upgradeRefs": [],
-              "bypassRefs": []
-            },
-            {
-              "id": "signer-config",
+              "id": "maximal-execution",
               "targetDeployment": "ink:0xa2eea193444b16fe2d18cfe977aceeea6dd9c367",
               "entrypointKind": "evm-selector",
               "entrypoints": [
-                "0x7460837f"
+                "0x11858c7a"
               ],
               "callMode": "call",
               "capabilities": [
+                "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
                 "parameter-change"
               ],
               "capSemantics": {
@@ -2269,15 +2218,37 @@
               "affectedLiabilityIds": [
                 "rlusd-ripple"
               ],
-              "affectedDeployments": [
-                "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
+              "affectedDeployments": [],
               "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
-              "bypassRefs": []
+              "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "ink:0xa2eea193444b16fe2d18cfe977aceeea6dd9c367",
+                "executorDeployment": "ink:0xa2eea193444b16fe2d18cfe977aceeea6dd9c367",
+                "sourceDeployment": "ink:0xa2eea193444b16fe2d18cfe977aceeea6dd9c367",
+                "targets": "any-contract",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "57658788",
+                  "hash": "0x9e7e5e2c947062d671ffdc32ad47f59712934d81274f65483e12bcd1301e78ef",
+                  "runtimeIdentity": "sha256:5705705405fefa4e3a6b00d33211ef59504dfac938ed2d6938ab8f7927e6dd0b",
+                  "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
+                },
+                "sourceRuntimeIdentity": "sha256:5705705405fefa4e3a6b00d33211ef59504dfac938ed2d6938ab8f7927e6dd0b",
+                "observedSourceRuntimeIdentity": "sha256:5705705405fefa4e3a6b00d33211ef59504dfac938ed2d6938ab8f7927e6dd0b",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://explorer.inkonchain.com/api/v2/smart-contracts/0xa2eea193444b16fe2d18cfe977aceeea6dd9c367",
+                  "location": "src/contracts/MultiSign.sol:execute and setSigners; signed arbitrary destination.call(data), self-call-only signer changes, no target/selector allowlist or executor delay"
+                }
+              }
             }
           ]
         },
@@ -2324,11 +2295,11 @@
         ],
         "executionScope": {
           "controllerDeployment": "ink:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-04",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
-          "confidence": "partial",
+          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -2345,42 +2316,52 @@
             {
               "label": "ink current RLUSD implementation",
               "url": "https://explorer.inkonchain.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            },
+            {
+              "label": "Re-verified arbitrary MultiSign executor source",
+              "url": "https://explorer.inkonchain.com/api/v2/smart-contracts/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9"
             }
           ],
           "pin": {
-            "position": "57377051",
-            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "position": "57658788",
+            "hash": "0x9e7e5e2c947062d671ffdc32ad47f59712934d81274f65483e12bcd1301e78ef",
             "runtimeIdentity": "sha256:914d976ae5efab2a882bfe52dac7e11587aa8fb313f7d75c633a5d4cbbf1dafe",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "57377051",
-            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "position": "57658788",
+            "hash": "0x9e7e5e2c947062d671ffdc32ad47f59712934d81274f65483e12bcd1301e78ef",
             "runtimeIdentity": "sha256:914d976ae5efab2a882bfe52dac7e11587aa8fb313f7d75c633a5d4cbbf1dafe",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
-              "id": "native-authority",
-              "targetDeployment": "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+              "id": "maximal-execution",
+              "targetDeployment": "ink:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
               "entrypointKind": "evm-selector",
               "entrypoints": [
-                "0x2f2ff15d",
-                "0xd547741f"
+                "0x11858c7a"
               ],
               "callMode": "call",
               "capabilities": [
                 "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
                 "parameter-change"
               ],
               "capSemantics": {
@@ -2394,51 +2375,37 @@
               "affectedLiabilityIds": [
                 "rlusd-ripple"
               ],
-              "affectedDeployments": [
-                "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
-              "reach": "root",
-              "controlRefs": [
-                "signer-config"
-              ],
-              "reactivationRefs": [],
-              "permissionChangeRefs": [
-                "signer-config"
-              ],
-              "upgradeRefs": [],
-              "bypassRefs": []
-            },
-            {
-              "id": "signer-config",
-              "targetDeployment": "ink:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
-              "entrypointKind": "evm-selector",
-              "entrypoints": [
-                "0x7460837f"
-              ],
-              "callMode": "call",
-              "capabilities": [
-                "parameter-change"
-              ],
-              "capSemantics": {
-                "kind": "unbounded",
-                "bound": null
-              },
-              "claimImpairment": "unbounded",
-              "economicLossScope": "global-claim",
-              "unavoidableDelaySec": 0,
-              "activation": "active",
-              "affectedLiabilityIds": [
-                "rlusd-ripple"
-              ],
-              "affectedDeployments": [
-                "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
+              "affectedDeployments": [],
               "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
-              "bypassRefs": []
+              "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "ink:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+                "executorDeployment": "ink:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+                "sourceDeployment": "ink:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+                "targets": "any-contract",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "57658788",
+                  "hash": "0x9e7e5e2c947062d671ffdc32ad47f59712934d81274f65483e12bcd1301e78ef",
+                  "runtimeIdentity": "sha256:914d976ae5efab2a882bfe52dac7e11587aa8fb313f7d75c633a5d4cbbf1dafe",
+                  "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+                },
+                "sourceRuntimeIdentity": "sha256:914d976ae5efab2a882bfe52dac7e11587aa8fb313f7d75c633a5d4cbbf1dafe",
+                "observedSourceRuntimeIdentity": "sha256:914d976ae5efab2a882bfe52dac7e11587aa8fb313f7d75c633a5d4cbbf1dafe",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://explorer.inkonchain.com/api/v2/smart-contracts/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+                  "location": "src/contracts/MultiSign.sol:execute and setSigners; signed arbitrary destination.call(data), self-call-only signer changes, no target/selector allowlist or executor delay"
+                }
+              }
             }
           ]
         },
@@ -2562,11 +2529,11 @@
         ],
         "executionScope": {
           "controllerDeployment": "ink:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-04",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
-          "confidence": "partial",
+          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -2583,77 +2550,52 @@
             {
               "label": "ink current RLUSD implementation",
               "url": "https://explorer.inkonchain.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            },
+            {
+              "label": "Re-verified arbitrary MultiSign executor source",
+              "url": "https://explorer.inkonchain.com/api/v2/smart-contracts/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
             }
           ],
           "pin": {
-            "position": "57377051",
-            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "position": "57658788",
+            "hash": "0x9e7e5e2c947062d671ffdc32ad47f59712934d81274f65483e12bcd1301e78ef",
             "runtimeIdentity": "sha256:bc4b0b5ba33262221bbee1eecd1dc691f77e7c26db7e48f54eed809eb4596181",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "57377051",
-            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "position": "57658788",
+            "hash": "0x9e7e5e2c947062d671ffdc32ad47f59712934d81274f65483e12bcd1301e78ef",
             "runtimeIdentity": "sha256:bc4b0b5ba33262221bbee1eecd1dc691f77e7c26db7e48f54eed809eb4596181",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
-              "id": "native-authority",
-              "targetDeployment": "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+              "id": "maximal-execution",
+              "targetDeployment": "ink:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
               "entrypointKind": "evm-selector",
               "entrypoints": [
-                "0x4f1ef286"
+                "0x11858c7a"
               ],
               "callMode": "call",
               "capabilities": [
                 "mint",
-                "upgrade"
-              ],
-              "capSemantics": {
-                "kind": "unbounded",
-                "bound": null
-              },
-              "claimImpairment": "unbounded",
-              "economicLossScope": "global-claim",
-              "unavoidableDelaySec": 0,
-              "activation": "active",
-              "affectedLiabilityIds": [
-                "rlusd-ripple"
-              ],
-              "affectedDeployments": [
-                "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
-              "reach": "root",
-              "controlRefs": [
-                "signer-config"
-              ],
-              "reactivationRefs": [],
-              "permissionChangeRefs": [
-                "signer-config"
-              ],
-              "upgradeRefs": [],
-              "bypassRefs": []
-            },
-            {
-              "id": "signer-config",
-              "targetDeployment": "ink:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
-              "entrypointKind": "evm-selector",
-              "entrypoints": [
-                "0x7460837f"
-              ],
-              "callMode": "call",
-              "capabilities": [
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
                 "parameter-change"
               ],
               "capSemantics": {
@@ -2667,15 +2609,37 @@
               "affectedLiabilityIds": [
                 "rlusd-ripple"
               ],
-              "affectedDeployments": [
-                "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
+              "affectedDeployments": [],
               "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
-              "bypassRefs": []
+              "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "ink:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+                "executorDeployment": "ink:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+                "sourceDeployment": "ink:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+                "targets": "any-contract",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "57658788",
+                  "hash": "0x9e7e5e2c947062d671ffdc32ad47f59712934d81274f65483e12bcd1301e78ef",
+                  "runtimeIdentity": "sha256:bc4b0b5ba33262221bbee1eecd1dc691f77e7c26db7e48f54eed809eb4596181",
+                  "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+                },
+                "sourceRuntimeIdentity": "sha256:bc4b0b5ba33262221bbee1eecd1dc691f77e7c26db7e48f54eed809eb4596181",
+                "observedSourceRuntimeIdentity": "sha256:bc4b0b5ba33262221bbee1eecd1dc691f77e7c26db7e48f54eed809eb4596181",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://explorer.inkonchain.com/api/v2/smart-contracts/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+                  "location": "src/contracts/MultiSign.sol:execute and setSigners; signed arbitrary destination.call(data), self-call-only signer changes, no target/selector allowlist or executor delay"
+                }
+              }
             }
           ]
         },
@@ -2802,11 +2766,11 @@
         ],
         "executionScope": {
           "controllerDeployment": "unichain:0x866eb2f5c483fa525137f982c2be220aa096918c",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-04",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
-          "confidence": "partial",
+          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -2823,76 +2787,52 @@
             {
               "label": "unichain current RLUSD implementation",
               "url": "https://unichain.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            },
+            {
+              "label": "Re-verified arbitrary MultiSign executor source",
+              "url": "https://unichain.blockscout.com/api/v2/smart-contracts/0x866eb2f5c483fa525137f982c2be220aa096918c"
             }
           ],
           "pin": {
-            "position": "60127103",
-            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "position": "60408838",
+            "hash": "0x40915d008c8bb61878a0cd1822b9fdcea9ceb553ebab263fef012a13fa917e50",
             "runtimeIdentity": "sha256:4c0c846d4dd5c750454037012a3ecd7ff8e8bdab51e9c23fe76041b02f8d6854",
             "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
           },
           "observedState": {
-            "position": "60127103",
-            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "position": "60408838",
+            "hash": "0x40915d008c8bb61878a0cd1822b9fdcea9ceb553ebab263fef012a13fa917e50",
             "runtimeIdentity": "sha256:4c0c846d4dd5c750454037012a3ecd7ff8e8bdab51e9c23fe76041b02f8d6854",
             "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
-              "id": "native-authority",
-              "targetDeployment": "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
-              "entrypointKind": "evm-selector",
-              "entrypoints": [
-                "0x40c10f19"
-              ],
-              "callMode": "call",
-              "capabilities": [
-                "mint"
-              ],
-              "capSemantics": {
-                "kind": "unbounded",
-                "bound": null
-              },
-              "claimImpairment": "unbounded",
-              "economicLossScope": "global-claim",
-              "unavoidableDelaySec": 0,
-              "activation": "active",
-              "affectedLiabilityIds": [
-                "rlusd-ripple"
-              ],
-              "affectedDeployments": [
-                "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
-              "reach": "root",
-              "controlRefs": [
-                "signer-config"
-              ],
-              "reactivationRefs": [],
-              "permissionChangeRefs": [
-                "signer-config"
-              ],
-              "upgradeRefs": [],
-              "bypassRefs": []
-            },
-            {
-              "id": "signer-config",
+              "id": "maximal-execution",
               "targetDeployment": "unichain:0x866eb2f5c483fa525137f982c2be220aa096918c",
               "entrypointKind": "evm-selector",
               "entrypoints": [
-                "0x7460837f"
+                "0x11858c7a"
               ],
               "callMode": "call",
               "capabilities": [
+                "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
                 "parameter-change"
               ],
               "capSemantics": {
@@ -2906,15 +2846,37 @@
               "affectedLiabilityIds": [
                 "rlusd-ripple"
               ],
-              "affectedDeployments": [
-                "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
+              "affectedDeployments": [],
               "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
-              "bypassRefs": []
+              "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "unichain:0x866eb2f5c483fa525137f982c2be220aa096918c",
+                "executorDeployment": "unichain:0x866eb2f5c483fa525137f982c2be220aa096918c",
+                "sourceDeployment": "unichain:0x866eb2f5c483fa525137f982c2be220aa096918c",
+                "targets": "any-contract",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "60408838",
+                  "hash": "0x40915d008c8bb61878a0cd1822b9fdcea9ceb553ebab263fef012a13fa917e50",
+                  "runtimeIdentity": "sha256:4c0c846d4dd5c750454037012a3ecd7ff8e8bdab51e9c23fe76041b02f8d6854",
+                  "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
+                },
+                "sourceRuntimeIdentity": "sha256:4c0c846d4dd5c750454037012a3ecd7ff8e8bdab51e9c23fe76041b02f8d6854",
+                "observedSourceRuntimeIdentity": "sha256:4c0c846d4dd5c750454037012a3ecd7ff8e8bdab51e9c23fe76041b02f8d6854",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://unichain.blockscout.com/api/v2/smart-contracts/0x866eb2f5c483fa525137f982c2be220aa096918c",
+                  "location": "src/contracts/MultiSign.sol:execute and setSigners; signed arbitrary destination.call(data), self-call-only signer changes, no target/selector allowlist or executor delay"
+                }
+              }
             }
           ]
         },
@@ -2961,11 +2923,11 @@
         ],
         "executionScope": {
           "controllerDeployment": "unichain:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-04",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
-          "confidence": "partial",
+          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -2982,42 +2944,52 @@
             {
               "label": "unichain current RLUSD implementation",
               "url": "https://unichain.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            },
+            {
+              "label": "Re-verified arbitrary MultiSign executor source",
+              "url": "https://unichain.blockscout.com/api/v2/smart-contracts/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9"
             }
           ],
           "pin": {
-            "position": "60127103",
-            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "position": "60408838",
+            "hash": "0x40915d008c8bb61878a0cd1822b9fdcea9ceb553ebab263fef012a13fa917e50",
             "runtimeIdentity": "sha256:076a4010515657f356ea878e68f30b62168b4981d8efcb5faec4804a142c5544",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "60127103",
-            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "position": "60408838",
+            "hash": "0x40915d008c8bb61878a0cd1822b9fdcea9ceb553ebab263fef012a13fa917e50",
             "runtimeIdentity": "sha256:076a4010515657f356ea878e68f30b62168b4981d8efcb5faec4804a142c5544",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
-              "id": "native-authority",
-              "targetDeployment": "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+              "id": "maximal-execution",
+              "targetDeployment": "unichain:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
               "entrypointKind": "evm-selector",
               "entrypoints": [
-                "0x2f2ff15d",
-                "0xd547741f"
+                "0x11858c7a"
               ],
               "callMode": "call",
               "capabilities": [
                 "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
                 "parameter-change"
               ],
               "capSemantics": {
@@ -3031,51 +3003,37 @@
               "affectedLiabilityIds": [
                 "rlusd-ripple"
               ],
-              "affectedDeployments": [
-                "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
-              "reach": "root",
-              "controlRefs": [
-                "signer-config"
-              ],
-              "reactivationRefs": [],
-              "permissionChangeRefs": [
-                "signer-config"
-              ],
-              "upgradeRefs": [],
-              "bypassRefs": []
-            },
-            {
-              "id": "signer-config",
-              "targetDeployment": "unichain:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
-              "entrypointKind": "evm-selector",
-              "entrypoints": [
-                "0x7460837f"
-              ],
-              "callMode": "call",
-              "capabilities": [
-                "parameter-change"
-              ],
-              "capSemantics": {
-                "kind": "unbounded",
-                "bound": null
-              },
-              "claimImpairment": "unbounded",
-              "economicLossScope": "global-claim",
-              "unavoidableDelaySec": 0,
-              "activation": "active",
-              "affectedLiabilityIds": [
-                "rlusd-ripple"
-              ],
-              "affectedDeployments": [
-                "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
+              "affectedDeployments": [],
               "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
-              "bypassRefs": []
+              "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "unichain:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+                "executorDeployment": "unichain:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+                "sourceDeployment": "unichain:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+                "targets": "any-contract",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "60408838",
+                  "hash": "0x40915d008c8bb61878a0cd1822b9fdcea9ceb553ebab263fef012a13fa917e50",
+                  "runtimeIdentity": "sha256:076a4010515657f356ea878e68f30b62168b4981d8efcb5faec4804a142c5544",
+                  "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+                },
+                "sourceRuntimeIdentity": "sha256:076a4010515657f356ea878e68f30b62168b4981d8efcb5faec4804a142c5544",
+                "observedSourceRuntimeIdentity": "sha256:076a4010515657f356ea878e68f30b62168b4981d8efcb5faec4804a142c5544",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://unichain.blockscout.com/api/v2/smart-contracts/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+                  "location": "src/contracts/MultiSign.sol:execute and setSigners; signed arbitrary destination.call(data), self-call-only signer changes, no target/selector allowlist or executor delay"
+                }
+              }
             }
           ]
         },
@@ -3199,11 +3157,11 @@
         ],
         "executionScope": {
           "controllerDeployment": "unichain:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-04",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
-          "confidence": "partial",
+          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -3220,77 +3178,52 @@
             {
               "label": "unichain current RLUSD implementation",
               "url": "https://unichain.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            },
+            {
+              "label": "Re-verified arbitrary MultiSign executor source",
+              "url": "https://unichain.blockscout.com/api/v2/smart-contracts/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
             }
           ],
           "pin": {
-            "position": "60127103",
-            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "position": "60408838",
+            "hash": "0x40915d008c8bb61878a0cd1822b9fdcea9ceb553ebab263fef012a13fa917e50",
             "runtimeIdentity": "sha256:d5a0cf89d7bb96ad7a38785d205db3c2de28b58cacf4ef2fa9473185310f2c15",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "60127103",
-            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "position": "60408838",
+            "hash": "0x40915d008c8bb61878a0cd1822b9fdcea9ceb553ebab263fef012a13fa917e50",
             "runtimeIdentity": "sha256:d5a0cf89d7bb96ad7a38785d205db3c2de28b58cacf4ef2fa9473185310f2c15",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
-              "id": "native-authority",
-              "targetDeployment": "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+              "id": "maximal-execution",
+              "targetDeployment": "unichain:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
               "entrypointKind": "evm-selector",
               "entrypoints": [
-                "0x4f1ef286"
+                "0x11858c7a"
               ],
               "callMode": "call",
               "capabilities": [
                 "mint",
-                "upgrade"
-              ],
-              "capSemantics": {
-                "kind": "unbounded",
-                "bound": null
-              },
-              "claimImpairment": "unbounded",
-              "economicLossScope": "global-claim",
-              "unavoidableDelaySec": 0,
-              "activation": "active",
-              "affectedLiabilityIds": [
-                "rlusd-ripple"
-              ],
-              "affectedDeployments": [
-                "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
-              "reach": "root",
-              "controlRefs": [
-                "signer-config"
-              ],
-              "reactivationRefs": [],
-              "permissionChangeRefs": [
-                "signer-config"
-              ],
-              "upgradeRefs": [],
-              "bypassRefs": []
-            },
-            {
-              "id": "signer-config",
-              "targetDeployment": "unichain:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
-              "entrypointKind": "evm-selector",
-              "entrypoints": [
-                "0x7460837f"
-              ],
-              "callMode": "call",
-              "capabilities": [
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
                 "parameter-change"
               ],
               "capSemantics": {
@@ -3304,15 +3237,37 @@
               "affectedLiabilityIds": [
                 "rlusd-ripple"
               ],
-              "affectedDeployments": [
-                "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
-              ],
+              "affectedDeployments": [],
               "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
-              "bypassRefs": []
+              "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "unichain:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+                "executorDeployment": "unichain:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+                "sourceDeployment": "unichain:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+                "targets": "any-contract",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "60408838",
+                  "hash": "0x40915d008c8bb61878a0cd1822b9fdcea9ceb553ebab263fef012a13fa917e50",
+                  "runtimeIdentity": "sha256:d5a0cf89d7bb96ad7a38785d205db3c2de28b58cacf4ef2fa9473185310f2c15",
+                  "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+                },
+                "sourceRuntimeIdentity": "sha256:d5a0cf89d7bb96ad7a38785d205db3c2de28b58cacf4ef2fa9473185310f2c15",
+                "observedSourceRuntimeIdentity": "sha256:d5a0cf89d7bb96ad7a38785d205db3c2de28b58cacf4ef2fa9473185310f2c15",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://unichain.blockscout.com/api/v2/smart-contracts/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+                  "location": "src/contracts/MultiSign.sol:execute and setSigners; signed arbitrary destination.call(data), self-call-only signer changes, no target/selector allowlist or executor delay"
+                }
+              }
             }
           ]
         },
@@ -3474,18 +3429,21 @@
         {
           "controlRef": "xrpl:rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
           "question": "The complete weighted roster establishes a minimum cryptographic signer count, but independent human or organizational controllers are not established. Obtain a key-controller attestation before treating these addresses as independent people.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol owner rulings 2026-10-01 (RuleC01)"
         },
         {
           "controlRef": "ethereum:0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e",
           "question": "The complete weighted roster establishes a minimum cryptographic signer count, but independent human or organizational controllers are not established. Obtain a key-controller attestation before treating these addresses as independent people.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol owner rulings 2026-10-01 (RuleC01)"
         },
         {
           "controlRef": "ethereum:0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
           "question": "The complete weighted roster establishes a minimum cryptographic signer count, but independent human or organizational controllers are not established. Obtain a key-controller attestation before treating these addresses as independent people.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol owner rulings 2026-10-01 (RuleC01)"
         }

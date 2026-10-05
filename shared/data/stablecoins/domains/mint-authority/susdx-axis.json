@@ -112,6 +112,7 @@
         {
           "controlRef": "Axis StakedUSDx parameter governance Safe",
           "question": "What independent signer, key-custody and recovery evidence establishes separation of this observed 3-of-5 Safe's owners? The same Safe controls immediate vault parameters and timelock proposals/execution; onchain quorum does not establish human independence.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
           "sources": [

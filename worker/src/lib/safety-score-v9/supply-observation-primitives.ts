@@ -95,6 +95,9 @@ export async function observeReviewedEvmDeployment<Identity>(input: {
   });
   const identity = input.identity(routeId);
   if (!identity) return rejectDeployment("deployment-identity-unavailable");
+  if (chainId === "tron" || chainRpcs.get(chainId)?.type === "tron") {
+    return rejectDeployment("deployment-state-unavailable");
+  }
 
   const extraRpcUrls = input.extraRpcUrls(identity, chainId);
   if (!hasRegistryRpc(getChainRpc(chainRpcs, chainId)) && (extraRpcUrls?.length ?? 0) === 0) {

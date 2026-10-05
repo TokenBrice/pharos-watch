@@ -305,6 +305,8 @@ describe("authenticated CCIP pending quantities", () => {
     const capture = economicInput(read, pending);
     capture.plan.escrows = []; capture.plan.accountingFamily = "independent-liability"; capture.plan.liabilityInFlightSource = read;
     capture.observations.pop(); capture.observations[0]!.amount = "80000000";
+    expect(deriveReviewedEconomicDeploymentPartition(capture)).toBeNull();
+    for (const route of capture.meta.bridgeRouteRisk?.routes ?? []) route.semantics = "burn-mint";
     const packet = deriveReviewedEconomicDeploymentPartition(capture);
     expect(packet?.deployments.map(row => row.currentSupplyUsd)).toEqual([80, 19]);
     expect(packet?.unattributedSupplyUsd).toBe(1);

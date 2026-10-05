@@ -28,7 +28,6 @@ import {
   withV9WmReviewedDeploymentAttribution as withWmReviewedDeploymentAttribution,
 } from "../../test-helpers/v9-fixed-input";
 import {
-  XAUT_FACT_SET_CLOCK_SEC,
   alphaMeta,
   metaMap,
   rebuildFixed,
@@ -37,6 +36,10 @@ import {
   xautFactSetFixedInput,
   xautFactSetMeta,
 } from "./safety-score-v9-fact-set.test-support";
+
+// The fixture consumes October destination reviews directly from the sidecar,
+// independently of the generated registry's older review clock.
+const XAUT_FACT_SET_CLOCK_SEC = Date.parse("2026-10-05T12:00:00Z") / 1_000;
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -122,6 +125,7 @@ const XAUT_COMMON_MODE_SIGNAL_CASES = [
 function reviewedXautGroupFixture() {
   const clockSec = XAUT_FACT_SET_CLOCK_SEC;
   const fixed = xautFactSetFixedInput({
+    clockSec,
     chainSupplyByChain: {},
     aggregateCirculating: { peggedGOLD: 2_480_000_000 },
     omitLiveReserve: true,
@@ -289,13 +293,14 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       economicLossScope: "deployment",
       materialSupplyShare: expect.closeTo(0.04849813227, 9),
       authority: {
-        authorityKey: "contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c",
+        authorityKey: "bridge-route:representation-group:xaut-tether:xaut0-omnichain",
         model: "unknown",
       },
-      failureDomains: [
+      failureDomains: expect.arrayContaining([
         { kind: "bridge-route", key: "contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c" },
         { kind: "bridge-route", key: "protocol:xaut0-omnichain" },
-      ],
+        { kind: "bridge-route", key: "contract:ton:0:024e04d3582c1609a4d20c9498de29c92f448a27f97f9b88f618d50f5728c7bd" },
+      ]),
     });
     expect(xaut.economicControlReview.bridge.status.observationState).toBe("known");
     expect(bridgeControls.some((control) =>
@@ -349,6 +354,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
   it("keeps an unattributed asset's chain supply on the fixed-input clock when another asset's packet is older", () => {
     const clockSec = XAUT_FACT_SET_CLOCK_SEC;
     const xautInput = xautFactSetFixedInput({
+      clockSec,
       chainSupplyByChain: {},
       aggregateCirculating: { peggedGOLD: 2_480_000_000 },
       omitLiveReserve: true,
@@ -409,6 +415,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
 
   it("retains missing XAUT global supply without inferring producer failure or a direct missing-data NR", () => {
     const fixed = xautFactSetFixedInput({
+      clockSec: XAUT_FACT_SET_CLOCK_SEC,
       chainSupplyByChain: {},
       omitLiveReserve: true,
     });
@@ -451,6 +458,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     const clockSec = XAUT_FACT_SET_CLOCK_SEC;
     const aggregateSupplyUsd = 2_480_000_000;
     const fixed = xautFactSetFixedInput({
+      clockSec,
       liquidityScore: 95,
       chainSupplyByChain: {},
       aggregateCirculating: { peggedGOLD: aggregateSupplyUsd },

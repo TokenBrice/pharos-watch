@@ -20,9 +20,10 @@
         "0xa3122c3ee71cbdc9e60b47f502b015c2d82f5fcc"
       ],
       "canChangeMintLogic": true,
+      "delaySec": 0,
       "controlRef": "USDFC owner and ProxyAdmin-owner Safe",
-      "observedAt": "2026-10-02",
-      "observedBlock": 6422489,
+      "observedAt": "2026-10-05",
+      "observedBlock": 6429411,
       "sources": [
         {
           "label": "Secured Finance FIL-only CDP overview",
@@ -82,6 +83,7 @@
         "role": "proxy-admin",
         "authorityType": "safe",
         "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 0,
         "threshold": 2,
         "signerCount": 3,
         "modulesOrGuardsStatus": "none-detected",
@@ -94,12 +96,12 @@
           "threshold": 2,
           "enabledModules": [],
           "guard": null,
-          "observedAt": "2026-10-02",
-          "observedBlock": 6422489,
+          "observedAt": "2026-10-05",
+          "observedBlock": 6429411,
           "source": "onchain"
         },
-        "observedAt": "2026-10-02",
-        "observedBlock": 6422489,
+        "observedAt": "2026-10-05",
+        "observedBlock": 6429411,
         "sources": [
           {
             "label": "Secured Finance FIL-only CDP overview",
@@ -110,11 +112,11 @@
             "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts"
           },
           {
-            "label": "Filecoin GLIF RPC pinned block 6422489",
+            "label": "Filecoin GLIF RPC pinned block 6429411",
             "url": "https://api.node.glif.io/rpc/v1"
           }
         ],
-        "evidence": "At Filecoin block 6422489, token owner and ProxyAdmin owner are this Safe. getThreshold()=2, getOwners() returns three addresses, paginated modules are empty and guard storage is zero. Signer independence and an enforced upgrade delay are not established."
+        "evidence": "At Filecoin block 6429411, token and ProxyAdmin owners remain this 2-of-3 Safe with unchanged owners, empty modules and zero guard. Verified ProxyAdmin upgrade/upgradeAndCall are immediate onlyOwner calls without a queue or delay. This establishes zero mandatory upgrade delay, not human signer independence or a complete execution certificate."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -173,35 +175,36 @@
         {
           "label": "Secured Finance September 7–18 incident-response thread",
           "url": "https://x.com/Secured_Fi/status/2097897896549179583"
+        },
+        {
+          "label": "September 26 incident update: lending patches and still-pending repairs",
+          "url": "https://x.com/Secured_Fi/status/2103707394706378843"
+        },
+        {
+          "label": "Fixed-rate lending remediation scope, distinct from core USDFC upgrades",
+          "url": "https://docs.secured.finance/fixed-rate-lending/contracts-and-security/contract-upgrade-history.md"
+        },
+        {
+          "label": "Verified ProxyAdmin immediate onlyOwner upgrade gates",
+          "url": "https://filecoin.blockscout.com/api/v2/smart-contracts/0xa3122c3ee71cbdc9e60b47f502b015c2d82f5fcc"
+        },
+        {
+          "label": "Current Filecoin core-owner and Safe pin, block 6429411",
+          "url": "https://api.node.glif.io/rpc/v1"
         }
       ],
-      "evidence": "At Filecoin block 6425379 on 2026-10-03, the token EIP-1967 implementation remains 0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b; token owner() and ProxyAdmin owner() both return the same recorded 2-of-3 Safe, whose threshold and three owners were re-read at that pin. Sourcify match 11586794 verifies the deployed implementation's executable runtime against DebtToken.sol compiled with solc 0.7.6, optimizer 100; runtimeMatch is match, not an exact metadata match. Its mint() invokes _requireCallerIsBorrowerOperations(), which requires msg.sender == borrowerOperationsAddress. This resolves the earlier source-to-executable correspondence question without claiming identical compiler metadata. Published September 2026 upgrades demonstrate exercised Safe authority; code audits do not establish signer independence or financial reserve reconciliation. Wave 3 recovered the official September 7–18 incident thread: the September 8 update identifies an order-book accounting flaw allowing unfilled orders to create invalid balances; September 11 reports Quantstamp reproduction and a verified fix, and September 18 says lending markets and TokenVaults remain paused pending validation. These establish affected lending infrastructure and ongoing remediation, not an exhaustive abnormal-issuance or affected-contract review for core USDFC BorrowerOperations and its owner/ProxyAdmin-owner Safe. No core incident-free state is inferred. Financial reserve reconciliation is not applicable to native FIL collateral.",
-      "reviewer": "Unknown resolver W1R08; wave 3 W3R11 incident-source recheck",
-      "reviewedAt": "2026-10-04",
+      "evidence": "R17 re-pins Filecoin core controls at block 6429411, hash 0x0acbb64bb2c1d62c8375c5d74aa2c52d7cb130c358c137f623154245d242a8f0. Implementation remains 0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b, BorrowerOperations remains 0x1de3c2e21dd5af7e5109d2502d0d570d57a1abb0, and token/ProxyAdmin owners remain the recorded 2-of-3 Safe with unchanged owners, empty modules and zero guard. Verified ProxyAdmin upgrade()/upgradeAndCall() are immediate onlyOwner calls: mandatory delay is zero, not unresearched. The prior Sourcify executable-runtime match is retained without claiming exact metadata verification. Official September 26 disclosure describes lending patches, still-paused markets and pending compensation/position repair. Its linked lending history names order-book, Itayose, recovery and TokenVault changes, not core USDFC mint remediation; the social post dates patches September 25 while the history dates Ethereum/Arbitrum execution September 24. Filtered lifetime Blockscout queries recover 575 mint events, 3732 deduplicated burns, two upgrades and two ownership changes from token creation block4807452 through the pin. Their net raw issuance is 186897978724044529018007, whereas pinned totalSupply is 190455538808608777432105. That mismatch is an unresolved historical observation/reconciliation issue, not proof of an exploit. GLIF rejects creation-to-pin event history and returns null for the earliest mint and both historical upgrade receipts; its recent filtered mint query also does not reproduce the indexer's latest mint. Thus an indexed lifetime census is recovered, but authenticated core abnormal-issuance and affected-contract reconciliation is not complete. Issuer disclosures, exact core/lending inventories, source/audit material, September7–26 incident thread and independent incident-index searches were reviewed. No core compromise, absence or resolution is inferred from lending patches or distinct oracle upgrades. Aggregate review remains unresolved and native authority remains unbounded-adverse.",
+      "reviewer": "Prior executable-source review retained; R17 current authority and September 26 incident-scope review",
+      "reviewedAt": "2026-10-05",
       "disposition": "unresolved",
       "unresolvedQuestions": [
-        "The recovered official September 7–18 incident thread identifies an order-book accounting flaw, confirmed lending losses and ongoing TokenVault remediation, but supplies no exhaustive affected-contract or abnormal-mint review for USDFC BorrowerOperations and its owner/ProxyAdmin-owner Safe. What exact primary or complete on-chain evidence establishes the impact on those core mint controls?"
+        "The latest official update establishes still-paused lending/TokenVault remediation, not core USDFC BorrowerOperations/Safe incident status. Filtered lifetime indexer history is now recovered, but its net issuance does not match pinned totalSupply; GLIF cannot authenticate earliest mint or historical upgrade receipts and does not reproduce the latest indexed mint in its recent event query. Obtain an aligned authenticated historical issuance/upgrade census and exact affected-contract reconciliation before any core incident verdict."
       ],
       "scopedQuestions": [
         {
           "controlRef": "USDFC owner and ProxyAdmin-owner Safe",
-          "question": "Is any enforceable delay imposed on this identified Safe's upgrade authority over the exact USDFC token proxy? No enforceable upgrade timelock is established by the current sources; signer independence is separately retained in evidence, not treated as missing control identity.",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement Refine03",
-          "sources": [
-            {
-              "label": "Identified Filecoin Safe and ProxyAdmin-owner relationship",
-              "url": "https://api.node.glif.io/rpc/v1"
-            },
-            {
-              "label": "Safe-executed USDFC upgrade history",
-              "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts/contract-upgrade-history.md"
-            }
-          ]
-        },
-        {
-          "controlRef": "USDFC owner and ProxyAdmin-owner Safe",
           "question": "Safe signer independence remains unverified. What beneficial signer identities, key-custody safeguards and signing policy protect this identified 2-of-3 Safe's token ownership and ProxyAdmin-owner authority? Its on-chain owners and quorum do not establish independent human control.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement Refine03",
           "sources": [

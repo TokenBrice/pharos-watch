@@ -36,14 +36,14 @@
         "observedBlock": 26098754,
         "executionScope": {
           "controllerDeployment": "ethereum:0xfb46481a9819e068af0eb64a2c2824fcecaaaa45",
-          "reviewedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
           "observedAt": "2026-10-01",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataUnitas)",
+          "reviewer": "R21 execution-entrypoint review 2026-10-05; prior DataUnitas pin retained",
           "confidence": "partial",
           "sources": [
             {
-              "label": "Exact verified module source; deployed runtime matched at Ethereum 26099926",
+              "label": "Exact verified module source; runtime identity independently reconfirmed at Ethereum 26125000",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfb46481a9819e068af0eb64a2c2824fcecaaaa45"
             },
             {
@@ -55,13 +55,13 @@
             "position": "26099926",
             "hash": "0xd2aaee1dfb96a21f51eccf24572f7f12bee0e04cc4ef28d9db3d6b7bc9cb2812",
             "runtimeIdentity": "sha256:8ef25a6aef3e9ae6c045078f25c8e4c90a79519bc175abda6308bfa041d94709",
-            "signerIdentity": "onlyCurator; verified curator at block 26098837: 0x9fe66037c44236c87d9ac8345f489b4413fdff06; upstream DAO authorization not closed"
+            "signerIdentity": "deposit/redeem onlyCurator; permissionless reconcile(); upstream DAO authorization not closed"
           },
           "observedState": {
             "position": "26099926",
             "hash": "0xd2aaee1dfb96a21f51eccf24572f7f12bee0e04cc4ef28d9db3d6b7bc9cb2812",
             "runtimeIdentity": "sha256:8ef25a6aef3e9ae6c045078f25c8e4c90a79519bc175abda6308bfa041d94709",
-            "signerIdentity": "onlyCurator; verified curator at block 26098837: 0x9fe66037c44236c87d9ac8345f489b4413fdff06; upstream DAO authorization not closed"
+            "signerIdentity": "deposit/redeem onlyCurator; permissionless reconcile(); upstream DAO authorization not closed"
           },
           "inventory": "partial",
           "closure": {
@@ -79,7 +79,9 @@
               "targetDeployment": "ethereum:0xfb46481a9819e068af0eb64a2c2824fcecaaaa45",
               "entrypointKind": "evm-selector",
               "entrypoints": [
-                "0xb6b55f25"
+                "0xb6b55f25",
+                "0xdb006a75",
+                "0x8f0d7e35"
               ],
               "callMode": "call",
               "capabilities": [
@@ -141,14 +143,14 @@
         "observedBlock": 26098754,
         "executionScope": {
           "controllerDeployment": "ethereum:0x6b6893d82edbc8d6769ba3c407102d33da2b623f",
-          "reviewedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
           "observedAt": "2026-10-01",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataUnitas)",
+          "reviewer": "R21 execution-entrypoint review 2026-10-05; prior DataUnitas pin retained",
           "confidence": "partial",
           "sources": [
             {
-              "label": "Exact verified module source; deployed runtime matched at Ethereum 26099926",
+              "label": "Exact verified module source; runtime identity independently reconfirmed at Ethereum 26125000",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6b6893d82edbc8d6769ba3c407102d33da2b623f"
             },
             {
@@ -160,13 +162,13 @@
             "position": "26099926",
             "hash": "0xd2aaee1dfb96a21f51eccf24572f7f12bee0e04cc4ef28d9db3d6b7bc9cb2812",
             "runtimeIdentity": "sha256:d12c65880824d929cb2e9a82a472a88c0a1631c7fd31a03caf0fd998d73806cb",
-            "signerIdentity": "permissionless swapIn/swapInTo; reconcile(bool) onlyCurator; stable.checkValidModule true at pin; upstream vault and token permissions not closed"
+            "signerIdentity": "permissionless swapIn/swapInTo/swapOut/swapOutTo/reconcile(); reconcile(bool) onlyCurator; upstream vault and token permissions not closed"
           },
           "observedState": {
             "position": "26099926",
             "hash": "0xd2aaee1dfb96a21f51eccf24572f7f12bee0e04cc4ef28d9db3d6b7bc9cb2812",
             "runtimeIdentity": "sha256:d12c65880824d929cb2e9a82a472a88c0a1631c7fd31a03caf0fd998d73806cb",
-            "signerIdentity": "permissionless swapIn/swapInTo; reconcile(bool) onlyCurator; stable.checkValidModule true at pin; upstream vault and token permissions not closed"
+            "signerIdentity": "permissionless swapIn/swapInTo/swapOut/swapOutTo/reconcile(); reconcile(bool) onlyCurator; upstream vault and token permissions not closed"
           },
           "inventory": "partial",
           "closure": {
@@ -186,7 +188,10 @@
               "entrypoints": [
                 "0x759c7265",
                 "0xf6bc3a00",
-                "0xdf03605e"
+                "0xdf03605e",
+                "0x8f0d7e35",
+                "0x74d945d9",
+                "0x98e992a7"
               ],
               "callMode": "call",
               "capabilities": [
@@ -240,14 +245,14 @@
         "observedBlock": 26098754,
         "executionScope": {
           "controllerDeployment": "ethereum:0xd9141f634ef9e871a5fe4f64195747db77a13f3e",
-          "reviewedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
           "observedAt": "2026-10-01",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataUnitas)",
+          "reviewer": "R21 execution-entrypoint review 2026-10-05; prior DataUnitas pin retained",
           "confidence": "partial",
           "sources": [
             {
-              "label": "Exact verified module source; deployed runtime matched at Ethereum 26099926",
+              "label": "Exact verified module source; runtime identity independently reconfirmed at Ethereum 26125000",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd9141f634ef9e871a5fe4f64195747db77a13f3e"
             },
             {
@@ -259,13 +264,13 @@
             "position": "26099926",
             "hash": "0xd2aaee1dfb96a21f51eccf24572f7f12bee0e04cc4ef28d9db3d6b7bc9cb2812",
             "runtimeIdentity": "sha256:aaf06a7cc4393e9efe1ec1c9819ba9690c44bd79c824962c08dc8f611638f93a",
-            "signerIdentity": "permissionless swapIn/swapInTo; reconcile(bool) onlyCurator; stable.checkValidModule true at pin; upstream vault and token permissions not closed"
+            "signerIdentity": "permissionless swapIn/swapInTo/swapOut/swapOutTo/reconcile(); reconcile(bool) onlyCurator; upstream vault and token permissions not closed"
           },
           "observedState": {
             "position": "26099926",
             "hash": "0xd2aaee1dfb96a21f51eccf24572f7f12bee0e04cc4ef28d9db3d6b7bc9cb2812",
             "runtimeIdentity": "sha256:aaf06a7cc4393e9efe1ec1c9819ba9690c44bd79c824962c08dc8f611638f93a",
-            "signerIdentity": "permissionless swapIn/swapInTo; reconcile(bool) onlyCurator; stable.checkValidModule true at pin; upstream vault and token permissions not closed"
+            "signerIdentity": "permissionless swapIn/swapInTo/swapOut/swapOutTo/reconcile(); reconcile(bool) onlyCurator; upstream vault and token permissions not closed"
           },
           "inventory": "partial",
           "closure": {
@@ -285,7 +290,10 @@
               "entrypoints": [
                 "0x759c7265",
                 "0xf6bc3a00",
-                "0xdf03605e"
+                "0xdf03605e",
+                "0x8f0d7e35",
+                "0x74d945d9",
+                "0x98e992a7"
               ],
               "callMode": "call",
               "capabilities": [

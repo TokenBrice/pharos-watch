@@ -104,9 +104,13 @@
           {
             "label": "Tempo native token",
             "url": "https://explore.tempo.xyz/address/0xe36e2e79beb1b7f618201eead6106a7d737695e3#code"
+          },
+          {
+            "label": "Tempo creation-to-block-42641165 role census independently re-verified October 5",
+            "url": "https://rpc.tempo.xyz"
           }
         ],
-        "evidence": "Tempo block 42323853 returned decimals 6, zero stock and the shared EVM owner. The prospectus authenticates Tempo native fund-share issuance; implementation execution closure and the full issuer/master census remain unresolved."
+        "evidence": "W3R25's Tempo block 42641165 (hash 0xb493b1920838f0a607624e1d666d4daee4cf80a1ef40011583956ceabce93a5c) census was independently re-verified on 2026-10-05: all 229 creation-to-pin 50000-block windows from TrustService creation 31237322 return the same 11 RoleAdded/RoleRemoved events, and every replayed getRole/code result reconciles. Token getDSService(1) binds TrustService 0xe2eb9d836e488dbbd9fa0baa391ff4034eeac275; sole MASTER is code-empty 0xe01605f6b6dc593b7d2917f4a0940db2a625b09e, TRANSFER_AGENT is code-empty 0xa9994621f1c3ee59846df756488229e8efdcb8bf, and six ISSUERs are 0x5072ed40eba6be38c2370cad1cb1df0202924e53, 0x7c8b1e4e9fecda57b6107278bab614e67f3a8bf4 (both code-empty), 0x84d37dfa4e6a1395faceab1120506718a9eeac86, 0xb7d43cd861eee4f3b3c4cd69b853c7f5525d4dc4, 0xb8707668acf4c3e025a90e88515b923529e10a69 and 0xfbdd6a4f828c4d29aa8dafc4570a241907660fc0. The four 170-byte issuer proxies resolve respectively to implementations 0x73357bbf4f1670797e77a930c491261a84971057, 0xc414c9f26364c1411188e724eb9c576c3070f722, 0x4411b9d82f4e854d573d5838da7a1d1711d0c122 and 0x4e8c97b9759c2e12b0c27dc1a2e35a09ec5c23b8. Token/trust implementation slots bind 0x0fc27145a78be5eeb133aca8a20569c90b389c56 and 0x0ea6d8ef1e8b9efd9395e9bd8288a24f2754f02d. This closes only the role census; executable/upstream authorization, key custody and incident closure remain unresolved."
       },
       {
         "label": "BRSRV Solana Token-2022 mint authority",
@@ -192,21 +196,49 @@
         {
           "label": "SEC EDGAR register: BlackRock Funds 40 Act file 811-05742, accession 0001193125-26-327203",
           "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000844779&type=485BPOS&dateb=&owner=include&count=40"
+        },
+        {
+          "label": "Verified Ethereum DSToken compiler-declared immutables and linked TokenLibrary ranges",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xc4ecf0307ff0c45c0546e0debedbbd0e47ac3354?fields=all"
+        },
+        {
+          "label": "Verified Ethereum TrustService compiler-declared self-address immutables",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xcf5f7cec13168144b82ef83fda638e81938c218b?fields=all"
+        },
+        {
+          "label": "Verified Ethereum TokenLibrary compiler-declared callProtection bytes",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xd9e2e5bc54dcff27cf219120eac4d4b11ca0b224?fields=all"
+        },
+        {
+          "label": "Tempo pinned role census and implementation/library runtime correspondence",
+          "url": "https://rpc.tempo.xyz"
+        },
+        {
+          "label": "Verified Ethereum ERC1967Proxy runtime: exact 170-byte match for Tempo token, trust and four issuer wrappers",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3078bcf707e457d3af2f938a2a478bbeea50a942"
+        },
+        {
+          "label": "Verified Ethereum TokenIssuer compiler-declared self-address immutable ranges: Tempo issuer correspondence",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x4ef34664ccbf1979180a9f3cb21f033e069713ba?fields=all"
+        },
+        {
+          "label": "Verified Ethereum WalletRegistrar compiler-declared self-address immutable ranges: Tempo issuer correspondence",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xb886f567219a39b49a68115207787dce0a10b9e6?fields=all"
         }
       ],
-      "evidence": "Ethereum block 26110197 native TrustService RoleAdded/RoleRemoved replay and getRole/code checks resolve one MASTER, six ISSUERs and one TRANSFER_AGENT. Four issuer contracts are ERC-1967 proxies, two with unverified implementations; full authorization/bypass closure is not established. MASTER can mint and immediately upgrade token and trust service. Solana account reads bind the authority to upgradeable program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP and ProgramData upgrade authority 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6, not a signing policy. Tempo execution and census remain unresolved. The SEC 485BPOS filed 31 July 2026, accession 0001193125-26-327203, and its EDGAR register were independently verified on 2026-10-04: BlackRock Funds is an Investment Company Act of 1940 registered open-end management investment company (40 Act file 811-05742), and its issuing series BlackRock Daily Reinvestment Stablecoin Reserve Vehicle is a government money market fund under Rule 2a-7. The prospectus's Use of the Blockchain section expressly subjects this exact OnChain Shares class (CUSIP 09261A839, ticker RSVXX), including its native multi-network ownership records, to the same fund investment requirements. Ongoing SEC Rule 2a-7 quality, diversification, liquidity and maturity requirements over this issuing fund support prudential supervision; this is not a claim based on transfer-agent licensing, custodian regulation, BUIDL coverage, SEC endorsement or a reserve guarantee. Deloitte & Touche LLP is named independent accountant, but appointment does not establish a dated completed attestation or audit history. The SAI also says the transfer agent typically reconciles records with blockchain transactions at least daily, and BNY reconciles securities/cash with the custodian. These separate register and portfolio processes do not establish all on/off-chain token liabilities reconciled to backing on one common clock; reconciliation remains unknown. Chronicle BUIDL coverage cannot be inherited by this separate fund. The unverified Ethereum implementations, Tempo paths and Solana deployed-runtime correspondence remain independently unresolved.",
+      "evidence": "Ethereum block 26110197 native TrustService RoleAdded/RoleRemoved replay and getRole/code checks resolve one MASTER, six ISSUERs and one TRANSFER_AGENT. Four issuer contracts are ERC-1967 proxies, two with unverified implementations; full authorization/bypass closure is not established. MASTER can mint and immediately upgrade token and trust service. Solana account reads bind the authority to upgradeable program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP and ProgramData upgrade authority 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6, not a signing policy. W4 R12 independently re-verified the complete W3R25 Tempo role census on 2026-10-05 at block 42641165, closing only that aggregate question. Tempo token/trust implementations additionally match the verified Ethereum references outside compiler-declared self-address immutable and TokenLibrary link ranges, including metadata; the linked Tempo TokenLibrary matches its verified Ethereum reference outside compiler-declared library callProtection bytes. This is bounded executable correspondence, not full issuer/proxy/upstream authorization or signing closure. The SEC 485BPOS filed 31 July 2026, accession 0001193125-26-327203, and its EDGAR register were independently verified on 2026-10-04: BlackRock Funds is an Investment Company Act of 1940 registered open-end management investment company (40 Act file 811-05742), and its issuing series BlackRock Daily Reinvestment Stablecoin Reserve Vehicle is a government money market fund under Rule 2a-7. The prospectus's Use of the Blockchain section expressly subjects this exact OnChain Shares class (CUSIP 09261A839, ticker RSVXX), including its native multi-network ownership records, to the same fund investment requirements. Ongoing SEC Rule 2a-7 quality, diversification, liquidity and maturity requirements over this issuing fund support prudential supervision; this is not a claim based on transfer-agent licensing, custodian regulation, BUIDL coverage, SEC endorsement or a reserve guarantee. Deloitte & Touche LLP is named independent accountant, but appointment does not establish a dated completed attestation or audit history. The SAI also says the transfer agent typically reconciles records with blockchain transactions at least daily, and BNY reconciles securities/cash with the custodian. These separate register and portfolio processes do not establish all on/off-chain token liabilities reconciled to backing on one common clock; reconciliation remains unknown. Chronicle BUIDL coverage cannot be inherited by this separate fund. The unverified Ethereum implementations, complete Tempo authority reach and Solana deployed-runtime correspondence remain independently unresolved.",
       "reviewer": "Sol v10.06 availability-invariant campaign (BEvidence)",
       "reviewedAt": "2026-10-04",
       "unresolvedQuestions": [
-        "The whole Tempo native deployment's issuer/master role census remains unestablished.",
         "Complete issuance execution and upstream authorization paths of the four identified Ethereum ISSUER proxies remain unestablished, including unverified implementations 0x9394de9e0e1c7274da58a6b6ae246182a23c347f and 0x77305a8503a576f61f6c8639c8cb287b6b751840; no deployed-runtime equivalence proof to a verified reference closes those paths.",
-        "Implementation execution closure of the identified Tempo native issuance surface remains unestablished, independently of the missing chain-wide issuer/master census.",
+        "Complete execution and upstream authorization of Tempo issuer implementations 0x4411b9d82f4e854d573d5838da7a1d1711d0c122 and 0x4e8c97b9759c2e12b0c27dc1a2e35a09ec5c23b8 remains unestablished. Their compiler-metadata CIDs QmYQ6K5jHsJZ9g85VpvMaC5g6LFFqLBxnyaCpdhzuaRphv and QmU6drM9FUVXiWZeW5jfhFE3sL48L7Ci9dj488ixSVRBWf were not recovered through three alternate gateways. At block 42641165 all six 170-byte token/trust/issuer proxy wrappers exactly match verified Ethereum ERC1967Proxy. Token/trust/TokenLibrary and issuer implementations 0x73357bbf4f1670797e77a930c491261a84971057 (TokenIssuer) and 0xc414c9f26364c1411188e724eb9c576c3070f722 (WalletRegistrar) match verified Ethereum source outside compiler-declared self-address/link/callProtection ranges, including metadata. The full issuer/master census is independently re-verified. Complete reachable service/upgrader and signing closure remains unresolved; census, native proxy correspondence and those four implementation sources are no longer missing ingredients.",
         "Source and executable authorization/signing/quorum paths of the identified Solana mint-authority program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP remain unestablished, including the ProgramData upgrade-authority path."
       ],
       "scopedQuestions": [
         {
           "controlRef": "BRSRV Ethereum native issuance service surface",
           "question": "Organizational key custody and human independence for the four identified Ethereum ISSUER proxy authorities remain unestablished. This custody observation does not close their separate mint/upgrade execution and upstream-authorization unknowns, which remain aggregate unresolvedQuestions.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine04 calibration v2",
           "sources": [

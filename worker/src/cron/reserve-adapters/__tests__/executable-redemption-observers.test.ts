@@ -23,6 +23,7 @@ import {
   erc20Abi,
   erc4626Abi,
 } from "../executable-redemption-abis";
+import lidoPin from "./fixtures/lido-earnusd-pinned-state.json";
 
 type Hex = `0x${string}`;
 
@@ -430,6 +431,165 @@ function client(
     }),
   };
 }
+
+function lidoClient(overrides: Record<string, Hex | null> = {}): ExecutableRedemptionReadClient {
+  const identities = Object.values(lidoPin.identities);
+  const raw = (name: string, func: string): Hex => {
+    const read = lidoPin.reads.find((row) => row.name === name && row.func === func);
+    if (!read) throw new Error(`Missing pinned ${name}.${func}`);
+    return read.raw as Hex;
+  };
+  const responses: Record<string, Hex> = {
+    "lido-fee-manager": raw("vault", "feeManager"),
+    "lido-oracle": raw("vault", "oracle"),
+    "lido-share-manager": raw("vault", "shareManager"),
+    "lido-share-vault": raw("shares", "vault"),
+    "lido-oracle-vault": raw("oracle", "vault"),
+    "lido-flags": raw("shares", "flags"),
+    "lido-fee": raw("fee", "redeemFeeD6"),
+    "lido-report": raw("oracle", "getReport"),
+    "lido-queue-state": raw("queue", "getState"),
+    "lido-sync-params": raw("sync", "syncRedeemParams"),
+    "lido-sync-limit": raw("sync", "remainingDailyLimit"),
+    "lido-sync-liquid": raw("sync", "getLiquidAssets"),
+    "lido-usdc-decimals": toHex(6n, { size: 32 }),
+    "lido-async-asset": raw("queue", "asset"),
+    "lido-async-vault": raw("queue", "vault"),
+    "lido-sync-asset": raw("sync", "asset"),
+    "lido-sync-vault": raw("sync", "vault"),
+    "lido-async-registered": toHex(1n, { size: 32 }),
+    "lido-sync-registered": toHex(1n, { size: 32 }),
+    "lido-async-paused": toHex(0n, { size: 32 }),
+    "lido-sync-paused": toHex(0n, { size: 32 }),
+  };
+  return {
+    blockNumber: async () => lidoPin.blockNumber,
+    blockTimestamp: async () => lidoPin.blockTimestamp,
+    codeHash: async (address) => {
+      const proxy = identities.find((row) => row.address === address);
+      return proxy?.codeHash ?? identities.find((row) => row.implementationAddress === address)?.implementationCodeHash ?? null;
+    },
+    storage: async (address) => {
+      const identity = identities.find((row) => row.address === address);
+      return identity ? storageWord(identity.implementationAddress) : null;
+    },
+    multicall: async (calls) => calls.map((call) => {
+      const value = Object.prototype.hasOwnProperty.call(overrides, call.label) ? overrides[call.label] : responses[call.label];
+      return { label: call.label, success: value != null, returnData: value ?? "0x" };
+    }),
+  };
+}
+
+const observeLido = (overrides: Record<string, Hex | null> = {}) => observeExecutableRedemptionRoute(
+  "earnusd-lido", lidoPin.identities.shares.address, new AbortController().signal, undefined,
+  { client: lidoClient(overrides), nowSec: lidoPin.blockTimestamp },
+);
+
+describe("Lido earnUSD queue observation", () => {
+  it("observes the actual Mellow rail without crediting liquidity, rolling limits or unpaid requests as capacity", async () => {
+    const observation = await observeLido();
+    expect(observation).toMatchObject({
+      capacityRaw: 0n, capacitySource: "lido-earnusd-unquantified-queue",
+      settlementBoundUnproven: true, routeStatus: "open", feeBps: 0,
+      blockNumber: 26122344, sourceTimestamp: 1791157259,
+      diagnostics: {
+        syncMaxPriceAgeSec: 86400, syncLiquidAssetsRaw: "129641670774",
+        syncRemainingSharesRaw: "11999999999999999923200",
+        pendingSharesRaw: "66717000000000000000000",
+        syncOpen: true, capacityQuantified: false, settlementMaximumKnown: false,
+      },
+    });
+    expect(observation).not.toHaveProperty("settlementDelaySec");
+  });
+
+  it.each(["lido-report", "lido-queue-state", "lido-sync-limit", "lido-fee"])(
+    "fails closed on an unavailable %s read", async (label) => {
+      await expect(observeLido({ [label]: null })).rejects.toThrow(/unavailable/);
+    },
+  );
+
+  it.each(["lido-sync-asset", "lido-async-vault", "lido-fee-manager"])(
+    "rejects dependency drift at %s", async (label) => {
+      await expect(observeLido({ [label]: storageWord(EARN_VAULT) })).rejects.toThrow(/identity drift/);
+    },
+  );
+
+  it("does not apply the sync report age as an async completion maximum", async () => {
+    const report = `0x${toHex(1n, { size: 32 }).slice(2)}${toHex(1n, { size: 32 }).slice(2)}${toHex(0n, { size: 32 }).slice(2)}` as Hex;
+    const observation = await observeLido({ "lido-report": report });
+    expect(observation?.routeStatus).toBe("open");
+    expect(observation?.diagnostics.syncOpen).toBe(false);
+    expect(observation?.diagnostics.syncReportUsable).toBe(false);
+    expect(observation).not.toHaveProperty("settlementDelaySec");
+  });
+
+  it("retains the async route when the separate sync rolling limit is exhausted", async () => {
+    const observation = await observeLido({
+      "lido-sync-limit": `0x${"0".repeat(128)}`,
+    });
+    expect(observation?.routeStatus).toBe("open");
+    expect(observation?.diagnostics.syncOpen).toBe(false);
+  });
+
+  it("records queue pause without substituting measured zero-capacity evidence", async () => {
+    const observation = await observeLido({ "lido-async-paused": toHex(1n, { size: 32 }) });
+    expect(observation).toMatchObject({ routeStatus: "paused", settlementBoundUnproven: true });
+  });
+
+  it("reads changed mutable protocol fees instead of preserving the historical zero", async () => {
+    const observation = await observeLido({ "lido-fee": toHex(2501n, { size: 32 }) });
+    expect(observation?.feeBps).toBe(26);
+  });
+
+  it.each([
+    [false, true, 0],
+    [false, false, lidoPin.blockTimestamp + 1],
+    [true, false, 0],
+  ] as const)("keeps mint/burn/lockup holder gates adverse without a capacity claim", async (mintPaused, burnPaused, lockup) => {
+    const words = [mintPaused ? 1n : 0n, burnPaused ? 1n : 0n, 0n, 0n, 0n, BigInt(lockup)];
+    const observation = await observeLido({
+      "lido-flags": `0x${words.map((word) => toHex(word, { size: 32 }).slice(2)).join("")}`,
+      "lido-fee": toHex(2500n, { size: 32 }),
+    });
+    expect(observation).toMatchObject({ routeStatus: "paused", settlementBoundUnproven: true });
+    expect(observation?.diagnostics.syncOpen).toBe(false);
+  });
+
+  it.each([
+    [0n, lidoPin.blockTimestamp, false],
+    [1n, lidoPin.blockTimestamp, true],
+    [1n, lidoPin.blockTimestamp + 1, false],
+    [1n, lidoPin.blockTimestamp - 86401, false],
+  ] as const)("keeps invalid/suspicious/future/stale reports diagnostic", async (price, timestamp, suspicious) => {
+    const observation = await observeLido({
+      "lido-report": `0x${[price, BigInt(timestamp), suspicious ? 1n : 0n].map(
+        (word) => toHex(word, { size: 32 }).slice(2),
+      ).join("")}`,
+    });
+    expect(observation?.routeStatus).toBe("open");
+    expect(observation?.diagnostics.syncOpen).toBe(false);
+    expect(observation).not.toHaveProperty("settlementDelaySec");
+  });
+
+  it("admits the sync report exactly at the maxAge boundary without turning it into an SLA", async () => {
+    const observation = await observeLido({
+      "lido-report": `0x${[1n, BigInt(lidoPin.blockTimestamp - 86400), 0n].map(
+        (word) => toHex(word, { size: 32 }).slice(2),
+      ).join("")}`,
+    });
+    expect(observation?.diagnostics.syncReportUsable).toBe(true);
+    expect(observation).not.toHaveProperty("settlementDelaySec");
+  });
+
+  it("rejects current implementation drift rather than continuing with a historical queue", async () => {
+    const readClient = lidoClient();
+    readClient.storage = async () => storageWord(EARN_VAULT);
+    await expect(observeExecutableRedemptionRoute(
+      "earnusd-lido", lidoPin.identities.shares.address, new AbortController().signal, undefined,
+      { client: readClient, nowSec: lidoPin.blockTimestamp },
+    )).rejects.toThrow(/implementation identity drift/);
+  });
+});
 
 describe("specialized executable redemption observers", () => {
   it("reads from a stable block behind the latest announced Ethereum head", () => {

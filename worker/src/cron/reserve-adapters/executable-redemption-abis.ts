@@ -58,3 +58,32 @@ export const NOON_SUSN_WITHDRAWAL_HANDLER_ABI = parseAbi([
   "function usn() view returns (address)",
   "function withdrawPeriod() view returns (uint256)",
 ]);
+
+export const LIDO_EARN_VAULT_ABI = parseAbi([
+  "function shareManager() view returns (address)",
+  "function feeManager() view returns (address)",
+  "function oracle() view returns (address)",
+  "function hasQueue(address queue) view returns (bool)",
+  "function isPausedQueue(address queue) view returns (bool)",
+]);
+export const LIDO_EARN_QUEUE_ABI = parseAbi([
+  "function asset() view returns (address)",
+  "function vault() view returns (address)",
+  "function getState() view returns (uint256 batchIterator, uint256 batches, uint256 demandAssets, uint256 pendingShares)",
+]);
+export const LIDO_EARN_SYNC_ABI = parseAbi([
+  "function syncRedeemParams() view returns (uint256 penaltyD6, uint32 maxAge, uint256 usage, uint256 dailyLimit, uint256 latestRequestTimestamp)",
+  "function remainingDailyLimit() view returns (uint256 usage, uint256 remaining)",
+  "function getLiquidAssets() view returns (uint256)",
+]);
+export const LIDO_EARN_FEE_ABI = parseAbi([
+  "function redeemFeeD6() view returns (uint24)",
+]);
+export const LIDO_EARN_ORACLE_ABI = parseAbi([
+  "function vault() view returns (address)",
+  "function getReport(address asset) view returns ((uint224 priceD18, uint32 timestamp, bool isSuspicious) report)",
+]);
+export const LIDO_EARN_SHARES_ABI = parseAbi([
+  "function vault() view returns (address)",
+  "function flags() view returns ((bool hasMintPause, bool hasBurnPause, bool hasTransferPause, bool hasWhitelist, bool hasTransferWhitelist, uint32 globalLockup) flags)",
+]);
