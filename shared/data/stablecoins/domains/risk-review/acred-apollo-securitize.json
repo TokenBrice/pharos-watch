@@ -14,7 +14,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "ACRED uses Securitize/Wormhole cross-chain transport. Wave-2 public-feed research identifies BridgeAddress 0x9A0460445E9B3E859F3C91A1b3f318354a0b11B6 on Ethereum, Ink, Avalanche and Polygon, plus a distinct Sei bridge 0x1643903347B8F995A8b3e303d53d2CB52A5ca623. Ethereum and Ink explorer metadata identify SecuritizeBridge implementation 0xA42A23Db258666aDE7A40F52Ea55819DA4FA9853; its source burns before sending and checks the relayer and configured source peer before issuing. This discovery is not a pinned current controller/peer certificate or complete material-route review: the current feed also adds Sei and changes the Aptos token identity, while Solana/Aptos bridge addresses are blank. Existing destination administration and upgrade controls remain adverse common-mode exposure.",
+    "summary": "ACRED uses Securitize/Wormhole cross-chain transport. The issuer feed identifies BridgeAddress 0x9A0460445E9B3E859F3C91A1b3f318354a0b11B6 on Ethereum, Ink, Avalanche and Polygon, plus Sei bridge 0x1643903347B8F995A8b3e303d53d2CB52A5ca623. Current exact block pins on Ethereum 26122489, Polygon 94970204, Avalanche 96771552, Ink 57662156 and Sei 235783673 bind each adapter to the exact ACRED token, Wormhole relayer 0x27428DD2d3DD32A4D7f7C497eAaa23130d894911, common owner 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee, paused=false and reciprocal EVM peers for Wormhole IDs 2, 5, 6, 40 and 46 (self entries are zero). Ethereum, Polygon, Avalanche and Ink resolve implementation 0xA42A23Db258666aDE7A40F52Ea55819DA4FA9853; Sei resolves 0x0c31f7cb10370692558e9e503b167cc16e8c3497. Aptos ledger 7485299960 resolves the feed's 0x13816cd4562c9cf260a0471615451253ab96cca6d6adf746969c52c78480f06a as the ds_token package: dstoken_address() and metadata() both bind the existing catalog metadata object 0xe528f4df568eb9fff6398adc514bc9585fab397f478972bcbebf1e75dee40a88, so this is not a changed token identity. Solana finalized account context slot 453414024 confirms the existing ACRED Token-2022 mint and issuer-controlled transfer hook and permanent delegate. EVM adapter and Aptos identity blockers are resolved, but the current route inventory omits issuer-listed Sei, and complete seven-rail economic attribution, non-EVM bridge-manager/authorization paths and message/supply conservation are not established. Existing destination administration and upgrade controls remain adverse common-mode exposure; the aggregate review date is retained.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint-bridge boundary migration",
     "confidence": "probable",
@@ -42,6 +42,34 @@
       {
         "label": "Wave-2 publicly verified SecuritizeBridge implementation source (not a pinned proxy-state certificate)",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xA42A23Db258666aDE7A40F52Ea55819DA4FA9853"
+      },
+      {
+        "label": "Ethereum canonical SecuritizeBridge read pin, block 26122489 (2026-10-05)",
+        "url": "https://eth.blockscout.com/block/26122489"
+      },
+      {
+        "label": "Aptos ACRED ds_token package ABI and metadata binding at ledger 7485299960",
+        "url": "https://api.mainnet.aptoslabs.com/v1/accounts/0x13816cd4562c9cf260a0471615451253ab96cca6d6adf746969c52c78480f06a/modules?ledger_version=7485299960"
+      },
+      {
+        "label": "Aptos ACRED metadata object resources at ledger 7485299960",
+        "url": "https://api.mainnet.aptoslabs.com/v1/accounts/0xe528f4df568eb9fff6398adc514bc9585fab397f478972bcbebf1e75dee40a88/resources?ledger_version=7485299960"
+      },
+      {
+        "label": "Polygon adapter state at block 94970204; pinned RPC receipt staged by W3R41",
+        "url": "https://polygon-bor-rpc.publicnode.com"
+      },
+      {
+        "label": "Avalanche adapter state at block 96771552; pinned RPC receipt staged by W3R41",
+        "url": "https://avalanche-c-chain-rpc.publicnode.com"
+      },
+      {
+        "label": "Ink adapter state at block 57662156; pinned RPC receipt staged by W3R41",
+        "url": "https://rpc-gel.inkonchain.com"
+      },
+      {
+        "label": "Sei adapter state at block 235783673; pinned RPC receipt staged by W3R41",
+        "url": "https://evm-rpc.sei-apis.com"
       }
     ],
     "routes": [

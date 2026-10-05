@@ -40436,6 +40436,43 @@
         "https://apilist.tronscanapi.com/api/contract?contract=TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs"
       ],
       "rationale": "Prior legal-access blocker resolved: browser recovered 15 complete terms pages, byte-identical to prior screenshots; page 16 is signup. Terms, reserve transparency, mint/bridge guide, Vat source/accounting and Maker-fork security-audit disclosures do not publish the exact whole-supply canonical/bridged PHT-to-custodial backing reconciliation procedure, common observation clock and recurring cadence. On-chain Vat debt and Satoshi tests are narrower facts, not financial reconciliation; no reconciliation:none is authored."
+    },
+    {
+      "id": "uw-acred-apollo-securitize-1a30db3ee6d9bef1",
+      "assetId": "acred-apollo-securitize",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:redemption:acred-apollo-securitize:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:29:12Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R41)",
+      "sources": [
+        {
+          "url": "https://securitize.io/primary-market/apollo-diversified-credit-securitize-fund",
+          "observedAt": "2026-10-05T00:08:31Z",
+          "datumAsOf": null,
+          "location": "Rendered ACRED offering, Redemptions and footnote (7)",
+          "excerpt": "Full redemptions are not guaranteed and may be subject to delays due to market conditions or blockchain settlement mechanics.",
+          "assertion": "The exact ACRED feeder publishes redemption frequency and outputs but expressly withholds guaranteed full completion; it states no end-to-end maximum to delivered USDC/USDG."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://securitize.io/primary-market/apollo-diversified-credit-securitize-fund",
+        "https://securitize.io/learn/press/apollo-and-securitize-announce-partnership-and-launch-tokenized-access-to-credit-fund",
+        "https://securitize.io/disclosure-library",
+        "https://securitize.io/disclosure/terms-of-service-transfer-agent",
+        "https://securitize.io/disclosure/terms-of-service-markets",
+        "https://securitize.io/fee-schedule-table",
+        "https://public-feed.securitize.io/asset-info?symbol=ACRED",
+        "https://www.sec.gov/Archives/edgar/data/2056038/000205603825000001/xslFormDX01/primary_doc.xml"
+      ],
+      "rationale": "No ACRED-specific end-to-end maximum settlement time is published for the issuer queue to delivered USDC/USDG. The rendered offering lists quarterly frequency and monthly redemptions during a quarterly notice period, then expressly says full redemptions are not guaranteed and may be delayed. Client-rendered transfer-agent and broker terms contain no ACRED completion SLA. The SEC reader exposed the exact feeder filing index, not filing text; no filing-based timing claim is made. Underlying Apollo repurchase rules cannot guarantee this feeder's final payout."
     }
   ]
 }
