@@ -265,6 +265,7 @@ export const MINT_AUTHORITY_TYPE_VALUES = [
   "contract",
   "issuer-backend",
   "validator-quorum",
+  "chain-consensus",
   "bridge",
   "custodian",
   "none",

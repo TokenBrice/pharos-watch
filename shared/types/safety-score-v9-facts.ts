@@ -4,7 +4,7 @@ import { V9ReserveBoundedFactSchema } from "./reserve-bounded-facts";
 import { ReserveScopedAdmissionSchema } from "./safety-score-v9-reserve-scope";
 import { AdmittedProviderRowExclusionSchema } from "./safety-score-v9-supply-attribution";
 import { V9AccessClaimGraphSchema, v9AccessClaimGraphStatuses } from "./safety-score-v9-access-lookthrough";
-import { V9InProcessControlExecutionScopeSchema, V9ExactControlPolicySchema, V9WeightedQuorumSchema } from "./safety-score-v9-control-scope";
+import { V9InProcessControlExecutionScopeSchema, V9ExactControlPolicySchema, V9WeightedQuorumSchema, V9SameChainSystemTransportSchema } from "./safety-score-v9-control-scope";
 import { createV9ValueInterner, deepFreeze } from "./safety-score-v9-immutable";
 import { DeploymentIdSchema } from "./stablecoin-meta-schemas";
 import { ReserveIntermediarySchema } from "./reserves";
@@ -742,6 +742,7 @@ const V9ControlAuthoritySchema = z
       "contract",
       "issuer-backend",
       "validator-quorum",
+      "chain-consensus",
       "unknown",
     ]),
     threshold: z
@@ -749,11 +750,18 @@ const V9ControlAuthoritySchema = z
       .strict()
       .nullable(),
     weightedQuorum: V9WeightedQuorumSchema.optional(),
+    sameChainSystemTransport: V9SameChainSystemTransportSchema.optional(),
   })
   .strict()
   .superRefine((authority, ctx) => {
     if (authority.weightedQuorum && (authority.model !== "multisig" || authority.threshold !== null || authority.authorityKey !== authority.weightedQuorum.deployment)) {
       ctx.addIssue({ code: "custom", message: "Weighted authority conflicts with uniform quorum or exact deployment" });
+    }
+    if ((authority.model === "chain-consensus") !== (authority.sameChainSystemTransport != null)) {
+      ctx.addIssue({ code: "custom", message: "Chain consensus requires its exact same-chain system transport identity" });
+    }
+    if (authority.sameChainSystemTransport && (authority.threshold !== null || authority.weightedQuorum != null || authority.authorityKey !== "consensus:hyperliquid")) {
+      ctx.addIssue({ code: "custom", message: "Same-chain transport cannot claim a signing quorum or independent authority" });
     }
   })
   .nullable();
