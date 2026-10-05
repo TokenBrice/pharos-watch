@@ -40479,6 +40479,121 @@
           "assertion": "Exact August 31 assets/liabilities examination is public; current fallback requires established publishedAt, absent from undated signatures. Remove obsolete no-2026-report C; no invented chronology."
         }
       ]
+    },
+    {
+      "id": "uw-paxg-paxos-81121d16184fa8cc",
+      "assetId": "paxg-paxos",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:redemption:paxg-paxos:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-05T00:22:25Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R35)",
+      "sources": [
+        {
+          "url": "https://support.paxos.com/articles/2899561282-PAX-Gold-Fees",
+          "observedAt": "2026-10-05T00:17:58Z",
+          "datumAsOf": "2026-09-01",
+          "location": "Redemption (Destruction) Fees; rolling marginal bands",
+          "excerpt": "Rates apply marginally, meaning each band is charged only on the portion of net redemption activity that falls within it.",
+          "assertion": "Public redemption formula: rolling net activity bands charge 12.5/25/35/50 bps; in-kind adds 5 bps. Current undisclosedReviewedFee config does not evaluate account history or an exact-request quote. W15 disclosed-unquantified B, not a zero/all-in cost."
+        }
+      ]
+    },
+    {
+      "id": "uw-usdp-paxos-d8371363d69347d9",
+      "assetId": "usdp-paxos",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1b2fd4c390933bf636a4dd88",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:22:25Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R35)",
+      "sources": [
+        {
+          "url": "https://framerusercontent.com/assets/YXrlcnHgVxcHy66TMLVHn2fM71U.pdf",
+          "observedAt": "2026-10-05T00:18:38Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Exhibit B, p.6, Cash; whole cash $22,220,905 versus uninsured subset",
+          "excerpt": "the uninsured FDIC demand deposits at commercial banks totaled $5,559,046 and $6,030,192, respectively.",
+          "assertion": "Demand-deposit wording establishes only the uninsured subset; the full cash book has neither an exhaustive account-tenor roster nor an all-accounts no-fixed-term statement."
+        },
+        {
+          "url": "https://www.paxos.com/terms-and-conditions/fdic-pass-through-insurance-disclosures",
+          "observedAt": "2026-10-05T00:17:58Z",
+          "datumAsOf": "2025-12-12",
+          "location": "Depository and deposit-placement network disclosure",
+          "excerpt": "Further, Paxos may utilize deposit placement networks operated by IntraFi Network LLC and Reich & Tang Deposit Solutions, LLC wherein the totality of balances in these deposit networks are FDIC-insured.",
+          "assertion": "Named possible deposit networks and bank roster disclose insurance/custody, not exact USDP account holdings or their contractual tenors."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.paxos.com/usdp-transparency",
+        "https://framerusercontent.com/assets/YXrlcnHgVxcHy66TMLVHn2fM71U.pdf",
+        "https://www.paxos.com/usdp",
+        "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions",
+        "https://www.paxos.com/terms-and-conditions/fdic-pass-through-insurance-disclosures",
+        "https://www.dfs.ny.gov/industry_guidance/industry_letters/il20220608_issuance_stablecoins"
+      ],
+      "rationale": "Exact whole-slice bank-deposit maturityDaysMax remains undisclosed: August Exhibit B calls only $6,030,192 of $22,220,905 demand deposits. New inspection of the governing cash-management terms, pass-through/network-bank disclosures and reserve guidance supplies neither remaining account tenors nor an exhaustive no-term covenant. Treasury/repo maxima and holder redemption targets do not bind deposited-cash maturity. No zero or whole-book N/A is inferred from the subset."
+    },
+    {
+      "id": "uw-pht-pht-a41f87e0d287e2a6",
+      "assetId": "pht-pht",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:22:25Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R35)",
+      "sources": [
+        {
+          "url": "https://docsend.com/view/6bz4qr67n2kaqq7b",
+          "observedAt": "2026-10-05T00:19:36Z",
+          "datumAsOf": "2025-03-04",
+          "location": "Recovered Terms of Use, all 15 document pages; p.6 section 1.5",
+          "excerpt": "The Informational Resources provided are not exhaustive and may not cover all aspects of or potential developments concerning the Apacx Protocol.",
+          "assertion": "Complete legal document recovered and inspected: interface/third-party disclaimers, not a dated whole-supply versus off-chain custodial backing reconciliation procedure or cadence. Viewer page 16 is signup, not omitted terms."
+        },
+        {
+          "url": "https://docs.apacx.io/transparency.md",
+          "observedAt": "2026-10-05T00:17:58Z",
+          "datumAsOf": null,
+          "location": "Custodial collateral wallet table and Satoshi test disclosure",
+          "excerpt": "We provide the option of a Satoshi test for collateral verification.",
+          "assertion": "A reserve wallet and optional authenticity test are disclosed; neither reconciles canonical plus bridged PHT and apcx collateral liabilities/backing on a common clock at a stated cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.apacx.io/PHT",
+        "https://docs.apacx.io/transparency.md",
+        "https://docs.apacx.io/user-guides/mint-redeem-and-bridge-pht.md",
+        "https://docs.apacx.io/technical-references/system-architecture.md",
+        "https://docs.apacx.io/technical-references/smart-contract-audits.md",
+        "https://docs.apacx.io/technical-references/contract-addresses.md",
+        "https://docsend.com/view/6bz4qr67n2kaqq7b",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xee0cde42bb6841736d809d2bb63ebf59db6e336c",
+        "https://apilist.tronscanapi.com/api/contract?contract=TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs"
+      ],
+      "rationale": "Prior legal-access blocker resolved: browser recovered 15 complete terms pages, byte-identical to prior screenshots; page 16 is signup. Terms, reserve transparency, mint/bridge guide, Vat source/accounting and Maker-fork security-audit disclosures do not publish the exact whole-supply canonical/bridged PHT-to-custodial backing reconciliation procedure, common observation clock and recurring cadence. On-chain Vat debt and Satoshi tests are narrower facts, not financial reconciliation; no reconciliation:none is authored."
     }
   ]
 }
