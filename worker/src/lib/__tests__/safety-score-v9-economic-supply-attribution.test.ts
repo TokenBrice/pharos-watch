@@ -60,6 +60,17 @@ function fixture(): EconomicFixture {
     inFlight: [observation("in-flight:bridge-escrow", CANONICAL, "0")],
   };
 }
+
+function independentFixture(): EconomicFixture {
+  const input = fixture();
+  input.plan.accountingFamily = "independent-liability";
+  input.plan.escrows = [];
+  input.observations.pop();
+  input.inFlight = [];
+  input.meta.bridgeRouteRisk!.routes!.forEach(route =>
+    Object.assign(route, { semantics: "native-mint", routeClass: "native", issuanceModel: "native-issuance" }));
+  return input;
+}
 afterEach(() => vi.restoreAllMocks());
 
 describe("reviewed economic supply accounting", () => {
@@ -70,8 +81,7 @@ describe("reviewed economic supply accounting", () => {
     expect(packet.unattributedSupplyUsd).toBe(0);
   });
   it("retains independently issued remote liability without subtracting it as a receipt", () => {
-    const input = fixture(); input.plan.escrows = []; input.plan.accountingFamily = "independent-liability";
-    input.observations.pop(); input.inFlight = [];
+    const input = independentFixture();
     const rows = deriveReviewedEconomicDeploymentPartition(input)!.deployments;
     expect(rows[0]!.currentSupplyUsd).toBeCloseTo(100 * 5 / 6);
     expect(rows[1]!.currentSupplyUsd).toBeCloseTo(100 / 6);
@@ -197,7 +207,7 @@ describe("reviewed economic supply accounting", () => {
     expect(deriveReviewedEconomicDeploymentPartition(input)).toBeNull();
   });
   it("preserves tiny nonzero receipts and distinguishes an observed zero from an absent row", () => {
-    const input = fixture(); input.plan.escrows = []; input.plan.accountingFamily = "independent-liability"; input.observations.pop(); input.inFlight = [];
+    const input = independentFixture();
     input.observations[1]!.amount = "101";
     expect(deriveReviewedEconomicDeploymentPartition(input)!.deployments[1]!.currentSupplyUsd).toBeGreaterThan(0);
     input.observations[1]!.amount = "0";
@@ -220,6 +230,19 @@ describe("reviewed economic supply accounting", () => {
     expect(deriveReviewedEconomicDeploymentPartition(badHash)).toBeNull();
     const expanded = fixture(); expanded.meta.contracts!.push({ chain: "optimism", address: `0x${"4".repeat(40)}`, decimals: 18 });
     expect(buildReviewedEconomicDeploymentInventory("alpha", expanded.plan, expanded.meta)).toBeNull();
+  });
+  it("rejects a lock-mint route relabelled as independent supply, even with a pending API", () => {
+    const input = independentFixture();
+    input.meta.bridgeRouteRisk!.routes![1]!.semantics = "lock-mint";
+    expect(ReviewedEconomicSupplyPlanSchema.safeParse(input.plan).success).toBe(true);
+    expect(buildReviewedEconomicDeploymentInventory("alpha", input.plan, input.meta)).toBeNull();
+    input.plan.liabilityInFlightSource = pendingSource;
+    expect(buildReviewedEconomicDeploymentInventory("alpha", input.plan, input.meta)).toBeNull();
+  });
+  it("admits native-only multichain liabilities without manufacturing pending messages", () => {
+    const input = independentFixture();
+    expect(buildReviewedEconomicDeploymentInventory("alpha", input.plan, input.meta)).not.toBeNull();
+    expect(deriveReviewedEconomicDeploymentPartition(input)!.inFlight).toEqual([]);
   });
   it("does not certify a missing deployment zero even when the visible provider subtotal equals aggregate", () => {
     const input = fixture();
@@ -520,8 +543,7 @@ describe("economic capture handoff", () => {
   });
 
   it("rebuilds input-derived provider quantities instead of stamping captured provider rows with a new generation", async () => {
-    const input = fixture();
-    input.plan.accountingFamily = "independent-liability"; input.plan.escrows = []; input.inFlight = [];
+    const input = independentFixture();
     input.plan.deployments.forEach(row => { row.read = { kind: "provider-chain", sourceChain: row.chainId }; row.amountBasis = "circulating-usd"; row.decimals = null; });
     input.observations = input.observations.slice(0, 2);
     input.meta.contracts!.forEach(contract => contract.decimals = null);
@@ -542,8 +564,7 @@ describe("economic capture handoff", () => {
   });
 
   it("recomputes native aggregate-derived units from the actual consumer aggregate and reference price", async () => {
-    const input = fixture(), nativeKey = "ethereum:native:ether";
-    input.plan.accountingFamily = "independent-liability"; input.plan.escrows = []; input.inFlight = [];
+    const input = independentFixture(), nativeKey = "ethereum:native:ether";
     Object.assign(input.plan.deployments[0]!, { deploymentKey: nativeKey, holdingKind: "native-gas", amountBasis: "native-ledger",
       address: "ether", decimals: null, routeId: null, read: { kind: "native-from-aggregate", safeBlockLag: 2 } });
     input.meta.contracts!.shift(); input.meta.bridgeRouteRisk!.routes!.shift();
