@@ -183,6 +183,39 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     ],
     notes: ["Protocol permission checks and published jurisdiction restrictions apply, including exclusions for the United States and Australia. The configured erc4626-single-asset reader measures fresh idle USDG but does not infer FIFO allocation, funded processing throughput or queue completion from that balance. No holder minimum, 30-day sibling maximum, 10% queue buffer, DEX capacity or static fallback is inferred."],
   }),
+  "susdat-saturn": defineQueueRedeemConfig({
+    reviewedAt: "2026-10-05",
+    holderEligibility: "any-holder",
+    outputAssets: ["usdat-saturn"],
+    capacityModel: { kind: "unquantified" },
+    costModel: documentedVariableFee(
+      "Native WithdrawalQueueERC721 request/process/claim fee is determined at processing, not submission: Regular/Elevated mode parameters and gas must be observed at the request notional; no permanent fee ceiling inferred from initial runbook values",
+      "formula",
+    ),
+    docs: [
+      sourceRef("Saturn V2 deployment runbook", "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md", ["route", "access", "fees", "settlement"]),
+      sourceRef("Native StakedUSDat implementation", "https://sourcify.dev/server/v2/contract/1/0x2b7074cf6681382b70e239063931ebe83c0f4e0a?fields=sources,abi,runtimeMatch", ["route", "capacity", "access", "fees"]),
+    ],
+    notes: ["Native sUSDat requests escrow shares, operators process against available USDat, and the request owner claims USDat. Pauses and restrictions apply. Neither the runbook schedule nor idle assets establish funded request capacity or a final-completion SLA; this is not the USDat primary-market route."],
+  }),
+  "susdx-axis": defineQueueRedeemConfig({
+    reviewedAt: "2026-10-05",
+    outputAssets: ["usdx-axis"],
+    capacityModel: { kind: "unquantified" },
+    costModel: undisclosedReviewedFee("No complete holder fee commitment; issuer terms permit fees and third-party/gas costs."),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      reviewedAt: "2026-10-05",
+      rationale: "The eligibility cooldown does not bound privileged servicing; reserved burned-share liabilities are not capacity for new requests.",
+      docs: [sourceRef("Axis asynchronous servicing", "https://docs.axis.to/risk/custody-liquidity-risk.md", ["route", "settlement"])],
+    },
+    docs: [
+      sourceRef("Axis asynchronous servicing", "https://docs.axis.to/risk/custody-liquidity-risk.md", ["route", "capacity", "access", "settlement"]),
+      sourceRef("Axis terms of service", "https://www.axis.to/terms-of-service", ["fees", "settlement"]),
+    ],
+    notes: ["Native Ethereum StakedUSDx 0xeb892628d1e58bc475a6dcb7f5dbc4f591632aa4 burns shares on requestRedeem and reserves USDx inside the vault. A redemption-servicer must call serviceRedemptions before withdraw/redeem can claim. Read accountedAssets, pendingRedeemAssets and claimableRedeemAssets separately; there is no separate silo or instant ERC-4626 capacity proof."],
+  }),
   "alusd-alchemix": defineReviewedQueueRedeemConfig(REVIEWED_QUEUE_REDEMPTION_AT, {
     outputAssets: ["dai-makerdao"],
     settlementModel: "days",
@@ -197,6 +230,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     ],
     notes: [
       "Alchemix documents the Transmuter as the 1:1 alUSD redemption rail, with claims settling as underlying collateral is repaid and harvested from yield strategies rather than as an instant stablecoin buffer",
+      "Ethereum V3 Transmuter 0x2584e8b0616b3e750492c9629a3b27679c410cb9 is a distinct MYT-receipt route, not this legacy V2 DAI rail. Its mutable transmutationFee applies to distributable yield and exitFee to the untransmuted synthetic portion; position maturity, exact payout legs and gas require a separately identified observer. V3 fee readings must never overwrite the legacy 1:1 DAI terms.",
     ],
   }),
   "iusd-infinifi": defineQueueRedeemConfig({
@@ -476,11 +510,13 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       ],
     },
   }),
-  "witry-brix": defineReviewedQueueRedeemConfig(REVIEWED_CONFIG_ONLY_GAPS_AT, {
+  "witry-brix": defineQueueRedeemConfig({
+    reviewedAt: "2026-10-05",
+    capacityModel: { kind: "unquantified" },
     unresolvedOutputAssetKeys: ["asset:itry"],
     unresolvedOutputDisposition: "reviewed-external",
     accessModel: "whitelisted-onchain",
-    settlementModel: "days",
+    settlementModel: "queued",
     executionModel: "rules-based-nav",
     costModel: fixedFee(
       0,
@@ -497,9 +533,10 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       ),
     ],
     notes: [
-      "wiTRY is the staked ERC-4626-style wrapper over iTRY; unstaking returns iTRY after the documented 3-day cooldown unless the holder uses the fee-bearing fast-withdraw path (re-confirmed 2026-07-27 against the issuer-published audit scope overview, Kimi data review).",
+      "Canonical Ethereum cooldownShares/unstake releases iTRY subject to the request-specific cooldownEnd and sender/receiver restrictions. At reviewed block 26122489 cooldownDuration was 300 seconds and MAX_COOLDOWN_DURATION is 90 days; neither is an unconditional final USD completion SLA. A new cooldown resets the accumulated request deadline.",
       "iTRY redemption is whitelist-gated and serviced first by the FastAccessVault DLF liquidity buffer, with custodian-managed redemption when immediate DLF liquidity is insufficient.",
       "The exact wrapper output remains unresolved for scoring because iTRY has no tracked Pharos stablecoin id; asset:itry is retained as a diagnostic identity.",
+      "MegaETH redemption additionally requires the Ethereum composer and return bridge; canonical cooldown release does not bound cross-chain completion.",
     ],
   }),
   "stkgho-umbrella-aave": erc4626ReserveTelemetryQueueConfig({
@@ -868,13 +905,15 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       ],
     },
   }),
-  "srusde-strata": erc4626ReserveTelemetryQueueConfig({
-    reviewedAt: "2026-08-27",
+  "srusde-strata": defineQueueRedeemConfig({
+    reviewedAt: "2026-10-05",
+    capacityModel: { kind: "reserve-sync-metadata", requiredOutputAssetKeys: ["usde-ethena", "susde-ethena"] },
     accessModel: "whitelisted-onchain",
-    settlementModel: "days",
+    settlementModel: "queued",
     executionModel: "rules-based-nav",
-    outputAssetType: "stable-basket",
-    outputAssets: ["usde-ethena", "susde-ethena"],
+    outputAssetType: "stable-single",
+    unresolvedOutputAssetKeys: ["usde-ethena", "susde-ethena"],
+    unresolvedOutputDisposition: "reviewed-external",
     totalScoreCap: 65,
     costModel: fixedFee(2.5, "Strata docs list a 2.5 bps senior redemption fee"),
     docs: [
@@ -886,10 +925,9 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       sourceRef("Strata FAQ", "https://docs.strata.markets/resources/faqs", ["route", "fees", "settlement"]),
     ],
     notes: [
-      "Output re-reviewed 2026-08-27: Strata's current FAQ states srUSDe can be redeemed for USDe and sUSDe. It documents instant sUSDe redemptions and a seven-day cooldown for USDe, so both tracked outputs are declared as the complete current set.",
+      "Holder-selected sUSDe and USDe payouts are mutually exclusive, not a basket. A successful sUSDe withdrawal can be atomic only when the same-run senior strategy cooldown is zero; USDe instead unstakes through Ethena and has no proven final-completion SLA. Neither the FAQ's seven days nor a current Ethena cooldown is a request-to-final-claim bound.",
+      "Separate output-bound executable observations must retain their shared Strata resources. The existing idle underlying telemetry is not a two-output basket quote and must not establish a branch's settlement or capacity.",
     ],
-    telemetrySubject: "the tranche vault's idle underlying balance",
-    settlementConstraint: "the documented redemption window",
   }),
   "scusd-rings": defineReviewedQueueRedeemConfig(REVIEWED_YIELD_COVERAGE_WAVE_AT, {
     outputAssetType: "stable-basket",

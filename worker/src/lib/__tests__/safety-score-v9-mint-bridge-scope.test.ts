@@ -926,7 +926,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     });
   });
 
-  it("compiles a representation group only when every member is reviewed wrapped lock-mint", () => {
+  it("preserves a wrapped lock-mint group while an unreviewed member keeps its authority unknown", () => {
     const representationId = "fixture-wrapped-representation";
     const acceptingRoute = representationRoute(BASE_ROUTE, {
       representationId,
@@ -963,10 +963,112 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       representationSupplyReview(rejectingMetadata.id, representationId),
     );
 
-    expect(rejecting.controls.some((control) => control.controlKey.startsWith("bridge-group:"))).toBe(false);
-    expect(rejecting.controls).toContainEqual(
-      expect.objectContaining({ deploymentKey: BASE_ROUTE, controlKind: "bridge" }),
+    expect(rejecting.controls).toHaveLength(1);
+    expect(rejecting.controls[0]).toMatchObject({
+      controlKey: expect.stringMatching(/^bridge-group:/),
+      authority: { model: "unknown", threshold: null },
+      capSemantics: { kind: "unknown" },
+      incidentState: "unknown",
+    });
+  });
+
+  describe("loss-preserving representation-group authorities", () => {
+    const representationId = "fixture-authority-group";
+    function groupFixture(
+      controls: BridgeRouteControl[],
+      routeOverrides: Partial<BridgeRouteDeployment>[] = [{}, {}],
+    ) {
+      const routes = [BASE_ROUTE, ARBITRUM_ROUTE].slice(0, routeOverrides.length).map((id, index) =>
+        representationRoute(id, {
+          representationId, issuanceModel: "wrapped-representation",
+          failureDomainKeys: [`contract:${id}`], ...routeOverrides[index],
+        }));
+      const metadata = meta("fixture-group-authorities", { bridgeRouteRisk: bridgeProfile(routes, { controls }) });
+      const supply = representationSupplyReview(metadata.id, representationId);
+      supply.failureDomains = [{ kind: "bridge-route", key: `contract:${ETHEREUM_ROUTE}` }];
+      return { metadata, result: adaptBridgeFixture(metadata, supply) };
+    }
+    function safe(id: string, routeRef: string, required: number, total: number) {
+      return bridgeControl({
+        id, routeRefs: [routeRef], controllerChain: routeRef.split(":")[0],
+        controllerAddress: routeRef.split(":")[1], authorityType: "multisig",
+        threshold: required, signerCount: total,
+      });
+    }
+
+    it("retains the weakest heterogeneous signing member and all destination failure domains", () => {
+      const { result } = groupFixture([safe("strong", BASE_ROUTE, 3, 5), safe("weak", ARBITRUM_ROUTE, 1, 2)]);
+      expect(result.controls).toHaveLength(1);
+      expect(result.controls[0]).toMatchObject({
+        authority: { authorityKey: ARBITRUM_ROUTE, model: "multisig", threshold: { required: 1, total: 2 } },
+        materialSupplyShare: 1, keyCustody: "unknown",
+        failureDomains: expect.arrayContaining([
+          { kind: "bridge-route", key: `contract:${BASE_ROUTE}` },
+          { kind: "bridge-route", key: `contract:${ARBITRUM_ROUTE}` },
+          { kind: "bridge-route", key: `contract:${ETHEREUM_ROUTE}` },
+        ]),
+      });
+      expect(result.review.routes).toEqual([{ controlKey: result.controls[0]!.controlKey, tier: "external-lock-mint" }]);
+    });
+
+    it("uses minimum signatures rather than the lowest threshold ratio, independent of member order", () => {
+      const strong = safe("strong", BASE_ROUTE, 3, 5);
+      const weak = safe("weak", ARBITRUM_ROUTE, 2, 2);
+      for (const controls of [[strong, weak], [weak, strong]]) {
+        expect(groupFixture(controls).result.controls[0]?.authority).toEqual({
+          authorityKey: ARBITRUM_ROUTE, model: "multisig", threshold: { required: 2, total: 2 },
+        });
+      }
+    });
+
+    it("retains a weaker upgrade key and proven modules even when the mint quorum is stronger", () => {
+      const upgrade = bridgeControl({
+        id: "upgrade-key", routeRefs: [BASE_ROUTE], authorityType: "eoa",
+        capabilities: ["upgrade"], controllerAddress: "0xcccccccccccccccccccccccccccccccccccccccc",
+        modulesOrGuardsStatus: "present",
+      });
+      const { result } = groupFixture([safe("strong", BASE_ROUTE, 3, 5), safe("sibling", ARBITRUM_ROUTE, 3, 5), upgrade]);
+      expect(result.controls[0]).toMatchObject({
+        authority: { model: "eoa", authorityKey: "base:0xcccccccccccccccccccccccccccccccccccccccc" },
+        capabilities: ["bridge-mint", "upgrade"], modulesOrGuards: "present", keyCustody: "unknown",
+      });
+    });
+
+    it.each(["missing", "unknown", "threshold-unreviewed", "stale", "unreviewed", "upgrade-unknown"] as const)(
+      "keeps the group unknown for a %s member instead of substituting the common adapter",
+      (condition) => {
+        const sibling = safe("sibling", ARBITRUM_ROUTE, 3, 5);
+        if (condition === "unknown") sibling.authorityType = "unknown";
+        if (condition === "threshold-unreviewed") { delete sibling.threshold; delete sibling.signerCount; }
+        if (condition === "stale") sibling.observedAt = "1970-01-01";
+        const controls = [safe("strong", BASE_ROUTE, 3, 5), ...(condition === "missing" ? [] : [sibling])];
+        if (condition === "upgrade-unknown") controls.push(bridgeControl({
+          id: "unknown-upgrade", routeRefs: [ARBITRUM_ROUTE], capabilities: ["upgrade"], authorityType: "unknown",
+        }));
+        const { metadata, result } = groupFixture(controls, [{}, condition === "unreviewed" ? { reviewDisposition: "unresolved" } : {}]);
+        const adapted = condition === "stale"
+          ? adaptBridgeFixture({
+            ...metadata,
+            bridgeRouteRisk: { ...metadata.bridgeRouteRisk!, reviewedAt: "2026-10-01",
+              routes: metadata.bridgeRouteRisk!.routes!.map((member) => ({ ...member, observedAt: "2026-10-01" })),
+              controls: controls.map((control) => ({ ...control, observedAt: control.id === "sibling" ? "1970-01-01" : "2026-10-01" })),
+            },
+          }, representationSupplyReview(metadata.id, representationId), undefined, Date.parse("2026-10-05T12:00:00Z") / 1_000)
+          : result;
+        expect(adapted.controls).toHaveLength(1);
+        expect(adapted.controls[0]?.authority).toEqual({
+          authorityKey: `bridge-route:${v9RepresentationGroupRouteKey(metadata.id, representationId)}`,
+          model: "unknown", threshold: null,
+        });
+      },
     );
+
+    it("leaves a single researched member authority unchanged", () => {
+      const { metadata, result } = groupFixture([safe("only", BASE_ROUTE, 3, 5)], [{}]);
+      const standalone = adaptBridgeFixture(metadata, null).controls[0];
+      expect(result.controls[0]?.authority).toEqual(standalone?.authority);
+      expect(result.controls[0]?.authority).toMatchObject({ model: "multisig", threshold: { required: 3, total: 5 } });
+    });
   });
 
   it("keeps a shared Safe identity-linked while separating native mint from bridge capabilities", () => {
@@ -1537,7 +1639,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(adapted.review.diagnostics?.applicabilityBranch).toBe("native-only-not-applicable");
     expect(adapted.review.diagnostics?.unmatchedRowIdentities).toContain("Tempo");
     expect(supply).toEqual(before);
-    expect(supply.selectedBridgeRoutes.at(-1)).toMatchObject({ reviewState: "unmatched", supplyShare: share, supplyUsd: share * 1_000_000 });
+    expect(supply.selectedBridgeRoutes[supply.selectedBridgeRoutes.length - 1]).toMatchObject({ reviewState: "unmatched", supplyShare: share, supplyUsd: share * 1_000_000 });
     expect([...evidence.evidence.values()]).toContainEqual(expect.objectContaining({
       sourceId: "stablecoin-meta.native-inventory-census",
       url: SOURCE.url,
@@ -1595,8 +1697,8 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       { ...remainder, deploymentRouteKey: `unmatched-chain:${metadata.id}:bittorrent`, supplyShare: 1e-5, supplyUsd: 10 },
     );
     expect(adaptBridgeFixture(metadata, supply).review.status.applicability.state).toBe("not-applicable");
-    supply.selectedBridgeRoutes.at(-1)!.supplyShare += 1e-8;
-    supply.selectedBridgeRoutes.at(-2)!.supplyShare -= 1e-8;
+    supply.selectedBridgeRoutes[supply.selectedBridgeRoutes.length - 1]!.supplyShare += 1e-8;
+    supply.selectedBridgeRoutes[supply.selectedBridgeRoutes.length - 2]!.supplyShare -= 1e-8;
     expect(adaptBridgeFixture(metadata, supply).review.status.applicability.state).toBe("required");
   });
 

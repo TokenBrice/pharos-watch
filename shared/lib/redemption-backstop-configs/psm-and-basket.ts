@@ -134,12 +134,14 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
   },
   "dllr-sovryn": {
     ...basketRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_YIELD_COVERAGE_WAVE_AT),
+    reviewedAt: "2026-10-05",
+    outputAssetType: "stable-single",
+    capacityModel: { kind: "reserve-sync-metadata" },
     unresolvedOutputAssetKeys: ["asset:zusd", "doc-money-on-chain"],
     unresolvedOutputDisposition: "reviewed-external",
-    costModel: fixedFee(0, "Mynt materials state redemption fees are currently disabled"),
-    reviewedAt: "2026-07-27",
+    costModel: documentedVariableFee("Mynt fees are currently disabled but can be enabled; evaluate the selected bAsset redemption fee and gas at the actual notional", "formula"),
     docs: [
+      sourceRef("Mynt selected bAsset redemption", "https://build.sovryn.com/builder-portal/smart-contracts/mynt", ["route", "fees", "settlement"]),
       sourceRefRouteCapacityAccess("Sovryn Dollar", "https://sovryn.com/sovryn-dollar"),
       sourceRef("Launching the Sovryn Dollar", "https://sovryn.com/all-things-sovryn/launching-the-sovryn-dollar", [
         "route",
@@ -148,8 +150,8 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       sourceRef("Mynt app", "https://app.mynt.xyz/", ["route", "capacity", "fees", "settlement"]),
     ],
     notes: [
-      "Fresh reserve sync reads the Mynt holder's ZUSD and DOC balances on Rootstock, but redemption capacity remains documented-bound because the adapter does not emit a dedicated route-capacity field",
-      "2026-07-27 recheck (Kimi data review): Mynt redeems DLLR 1:1 into a user-selected bAsset, currently DOC or ZUSD. ZUSD has no tracked Pharos stablecoin id, so the complete pair is preserved as unresolved diagnostic identities rather than publishing DOC alone.",
+      "Mynt redeems DLLR 1:1 into holder-selected DOC or ZUSD, not a proportional reserve basket. Both diagnostic identities remain visible; no weights or DOC-only output are inferred.",
+      "Separate exact DOC/ZUSD request observations and fresh USD output valuation are required before attributing executable branch capacity. Raw Mynt backing balances do not prove holder-selected same-notional capacity; ZUSD remains externally unpriced.",
     ],
   },
   "xusd-babelfish": {

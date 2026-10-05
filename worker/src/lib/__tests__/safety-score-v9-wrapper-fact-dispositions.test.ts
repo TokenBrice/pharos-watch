@@ -14,6 +14,8 @@ import {
   v9Status,
 } from "../../test-helpers/v9-fixed-input";
 import { normalizeFixedInput } from "../report-cards-fixed-input";
+import wrapperLocalReviews from "@shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json";
+import { SafetyScoreV9WrapperLocalReviewSchema } from "@shared/types/safety-score-v9-wrapper-local-review";
 
 function fixedInputWithTrackedParent() {
   return makeV9TwoAssetFixedInput();
@@ -60,6 +62,50 @@ function wrapperFacts(
 }
 
 describe("Safety Score V9 wrapper fact dispositions", () => {
+  it("prices adverse researched no-public-withdrawal entitlement without inventing a route or unwind", () => {
+    const fixed = makeV9TwoAssetFixedInput({ clockSec: 1791184659 });
+    const extension = wrapperExtension(fixed, "strategy-vault");
+    const wrapper = extension.assets.find((candidate) => candidate.assetId === "alpha")!;
+    const sourceReview = wrapperLocalReviews.localReviews.find((review) => review.kind === "holder-entitlement")!;
+    const review = SafetyScoreV9WrapperLocalReviewSchema.parse({
+      ...sourceReview, assetId: "alpha", identity: { ...sourceReview.identity, assetId: "alpha" },
+    });
+    wrapper.allocationScopeIdentityReview = structuredClone(review.identity);
+    const beforeSet = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+    const before = beforeSet.assets.find((asset) => asset.assetId === "alpha")!;
+    wrapper.wrapperLocalReviews = [review];
+    const afterSet = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+    const after = afterSet.assets.find((asset) => asset.assetId === "alpha")!;
+    if (before.wrapperLocalFacts.applicability !== "wrapper" || after.wrapperLocalFacts.applicability !== "wrapper") {
+      throw new Error("Expected wrapper-local facts");
+    }
+    expect(after.wrapperLocalFacts.facts.withdrawalTerms).toMatchObject({
+      disposition: "reviewed", assessment: "critical",
+    });
+    expect(after.gaps.some((gap) => gap.gapId === "alpha:gap:wrapper-local:withdrawalTerms")).toBe(false);
+    expect(after.exitRoutes).toEqual(before.exitRoutes);
+    expect(after.exitStatus).toEqual(before.exitStatus);
+    expect(after.wrapperLocalFacts.facts.measuredUnwind).toEqual(before.wrapperLocalFacts.facts.measuredUnwind);
+    expect(after.economicControlReview).toEqual(before.economicControlReview);
+    const beforeLimit = evaluateV9FactSet(beforeSet, V9_CANDIDATE_POLICY_V1).assets
+      .find((asset) => asset.assetId === "alpha")!.trace.wrapperParentLimit!;
+    const afterLimit = evaluateV9FactSet(afterSet, V9_CANDIDATE_POLICY_V1).assets
+      .find((asset) => asset.assetId === "alpha")!.trace.wrapperParentLimit!;
+    expect(afterLimit.adjustments).toContainEqual(expect.objectContaining({
+      factKey: "withdrawalTerms", assessment: "critical", discountPoints: 3, scoringDisposition: "included",
+    }));
+    expect(afterLimit.localRiskDiscount).toBeGreaterThan(beforeLimit.localRiskDiscount);
+    expect(afterLimit.missingFacts.some((fact) => fact.factClass === "withdrawalTerms")).toBe(false);
+    expect(afterLimit.limit).toBeLessThanOrEqual(beforeLimit.limit);
+  });
+
+  it.each(["accounting", "holder-entitlement"] as const)("rejects a %s review whose identity names a different holder instrument", (kind) => {
+    const source = wrapperLocalReviews.localReviews.find((review) => review.kind === kind)!;
+    expect(SafetyScoreV9WrapperLocalReviewSchema.safeParse({
+      ...source, identity: { ...source.identity, assetId: "different-instrument" },
+    }).success).toBe(false);
+  });
+
   it("removes only immutable-root local uncertainty while retaining aggregate issuance and other wrapper causes", () => {
     const fixed = fixedInputWithTrackedParent();
     const extension = wrapperExtension(fixed, "strategy-vault");

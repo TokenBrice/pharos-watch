@@ -14,9 +14,12 @@ import {
   severeMarketEvidence,
   liveSnapshot,
 } from "./redemption-backstop-sources.test-support";
+import { readRedemptionBackstopLiveMetadata } from "../redemption-backstop/live-metadata";
 
-const getReserveSyncStateMock = vi.fn();
-const getLatestSuccessfulReserveSnapshotMetadataMock = vi.fn();
+const { getReserveSyncStateMock, getLatestSuccessfulReserveSnapshotMetadataMock } = vi.hoisted(() => ({
+  getReserveSyncStateMock: vi.fn(),
+  getLatestSuccessfulReserveSnapshotMetadataMock: vi.fn(),
+}));
 
 const observeExecutableRedemptionRouteMock = vi.fn();
 vi.mock("../../cron/reserve-adapters/executable-redemption-observers", () => ({
@@ -139,6 +142,10 @@ describe("buildRedemptionBackstopEntry", () => {
     "usdfc-secured-finance",
     "sparkusdtbc-spark",
     "sparkusdc-spark",
+    "usdr-rise",
+    "susdat-saturn",
+    "susdx-axis",
+    "xgld-unitas",
   ])("publishes missing capacity rather than a measured zero for unmeasured %s liquidity", async (id) => {
     const config = getRedemptionBackstopConfig(id);
     expect(config).not.toBeNull();
@@ -197,7 +204,7 @@ describe("buildRedemptionBackstopEntry", () => {
       }
       expect(entry.settlementDelaySec).toBeUndefined();
       expect(entry.notes).toContain("redemption-capacity-unquantified");
-      expect(entry.notes.some((note) => note.includes("queue diagnostics:"))).toBe(true);
+      expect(entry.notes?.some((note) => note.includes("queue diagnostics:"))).toBe(true);
       expect(getLatestSuccessfulReserveSnapshotMetadataMock).not.toHaveBeenCalled();
       expect(observeExecutableRedemptionRouteMock).toHaveBeenCalledWith(
         "earnusd-lido", "0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981", expect.any(AbortSignal),
@@ -220,14 +227,40 @@ describe("buildRedemptionBackstopEntry", () => {
   });
 
   it.each([
+    { keys: undefined, accepted: false },
+    { keys: ["m-m0"], accepted: false },
+    { keys: ["wm-m0"], accepted: true },
+  ])("admits only exact USDR holder-output telemetry ($keys)", async ({ keys, accepted }) => {
+    const metadata = {
+      ...readRedemptionBackstopLiveMetadata("usdr-rise", null, now),
+      canUseCapacity: true,
+      canUseFee: true,
+      immediateRedeemableUsd: 2_000_000,
+      immediateRedeemableRatio: 0.2,
+      capacityConfidence: "live-direct" as const,
+      capacityKind: "live-direct" as const,
+      freshnessKind: "same-run-onchain" as const,
+      redemptionFeeBps: 0,
+      outputAssetKeys: keys,
+    };
+    const entry = await buildEntry("usdr-rise", getRedemptionBackstopConfig("usdr-rise")!, 10_000_000, null, {
+      reserveSnapshotMetadata: null,
+      redemptionLiveMetadata: metadata,
+    });
+    expect(entry.immediateCapacityUsd).toBe(accepted ? 2_000_000 : null);
+    expect(entry.feeBps).toBe(accepted ? 0 : null);
+    expect(entry.resolutionState).toBe(accepted ? "resolved" : "missing-capacity");
+    if (!accepted) {
+      expect(entry.capacityProfile?.exitRouteObservations ?? []).toEqual([]);
+      expect(entry.notes).toContain("route-output-identity-unobserved");
+    }
+  });
+
+  it.each([
     "usdfr-forest-road",
     "usdx-axis",
     "susdc-spark-v1",
-    "usdr-rise",
     "mantrausd-mantra",
-    "susdat-saturn",
-    "susdx-axis",
-    "xgld-unitas",
   ])("withholds the %s entry when no honest exact-route capacity model exists", async (id) => {
     const entry = await resolveRedemptionBackstopEntry(mockD1Strict([]), { id } as StablecoinData, null, now);
 

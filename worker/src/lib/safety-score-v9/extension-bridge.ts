@@ -192,9 +192,12 @@ export function mergedBridgeCapSemantics(
  * and never stronger than a named multisig — but a rotating quorum that must
  * collude is still a harder failure than one unattested single key.
  */
-function bridgeAuthoritySeverity(authority: NonNullable<ControlOverlay["authority"]>): number {
+function bridgeAuthoritySeverity(
+  authority: NonNullable<ControlOverlay["authority"]>,
+  authorityModel = authority.model,
+): number {
   const required = effectiveAuthoritySignatureRequirement(authority);
-  const model = authority.weightedQuorum ? required === null ? "unknown" : required === 1 ? "eoa" : authority.model : authority.model;
+  const model = authority.weightedQuorum ? required === null ? "unknown" : required === 1 ? "eoa" : authorityModel : authorityModel;
   return {
     none: 0,
     multisig: 1,
@@ -479,20 +482,59 @@ function representationGroupId(
     : null;
 }
 
+/**
+ * A pooled liability is exposed to every destination authority, not to the
+ * common adapter's signing model. Missing member research poisons the aggregate;
+ * otherwise retain the weakest model and the minimum cryptographic quorum.
+ */
+function representationGroupAuthority(
+  members: readonly ControlOverlay[],
+  routeKey: string,
+  reviewed: boolean,
+): ControlOverlay["authority"] {
+  const unknown: NonNullable<ControlOverlay["authority"]> = {
+    authorityKey: `bridge-route:${routeKey}`, model: "unknown", threshold: null,
+  };
+  let weakest: NonNullable<ControlOverlay["authority"]> | null = null;
+  for (const member of members) {
+    const authority = member.authority;
+    if (!reviewed || authority === null || authority.model === "unknown" ||
+        ((authority.model === "multisig" || authority.weightedQuorum) &&
+          effectiveAuthoritySignatureRequirement(authority) === null)) return unknown;
+    if (weakest === null) {
+      weakest = authority;
+      continue;
+    }
+    const required = effectiveAuthoritySignatureRequirement(authority);
+    const weakestRequired = effectiveAuthoritySignatureRequirement(weakest);
+    // A uniform 1-of-N roster is still single-key reach, just like a weighted
+    // quorum whose minimum signature set contains one key.
+    const weakness = bridgeAuthoritySeverity(authority, required === 1 ? "eoa" : authority.model) -
+      bridgeAuthoritySeverity(weakest, weakestRequired === 1 ? "eoa" : weakest.model);
+    const signatures = (required ?? 0) - (weakestRequired ?? 0);
+    if (weakness > 0 || (weakness === 0 &&
+        (signatures < 0 || (signatures === 0 && compareBridgeAuthorityWeakness(authority, weakest) < 0)))) {
+      weakest = authority;
+    }
+  }
+  return weakest ?? unknown;
+}
+
 function representationGroupBridgeControl(
   assetId: string,
   route: NonNullable<
     ExtensionAsset["supplyReview"]
   >["selectedBridgeRoutes"][number],
   failureDomains: readonly V9FailureDomainRef[],
+  memberControls: readonly ControlOverlay[],
+  membersReviewed: boolean,
 ): ControlOverlay {
-  const reviewed = route.reviewState === "selected-reviewed";
-  const authorityDomain =
-    failureDomains.find(
-      (domain) =>
-        domain.kind === "bridge-route" &&
-        domain.key.startsWith("contract:"),
-    ) ?? failureDomains[0];
+  const reviewed = route.reviewState === "selected-reviewed" && membersReviewed;
+  const domains = new Map<string, V9FailureDomainRef>();
+  for (const domain of failureDomains) domains.set(`${domain.kind}:${domain.key}`, domain);
+  for (const member of memberControls) {
+    for (const domain of member.failureDomains) domains.set(`${domain.kind}:${domain.key}`, domain);
+  }
   return {
     controlKey: `bridge-group:${assetId}:${domainDigest(
       "safety-score-v9.representation-group-bridge-control-key.v1",
@@ -501,27 +543,34 @@ function representationGroupBridgeControl(
     deploymentKey: route.deploymentRouteKey,
     controlKind: "bridge",
     scope: "deployment",
-    capabilities: ["bridge-mint"],
+    capabilities: [...new Set(memberControls.flatMap((member) => member.capabilities))].sort(compareText),
     capSemantics: reviewed
       ? { kind: "unbounded", bound: null }
       : { kind: "unknown", bound: null },
     claimImpairment: reviewed ? "unbounded" : "unknown",
     economicLossScope: reviewed ? "deployment" : "unknown",
-    authority: {
-      authorityKey:
-        authorityDomain?.key ??
-        `bridge-route:${route.deploymentRouteKey}`,
-      // The adapter contract is the observed common mechanism, not proof of
-      // the heterogeneous destination mint authorities.
-      model: "unknown",
-      threshold: null,
-    },
-    delaySec: null,
+    authority: representationGroupAuthority(memberControls, route.deploymentRouteKey, reviewed),
+    delaySec: memberControls.some((member) => member.delaySec == null)
+      ? null : Math.min(...memberControls.map((member) => member.delaySec!)),
     materialSupplyShare: route.supplyShare,
+    // Pooling supplies no custody or independence credit. Proven extensions and
+    // execution-scope uncertainty must survive even when a different member has
+    // the weakest signing model.
     keyCustody: "unknown",
-    modulesOrGuards: "unknown",
-    incidentState: reviewed ? "none" : "unknown",
-    failureDomains: [...failureDomains].sort((left, right) =>
+    modulesOrGuards: memberControls.some((member) => member.modulesOrGuards === "present") ? "present" : "unknown",
+    ...(memberControls.some((member) => member.executionScope) ? {
+      executionScopeContributors: memberControls.map((member) => ({
+        authorityKey: member.authority?.authorityKey ?? `bridge-control:${member.controlKey}`,
+        ...(member.executionScope ? { scope: member.executionScope } : {}),
+      })),
+      executionScopeComplete: memberControls.every((member) => member.executionScopeComplete === true),
+      moduleImpact: memberControls.every((member) => member.moduleImpact === "verified-noninterfering" || member.modulesOrGuards !== "present") ? "verified-noninterfering" as const : "unresolved" as const,
+      scopeDiagnostics: [...new Set(memberControls.flatMap((member) => member.scopeDiagnostics ?? ["execution-scope-unreviewed"]))].sort(compareText),
+    } : {}),
+    incidentState: memberControls.some((member) => member.incidentState === "active") ? "active"
+      : !reviewed || memberControls.some((member) => member.incidentState === "unknown") ? "unknown"
+      : memberControls.some((member) => member.incidentState === "resolved") ? "resolved" : "none",
+    failureDomains: [...domains.values()].sort((left, right) =>
       compareText(`${left.kind}:${left.key}`, `${right.kind}:${right.key}`),
     ),
   };
@@ -984,21 +1033,17 @@ export function adaptBridgeReview(
   // inherits the marker only when every unresolved contributor on the route is
   // named; one unnamed unresolved sibling keeps the hard treatment, mirroring
   // the mint-authority whole-inventory rule at route granularity.
-  const freshScopedQuestionRefs = new Set(
-    (profile.scopedQuestions ?? [])
-      .filter(
-        (question) =>
-          clockSec - isoDateStartSec(question.reviewedAt, clockSec, `${meta.id}:bridge-scoped-question`) <=
-          V9_SCOPED_QUESTION_MAX_AGE_SEC,
-      )
-      .map((question) => question.controlRef.toLowerCase()),
-  );
-  const controlHasFreshScopedQuestion = (control: BridgeRouteControl): boolean =>
-    freshScopedQuestionRefs.has(control.id.toLowerCase()) ||
-    freshScopedQuestionRefs.has(control.label.toLowerCase()) ||
+  const freshScopedQuestions = (profile.scopedQuestions ?? []).filter((question) =>
+    clockSec - isoDateStartSec(question.reviewedAt, clockSec, `${meta.id}:bridge-scoped-question`) <= V9_SCOPED_QUESTION_MAX_AGE_SEC);
+  const freshScopedQuestionRefs = new Set(freshScopedQuestions.map((question) => question.controlRef.toLowerCase()));
+  const semanticQuestionRefs = new Set(freshScopedQuestions.filter((question) =>
+    question.subject !== "key-custody-independence").map((question) => question.controlRef.toLowerCase()));
+  const controlHasFreshScopedQuestion = (control: BridgeRouteControl, refs = freshScopedQuestionRefs): boolean =>
+    refs.has(control.id.toLowerCase()) ||
+    refs.has(control.label.toLowerCase()) ||
     (control.controllerChain != null &&
       control.controllerAddress != null &&
-      freshScopedQuestionRefs.has(`${control.controllerChain}:${control.controllerAddress.toLowerCase()}`));
+      refs.has(`${control.controllerChain}:${control.controllerAddress.toLowerCase()}`));
   const overlayFullyResolved = (overlay: ControlOverlay): boolean =>
     overlay.authority !== null &&
     overlay.authority.model !== "unknown" &&
@@ -1010,13 +1055,21 @@ export function adaptBridgeReview(
   if (freshScopedQuestionRefs.size > 0) {
     for (const [routeId, entries] of structuredOverlaysByDeployment) {
       const merged = structuredRouteControlsByDeployment.get(routeId);
-      if (!merged || overlayFullyResolved(merged)) continue;
+      if (!merged) continue;
       const anyNamed = entries.some((entry) => controlHasFreshScopedQuestion(entry.sourceControl));
+      const custodyOnly = anyNamed && !entries.some((entry) => controlHasFreshScopedQuestion(entry.sourceControl, semanticQuestionRefs));
+      if (custodyOnly && overlayFullyResolved(merged)) {
+        structuredRouteControlsByDeployment.set(routeId, { ...merged, scopedQuestionFresh: true,
+          scopedQuestionSubject: "key-custody-independence", keyCustody: "unknown" });
+        continue;
+      }
+      if (overlayFullyResolved(merged)) continue;
       const allUnresolvedNamed = entries.every(
         (entry) => controlHasFreshScopedQuestion(entry.sourceControl) || overlayFullyResolved(entry.overlay),
       );
       if (anyNamed && allUnresolvedNamed) {
-        structuredRouteControlsByDeployment.set(routeId, { ...merged, scopedQuestionFresh: true });
+        structuredRouteControlsByDeployment.set(routeId, { ...merged, scopedQuestionFresh: true,
+          ...(custodyOnly ? { scopedQuestionSubject: "key-custody-independence" as const, keyCustody: "unknown" as const } : {}) });
       }
     }
   }
@@ -1041,10 +1094,8 @@ export function adaptBridgeReview(
     if (
       members.length === 0 ||
       tiers.size !== 1 ||
-      members.some((route) => structuredRouteIds.has(normalizedBridgeDeploymentId(route.id))) ||
       members.some(
         (route) =>
-          route.reviewDisposition !== "reviewed" ||
           route.routeClass === "native" ||
           route.issuanceModel !== "wrapped-representation" ||
           route.semantics !== "lock-mint",
@@ -1057,6 +1108,25 @@ export function adaptBridgeReview(
         meta.id,
         row,
         supplyReview?.failureDomains ?? [],
+        members.flatMap((member) => {
+          const routeId = normalizedBridgeDeploymentId(member.id);
+          const entries = structuredOverlaysByDeployment.get(routeId);
+          if (entries?.length) return entries.map((entry) => entry.overlay);
+          const overlay = bridgeControl(meta.id, member, null, !reviewStale);
+          if (!overlay) throw new Error(`Missing representation-group member control ${routeId} for ${meta.id}`);
+          // A route controller address alone is not a researched signing model.
+          return [{ ...overlay, authority: {
+            authorityKey: `bridge-route:${routeId}`, model: "unknown" as const, threshold: null,
+          } }];
+        }),
+        !reviewStale && members.every((member) => {
+          const routeId = normalizedBridgeDeploymentId(member.id);
+          return member.reviewDisposition === "reviewed" &&
+            (member.observedAt === undefined || researchReviewObservationState(member.observedAt, clockSec) === "current") &&
+            (profile.controls ?? []).every((control) =>
+              !control.routeRefs.some((id) => normalizedBridgeDeploymentId(id) === routeId) ||
+              control.observedAt === undefined || researchReviewObservationState(control.observedAt, clockSec) === "current");
+        }),
       ),
       routeIds: members.map((route) => route.id),
       tier: [...tiers][0]!,
@@ -1095,7 +1165,7 @@ export function adaptBridgeReview(
     )
     .map((route) => unmatchedBridgeControl(meta.id, route));
   const controls = [
-    ...structuredOverlays,
+    ...structuredOverlays.filter((control) => !groupedRouteIds.has(control.deploymentKey)),
     ...profileControls,
     ...representationGroups.map((group) => group.control),
     ...unmatchedControls,

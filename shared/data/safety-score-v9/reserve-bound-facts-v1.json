@@ -1,6 +1,46 @@
 {
   "schemaVersion": 1,
   "assets": {
+    "pathusd-bridge": [
+      {
+        "factKey": "pathusd:treasury:conditional-business-day-liquidity",
+        "kind": "business-calendar-liquidity",
+        "scope": { "kind": "exposure", "exposureKey": "reserve:1c4dd3588a3d275a0d87b130" },
+        "asOfSec": 1791159033,
+        "publisher": "Bridge",
+        "sourceUrls": ["https://apidocs.bridge.xyz/platform/issuance/reserve-management"],
+        "assertion": "Reserves allocated to treasuries earn maximum rewards, and can be redeemed within 1 business day. The reserve matrix distinguishes traditional US banking hours from tokenized partners with some out-of-hours availability. This conditional normal window is not a binding whole-position liquidation guarantee.",
+        "contentDigest": "6f944f4650e6a5f510ac918ad7b8678049458e614480c0b1dd8d5ef1d542fad3",
+        "provenance": { "kind": "reviewed-research", "reviewedAt": "2026-10-05", "reviewer": "W3R38 and E09 governing-calendar review", "confidence": "high" },
+        "settlementAsset": "fiat:USD", "allInScope": true, "availableDuring": "business-day",
+        "businessDayTerms": {
+          "businessDays": 1, "calendarId": "us-federal-reserve",
+          "cutoff": { "time": null, "timezone": "America/New_York" },
+          "assurance": "target", "conditional": true,
+          "conditions": ["Partner-specific banking hours and liquidation", "No reviewed whole-position binding final-cash deadline or numeric cutoff"],
+          "startEvent": "Eligible treasury reserve redemption through Bridge and the applicable custodian"
+        }
+      },
+      {
+        "factKey": "pathusd:cash:conditional-banking-hours-liquidity",
+        "kind": "business-calendar-liquidity",
+        "scope": { "kind": "exposure", "exposureKey": "reserve:ad8f3089c8d58cf408e0be9a" },
+        "asOfSec": 1791159033,
+        "publisher": "Bridge",
+        "sourceUrls": ["https://apidocs.bridge.xyz/platform/issuance/reserve-management"],
+        "assertion": "Instantly redeemable during US banking hours, but offers lower reward than treasuries. Lead Bank is named for off-chain USD. The separate 24/7 on-chain stablecoin window does not apply to this captured Cash exposure.",
+        "contentDigest": "9204b29ab5f001bb195056c6d40e5ba0832424e84b22c60ace4265942131d1d8",
+        "provenance": { "kind": "reviewed-research", "reviewedAt": "2026-10-05", "reviewer": "W3R38 and E09 governing-calendar review", "confidence": "high" },
+        "settlementAsset": "fiat:USD", "allInScope": true, "availableDuring": "banking-hours",
+        "businessDayTerms": {
+          "businessDays": 0, "calendarId": "us-federal-reserve",
+          "cutoff": { "time": null, "timezone": "America/New_York" },
+          "assurance": "target", "conditional": true,
+          "conditions": ["US banking-hours availability only", "No numeric opening/closing times or binding whole-position final-cash deadline"],
+          "startEvent": "Eligible off-chain USD reserve redemption during Lead Bank's applicable banking hours"
+        }
+      }
+    ],
     "cash-phantom": [
       {
         "factKey": "cash-phantom:direct-treasury-bills:contractual-three-calendar-months",

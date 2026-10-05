@@ -151,6 +151,10 @@ const DEPLOYMENT_ENDPOINT_BINDINGS: ReadonlyMap<string, DeploymentEndpointBindin
   ["uniswap-v3-quoter-v2", quoterV2DeploymentBinding],
   ["pancakeswap-v3-quoter-v2", quoterV2DeploymentBinding],
   ["aerodrome-slipstream-quoter-v2", quoterV2DeploymentBinding],
+  ["hyperswap-v3-quoter-v2", quoterV2DeploymentBinding],
+  ["hybra-v3-quoter-v2", quoterV2DeploymentBinding],
+  ["kodiak-v3-quoter-v2", quoterV2DeploymentBinding],
+  ["xswap-v3-quoter-v2", quoterV2DeploymentBinding],
   [UNISWAP_V4_ADAPTER_PROFILE_ID, {
     resolve: (profile) => getUniswapV4Deployment(profile.chain),
     validate: validateUniswapV4ProfileProof,

@@ -191,12 +191,17 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
   },
   "gldy-streamex": {
     ...commodityIssuerBase,
-    ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
+    reviewedAt: "2026-10-05",
+    capacityModel: { kind: "unquantified" },
+    settlementModel: "queued",
+    unresolvedOutputAssetKeys: ["fiat:USD", "stablecoin:identity-unspecified", "physical:XAU"],
+    unresolvedOutputDisposition: "reviewed-external",
     costModel: fixedFee(
       200,
       "RWA.xyz primary-market terms list a 2% redemption fee; physical gold delivery can involve additional fabrication, shipping, or custody costs",
     ),
     docs: [
+      sourceRef("Streamex fund payout and extraordinary gating disclosure", "https://ir.streamex.com/news-releases/news-release-details/streamex-corp-details-gldys-liquidity-infrastructure-12-million", ["route", "settlement"]),
       sourceRefRouteCapacityAccess("Streamex GLDY", "https://www.streamex.com/GLDY"),
       sourceRefFull("RWA.xyz GLDY", "https://app.rwa.xyz/assets/GLDY"),
       sourceRef("Chainlink GLDY Reserves", "https://data.chain.link/feeds/base/base/gldy-reserves", ["capacity"]),
@@ -204,6 +209,8 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
     notes: [
       "Modeled route is the source-reviewed eligible-investor primary-market redemption path, not ordinary secondary-market sale liquidity",
       "GLDY distributes gold-leasing yield, so redemption quality depends on both gold backing and the issuer's leasing/custody program staying current",
+      "The fund may pay U.S. dollars, unspecified stablecoins or physical gold. These conditional alternatives require a selected binding payout and its exact valuation; they are not a weighted basket. Wintermute RFQ's USDC output and instant secondary-sale execution do not describe this fund route.",
+      "The July 23 disclosure allows extraordinary redemption gates and describes a longest wait of 12 calendar months for lease roll-off/full-fund liquidation. This contingent fund wait is not converted into seconds or treated as a bound on final delivered USD. No fixed funded capacity or full-supply completion is inferred.",
     ],
   },
   "gldt-gold-dao": {

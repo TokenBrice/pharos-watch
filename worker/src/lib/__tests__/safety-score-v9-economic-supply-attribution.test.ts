@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { BridgeRouteRiskProfile, StablecoinMeta } from "@shared/types/core";
+import { resolveChainId } from "@shared/types/chain-identity";
+import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { ReviewedEconomicSupplyPlanFileSchema, ReviewedEconomicSupplyPlanSchema, type ReviewedEconomicSupplyPlan, type ReviewedEconomicDeploymentPartition, type EconomicSupplyReference, type EconomicSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
 import type { SafetyScoreV9ReviewedTransferFact } from "@shared/types/safety-score-v9-transfer-overlays";
 import reviewRegistry from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
@@ -18,6 +20,9 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import type * as SupplyAttributionGeneration from "../safety-score-v9/supply-attribution-generation";
 import { normalizeFixedInput } from "../report-cards-fixed-input";
+import { ReviewedProviderChainPartitionSchema } from "@shared/types/safety-score-v9-supply-attribution";
+import { REVIEWED_PROVIDER_CHAIN_PARTITIONS, deriveReviewedProviderChainPartition } from "../safety-score-v9/supply-attribution-contract";
+import { createSafetyScoreV9TransferMaterialityGeneration, exactInputBoundTransferMaterialityPacket, type SafetyScoreV9TransferMaterialityObservation } from "../safety-score-v9/transfer-materiality";
 
 const CLOCK = 1790850000;
 const CANONICAL = `ethereum:0x${"1".repeat(40)}`;
@@ -399,8 +404,17 @@ describe("economic materiality consumers", () => {
     for (const assetId of ReviewedEconomicSupplyPlanFileSchema.parse(reviewRegistry).independentLiabilityAssetIds) {
       const meta = ACTIVE_META_BY_ID.get(assetId)!;
       expect(meta).toBeDefined();
-      expect(meta.bridgeRouteRisk!.routes!.every(route => route.semantics === "burn-mint" ||
-        (route.semantics === "native-mint" && route.issuanceModel === "native-issuance"))).toBe(true);
+      const routes = meta.bridgeRouteRisk!.routes!;
+      expect(routes.every(route => route.reviewDisposition === "reviewed" && route.representationId === undefined &&
+        (route.semantics === "burn-mint" && route.issuanceModel === "bridge-representation" && route.routeClass !== "native" ||
+          route.semantics === "native-mint" && route.issuanceModel === "native-issuance" && route.routeClass === "native"))).toBe(true);
+      const deployments = meta.contracts!.map(contract => {
+        expect(isFixedDecimalDeployment(contract)).toBe(true);
+        const chain = resolveChainId(contract.chain)!;
+        return `${chain}:${chain === "solana" ? contract.address : contract.address.toLowerCase()}`;
+      }).sort();
+      expect(routes.map(route => route.id).sort()).toEqual(deployments);
+      expect(new Set(deployments).size).toBe(deployments.length);
     }
   });
   it("guards every registry-authored native single-route entry and preserves xDAI's compiled partition", () => {
@@ -584,5 +598,119 @@ describe("economic capture handoff", () => {
       });
       expect(packet.deployments.find(row => row.deploymentKey === nativeKey)!.currentSupplyUsd).toBeCloseTo(300 * 150 / 170);
     });
+  });
+});
+
+describe("reviewed same-chain provider partition", () => {
+  const chainClock = 1791184659;
+  const assetId = "usdc-circle";
+  function chainFixture() {
+    const review = structuredClone(REVIEWED_PROVIDER_CHAIN_PARTITIONS.get(assetId)!);
+    const meta = structuredClone(ACTIVE_META_BY_ID.get(assetId)!);
+    const fixedInput = makeV9FixedInput({ assetId, clockSec: chainClock });
+    const history = { circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 };
+    fixedInput.chainCirculatingById = { [assetId]: { "X Layer": { ...history, current: 100 }, Ethereum: { ...history, current: 900 } } };
+    fixedInput.aggregateCirculatingById = { [assetId]: { circulating: { peggedUSD: 1000 }, observedAtSec: chainClock - 60 } };
+    const observations: SafetyScoreV9TransferMaterialityObservation[] = review.deployments.map((row, index) => ({
+      deploymentKey: row.routeId, rawTokenUnits: index === 0 ? "20000000" : "80000000",
+      decimals: row.decimals, blockNumber: "100", blockHash: `0x${"a".repeat(64)}`,
+      observedAtSec: chainClock - 60, status: "accepted",
+    }));
+    const derive = () => deriveReviewedProviderChainPartition({ review, meta, clockSec: fixedInput.clockSec, supplyUsd: 100, observations });
+    const generation = () => createSafetyScoreV9TransferMaterialityGeneration({
+      schemaVersion: 1, kind: "safety-score-v9-transfer-materiality-generation",
+      sourceBaseInputGenerationId: fixedInput.baseInputGenerationId,
+      registryFingerprint: fixedInput.registryFingerprint, capturedAtSec: chainClock,
+      observationsByAssetId: { [assetId]: observations },
+    });
+    return { review, meta, fixedInput, observations, derive, generation };
+  }
+
+  it("conserves only the exact mixed chain row and preserves native/bridged control attribution", () => {
+    const input = chainFixture();
+    const review = buildSafetyScoreV9SupplyReview(input.fixedInput, assetId, input.meta.bridgeRouteRisk, {
+      meta: input.meta, transferMaterialityGeneration: input.generation(),
+    })!;
+    expect(review.selectedBridgeRoutes.filter(row => row.deploymentRouteKey.startsWith("xlayer:"))).toEqual([
+      { deploymentRouteKey: input.review.deployments[0]!.routeId, supplyUsd: 20, supplyShare: 0.02, reviewState: "selected-reviewed", reviewedRouteKind: "controlled" },
+      { deploymentRouteKey: input.review.deployments[1]!.routeId, supplyUsd: 80, supplyShare: 0.08, reviewState: "selected-reviewed", reviewedRouteKind: "native" },
+    ]);
+    expect(review.selectedBridgeRoutes.find(row => row.deploymentRouteKey.startsWith("ethereum:"))?.supplyUsd).toBe(900);
+    expect(review.selectedBridgeRoutes.reduce((sum, row) => sum + row.supplyUsd!, 0)).toBe(1000);
+    expect(exactInputBoundTransferMaterialityPacket({
+      assetId, meta: input.meta, generation: input.generation(), registryFingerprint: input.fixedInput.registryFingerprint,
+      baseInputGenerationId: input.fixedInput.baseInputGenerationId, clockSec: chainClock,
+    })).toBeNull();
+  });
+
+  it.each(["missing", "duplicate", "rejected", "decimals", "number", "hash", "time", "stale", "future", "expanded", "unreviewed", "expired"] as const)(
+    "retains ambiguity for a %s chain census", failure => {
+      const input = chainFixture();
+      const row = input.observations[1]!;
+      if (failure === "missing") input.observations.pop();
+      if (failure === "duplicate") input.observations[1] = { ...input.observations[0]! };
+      if (failure === "rejected") Object.assign(row, { status: "rejected", rawTokenUnits: null, decimals: null, blockNumber: null, observedAtSec: null });
+      if (failure === "decimals") row.decimals = 18;
+      if (failure === "number") row.blockNumber = "101";
+      if (failure === "hash") row.blockHash = `0x${"b".repeat(64)}`;
+      if (failure === "time") row.observedAtSec!--;
+      if (failure === "stale") input.observations.forEach(value => value.observedAtSec = chainClock - 1801);
+      if (failure === "future") input.observations.forEach(value => value.observedAtSec = chainClock + 1);
+      if (failure === "expanded") input.meta.contracts!.push({ chain: "xlayer", address: `0x${"f".repeat(40)}`, decimals: 6 });
+      if (failure === "unreviewed") input.meta.bridgeRouteRisk!.routes!.find(route => route.id === input.review.deployments[1]!.routeId)!.reviewDisposition = "unresolved";
+      if (failure === "expired") input.review.expiresAtSec = chainClock;
+      expect(input.derive()).toBeNull();
+    },
+  );
+
+  it.each([1800, 1801])("honors the exact %s-second observation boundary", age => {
+    const input = chainFixture();
+    input.observations.forEach(row => row.observedAtSec = chainClock - age);
+    expect(input.derive() === null).toBe(age > 1800);
+  });
+
+  it("distinguishes an authentic zero from missing supply and preserves tiny nonzero units", () => {
+    const input = chainFixture();
+    input.observations[0]!.rawTokenUnits = "0";
+    expect(input.derive()?.map(row => row.supplyUsd)).toEqual([0, 100]);
+    input.observations[0]!.rawTokenUnits = "1";
+    expect(input.derive()![0]!.supplyUsd).toBeGreaterThan(0);
+    input.observations.forEach(row => row.rawTokenUnits = "0");
+    expect(input.derive()).toBeNull();
+    expect(deriveReviewedProviderChainPartition({ review: input.review, meta: input.meta, clockSec: chainClock, supplyUsd: 0, observations: input.observations })?.map(row => row.supplyUsd)).toEqual([0, 0]);
+  });
+
+  it.each(["base", "registry", "stale", "future"] as const)("does not join a %s generation", mismatch => {
+    const input = chainFixture(), generation = input.generation();
+    if (mismatch === "base") generation.sourceBaseInputGenerationId = `report-cards-input:v1:${"e".repeat(64)}`;
+    if (mismatch === "registry") generation.registryFingerprint = "f".repeat(64);
+    if (mismatch === "stale") generation.capturedAtSec = chainClock - 1801;
+    if (mismatch === "future") generation.capturedAtSec = chainClock + 1;
+    const review = buildSafetyScoreV9SupplyReview(input.fixedInput, assetId, input.meta.bridgeRouteRisk, { meta: input.meta, transferMaterialityGeneration: generation })!;
+    expect(review.selectedBridgeRoutes.find(row => row.deploymentRouteKey === `ambiguous-chain:${assetId}:xlayer`))
+      .toMatchObject({ supplyUsd: 100, supplyShare: 0.1, reviewState: "unmatched" });
+  });
+
+  it("bounds local censuses at eight deployments without enlarging the whole-asset economic plan", () => {
+    const input = chainFixture();
+    input.review.deployments = Array.from({ length: 8 }, (_, index) => {
+      const address = `0x${(index + 1).toString(16).padStart(40, "0")}`;
+      return { address, routeId: `xlayer:${address}`, decimals: 6 };
+    });
+    expect(ReviewedProviderChainPartitionSchema.safeParse(input.review).success).toBe(true);
+    input.review.deployments.push({ address: `0x${"f".repeat(40)}`, routeId: `xlayer:0x${"f".repeat(40)}`, decimals: 6 });
+    expect(ReviewedProviderChainPartitionSchema.safeParse(input.review).success).toBe(false);
+    const whole = fixture().plan;
+    whole.accountingFamily = "independent-liability";
+    whole.escrows = [];
+    whole.deployments = Array.from({ length: 88 }, (_, index) => {
+      const address = `0x${(index + 1).toString(16).padStart(40, "0")}`;
+      return { ...whole.deployments[0]!, address, deploymentKey: `ethereum:${address}` };
+    });
+    expect(ReviewedEconomicSupplyPlanSchema.safeParse(whole).success).toBe(false);
+    whole.deployments = whole.deployments.slice(0, 65);
+    expect(ReviewedEconomicSupplyPlanSchema.safeParse(whole).success).toBe(false);
+    whole.deployments.pop();
+    expect(ReviewedEconomicSupplyPlanSchema.safeParse(whole).success).toBe(true);
   });
 });

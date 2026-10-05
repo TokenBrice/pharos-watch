@@ -184,12 +184,12 @@ export async function buildRedemptionBackstopEntry(
   if (usesLidoEarnQueue && !directQueueObservation) {
     throw new Error("earnusd-lido redemption observer unavailable");
   }
-  let liveMetadata =
+  let observedLiveMetadata =
     options.redemptionLiveMetadata ?? readRedemptionBackstopLiveMetadata(stablecoinId, reserveSnapshotMetadata, now);
   if (directQueueObservation) {
     // Deliberately do not admit any capacity, settlement maximum or output
     // valuation from these diagnostic queue/liquidity reads.
-    liveMetadata = {
+    observedLiveMetadata = {
       ...readRedemptionBackstopLiveMetadata(stablecoinId, null, now),
       canUseFee: true,
       feeReason: null,
@@ -200,6 +200,32 @@ export async function buildRedemptionBackstopEntry(
       liveHolderEligibility: directQueueObservation.holderEligibility,
     };
   }
+  const requiredOutputKeys = config.capacityModel.kind === "reserve-sync-metadata"
+    ? config.capacityModel.requiredOutputAssetKeys
+    : undefined;
+  const observedOutputKeys = observedLiveMetadata.outputAssetKeys ?? [];
+  const outputBound = !requiredOutputKeys || (
+    observedOutputKeys.length === requiredOutputKeys.length &&
+    requiredOutputKeys.every((key) => observedOutputKeys.includes(key))
+  );
+  const liveMetadata = outputBound ? observedLiveMetadata : {
+    ...observedLiveMetadata,
+    canUseCapacity: false,
+    canUseFee: false,
+    capacityReason: "route-output-identity-unobserved",
+    feeReason: "route-output-identity-unobserved",
+    immediateRedeemableUsd: null,
+    immediateRedeemableRatio: null,
+    settlementDelaySec: null,
+    dailyLimitUsd: null,
+    queueDepthUsd: null,
+    routeStatus: null,
+    routeStatusSource: null,
+    routeStatusReason: null,
+    routeStatusReviewedAt: null,
+    liveHolderEligibility: null,
+    v9OutputValuation: null,
+  };
   const capacity = await resolveRedemptionCapacity(db, stablecoinId, config.capacityModel, supplyUsd, now, {
     ...options,
     reserveSnapshotMetadata,

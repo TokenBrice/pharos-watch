@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { V9ControlExecutionScopeSchema, V9WeightedQuorumSchema, V9SameChainSystemTransportSchema, V1005ExecutionClassRefSchema, V1005ExecutionCertificatesSchema, V1005AuthorityGraphSchema, V1005VotingControlSchema, V1005OperationalIssuanceSchema } from "./safety-score-v9-control-scope";
+import { V9ControlExecutionScopeSchema, V9WeightedQuorumSchema, V9SameChainSystemTransportSchema, V1005ExecutionClassRefSchema, V1005ExecutionCertificatesSchema, V1005AuthorityGraphSchema, V1005VotingControlSchema, V1005OperationalIssuanceSchema, V9ControlQuestionSubjectSchema } from "./safety-score-v9-control-scope";
 import { normalizeDeploymentId } from "./deployment-id";
 import {
   BRIDGE_ROUTE_CLASS_VALUES,
@@ -587,6 +587,10 @@ function validateExactAuthority(control: z.output<z.ZodObject<typeof AuthorityCo
     ctx.addIssue({ code: "custom", message: "Safe and execution scope must share observation pin", path: ["executionScope"] });
   }
   for (const path of control.executionScope?.paths ?? []) {
+    if (path.downstreamCallDomain && control.timelockDelaySec != null &&
+        path.downstreamCallDomain.minimumDelaySec > control.timelockDelaySec) {
+      ctx.addIssue({ code: "custom", message: "Maximal execution cannot claim more delay than the controller's fastest enforced path", path: ["executionScope"] });
+    }
     if (path.activation === "counterfactual" && path.counterfactual &&
         (control.authorityType !== "safe" && control.authorityType !== "multisig" ||
           control.weightedQuorum != null || control.threshold !== path.counterfactual.threshold ||
@@ -651,6 +655,7 @@ const ControlScopedQuestionSchema = z
   .object({
     controlRef: z.string().min(1),
     question: z.string().min(12),
+    subject: V9ControlQuestionSubjectSchema.optional(),
     reviewedAt: ReviewDateSchema,
     reviewer: z.string().min(1),
     sources: z.array(StablecoinLinkSchema).min(1).optional(),

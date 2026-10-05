@@ -474,7 +474,7 @@ function lidoClient(overrides: Record<string, Hex | null> = {}): ExecutableRedem
       return identity ? storageWord(identity.implementationAddress) : null;
     },
     multicall: async (calls) => calls.map((call) => {
-      const value = Object.hasOwn(overrides, call.label) ? overrides[call.label] : responses[call.label];
+      const value = Object.prototype.hasOwnProperty.call(overrides, call.label) ? overrides[call.label] : responses[call.label];
       return { label: call.label, success: value != null, returnData: value ?? "0x" };
     }),
   };

@@ -121,6 +121,17 @@ const RESERVOIR_REDEEM_CONFIGS = defineConfigFamily(
 
 const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   ...DISCOVERY_STABLECOIN_REDEEM_CONFIGS,
+  "usdr-rise": defineStablecoinRedeemConfig({
+    reviewedAt: "2026-10-05",
+    outputAssets: ["wm-m0"],
+    capacityModel: { kind: "reserve-sync-metadata", requiredOutputAssetKeys: ["wm-m0"] },
+    costModel: documentedVariableFee("SwapFacility extension-to-extension unwrap/wrap contains no additional protocol deduction; exact wM rounding and gas require same-notional observation", "formula"),
+    docs: [
+      sourceRef("RISE SwapFacility implementation", "https://explorer.risechain.com/api/v2/smart-contracts/0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e", ["route", "access", "fees", "settlement"]),
+      sourceRef("M0 liquidity routes", "https://docs.m0.org/build/accessing-liquidity", ["route", "access", "settlement"]),
+    ],
+    notes: ["The holder path swaps USDR to wM via RISE SwapFacility 0xb6807116b3b1b321a390594e31ecd6e0076f6278. Extension approval, pauses and permissioning apply. Native-M approved-swapper telemetry is not wM output capacity and must not be inherited. Downstream wM-to-USDC liquidity is separate."],
+  }),
   "onyc-onre": defineStablecoinRedeemConfig({
     outputAssets: ["usdg-paxos"],
     capacityModel: { kind: "fixed-usd", amountUsd: 0, confidence: "dynamic" },
