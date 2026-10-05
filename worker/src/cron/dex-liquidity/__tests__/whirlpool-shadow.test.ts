@@ -1,17 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import type { DatabaseSync } from "node:sqlite";
 import type * as SolanaModule from "../../reserve-adapters/solana";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getDexExecutionCapabilityRegistration, isDexExecutionProfileAdmittedForScoring } from "@shared/lib/p4-exit-route-capability-policy";
 import fixture from "./fixtures/whirlpool-slot-449058549.json";
 import raydiumFixture from "./fixtures/raydium-slot-449058549.json";
+import pinned from "./fixtures/solana-clmm-wave4-pinned.json";
 import { collectWhirlpoolShadowQuotes, collectRaydiumShadowQuotes, selectSolanaShadowPools } from "../solana/whirlpool-shadow";
 import { buildOrcaWhirlpoolRegisteredExecutionTarget } from "../execution-targets/orca-whirlpool";
 import { buildRaydiumClmmRegisteredExecutionTarget } from "../execution-targets/raydium-clmm";
 import type { DexExecutionTargetFactoryInput } from "../execution-target-registry";
 import { fetchSolanaAccountBatch, type SolanaAccount } from "../../reserve-adapters/solana";
 
-vi.mock("../orchestrator-phases/lookups", () => ({ loadTrackedStablecoinMaps: vi.fn(async () => ({ stablecoinPriceById: new Map([["usx-solstice", 1], ["jupusd-jupiter", 1]]) })) }));
+vi.mock("../orchestrator-phases/lookups", () => ({ loadTrackedStablecoinMaps: vi.fn(async () => ({ stablecoinPriceById: new Map([["usx-solstice", 1], ["jupusd-jupiter", 1], ["usdc-circle", 1]]) })) }));
 vi.mock("../../reserve-adapters/solana", async (original) => ({ ...await original<typeof SolanaModule>(), fetchSolanaAccountBatch: vi.fn() }));
 const fixtures = createLatestSchemaFixtureTracker();
 const batch = vi.mocked(fetchSolanaAccountBatch);
@@ -69,12 +71,12 @@ describe("Orca native shadow producer", () => {
     expect(result).toMatchObject({ attempted: 1, persisted: 1, failed: 0, scoreEligible: false });
     expect(peak()).toBe(1);
     expect(batch.mock.calls.map(([addresses]) => addresses.length)).toEqual([1, 2, 6]);
-    expect(sqlite.prepare("SELECT pool_id, slot, notional_usd, amount_in, amount_out, model_version, capability_id, score_eligible FROM dex_native_shadow_quotes_v2").all()).toEqual([{
+    expect(sqlite.prepare("SELECT pool_id, slot, notional_usd, amount_in, amount_out, model_version, capability_id, score_eligible FROM dex_native_shadow_quotes_v2 WHERE notional_usd = 1000").all()).toEqual([{
       pool_id: poolId, slot: fixture.slot, notional_usd: 1000, amount_in: fixture.amountIn, amount_out: fixture.amountOut,
       model_version: "orca-whirlpool-native-v1", capability_id: "measured-adapter-shadow", score_eligible: 0,
     }]);
     await collectWhirlpoolShadowQuotes({ db });
-    expect(sqlite.prepare("SELECT count(*) AS n FROM dex_native_shadow_quotes_v2").get()).toEqual({ n: 1 });
+    expect(sqlite.prepare("SELECT count(*) AS n FROM dex_native_shadow_quotes_v2 WHERE notional_usd = 1000").get()).toEqual({ n: 1 });
     expect(sqlite.prepare("SELECT count(*) AS n FROM dex_measured_execution_quotes").get()).toEqual({ n: 0 });
     expect(sqlite.prepare("SELECT count(*) AS n FROM dex_measured_execution_targets").get()).toEqual({ n: 0 });
     expect(() => sqlite.prepare("UPDATE dex_native_shadow_quotes_v2 SET score_eligible = 1").run()).toThrow();
@@ -99,7 +101,7 @@ describe("Orca native shadow producer", () => {
 
     expect(result).toMatchObject({ attempted: 1, persisted: 1, failed: 0, scoreEligible: false });
     expect(overloaded).toBe(true);
-    expect(opened.sqlite.prepare("SELECT count(*) AS n FROM dex_native_shadow_quotes_v2").get()).toEqual({ n: 1 });
+    expect(opened.sqlite.prepare("SELECT count(*) AS n FROM dex_native_shadow_quotes_v2 WHERE notional_usd = 1000").get()).toEqual({ n: 1 });
   });
 
   it("rejects transfer-fee capable mint ownership before snapshot/quote", async () => {
@@ -123,7 +125,7 @@ describe("Orca native shadow producer", () => {
     sqlite.prepare("UPDATE dex_liquidity SET top_pools_json = ? WHERE stablecoin_id = 'usx-solstice'")
       .run(JSON.stringify([...rejected, { poolId, project: "orca", chain: "Solana", tvlUsd: 16000000 }]));
     sqlite.prepare(`INSERT INTO dex_liquidity (stablecoin_id, symbol, updated_at, publication_generation_id, publication_state, top_pools_json)
-      VALUES ('usdc-circle', 'USDC', ?, 'shadow-fixture', 'published', ?)`)
+      VALUES ('usdt-tether', 'USDT', ?, 'shadow-fixture', 'published', ?)`)
       .run(Math.floor(Date.now() / 1000), JSON.stringify([{ poolId: `solana:${"7".repeat(32)}`, project: "orca", chain: "Solana", tvlUsd: 100000000 }]));
     serveAccounts();
     const serve = batch.getMockImplementation()!;
@@ -153,13 +155,41 @@ describe("Orca native shadow producer", () => {
     const result = await collectRaydiumShadowQuotes({ db });
     expect(result).toMatchObject({ attempted: 1, persisted: 1, failed: 0, scoreEligible: false });
     expect(result.durationMs).toBeGreaterThanOrEqual(0);
-    expect(sqlite.prepare("SELECT amount_out, profile_id, score_eligible FROM dex_native_shadow_quotes_v2").all()).toEqual([
+    expect(sqlite.prepare("SELECT amount_out, profile_id, score_eligible FROM dex_native_shadow_quotes_v2 WHERE notional_usd = 1000").all()).toEqual([
       { amount_out: raydiumFixture.amountOut, profile_id: "raydium-clmm-exact-v1", score_eligible: 0 },
     ]);
     expect(sqlite.prepare("SELECT count(*) AS n FROM dex_native_shadow_quotes").get()).toEqual({ n: 0 });
     expect(sqlite.prepare("SELECT count(*) AS n FROM dex_measured_execution_quotes").get()).toEqual({ n: 0 });
     await collectRaydiumShadowQuotes({ db });
-    expect(sqlite.prepare("SELECT count(*) AS n FROM dex_native_shadow_quotes_v2").get()).toEqual({ n: 1 });
+    expect(sqlite.prepare("SELECT count(*) AS n FROM dex_native_shadow_quotes_v2 WHERE notional_usd = 1000").get()).toEqual({ n: 1 });
+  });
+
+  it("accrues same-bank policy ladder history and leaves a failed large probe unknown", async () => {
+    const capture = pinned.snapshots.find((snapshot) => snapshot.symbol === "USX / USDC")!;
+    const { db, sqlite } = fixtures.open(); seed(sqlite);
+    sqlite.prepare("UPDATE dex_liquidity SET stablecoin_id = 'usdc-circle' WHERE stablecoin_id = 'usx-solstice'").run();
+    const raw = z.record(z.string(), z.object({ owner: z.string(), data: z.array(z.string()) })).parse(capture.accounts);
+    batch.mockImplementation(async (addresses) => ({
+      slot: capture.slot,
+      accounts: new Map(addresses.map((address) => {
+        const account = raw[address];
+        return [address, account
+          ? { owner: account.owner, data: Uint8Array.from(Buffer.from(account.data[0], "base64")) }
+          : addresses.length === 2 ? mint() : null];
+      })),
+    }));
+    const result = await collectWhirlpoolShadowQuotes({ db });
+    expect(result).toMatchObject({ attempted: 1, persisted: 1, failed: 0, quotePointsPersisted: 4, quotePointsRejected: 1, scoreEligible: false });
+    expect(result.failures).toEqual([expect.stringContaining("@25000000:")]);
+    expect(sqlite.prepare("SELECT slot, notional_usd, amount_out, score_eligible FROM dex_native_shadow_quotes_v2 ORDER BY notional_usd").all()).toEqual([
+      { slot: capture.slot, notional_usd: 1000, amount_out: "1000297197", score_eligible: 0 },
+      { slot: capture.slot, notional_usd: 100000, amount_out: "100028505368", score_eligible: 0 },
+      { slot: capture.slot, notional_usd: 1000000, amount_out: "1000178870068", score_eligible: 0 },
+      { slot: capture.slot, notional_usd: 10000000, amount_out: "9997232980115", score_eligible: 0 },
+    ]);
+    await collectWhirlpoolShadowQuotes({ db });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM dex_native_shadow_quotes_v2").get()).toEqual({ n: 4 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM dex_measured_execution_quotes").get()).toEqual({ n: 0 });
   });
 
   it("marks Orca activation pending and never admits its registered capability for scoring", () => {

@@ -36,6 +36,8 @@ interface SolanaShadowSummary {
   attempted: number;
   persisted: number;
   failed: number;
+  quotePointsPersisted: number;
+  quotePointsRejected: number;
   budgetExhausted: boolean;
   scoreEligible: false;
   durationMs: number;
@@ -56,7 +58,7 @@ async function collectSolanaShadowQuotes(input: CollectorInput, family: Family):
   const startedAt = Date.now();
   const nowSec = Math.floor(startedAt / 1_000);
   const signal = AbortSignal.any([...(input.signal ? [input.signal] : []), AbortSignal.timeout(RUNTIME_MS)]);
-  const summary: SolanaShadowSummary = { attempted: 0, persisted: 0, failed: 0, budgetExhausted: false, scoreEligible: false, durationMs: 0, skippedIneligible: {}, failures: [] };
+  const summary: SolanaShadowSummary = { attempted: 0, persisted: 0, failed: 0, quotePointsPersisted: 0, quotePointsRejected: 0, budgetExhausted: false, scoreEligible: false, durationMs: 0, skippedIneligible: {}, failures: [] };
   const orca = family === "orca";
   const cursorKey = orca ? "orca-whirlpool-native-shadow:v1" : "raydium-clmm-native-shadow:v1";
   throwIfAborted(input.signal);
@@ -113,29 +115,42 @@ async function collectSolanaShadowQuotes(input: CollectorInput, family: Family):
       summary.attempted++;
       quoteAttempted = true;
       const decimals = mintBatch.accounts.get(tokenMintIn)!.data[44];
-      const notionalUsd = getDexMeasuredExecutionProbeNotionals(row.tvl_usd)[0];
-      const tokenAmount = notionalUsd / price;
-      if (!Number.isFinite(tokenAmount) || tokenAmount <= 0 || tokenAmount >= 1e21) throw new Error("Invalid exact-in notional");
-      const amountIn = parseUnits(tokenAmount.toFixed(decimals), decimals);
-      let quote: { amountOut: bigint; slot: number };
-      if (orca) {
-        const snapshot = await fetchWhirlpoolSnapshot(poolAddress, pool, signal, input.ctx);
-        if (snapshot.slot < mintBatch.slot || snapshot.pool.tokenMintA !== pool.tokenMintA || snapshot.pool.tokenMintB !== pool.tokenMintB) throw new Error("Whirlpool discovery identity changed");
-        quote = quoteWhirlpoolExactIn(snapshot, tokenMintIn, amountIn);
-      } else {
-        const snapshot = await fetchRaydiumSnapshot(poolAddress, decodeRaydiumPool(account.data, discovery.slot), tokenMintIn, signal, input.ctx, mintBatch.slot);
-        quote = quoteRaydiumExactIn(snapshot, tokenMintIn, amountIn);
+      const snapshot = orca
+        ? await fetchWhirlpoolSnapshot(poolAddress, pool, signal, input.ctx, mintBatch.slot)
+        : await fetchRaydiumSnapshot(poolAddress, decodeRaydiumPool(account.data, discovery.slot), tokenMintIn, signal, input.ctx, mintBatch.slot);
+      let persisted = false;
+      // Every policy probe uses this same bank. Higher-notional traversal
+      // failures are unknown, never synthetic zero capacity or partial fills.
+      for (const notionalUsd of getDexMeasuredExecutionProbeNotionals(row.tvl_usd)) {
+        throwIfAborted(signal);
+        let amountIn: bigint;
+        let quote: { amountOut: bigint; slot: number };
+        try {
+          const tokenAmount = notionalUsd / price;
+          if (!Number.isFinite(tokenAmount) || tokenAmount <= 0 || tokenAmount >= 1e21) throw new Error("Invalid exact-in notional");
+          amountIn = parseUnits(tokenAmount.toFixed(decimals), decimals);
+          quote = "feeRate" in snapshot
+            ? quoteRaydiumExactIn(snapshot, tokenMintIn, amountIn)
+            : quoteWhirlpoolExactIn(snapshot, tokenMintIn, amountIn);
+          if (quote.amountOut <= 0n) throw new Error("Zero native shadow output");
+        } catch (error) {
+          summary.quotePointsRejected++;
+          summary.failures.push(`${row.pool_id}@${notionalUsd}: ${toErrorMessage(error).slice(0, 180)}`);
+          continue;
+        }
+        await persistNativeShadowQuote(input.db, {
+          poolId: row.pool_id, stablecoinId: row.stablecoin_id, slot: quote.slot,
+          quotedAt: Math.floor(Date.now() / 1_000), notionalUsd, tokenMintIn,
+          tokenMintOut: tokenMintIn === pool.tokenMintA ? pool.tokenMintB : pool.tokenMintA,
+          amountIn, amountOut: quote.amountOut, inputPriceUsd: price, inputDecimals: decimals,
+          modelVersion: orca ? "orca-whirlpool-native-v1" : "raydium-clmm-native-v1",
+          profileId: orca ? "orca-whirlpool-exact-v1" : "raydium-clmm-exact-v1",
+        }, signal);
+        summary.quotePointsPersisted++;
+        persisted = true;
       }
-      throwIfAborted(signal);
-      await persistNativeShadowQuote(input.db, {
-        poolId: row.pool_id, stablecoinId: row.stablecoin_id, slot: quote.slot,
-        quotedAt: Math.floor(Date.now() / 1_000), notionalUsd, tokenMintIn,
-        tokenMintOut: tokenMintIn === pool.tokenMintA ? pool.tokenMintB : pool.tokenMintA,
-        amountIn, amountOut: quote.amountOut, inputPriceUsd: price, inputDecimals: decimals,
-        modelVersion: orca ? "orca-whirlpool-native-v1" : "raydium-clmm-native-v1",
-        profileId: orca ? "orca-whirlpool-exact-v1" : "raydium-clmm-exact-v1",
-      }, signal);
-      summary.persisted++;
+      if (persisted) summary.persisted++;
+      else summary.failed++;
     } catch (error) {
       throwIfAborted(input.signal);
       if (signal.aborted) { summary.budgetExhausted = true; break; }
