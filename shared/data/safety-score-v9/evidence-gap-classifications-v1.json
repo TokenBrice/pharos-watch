@@ -39531,6 +39531,75 @@
         "https://www.linkedin.com/pulse/why-wyoming-stable-token-commission-migrated-frnt-from-keith-lawhorn-jcdpe"
       ],
       "rationale": "The exact Solana authority is an initialized native Token-2022 one-of-two multisig, not an opaque backend; that public cryptographic identity is curated. Current Commission rules, technology bundle, legal terms, factbook, meeting materials and audit chronology do not identify its two operators, their independence or private recovery authorization. These indispensable private-policy questions remain researched non-disclosure. The incident question remains separately U; this is not an incident-free finding."
+    },
+    {
+      "id": "uw-mxne-real-mxn-8809d924a1ef31e4",
+      "assetId": "mxne-real-mxn",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:redemption:mxne-real-mxn:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:26:51Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R55)",
+      "sources": [
+        {
+          "url": "https://brale.xyz/case-studies/etherfuse",
+          "observedAt": "2026-10-05T00:26:51Z",
+          "datumAsOf": null,
+          "location": "Currency conversion / Solution",
+          "excerpt": "Brale provides low-fee stablecoin swaps between Brale-issued stablecoins, USDC, and PYUSD with MXNe.",
+          "assertion": "Nearby MXNe swap services are described only as 'low-fee'; the same case study depicts conversion to local pesos without publishing the peso-redemption fee schedule."
+        },
+        {
+          "url": "https://brale.xyz/legal/terms",
+          "observedAt": "2026-10-05T00:26:51Z",
+          "datumAsOf": "2026-05-27",
+          "location": "Do the Services cost anything? / Paid Services",
+          "excerpt": "Please see the Services Agreement for a description of the current Paid Services and the associated fees and payment terms.",
+          "assertion": "Binding fees are deferred to the customer's Services Agreement; this public legal page does not supply the all-in MXNe-to-peso redemption schedule."
+        },
+        {
+          "url": "https://brale.xyz/pricing",
+          "observedAt": "2026-10-05T00:26:51Z",
+          "datumAsOf": null,
+          "location": "Frequently asked questions / Does Brale charge basis points on money movement?",
+          "excerpt": "Brale charges 0 bps on standard money movement. The one exception is USDT conversions, charged at 5 bps (0.05%) per transaction.",
+          "assertion": "Standard movement and gas/U.S. bank charges are public; these do not establish all-in cost for the captured MXNe issuer route paying fiat:MXN to a peso endpoint."
+        },
+        {
+          "url": "https://etherfuse.com/markets/mexico",
+          "observedAt": "2026-10-05T00:26:51Z",
+          "datumAsOf": null,
+          "location": "MEXe product description",
+          "excerpt": "MEXe is issued by Etherfuse. It is not MXNe, which is issued by Brale and runs on Etherfuse Stablebonds.",
+          "assertion": "Etherfuse's separate MEXe/CETES and ramp schedules cannot be transplanted into the Brale-issued MXNe issuer route."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://brale.xyz/",
+        "https://brale.xyz/stablecoins/MXNe",
+        "https://brale.xyz/blog/introducing-mxne",
+        "https://brale.xyz/blog/mxne-is-live-on-base",
+        "https://brale.xyz/case-studies/etherfuse",
+        "https://brale.xyz/pricing",
+        "https://brale.xyz/legal/terms",
+        "https://docs.brale.xyz/llms.txt",
+        "https://docs.brale.xyz/coverage/value-types",
+        "https://docs.brale.xyz/key-concepts/transfers",
+        "https://docs.brale.xyz/guides/stablecoin-to-fiat-offramp",
+        "https://docs.brale.xyz/guides/stablecoin-to-stablecoin-swap",
+        "https://app.etherfuse.com/legal/proof-of-reserves",
+        "https://etherfuse.com/markets/mexico",
+        "https://docs.etherfuse.com/llms.txt",
+        "https://docs.etherfuse.com/fees.md"
+      ],
+      "rationale": "The same-notional all-in cost of MXNe issuer redemption to fiat:MXN remains undisclosed. Brale depicts conversion to local pesos but publishes no applicable peso-payout fee/minimum schedule. Standard 0-bps movement, gas markup and U.S. ACH/RTP/wire tariffs are partial disclosures, not the complete Mexican payout cost. Legal terms defer fees to customer Services Agreements. Etherfuse Mexico ramp tiers lack an explicit applicability join to the captured Brale MXNe issuer rail; its MEXe is a different token. No generic zero-fee or USD 1:1-swap assumption is applied."
     }
   ]
 }
