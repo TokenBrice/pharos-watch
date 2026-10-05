@@ -94,6 +94,14 @@ describe("MintAuthorityRail", () => {
     expect(html).toContain("+2 more in Primary controls");
   });
 
+  it("keeps the authoritative count when the detail census is bounded", () => {
+    const controls = [0, 1, 2, 3].map((index) => makeControl({ key: `control-${index}` }));
+    const html = renderToStaticMarkup(<MintAuthorityRail {...BASE_PROPS} controls={controls} totalControlCount={149} />);
+    expect(html).toContain("through 149 controls");
+    expect(html).toContain("+146 more controls (full census linked below)");
+    expect(html).not.toContain("through 4 controls");
+  });
+
   it("renders every control with no overflow notice at exactly the cap", () => {
     const controls = [0, 1, 2].map((index) =>
       makeControl({ key: `control-${index}`, authorityTypeLabel: `Ctl-${index}` }),

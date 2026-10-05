@@ -36,6 +36,9 @@ export interface MintAuthorityClientSummary {
   inheritedFrom?: string;
   mintIncidents?: MintAuthorityProfile["mintIncidents"];
   controls?: MintAuthorityClientControlSummary[];
+  /** Detail-only census metadata, present when the rendered control list is bounded. */
+  totalControlCount?: number;
+  controlCensusUrl?: string;
   sources?: StablecoinLink[];
   reviewedAt?: string;
   sourceFreeRationale?: string;

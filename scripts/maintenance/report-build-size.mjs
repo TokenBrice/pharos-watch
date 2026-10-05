@@ -83,8 +83,12 @@ const DEFAULT_BUDGETS = {
   // 635-646 KiB HTML / 103-115 KiB page TXT across the five representative
   // coins (Mint Authority and Explore-and-reference sections now render
   // server-side). Ratcheted to the measured payload with ~3% headroom so the
-  // next growth still has to be re-ratcheted deliberately.
-  representativeDetailHtmlBytes: 680_000,
+  // next growth still has to be re-ratcheted deliberately. Re-ratcheted
+  // 2026-10-05 for v10.05: DAI's mint section now bounds its 149-control Sky
+  // census to 12 rendered rows plus counts (905 KiB -> 667 KiB in a release
+  // build); the remaining DAI growth is the census disclosure and its larger
+  // process summary. 700,000 keeps ~2.5% headroom over the measured route.
+  representativeDetailHtmlBytes: 700_000,
   representativeDetailPageTxtBytes: 122_000,
   // Sum of gzip sizes of every script chunk referenced by a representative
   // detail page's HTML — the eager first-load JS budget per route (Mythos
