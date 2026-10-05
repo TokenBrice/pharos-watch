@@ -1128,7 +1128,21 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
                 });
             }) ||
             pendingObservation.responseSha256 !== sha256Hex(stableJsonStringifyV1({ proof, amount: pendingObservation.amount }))) return null;
-        } else if (pendingObservation.curvePendingProof !== undefined) return null;
+        } else if (escrow.inFlightSource.kind === "evm-l2-messenger-pending") {
+          const source = escrow.inFlightSource, proof = pendingObservation.l2MessengerPendingProof;
+          if (!proof || proof.sourceDigest !== sha256Hex(stableJsonStringifyV1(source)) ||
+            BigInt(proof.depositAmount) + BigInt(proof.withdrawalAmount) !== BigInt(pendingObservation.amount) ||
+            proof.pins.some((pin, index) => {
+              const chainId = index === 0 ? source.chainId : source.l2ChainId;
+              const start = index === 0 ? source.l1StartBlock : source.l2StartBlock;
+              const holdings = input.plan.deployments.filter(row => row.chainId === chainId);
+              return pin.chainId !== chainId || pin.anchor < start || holdings.length === 0 || holdings.some(row => {
+                const observed = observations.get(row.deploymentKey);
+                return !observed || observed.anchor !== String(pin.anchor) || observed.anchorHash !== pin.anchorHash ||
+                  observed.observedAtSec !== pin.observedAtSec;
+              });
+            }) || pendingObservation.responseSha256 !== sha256Hex(stableJsonStringifyV1({ proof, amount: pendingObservation.amount }))) return null;
+        } else if (pendingObservation.curvePendingProof !== undefined || pendingObservation.l2MessengerPendingProof !== undefined) return null;
       }
       const pending: EconomicFraction | null | undefined = escrow.inFlightSource === null && input.plan.inFlightTreatment === "atomic-native-wrapper"
         ? { n: 0n, d: 1n } : pendingObservation && convert(escrow.canonicalDeploymentKey, pendingObservation);
