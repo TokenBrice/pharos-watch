@@ -357,6 +357,7 @@
       "serialRequiredPathsAlwaysBind": true,
       "basketExposureTreatment": "proportional",
       "deploymentMaterialSharePct": 10,
+      "haltedChainMinStallSec": 1209600,
       "unresolvedDeploymentBlendStartSharePct": 5,
       "unresolvedDeploymentFullCeilingSharePct": 15,
       "commonModeOracleMinBranches": 2,
