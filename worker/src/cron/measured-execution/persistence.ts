@@ -74,6 +74,7 @@ export async function persistNativeShadowQuote(
   // drop an otherwise measured native shadow quote for the slot.
   await runWithOverloadRetry(
     () =>
+      // SAFETY: `table` is one of two literal table names chosen above, never caller input.
       db.prepare(`INSERT INTO ${table}
     (pool_id, stablecoin_id, slot, quoted_at, notional_usd, token_mint_in, token_mint_out,
      amount_in, amount_out, input_price_usd, input_decimals, model_version, profile_id, capability_id, score_eligible)
