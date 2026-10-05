@@ -78,6 +78,22 @@ describe("resolveChainId", () => {
     expect(resolveChainId("Pharos")).toBe("pharos");
   });
 
+  it("registers canonical VeChain mainnet identity without claiming provider coverage", () => {
+    expect(CHAIN_META.vechain).toMatchObject({
+      name: "VeChain",
+      explorerUrl: "https://explore.vechain.org",
+      evmChainId: 100009,
+      type: "evm",
+    });
+    expect(resolveChainId(" VeChain ")).toBe("vechain");
+    expect(resolveChainId("vechain")).toBe("vechain");
+    expect(resolveChainId(100009)).toBe("vechain");
+    expect(resolveChainId(100010)).toBeNull();
+    expect(CHAIN_META.vechain.providers).toBeUndefined();
+    expect(CG_CHAIN_MAP.vechain).toBeUndefined();
+    expect(GT_CHAIN_MAP.vechain).toBeUndefined();
+  });
+
   it("maps IOTA EVM to CoinGecko Onchain's verified network id", () => {
     expect(CG_CHAIN_MAP["iota-evm"]).toBe("iota-evm");
   });

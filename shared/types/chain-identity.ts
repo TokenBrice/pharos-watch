@@ -173,6 +173,9 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   filecoin:       { name: "Filecoin",        explorerUrl: "https://filecoin.blockscout.com",               evmChainId: 314,      type: "evm",   logoPath: "/chains/filecoin.svg",        providers: { coingecko: "filecoin", geckoTerminal: "filecoin" } },
   // Scilla ZRC-2 scope, not Zilliqa's separate EVM interface. No pool provider.
   zilliqa:        { name: "Zilliqa",         explorerUrl: "https://viewblock.io/zilliqa",                   evmChainId: null,     type: "other", logoPath: "/chains/zilliqa.png"          },
+  // VeChainThor's official EVM proxy uses mainnet chain ID 100009. No pool
+  // provider is registered here; canonical identity alone proves no token route.
+  vechain:        { name: "VeChain",          explorerUrl: "https://explore.vechain.org",                   evmChainId: 100009,   type: "evm",   logoPath: "/chains/vechain.png"          },
 };
 
 /**
