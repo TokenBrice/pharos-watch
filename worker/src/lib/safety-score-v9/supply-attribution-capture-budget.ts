@@ -52,8 +52,8 @@ export async function runBudgetedSupplyAttributionAssets<TAsset, TResult>(
       }
     }
   }
-  // Each observer uses at most three connections. Two assets consume the
-  // isolated trigger's six-connection budget, never three concurrent assets.
+  // Preserve the reviewed serial slot: one observer uses at most three
+  // connections, below the slot's five-connection capacity.
   await Promise.all(Array.from({ length: Math.min(assets.length, budget.assetConcurrency) }, worker));
   return results;
 }

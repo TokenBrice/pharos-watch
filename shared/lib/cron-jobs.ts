@@ -606,7 +606,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     intervalSec: SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC,
     scheduleKey: "v9SupplyAttributionOffset",
     triggerMode: "isolated",
-    maxConnections: 6,
+    maxConnections: 3,
     connectionGroup: "v9-supply-attribution-chain",
   },
   {
