@@ -39879,6 +39879,163 @@
           "assertion": "Issuer registry binds the missing eighth chain to USDGLO; native tier is public, but current canonical chain metadata/contract-route census cannot admit it. No manual supply share is authored."
         }
       ]
+    },
+    {
+      "id": "uw-mre7yield-midas-4931b72bf9a84dfa",
+      "assetId": "mre7yield-midas",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:redemption:mre7yield-midas:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-05T00:10:25Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R23)",
+      "sources": [
+        {
+          "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FhkJf4UxNukH071S6e4GA%2FMidas_Prospectus_Update_2025%20(1).pdf?alt=media&token=9bfe7105-c648-406b-b51c-b9c4431bc335",
+          "observedAt": "2026-10-05T00:09:48Z",
+          "datumAsOf": "2025-07-17",
+          "location": "2025 governing base prospectus, General Terms 5.3, PDF page 27; expressly incorporated by currently linked mRE7YIELD and mMEV Final Terms",
+          "excerpt": "Tokenholder\u2019s wallet or account within ten Business Days after notice of the exercise of the Issuer \nCall Option by the Issuer or notice of receipt of the Tokenholder Order Request Form by the Issuer.",
+          "assertion": "Public ten-Business-Day payment bound for Greenlisted holders after issuer notice. Current route schema requires integer calendar seconds and cannot retain Business Days/notice prerequisites; owner conversion is required. MEV suspension remains unchanged."
+        }
+      ]
+    },
+    {
+      "id": "uw-mmev-midas-b6aa9dd3d9088393",
+      "assetId": "mmev-midas",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:redemption:mmev-midas:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-05T00:10:25Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R23)",
+      "sources": [
+        {
+          "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FhkJf4UxNukH071S6e4GA%2FMidas_Prospectus_Update_2025%20(1).pdf?alt=media&token=9bfe7105-c648-406b-b51c-b9c4431bc335",
+          "observedAt": "2026-10-05T00:09:48Z",
+          "datumAsOf": "2025-07-17",
+          "location": "2025 governing base prospectus, General Terms 5.3, PDF page 27; expressly incorporated by currently linked mRE7YIELD and mMEV Final Terms",
+          "excerpt": "Tokenholder\u2019s wallet or account within ten Business Days after notice of the exercise of the Issuer \nCall Option by the Issuer or notice of receipt of the Tokenholder Order Request Form by the Issuer.",
+          "assertion": "Public ten-Business-Day payment bound for Greenlisted holders after issuer notice. Current route schema requires integer calendar seconds and cannot retain Business Days/notice prerequisites; owner conversion is required. MEV suspension remains unchanged."
+        }
+      ]
+    },
+    {
+      "id": "uw-cumiu-chinaamc-ba0249b25d78b719",
+      "assetId": "cumiu-chinaamc",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:7fab95adfe29aea82c92122a",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:07:00Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R23)",
+      "sources": [
+        {
+          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/Factsheet_USDDTMMF_20260831_EN_1789617629732.pdf",
+          "observedAt": "2026-10-05T00:06:46Z",
+          "datumAsOf": "2026-08-31",
+          "location": "August factsheet page 1, Investment Objective and Fund Information",
+          "excerpt": "The Fund\u2019s objective is to invest in short-term deposits and high quality money market instruments to achieve long-term return in US Dollars in line with prevailing money market rates, with primary considerations of both capital security and liquidity.",
+          "assertion": "Liquidity is an objective and daily dealing concerns fund shares; neither quantifies realization of each complete August reserve-category position."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.chinaamc.com.hk/detail?fundId=USDDMMF&fundName=ChinaAMC-USD-Digital-Money-Market-Fund-%28Tokenized-Unlisted-Class%29&lan=EN",
+        "https://www.chinaamc.com.hk/jeecg-boot/mainFund/fundQuery/getHoldingsDetail?fundID=USDDMMF&curLang=EN",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/Factsheet_USDDTMMF_20260831_EN_1789617629732.pdf",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/ChinaAMCDigitalOFC-InterimReport20260630Final(Clean)_cover_1787921459710.pdf",
+        "https://www1.hkexnews.hk/listedco/listconews/sehk/2026/0914/2026091400087.pdf"
+      ],
+      "rationale": "The exact missing facts are whole-position liquidity horizons for the August Other Money Market Instrument, Time Deposit and Cash and Cash Equivalent buckets. Reviewed August factsheet, September prospectus/KFS, June accounts, issuer document archive and recovered complete October 2 XLSX. These disclose daily share dealing, investment objectives, WAM and holdings, but not per-August-slice realizability, deposit break terms or final USD availability. October bank balances and share redemption promises cannot establish August category liquidity."
+    },
+    {
+      "id": "uw-cumiu-chinaamc-e6d89c20d599c0cc",
+      "assetId": "cumiu-chinaamc",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e965f001c86b80c682b9c8fa",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:07:00Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R23)",
+      "sources": [
+        {
+          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/Factsheet_USDDTMMF_20260831_EN_1789617629732.pdf",
+          "observedAt": "2026-10-05T00:06:46Z",
+          "datumAsOf": "2026-08-31",
+          "location": "August factsheet page 1, Investment Objective and Fund Information",
+          "excerpt": "The Fund\u2019s objective is to invest in short-term deposits and high quality money market instruments to achieve long-term return in US Dollars in line with prevailing money market rates, with primary considerations of both capital security and liquidity.",
+          "assertion": "Liquidity is an objective and daily dealing concerns fund shares; neither quantifies realization of each complete August reserve-category position."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.chinaamc.com.hk/detail?fundId=USDDMMF&fundName=ChinaAMC-USD-Digital-Money-Market-Fund-%28Tokenized-Unlisted-Class%29&lan=EN",
+        "https://www.chinaamc.com.hk/jeecg-boot/mainFund/fundQuery/getHoldingsDetail?fundID=USDDMMF&curLang=EN",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/Factsheet_USDDTMMF_20260831_EN_1789617629732.pdf",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/ChinaAMCDigitalOFC-InterimReport20260630Final(Clean)_cover_1787921459710.pdf",
+        "https://www1.hkexnews.hk/listedco/listconews/sehk/2026/0914/2026091400087.pdf"
+      ],
+      "rationale": "The exact missing facts are whole-position liquidity horizons for the August Other Money Market Instrument, Time Deposit and Cash and Cash Equivalent buckets. Reviewed August factsheet, September prospectus/KFS, June accounts, issuer document archive and recovered complete October 2 XLSX. These disclose daily share dealing, investment objectives, WAM and holdings, but not per-August-slice realizability, deposit break terms or final USD availability. October bank balances and share redemption promises cannot establish August category liquidity."
+    },
+    {
+      "id": "uw-cumiu-chinaamc-a0354241c7b5025a",
+      "assetId": "cumiu-chinaamc",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:fcdb74fe93aaccf1d6f9c7b7",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:07:00Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R23)",
+      "sources": [
+        {
+          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/Factsheet_USDDTMMF_20260831_EN_1789617629732.pdf",
+          "observedAt": "2026-10-05T00:06:46Z",
+          "datumAsOf": "2026-08-31",
+          "location": "August factsheet page 1, Investment Objective and Fund Information",
+          "excerpt": "The Fund\u2019s objective is to invest in short-term deposits and high quality money market instruments to achieve long-term return in US Dollars in line with prevailing money market rates, with primary considerations of both capital security and liquidity.",
+          "assertion": "Liquidity is an objective and daily dealing concerns fund shares; neither quantifies realization of each complete August reserve-category position."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.chinaamc.com.hk/detail?fundId=USDDMMF&fundName=ChinaAMC-USD-Digital-Money-Market-Fund-%28Tokenized-Unlisted-Class%29&lan=EN",
+        "https://www.chinaamc.com.hk/jeecg-boot/mainFund/fundQuery/getHoldingsDetail?fundID=USDDMMF&curLang=EN",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/Factsheet_USDDTMMF_20260831_EN_1789617629732.pdf",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/ChinaAMCDigitalOFC-InterimReport20260630Final(Clean)_cover_1787921459710.pdf",
+        "https://www1.hkexnews.hk/listedco/listconews/sehk/2026/0914/2026091400087.pdf"
+      ],
+      "rationale": "The exact missing facts are whole-position liquidity horizons for the August Other Money Market Instrument, Time Deposit and Cash and Cash Equivalent buckets. Reviewed August factsheet, September prospectus/KFS, June accounts, issuer document archive and recovered complete October 2 XLSX. These disclose daily share dealing, investment objectives, WAM and holdings, but not per-August-slice realizability, deposit break terms or final USD availability. October bank balances and share redemption promises cannot establish August category liquidity."
     }
   ]
 }

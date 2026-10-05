@@ -25,7 +25,8 @@
         "counterparty",
         "custody"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "maturityDaysMax": 397
     },
     {
       "name": "Cash and Cash Equivalent",
@@ -40,8 +41,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W2R14 primary factsheet correction review",
+    "reviewedAt": "2026-10-05",
+    "reviewer": "W3R23 prospectus duration and disclosure review",
     "confidence": "verified",
     "sources": [
       {
@@ -59,9 +60,17 @@
       {
         "label": "Issuer top-ten holdings as of October 2, 2026",
         "url": "https://www.chinaamc.com.hk/detail?fundId=USDDMMF&fundName=ChinaAMC-USD-Digital-Money-Market-Fund-%28Tokenized-Unlisted-Class%29&lan=EN"
+      },
+      {
+        "label": "ChinaAMC September 2026 prospectus, USD sub-fund maximum instrument maturity (printed page 160)",
+        "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf"
+      },
+      {
+        "label": "Issuer complete daily holdings workbook, October 2, 2026 (tokenized unlisted class)",
+        "url": "https://www.chinaamc.com.hk/jeecg-boot/mainFund/fundQuery/getHoldingsDetail?fundID=USDDMMF&curLang=EN"
       }
     ],
-    "rationale": "The issuer's August 31 factsheet page 2 gives the complete asset-class allocation: Other Money Market Instrument 63.54%, Time Deposit 24.71%, Cash and Cash Equivalent 11.75%, totaling 100.00%. These are pooled USD sub-fund category weights backing Class I and other share classes, not token supply or an independently audited Class I-only denominator. Existing June accounts and October top-ten observations remain historical corroboration, not the source of these refreshed weights.",
+    "rationale": "The issuer's August 31 factsheet page 2 gives the complete asset-class allocation: Other Money Market Instrument 63.54%, Time Deposit 24.71%, Cash and Cash Equivalent 11.75%, totaling 100.00%. These are pooled USD sub-fund category weights backing Class I and other share classes, not token supply or an independently audited Class I-only denominator. Existing June accounts and October top-ten observations remain historical corroboration, not the source of these weights. The September 14 prospectus, USD sub-fund printed page 160, prohibits purchasing instruments with remaining maturity above 397 days except Government and other Public Securities. The exception cannot apply to bank time deposits, so their governing maximum is 397 days, not the 50.85-day WAM. No maximum is assigned to the mixed Other Money Market Instrument bucket because permitted money-market fund shares and the public-security exception require constituent-level scope.",
     "compositionBasis": "Issuer August 31, 2026 full portfolio asset-class allocation chart",
     "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
@@ -103,7 +112,7 @@
         }
       }
     ],
-    "knownUnknownExposure": "August category weights are complete, but do not identify all obligors or constituent instruments within Other Money Market Instrument (63.54%). The prior June 30 unaudited accounts cover pooled gross assets of USD 603917339, not current token liabilities. The separately dated October 2 top-ten table covers 72.54%, with 27.46% unidentified: Credit Agricole CIB 23.85%, Standard Chartered HK bank cash 16.86%, UOB HK 8.71%, United Overseas Bank 5.33%, Huatai International Finance 5.29%, Bocom Leasing 3.51%, CSCIF HK 2.69%, ICBC Singapore 2.36%, China Cinda 2.16% and SMBC HK term deposit 1.79%. Rounded October rows sum to 72.55%; no normalization, inferred instrument identity or transplantation into August weights is applied. The active composition observation supersedes those historical partial observations only for the category denominator. August WAM 50.85 days is an average, not maximum tenor. Class I token-to-fund liability reconciliation and exact distributor custody shares remain unestablished.",
+    "knownUnknownExposure": "August category weights are complete, but do not identify the August constituents or obligors. The issuer's recovered October 2 full holdings workbook lists 62 rows, totaling 100.0497% of reported NAV without normalization, rather than only the 72.54% top-ten display. It identifies named banks and ISINs but lacks a classification join to the August categories, leaves the 23.8501% Credit Agricole instrument unnamed, truncates term-deposit maturity descriptions, and supplies no per-position realization bounds. These independently dated holdings are not transplanted into August weights. The prior June 30 unaudited accounts cover pooled gross assets of USD 603917339, not current token liabilities. August WAM 50.85 days is an average, not maximum tenor. Class I token-to-fund liability reconciliation and exact distributor custody shares remain unestablished.",
     "knownUnknownExposurePct": 63.54,
     "nonLinkDispositions": [
       {
