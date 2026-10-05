@@ -36,6 +36,22 @@ describe("redemption evidence observation clock", () => {
   });
 });
 
+describe("redemption capacity payout identity", () => {
+  it.each([
+    { keys: ["wm-m0"], expected: ["wm-m0"] },
+    { keys: ["m-m0"], expected: ["m-m0"] },
+    { keys: ["wm-m0", "wm-m0"], expected: null },
+    { keys: [], expected: null },
+    { keys: "wm-m0", expected: null },
+    { keys: undefined, expected: null },
+  ])("retains only typed exact payout identities ($keys)", ({ keys, expected }) => {
+    const result = readMetadata("usdr-rise", {
+      redemption: { outputAssetKeys: keys },
+    });
+    expect(result.outputAssetKeys).toEqual(expected);
+  });
+});
+
 function decodedRowMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
   const decoded = parseReserveCompositionRow(
     {

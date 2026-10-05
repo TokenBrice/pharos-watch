@@ -2,6 +2,7 @@ import type { ReserveBoundedFact, V9ReserveBoundedFact } from "../../types/reser
 import type { V9ReserveExposureFactV2 } from "../../types/safety-score-v9-facts";
 import type { V9BackingSemanticPolicy } from "./backing-primitives";
 import { stableJsonStringifyV1 } from "../stable-json";
+import { maximumBusinessDaySettlement } from "../business-calendars";
 
 export function reserveBoundScopeKey(scope: ReserveBoundedFact["scope"]): string {
   return stableJsonStringifyV1(scope.kind === "reserve-envelope" ? [scope.kind] : scope.kind === "exposure" ? [scope.kind, scope.exposureKey] : [scope.kind, scope.exposureKey, scope.instrumentId]);
@@ -55,6 +56,14 @@ export function v9MaturityNotApplicableBoundFact(
     row.fact.conclusion === "not-applicable" && row.fact.allInScope &&
     row.fact.scope.kind === "exposure" && row.fact.scope.exposureKey === exposureKey);
 }
+/** Applicable claim duration without a finite contractual maximum, never portfolio tenor. */
+export function v9OpenEndedMaturityBoundFact(
+  exposureKey: string, rows: readonly V9ReserveBoundedFact[], clockSec: number,
+): V9ReserveBoundedFact | undefined {
+  return coherentFacts(rows, clockSec).find((row) => row.fact.kind === "maturity-applicability" &&
+    row.fact.conclusion === "open-ended" && row.fact.allInScope &&
+    row.fact.scope.kind === "exposure" && row.fact.scope.exposureKey === exposureKey);
+}
 function coverage(fact: ReserveBoundedFact): number {
   const scopeShare = fact.scope.kind === "sub-instrument" ? fact.scope.coveredShare ?? 0 : 1;
   if (fact.kind === "observed-portfolio-maturity" || fact.kind === "stressed-realization-bound") {
@@ -69,6 +78,9 @@ function observedDays(fact: Extract<ReserveBoundedFact, { kind: "observed-portfo
 export function resolveV9ReserveFactorBounds(exposure: V9ReserveExposureFactV2, rows: readonly V9ReserveBoundedFact[], policy: V9BackingSemanticPolicy, clockSec: number, baseline: { liquidity: number; maturity: number }): { liquidity: number; maturity: number; liquidityCoveredShare: number; maturityCoveredShare: number; liquidityCoveredQuality: number | null; maturityCoveredQuality: number | null; evidenceRefIds: string[]; contradiction: boolean } {
   if (rows.length === 0) return { ...baseline, liquidityCoveredShare: 0, maturityCoveredShare: 0, liquidityCoveredQuality: null, maturityCoveredQuality: null, evidenceRefIds: [], contradiction: false };
   const facts = coherentFacts(rows, clockSec).filter((row) => row.fact.scope.kind !== "reserve-envelope" && row.fact.scope.exposureKey === exposure.exposureKey);
+  const openEndedScopes = new Set(facts.flatMap((row) => row.fact.kind === "maturity-applicability" &&
+    row.fact.conclusion === "open-ended" && row.fact.allInScope ? [reserveBoundScopeKey(row.fact.scope)] : []));
+  const openEndedExposure = openEndedScopes.has(reserveBoundScopeKey({ kind: "exposure", exposureKey: exposure.exposureKey }));
   const contracts = facts.filter((row) => row.fact.kind === "contractual-maturity-maximum" && row.fact.legallyBinding && row.fact.allInScope);
   const observations = facts.filter((row) => row.fact.kind === "observed-portfolio-maturity");
   const contradiction = contracts.some((contract) => observations.some((observation) => {
@@ -88,8 +100,9 @@ export function resolveV9ReserveFactorBounds(exposure: V9ReserveExposureFactV2, 
     let share = coverage(fact);
     if (share === 0) continue;
     let quality: number | null = null, factor: "liquidity" | "maturity" = "maturity";
-    if (fact.kind === "contractual-maturity-maximum" && fact.legallyBinding && fact.allInScope && !contradiction) quality = maturityQuality(reserveBoundTermDays(fact.maximumTerm), policy);
-    if (fact.kind === "observed-portfolio-maturity") {
+    if (fact.kind === "contractual-maturity-maximum" && fact.legallyBinding && fact.allInScope && !contradiction &&
+      !openEndedExposure && !openEndedScopes.has(reserveBoundScopeKey(fact.scope))) quality = maturityQuality(reserveBoundTermDays(fact.maximumTerm), policy);
+    if (fact.kind === "observed-portfolio-maturity" && !openEndedExposure && !openEndedScopes.has(reserveBoundScopeKey(fact.scope))) {
       const days = observedDays(fact);
       if (days !== null && (missingMaturity || days > exposure.maturityDaysMax!)) {
         quality = missingMaturity
@@ -97,7 +110,8 @@ export function resolveV9ReserveFactorBounds(exposure: V9ReserveExposureFactV2, 
           : maturityQuality(days, policy);
       }
     }
-    if (fact.kind === "maturity-applicability" && fact.allInScope) quality = 100;
+    if (fact.kind === "maturity-applicability" && fact.allInScope) quality =
+      fact.conclusion === "open-ended" ? maturityQuality(Infinity, policy) : 100;
     if (fact.kind === "currently-liquid-fraction") {
       factor = "liquidity";
       if (missingLiquidity) {
@@ -108,6 +122,13 @@ export function resolveV9ReserveFactorBounds(exposure: V9ReserveExposureFactV2, 
     if (fact.kind === "stressed-realization-bound" && fact.realizationStage === "final-cash-settlement" && fact.settlementAsset === "fiat:USD") {
       factor = "liquidity";
       quality = policy.reserve.liquidityQuality[fact.elapsedTimeSec <= 86400 ? "one-day" : fact.elapsedTimeSec <= 604800 ? "seven-days" : "over-seven-days"];
+    }
+    if (fact.kind === "business-calendar-liquidity" && fact.allInScope && fact.settlementAsset === "fiat:USD") {
+      factor = "liquidity";
+      const bound = maximumBusinessDaySettlement(fact.businessDayTerms, clockSec);
+      // A public business-hours target is known documentation, not a known
+      // whole-position liquidity horizon. It cannot clear or reclassify its U gap.
+      if (bound.state === "known") quality = policy.reserve.liquidityQuality[bound.maximumElapsedSec <= 86400 ? "one-day" : bound.maximumElapsedSec <= 604800 ? "seven-days" : "over-seven-days"];
     }
     if (quality === null) continue;
     // Known classification survives favorable incomplete snapshots. Adverse tenor is retained.

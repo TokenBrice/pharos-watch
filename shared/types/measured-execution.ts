@@ -30,6 +30,7 @@ export const DEX_EXACT_QUOTE_ADAPTER_IDS = {
   evmV2: "evm-v2-reserve-exact",
   solanaClmm: "solana-clmm",
   suiClmm: "sui-clmm",
+  solanaDlmm: "solana-dlmm",
 } as const;
 
 export type DexExactQuoteAdapterId =

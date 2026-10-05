@@ -20,7 +20,7 @@ import {
   type DexMeasuredExecutionObservationHistory,
   type DexMeasuredExecutionPublicProfile,
 } from "../types/measured-execution";
-import { UNISWAP_V4_DEPLOYMENT } from "./measured-execution-deployment-policies";
+import { UNISWAP_V4_DEPLOYMENT, UNISWAP_V4_SHADOW_DEPLOYMENTS } from "./measured-execution-deployment-policies";
 import type { ExitExecutionAdmission } from "./safety-score-v9/exit-execution";
 
 export const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.9";
@@ -121,6 +121,20 @@ export const DEX_EXECUTION_CAPABILITY_REGISTRY: readonly DexExecutionCapabilityR
     eligibleDeploymentKeys: ACTIVE_QUOTER_V2_DEPLOYMENT_KEYS,
     proofKind: "evm-state-and-call-proof",
   }),
+  ...[
+    { profileId: "hyperswap-v3-quoter-v2", chain: "hyperevm" },
+    { profileId: "hybra-v3-quoter-v2", chain: "hyperevm" },
+    { profileId: "kodiak-v3-quoter-v2", chain: "berachain" },
+    { profileId: "xswap-v3-quoter-v2", chain: "xdc" },
+  ].map(({ profileId, chain }) => capabilityRegistration({
+    profileId,
+    capabilityId: "measured-adapter-shadow",
+    adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.quoterV2,
+    platform: "evm",
+    lifecycle: "shadow",
+    eligibleChains: [chain],
+    proofKind: "evm-state-and-call-proof",
+  })),
   capabilityRegistration({
     profileId: UNISWAP_V4_ADAPTER_PROFILE_ID,
     capabilityId: "uniswap-v4-hook-free-measured-exact",
@@ -128,7 +142,7 @@ export const DEX_EXECUTION_CAPABILITY_REGISTRY: readonly DexExecutionCapabilityR
     platform: "evm",
     lifecycle: "active",
     eligibleChains: ["ethereum"],
-    shadowChains: ["bsc", "base", "arbitrum", "polygon"],
+    shadowChains: UNISWAP_V4_SHADOW_DEPLOYMENTS.map((deployment) => deployment.chain),
     proofKind: "evm-state-and-call-proof",
   }),
   capabilityRegistration({
@@ -183,7 +197,7 @@ export const DEX_EXECUTION_CAPABILITY_REGISTRY: readonly DexExecutionCapabilityR
     adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.evmV2,
     platform: "evm",
     lifecycle: "active",
-    eligibleChains: ["ethereum", "base", "bsc"],
+    eligibleChains: ["ethereum", "bsc"],
     proofKind: "evm-reserve-proof",
   }),
   capabilityRegistration({
@@ -221,6 +235,15 @@ export const DEX_EXECUTION_CAPABILITY_REGISTRY: readonly DexExecutionCapabilityR
     lifecycle: "shadow",
     eligibleChains: ["sui"],
     proofKind: "sui-checkpoint-object-proof",
+  }),
+  capabilityRegistration({
+    profileId: "meteora-dlmm-exact-v1",
+    capabilityId: "measured-adapter-shadow",
+    adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.solanaDlmm,
+    platform: "solana",
+    lifecycle: "shadow",
+    eligibleChains: ["solana"],
+    proofKind: "solana-account-proof",
   }),
 ] as const;
 
@@ -300,6 +323,7 @@ export interface DexRouteSourceCapability {
     | "constant-product"
     | "weighted-constant-mean"
     | "stableswap"
+    | "solidly-v2"
     | "measured-quote"
     | "curve-stableswap-retained"
     | "amm-tvl-proxy"
@@ -344,7 +368,7 @@ export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] 
   },
   {
     id: "uniswap-v4-hook-free-measured-exact",
-    sourceFamilies: ["dl"],
+    sourceFamilies: ["dl", "cg_onchain", "gecko_terminal", "dexscreener", "direct_api"],
     model: "measured-quote",
     tokenIdentity: "exact",
     exactBalancesOrReserves: "absent",
@@ -473,9 +497,29 @@ export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] 
     commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
     scoreEligible: true,
     limitations: [
-      "Supports factory-verified Uniswap V2 pools on Ethereum, PancakeSwap V2 pools on BSC, and classic Aerodrome volatile pools on Base.",
-      "Aerodrome requires the reviewed factory and implementation runtimes, exact volatile factory binding, an unpaused factory, and the same-block per-pool fee.",
+      "Supports factory-verified Uniswap V2 pools on Ethereum and its byte-identical BSC factory, and PancakeSwap V2 pools on BSC.",
       "Untracked counter-asset reference prices are pool-implied from same-block reserves and the tracked input's market price.",
+    ],
+  },
+  {
+    id: "solidly-v2-exact-shadow",
+    sourceFamilies: ["dl", "cg_onchain", "gecko_terminal", "dexscreener", "direct_api"],
+    model: "solidly-v2",
+    tokenIdentity: "exact",
+    exactBalancesOrReserves: "exact",
+    poolInvariantParameters: "exact",
+    outputIdentity: "exact",
+    fees: "exact",
+    observationTime: "producer-run",
+    outputEvidenceKind: "reserve-based-amm-simulation",
+    confidence: "high",
+    outputKinds: ["tracked-stablecoin", "collateral"],
+    commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
+    scoreEligible: false,
+    limitations: [
+      "Collection-only Solidly V2 stable/volatile exact integer invariant with same-block getAmountOut equivalence.",
+      "Reviewed Aerodrome Base, Velodrome Optimism and Shadow legacy Sonic factories; CL pools never inherit this capability.",
+      "Activation requires post-deploy drift/capture/replay and publication review; current observations are diagnostic only.",
     ],
   },
   {
@@ -845,6 +889,9 @@ export function capabilityForPool(
     pool.extra.orderbookDepthUsd > 0
   ) {
     return capabilityById("cg-tickers-orderbook-depth-2pct");
+  }
+  if (pool.extra?.ammExecutionModel?.source === "solidly-v2") {
+    return capabilityById("solidly-v2-exact-shadow");
   }
   if (pool.extra?.ammExecutionModel?.invariant === "constant-product") {
     return capabilityById(

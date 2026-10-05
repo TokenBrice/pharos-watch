@@ -99,7 +99,7 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Deployment identity is verified independently from Binance, NAVA and latest-state RPC: name/symbol KGST, decimals 18. Token owner and autoOwner are TV1qH8m835v1tPyKiZCMVGcWZduMKW33D8; ProxyAdmin TYhmr8dZMVAesxwpPyw3hyyJpmENSj96Hu has the same owner; implementation is TR9KpxsZ2F94ZnbwHR148d7U5mrFneKMtt. Native account owner permission is weight-1 threshold 2 across five keys; its active permission is weight-1 threshold 2 across four keys, including smart-contract calls. Neither signer independence nor custody is established. autoMintMaxLimit() is zero, which is not a cap on manual mint or upgrade. A successful direct mint(address,uint256) by that owner is confirmed at transaction 7b03bac02cea00ce01708c4efc9b099b0e06d9b8453f07d98027bd27516f365b (block 82925474), with two signatures. These observations establish mechanical issuance and administrative identities, not whether TRON balances are independent native reserve liabilities or an off-chain-conserved BSC representation. No escrow, backing partition, cross-chain conservation or financial reconciliation is asserted. RPC state reads were observed 2026-10-02 against latest; historical QUANTITY pins are unsupported and anchor block 86751699 is not a pin for those reads.",
+        "reviewNote": "Deployment identity is verified independently from Binance, NAVA and latest-state RPC: name/symbol KGST, decimals 18. Token owner and autoOwner are TV1qH8m835v1tPyKiZCMVGcWZduMKW33D8; ProxyAdmin TYhmr8dZMVAesxwpPyw3hyyJpmENSj96Hu has the same owner; implementation is TR9KpxsZ2F94ZnbwHR148d7U5mrFneKMtt. Native account owner permission is weight-1 threshold 2 across five keys; its active permission is weight-1 threshold 2 across four keys, including smart-contract calls. Neither signer independence nor custody is established. autoMintMaxLimit() is zero, which is not a cap on manual mint or upgrade. A successful direct mint(address,uint256) by that owner is confirmed at transaction 7b03bac02cea00ce01708c4efc9b099b0e06d9b8453f07d98027bd27516f365b (block 82925474), with two signatures. These observations establish mechanical issuance and administrative identities, not whether TRON balances are independent native reserve liabilities or an off-chain-conserved BSC representation. No escrow, backing partition, cross-chain conservation or financial reconciliation is asserted. RPC state reads were observed 2026-10-02 against latest; historical QUANTITY pins are unsupported and anchor block 86751699 is not a pin for those reads. Research on 2026-10-05 independently re-fetches the same verified implementation bytecode and proxy metadata, and re-verifies the immutable mint transaction receipt as SUCCESS with two signatures and amount 17559988000000000000000000 base units (18 decimals). The manual selector 0x40c10f19 enters runtime 0x1012, checks recipient frozen state, reaches the owner guard at 0x1f71, then mint/update blocks 0x20af, 0x28ba, 0x2ba1 and 0x2f2a. This path checks pause and ERC20 arithmetic but does not read autoMintMaxLimit; no automated-path ceiling is transplanted onto manual issuance. A new blockHash-form eth_call succeeds for a real header and rejects an invalid hash, but TRON's official eth_call documentation expressly states that object-form block references only verify block existence and still execute against latest state. Neither the successful hash-form call nor an observed head is promoted to a pinned state witness. Native-versus-representation liability scope and a complete historical upgrade/owner/incident census remain unresolved.",
         "controllerChain": "tron",
         "controllerAddress": "TV1qH8m835v1tPyKiZCMVGcWZduMKW33D8",
         "failureDomainKeys": [
@@ -122,6 +122,14 @@
           {
             "label": "TronGrid native account permissions and contract reads",
             "url": "https://developers.tron.network/reference/account-getaccount"
+          },
+          {
+            "label": "TRON eth_call: blockHash checks existence but executes latest state",
+            "url": "https://developers.tron.network/reference/eth_call"
+          },
+          {
+            "label": "Direct owner mint transaction at TRON block 82925474",
+            "url": "https://tronscan.org/#/transaction/7b03bac02cea00ce01708c4efc9b099b0e06d9b8453f07d98027bd27516f365b"
           }
         ]
       }

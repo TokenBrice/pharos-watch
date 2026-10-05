@@ -439,6 +439,14 @@
           {
             "label": "Pinned base RPC control observations",
             "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Verified receipt source: private minters mapping and non-emitting repeatable setMinter",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xca78ee4544ec5a33af86f1e786efc7d3652bf005"
+          },
+          {
+            "label": "Verified CCIP Router off-ramp and owner replacement guards",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x881e3a65b4d4a04dd529061dd0071cf975f58bcd"
           }
         ],
         "capDescription": "Former pool mint is revoked; owner can grant mint permission again. No complete cap, caller, upgrade or economic-loss exclusion certificate.",
@@ -447,7 +455,7 @@
           "protocol:chainlink-ccip",
           "contract:base:0x1c064265e053d23d120c518fdbb542e6537f82d1"
         ],
-        "evidence": "Pinned read confirms empty pool supported-chain list, rejected former-pool mint and successful owner setMinter simulation. Receipt totalSupply remains nonzero. Ordinary ERC20 transfers are not disabled. Governance proxy accepts the Ethereum GovernanceSender; complete upstream caller/minter/upgrade census remains unresolved.",
+        "evidence": "Pinned read confirms empty pool supported-chain list, rejected former-pool mint and successful owner setMinter simulation. Receipt totalSupply remains nonzero. Ordinary ERC20 transfers are not disabled. Governance proxy accepts the Ethereum GovernanceSender; complete upstream caller/minter/upgrade census remains unresolved. Supplemental 2026-10-05 review at Base block 52199652 confirms the same dormant/reactivatable posture. Exact runtime-matched ERC20Mintable source declares SetMinter but setMinter(address,bool) never emits it, has no once-only guard, and writes private minters at compiler storage slot 11. Source-bound reads show both former pool and owner currently false, not an exhaustive minter inventory. Complete closure requires historical setMinter calldata/internal-call discovery, not Rely/Deny or SetMinter event census. The pinned Router has an Ethereum off-ramp and owner-controlled applyRampUpdates; empty token-pool peers do not close governance-message reach. Existing partial certificate and its observation pin are unchanged.",
         "executionScope": {
           "controllerDeployment": "base:0x1c064265e053d23d120c518fdbb542e6537f82d1",
           "reviewedAt": "2026-10-01",
@@ -726,6 +734,14 @@
           {
             "label": "Pinned optimism RPC control observations",
             "url": "https://api-optimism-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Verified receipt source: private minters mapping and non-emitting repeatable setMinter",
+            "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0xfc63c9c8ba44ae89c01265453ed4f427c80cbd4e"
+          },
+          {
+            "label": "Verified CCIP Router off-ramp and owner replacement guards",
+            "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0x3206695cae29952f4b0c22a169725a865bc8ce0f"
           }
         ],
         "capDescription": "Former pool mint is revoked; owner can grant mint permission again. No complete cap, caller, upgrade or economic-loss exclusion certificate.",
@@ -734,7 +750,7 @@
           "protocol:chainlink-ccip",
           "contract:optimism:0xaf956837af704d825c1fcbe2651d5c3c37ad5289"
         ],
-        "evidence": "Pinned read confirms empty pool supported-chain list, rejected former-pool mint and successful owner setMinter simulation. Receipt totalSupply remains nonzero. Ordinary ERC20 transfers are not disabled. Governance proxy accepts the Ethereum GovernanceSender; complete upstream caller/minter/upgrade census remains unresolved.",
+        "evidence": "Pinned read confirms empty pool supported-chain list, rejected former-pool mint and successful owner setMinter simulation. Receipt totalSupply remains nonzero. Ordinary ERC20 transfers are not disabled. Governance proxy accepts the Ethereum GovernanceSender; complete upstream caller/minter/upgrade census remains unresolved. Supplemental 2026-10-05 review at Optimism block 157794937 confirms the same dormant/reactivatable posture. Exact runtime-matched ERC20Mintable source declares SetMinter but setMinter(address,bool) never emits it, has no once-only guard, and writes private minters at compiler storage slot 11. Source-bound reads show both former pool and owner currently false, not an exhaustive minter inventory. Complete closure requires historical setMinter calldata/internal-call discovery, not an event-only census. The pinned Router retains an Ethereum off-ramp and owner-controlled ramp replacement. Existing partial certificate and its observation pin are unchanged.",
         "executionScope": {
           "controllerDeployment": "optimism:0xaf956837af704d825c1fcbe2651d5c3c37ad5289",
           "reviewedAt": "2026-10-01",
@@ -1013,6 +1029,14 @@
           {
             "label": "Pinned arbitrum RPC control observations",
             "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Verified receipt source: private minters mapping and non-emitting repeatable setMinter",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7a1e123e41458aabab8068bfed6010d8f9480898"
+          },
+          {
+            "label": "Verified CCIP Router off-ramp and owner replacement guards",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x141fa059441e0ca23ce184b6a78bafd2a517dde8"
           }
         ],
         "capDescription": "Former pool mint is revoked; owner can grant mint permission again. No complete cap, caller, upgrade or economic-loss exclusion certificate.",
@@ -1021,7 +1045,7 @@
           "protocol:chainlink-ccip",
           "contract:arbitrum:0x607bcd974bb69c78ecdbf0b68748b791bba24d94"
         ],
-        "evidence": "Pinned read confirms empty pool supported-chain list, rejected former-pool mint and successful owner setMinter simulation. Receipt totalSupply remains nonzero. Ordinary ERC20 transfers are not disabled. Governance proxy accepts the Ethereum GovernanceSender; complete upstream caller/minter/upgrade census remains unresolved.",
+        "evidence": "Pinned read confirms empty pool supported-chain list, rejected former-pool mint and successful owner setMinter simulation. Receipt totalSupply remains nonzero. Ordinary ERC20 transfers are not disabled. Governance proxy accepts the Ethereum GovernanceSender; complete upstream caller/minter/upgrade census remains unresolved. Supplemental 2026-10-05 review confirms the dormant/reactivatable posture at the pinned Arbitrum observation recorded in R16 research. Exact runtime-matched ERC20Mintable source declares SetMinter but setMinter(address,bool) never emits it, has no once-only guard, and writes private minters at compiler storage slot 11. Source-bound reads show both former pool and owner currently false, not an exhaustive minter inventory. Complete closure requires historical setMinter calldata/internal-call discovery, not an event-only census. The pinned Router retains an Ethereum off-ramp and owner-controlled ramp replacement. Existing partial certificate and its observation pin are unchanged.",
         "executionScope": {
           "controllerDeployment": "arbitrum:0x607bcd974bb69c78ecdbf0b68748b791bba24d94",
           "reviewedAt": "2026-10-01",
@@ -1316,6 +1340,10 @@
           {
             "label": "Complete sender internal mutation traces, including mill 396 helper revocation",
             "url": "https://eth.blockscout.com/api/v2/transactions/0xf1f3e33ea118c50aafa8ee74ece93e10590ae756cf75f1c1389f87b895180309/raw-trace"
+          },
+          {
+            "label": "Compiler-declared receipt immutable offsets and private minter storage layout; Berachain executable correspondence",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xca78ee4544ec5a33af86f1e786efc7d3652bf005?fields=all"
           }
         ],
         "capDescription": "Former pool mint is revoked; owner can grant mint permission again. No complete cap, caller, upgrade or economic-loss exclusion certificate.",
@@ -1324,7 +1352,7 @@
           "protocol:chainlink-ccip",
           "contract:berachain:0x1992af61fbf8ee38741bcc57d636caa22a1a7702"
         ],
-        "evidence": "Historical observations retain empty pool supported-chain list, rejected former-pool mint, owner reactivation and nonzero receipt supply. W3R12 on 2026-10-04 recovered the Berachain governance proxy's executable correspondence: block 27071315 runtime SHA-256 6b8e29d969482f06a02135d0ae8fe2a0b25ff5634f1f3b6e71025e44a4bd9f88 exactly matches Sourcify's verified Base GovernanceProxy outside six compiler-declared immutable ranges, including identical metadata. Immutable words bind router 0x71a275704c283486fba26dad3dd0db78804426ef, Ethereum selector 5009297550715157269 and sender 0x4e521fe7a9084067096d45a312b8feee39d5f1f3; getter reads confirm router/sender. Its authenticated CCIP entrypoint performs arbitrary targetContract.call(callData). Ethereum block 26122351 binds that sender's owner to Timelock 0x926df14a23be491164dcf93f4c468a50ef659d5b. Complete explorer pages contain 49 external and 17 internal inbound transactions, with pagination end; mutation calldata and all three internal parent traces reconstruct the Timelock as enabled, deployer 0x11ec78492d53c9276dd7a184b1dbfb34e50b710d as disabled, and mill 396 helper 0x2a0fec62992d2c0f1b0c598551c1627f18286f84 as disabled. Pinned allowListedCallers reads validate all three. No complete downstream dormant permission, CCIP router/bypass or affected-liability inventory is claimed; execution certificate remains partial.",
+        "evidence": "Historical observations retain empty pool supported-chain list, rejected former-pool mint, owner reactivation and nonzero receipt supply. W3R12 on 2026-10-04 recovered the Berachain governance proxy's executable correspondence: block 27071315 runtime SHA-256 6b8e29d969482f06a02135d0ae8fe2a0b25ff5634f1f3b6e71025e44a4bd9f88 exactly matches Sourcify's verified Base GovernanceProxy outside six compiler-declared immutable ranges, including identical metadata. Immutable words bind router 0x71a275704c283486fba26dad3dd0db78804426ef, Ethereum selector 5009297550715157269 and sender 0x4e521fe7a9084067096d45a312b8feee39d5f1f3; getter reads confirm router/sender. Its authenticated CCIP entrypoint performs arbitrary targetContract.call(callData). Ethereum block 26122351 binds that sender's owner to Timelock 0x926df14a23be491164dcf93f4c468a50ef659d5b. Complete explorer pages contain 49 external and 17 internal inbound transactions, with pagination end; mutation calldata and all three internal parent traces reconstruct the Timelock as enabled, deployer 0x11ec78492d53c9276dd7a184b1dbfb34e50b710d as disabled, and mill 396 helper 0x2a0fec62992d2c0f1b0c598551c1627f18286f84 as disabled. Pinned allowListedCallers reads validate all three. Supplemental 2026-10-05 review at Berachain block 27086966 additionally binds receipt runtime SHA-256 1c17c07570675216756b65988104fca2bad6053f08e86d1c44fdb11fe7fd2899 to verified Base ERC20Mintable: all 8407 bytes, including metadata, match outside compiler-declared immutable ranges 2440+32, 2477+32, 2529+32. Immutable words are 18, 80094 and the deployment domain separator. The matched source's private minters mapping is at slot 11; setMinter is repeatable and emits no SetMinter despite declaring that event. Both known former pool and owner mapping words are zero at the new pin; exhaustive historical minter calldata/internal calls and Router off-ramp replacement reach remain unresolved. No complete downstream dormant permission, CCIP router/bypass or affected-liability inventory is claimed; execution certificate remains partial at its original pin.",
         "executionScope": {
           "controllerDeployment": "berachain:0x1992af61fbf8ee38741bcc57d636caa22a1a7702",
           "reviewedAt": "2026-10-01",

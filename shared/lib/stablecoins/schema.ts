@@ -167,6 +167,7 @@ const StablecoinMetaAssetSchemaShape = {
   mica: MicaProfileSchema.optional(),
   genius: GeniusProfileSchema.optional(),
   mintAuthority: MintAuthorityProfileSchema.optional(),
+  // The deployment schema owns token-contract versus native bank-denom identity.
   contracts: z.array(ContractDeploymentSchema).optional(),
   tradedContracts: z.array(ContractDeploymentSchema).optional(),
   dependencies: z.array(DependencyWeightSchema).optional(),

@@ -10,12 +10,16 @@ import type { SupplyAttributionRejectionCode } from "@shared/lib/safety-score-v9
 import { rethrowIfAborted, throwIfAborted } from "../abort";
 import { getRpcAuthHeaders, type ChainRpcConfig } from "../chain-registry";
 import { getCache, setCache } from "../db-cache";
-import { fetchEvmBlockHeader, fetchEvmBlockNumber, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmRpcBatch, type EvmBlockHeader } from "../evm-rpc";
+import { fetchEvmBlockHeader, fetchEvmBlockNumber, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmRpcBatch, type EvmBlockHeader, type EvmMulticall3Call, type EvmMulticall3Result } from "../evm-rpc";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../evm-selectors";
 import { getPublicRpcUrl } from "../public-rpc-registry";
 import { decodeEvmUint256, fetchSafetyScoreV9SolanaRpc, rewindEvmBlockHeaderToScoringClock, type SafetyScoreV9SolanaRpcFetcher } from "./supply-observation-primitives";
 import { buildReviewedEconomicDeploymentInventory, deriveReviewedEconomicDeploymentPartition, economicProviderSupplyContradictionChain, economicSupplyInputDeploymentObservation, economicSupplyInputReferencePrice, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
 import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
+import { observeLayerZeroOftPending } from "./layerzero-oft-pending-observer";
+import { observeEconomicCosmosBank, pinEconomicCosmosBank, type CosmosBankPin } from "./cosmos-bank-observer";
+import { fetchMoveFungibleAssetSupply, fetchTonJettonSupply } from "../../cron/reserve-adapters/token-supply";
+import { observeCcipPending } from "./ccip-pending-observer";
 
 /** Finalized mint snapshot, case-preserved identity, pinned chronology and response hash. */
 export async function observeEconomicSolanaMint(input: {
@@ -353,6 +357,47 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
       : economicSupplyInputReferencePrice(input.fixedInput, input.assetId);
     if (!referencePrice || Number(referencePrice.value) <= 0) return { status: "rejected", rejectionCode: "packet-reconciliation-failed", failedRouteId: plan.sourceId };
     const headers = new Map<string, EvmBlockHeader>();
+    const cosmosPins = new Map<string, CosmosBankPin>();
+    const readCosmos = async (row: ReviewedEconomicSupplyPlan["deployments"][number], id: string, account?: string): Promise<EconomicSupplyObservation | null> => {
+      if (row.read.kind !== "cosmos-bank-supply" || row.address !== row.read.denom) return null;
+      const key = `${row.chainId}:${row.read.restUrl}`;
+      let pin = cosmosPins.get(key);
+      if (!pin) {
+        const result = await pinEconomicCosmosBank({ source: row.read, chainId: row.chainId, clockSec: input.scoringClockSec, signal: input.signal });
+        if (!result) return null;
+        pin = result; cosmosPins.set(key, pin);
+      }
+      const result = await observeEconomicCosmosBank({ source: row.read, chainId: row.chainId, pin, clockSec: input.scoringClockSec, account, signal: input.signal });
+      return result ? { id, deploymentKey: row.deploymentKey, ...result } : null;
+    };
+    const evmCallsByChain = new Map<string, EvmMulticall3Call[]>();
+    const evmCallsById = new Map<string, readonly EvmMulticall3Call[]>();
+    const evmResultsById = new Map<string, readonly EvmMulticall3Result[] | null>();
+    const batchedChains = new Set<string>();
+    const addEvmRead = (row: ReviewedEconomicSupplyPlan["deployments"][number], id: string, account?: string) => {
+      if (CHAIN_META[row.chainId]?.type !== "evm" || row.address === null ||
+        row.decimals === null || (row.holdingKind === "native-gas" && account !== undefined) ||
+        (account !== undefined && !/^0x[0-9a-f]{40}$/.test(account))) return;
+      const calls = evmCallsByChain.get(row.chainId) ?? [];
+      const pair = [
+        { label: id, target: row.address, callData: account === undefined ? TOTAL_SUPPLY_SELECTOR : `0x70a08231${account.slice(2).padStart(64, "0")}`, allowFailure: true },
+        { label: `${id}:decimals`, target: row.address, callData: DECIMALS_SELECTOR, allowFailure: true },
+      ];
+      calls.push(...pair);
+      evmCallsById.set(id, pair);
+      evmCallsByChain.set(row.chainId, calls);
+    };
+    for (const row of plan.deployments) {
+      if (row.read.kind === "evm-total-supply" || row.read.kind === "evm-balance") {
+        addEvmRead(row, row.deploymentKey, row.read.kind === "evm-balance" ? row.read.account : undefined);
+      }
+    }
+    for (const rule of [...plan.exclusions, ...plan.escrows.map(escrow => ({
+      id: escrow.id, deploymentKey: escrow.canonicalDeploymentKey, account: escrow.account,
+    }))]) {
+      const row = plan.deployments.find(row => row.deploymentKey === rule.deploymentKey);
+      if (row) addEvmRead(row, rule.id, rule.account);
+    }
     const readEvm = async (row: ReviewedEconomicSupplyPlan["deployments"][number], id: string, account?: string): Promise<EconomicSupplyObservation | null> => {
       if (CHAIN_META[row.chainId]?.type !== "evm" || row.address === null) return null;
       let header = headers.get(row.chainId);
@@ -379,11 +424,21 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
         return { id, deploymentKey: row.deploymentKey, amount, observedAtSec: header.timestamp, anchor: String(header.number), anchorHash: header.hash, responseSha256: sha256Hex(stableJsonStringifyV1({ result, header, account })) };
       }
       if (row.decimals === null) return null;
-      const calls = [
-        { label: id, target: row.address, callData: account === undefined ? TOTAL_SUPPLY_SELECTOR : `0x70a08231${account.slice(2).padStart(64, "0")}`, allowFailure: true },
-        { label: `${id}:decimals`, target: row.address, callData: DECIMALS_SELECTOR, allowFailure: true },
-      ];
-      const results = await fetchEvmMulticall3Aggregate3AtBlock(row.chainId, calls, header.number, { chainRpcs: input.chainRpcs, signal: input.signal, stateBlockHash: header.hash, multicallFallbackBlockHash: header.hash });
+      if (!batchedChains.has(row.chainId)) {
+        batchedChains.add(row.chainId);
+        const calls = evmCallsByChain.get(row.chainId) ?? [];
+        // The existing multicall helper chunks large censuses and consumes
+        // each response before opening the next. All rows share this exact pin.
+        const batch = await fetchEvmMulticall3Aggregate3AtBlock(row.chainId, calls, header.number, {
+          chainRpcs: input.chainRpcs, signal: input.signal,
+          stateBlockHash: header.hash, multicallFallbackBlockHash: header.hash,
+        });
+        for (let index = 0; index < calls.length; index += 2) {
+          evmResultsById.set(calls[index].label, batch ? [batch[index], batch[index + 1]] : null);
+        }
+      }
+      const calls = evmCallsById.get(id) ?? [];
+      const results = evmResultsById.get(id);
       const value = results && decodeEvmUint256(results[0]), decimals = results && decodeEvmUint256(results[1]);
       if (value == null || decimals == null || decimals !== BigInt(row.decimals)) return null;
       return { id, deploymentKey: row.deploymentKey, amount: value.toString(), observedAtSec: header.timestamp, anchor: String(header.number), anchorHash: header.hash, responseSha256: sha256Hex(stableJsonStringifyV1({ calls, results, header })) };
@@ -427,16 +482,51 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
         responseSha256: sha256Hex(stableJsonStringifyV1({ source, state, calls, messages, header,
           sourceGeneration: input.fixedInput.sourceGeneration, baseInputGenerationId: input.fixedInput.baseInputGenerationId })) };
     };
+    const readOftPending = async (
+      source: Extract<NonNullable<ReviewedEconomicSupplyPlan["liabilityInFlightSource"]>, { kind: "evm-layerzero-oft-pending" }>,
+      id: string, deploymentKey: string,
+    ): Promise<EconomicSupplyObservation | null> => {
+      const pins = source.sides.map(side => headers.get(side.chainId));
+      if (pins.some(pin => pin === undefined)) { failedRouteId = `${id}:pin-missing`; return null; }
+      const result = await observeLayerZeroOftPending({ source, headers: pins as EvmBlockHeader[], chainRpcs: input.chainRpcs, signal: input.signal, db: input.db });
+      if (result.status !== "accepted") { failedRouteId = `${id}:${result.reason}`; return null; }
+      const header = pins[0]!;
+      return { id, deploymentKey, amount: result.amount, observedAtSec: header.timestamp,
+        anchor: String(header.number), anchorHash: header.hash,
+        responseSha256: result.responseSha256, layerZeroOftPendingProof: result.proof };
+    };
     for (const row of plan.deployments) {
       throwIfAborted(input.signal); failedRouteId = row.routeId ?? row.deploymentKey;
       let observation: EconomicSupplyObservation | null = null;
       if (row.read.kind === "provider-chain" || row.read.kind === "native-from-aggregate") {
         observation = economicSupplyInputDeploymentObservation({ fixedInput: input.fixedInput, plan, row, referencePrice });
+      } else if (row.read.kind === "cosmos-bank-supply") {
+        observation = await readCosmos(row, row.deploymentKey);
       } else if (row.read.kind === "evm-total-supply" || row.read.kind === "evm-balance") {
         observation = await readEvm(row, row.deploymentKey, row.read.kind === "evm-balance" ? row.read.account : undefined);
       } else if (row.read.kind === "solana-mint" && row.chainId === "solana" && row.address !== null && row.decimals !== null) {
         const result = await observeEconomicSolanaMint({ address: row.address, decimals: row.decimals, programOwner: row.read.programOwner, clockSec: input.scoringClockSec, chainRpcs: input.chainRpcs, signal: input.signal, requireExactContextSlot: true });
         if (result) observation = { id: row.deploymentKey, deploymentKey: row.deploymentKey, amount: result.amount, observedAtSec: result.observedAtSec, anchor: result.slot, anchorHash: result.blockHash, responseSha256: result.responseSha256 };
+      } else if (row.read.kind === "move-fa-supply" && ["aptos", "movement"].includes(row.chainId) && row.address !== null && row.decimals !== null) {
+        const url = input.chainRpcs.get(row.chainId)?.endpoints[0]?.url ?? getPublicRpcUrl(row.chainId);
+        if (url) {
+          const result = await fetchMoveFungibleAssetSupply(row.address, input.signal ?? new AbortController().signal, url, undefined, {
+            clockSec: input.scoringClockSec, expectedChainId: row.read.ledgerChainId,
+            identityKind: row.read.identityKind, expectedMetadataAddress: row.read.metadataAddress, expectedDecimals: row.decimals,
+          });
+          if (result?.ledgerTimestampSec !== undefined && result.metadataAddress === row.read.metadataAddress && result.responseSha256) {
+            observation = { id: row.deploymentKey, deploymentKey: row.deploymentKey, amount: result.rawSupply.toString(),
+              observedAtSec: result.ledgerTimestampSec, anchor: result.ledgerVersion,
+              anchorHash: result.responseSha256, responseSha256: result.responseSha256 };
+          }
+        }
+      } else if (row.read.kind === "ton-jetton-supply" && row.chainId === "ton" && row.address !== null && row.decimals !== null) {
+        const result = await fetchTonJettonSupply(row.address, input.signal ?? new AbortController().signal, row.read.apiUrl, {
+          clockSec: input.scoringClockSec, expectedDecimals: row.decimals,
+        });
+        if (result) observation = { id: row.deploymentKey, deploymentKey: row.deploymentKey, amount: result.rawSupply.toString(),
+          observedAtSec: result.blockTimestampSec, anchor: String(result.masterchainSeqno),
+          anchorHash: result.blockHash, responseSha256: result.responseSha256 };
       } else if (row.read.kind === "xrpl-issued-currency" && row.chainId === "xrpl") {
         const url = input.chainRpcs.get("xrpl")?.endpoints[0]?.url ?? getPublicRpcUrl("xrpl");
         if (url) {
@@ -465,7 +555,8 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
     for (const rule of [...plan.exclusions, ...plan.escrows.map(escrow => ({ id: escrow.id, deploymentKey: escrow.canonicalDeploymentKey, account: escrow.account }))]) {
       const row = plan.deployments.find(row => row.deploymentKey === rule.deploymentKey)!;
       failedRouteId = row.routeId ?? row.deploymentKey;
-      const observation = await readEvm(row, rule.id, rule.account);
+      const observation = row.read.kind === "cosmos-bank-supply"
+        ? await readCosmos(row, rule.id, rule.account) : await readEvm(row, rule.id, rule.account);
       if (!observation) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId };
       observations.push(observation);
     }
@@ -485,7 +576,16 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
       failedRouteId = escrow.id;
       if ("kind" in escrow.inFlightSource) {
         let pending: EconomicSupplyObservation | null;
-        if (escrow.inFlightSource.kind === "evm-curve-lz-pending") {
+        if (escrow.inFlightSource.kind === "evm-ccip-pending") {
+          const source = escrow.inFlightSource;
+          const result = await observeCcipPending({ source, headers, clockSec: input.scoringClockSec,
+            chainRpcs: input.chainRpcs, signal: input.signal, db: input.db });
+          if (result.status !== "accepted") return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `${escrow.id}:${result.reason}` };
+          const header = headers.get(source.chainId)!;
+          pending = { id: `in-flight:${escrow.id}`, deploymentKey: escrow.canonicalDeploymentKey, amount: result.amount,
+            observedAtSec: header.timestamp, anchor: String(header.number), anchorHash: header.hash,
+            responseSha256: result.responseSha256, ccipPendingProof: result.proof };
+        } else if (escrow.inFlightSource.kind === "evm-curve-lz-pending") {
           const source = escrow.inFlightSource;
           const pins = source.sides.map(side => headers.get(side.chainId));
           if (pins.some(pin => pin === undefined)) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `${escrow.id}:pin-missing` };
@@ -495,6 +595,8 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
           pending = { id: `in-flight:${escrow.id}`, deploymentKey: escrow.canonicalDeploymentKey, amount: result.amount,
             observedAtSec: header.timestamp, anchor: String(header.number), anchorHash: header.hash,
             responseSha256: result.responseSha256, curvePendingProof: result.proof };
+        } else if (escrow.inFlightSource.kind === "evm-layerzero-oft-pending") {
+          pending = await readOftPending(escrow.inFlightSource, `in-flight:${escrow.id}`, escrow.canonicalDeploymentKey);
         } else {
           pending = await readPendingState(escrow.inFlightSource, escrow);
         }
@@ -507,10 +609,31 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
       }
     }
     if (plan.liabilityInFlightSource !== null) {
-      const pending = await readReviewedApiAmount(plan.liabilityInFlightSource, input.signal);
-      if (!pending) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: "in-flight:liability" };
-      inFlight.push({ id: "in-flight:liability", deploymentKey: plan.deployments[0]!.deploymentKey, amount: pending.value,
-        observedAtSec: pending.observedAtSec, anchor: pending.sourceGeneration, anchorHash: pending.responseSha256, responseSha256: pending.responseSha256 });
+      failedRouteId = "in-flight:liability";
+      const source = plan.liabilityInFlightSource;
+      if ("kind" in source) {
+        if (source.kind === "evm-layerzero-oft-pending") {
+          const pending = await readOftPending(source, "in-flight:liability", plan.deployments[0]!.deploymentKey);
+          if (!pending) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId };
+          inFlight.push(pending);
+        } else if (source.kind === "evm-ccip-pending") {
+          const result = await observeCcipPending({ source, headers, clockSec: input.scoringClockSec,
+            chainRpcs: input.chainRpcs, signal: input.signal, db: input.db });
+          if (result.status !== "accepted") return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `in-flight:liability:${result.reason}` };
+          const header = headers.get(source.chainId);
+          if (!header) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: "in-flight:liability:pin-missing" };
+          inFlight.push({ id: "in-flight:liability", deploymentKey: plan.deployments[0]!.deploymentKey, amount: result.amount,
+            observedAtSec: header.timestamp, anchor: String(header.number), anchorHash: header.hash,
+            responseSha256: result.responseSha256, ccipPendingProof: result.proof });
+        } else {
+          return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: "in-flight:liability:unsupported-read" };
+        }
+      } else {
+        const pending = await readReviewedApiAmount(source, input.signal);
+        if (!pending) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId };
+        inFlight.push({ id: "in-flight:liability", deploymentKey: plan.deployments[0]!.deploymentKey, amount: pending.value,
+          observedAtSec: pending.observedAtSec, anchor: pending.sourceGeneration, anchorHash: pending.responseSha256, responseSha256: pending.responseSha256 });
+      }
     }
     for (const [chainId, header] of headers) {
       const rechecked = await fetchEvmBlockHeader(chainId, header.number, { chainRpcs: input.chainRpcs, signal: input.signal });

@@ -32,6 +32,8 @@ import {
 } from "./fact-set-context";
 import type { V9AllocationScopeFact, V9AllocationScoredDimension } from "@shared/types/safety-score-v9-allocation";
 import { resolveAllocationDimensionCoverage } from "./fact-set-allocation";
+import { allocationReviewClockSec } from "@shared/types/safety-score-v9-allocation";
+import type { SafetyScoreV9WrapperLocalReview } from "@shared/types/safety-score-v9-wrapper-local-review";
 
 interface WrapperLocalFactBuildInputs {
   implementation: V9AssetFactsV2["implementation"];
@@ -295,6 +297,50 @@ function independentlyReviewedImmutableRootEvidence(context: AssetBuildContext):
     contentSha256: domainDigest("safety-score-v9.wrapper-immutable-root-identity.v1", deployment),
     maxAgeSec,
   }, clock)));
+}
+
+function independentWrapperLocalReview(
+  context: AssetBuildContext,
+  kind: SafetyScoreV9WrapperLocalReview["kind"],
+): { review: SafetyScoreV9WrapperLocalReview; evidenceRefIds: string[] } | null {
+  const matches = (context.asset.wrapperLocalReviews ?? []).filter((review) => review.kind === kind);
+  if (matches.length !== 1) return null;
+  const review = matches[0]!;
+  const identity = context.asset.allocationScopeIdentityReview;
+  const clock = context.fixedInput.clockSec;
+  const maxAgeSec = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec;
+  if (!identity || review.assetId !== context.asset.assetId || review.identity.assetId !== review.assetId ||
+    identity.assetId !== review.assetId || allocationReviewClockSec(review.reviewedAt) > clock ||
+    review.observedAtSec > clock || clock >= review.expiresAtSec || clock - review.observedAtSec > maxAgeSec) return null;
+  const registered = new Set(identity.registeredDeploymentKeys);
+  if (registered.size === 0 || registered.size !== identity.registeredDeploymentKeys.length ||
+    registered.size !== review.identity.registeredDeploymentKeys.length ||
+    review.identity.registeredDeploymentKeys.some((key) => !registered.has(key)) ||
+    new Set(review.identity.registeredDeploymentKeys).size !== registered.size ||
+    review.identity.deployments.length !== registered.size) return null;
+  const seen = new Set<string>();
+  for (const deployment of review.identity.deployments) {
+    const key = `${deployment.chain}:${deployment.address}`;
+    const retained = identity.deployments.filter((row) => row.chain === deployment.chain && row.address === deployment.address);
+    if (!registered.has(key) || seen.has(key) || retained.length !== 1 ||
+      deployment.observedAtSec > review.observedAtSec || clock - deployment.observedAtSec > maxAgeSec ||
+      retained[0]!.codeKind !== deployment.codeKind || !review.sources.some((source) => source.url === deployment.sourceUrl)) return null;
+    if (deployment.codeKind === "proxy") {
+      const current = retained[0]!;
+      if (current.codeKind !== "proxy" || current.implementation !== deployment.implementation ||
+        current.observedAtSec > clock || clock - current.observedAtSec > maxAgeSec) return null;
+    }
+    seen.add(key);
+  }
+  const evidenceRefIds = review.sources.map((source) => addEvidence(context, createV9EvidenceReference({
+    evidenceId: `${review.assetId}:wrapper-local-review:${kind}:${domainDigest("safety-score-v9.wrapper-local-source.v1", source).slice(0, 16)}`,
+    sourceId: "safety-score-v9.wrapper-local-review",
+    sourceGenerationId: context.extension.sources.researchOverlays.generationId,
+    disposition: "observed", observedAtSec: review.observedAtSec, url: source.url,
+    contentSha256: domainDigest("safety-score-v9.wrapper-local-review.v1", { review, source }),
+    maxAgeSec: Math.min(maxAgeSec, review.expiresAtSec - review.observedAtSec),
+  }, clock)));
+  return { review, evidenceRefIds };
 }
 
 function buildWrapperStructuralDimensions(
@@ -625,7 +671,15 @@ function buildWrapperStructuralDimensions(
   }
 
   let shareAccountingNavOracle: V9WrapperLocalDimensionFact;
-  if (form === "pure") {
+  const accountingReview = independentWrapperLocalReview(context, "accounting");
+  if (accountingReview?.review.kind === "accounting") {
+    shareAccountingNavOracle = reviewedWrapperFact(
+      context,
+      accountingReview.review.mechanism === "fixed-face-accounting" ? "none" : "moderate",
+      [`wrapper-local-accounting:${accountingReview.review.mechanism}`, "borrower-liquidation-oracle-risk-retained-separately"],
+      accountingReview.evidenceRefIds,
+    );
+  } else if (form === "pure") {
     shareAccountingNavOracle = reviewedWrapperFact(
       context,
       "none",
@@ -702,7 +756,15 @@ function buildWrapperExitDimensions(
       (route.status.observationState === "known" || route.status.observationState === "stale"),
   );
   let withdrawalTerms: V9WrapperLocalDimensionFact;
-  if (knownRedemptionRoutes.length === 0) {
+  const entitlementReview = independentWrapperLocalReview(context, "holder-entitlement");
+  if (entitlementReview?.review.kind === "holder-entitlement") {
+    withdrawalTerms = reviewedWrapperFact(
+      context,
+      "critical",
+      [`wrapper-holder-entitlement:${entitlementReview.review.entitlement}`],
+      entitlementReview.evidenceRefIds,
+    );
+  } else if (knownRedemptionRoutes.length === 0) {
     withdrawalTerms = unavailableWrapperFact(
       wrapperFactDisposition(context, [input.exitStatus]),
       "wrapper-withdrawal-fee-or-gate-terms-unavailable",

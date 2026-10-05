@@ -46,7 +46,7 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
     kind: "unused-live-redemption-telemetry",
     stablecoinId: "usdr-rise",
     reason:
-      "The M-wrapper producer measures native-M backing and a sampled approved-swapper cohort, not executable wM output through the reviewed same-chain holder route. Native-M telemetry must not be attributed to wM capacity; the route remains source-reviewed unconfigured.",
+      "The M-wrapper producer measures native-M backing and a sampled approved-swapper cohort, not executable wM output through the reviewed same-chain holder route. Native-M telemetry must not be attributed to the configured USDR-to-wM route; exact wM output capacity requires separate producer evidence.",
     owner: POLICY_OWNER,
     reviewedAt: "2026-10-03",
   },
@@ -153,7 +153,7 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
     kind: "unused-live-redemption-telemetry",
     stablecoinId: "witry-brix",
     reason:
-      "wiTRY's ERC-4626 wrapper feed is reserve evidence only: the TRY-denominated underlying has no same-path USD valuation, so nominal TRY is not emitted as USD capacity. A public holder-facing redemption route also remains unreviewed.",
+      "wiTRY's ERC-4626 wrapper feed is reserve evidence only: the TRY-denominated underlying has no same-path USD valuation, so nominal TRY is not emitted as USD capacity. Canonical cooldown terms are reviewed separately and do not price the iTRY output.",
     owner: POLICY_OWNER,
     reviewedAt: "2026-10-03",
   },

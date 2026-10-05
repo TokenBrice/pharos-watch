@@ -69,6 +69,11 @@
       "decimals": 6
     },
     {
+      "chain": "sei",
+      "address": "0xf7fa6725183e603059fc23d95735bf67f72b2d78",
+      "decimals": 6
+    },
+    {
       "chain": "solana",
       "address": "FubtUcvhSCr3VPXEcxouoQjKQ7NWTCzXyECe76B7L3f8",
       "decimals": 6

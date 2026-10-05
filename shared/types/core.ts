@@ -265,6 +265,7 @@ export const MINT_AUTHORITY_TYPE_VALUES = [
   "contract",
   "issuer-backend",
   "validator-quorum",
+  "chain-consensus",
   "bridge",
   "custodian",
   "none",
@@ -433,6 +434,7 @@ export type GeniusApplicabilityBasis = import("./stablecoin-meta-compliance-sche
 export type GeniusForeignExceptionEvidence = import("./stablecoin-meta-compliance-schemas").GeniusForeignExceptionEvidence;
 export type GeniusNegativeEvidenceReview = import("./stablecoin-meta-compliance-schemas").GeniusNegativeEvidenceReview;
 export type GeniusProfile = import("./stablecoin-meta-compliance-schemas").GeniusProfile;
+/** Includes explicit native-denom bank deployments alongside token contracts. */
 export type ContractDeployment = import("./stablecoin-meta-schemas").ContractDeployment;
 export type DependencyWeight = import("./stablecoin-meta-schemas").DependencyWeight;
 

@@ -272,6 +272,14 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
     expect(evaluated.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
     expect(evaluated.exit.reasons).toContain("unproven-settlement-bound");
     expect(evaluated.exit.reasons).not.toContain("no-viable-exit-path");
+    const settlementGapIds = redemption.factorStatuses!.settlement!.gapIds;
+    expect(settlementGapIds).toHaveLength(1);
+    const reason = evaluated.scoreInput.pillars.exit.reasons.find(
+      (entry) => entry.code === "unproven-settlement-bound",
+    )!;
+    expect(reason.causeGapIds).toEqual(settlementGapIds);
+    expect(reason.sourceGapId).toBe(settlementGapIds[0]);
+    expect(reason.cause).toBe("U");
   });
 
   it("withdraws producer eligibility when the v9 review has an unbounded settlement queue", () => {

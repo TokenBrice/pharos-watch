@@ -1,4 +1,5 @@
 import { CHAIN_META } from "../types/chain-identity";
+import type { ContractDeployment } from "../types/core";
 
 /**
  * Entity type for block-explorer URL construction.
@@ -13,6 +14,7 @@ interface ExplorerUrlInput {
   chainKey?: string;
   explorerUrl?: string;
   chainType?: "evm" | "tron" | "other";
+  deploymentKind?: ContractDeployment["kind"];
   entityType: ExplorerEntityType;
   value: string;
 }
@@ -22,6 +24,8 @@ function normalizeTronAddress(value: string): string {
 }
 
 export function buildExplorerUrl(input: ExplorerUrlInput): string | null {
+  // A bank denom is not a contract address on the chain's EVM explorer.
+  if (input.deploymentKind === "native-denom") return null;
   const meta = input.chainKey ? CHAIN_META[input.chainKey] : undefined;
   const explorerUrl = input.explorerUrl ?? meta?.explorerUrl;
   const chainType = input.chainType ?? meta?.type;

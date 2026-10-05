@@ -493,6 +493,7 @@ function deriveContractInfo(contract: ContractDeployment) {
   const chainName = chain?.name ?? contract.chain;
   const explorerUrl = buildExplorerUrl({
     chainKey: contract.chain,
+    deploymentKind: contract.kind,
     entityType: "contract",
     value: contract.address,
   });

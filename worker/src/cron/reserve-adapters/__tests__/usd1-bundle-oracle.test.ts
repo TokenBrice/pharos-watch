@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { encodeAbiParameters } from "viem/utils";
 import usd1MetaSource from "@shared/data/stablecoins/coins/usd1-world-liberty-financial.json";
 import type { IssuerNativeLiabilityScope } from "@shared/types/live-reserve-adapter-declarations";
@@ -45,6 +45,8 @@ const SOLANA_RPC_URLS = [
 ];
 const APTOS_REST = "https://api.mainnet.aptoslabs.com/v1";
 const APTOS_LEDGER = "7386894871";
+
+afterEach(() => vi.restoreAllMocks());
 
 const SCOPE: IssuerNativeLiabilityScope = {
   basis: "issuer-native-supply",
@@ -193,6 +195,7 @@ function usd1Network(options: {
   aptos?: ChainOutcome;
   bundle?: string;
 }): AdapterNetworkSpec {
+  vi.spyOn(Date, "now").mockReturnValue(options.readAt * 1000);
   const solanaAccount = options.solana === "fail"
     ? { jsonrpc: "2.0", id: 1, result: { context: { slot: 451_107_855 }, value: null } }
     : {

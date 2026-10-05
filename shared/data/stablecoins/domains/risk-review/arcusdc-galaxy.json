@@ -244,11 +244,31 @@
         "pricingAuthority": "none",
         "applicability": {
           "disposition": "not-applicable",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Refine07",
-          "confidence": "probable",
-          "rationale": "The referenced VaultV2 share accounting computes NAV from underlying assets and adapter realAssets, without a separate external price input on the deposit/mint/redeem accounting path. This exemption does not cover borrower collateral liquidation or nested-vault valuation. Exact-deployment verification caveats remain.",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "R22 exact runtime and valuation-reach review",
+          "confidence": "verified",
+          "rationale": "At Arc block 24363505 (hash 0x976abe2b257c5ce59f4eed9933005a65a276e0ac7c3dc0340908ce0aaf518462), the exact vault and sole adapter runtime match Sourcify compiler-produced VaultV2/MorphoMarketV1AdapterV2 bytecode outside compiler-declared immutable slots, with zero other differences. Morpho and AdaptiveCurveIrm executable bytes likewise match exact-verified templates outside immutable slots; only trailing Solidity CBOR metadata differs. Immutable values bind USDC 0x3600000000000000000000000000000000000000, this parent vault, Morpho 0x34cd04070dd72b14e241112f6d83812df5af7fcd and AdaptiveCurveIrm 0xf02615d094fc02fc031c35fe705e175aa4653f20. Complete current census is one adapter and one cirBTC/USDC market; liquidityAdapter is zero. Bound accrueInterestView computes USDC balance plus adapter.realAssets; the adapter's inlined expectedMarketBalances reads Morpho.market and rateAtTarget, not IOracle.price or collateral valuation. Only direct share-accounting pricing is exempt. The retained cirBTC oracle path remains separately applicable and single-source-or-laggy; borrower loss, mutable adapter governance, custody and leverage are not exempt.",
           "sources": [
+            {
+              "label": "Arc block 24363505: exact vault/adapter/Morpho/IRM runtime, complete adapter/market census, immutable bindings and rate getter pinned 2026-10-05",
+              "url": "https://explorer.arc.io/block/24363505"
+            },
+            {
+              "label": "Compiler-produced VaultV2 template: runtime 21808 bytes; exact Arc bytes differ only at declared immutable slots",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=all"
+            },
+            {
+              "label": "Compiler-produced MorphoMarketV1AdapterV2 template: runtime 11784 bytes; exact Arc bytes differ only at declared immutable slots",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x812b71c33ae5eafebae967c5670e37eca3cab0ac?fields=all"
+            },
+            {
+              "label": "Exact-verified Morpho template: identical 15570 executable bytes outside immutable slots; trailing CBOR excluded",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb?fields=all"
+            },
+            {
+              "label": "Exact-verified AdaptiveCurveIrm template: identical 2270 executable bytes outside immutable slots; trailing CBOR excluded",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x46415998764c29ab2a25cbea6254146d50d22687?fields=all"
+            },
             {
               "label": "Adapter 0xee0080203a76690bca40670dfd0cd1c30fab7c2c marketIdsLength/marketIds census at arc block 24011393, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
               "url": "https://rpc.mainnet.arc.io"
