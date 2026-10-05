@@ -37,6 +37,14 @@
         "canRaiseCap": false,
         "capDescription": "Executes signed mint orders through account, signature/delegation, nonce, route/channel and capacity checks; the pinned market block-mint maximum is 20m USDx. Governance can change limits and separately mint directly.",
         "modulesOrGuardsStatus": "not-applicable",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            { "label": "Exact mint operator KMS custody binding", "url": "https://docs.axis.to/reference/contract-addresses.md" },
+            { "label": "Axis identifies AWS KMS for key material", "url": "https://docs.axis.to/backing-reserves-and-transparency/security.md" },
+            { "label": "AWS KMS FIPS-validated HSM key protection", "url": "https://docs.aws.amazon.com/kms/latest/developerguide/data-protection.html" }
+          ]
+        },
         "observedAt": "2026-10-02",
         "observedBlock": 26107703,
         "sources": [
@@ -44,7 +52,7 @@
           { "label": "Mint operator permissions", "url": "https://docs.axis.to/reference/access-control.md" },
           { "label": "Pinned role observation block", "url": "https://etherscan.io/block/26107703" }
         ],
-        "evidence": "USDxMarket.hasRole(MINT_OPERATOR_ROLE, this published wallet) returned true at block 26107703. Complete RoleGranted/RoleRevoked history from deployment through block 26110188 identifies this as the sole current mint operator, corroborated by hasRole. Docs call it KMS-secured; no independent HSM/MPC key-custody attestation was retrieved. It executes signed settlement, while the governance Safe separately retains direct token mint authority."
+        "evidence": "USDxMarket.hasRole(MINT_OPERATOR_ROLE, this published wallet) returned true at block 26107703. Complete RoleGranted/RoleRevoked history through block 26110188 identifies this as the sole current mint operator. On 2026-10-05, issuer contract-address docs bind this exact operator to KMS-secured signing; issuer security docs identify AWS KMS, whose provider documents FIPS-validated HSM protection. This establishes the disclosed HSM-backed custody model, not operator independence, IAM approval policy or recovery controls. It executes signed settlement, while the governance Safe separately retains direct token mint authority."
       },
       {
         "chain": "ethereum",
@@ -141,23 +149,26 @@
       "scopedQuestions": [
         {
           "controlRef": "Axis governance Safe native issuance administration",
-          "question": "What independent signer, key-custody and recovery evidence establishes separation of the five observed owners of this 3-of-5 Safe? The onchain owner roster and threshold do not establish human independence or signing policy.",
+          "question": "Axis discloses geographically distributed internal/external signers and cold hardware-wallet custody for the governance Safe. What controller-specific approval policy, signer-to-organization separation and recovery arrangements establish independent authorization? Hardware-wallet custody is disclosed but is not an MPC or HSM attestation.",
           "subject": "key-custody-independence",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "K07 primary-source custody and residual-policy review",
           "sources": [
             { "label": "Exact Safe and observed quorum", "url": "https://etherscan.io/address/0xdeb538917b1c1ae6b81550a6c42a66d818cc6d6d" },
+            { "label": "Disclosed geographic separation and hardware-wallet custody", "url": "https://docs.axis.to/backing-reserves-and-transparency/security.md" },
             { "label": "Pinned complete role and Safe observation", "url": "https://etherscan.io/block/26110188" }
           ]
         },
         {
           "controlRef": "Axis published mint operator",
-          "question": "What independent HSM/KMS signing policy, operator independence and recovery evidence governs this identified mint operator? Issuer KMS disclosure does not establish a signing threshold or independent custody assurance.",
+          "question": "AWS KMS HSM-backed custody is disclosed for this exact mint operator and recorded separately. What controller-specific IAM signing/approval policy, operator independence and recovery arrangements govern use of that key? A protected key store does not establish independent authorization or a signing threshold.",
           "subject": "key-custody-independence",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "K07 primary-source custody and residual-policy review",
           "sources": [
             { "label": "Published Axis operator and KMS disclosure", "url": "https://docs.axis.to/reference/contract-addresses.md" },
+            { "label": "Axis AWS KMS key-management disclosure", "url": "https://docs.axis.to/backing-reserves-and-transparency/security.md" },
+            { "label": "AWS KMS HSM protection and customer-controlled authorization policies", "url": "https://docs.aws.amazon.com/kms/latest/developerguide/data-protection.html" },
             { "label": "Native mint operator permissions", "url": "https://docs.axis.to/reference/access-control.md" }
           ]
         }
