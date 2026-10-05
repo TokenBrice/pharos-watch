@@ -4,13 +4,20 @@ import { sha256Hex } from "@shared/lib/sha256";
 import type { ExitExecutionCertificate, ExitExecutionModelReview } from "@shared/types/exit-route";
 import { observeErc4626InstantExit } from "../exit-execution/erc4626-instant";
 import { observeReviewedExitExecutionRoutes } from "../exit-execution/runtime";
-import { selectV9ExitStressRequest, resolveV9ExitCapacityAtRequest } from "@shared/lib/safety-score-v9/exit";
+import { evaluateV9Exit, projectV9ExitEvaluationRoute, selectV9ExitStressRequest, resolveV9ExitCapacityAtRequest } from "@shared/lib/safety-score-v9/exit";
+import { admitExitExecutionCertificate, exitExecutionInputGenerationId } from "@shared/lib/safety-score-v9/exit-execution";
 import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { getRedemptionBackstopConfig, validateRedemptionOutputIdentity } from "@shared/lib/redemption-backstops";
 import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
 import { resolveCapacityBasis, resolveRedemptionCapacity } from "../redemption-backstop/capacity";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import type { StablecoinsCacheLoadOk } from "../stablecoins-cache";
+import type * as EvmRpcModule from "../evm-rpc";
+import { makeV9FixedInput, makeV9Extension } from "../../test-helpers/v9-fixed-input";
+import { rebuildFixed } from "./safety-score-v9-fact-set.test-support";
+import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
+import { buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
+import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 
 const CLOCK = 1_791_184_659;
 const VAULT = "0x0000000000000000000000000000000000000001";
@@ -19,7 +26,11 @@ const HASH = `0x${"1".repeat(64)}`;
 const MULTICALL = parseAbi(["function aggregate3((address target,bool allowFailure,bytes callData)[] calls) payable returns ((bool success,bytes returnData)[] returnData)"]);
 const state = vi.hoisted(() => ({ liquidity: 1_000_000_000_000_000n, feeBps: 0n, maxBps: 10_000n, paused: false, override: "supported", identity: false, code: false, realizedMismatch: false, redeemFails: false, nonBinding: false, reorg: false, headers: 0 }));
 const word = (value: bigint) => `0x${value.toString(16).padStart(64, "0")}` as `0x${string}`;
-vi.mock("../evm-rpc", () => ({
+vi.mock("@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json", () => ({
+  default: { schemaVersion: 1, get reviews() { return [review]; } },
+}));
+vi.mock("../evm-rpc", async (importOriginal) => ({
+  ...(await importOriginal<typeof EvmRpcModule>()),
   MULTICALL3_ADDRESS: "0xca11bde05977b3631167028862be2a173976ca11",
   fetchEvmBlockNumber: async () => 100,
   fetchEvmBlockHeader: async () => ({ number: 100, hash: state.reorg && state.headers++ > 0 ? `0x${"2".repeat(64)}` : HASH, timestamp: CLOCK }),
@@ -153,6 +164,82 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     expect(observation).toMatchObject({ scoreEligible: true, completionRatio: 1, executionModelId: "erc4626-instant", executionCertificate: { settlement: { maximumCompletionSec: 0 } } });
     expect(resolveV9ExitCapacityAtRequest(observation.capacityCurve!.map(point => ({ ...point, executionCostBps: point.executionCostBps! })), request)?.completionRatio).toBe(1);
     expect(observation.executionCertificate!.points.every(point => point.certification === "exact-complete")).toBe(true);
+  });
+  it("keeps fresh measured execution admitted across supply drift only while the canonical request stays unchanged", async () => {
+    const envelope = loadV9CandidateMethodologyPolicy(CLOCK);
+    const producerSupply = 210_000_000;
+    const produced = await observeReviewedExitExecutionRoutes({
+      assetId: "fixture-vault", circulatingUsd: producerSupply, clockSec: CLOCK, lane: "redemption",
+      reviews: [review], inputReference, outputReference, envelope,
+    });
+    const certificate = produced.observations[0]!.executionCertificate!;
+    const admitAt = (circulatingUsd: number, clockSec = CLOCK) => {
+      const request = selectV9ExitStressRequest(circulatingUsd, envelope)!;
+      return admitExitExecutionCertificate({
+        certificate, envelope, assetId: "fixture-vault", clockSec, request, reviews: [review],
+        inputGenerationId: exitExecutionInputGenerationId("fixture-vault", request, certificate.inputReference),
+        observationGenerationId: certificate.observationGenerationId,
+      });
+    };
+    const driftedRequest = selectV9ExitStressRequest(211_000_000, envelope)!;
+    expect(driftedRequest.rawSupplyRequestUsd).not.toBe(selectV9ExitStressRequest(producerSupply, envelope)!.rawSupplyRequestUsd);
+    expect(admitAt(211_000_000)).toMatchObject({ state: "observed", point: { certification: "exact-complete" } });
+    const changedRequest = selectV9ExitStressRequest(200_000_000, envelope)!;
+    expect(certificate.points.some(point => point.requestedNotionalUsd === changedRequest.requestedNotionalUsd)).toBe(true);
+    expect(admitAt(200_000_000)).toMatchObject({ state: "unavailable", reason: "execution-generation-mismatch" });
+    expect(admitAt(211_000_000, CLOCK + certificate.sourceMaxAgeSec)).toMatchObject({ state: "observed" });
+    expect(admitAt(211_000_000, CLOCK + certificate.sourceMaxAgeSec + 1)).toMatchObject({ state: "unavailable", reason: "execution-source-stale" });
+  });
+  it("re-admits the producer certificate at both fact compilation and Exit evaluation using the consumer's current request", async () => {
+    const envelope = loadV9CandidateMethodologyPolicy(CLOCK);
+    const produced = await observeReviewedExitExecutionRoutes({
+      assetId: "fixture-vault", circulatingUsd: 210_000_000, clockSec: CLOCK, lane: "redemption",
+      reviews: [review], inputReference, outputReference, envelope,
+    });
+    const observation = produced.observations[0]!;
+    const certificate = observation.executionCertificate!;
+    const compileAt = (circulatingUsd: number, clockSec = CLOCK) => {
+      const draft = structuredClone(makeV9FixedInput({
+        assetId: "fixture-vault", clockSec, aggregateCirculating: { peggedUSD: circulatingUsd },
+        includeDexObservations: false, includeDexCoverage: false,
+      }));
+      draft.redemptionGenerationId = "redemption:fixture-certified";
+      draft.redemptionStale = false;
+      draft.inputFreshness.redemptionBackstops = { updatedAt: CLOCK, ageSeconds: clockSec - CLOCK, stale: false };
+      draft.redemptionBackstopMap["fixture-vault"] = makeSupplyFullRedemption({
+        stablecoinId: "fixture-vault", updatedAt: CLOCK,
+        capacityProfile: {
+          immediateUsd: observation.executableUsd, eventualUsd: observation.executableUsd,
+          scoringUsd: observation.executableUsd, scoringHorizon: "immediate",
+          capacityProfileConfidence: "dynamic", modeledExitSizeUsd: observation.requestedNotionalUsd,
+          exitRouteObservations: [observation],
+        },
+      });
+      const fixed = rebuildFixed(draft);
+      const extension = makeV9Extension({ assetId: "fixture-vault", clockSec, registryFingerprint: fixed.registryFingerprint });
+      extension.routeFreshness.redemptionMaxAgeSec = certificate.sourceMaxAgeSec + 1;
+      extension.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "fixture-vault");
+      return compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+    };
+    const asset = compileAt(211_000_000);
+    const route = asset.exitRoutes.find(route => route.routeId === observation.routeId)!;
+    expect(route).toMatchObject({ scoreEligible: true, coverageClass: "exact-complete", status: { observationState: "known" } });
+    const evaluateAt = (circulatingUsd: number, clockSec = CLOCK) => evaluateV9Exit({
+      assetId: "fixture-vault", clockSec, circulatingUsd, routes: [projectV9ExitEvaluationRoute(route)],
+    }, envelope);
+    expect(evaluateAt(212_000_000).routes[0]!.included).toBe(true);
+    expect(evaluateAt(200_000_000).routes[0]!.included).toBe(false);
+    expect(evaluateAt(212_000_000, CLOCK + certificate.sourceMaxAgeSec + 1).routes[0]!.included).toBe(false);
+    for (const scenario of [
+      { supply: 200_000_000, clockSec: CLOCK, reason: "execution-generation-mismatch" },
+      { supply: 211_000_000, clockSec: CLOCK + certificate.sourceMaxAgeSec + 1, reason: "execution-source-stale" },
+    ]) {
+      const rejectedAsset = compileAt(scenario.supply, scenario.clockSec);
+      const rejectedRoute = rejectedAsset.exitRoutes.find(route => route.routeId === observation.routeId)!;
+      expect(rejectedRoute).toMatchObject({ scoreEligible: false, status: { observationState: "unsupported" } });
+      expect(rejectedAsset.evidence.find(evidence => rejectedRoute.status.evidenceRefIds.includes(evidence.evidenceId)))
+        .toMatchObject({ disposition: "rejected", rejection: { code: scenario.reason } });
+    }
   });
   it.each(["steakusdg-steakhouse", "krusdc-keyrock", "steakeurcv-steakhouse", "susdc-spark-v1"])("keeps %s scheduled baseline capacity unquantified without an execution receipt", async (assetId) => {
     const config = getRedemptionBackstopConfig(assetId)!;

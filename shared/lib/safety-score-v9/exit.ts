@@ -1108,7 +1108,7 @@ export function evaluateV9Exit(
     const admission = certificate && args.assetId !== undefined && args.clockSec !== undefined
       ? admitExitExecutionCertificate({
           certificate, envelope, assetId: args.assetId, clockSec: args.clockSec,
-          inputGenerationId: exitExecutionInputGenerationId(args.assetId, args.circulatingUsd, certificate.inputReference),
+          inputGenerationId: exitExecutionInputGenerationId(args.assetId, stressRequest, certificate.inputReference),
           observationGenerationId: domainDigest("safety-score-v10.exit-execution-source.v1", certificate.source),
           request: stressRequest,
         })

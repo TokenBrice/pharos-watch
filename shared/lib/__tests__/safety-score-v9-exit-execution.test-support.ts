@@ -16,7 +16,7 @@ export function makeExecutionCertificate(): ExitExecutionCertificate {
   const inputReference = { assetKey: "fixture-dollar", deployment: executionReview.identity.deployment, rawUnits: "0", decimals: 6, unitValueUsd: 1, expectedUnitValueUsd: 1, sourceId: "observed-input-price", sourceGenerationId: "price-1", observedAtSec: executionClockSec };
   return {
     modelId: "orderbook", reviewDigest: exitExecutionReviewDigest(executionReview), identity: executionReview.identity,
-    inputGenerationId: exitExecutionInputGenerationId("fixture-dollar", 2_000_000, inputReference), observationGenerationId: domainDigest("safety-score-v10.exit-execution-source.v1", source),
+    inputGenerationId: exitExecutionInputGenerationId("fixture-dollar", { requestedNotionalUsd: 100_000, maxCostBps: 200 }, inputReference), observationGenerationId: domainDigest("safety-score-v10.exit-execution-source.v1", source),
     observedAtSec: executionClockSec, sourceMaxAgeSec: 300, priceMaxAgeSec: 300, source,
     holder: "verified-customer", prerequisites: ["eligible-account", "enabled-withdrawal"],
     gates: V9_CANDIDATE_POLICY_V1.policy.semantic.exit.executionModels.orderbook!.requiredGates.map((gateId) => ({ gateId, verdict: "passed", evidenceId: `observed:${gateId}`, observedAtSec: executionClockSec, reason: null })),

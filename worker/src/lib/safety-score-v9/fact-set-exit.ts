@@ -276,6 +276,31 @@ function buildRoute(
   const generationId =
     args.lane === "dex" ? context.fixedInput.dexGenerationId : context.fixedInput.redemptionGenerationId;
   const routeKey = canonicalV9RouteKey(args.lane, generationId, args.observation.routeId);
+  const certificate = args.observation.executionCertificate;
+  const supplyUsd = getCirculatingRawOrNull(context.fixedInput.aggregateCirculatingById?.[context.asset.assetId] ?? {});
+  const executionPolicy = args.observation.executionModelId ? loadV9CandidateMethodologyPolicy(context.fixedInput.clockSec) : null;
+  const executionRequest = executionPolicy ? selectV9ExitStressRequest(supplyUsd, executionPolicy) : null;
+  const executionAdmission = args.observation.executionModelId
+    ? certificate && executionPolicy && executionRequest
+      ? admitExitExecutionCertificate({
+          certificate, envelope: executionPolicy, assetId: context.asset.assetId, clockSec: context.fixedInput.clockSec,
+          inputGenerationId: exitExecutionInputGenerationId(context.asset.assetId, executionRequest, certificate.inputReference),
+          observationGenerationId: domainDigest("safety-score-v10.exit-execution-source.v1", certificate.source),
+          request: executionRequest,
+        })
+      : { state: "unavailable" as const, reason: "execution-certificate-missing", responsibility: "method-unsupported" as const }
+    : null;
+  if (executionAdmission?.state === "unavailable" && args.disposition === "observed") {
+    args = {
+      ...args,
+      disposition: "rejected",
+      rejection: {
+        code: executionAdmission.reason,
+        reason: executionAdmission.reason,
+        rejectedAtSec: context.fixedInput.clockSec,
+      },
+    };
+  }
   const evidenceId = routeEvidence(
     context,
     args.lane,
@@ -297,20 +322,6 @@ function buildRoute(
       });
     }
   }
-  const certificate = args.observation.executionCertificate;
-  const supplyUsd = getCirculatingRawOrNull(context.fixedInput.aggregateCirculatingById?.[context.asset.assetId] ?? {});
-  const executionPolicy = args.observation.executionModelId ? loadV9CandidateMethodologyPolicy(context.fixedInput.clockSec) : null;
-  const executionRequest = executionPolicy ? selectV9ExitStressRequest(supplyUsd, executionPolicy) : null;
-  const executionAdmission = args.observation.executionModelId
-    ? certificate && executionPolicy && executionRequest
-      ? admitExitExecutionCertificate({
-          certificate, envelope: executionPolicy, assetId: context.asset.assetId, clockSec: context.fixedInput.clockSec,
-          inputGenerationId: exitExecutionInputGenerationId(context.asset.assetId, supplyUsd, certificate.inputReference),
-          observationGenerationId: domainDigest("safety-score-v10.exit-execution-source.v1", certificate.source),
-          request: executionRequest,
-        })
-      : { state: "unavailable" as const, reason: "execution-certificate-missing", responsibility: "method-unsupported" as const }
-    : null;
 
   if (!args.review) {
     const gapId = routeGap(

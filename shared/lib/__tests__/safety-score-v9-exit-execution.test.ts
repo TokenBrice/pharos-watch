@@ -1,15 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { admitExitExecutionCertificate, projectExitExecutionCertificate, resolveExitExecutionRequestPoint } from "../safety-score-v9/exit-execution";
+import { admitExitExecutionCertificate, exitExecutionInputGenerationId, projectExitExecutionCertificate, resolveExitExecutionRequestPoint } from "../safety-score-v9/exit-execution";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
-import { evaluateV9Exit } from "../safety-score-v9/exit";
+import { evaluateV9Exit, selectV9ExitStressRequest } from "../safety-score-v9/exit";
 import { makeExitRoute } from "./safety-score-v9-exit.test-support";
 import { executionClockSec, executionReview, makeExecutionCertificate } from "./safety-score-v9-exit-execution.test-support";
 import type { ExitExecutionCertificate } from "../../types/exit-route";
 
-function admission(certificate: ExitExecutionCertificate, clockSec = executionClockSec) {
+function admission(certificate: ExitExecutionCertificate, clockSec = executionClockSec, circulatingUsd = 2_000_000) {
+  const request = selectV9ExitStressRequest(circulatingUsd, V9_CANDIDATE_POLICY_V1)!;
   return admitExitExecutionCertificate({ certificate, envelope: V9_CANDIDATE_POLICY_V1, assetId: "fixture-dollar", clockSec,
-    inputGenerationId: certificate.inputGenerationId, observationGenerationId: certificate.observationGenerationId,
-    request: { requestedNotionalUsd: 100_000, maxCostBps: 200 }, reviews: [executionReview] });
+    inputGenerationId: exitExecutionInputGenerationId("fixture-dollar", request, certificate.inputReference), observationGenerationId: certificate.observationGenerationId,
+    request, reviews: [executionReview] });
 }
 
 describe("exact-request execution certificate admission", () => {
@@ -21,6 +22,29 @@ describe("exact-request execution certificate admission", () => {
     expect(admission(partial)).toMatchObject({ state: "observed", point: { executableUsd: 50_000 } });
     partial.gates[0]!.verdict = "unavailable"; partial.gates[0]!.reason = "account-unavailable";
     expect(admission(partial)).toMatchObject({ state: "unavailable", responsibility: "producer-failed", reason: "account-unavailable" });
+  });
+
+  it("admits supply drift within the selected bucket but rejects a changed request even if its point was measured", () => {
+    const certificate = makeExecutionCertificate();
+    expect(admission(certificate, executionClockSec, 1_900_000)).toMatchObject({ state: "observed" });
+    const larger = structuredClone(certificate.points[0]!);
+    Object.assign(larger, { requestedNotionalUsd: 1_000_000, requestedRawInput: "1000000000000", executedRawInput: "1000000000000", executableUsd: 1_000_000 });
+    larger.outputs[0]!.rawUnits = "999000000000";
+    larger.fees[0]!.rawUnits = "1000000000";
+    certificate.points.push(larger);
+    expect(admission(certificate, executionClockSec, 2_000_001)).toMatchObject({ state: "unavailable", reason: "execution-generation-mismatch" });
+  });
+
+  it("retains exact cost-budget and input-valuation binding", () => {
+    const certificate = makeExecutionCertificate();
+    const request = { requestedNotionalUsd: 100_000, maxCostBps: 199 };
+    expect(admitExitExecutionCertificate({
+      certificate, envelope: V9_CANDIDATE_POLICY_V1, assetId: "fixture-dollar", clockSec: executionClockSec,
+      inputGenerationId: exitExecutionInputGenerationId("fixture-dollar", request, certificate.inputReference),
+      observationGenerationId: certificate.observationGenerationId, request, reviews: [executionReview],
+    })).toMatchObject({ state: "unavailable", reason: "execution-generation-mismatch" });
+    certificate.inputReference.unitValueUsd = 0.99;
+    expect(admission(certificate)).toMatchObject({ state: "unavailable", reason: "execution-generation-mismatch" });
   });
 
   it("preserves observed zero but refuses missing or smaller defining requests", () => {
@@ -43,8 +67,8 @@ describe("exact-request execution certificate admission", () => {
   });
 
   it("admits the exact maximum age and rejects one second past it, including gate and output clocks", () => {
-    expect(admission(makeExecutionCertificate(), executionClockSec + 300).state).toBe("observed");
-    expect(admission(makeExecutionCertificate(), executionClockSec + 301)).toMatchObject({ state: "unavailable", reason: "execution-source-stale" });
+    expect(admission(makeExecutionCertificate(), executionClockSec + 300, 1_900_000).state).toBe("observed");
+    expect(admission(makeExecutionCertificate(), executionClockSec + 301, 1_900_000)).toMatchObject({ state: "unavailable", reason: "execution-source-stale" });
     const certificate = makeExecutionCertificate();
     certificate.gates[0]!.observedAtSec -= 301;
     expect(admission(certificate)).toMatchObject({ state: "unavailable", reason: `execution-gate-stale:${certificate.gates[0]!.gateId}` });
