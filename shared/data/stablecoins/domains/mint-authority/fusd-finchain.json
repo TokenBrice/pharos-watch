@@ -4,8 +4,128 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unknown",
     "confidence": "verified",
-    "summary": "FUSD's reviewed EVM deployments on Ethereum, Avalanche, Sonic, and Monad share an issuer-administered uncapped gateway and zero-delay ProxyAdmin. The cataloged Solana mint has a verified 1-of-3 SPL Token multisig, but its liability identity is disputed: on-chain metadata names FinChain Dollar LP / FUSDLP, and issuer FUSD and FUSDLP pages both list that mint. Existing Solana control exposure is retained pending identity adjudication, not presented as an unambiguous FUSD native deployment. CCIP pools and TokenBridgeSender remain bridge machinery reviewed under bridgeRouteRisk.",
+    "summary": "FUSD's reviewed EVM deployments on Ethereum, Avalanche, Sonic, Monad, and exSat share issuer-administered uncapped gateways and zero-delay ProxyAdmin ownership. exSat block 62726859 independently confirms its native gateway/admin and fresh-message-ID mint paths; its contract pauser differs from the sibling chains and does not establish independent signing protection. The cataloged Solana mint has a verified 1-of-3 SPL Token multisig, but its liability identity is disputed: on-chain metadata names FinChain Dollar LP / FUSDLP, and issuer FUSD and FUSDLP pages both list that mint. Existing Solana control exposure is retained pending identity adjudication, not presented as an unambiguous FUSD native deployment. CCIP pools and TokenBridgeSender remain bridge machinery reviewed under bridgeRouteRisk.",
     "controls": [
+      {
+        "chain": "exsat",
+        "address": "0xc61f22aa3a6469f4f90994421f4570459217c215",
+        "label": "FinChain exSat token and gateway administrator EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "deploymentRefs": [
+          "exsat:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+        ],
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "eoa:finchain:0xc61f22aa3a6469f4f90994421f4570459217c215"
+        ],
+        "observedAt": "2026-10-05",
+        "observedBlock": 62726859,
+        "sources": [
+          {
+            "label": "exSat block 62726859 token/gateway complete current role-member census and codeless administrator",
+            "url": "https://evm.exsat.network/"
+          },
+          {
+            "label": "Verified FUSDGateway source with exact exSat runtime correspondence",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3a4b7d8e5dc20788c52d3d5102d8ea3f2358c95f"
+          }
+        ],
+        "evidence": "At exact exSat block 62726859, hash 0x4d0937eeed38b5ced7ffbc6bfc107ff89d2fe4bfc557c70ff219e5bc6c4eb8aa, the sole token and gateway DEFAULT_ADMIN_ROLE member is this codeless EOA, also the shared ProxyAdmin.owner(). A read-only mint(bytes32,uint256,uint64) call from it with 1e18 amount and destination zero succeeds without collateral transfer. Shared issuer control is not a new independent authority. Current role enumeration does not certify full historical authority provenance, execution scope or incident absence."
+      },
+      {
+        "chain": "exsat",
+        "address": "0x561bc4f174e04d057c9ce7ae763bc18be7fa3107",
+        "label": "FUSD exSat native mint gateway",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "deploymentRefs": [
+          "exsat:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+        ],
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "contract:multichain:0x561bc4f174e04d057c9ce7ae763bc18be7fa3107",
+          "eoa:finchain:0xc61f22aa3a6469f4f90994421f4570459217c215",
+          "contract:multichain:0x29a48097055d6779e6832355680b7c7bf0d43c53"
+        ],
+        "observedAt": "2026-10-05",
+        "observedBlock": 62726859,
+        "sources": [
+          {
+            "label": "exSat pinned gateway implementation, roles and successful native mint simulations",
+            "url": "https://evm.exsat.network/"
+          },
+          {
+            "label": "Verified FUSDGateway implementation exactly matching exSat runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3a4b7d8e5dc20788c52d3d5102d8ea3f2358c95f"
+          }
+        ],
+        "evidence": "At exSat block 62726859 on 2026-10-05 the gateway is one of exactly two token MINTER_ROLE members; the other is transfer-only TokenBridgeSender, inventoried in Bridge Risk. Its EIP-1967 implementation is 0x3a4b7d8e5dc20788c52d3d5102d8ea3f2358c95f and runtime exactly matches verified Ethereum deployed_bytecode. DEFAULT_ADMIN can mint locally without collateral; MINTER_ROLE can mint with arbitrary unused message IDs. Token and gateway PAUSER_ROLE both resolve to contract 0x7854615523363bfd37bf309c7cc90572325735db, unlike sibling pausers; its signing topology and independence remain unknown."
+      },
+      {
+        "chain": "exsat",
+        "address": "0x88a7141a3dd011e85ce5e18e4c7b679a6d9cd647",
+        "label": "FinChain exSat gateway fresh-message-ID minter EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "deploymentRefs": [
+          "exsat:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+        ],
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "eoa:finchain:0x88a7141a3dd011e85ce5e18e4c7b679a6d9cd647"
+        ],
+        "observedAt": "2026-10-05",
+        "observedBlock": 62726859,
+        "sources": [
+          {
+            "label": "exSat pinned complete gateway MINTER_ROLE census and codeless member",
+            "url": "https://evm.exsat.network/"
+          },
+          {
+            "label": "Verified mintWithMessageId role and unused-ID checks",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3a4b7d8e5dc20788c52d3d5102d8ea3f2358c95f"
+          }
+        ],
+        "evidence": "At exSat block 62726859, gateway MINTER_ROLE has exactly one member, this codeless EOA. A read-only mintWithMessageId(bytes32,address,uint256) simulation from it succeeds for a fresh ID and 1e18 amount. The runtime-bound verified source checks only its role and unused message ID before FUSD.mint; it requires neither collateral nor an authenticated external bridge message. Arbitrary fresh-ID issuance remains unbounded. Key custody and independence are unknown, not an inferred multisig."
+      },
+      {
+        "chain": "exsat",
+        "address": "0x29a48097055d6779e6832355680b7c7bf0d43c53",
+        "label": "FUSD exSat native ProxyAdmin contract",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "deploymentRefs": [
+          "exsat:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+        ],
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "timelockDelaySec": 0,
+        "failureDomainKeys": [
+          "contract:multichain:0x29a48097055d6779e6832355680b7c7bf0d43c53",
+          "eoa:finchain:0xc61f22aa3a6469f4f90994421f4570459217c215"
+        ],
+        "observedAt": "2026-10-05",
+        "observedBlock": 62726859,
+        "sources": [
+          {
+            "label": "exSat pinned native token/gateway admin slots and ProxyAdmin.owner",
+            "url": "https://evm.exsat.network/"
+          },
+          {
+            "label": "Verified shared immediate onlyOwner ProxyAdmin upgrade semantics",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x29a48097055d6779e6832355680b7c7bf0d43c53"
+          }
+        ],
+        "evidence": "At exSat block 62726859, token, gateway and sender admin slots all name 0x29a48097055d6779e6832355680b7c7bf0d43c53, whose owner() is codeless issuer EOA 0xc61f22aa3a6469f4f90994421f4570459217c215. Native token and gateway implementations are 0xc3f0daa78781c4f991b605d8c10756deb5f216f7 and 0x3a4b7d8e5dc20788c52d3d5102d8ea3f2358c95f. Immediate replacement can change native mint logic; transfer-only sender replacement is separately recorded as bridge upgrade risk. No independent signer or timelock is inferred."
+      },
       {
         "label": "FinChain issuer-operated mint authority",
         "role": "direct-minter",
@@ -370,7 +490,8 @@
         "ethereum:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
         "avalanche:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
         "sonic:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
-        "monad:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+        "monad:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+        "exsat:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
       ],
       "proxyAddresses": [
         "0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
@@ -410,6 +531,10 @@
         {
           "label": "Official Monad mainnet RPC used at block 96607753",
           "url": "https://rpc.monad.xyz"
+        },
+        {
+          "label": "exSat token/gateway/sender proxy slots and shared owner reverified on 2026-10-05 at block 62726859; sibling observation dates remain unchanged",
+          "url": "https://evm.exsat.network/"
         }
       ]
     }
