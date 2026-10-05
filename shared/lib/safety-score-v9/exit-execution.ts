@@ -6,8 +6,17 @@ import { stableJsonStringifyV1 } from "../stable-json";
 import reviewedModels from "../../data/safety-score-v9/exit-execution-model-reviews-v1.json";
 import { exitRawUsd, requestedExitRawInput } from "./exit-execution-units";
 
-export function exitExecutionInputGenerationId(assetId: string, circulatingUsd: number | null, inputReference: ExitExecutionCertificate["inputReference"]): string {
-  return domainDigest("safety-score-v10.exit-execution-input.v1", { assetId, circulatingUsd, inputReference });
+/** Bind model inputs and the selected exact request, not incidental supply drift within its bucket. */
+export function exitExecutionInputGenerationId(
+  assetId: string,
+  request: Pick<ExitExecutionRequestPoint, "requestedNotionalUsd" | "maxCostBps">,
+  inputReference: ExitExecutionCertificate["inputReference"],
+): string {
+  return domainDigest("safety-score-v10.exit-execution-input.v2", {
+    assetId,
+    request: { requestedNotionalUsd: request.requestedNotionalUsd, maxCostBps: request.maxCostBps },
+    inputReference,
+  });
 }
 
 export function exitExecutionReviewDigest(review: ExitExecutionModelReview): string {

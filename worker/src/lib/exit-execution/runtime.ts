@@ -86,7 +86,7 @@ export async function observeReviewedExitExecutionRoutes(args: {
       const settlementMaximumSec = isBook ? args.settlementMaximumSec ?? null : completeExecution ? 0 : null;
       const certificate: ExitExecutionCertificate = {
         modelId: review.modelId, reviewDigest: exitExecutionReviewDigest(review), identity: review.identity,
-        inputGenerationId: exitExecutionInputGenerationId(args.assetId, args.circulatingUsd, inputReference),
+        inputGenerationId: exitExecutionInputGenerationId(args.assetId, request, inputReference),
         observationGenerationId: domainDigest("safety-score-v10.exit-execution-source.v1", source),
         observedAtSec, sourceMaxAgeSec: policy.sourceMaxAgeSec, priceMaxAgeSec: policy.priceMaxAgeSec, source,
         holder: review.holder, prerequisites: isBook ? ["eligible-account", "funded-deposit", "enabled-withdrawal"] : isVault ? ["counterfactual-share-balance-only", "ordinary-synchronous-redeem", "network-gas-excluded-as-dex"] : ["eligible-holder", "token-balance", "approved-spender"],
