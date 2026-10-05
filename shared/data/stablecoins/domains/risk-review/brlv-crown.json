@@ -133,8 +133,8 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Crown's March 2026 whitepaper identifies this exact Tempo BRLV deployment. At Tempo block 0x2884b0b, name() is bridgedBRLV, symbol() BRLV, decimals() 6 and totalSupply() 48800000. The Base and Ethereum contracts use 18 decimals. Exact TIP-20 mint/role administrators, canonical-gateway domain binding, decimal conversion and in-flight accounting have not been certified; issuer-attestor prose does not make this a native independent liability.",
-        "observedBlock": 42486539,
+        "reviewNote": "Crown identifies this Tempo BRLV deployment. At block 42643197, a complete TIP-20 membership/admin-event census from creation block 22227631 identifies sole DEFAULT_ADMIN EOA 0x6eebafd70486f03c17287673f08b79c696ee5f2e and issuer/pause/unpause proxy 0x06d804add7208437b10ece87306cc2aa6914c806. Live hasRole(address,bytes32) confirms each; all role admins are DEFAULT_ADMIN. The supply cap is mutable by that EOA. Issuer EIP-1967 implementation is 0x3b3f2e2aa07460a9ba95ffd06ad9597398bbbab7, unverified in Sourcify. The exact counterpart/domain, 18-to-6 conversion and in-flight conservation remain unresolved; known role identities do not certify the route.",
+        "observedBlock": 42643197,
         "sources": [
           {
             "label": "Crown exact Tempo BRLV address",
@@ -560,6 +560,45 @@
           }
         ],
         "evidence": "At Ethereum block 25771220, the bridgedBRLV proxy resolves to implementation 0x57323db6d883811c17877d075e05ad9e2ed41519, with MINTER_ROLE held by relayer EOA 0x039b419dafc801c3e375046efabd00813b0c48b6, BURNER_ROLE held by 0x161247c7c1b01715b1a3cc32f5036999c559a754, and DEFAULT_ADMIN_ROLE held by 0x239d4a24efa36a8987b86184c080ace26b3a8968. The default admin can grant UPGRADE_ROLE, PAUSE_ROLE, or BLOCKLIST_ROLE immediately; this is an off-chain relayer/common-admin bridge failure domain, not an Ethereum native mint authority."
+      },
+      {
+        "id": "brlv-tempo-tip20-admin",
+        "label": "BRLV Tempo TIP-20 DEFAULT_ADMIN",
+        "routeRefs": ["tempo:0x20c000000000000000000000f4371867ae9754ce"],
+        "capabilities": ["admin", "bridge-mint", "rate-limit"],
+        "authorityType": "eoa",
+        "controllerChain": "tempo",
+        "controllerAddress": "0x6eebafd70486f03c17287673f08b79c696ee5f2e",
+        "canRaiseCap": true,
+        "capDescription": "TIP-20 DEFAULT_ADMIN can setSupplyCap and grant ISSUER_ROLE; the observed uint128 maximum is mutable, not an immutable economic ceiling.",
+        "observedAt": "2026-10-05",
+        "observedBlock": 42643197,
+        "sources": [
+          {"label": "Official exact BRLV Tempo deployment", "url": "https://docs.crown-brlv.com/whitepaper.md"},
+          {"label": "TIP-20 role and supply-cap semantics", "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"},
+          {"label": "TIP-20 hasRole address-first ABI", "url": "https://raw.githubusercontent.com/tempoxyz/tempo/main/crates/contracts/src/precompiles/tip20.rs"},
+          {"label": "Pinned membership census and live reads at block 42643197", "url": "https://rpc.tempo.xyz"}
+        ],
+        "evidence": "At Tempo block 42643197/hash 0x6c53d6a8d57809a1b9a1f966764ee63f1ecbf9ce20959996ea1c19dcb1219306, 205 inclusive windows of at most 100000 blocks cover creation 22227631 through the pin for RoleMembershipUpdated and RoleAdminUpdated. Four grants and no revocations/admin updates identify this sole DEFAULT_ADMIN; hasRole(address,bytes32) is true and eth_getCode is empty. All five standard role admins read zero DEFAULT_ADMIN. Official TIP-20 code permits this role to setSupplyCap and grant ISSUER_ROLE. Current cap is 340282366920938463463374607431768211455 raw six-decimal units. No fixed bound, independence, incident absence or complete bridge-conservation assertion is made."
+      },
+      {
+        "id": "brlv-tempo-tip20-issuer",
+        "label": "BRLV Tempo TIP-20 issuer and pause proxy",
+        "routeRefs": ["tempo:0x20c000000000000000000000f4371867ae9754ce"],
+        "capabilities": ["bridge-mint", "bridge-burn", "pause"],
+        "authorityType": "contract",
+        "controllerChain": "tempo",
+        "controllerAddress": "0x06d804add7208437b10ece87306cc2aa6914c806",
+        "canRaiseCap": false,
+        "capDescription": "This proxy lacks DEFAULT_ADMIN at the pin; only the separately identified DEFAULT_ADMIN EOA can setSupplyCap. The merged route retains that independently raiseable cap authority.",
+        "observedAt": "2026-10-05",
+        "observedBlock": 42643197,
+        "sources": [
+          {"label": "Official exact BRLV Tempo deployment", "url": "https://docs.crown-brlv.com/whitepaper.md"},
+          {"label": "TIP-20 issuer and pause semantics", "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"},
+          {"label": "Pinned membership census and current contract code", "url": "https://rpc.tempo.xyz"}
+        ],
+        "evidence": "Complete TIP-20 event census and live address-first hasRole reads at block 42643197 identify this contract as sole ISSUER_ROLE, PAUSE_ROLE and UNPAUSE_ROLE. Its runtime is nonempty; EIP-1967 implementation is 0x3b3f2e2aa07460a9ba95ffd06ad9597398bbbab7. Sourcify returns 404 for both proxy and implementation on chain 4217. This identifies the actual contract authority, not its ultimate signer/admin reach. DEFAULT_ADMIN may replace role members and raise the token cap. No controller source, cap immutability or route-conservation certificate is claimed."
       }
     ]
   }
