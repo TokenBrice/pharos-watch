@@ -365,6 +365,27 @@ export const ExitExecutionModelReviewSchema = z.object({
         implementationAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional(),
       }).strict()).min(5).max(16),
     }).strict(),
+    z.object({
+      kind: z.literal("erc4626-instant"), chain: z.string().min(1), chainId: z.number().int().positive(),
+      contract: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+      outputToken: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+      inputDecimals: z.number().int().min(0).max(18), outputDecimals: z.number().int().min(0).max(18),
+      codeSha256: z.string().regex(/^[a-f0-9]{64}$/),
+      implementation: z.object({
+        address: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+        // Absent only for the canonical EIP-1167 runtime with its embedded implementation.
+        slot: z.string().regex(/^0x[0-9a-fA-F]{64}$/).optional(),
+        codeSha256: z.string().regex(/^[a-f0-9]{64}$/),
+      }).strict().optional(),
+      balanceStorage: z.object({
+        slot: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+        keyOrder: z.enum(["account-slot", "slot-account"]),
+      }).strict(),
+      maxFunctions: z.enum(["binding", "reviewed-non-binding-zero"]),
+      unrestrictedGateSelectors: z.array(z.string().regex(/^0x[0-9a-fA-F]{8}$/)).max(8),
+      pausedSelector: z.string().regex(/^0x[0-9a-fA-F]{8}$/).optional(),
+      multicallCodeSha256: z.string().regex(/^[a-f0-9]{64}$/),
+    }).strict(),
   ]),
 }).strict();
 export type ExitExecutionModelReview = z.output<typeof ExitExecutionModelReviewSchema>;

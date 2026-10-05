@@ -246,6 +246,7 @@
         {
           "controlRef": "Wintermute USDC Select owner parameter authority",
           "question": "Independent human control, operational key custody and signing policy of the identified Wintermute USDC Select owner parameter authority at ethereum:0xb83a77677c51aaf6c45b0b64199eae6938559e5e are not publicly established; enumerated owners/threshold or a codeless EOA do not certify these safeguards.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine07 calibration v2 2026-10-03",
           "sources": [

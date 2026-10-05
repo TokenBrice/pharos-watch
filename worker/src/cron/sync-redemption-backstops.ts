@@ -5,6 +5,9 @@ import { DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/cron-cadences";
 import { resolveCapacityConfidence } from "@shared/lib/redemption-backstop-confidence";
 import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
+import { validateExitExecutionModelReviews } from "@shared/lib/safety-score-v9/exit-execution";
+import exitExecutionModelReviews from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
 import {
   REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
   REDEMPTION_ROUTE_FAMILY_CAPS,
@@ -28,6 +31,7 @@ import { REDEMPTION_ROUTE_STATUS_PRODUCER } from "../lib/redemption-backstop/rou
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { throwIfAborted } from "../lib/abort";
 import { fnv1aHash } from "../lib/hash";
+import type { EvmRpcOptions } from "../lib/evm-rpc";
 
 const MISSING_CAPACITY_OK_RATIO = 0.01;
 
@@ -95,7 +99,7 @@ function buildRegistryMetadata(
   };
 }
 
-export async function syncRedemptionBackstops(db: D1Database, signal: AbortSignal): Promise<CronResult> {
+export async function syncRedemptionBackstops(db: D1Database, signal: AbortSignal, rpcOptions?: EvmRpcOptions): Promise<CronResult> {
   throwIfAborted(signal);
 
   const stablecoinsCache = await loadStablecoinsCache(db, {
@@ -114,6 +118,8 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   );
   const stablecoinAssetById = new Map(stablecoinsCache.payload.peggedAssets.map((asset) => [asset.id, asset]));
   const now = Math.floor(Date.now() / 1000);
+  const exitExecutionEnvelope = loadV9CandidateMethodologyPolicy(now);
+  const exitExecutionReviews = validateExitExecutionModelReviews(exitExecutionModelReviews, exitExecutionEnvelope);
   const currentDepegObservationsById = buildRedemptionCurrentDepegObservationMap({
     peggedAssets: stablecoinsCache.payload.peggedAssets,
     fxFallbackRates: stablecoinsCache.payload.fxFallbackRates,
@@ -185,6 +191,8 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
           signal,
           reserveSnapshotMetadata: reserveSnapshotMetadataById.get(stablecoinId) ?? null,
           routeAvailability,
+          rpcOptions,
+          stablecoinsCache, exitExecutionEnvelope, exitExecutionReviews,
         });
       } else {
         const config = configById.get(stablecoinId);
@@ -193,6 +201,8 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
             signal,
             reserveSnapshotMetadata: reserveSnapshotMetadataById.get(stablecoinId) ?? null,
             routeAvailability,
+            rpcOptions,
+            stablecoinsCache, exitExecutionEnvelope, exitExecutionReviews,
           });
         }
       }

@@ -390,6 +390,7 @@
         {
           "controlRef": "ethereum:0xc684c6587712e5e7bdf9fd64415f23bd2b05faec",
           "question": "Which human independence, key-custody scheme and signing-policy approval boundary apply to the exact identified Safe owners? The observed roster/quorum and empty modules/guard do not establish independent humans or custody assurances.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
           "sources": [
@@ -426,6 +427,7 @@
         {
           "controlRef": "ethereum:0x9e33faae38ff641094fa68c65c2ce600b3410585",
           "question": "Which human independence, key-custody scheme and signing-policy approval boundary apply to the exact identified Safe owners? The observed roster/quorum and empty modules/guard do not establish independent humans or custody assurances.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
           "sources": [
@@ -462,6 +464,7 @@
         {
           "controlRef": "ethereum:0x26c1df5cba4a40946f8e57bbceee83fb556e2b4f",
           "question": "Which human controller, key-custody scheme and signing-policy approval boundary apply to this exact identified EOA? Empty deployed code establishes an EOA, not independent human control or a custody attestation.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
           "sources": [
@@ -482,6 +485,7 @@
         {
           "controlRef": "ethereum:0x49335b4b2cae23580db5ecbab0a217b18cc83409",
           "question": "Which human controller, key-custody scheme and signing-policy approval boundary apply to this exact identified EOA? Empty deployed code establishes an EOA, not independent human control or a custody attestation.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
           "sources": [
@@ -502,6 +506,7 @@
         {
           "controlRef": "ethereum:0x7084bf4db6c21e1834dd6482f6056a39a33584cd",
           "question": "Which human independence, key-custody scheme and signing-policy approval boundary apply to the exact identified Safe owners? The observed roster/quorum and empty modules/guard do not establish independent humans or custody assurances.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
           "sources": [

@@ -87,6 +87,22 @@ describe("check-redemption-backstops CLI", () => {
     expect(report.findings.filter((finding) => finding.severity === "error")).toEqual([]);
   }, GATE_LOAD_TIMEOUT_MS);
 
+  it.each(["krusdc-keyrock", "steakusdg-steakhouse", "steakeurcv-steakhouse"])(
+    "requires %s to retain its execution-only baseline rather than unconditionally consume reserve telemetry",
+    (id) => {
+      const config = getRedemptionBackstopConfig(id)!;
+      const executionOnly = validateFixture({ [id]: config });
+      expect(executionOnly.findings.filter((finding) => finding.stablecoinId === id && finding.severity === "error")).toEqual([]);
+
+      const reserveConsuming = validateFixture({
+        [id]: { ...config, capacityModel: { kind: "reserve-sync-metadata" } },
+      });
+      expect(reserveConsuming.findings).toContainEqual(expect.objectContaining({
+        severity: "error", code: "unused-live-telemetry-policy-stale", stablecoinId: id,
+      }));
+    },
+  );
+
   it.each([false, true])("retains unused native-M policy only with exact payout admission (bound=%s)", (bound) => {
     const config = getRedemptionBackstopConfig("usdr-rise")!;
     const report = validateFixture({

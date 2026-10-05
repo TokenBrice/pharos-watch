@@ -5,15 +5,14 @@ import {
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
-  buildSafetyScoreV9SupplyAttributionSource,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,
   serializeSafetyScoreV9SupplyAttributionSource,
+  type SafetyScoreV9SupplyAttributionSource,
 } from "../../lib/safety-score-v9/supply-attribution-source";
 import {
   parseSafetyScoreV9SupplyAttributionGeneration,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
 } from "../../lib/safety-score-v9/supply-attribution-generation";
-import { createNativeSafetyScoreV9FullRegistryInput } from "../../lib/__tests__/fixtures/safety-score-v9-full-registry-input";
 
 const mocks = vi.hoisted(() => ({
   capture: vi.fn(),
@@ -41,9 +40,29 @@ function openDb(): { sqlite: DatabaseSync; db: D1Database } {
   return createLatestSchemaSqlite();
 }
 
+function xautSourceFixture(): SafetyScoreV9SupplyAttributionSource {
+  const clockSec = 1_791_184_659;
+  // These cron scenarios exercise XAUT's rejection/cooldown contract, not the
+  // live reviewed cohort. New registry plans must not expand this exact input.
+  return {
+    schemaVersion: 1,
+    kind: "safety-score-v9-supply-attribution-source",
+    baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+    sourceGeneration: "report-cards:v8:xaut-cron-fixture",
+    registryFingerprint: "b".repeat(64),
+    clockSec,
+    activeAssetIds: ["xaut-tether"],
+    aggregateCirculatingById: {
+      "xaut-tether": { circulating: { peggedUSD: 2_480_000_000 }, observedAtSec: clockSec },
+    },
+    chainCirculatingById: { "xaut-tether": {} },
+    navPriceById: {},
+  };
+}
+
 function insertSourceInput(
   sqlite: DatabaseSync,
-  fixedInput: ReturnType<typeof createNativeSafetyScoreV9FullRegistryInput>,
+  fixedInput: SafetyScoreV9SupplyAttributionSource,
 ): void {
   sqlite
     .prepare(
@@ -51,9 +70,7 @@ function insertSourceInput(
     )
     .run(
       SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,
-      serializeSafetyScoreV9SupplyAttributionSource(
-        buildSafetyScoreV9SupplyAttributionSource(fixedInput),
-      ),
+      serializeSafetyScoreV9SupplyAttributionSource(fixedInput),
       fixedInput.clockSec,
     );
 }
@@ -71,7 +88,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
   it("publishes one exact diagnostic rejected generation as healthy and retries only after the producer cooldown", async () => {
     const { sqlite, db } = openDb();
     try {
-      const fixedInput = createNativeSafetyScoreV9FullRegistryInput();
+      const fixedInput = xautSourceFixture();
       const nowSec = fixedInput.clockSec + 15 * 60;
       vi.setSystemTime(nowSec * 1_000);
       insertSourceInput(sqlite, fixedInput);
@@ -158,7 +175,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
   it("keeps blocking rejected generations degraded", async () => {
     const { sqlite, db } = openDb();
     try {
-      const fixedInput = createNativeSafetyScoreV9FullRegistryInput();
+      const fixedInput = xautSourceFixture();
       const nowSec = fixedInput.clockSec + 15 * 60;
       vi.setSystemTime(nowSec * 1_000);
       insertSourceInput(sqlite, fixedInput);
@@ -239,7 +256,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
   it("fails closed before capture when the source fixed input is stale", async () => {
     const { sqlite, db } = openDb();
     try {
-      const fixedInput = createNativeSafetyScoreV9FullRegistryInput();
+      const fixedInput = xautSourceFixture();
       vi.setSystemTime((fixedInput.clockSec + 30 * 60 + 1) * 1_000);
       insertSourceInput(sqlite, fixedInput);
 

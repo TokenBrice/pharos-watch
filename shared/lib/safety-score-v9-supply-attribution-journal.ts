@@ -17,7 +17,7 @@ export const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_BYTES = 256 * 1_024;
 export const SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES = 1_024 * 1_024;
 export const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ENTRIES_PER_ASSET = 2;
 export const SUPPLY_ATTRIBUTION_CAPTURE_BUDGET = Object.freeze({
-  assetConcurrency: 2,
+  assetConcurrency: 1,
   assetTimeoutMs: 30_000,
   wallTimeoutMs: 180_000,
   publicationReserveMs: 15_000,

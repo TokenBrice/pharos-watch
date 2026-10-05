@@ -184,54 +184,63 @@
         {
           "controlRef": "FILQ-A platform-admin EOA",
           "question": "Organizational identity, human independence and MPC/HSM/signing policy of the identified platform-admin EOA remain undisclosed; native upgrade authorization and its one-second token delay are established.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Refine04 calibration v2",
           "sources": [{"label": "Verified factory platform/upgrade authorization", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}]
         },
         {
           "controlRef": "FILQ-A group1 operator 1",
           "question": "Organizational identity, human independence and MPC/HSM/signing policy of this identified operator EOA remain undisclosed; its native mint permission and code-empty state are established.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Refine04 calibration v2",
           "sources": [{"label": "Verified factory native mint authorization", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}]
         },
         {
           "controlRef": "FILQ-A group1 operator 2",
           "question": "Organizational identity, human independence and MPC/HSM/signing policy of this identified operator EOA remain undisclosed; native OPERATOR mint authorization is established, not protected off-chain custody.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Refine04 calibration v2",
           "sources": [{"label": "Verified factory native mint authorization", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}]
         },
         {
           "controlRef": "FILQ-A group1 operator 3",
           "question": "Organizational identity, human independence and MPC/HSM/signing policy of this identified operator EOA remain undisclosed, despite the closed on-chain native role and permission census.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Refine04 calibration v2",
           "sources": [{"label": "Verified factory native mint authorization", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}]
         },
         {
           "controlRef": "FILQ-A group1 operator 4",
           "question": "Organizational identity, human independence and MPC/HSM/signing policy of this identified operator EOA remain undisclosed; the known direct native mint path does not attest organizational key controls.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Refine04 calibration v2",
           "sources": [{"label": "Verified factory native mint authorization", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}]
         },
         {
           "controlRef": "FILQ-A group1 system 1",
           "question": "Organizational identity, human independence and MPC/HSM/signing policy of this identified SYSTEM-role EOA remain undisclosed; the role name does not prove a protected signing environment or independent reconciliation.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Refine04 calibration v2",
           "sources": [{"label": "Verified factory native SYSTEM mint authorization", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}]
         },
         {
           "controlRef": "FILQ-A group1 system 2",
           "question": "Organizational identity, human independence and MPC/HSM/signing policy of this identified SYSTEM-role EOA remain undisclosed; its verified native mint permission supplies no off-chain signing/quorum attestation.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Refine04 calibration v2",
           "sources": [{"label": "Verified factory native SYSTEM mint authorization", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}]
         },
         {
           "controlRef": "FILQ-A global role manager 1",
           "question": "Organizational identity, human independence and MPC/HSM/signing policy of this identified global role-manager EOA remain undisclosed; its mint-role grant authority is established on-chain.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Refine04 calibration v2",
           "sources": [{"label": "Verified factory role-grant authorization", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}]
         },
         {
           "controlRef": "FILQ-A global role manager 2",
           "question": "Organizational identity, human independence and MPC/HSM/signing policy of this identified global role-manager EOA remain undisclosed; its verified authorization power does not establish an organizational quorum.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Refine04 calibration v2",
           "sources": [{"label": "Verified factory role-grant authorization", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}]
         }

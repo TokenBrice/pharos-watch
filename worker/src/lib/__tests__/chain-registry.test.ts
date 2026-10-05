@@ -153,8 +153,8 @@ describe("buildChainRpcs", () => {
     expect(registryRpcUrls(pharos)).toEqual([]);
     expect(logScanRpcEndpoints(pharos)).toEqual([]);
     expect(supplementalRpcEndpoints(pharos, { historicalBlock: true })).toEqual([
-      { url: "https://rpc.pharos.xyz", operator: "public", keyed: false, position: "supplemental", stateHistory: "archive", logsHistory: "none", verifiedAt: "2026-10-05" },
-      { url: "https://api.zan.top/public/pharos-mainnet", operator: "public", keyed: false, position: "supplemental", stateHistory: "archive", logsHistory: "none", verifiedAt: "2026-10-05" },
+      { url: "https://rpc.pharos.xyz", operator: "public", keyed: false, position: "supplemental", stateHistory: "archive", logsHistory: "none", verifiedAt: "2026-10-05", maxLogBlockSpan: 1000, noBatch: true },
+      { url: "https://api.zan.top/public/pharos-mainnet", operator: "public", keyed: false, position: "supplemental", stateHistory: "archive", logsHistory: "none", verifiedAt: "2026-10-05", maxLogBlockSpan: 1000, noBatch: true },
     ]);
   });
 

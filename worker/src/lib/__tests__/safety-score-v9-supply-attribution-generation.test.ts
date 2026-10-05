@@ -440,7 +440,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     })).toThrow(`exceeds ${SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES} bytes`);
   });
 
-  it("bounds concurrency and isolates a slow asset without dropping its peers", async () => {
+  it("runs assets serially and isolates a slow asset without dropping its peers", async () => {
     vi.useFakeTimers();
     try {
       let active = 0, maximum = 0;
@@ -454,7 +454,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
       });
       await vi.runAllTimersAsync();
       const results = await pending;
-      expect(maximum).toBe(SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.assetConcurrency);
+      expect(maximum).toBe(1);
       expect(active).toBe(0);
       expect(results).toHaveLength(assets.length);
       expect(results[0]).toEqual({ status: "rejected", reason: "asset-timeout" });
@@ -475,7 +475,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
       await vi.runAllTimersAsync();
       expect(await pending).toEqual([
         { status: "rejected", reason: "asset-timeout" },
-        { status: "rejected", reason: "asset-timeout" },
+        { status: "rejected", reason: "capture-window-exhausted" },
         { status: "rejected", reason: "capture-window-exhausted" },
         { status: "rejected", reason: "capture-window-exhausted" },
       ]);

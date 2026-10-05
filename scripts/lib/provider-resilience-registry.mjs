@@ -10,6 +10,27 @@ export const REQUIRED_PROVIDER_SURFACE_FAMILIES = [
 
 export const PROVIDER_RESILIENCE_REGISTRY = [
   {
+    id: "safety-score-cosmos-bank-observer",
+    family: "safety-score-attribution",
+    description: "Reviewed height-pinned Cosmos bank supply and escrow observations.",
+    files: ["worker/src/lib/safety-score-v9/cosmos-bank-observer.ts"],
+    tests: ["worker/src/lib/__tests__/safety-score-v9-cosmos-bank.test.ts"],
+    allowBareFetch: false,
+    resilience: {
+      transport: "fetchTextWithRetry with zero retries",
+      timeout: "10-second per-request deadline covers headers and body, composed with the producer AbortSignal.",
+      body: "128 KiB streamed byte cap; consumed text remains available for provenance and height metadata is checked.",
+      circuitSources: [],
+    },
+    requiredMarkers: [
+      "fetchTextWithRetry",
+      "COSMOS_BANK_REQUEST_TIMEOUT_MS",
+      "COSMOS_BANK_MAX_RESPONSE_BYTES",
+      "rethrowIfAborted",
+      "grpc-metadata-x-cosmos-block-height",
+    ],
+  },
+  {
     id: "safety-score-economic-supply-observer",
     family: "safety-score-attribution",
     description: "Isolated reviewed economic partition API/validated-ledger observations.",

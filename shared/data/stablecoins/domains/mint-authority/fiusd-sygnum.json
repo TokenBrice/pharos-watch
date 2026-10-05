@@ -187,24 +187,28 @@
         {
           "controlRef": "FIUSD zksync operators registry",
           "question": "Establish issuer key-custody and signing-policy evidence for the identified zkSync registry operator/admin EOAs; the complete on-chain member census does not attest beneficial key independence.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Refine05 mint-authority calibration v2",
           "sources": [{"label": "Verified exact zkSync operator registry", "url": "https://zksync2-mainnet-explorer.zksync.io/contract_verification/info/0x159d8a100d5a869edda532626fde7737056c06c5"}, {"label": "Issuer CBS and client mint-accounting process", "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"}]
         },
         {
           "controlRef": "FIUSD arbitrum operators registry",
           "question": "Establish issuer key-custody and signing-policy evidence for the identified Arbitrum registry operator/admin EOAs; the complete on-chain member census does not attest beneficial key independence.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Refine05 mint-authority calibration v2",
           "sources": [{"label": "Verified exact Arbitrum operator registry", "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xbf9060880363a61e7462039aa8a4aa98fe486067"}, {"label": "Issuer CBS and client mint-accounting process", "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"}]
         },
         {
           "controlRef": "FIUSD Arbitrum proxy-admin EOA",
           "question": "Establish issuer key-custody and signing-policy evidence for the identified single Arbitrum proxy-admin EOA; a no-code account and direct upgrade authority do not attest independent or hardened key custody.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Refine05 mint-authority calibration v2",
           "sources": [{"label": "Verified exact Arbitrum administered proxy", "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xcded6b899edba762d793f44ed295248049440e1e"}, {"label": "Pinned Arbitrum admin and code reads", "url": "https://arb1.arbitrum.io/rpc"}]
         },
         {
           "controlRef": "FIUSD zkSync proxy-admin Safe",
           "question": "Establish independent key custody, human signer independence and signing policy for the identified zkSync 3-of-6 proxy-admin Safe signers; observed owners and threshold do not attest beneficial key separation.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Refine05 mint-authority calibration v2",
           "sources": [{"label": "Pinned exact zkSync admin slot and Safe owners/threshold", "url": "https://mainnet.era.zksync.io"}, {"label": "Exact administered FIUSD proxy", "url": "https://era.zksync.network/address/0x2ab105a3ead22731082b790ca9a00d9a3a7627f9"}]
         }

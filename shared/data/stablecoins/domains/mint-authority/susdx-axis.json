@@ -111,10 +111,13 @@
       "scopedQuestions": [
         {
           "controlRef": "Axis StakedUSDx parameter governance Safe",
-          "question": "What independent signer, key-custody and recovery evidence establishes separation of this observed 3-of-5 Safe's owners? The same Safe controls immediate vault parameters and timelock proposals/execution; onchain quorum does not establish human independence.",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
+          "question": "Axis discloses that the governance Safe's multisig signer keys are held in cold storage on hardware wallets, with a geographically distributed 3-of-5 set inside and outside Axis Labs. What independent evidence binds the five observed signer addresses to separate operators and specifies their recovery and approval policy? Hardware-wallet custody is public but is not an MPC or HSM attestation.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "Unknown-resolver wave 4 2026-10-05 (K03)",
           "sources": [
+            { "label": "Axis governance Safe cold hardware-wallet custody disclosure", "url": "https://docs.axis.to/backing-reserves-and-transparency/security.md" },
+            { "label": "Axis named governance Safe and separate KMS operator addresses", "url": "https://docs.axis.to/reference/contract-addresses.md" },
             { "label": "Vault privileged governance and upgrade roles", "url": "https://docs.axis.to/reference/access-control.md" },
             { "label": "Pinned complete vault-role and Safe observation", "url": "https://etherscan.io/block/26110188" }
           ]

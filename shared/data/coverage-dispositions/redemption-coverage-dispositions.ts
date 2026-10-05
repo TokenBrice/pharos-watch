@@ -87,19 +87,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     allowedRouteFamilyIfProven: "offchain-issuer",
   }),
   reviewedOn("2026-10-03", {
-    id: "susdc-spark-v1",
-    disposition: "defer",
-    reasonCode: "capacity-unpublished",
-    blocker: "Legacy V1 USDC capacity requires the current PSM pocket; no exact-route capacity/fee adapter exists.",
-    rationale: "USDC and in-kind sUSDS shares are distinct holder choices, not an equal-weight portfolio or additive pocket. Governance-variable tin/tout and zero values at the research pin do not establish enduring fees. Share conversion alone does not establish available output liquidity.",
-    evidenceNeeded: "Fresh USDC PSM pocket capacity and fee/gate reads, separately scoped from any sUSDS in-kind redemption.",
-    evidenceUrls: [
-      "https://docs.spark.finance/products/spark-savings",
-      "https://eth.blockscout.com/api/v2/smart-contracts/0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba",
-    ],
-    allowedRouteFamilyIfProven: "stablecoin-redeem",
-  }),
-  reviewedOn("2026-10-03", {
     id: "mantrausd-mantra",
     disposition: "defer",
     reasonCode: "capacity-unpublished",
@@ -112,20 +99,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
       "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8",
     ],
     allowedRouteFamilyIfProven: "stablecoin-redeem",
-  }),
-  reviewedOn("2026-10-03", {
-    id: "earnusd-lido",
-    disposition: "defer",
-    reasonCode: "capacity-unpublished",
-    blocker: "No exact-route adapter measures funded USDC RedeemQueue settlement capacity.",
-    rationale: "The non-ERC-4626 ShareManager request-and-claim route returns USDC with configurable access, locks and pauses. A typical three-day wait is not a completion maximum. Research-pin zero FeeManager values are not enduring fee terms; ERC-4626 probes and historical balances cannot replace exact queue telemetry.",
-    evidenceNeeded: "Fresh USDC RedeemQueue funded claims, effective ShareManager gates, queue throughput, completion bounds and current all-in fees.",
-    evidenceUrls: [
-      "https://docs.lido.fi/earn/",
-      "https://docs.lido.fi/earn/deployment-contracts",
-      "https://docs.lido.fi/earn/architecture/managers/sharemanager/",
-    ],
-    allowedRouteFamilyIfProven: "queue-redeem",
   }),
   {
     id: "zarsc-supercoin",

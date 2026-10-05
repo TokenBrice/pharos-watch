@@ -218,6 +218,7 @@
         {
           "controlRef": "etherlink:0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd",
           "question": "What independent MPC quorum, signer-independence and key-recovery evidence governs this EOA's native mint/admin and ProxyAdmin-owner powers? The issuer's MPC claim is not an independently established signing threshold.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
           "sources": [
@@ -228,6 +229,7 @@
         {
           "controlRef": "USDSM additional Etherlink native minter",
           "question": "What independently evidenced signing quorum, operator independence and key-recovery policy governs this additional codeless native minter? No such policy was established by the complete role census.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
           "sources": [

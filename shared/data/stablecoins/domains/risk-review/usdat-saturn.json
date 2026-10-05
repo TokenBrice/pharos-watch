@@ -461,6 +461,7 @@
       {
         "controlRef": "usdat-ccip-rmn-validation",
         "question": "What is the current RMN node roster and f-threshold (2f+1) that must bless CCIP commits for the Ethereum-Monad and Ethereum-BNB USDat lanes? Per-chain RMN 2.1.0 getVersionedConfig() returns empty signers and fSign=0 by design; getAllAuthorizedCallers() only lists curse admins, not the blessing committee. The live membership is not published on the curse contract or in the CCIP directory pages reviewed.",
+        "subject": "authority-semantics",
         "reviewedAt": "2026-08-18",
         "reviewer": "aug18-v927-control-wave W02",
         "sources": [

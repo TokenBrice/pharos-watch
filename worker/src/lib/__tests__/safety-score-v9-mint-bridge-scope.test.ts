@@ -1034,6 +1034,45 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       });
     });
 
+    it("pools the shortest reviewed delay without granting a sibling's execution certificate to the group", () => {
+      const scoped = safe("scoped", BASE_ROUTE, 3, 5);
+      scoped.executionScope = reviewedScope({
+        controllerDeployment: BASE_ROUTE, reviewedAt: "1970-01-01", observedAt: "1970-01-01",
+      });
+      scoped.executionScope.paths[0]!.capabilities = ["bridge-mint"];
+      scoped.executionScope.paths[0]!.unavoidableDelaySec = 172800;
+      const sibling = safe("unscoped", ARBITRUM_ROUTE, 2, 3);
+      sibling.timelockDelaySec = 3600;
+      sibling.modulesOrGuardsStatus = "present";
+      const { result } = groupFixture([scoped, sibling]);
+      expect(result.controls[0]).toMatchObject({
+        authority: { authorityKey: ARBITRUM_ROUTE },
+        delaySec: 3600, modulesOrGuards: "present", executionScopeComplete: false,
+        moduleImpact: "unresolved",
+        executionScopeContributors: [
+          { authorityKey: BASE_ROUTE, scope: scoped.executionScope },
+          { authorityKey: ARBITRUM_ROUTE },
+        ],
+      });
+      expect(result.controls[0]!.executionScopeContributors![1]).not.toHaveProperty("scope");
+      expect(result.controls[0]!.scopeDiagnostics).toContain("execution-scope-unreviewed");
+    });
+
+    it.each([
+      { riskTier: "canonical-rollup-bridge" as const },
+      { routeClass: "native" as const },
+      { issuanceModel: "bridge-representation" as const },
+      { semantics: "burn-mint" as const },
+    ])("does not pool an incompatible representation member %j", (overrides) => {
+      const { result } = groupFixture(
+        [safe("first", BASE_ROUTE, 3, 5), safe("second", ARBITRUM_ROUTE, 3, 5)],
+        [{}, overrides],
+      );
+      expect(result.controls.some((control) => control.controlKey.startsWith("bridge-group:"))).toBe(false);
+      expect(result.controls.map((control) => control.deploymentKey).sort()).toEqual([ARBITRUM_ROUTE, BASE_ROUTE]);
+      expect(result.controls.every((control) => control.authority?.model === "multisig")).toBe(true);
+    });
+
     it.each(["missing", "unknown", "threshold-unreviewed", "stale", "unreviewed", "upgrade-unknown"] as const)(
       "keeps the group unknown for a %s member instead of substituting the common adapter",
       (condition) => {
@@ -1745,10 +1784,12 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(supplyReview).toEqual(before);
   });
 
-  it("records the native bridge join decision for all five reviewed FUSD deployments", () => {
+  it("records the native bridge join decision for all six reviewed FUSD deployments", () => {
     const profile = fusdRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile;
     const routes = profile.routes ?? [];
-    expect(routes).toHaveLength(5);
+    expect(routes).toHaveLength(6);
+    expect(routes.find((candidate) => candidate.destinationChain === "exsat")?.id)
+      .toBe("exsat:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c");
     const supplyReview: NonNullable<Parameters<typeof adaptBridgeReview>[1]> = {
       selectedBridgeRoutes: routes.map((candidate) => ({
         deploymentRouteKey: candidate.id,
@@ -1763,7 +1804,10 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       failureDomains: [],
     };
     const chainRows = Object.fromEntries(
-      routes.map((candidate) => [candidate.destinationChain, { current: 1 }]),
+      routes.map((candidate) => [
+        candidate.destinationChain === "exsat" ? "exSat" : candidate.destinationChain,
+        { current: 1 },
+      ]),
     );
     const adapted = adaptBridgeFixture(
       meta("fusd-finchain", { bridgeRouteRisk: profile }),
@@ -1774,13 +1818,13 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
 
     expect(adapted.review.status.applicability.state).toBe("not-applicable");
     expect(adapted.review.diagnostics).toEqual({
-      profileRouteCount: 5,
-      canonicalSupplyRowCount: 5,
+      profileRouteCount: 6,
+      canonicalSupplyRowCount: 6,
       unmatchedRowIdentities: [],
       reviewedNativeCoverage: {
-        reviewedRowCount: 5,
-        canonicalSupplyRowCount: 5,
-        supplyShare: 1,
+        reviewedRowCount: 6,
+        canonicalSupplyRowCount: 6,
+        supplyShare: expect.closeTo(1, 12),
         complete: true,
       },
       bridgeClaimControls: [],
@@ -1791,9 +1835,12 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(adapted.controls.some((control) => control.capabilities.includes("bridge-mint"))).toBe(true);
   });
 
-  it("keeps the FUSD join applicable and names an unmatched raw chain label", () => {
-    const profile = fusdRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile;
-    const routes = profile.routes ?? [];
+  it("keeps a native fixture join applicable and names an unmatched raw chain label", () => {
+    const assetId = "fixture-native-unmatched";
+    const routes = [route(ETHEREUM_ROUTE), route(BASE_ROUTE)];
+    const profile = bridgeProfile(routes, {
+      controls: [bridgeControl({ routeRefs: routes.map((candidate) => candidate.id) })],
+    });
     const supplyReview: NonNullable<Parameters<typeof adaptBridgeReview>[1]> = {
       selectedBridgeRoutes: [
         ...routes.map((candidate) => ({
@@ -1804,7 +1851,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
           reviewedRouteKind: "native" as const,
         })),
         {
-          deploymentRouteKey: "unmatched-chain:fusd-finchain:future-network",
+          deploymentRouteKey: `unmatched-chain:${assetId}:future-network`,
           supplyUsd: 1,
           supplyShare: 0.2,
           reviewState: "unmatched" as const,
@@ -1820,7 +1867,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       ["Future Network", { current: 1 }],
     ]);
     const adapted = adaptBridgeFixture(
-      meta("fusd-finchain", { bridgeRouteRisk: profile }),
+      meta(assetId, { bridgeRouteRisk: profile }),
       supplyReview,
       chainRows,
       v9TestClockSec(),
@@ -1828,25 +1875,22 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
 
     expect(adapted.review.status.applicability.state).toBe("required");
     expect(adapted.review.diagnostics).toMatchObject({
-      profileRouteCount: 5,
-      canonicalSupplyRowCount: 5,
+      profileRouteCount: 2,
+      canonicalSupplyRowCount: 2,
       unmatchedRowIdentities: ["Future Network"],
       reviewedNativeCoverage: {
-        reviewedRowCount: 5,
-        canonicalSupplyRowCount: 5,
+        reviewedRowCount: 2,
+        canonicalSupplyRowCount: 2,
         supplyShare: 0.8,
         complete: false,
       },
       applicabilityBranch: "applicable",
     });
-    // The four EVM rows still join CCIP controls. Solana's reviewed native
-    // authority is not a bridge control; the unmatched row remains unproven.
+    // Known native-control joins stay proven. Only the unmatched liability
+    // keeps the aggregate review applicable and remains in the unproven census.
     expect(
       adapted.review.diagnostics?.unprovenRouteJoins.map((row) => row.deploymentRouteKey),
-    ).toEqual([
-      ...routes.filter((candidate) => candidate.destinationChain !== "solana").map((candidate) => candidate.id).sort(),
-      "unmatched-chain:fusd-finchain:future-network",
-    ].sort());
+    ).toEqual([`unmatched-chain:${assetId}:future-network`]);
   });
 
   it("records no unproven bridge row when every selected row is a tolerated dust remainder", () => {

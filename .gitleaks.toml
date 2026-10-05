@@ -152,6 +152,24 @@ regexTarget = "secret"
 regexes = ['''^(?:34ae6ee1-5f94-4ce9-87e8-c98bcec11762|19d915b4-356f-4abd-a4b2-d331515adc22|79d5fd49-deae-41b4-a809-9e1afaa02f32|7a7a500e-1321-4e9d-8046-46ae8199e244|9bfe7105-c648-406b-b51c-b9c4431bc335)$''']
 paths = ['''(?:^|/)shared/data/safety-score-v9/evidence-gap-classifications-v1\.json$''']
 
+# Reviewed wave-4 public document links: Reservoir's SSC bridge audit, and
+# Midas's 2026/2025 base prospectuses. Pin each capability to its citing file.
+[[allowlists]]
+description = "Reservoir publicly linked SSC bridge audit download token"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^168abe3d-0650-454c-bfa5-592b7c08ad83$''']
+paths = ['''(?:^|/)shared/data/safety-score-v9/evidence-gap-classifications-v1\.json$''']
+
+[[allowlists]]
+description = "Midas publicly linked 2026 and 2025 base prospectus download tokens in settlement evidence"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^(?:58c911b9-1ab7-495c-97ba-d379fe9c4e5e|9bfe7105-c648-406b-b51c-b9c4431bc335)$''']
+paths = ['''(?:^|/)shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit\.ts$''']
+
 # Gold DAO's GLDT symbol in reviewed wave ids and the issuer's public article slug
 # resembles a GitLab deploy token. Pin only the exact default-rule match spans.
 [[allowlists]]
@@ -201,6 +219,53 @@ condition = "AND"
 regexTarget = "secret"
 regexes = ['''^(?:2e3WeM4WwdEqwTtRnWN3gJSbhNg1P6Aj2y7kEdfrYbix|6FrrzDk5mQARGc1TDYoyVnSyRdds1t4PbtohCD6p3tgG|EUGzX8kKvbLB55idiETEdXm6NZzB3Dz7c1ui6wGhcviR|JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD)$''']
 paths = ['''(?:^|/)worker/src/cron/dex-liquidity/__tests__/fixtures/(?:whirlpool|raydium)-slot-449058549\.json$''']
+
+# Wave-4 finalized-account and same-slot simulation fixtures retain public
+# input mints. Exact values and paths only; never exempt arbitrary base58 keys.
+[[allowlists]]
+description = "Reviewed input mint pubkeys in the Meteora DLMM pinned-account fixture"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = [
+  '''^JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD$''',
+  '''^EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v$''',
+  '''^Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C$''',
+  '''^3uZLfBgY9XaLXG7C2DDdVjQWgS9x9kEb9VLpfe4yED4P$''',
+  '''^6FrrzDk5mQARGc1TDYoyVnSyRdds1t4PbtohCD6p3tgG$''',
+  '''^GArhnnDj3GYhmQeApKVXaRv4TQFwhPcs3SNF6FXsTeXq$''',
+  '''^USDH1SM1ojwWUga67PGrgFWUHibbjqMvuMaDkRJTgkX$''',
+  '''^A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6$''',
+]
+paths = ['''(?:^|/)worker/src/cron/dex-liquidity/__tests__/fixtures/meteora-dlmm-pinned\.json$''']
+
+[[allowlists]]
+description = "Reviewed USDC input mint in the wave-4 Raydium simulation and Solana CLMM fixtures"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v$''']
+paths = ['''(?:^|/)worker/src/cron/dex-liquidity/__tests__/fixtures/(?:raydium-wave4-simulation|solana-clmm-wave4-pinned)\.json$''']
+
+# HyperCore's spot asset identity is public, but its 16-byte hex shape also
+# fits credentials. Bind only feUSD's reviewed identifier to its risk review.
+[[allowlists]]
+description = "Reviewed feUSD HyperCore spot asset identifier"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^0x88102bea0bbad5f301f6e9e4dacdf979$''']
+paths = ['''(?:^|/)shared/data/stablecoins/domains/risk-review/feusd-felix\.json$''']
+
+# STUSD's public token runtime keccak256 is evidence, not a signing key.
+# A different 32-byte hash/key in the same review must still be detected.
+[[allowlists]]
+description = "Reviewed STUSD token runtime keccak256 in wrapper allocation evidence"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^0x511f4a291580f38c1482a112c65ac6fcc455169f9739e90e68713b41958e5d22$''']
+paths = ['''(?:^|/)shared/data/safety-score-v9/wrapper-allocation-reviews-v1\.json$''']
 
 # Falcon publishes asset labels such as `ARIA_B71VABWJ_T8GB`. Artifact V2
 # records those labels as allocation `key` values, and the default

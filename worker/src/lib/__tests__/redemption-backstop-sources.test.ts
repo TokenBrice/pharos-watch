@@ -5,6 +5,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS } from "@shared/data/coverage-dispositions/redemption-coverage-dispositions";
 import type { StablecoinData } from "@shared/types/market";
 import type { resolveRedemptionBackstopEntry as ResolveRedemptionBackstopEntry } from "../redemption-backstop/sources";
+import type { ExecutableRedemptionObservation } from "../../cron/reserve-adapters/executable-redemption-observers";
 import {
   buildEntryFixture,
   dusdOpenQueueMetadata,
@@ -14,12 +15,17 @@ import {
   liveSnapshot,
 } from "./redemption-backstop-sources.test-support";
 import { readRedemptionBackstopLiveMetadata } from "../redemption-backstop/live-metadata";
+import { makeAsset } from "../../test-helpers/__shared/fixtures";
 
 const { getReserveSyncStateMock, getLatestSuccessfulReserveSnapshotMetadataMock } = vi.hoisted(() => ({
   getReserveSyncStateMock: vi.fn(),
   getLatestSuccessfulReserveSnapshotMetadataMock: vi.fn(),
 }));
 
+const observeExecutableRedemptionRouteMock = vi.fn();
+vi.mock("../../cron/reserve-adapters/executable-redemption-observers", () => ({
+  observeExecutableRedemptionRoute: observeExecutableRedemptionRouteMock,
+}));
 vi.mock("../live-reserves/store", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../live-reserves/store")>();
   return {
@@ -83,6 +89,7 @@ describe("buildRedemptionBackstopEntry", () => {
         feeBps: 0, feeConfidence: "fixed" } },
   ] as const;
 
+  // These fixtures cover terms/reserve telemetry; exact-execution reviews are explicit opt-ins.
   const buildEntry = (
     stablecoinId: string,
     config: RedemptionConfig,
@@ -96,7 +103,7 @@ describe("buildRedemptionBackstopEntry", () => {
     supplyUsd,
     dexScore,
     nowSec: now,
-    options,
+    options: { exitExecutionReviews: [], ...options },
   });
 
   beforeAll(async () => {
@@ -111,6 +118,7 @@ describe("buildRedemptionBackstopEntry", () => {
     getLatestSuccessfulReserveSnapshotMetadataMock.mockReset();
     getReserveSyncStateMock.mockResolvedValue(null);
     getLatestSuccessfulReserveSnapshotMetadataMock.mockResolvedValue(null);
+    observeExecutableRedemptionRouteMock.mockReset();
   });
 
   it("publishes unrestricted-holder access for native sUSDf unwrap without inheriting parent issuer KYC", async () => {
@@ -155,6 +163,71 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.eventualRedeemabilityScore).toBeNull();
   });
 
+  it.each([null, 0, 100_000_000])(
+    "publishes earnUSD fee/status diagnostics without inventing capacity from supply %s", async (supplyUsd) => {
+      observeExecutableRedemptionRouteMock.mockResolvedValue({
+        capacityRaw: 129641670774n,
+        capacitySource: "lido-earnusd-unquantified-queue",
+        settlementBoundUnproven: true,
+        underlyingDecimals: 6,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: "same-run-onchain",
+        routeStatusSource: "onchain",
+        routeStatus: "open",
+        routeStatusReason: "Exact async requests open, no guaranteed completion maximum",
+        feeBps: 27,
+        holderEligibility: "any-holder",
+        blockNumber: 26122344,
+        sourceTimestamp: now,
+        sourceUrls: ["https://docs.lido.fi/earn/deployment-contracts"],
+        diagnostics: { syncLiquidAssetsRaw: "129641670774", capacityQuantified: false },
+      } satisfies ExecutableRedemptionObservation);
+      const config = getRedemptionBackstopConfig("earnusd-lido")!;
+      const entry = await buildEntry("earnusd-lido", config, supplyUsd, null);
+      expect(entry).toMatchObject({
+        feeBps: 27, feeConfidence: "formula", routeStatus: "open", routeStatusSource: "onchain",
+        capacitySemantics: "eventual-only", resolutionState: "missing-capacity",
+        immediateCapacityUsd: null, immediateCapacityRatio: null,
+        capacityScore: null, score: null, eventualRedeemabilityScore: null,
+        sourceTimestamp: now,
+      });
+      expect(entry.capacityProfile).toMatchObject({
+        immediateUsd: null, scoringUsd: null, eventualUsd: null, scoringHorizon: "unknown",
+      });
+      expect(entry.capacityProfile?.settlementBoundUnproven).toBe(true);
+      if (supplyUsd != null && supplyUsd > 0) {
+        expect(entry.capacityProfile?.exitRouteObservations).toHaveLength(1);
+        expect(entry.capacityProfile?.exitRouteObservations?.[0]).toMatchObject({
+          routeId: "redemption:earnusd-lido:queue-redeem",
+          scoreEligible: false,
+          settlementBoundUnproven: true,
+          output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] },
+        });
+      }
+      expect(entry.settlementDelaySec).toBeUndefined();
+      expect(entry.notes).toContain("redemption-capacity-unquantified");
+      expect(entry.notes?.some((note) => note.includes("queue diagnostics:"))).toBe(true);
+      expect(getLatestSuccessfulReserveSnapshotMetadataMock).not.toHaveBeenCalled();
+      expect(observeExecutableRedemptionRouteMock).toHaveBeenCalledWith(
+        "earnusd-lido", "0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981", expect.any(AbortSignal),
+      );
+    },
+  );
+
+  it("fails earnUSD closed when its exact queue observation is unavailable", async () => {
+    observeExecutableRedemptionRouteMock.mockResolvedValue(null);
+    await expect(buildEntry(
+      "earnusd-lido", getRedemptionBackstopConfig("earnusd-lido")!, 100_000_000, null,
+    )).rejects.toThrow("earnusd-lido redemption observer unavailable");
+  });
+
+  it("does not retain the historical open/zero-fee snapshot after a read rejection", async () => {
+    observeExecutableRedemptionRouteMock.mockRejectedValue(new Error("queue identity drift"));
+    await expect(buildEntry(
+      "earnusd-lido", getRedemptionBackstopConfig("earnusd-lido")!, 100_000_000, null,
+    )).rejects.toThrow("queue identity drift");
+  });
+
   it.each([
     { keys: undefined, accepted: false },
     { keys: ["m-m0"], accepted: false },
@@ -188,9 +261,7 @@ describe("buildRedemptionBackstopEntry", () => {
   it.each([
     "usdfr-forest-road",
     "usdx-axis",
-    "susdc-spark-v1",
     "mantrausd-mantra",
-    "earnusd-lido",
   ])("withholds the %s entry when no honest exact-route capacity model exists", async (id) => {
     const entry = await resolveRedemptionBackstopEntry(mockD1Strict([]), { id } as StablecoinData, null, now);
 
@@ -199,6 +270,28 @@ describe("buildRedemptionBackstopEntry", () => {
       disposition: "defer",
       reasonCode: "capacity-unpublished",
     });
+  });
+
+  it("publishes the reviewed legacy Spark USDC route with unquantified capacity when no execution receipt exists", async () => {
+    const asset = makeAsset({ id: "susdc-spark-v1", circulating: { peggedUSD: 100_000_000 } });
+    const entry = await resolveRedemptionBackstopEntry(mockD1Strict([]), asset, null, now, {
+      exitExecutionReviews: [],
+    });
+
+    expect(entry).toMatchObject({
+      routeFamily: "stablecoin-redeem",
+      outputAssetType: "stable-single",
+      resolutionState: "missing-capacity",
+      immediateCapacityUsd: null,
+      immediateCapacityRatio: null,
+      capacityScore: null,
+      score: null,
+      eventualRedeemabilityScore: null,
+    });
+    expect(entry?.capacityProfile).toMatchObject({
+      immediateUsd: null, scoringUsd: null, eventualUsd: null, scoringHorizon: "unknown",
+    });
+    expect(entry?.capacityProfile?.exitRouteObservations ?? []).toEqual([]);
   });
 
   it("resolves supply-full capacity with valid supply", async () => {

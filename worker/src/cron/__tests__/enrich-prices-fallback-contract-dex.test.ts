@@ -1,4 +1,5 @@
 import * as circuitBreaker from "../../lib/circuit-breaker";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   maturePairCreatedAt,
@@ -251,6 +252,34 @@ describe("enrichMissingPrices", () => {
     expect(result).toMatchObject({ pass1: 2, failures: [] });
     expect(assets.map((asset) => asset.price)).toEqual([0.9998, 0.658]);
     expect(fetchSpy.getHistory()[0]?.url).toContain("osmosis:ibc%2FC78F65");
+    expect(fetchSpy.getHistory()[0]?.url).not.toContain("kava:usdx");
+  });
+
+  it.each(["usdx", "kava:usdx"])("does not use native bank identity %s as a contract price lookup", async address => {
+    const ibcId = "osmosis:ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE";
+    const fetchSpy = mockFetch([{
+      match: "coins.llama.fi/prices/current/osmosis:ibc%2FC78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE",
+      body: { coins: { [ibcId]: dlQuote(0.658, "USDX") } },
+    }], { requireMatch: true });
+    const assets = [makePeggedAsset({ id: "usdx-kava", name: "Kava USDX", symbol: "USDX", price: 0, address, chains: ["Kava"] })];
+    expect(await runDlContractPasses(assets, undefined)).toMatchObject({ pass1: 1, failures: [] });
+    expect(assets[0].price).toBe(0.658);
+    expect(fetchSpy.getHistory()).toHaveLength(1);
+    expect(fetchSpy.getHistory()[0].url).not.toContain("kava:usdx");
+    expect(fetchSpy.getHistory()[0].url).not.toContain("solana:usdx");
+  });
+
+  it("keeps a native-only asset unpriced without sending a synthetic contract request", async ({ onTestFinished }) => {
+    const meta = ACTIVE_META_BY_ID.get("usdx-kava")!;
+    const lookup = vi.spyOn(ACTIVE_META_BY_ID, "get").mockReturnValue({
+      ...meta, contracts: meta.contracts!.filter(deployment => deployment.kind === "native-denom"), tradedContracts: [],
+    });
+    onTestFinished(() => lookup.mockRestore());
+    const fetchSpy = mockFetch([], { requireMatch: true });
+    const assets = [makePeggedAsset({ id: "usdx-kava", name: "Kava USDX", symbol: "USDX", price: 0, address: "kava:usdx" })];
+    expect(await runDlContractPasses(assets, undefined)).toMatchObject({ pass1: 0, pass1b: 0, failures: [] });
+    expect(assets[0].price).toBe(0);
+    expect(fetchSpy.getHistory()).toHaveLength(0);
   });
 
   it("reports a non-OK DefiLlama contract batch as a failed pass", async () => {

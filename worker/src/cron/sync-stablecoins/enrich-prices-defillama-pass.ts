@@ -192,6 +192,7 @@ function buildTrackedDeploymentCoinIds(asset: PeggedAsset): string[] {
   const ids = new Set<string>();
   const deployments = [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])];
   for (const deployment of deployments) {
+    if (deployment.kind === "native-denom") continue;
     const chain = resolveChainId(deployment.chain);
     const address = deployment.address?.trim();
     if (!chain || !address) continue;
@@ -203,14 +204,25 @@ function buildTrackedDeploymentCoinIds(asset: PeggedAsset): string[] {
 function buildPrimaryContractCoinIds(asset: PeggedAsset): string[] {
   const rawAddress = (asset.address?.trim() || TRACKED_ASSET_ADDRESS_OVERRIDES[asset.id])?.trim();
   if (!rawAddress) return buildTrackedDeploymentCoinIds(asset);
+  const meta = ACTIVE_META_BY_ID.get(asset.id);
+  const deployments = [...(meta?.contracts ?? []), ...(meta?.tradedContracts ?? [])];
+  const separatorIndex = rawAddress.indexOf(":");
+  const explicitChain = separatorIndex >= 0 ? resolveChainId(rawAddress.slice(0, separatorIndex)) : null;
+  const unscopedAddress = explicitChain !== null ? rawAddress.slice(separatorIndex + 1) : rawAddress;
+  if (deployments.some(deployment => deployment.kind === "native-denom" &&
+    deployment.address === unscopedAddress && (explicitChain === null || resolveChainId(deployment.chain) === explicitChain))) {
+    // A bank-denom source identity cannot become a synthetic contract lookup.
+    // Separately curated token/receipt deployments remain eligible.
+    return buildTrackedDeploymentCoinIds(asset);
+  }
   if (rawAddress.includes(":")) {
     return [addressToCoinId(rawAddress)];
   }
 
-  const meta = ACTIVE_META_BY_ID.get(asset.id);
   const matchedDeploymentIds = new Set<string>();
   const normalizedAddress = rawAddress.toLowerCase();
-  for (const deployment of [...(meta?.contracts ?? []), ...(meta?.tradedContracts ?? [])]) {
+  for (const deployment of deployments) {
+    if (deployment.kind === "native-denom") continue;
     const chain = resolveChainId(deployment.chain);
     const address = deployment.address?.trim();
     if (!chain || !address) continue;

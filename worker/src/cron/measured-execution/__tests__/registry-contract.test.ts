@@ -16,12 +16,13 @@ describe("Wave 0 registration fan-out", () => {
     }
   });
 
-  it("predeclares the U1, U2, and U5 target leaves", () => {
+  it("retains existing target leaves alongside native Sui and Meteora leaves", () => {
     expect(DEX_EXECUTION_TARGET_FACTORY_REGISTRY.map((entry) => entry.slotId)).toEqual([
       "quoter-v2",
       "uniswap-v4",
       "orca-whirlpool",
       "raydium-clmm",
+      "sui-clmm",
       "meteora-dlmm",
       "evm-v2",
     ]);

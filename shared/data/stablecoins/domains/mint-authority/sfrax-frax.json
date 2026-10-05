@@ -157,6 +157,7 @@
         {
           "controlRef": "ethereum:0x831822660572bd54ebaa065c2acef662a6277d40",
           "question": "For Staked FRAX parameter-control Safe (ethereum:0x831822660572bd54ebaa065c2acef662a6277d40): Offchain key custody and independence of the six Safe signer addresses remain unestablished; onchain quorum/source census cannot identify independent human or institutional key holders.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement Refine11",
           "sources": [

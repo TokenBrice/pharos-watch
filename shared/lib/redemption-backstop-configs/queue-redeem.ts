@@ -106,6 +106,36 @@ function erc4626ReserveTelemetryQueueConfig(options: {
 }
 
 const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
+  "earnusd-lido": defineQueueRedeemConfig({
+    outputAssets: ["usdc-circle"],
+    holderEligibility: "any-holder",
+    capacityModel: { kind: "unquantified" },
+    costModel: documentedVariableFee(
+      "The exact Mellow FeeManager exposes the mutable redeemFeeD6 / 1e6 fee on async requests. The conditional sync rail additionally applies penaltyD6; observed zeros are snapshots, not permanent or all-in cost bounds. Gas and wallet charges remain separate.",
+      "formula",
+    ),
+    reviewedAt: "2026-10-05",
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale: "Public USDC request/claim is established, but oracle reporting and funded batch processing have no guaranteed completion maximum. Sync liquidity and a rolling share limit are conditional diagnostics, not executed same-notional capacity. Mutable protocol fees are observed each run; all-in execution costs remain unmeasured.",
+      reviewedAt: "2026-10-05",
+      docs: [
+        sourceRefFull("Lido earnUSD exact deployed queues", "https://docs.lido.fi/earn/deployment-contracts"),
+        sourceRef("Mellow earnUSD withdrawal timing", "https://docs.mellow.finance/lido-earn/earnusd.md", ["route", "settlement"]),
+      ],
+    },
+    docs: [
+      sourceRefFull("Lido earnUSD exact deployed queues", "https://docs.lido.fi/earn/deployment-contracts"),
+      sourceRef("Exact USDC async RedeemQueue implementation", "https://eth.blockscout.com/api/v2/smart-contracts/0x000000000c139266ba06170ed1deaca6d11903c1", ["route", "access", "fees", "settlement"]),
+      sourceRef("Exact USDC SyncRedeemQueue implementation", "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000038801c7281284f8f68b80b679f64a074", ["route", "capacity", "fees"]),
+    ],
+    notes: [
+      "The direct producer observes the actual Mellow modular-vault queues, distinct from Ember eEARN; no ERC-4626 or nonexistent live-reserves adapter is required.",
+      "USDC async queue 0x9e36a74fe278906a76e7615263e46a83fc40c47f locks holder shares and claim(receiver,timestamps) pays only funded processed batches belonging to the caller. Burn pause, global lockup and account blacklisting remain applicable.",
+      "USDC sync queue 0xe0eee7e956a94bd00546d9ca07e5012f11a5059d requires a usable oracle report, liquidity and rolling-limit headroom. Its maxAge=86400 is price staleness, not settlement; the API average 216000 seconds (60 hours) is not a maximum. No full-supply, zero-capacity, fixed fee or measured-unwind credit is inferred.",
+    ],
+  }),
   "strusd-tori": defineQueueRedeemConfig({
     accessModel: "whitelisted-onchain",
     settlementModel: "days",

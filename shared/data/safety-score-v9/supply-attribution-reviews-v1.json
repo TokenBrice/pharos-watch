@@ -2624,6 +2624,462 @@
           }
         }
       ]
+    },
+    {
+      "assetId": "xgld-unitas",
+      "reviewer": "P4OftCohortPlans reviewed runtime and complete peer census",
+      "reviewedAtSec": 1791196392,
+      "expiresAtSec": 1793788392,
+      "evidenceUrls": [
+        "https://docs.unitas.so/overview/xgld.md",
+        "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=all",
+        "https://bscscan.com/address/0xe60106a5cab7e7c64830919d36ab20caaf50ac91",
+        "https://ethereum-rpc.publicnode.com",
+        "https://rpc.mantle.xyz"
+      ],
+      "economicScope": "All outstanding six-decimal XGLD token claims on BSC, Base, Ethereum and Mantle, including zero and dust holdings. Whole-runtime equality to exact-match XGLDToken/OFT source establishes the same non-rebasing claim unit; transport burns on source and mints on destination, with authenticated bidirectional pending added once. All minted holder balances remain in supply until burned, including treasury, redemption-contract and composer-held balances; no holder exclusion or collateral/XAUt token is treated as XGLD circulation. Twelve current and historical reciprocal pathways are exhaustive from each authenticated zero-nonce creation floor. The issuer two-chain table is not the full on-chain census. Fresh independent CoinGecko price binds the unchanged upstream USD aggregate, never gold par or a static deployment share.",
+      "sourceId": "coingecko",
+      "accountingFamily": "independent-liability",
+      "commonClaimUnit": "xgld-unitas-token",
+      "exhaustive": true,
+      "inFlightTreatment": "observed-reconciled",
+      "deployments": [
+        {
+          "deploymentKey": "bsc:0xe60106a5cab7e7c64830919d36ab20caaf50ac91",
+          "chainId": "bsc",
+          "address": "0xe60106a5cab7e7c64830919d36ab20caaf50ac91",
+          "holdingKind": "contract",
+          "amountBasis": "fixed-token-units",
+          "decimals": 6,
+          "routeId": "bsc:0xe60106a5cab7e7c64830919d36ab20caaf50ac91",
+          "read": {
+            "kind": "evm-total-supply",
+            "safeBlockLag": 3889
+          },
+          "claimUnit": "xgld-unitas-token",
+          "conversionSourceId": null
+        },
+        {
+          "deploymentKey": "base:0xea953ea6634d55dac6697c436b1e81a679db5882",
+          "chainId": "base",
+          "address": "0xea953ea6634d55dac6697c436b1e81a679db5882",
+          "holdingKind": "contract",
+          "amountBasis": "fixed-token-units",
+          "decimals": 6,
+          "routeId": "base:0xea953ea6634d55dac6697c436b1e81a679db5882",
+          "read": {
+            "kind": "evm-total-supply",
+            "safeBlockLag": 875
+          },
+          "claimUnit": "xgld-unitas-token",
+          "conversionSourceId": null
+        },
+        {
+          "deploymentKey": "ethereum:0x77a31a47e8a1dce18cb1772ae1c2157fa080cfde",
+          "chainId": "ethereum",
+          "address": "0x77a31a47e8a1dce18cb1772ae1c2157fa080cfde",
+          "holdingKind": "contract",
+          "amountBasis": "fixed-token-units",
+          "decimals": 6,
+          "routeId": "ethereum:0x77a31a47e8a1dce18cb1772ae1c2157fa080cfde",
+          "read": {
+            "kind": "evm-total-supply",
+            "safeBlockLag": 145
+          },
+          "claimUnit": "xgld-unitas-token",
+          "conversionSourceId": null
+        },
+        {
+          "deploymentKey": "mantle:0x385c279445581a186a4182a5503094ebb652ec71",
+          "chainId": "mantle",
+          "address": "0x385c279445581a186a4182a5503094ebb652ec71",
+          "holdingKind": "contract",
+          "amountBasis": "fixed-token-units",
+          "decimals": 6,
+          "routeId": "mantle:0x385c279445581a186a4182a5503094ebb652ec71",
+          "read": {
+            "kind": "evm-total-supply",
+            "safeBlockLag": 875
+          },
+          "claimUnit": "xgld-unitas-token",
+          "conversionSourceId": null
+        }
+      ],
+      "conversionSources": [],
+      "referencePriceSource": null,
+      "liabilityInFlightSource": {
+        "kind": "evm-layerzero-oft-pending",
+        "sourceId": "layerzero-oft:xgld-unitas:complete-history-v1",
+        "chainId": "bsc",
+        "finality": "finalized",
+        "sharedDecimals": 6,
+        "localDecimals": 6,
+        "sides": [
+          {
+            "chainId": "bsc",
+            "eid": 30102,
+            "oappAddress": "0xe60106a5cab7e7c64830919d36ab20caaf50ac91",
+            "oappRuntimeCodeSha256": "877e88dcdf877380ae73ce8656f03b89b0c3ae5b2246eaf3e295dca22e8495b7",
+            "tokenAddress": "0xe60106a5cab7e7c64830919d36ab20caaf50ac91",
+            "localDecimals": 6,
+            "endpointAddress": "0x1a44076050125825900e736c501f859c50fe728c",
+            "endpointRuntimeCodeSha256": "cd64da8ac946ea43b06591188a6cd35128d4ef226f1f6b6906ff614ded31acfe",
+            "deploymentBlock": 99201716
+          },
+          {
+            "chainId": "base",
+            "eid": 30184,
+            "oappAddress": "0xea953ea6634d55dac6697c436b1e81a679db5882",
+            "oappRuntimeCodeSha256": "877e88dcdf877380ae73ce8656f03b89b0c3ae5b2246eaf3e295dca22e8495b7",
+            "tokenAddress": "0xea953ea6634d55dac6697c436b1e81a679db5882",
+            "localDecimals": 6,
+            "endpointAddress": "0x1a44076050125825900e736c501f859c50fe728c",
+            "endpointRuntimeCodeSha256": "2eba2050103bd3f0274bbffb9b48e484b1ad4e34d12e1bedb87e2e620d3bf142",
+            "deploymentBlock": 46203166
+          },
+          {
+            "chainId": "ethereum",
+            "eid": 30101,
+            "oappAddress": "0x77a31a47e8a1dce18cb1772ae1c2157fa080cfde",
+            "oappRuntimeCodeSha256": "877e88dcdf877380ae73ce8656f03b89b0c3ae5b2246eaf3e295dca22e8495b7",
+            "tokenAddress": "0x77a31a47e8a1dce18cb1772ae1c2157fa080cfde",
+            "localDecimals": 6,
+            "endpointAddress": "0x1a44076050125825900e736c501f859c50fe728c",
+            "endpointRuntimeCodeSha256": "a84ad07a40daf6a6ecb9b141fd6f7a1b78784886dfa9f2497268ff000b756f38",
+            "deploymentBlock": 25219689
+          },
+          {
+            "chainId": "mantle",
+            "eid": 30181,
+            "oappAddress": "0x385c279445581a186a4182a5503094ebb652ec71",
+            "oappRuntimeCodeSha256": "877e88dcdf877380ae73ce8656f03b89b0c3ae5b2246eaf3e295dca22e8495b7",
+            "tokenAddress": "0x385c279445581a186a4182a5503094ebb652ec71",
+            "localDecimals": 6,
+            "endpointAddress": "0x1a44076050125825900e736c501f859c50fe728c",
+            "endpointRuntimeCodeSha256": "00067076c6572373c897c126d3a7d947c6879cba2171520f67b218d0ac3cb200",
+            "deploymentBlock": 95532694
+          }
+        ],
+        "pathways": [
+          {
+            "sourceIndex": 0,
+            "destinationIndex": 1
+          },
+          {
+            "sourceIndex": 0,
+            "destinationIndex": 2
+          },
+          {
+            "sourceIndex": 0,
+            "destinationIndex": 3
+          },
+          {
+            "sourceIndex": 1,
+            "destinationIndex": 0
+          },
+          {
+            "sourceIndex": 1,
+            "destinationIndex": 2
+          },
+          {
+            "sourceIndex": 1,
+            "destinationIndex": 3
+          },
+          {
+            "sourceIndex": 2,
+            "destinationIndex": 0
+          },
+          {
+            "sourceIndex": 2,
+            "destinationIndex": 1
+          },
+          {
+            "sourceIndex": 2,
+            "destinationIndex": 3
+          },
+          {
+            "sourceIndex": 3,
+            "destinationIndex": 0
+          },
+          {
+            "sourceIndex": 3,
+            "destinationIndex": 1
+          },
+          {
+            "sourceIndex": 3,
+            "destinationIndex": 2
+          }
+        ]
+      },
+      "excludedRegistryDeploymentKeys": [],
+      "exclusions": [],
+      "escrows": []
+    },
+    {
+      "assetId": "srusd-reservoir",
+      "reviewer": "P4OftCohortPlans reviewed runtime and complete peer census",
+      "reviewedAtSec": 1791196392,
+      "expiresAtSec": 1793788392,
+      "evidenceUrls": [
+        "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=srUSD",
+        "https://docs.reservoir.xyz",
+        "https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api?module=contract&action=getsourcecode&address=0x316cd39632cac4f4cdfc21757c4500fe12f64514",
+        "https://rpc.berachain.com",
+        "https://sourcify.dev/server/v2/contract/1/0x738d1115b90efa71ae468f1287fc864775e23a31?fields=all",
+        "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all"
+      ],
+      "economicScope": "All non-rebasing Savingcoin srUSD token-share claims on Ethereum and Berachain. The exact verified Ethereum Savingcoin source is plain ERC20Burnable plus role-gated minting, not rebasing rUSD, wsrUSD, NAV or a gold/par denominator. Standard Ethereum OFTAdapter locks the canonical shares; bytecode/source-correspondent Berachain OFT issues equal 18-decimal share receipts (shared decimals 6). Measure both supplies, adapter-held backing and both authenticated message directions at their exact finalized holding pins; remove backing from Ethereum once, retain all remote receipts, and reconcile backing exactly to receipts plus authenticated pending. All minted shares held in savings, wrappers, treasury or redemption contracts remain claims until burned; underlying rUSD and separately catalogued wsrUSD are not additional srUSD liabilities. Creation-to-finalized PeerSet censuses contain solely this reciprocal two-side path, Berachain EID30362, with authenticated zero outbound nonces before each creation. Independently timestamped CoinGecko srUSD price binds the unchanged upstream aggregate; no static shares or escrow-minus-receipts pending.",
+      "sourceId": "coingecko",
+      "accountingFamily": "lock-mint",
+      "commonClaimUnit": "srusd-reservoir-token",
+      "exhaustive": true,
+      "inFlightTreatment": "observed-reconciled",
+      "deployments": [
+        {
+          "deploymentKey": "ethereum:0x738d1115b90efa71ae468f1287fc864775e23a31",
+          "chainId": "ethereum",
+          "address": "0x738d1115b90efa71ae468f1287fc864775e23a31",
+          "holdingKind": "contract",
+          "amountBasis": "fixed-token-units",
+          "decimals": 18,
+          "routeId": "ethereum:0x738d1115b90efa71ae468f1287fc864775e23a31",
+          "read": {
+            "kind": "evm-total-supply",
+            "safeBlockLag": 128
+          },
+          "claimUnit": "srusd-reservoir-token",
+          "conversionSourceId": null
+        },
+        {
+          "deploymentKey": "berachain:0x5475611dffb8ef4d697ae39df9395513b6e947d7",
+          "chainId": "berachain",
+          "address": "0x5475611dffb8ef4d697ae39df9395513b6e947d7",
+          "holdingKind": "contract",
+          "amountBasis": "fixed-token-units",
+          "decimals": 18,
+          "routeId": "berachain:0x5475611dffb8ef4d697ae39df9395513b6e947d7",
+          "read": {
+            "kind": "evm-total-supply",
+            "safeBlockLag": 768
+          },
+          "claimUnit": "srusd-reservoir-token",
+          "conversionSourceId": null
+        }
+      ],
+      "conversionSources": [],
+      "referencePriceSource": null,
+      "liabilityInFlightSource": null,
+      "excludedRegistryDeploymentKeys": [],
+      "exclusions": [],
+      "escrows": [
+        {
+          "id": "srusd-ethereum-oft-escrow",
+          "canonicalDeploymentKey": "ethereum:0x738d1115b90efa71ae468f1287fc864775e23a31",
+          "account": "0x316cd39632cac4f4cdfc21757c4500fe12f64514",
+          "receiptDeploymentKeys": [
+            "berachain:0x5475611dffb8ef4d697ae39df9395513b6e947d7"
+          ],
+          "independentReceiptLiability": false,
+          "receiptClaimSources": [],
+          "inFlightSource": {
+            "kind": "evm-layerzero-oft-pending",
+            "sourceId": "layerzero-oft:srusd-reservoir:complete-history-v1",
+            "chainId": "ethereum",
+            "finality": "finalized",
+            "sharedDecimals": 6,
+            "localDecimals": 18,
+            "sides": [
+              {
+                "chainId": "ethereum",
+                "eid": 30101,
+                "oappAddress": "0x316cd39632cac4f4cdfc21757c4500fe12f64514",
+                "oappRuntimeCodeSha256": "c2c704a42552c88afef02bef5894b090ca23b06faec39789c87123407cec2da3",
+                "tokenAddress": "0x738d1115b90efa71ae468f1287fc864775e23a31",
+                "localDecimals": 18,
+                "endpointAddress": "0x1a44076050125825900e736c501f859c50fe728c",
+                "endpointRuntimeCodeSha256": "a84ad07a40daf6a6ecb9b141fd6f7a1b78784886dfa9f2497268ff000b756f38",
+                "deploymentBlock": 21839337
+              },
+              {
+                "chainId": "berachain",
+                "eid": 30362,
+                "oappAddress": "0x5475611dffb8ef4d697ae39df9395513b6e947d7",
+                "oappRuntimeCodeSha256": "6d5f03ddbf2b251022b3bbcbd612fcbb3d3754d69133750d5bb50621177ec087",
+                "tokenAddress": "0x5475611dffb8ef4d697ae39df9395513b6e947d7",
+                "localDecimals": 18,
+                "endpointAddress": "0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+                "endpointRuntimeCodeSha256": "ff6774ee3325fe2a34951847dbffe7e640208780e98a55f9b49eb691339acd17",
+                "deploymentBlock": 1097399
+              }
+            ],
+            "pathways": [
+              {
+                "sourceIndex": 0,
+                "destinationIndex": 1
+              },
+              {
+                "sourceIndex": 1,
+                "destinationIndex": 0
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "assetId": "witry-brix",
+      "reviewer": "P4OftCohortPlans reviewed runtime and complete peer census",
+      "reviewedAtSec": 1791197520,
+      "expiresAtSec": 1793789520,
+      "evidenceUrls": [
+        "https://docs.brix.money/resources/contracts",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x698b7518711bde4832fdc19f5262df705c713006",
+        "https://sourcify.dev/server/v2/contract/1/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee?fields=all",
+        "https://sourcify.dev/server/v2/contract/4326/0x15b271d9012b5820fc42b1c495b4c1e206547de5?fields=all",
+        "https://unpkg.com/@layerzerolabs/lz-definitions@3.1.15/dist/index.d.ts",
+        "https://mainnet.megaeth.com/rpc",
+        "https://rpc.mainnet.chain.robinhood.com"
+      ],
+      "economicScope": "All outstanding non-rebasing wiTRY ERC4626 share-token claims on canonical Ethereum, MegaETH and Robinhood, including composer-held shares until actually burned. Pinned verified canonical vault and adapter sources establish fee-free transfers of wiTRY shares, not underlying iTRY quantities or TRY-par units. Satellite wiTRYOFT source/runtime equality proves standard OFTMsgCodec and equal share debit/credit amounts: rate-limit guards and blacklist recipient redistribution do not change credited quantity. Exact 18-decimal local and 6-decimal shared units therefore require no NAV/share-to-asset conversion between these holdings. Ethereum adapter-backed receipts on both spokes and all six directed historical pathways share one escrow conservation: subtract the measured Ethereum lockbox once and reconcile it to both spoke supplies plus authenticated OFT pending, never escrow-minus-receipts. Verified canonical cooldownSharesByComposer burns delivered wiTRY shares through _withdraw before booking underlying iTRY in the silo; later unstake messages release that already-converted iTRY claim and cannot be counted again as outstanding wiTRY shares. Underlying iTRY transfers, burned-share cooldown entitlements and unrelated iTRY OFTs are distinct liabilities, not missing wiTRY holdings. Creation-to-finalized exhaustive peer histories and authenticated zero-nonce floors identify only the three reviewed sides; primary LayerZero EID30416 is Robinhood. Independently timestamped current CoinGecko wiTRY price binds the unchanged upstream aggregate, never fiat par or static shares.",
+      "sourceId": "coingecko",
+      "accountingFamily": "lock-mint",
+      "commonClaimUnit": "witry-brix-token",
+      "exhaustive": true,
+      "inFlightTreatment": "observed-reconciled",
+      "deployments": [
+        {
+          "deploymentKey": "ethereum:0xe346c29b5b60ef870b9724c57ccfbbc631e47dee",
+          "chainId": "ethereum",
+          "address": "0xe346c29b5b60ef870b9724c57ccfbbc631e47dee",
+          "holdingKind": "contract",
+          "amountBasis": "fixed-token-units",
+          "decimals": 18,
+          "routeId": "ethereum:0xe346c29b5b60ef870b9724c57ccfbbc631e47dee",
+          "read": {
+            "kind": "evm-total-supply",
+            "safeBlockLag": 128
+          },
+          "claimUnit": "witry-brix-token",
+          "conversionSourceId": null
+        },
+        {
+          "deploymentKey": "megaeth:0x15b271d9012b5820fc42b1c495b4c1e206547de5",
+          "chainId": "megaeth",
+          "address": "0x15b271d9012b5820fc42b1c495b4c1e206547de5",
+          "holdingKind": "contract",
+          "amountBasis": "fixed-token-units",
+          "decimals": 18,
+          "routeId": "megaeth:0x15b271d9012b5820fc42b1c495b4c1e206547de5",
+          "read": {
+            "kind": "evm-total-supply",
+            "safeBlockLag": 1536
+          },
+          "claimUnit": "witry-brix-token",
+          "conversionSourceId": null
+        },
+        {
+          "deploymentKey": "robinhood:0x15b271d9012b5820fc42b1c495b4c1e206547de5",
+          "chainId": "robinhood",
+          "address": "0x15b271d9012b5820fc42b1c495b4c1e206547de5",
+          "holdingKind": "contract",
+          "amountBasis": "fixed-token-units",
+          "decimals": 18,
+          "routeId": "robinhood:0x15b271d9012b5820fc42b1c495b4c1e206547de5",
+          "read": {
+            "kind": "evm-total-supply",
+            "safeBlockLag": 15059
+          },
+          "claimUnit": "witry-brix-token",
+          "conversionSourceId": null
+        }
+      ],
+      "conversionSources": [],
+      "referencePriceSource": null,
+      "liabilityInFlightSource": null,
+      "excludedRegistryDeploymentKeys": [],
+      "exclusions": [],
+      "escrows": [
+        {
+          "id": "witry-ethereum-oft-escrow",
+          "canonicalDeploymentKey": "ethereum:0xe346c29b5b60ef870b9724c57ccfbbc631e47dee",
+          "account": "0x698b7518711bde4832fdc19f5262df705c713006",
+          "receiptDeploymentKeys": [
+            "megaeth:0x15b271d9012b5820fc42b1c495b4c1e206547de5",
+            "robinhood:0x15b271d9012b5820fc42b1c495b4c1e206547de5"
+          ],
+          "independentReceiptLiability": false,
+          "receiptClaimSources": [],
+          "inFlightSource": {
+            "kind": "evm-layerzero-oft-pending",
+            "sourceId": "layerzero-oft:witry-brix:complete-history-v1",
+            "chainId": "ethereum",
+            "finality": "finalized",
+            "sharedDecimals": 6,
+            "localDecimals": 18,
+            "sides": [
+              {
+                "chainId": "ethereum",
+                "eid": 30101,
+                "oappAddress": "0x698b7518711bde4832fdc19f5262df705c713006",
+                "oappRuntimeCodeSha256": "99a335728e95a976478823e051a81db5e35a20825ce160847886e2e2b8338af4",
+                "tokenAddress": "0xe346c29b5b60ef870b9724c57ccfbbc631e47dee",
+                "localDecimals": 18,
+                "endpointAddress": "0x1a44076050125825900e736c501f859c50fe728c",
+                "endpointRuntimeCodeSha256": "a84ad07a40daf6a6ecb9b141fd6f7a1b78784886dfa9f2497268ff000b756f38",
+                "deploymentBlock": 24929918
+              },
+              {
+                "chainId": "megaeth",
+                "eid": 30398,
+                "oappAddress": "0x15b271d9012b5820fc42b1c495b4c1e206547de5",
+                "oappRuntimeCodeSha256": "e1a4bcd29f7d6d33bb4375fc63b6ba9e7a4e8f180aab27355c63a40f411b3c59",
+                "tokenAddress": "0x15b271d9012b5820fc42b1c495b4c1e206547de5",
+                "localDecimals": 18,
+                "endpointAddress": "0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+                "endpointRuntimeCodeSha256": "ef58c53e3a6de11fef77a2d97bce2d82e6b0058ab0d403ff5d54bd1cdfba2fbf",
+                "deploymentBlock": 13999380
+              },
+              {
+                "chainId": "robinhood",
+                "eid": 30416,
+                "oappAddress": "0x15b271d9012b5820fc42b1c495b4c1e206547de5",
+                "oappRuntimeCodeSha256": "e1a4bcd29f7d6d33bb4375fc63b6ba9e7a4e8f180aab27355c63a40f411b3c59",
+                "tokenAddress": "0x15b271d9012b5820fc42b1c495b4c1e206547de5",
+                "localDecimals": 18,
+                "endpointAddress": "0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+                "endpointRuntimeCodeSha256": "442781b66a138f3d90ff13965f5d56a1a09b714fe1bdc375d92327369eefd3d0",
+                "deploymentBlock": 54288879
+              }
+            ],
+            "pathways": [
+              {
+                "sourceIndex": 0,
+                "destinationIndex": 1
+              },
+              {
+                "sourceIndex": 0,
+                "destinationIndex": 2
+              },
+              {
+                "sourceIndex": 1,
+                "destinationIndex": 0
+              },
+              {
+                "sourceIndex": 1,
+                "destinationIndex": 2
+              },
+              {
+                "sourceIndex": 2,
+                "destinationIndex": 0
+              },
+              {
+                "sourceIndex": 2,
+                "destinationIndex": 1
+              }
+            ]
+          }
+        }
+      ]
     }
   ],
   "providerChainPartitionReviews": [

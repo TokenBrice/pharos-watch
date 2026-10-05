@@ -227,6 +227,7 @@
         {
           "controlRef": "Maple GovernorTimelock",
           "question": "What human signer independence, signing policy and key-custody assurance support the identified governor role holders, including the 4-of-7 proposer Safe and operational executor Safe/EOA? Current role census, thresholds and scheduling do not establish those custody facts.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine13)",
           "sources": [
@@ -237,6 +238,7 @@
         {
           "controlRef": "Maple security-admin Safe",
           "question": "What human signer independence, signing policy and key-custody assurance support the identified 3-of-6 security-admin Safe owners? Its verified threshold, empty modules and zero guard do not establish independent custody for the immediate authorized upgrade branch.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine13)",
           "sources": [
@@ -247,6 +249,7 @@
         {
           "controlRef": "Maple syrupUSDG pool delegate",
           "question": "What signing policy and key-custody assurance support the identified pool-delegate EOA? Its verified address, empty code and calldata-bound upgrade scheduling do not establish MPC/HSM protection or operational custody.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine13)",
           "sources": [

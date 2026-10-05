@@ -168,6 +168,7 @@
         {
           "controlRef": "USCC Solana mint authority",
           "question": "Establish issuer key-custody and signing-policy evidence for the identified Solana native mint-authority EOA; its System-owned zero-data account does not establish independent or hardened key custody.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine05 mint-authority calibration v2",
           "sources": [{"label": "Exact USCC native Solana mint", "url": "https://explorer.solana.com/address/BTRR3sj1Bn2ZjuemgbeQ6SCtf84iXS81CS7UDTSxUCaK"}, {"label": "Issuer SVM mint versus allowlist-program design", "url": "https://docs.superstate.com/investors/smart-contracts"}]

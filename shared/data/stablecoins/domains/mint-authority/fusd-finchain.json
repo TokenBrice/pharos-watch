@@ -465,6 +465,7 @@
         {
           "controlRef": "solana:Ch1Z9TZK7hiX73HZnhGQygsZ3zr1Rjh8ifspDfAqVRgm",
           "question": "At finalized slot 453519477 on 2026-10-05, one getMultipleAccounts read reconfirms the mint, initialized 1-of-3 multisig and FinChain Dollar LP / FUSDLP metadata. Fresh issuer FUSD and FUSDLP tables still assign this same mint to both products. Which issuer claim and loss perimeter does this SPL mint represent? The public LP conversion description does not bind its claim to canonical FUSD liabilities. D-24 preserves unknown identity; retain the existing exposure and partial execution scope.",
+          "subject": "authority-semantics",
           "reviewedAt": "2026-10-05",
           "reviewer": "Sol wave-4 control research (R06)",
           "sources": [

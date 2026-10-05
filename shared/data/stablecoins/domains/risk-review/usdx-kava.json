@@ -272,9 +272,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "USDX is native Cosmos bank-denom usdx issued by Kava x/cdp, with a separate Osmosis ICS-20 representation. Native Kava denomination identity is directly disclosed, but the catalog's EVM-only Kava address guard prevents an authored kava:usdx deployment and leaves its chain-supply route unmatched. At Kava height 22861203 on 2026-10-03, transfer/channel-1 was OPEN to transfer/channel-143; connection-1 identifies Tendermint client 07-tendermint-2 for osmosis-1. The representation depends on cross-chain validator/light-client authentication, not native issuer burn/mint. Earlier 2026-09-04 escrow/voucher balance observations remain historical; this review does not renew those amounts, prove current packet conservation, or establish economic supply shares.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Unknown-wave W1R90 primary-source and height-pinned review",
+    "summary": "USDX has exact native Kava bank-denom identity kava:usdx (x/cdp collateral-funded issuance) and a distinct Osmosis ICS-20 representation. Pinned Kava height 22881000 confirms native supply and channel-1 escrow, but these amounts do not establish voucher or in-flight shares. Kava transfer/channel-1 remains OPEN to Osmosis transfer/channel-143. The receipt depends on cross-chain validator/light-client authentication, not native issuer burn/mint; dated historical receipt observations remain historical.",
+    "reviewedAt": "2026-10-05",
+    "reviewer": "E20KavaNative native identity and pinned CDP/channel review",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -288,6 +288,22 @@
       }
     ],
     "sources": [
+      {
+        "label": "Reviewed Kava block identity and clock at height 22881000",
+        "url": "https://kava-api.polkachu.com/cosmos/base/tendermint/v1beta1/blocks/22881000"
+      },
+      {
+        "label": "Height-22881000 CDP parameters (matching grpc height metadata)",
+        "url": "https://kava-api.polkachu.com/kava/cdp/v1beta1/params"
+      },
+      {
+        "label": "Height-22881000 source supply",
+        "url": "https://kava-api.polkachu.com/cosmos/bank/v1beta1/supply/by_denom?denom=usdx"
+      },
+      {
+        "label": "Height-22881000 source channel escrow balance",
+        "url": "https://kava-api.polkachu.com/cosmos/bank/v1beta1/balances/kava1kq2rzz6fq2q7fsu75a9g7cpzjeanmk685s3zdn/by_denom?denom=usdx"
+      },
       {
         "label": "Kava latest block",
         "url": "https://api.data.kava.io/cosmos/base/tendermint/v1beta1/blocks/latest"
@@ -330,6 +346,39 @@
       }
     ],
     "routes": [
+      {
+        "id": "kava:usdx",
+        "sourceChain": "kava",
+        "destinationChain": "kava",
+        "canonicalChain": "kava",
+        "contractAddress": "usdx",
+        "protocol": "Kava x/cdp native Cosmos bank denomination",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native usdx is a case-sensitive Cosmos bank denom, not an EVM address or Osmosis voucher. Height-22881000 CDP params identify debt denom usdx and conversion factor 6; module account cdp holds minter/burner permissions. The native supply read is 9989936927744 base units, including channel-1 escrow 882476303. Free native plus escrow conserves the native bank liability; no static route share or escrow-minus-receipts in-flight claim is authored.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": ["module:kava:cdp"],
+        "observedAt": "2026-10-05",
+        "observedBlock": 22881000,
+        "sources": [
+          {
+            "label": "Height-22881000 native CDP denomination",
+            "url": "https://kava-api.polkachu.com/kava/cdp/v1beta1/params"
+          },
+          {
+            "label": "Height-22881000 native minter module account",
+            "url": "https://kava-api.polkachu.com/cosmos/auth/v1beta1/module_accounts"
+          },
+          {
+            "label": "Height-22881000 block clock and identity",
+            "url": "https://kava-api.polkachu.com/cosmos/base/tendermint/v1beta1/blocks/22881000"
+          }
+        ]
+      },
       {
         "id": "osmosis:ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE",
         "sourceChain": "kava",

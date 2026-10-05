@@ -16,7 +16,9 @@ import { getPublicRpcUrl } from "../public-rpc-registry";
 import { decodeEvmUint256, fetchSafetyScoreV9SolanaRpc, rewindEvmBlockHeaderToScoringClock, type SafetyScoreV9SolanaRpcFetcher } from "./supply-observation-primitives";
 import { buildReviewedEconomicDeploymentInventory, deriveReviewedEconomicDeploymentPartition, economicProviderSupplyContradictionChain, economicSupplyInputDeploymentObservation, economicSupplyInputReferencePrice, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
 import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
+import { observeL2MessengerPending } from "./l2-messenger-pending-observer";
 import { observeLayerZeroOftPending } from "./layerzero-oft-pending-observer";
+import { observeEconomicCosmosBank, pinEconomicCosmosBank, type CosmosBankPin } from "./cosmos-bank-observer";
 import { fetchMoveFungibleAssetSupply, fetchTonJettonSupply } from "../../cron/reserve-adapters/token-supply";
 import { observeCcipPending } from "./ccip-pending-observer";
 
@@ -356,6 +358,19 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
       : economicSupplyInputReferencePrice(input.fixedInput, input.assetId);
     if (!referencePrice || Number(referencePrice.value) <= 0) return { status: "rejected", rejectionCode: "packet-reconciliation-failed", failedRouteId: plan.sourceId };
     const headers = new Map<string, EvmBlockHeader>();
+    const cosmosPins = new Map<string, CosmosBankPin>();
+    const readCosmos = async (row: ReviewedEconomicSupplyPlan["deployments"][number], id: string, account?: string): Promise<EconomicSupplyObservation | null> => {
+      if (row.read.kind !== "cosmos-bank-supply" || row.address !== row.read.denom) return null;
+      const key = `${row.chainId}:${row.read.restUrl}`;
+      let pin = cosmosPins.get(key);
+      if (!pin) {
+        const result = await pinEconomicCosmosBank({ source: row.read, chainId: row.chainId, clockSec: input.scoringClockSec, signal: input.signal });
+        if (!result) return null;
+        pin = result; cosmosPins.set(key, pin);
+      }
+      const result = await observeEconomicCosmosBank({ source: row.read, chainId: row.chainId, pin, clockSec: input.scoringClockSec, account, signal: input.signal });
+      return result ? { id, deploymentKey: row.deploymentKey, ...result } : null;
+    };
     const evmCallsByChain = new Map<string, EvmMulticall3Call[]>();
     const evmCallsById = new Map<string, readonly EvmMulticall3Call[]>();
     const evmResultsById = new Map<string, readonly EvmMulticall3Result[] | null>();
@@ -486,6 +501,8 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
       let observation: EconomicSupplyObservation | null = null;
       if (row.read.kind === "provider-chain" || row.read.kind === "native-from-aggregate") {
         observation = economicSupplyInputDeploymentObservation({ fixedInput: input.fixedInput, plan, row, referencePrice });
+      } else if (row.read.kind === "cosmos-bank-supply") {
+        observation = await readCosmos(row, row.deploymentKey);
       } else if (row.read.kind === "evm-total-supply" || row.read.kind === "evm-balance") {
         observation = await readEvm(row, row.deploymentKey, row.read.kind === "evm-balance" ? row.read.account : undefined);
       } else if (row.read.kind === "solana-mint" && row.chainId === "solana" && row.address !== null && row.decimals !== null) {
@@ -539,7 +556,8 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
     for (const rule of [...plan.exclusions, ...plan.escrows.map(escrow => ({ id: escrow.id, deploymentKey: escrow.canonicalDeploymentKey, account: escrow.account }))]) {
       const row = plan.deployments.find(row => row.deploymentKey === rule.deploymentKey)!;
       failedRouteId = row.routeId ?? row.deploymentKey;
-      const observation = await readEvm(row, rule.id, rule.account);
+      const observation = row.read.kind === "cosmos-bank-supply"
+        ? await readCosmos(row, rule.id, rule.account) : await readEvm(row, rule.id, rule.account);
       if (!observation) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId };
       observations.push(observation);
     }
@@ -578,6 +596,16 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
           pending = { id: `in-flight:${escrow.id}`, deploymentKey: escrow.canonicalDeploymentKey, amount: result.amount,
             observedAtSec: header.timestamp, anchor: String(header.number), anchorHash: header.hash,
             responseSha256: result.responseSha256, curvePendingProof: result.proof };
+        } else if (escrow.inFlightSource.kind === "evm-l2-messenger-pending") {
+          const source = escrow.inFlightSource;
+          const pins = [headers.get(source.chainId), headers.get(source.l2ChainId)];
+          if (pins.some(pin => pin === undefined)) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `${escrow.id}:pin-missing` };
+          const result = await observeL2MessengerPending({ source, headers: pins as EvmBlockHeader[], chainRpcs: input.chainRpcs, signal: input.signal, db: input.db });
+          if (result.status !== "accepted") return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `${escrow.id}:${result.reason}` };
+          const header = pins[0]!;
+          pending = { id: `in-flight:${escrow.id}`, deploymentKey: escrow.canonicalDeploymentKey, amount: result.amount,
+            observedAtSec: header.timestamp, anchor: String(header.number), anchorHash: header.hash,
+            responseSha256: result.responseSha256, l2MessengerPendingProof: result.proof };
         } else if (escrow.inFlightSource.kind === "evm-layerzero-oft-pending") {
           pending = await readOftPending(escrow.inFlightSource, `in-flight:${escrow.id}`, escrow.canonicalDeploymentKey);
         } else {

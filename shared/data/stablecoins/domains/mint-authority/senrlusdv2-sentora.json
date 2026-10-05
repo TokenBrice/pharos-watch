@@ -600,6 +600,7 @@
         {
           "controlRef": "ethereum:0xe8c9c99ecad0686a14a00d8521c572281e938008",
           "question": "The identified 1-of-1 Safe has sole signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9; the human or organizational key controller, independence from other Sentora role signers, and independently attested key custody/signing policy are undisclosed. Sentora terms do not identify the key holder.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine10)",
           "sources": [
@@ -640,6 +641,7 @@
         {
           "controlRef": "ethereum:0x9e396de3312d373b87f9bd8763fb48184b42aac0",
           "question": "The identified 1-of-1 Safe has sole signer 0x992592e073aa9b98daed79ee05c4af832e1d0abe; the human or organizational key controller, independence from other Sentora role signers, and independently attested key custody/signing policy are undisclosed. Sentora terms do not identify the key holder.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine10)",
           "sources": [

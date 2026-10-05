@@ -927,6 +927,7 @@
         {
           "controlRef": "stellar:GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H",
           "question": "Which custody scheme and approval policy secure this shared Stellar owner/admin key? Spiko publishes managed Dfns signing for relayers, but not the exact-address mapping for this administrator. MPC/HSM custody stays unknown pending named issuer/provider evidence.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
           "sources": [
@@ -947,6 +948,7 @@
         {
           "controlRef": "Spiko Minter group-10 initiator EOAs (Ethereum; 2)",
           "question": "Which custody schemes and signing-policy approval boundaries secure 0x7a493c05479f6132cb895c72c49439139b595eb4 and 0xe582cddcb3d2374adbb34c9afe76683d019c8a2b? The issuer names Dfns as its relayer provider but does not map these exact native-issuance initiators to MPC/HSM custody.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
           "sources": [

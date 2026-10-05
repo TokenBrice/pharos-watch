@@ -212,6 +212,40 @@ describe("authenticated CCIP pending quantities", () => {
     expect(resumed).toMatchObject({ status: "accepted", amount: "30", proof: { lanes: [{ pendingCount: 2, lastSequence: "2" }] } });
     expect(logRanges.filter(range => range.chain === "ethereum")).toEqual([{ chain: "ethereum", from: 16100, to: 16105 }]);
   });
+  it("resumes complete source history with the smallest eligible inclusive endpoint span", async () => {
+    pinNumber = 8105; sent = [send(1, 10n, 100), send(2, 20n, 8100)]; expectedNext = 3;
+    const args = input();
+    const endpoint = { url: "https://rpc.example", operator: "public" as const, keyed: false, position: "registry" as const, stateHistory: "archive" as const, logsHistory: "full" as const };
+    args.chainRpcs.set("ethereum", { chainId: "ethereum", chainName: "ethereum", type: "evm", explorerUrl: "https://explorer.example",
+      endpoints: [{ ...endpoint, maxLogBlockSpan: 1000 }, { ...endpoint, url: "https://fallback.example", maxLogBlockSpan: 1500 },
+        { ...endpoint, url: "https://state.example", position: "supplemental", logsHistory: "none", maxLogBlockSpan: 1 }] });
+    const first = await observeCcipPending(args);
+    expect(first).toMatchObject({ status: "rejected", reason: "history-incomplete" });
+    if (first.status !== "rejected" || !first.checkpoint) throw new Error("Missing bounded checkpoint");
+    expect(first.checkpoint.lanes[0]!.sent.nextBlock).toBe(8100);
+    expect(logRanges.every(range => range.to - range.from + 1 <= 1000)).toBe(true);
+    expect(logRanges[0]).toEqual({ chain: "ethereum", from: 100, to: 1099 });
+    logRanges = [];
+    const resumed = { ...args, checkpoint: first.checkpoint };
+    expect(await observeCcipPending(resumed)).toMatchObject({ status: "accepted", amount: "30" });
+    expect(logRanges).toEqual([{ chain: "ethereum", from: 8100, to: 8105 }]);
+  });
+  it("caps resumed execution pages independently of the source chain defaults", async () => {
+    const first = await observeCcipPending(input());
+    if (first.status !== "accepted") throw new Error(first.reason);
+    pinNumber = 2106; states["1"] = 2; logRanges = [];
+    const args = input(source(), first.checkpoint);
+    args.chainRpcs.set("base", { chainId: "base", chainName: "base", type: "evm", explorerUrl: "https://explorer.example",
+      endpoints: [{ url: "https://base.example", operator: "public", keyed: false, position: "registry", stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 500 }] });
+    expect(await observeCcipPending(args)).toMatchObject({ status: "accepted", amount: "0" });
+    expect(logRanges.filter(range => range.chain === "base")).toEqual([
+      { chain: "base", from: 106, to: 605 }, { chain: "base", from: 606, to: 1105 },
+      { chain: "base", from: 1106, to: 1605 }, { chain: "base", from: 1606, to: 2105 },
+      { chain: "base", from: 2106, to: 2106 },
+    ]);
+    expect(logRanges.find(range => range.chain === "ethereum")).toEqual({ chain: "ethereum", from: 106, to: 2105 });
+  });
+
   it("consumes a subsequent successful execution at the resumed finalized pin", async () => {
     const first = await observeCcipPending(input());
     if (first.status !== "accepted") throw new Error(first.reason);

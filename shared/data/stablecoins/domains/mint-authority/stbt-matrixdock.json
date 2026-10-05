@@ -110,10 +110,12 @@
       "scopedQuestions": [
         {
           "controlRef": "STBT issuer and owner controller",
-          "question": "Organizational identity, independence and MPC/HSM/key custody of this controller's identified proposer, executor and canceller EOAs remain undisclosed. The proposer Minter is owned by the identified executor EOA. The role census and selector-specific timelock execution are established; this question concerns human/signing custody, not an unidentified mint path.",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Refine04 calibration v2",
+          "question": "The issuer's March 18, 2023 whitepaper section 3.3.1 names Cactus custody for proposer/executor and self-hosted hardware wallets for canceller. This is a disclosed role-level custody model, not an MPC/HSM attestation or proof of independent humans for the currently identified proposer, executor and canceller EOAs. Are those historical custody arrangements still in force for the current role accounts, and which beneficial humans and approval policy govern them? The proposer Minter is owned by the identified executor EOA; verified role census and selector-specific timelock execution do not answer these off-chain questions.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "Pharos wave-4 scoped custody research (K08)",
           "sources": [
+            {"label": "Issuer STBT whitepaper section 3.3.1: Cactus custody and self-hosted hardware canceller", "url": "https://raw.githubusercontent.com/Matrixdock-STBT/STBT-contracts/main/whitepaper/STBT%20White%20Paper.pdf"},
             {"label": "Verified controller and role/delay source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x22276a1bd16bc3052b362c2e0f65aace04ed6f99"},
             {"label": "Verified proposer Minter source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xca241823d4bfe8b29610709db617407fbc9ae02b"}
           ]

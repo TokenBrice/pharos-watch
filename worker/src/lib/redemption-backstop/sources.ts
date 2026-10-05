@@ -1,4 +1,7 @@
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { observeExecutableRedemptionRoute } from "../../cron/reserve-adapters/executable-redemption-observers";
+import { resolveCoinContractAddress } from "../../cron/reserve-adapters/evm";
 import { observeReviewedExitExecutionRoutes } from "../exit-execution/runtime";
 import {
   deriveModelConfidenceWithDetails,
@@ -160,12 +163,43 @@ export async function buildRedemptionBackstopEntry(
   now = Math.floor(Date.now() / 1000),
   options: RedemptionBackstopBuildOptions = {},
 ): Promise<RedemptionBackstopEntry> {
-  const reserveSnapshotMetadata =
-    options.reserveSnapshotMetadata !== undefined
+  // The Mellow modular vault has no ERC-4626 reserve adapter. Observe its
+  // exact queue terms here; the unquantified model never consumes capacityRaw.
+  const usesLidoEarnQueue = stablecoinId === "earnusd-lido";
+  const reserveSnapshotMetadata = usesLidoEarnQueue
+    ? null
+    : options.reserveSnapshotMetadata !== undefined
       ? options.reserveSnapshotMetadata
       : await getLatestSuccessfulReserveSnapshotMetadata(db, stablecoinId);
-  const observedLiveMetadata =
+  const meta = usesLidoEarnQueue ? TRACKED_META_BY_ID.get(stablecoinId) : null;
+  const contractAddress = meta ? resolveCoinContractAddress(meta, "ethereum") : null;
+  if (usesLidoEarnQueue && !contractAddress) {
+    throw new Error("earnusd-lido redemption observer missing tracked Ethereum contract");
+  }
+  const directQueueObservation = usesLidoEarnQueue && contractAddress
+    ? await observeExecutableRedemptionRoute(
+        stablecoinId, contractAddress, options.signal ?? new AbortController().signal,
+      )
+    : null;
+  if (usesLidoEarnQueue && !directQueueObservation) {
+    throw new Error("earnusd-lido redemption observer unavailable");
+  }
+  let observedLiveMetadata =
     options.redemptionLiveMetadata ?? readRedemptionBackstopLiveMetadata(stablecoinId, reserveSnapshotMetadata, now);
+  if (directQueueObservation) {
+    // Deliberately do not admit any capacity, settlement maximum or output
+    // valuation from these diagnostic queue/liquidity reads.
+    observedLiveMetadata = {
+      ...readRedemptionBackstopLiveMetadata(stablecoinId, null, now),
+      canUseFee: true,
+      feeReason: null,
+      redemptionFeeBps: directQueueObservation.feeBps,
+      routeStatus: directQueueObservation.routeStatus,
+      routeStatusSource: directQueueObservation.routeStatusSource,
+      routeStatusReason: directQueueObservation.routeStatusReason,
+      liveHolderEligibility: directQueueObservation.holderEligibility,
+    };
+  }
   const requiredOutputKeys = config.capacityModel.kind === "reserve-sync-metadata"
     ? config.capacityModel.requiredOutputAssetKeys
     : undefined;
@@ -272,7 +306,13 @@ export async function buildRedemptionBackstopEntry(
     ...(routeSuspension ? { routeStatusReason: routeSuspension.reason, routeStatusReviewedAt: routeSuspension.reviewedAt } : {}),
   };
   const liveRouteStatus: RedemptionRouteStatusEvidence | null =
-    capacity.routeStatus && capacity.routeStatusSource
+    directQueueObservation
+      ? {
+          routeStatus: directQueueObservation.routeStatus,
+          routeStatusSource: directQueueObservation.routeStatusSource,
+          routeStatusReason: directQueueObservation.routeStatusReason,
+        }
+      : capacity.routeStatus && capacity.routeStatusSource
       ? {
           routeStatus: capacity.routeStatus,
           routeStatusSource: capacity.routeStatusSource,
@@ -305,6 +345,7 @@ export async function buildRedemptionBackstopEntry(
     ? {
         ...capacity.capacityProfile,
         ...(modeledExitSizeUsd != null ? { modeledExitSizeUsd } : {}),
+        ...(directQueueObservation ? { settlementBoundUnproven: true as const } : {}),
       }
     : undefined;
   const exitRouteObservation = liveMetadata.v9SfrxusdCrosschainRouteState
@@ -338,7 +379,9 @@ export async function buildRedemptionBackstopEntry(
         ...(capacity.freshnessKind ? { freshnessKind: capacity.freshnessKind } : {}),
         ...(capacity.evidenceObservedAt != null ? { evidenceObservedAt: capacity.evidenceObservedAt } : {}),
         ...(capacity.settlementDelaySec != null ? { settlementDelaySec: capacity.settlementDelaySec } : {}),
-        ...(capacity.settlementBoundUnproven ? { settlementBoundUnproven: true } : {}),
+        ...(capacity.settlementBoundUnproven || directQueueObservation
+          ? { settlementBoundUnproven: true }
+          : {}),
         ...(liveMetadata.v9OutputValuation ? { outputValuation: liveMetadata.v9OutputValuation } : {}),
         resolvedFeeBps: staticFields.feeBps,
         now,
@@ -369,6 +412,12 @@ export async function buildRedemptionBackstopEntry(
     ...capacity.notes,
     ...staticFields.notes,
     ...mergedRouteStatus.notes,
+    ...(directQueueObservation
+      ? [
+          `earnusd-lido queue observation block ${directQueueObservation.blockNumber}; protocol fee only, not all-in cost or executable capacity`,
+          `earnusd-lido queue diagnostics: ${JSON.stringify(directQueueObservation.diagnostics)}`,
+        ]
+      : []),
   ]);
 
   const entry: RedemptionBackstopEntry = {
@@ -421,6 +470,11 @@ export async function buildRedemptionBackstopEntry(
     queueEnabled: staticFields.queueEnabled,
     methodologyVersion: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
     updatedAt: now,
+    ...(directQueueObservation ? {
+      sourceTimestamp: directQueueObservation.sourceTimestamp,
+      sourceUrls: directQueueObservation.sourceUrls,
+      freshnessKind: directQueueObservation.freshnessKind,
+    } : {}),
     ...(staticFields.docs ? { docs: staticFields.docs } : {}),
     notes,
     capsApplied,
@@ -451,12 +505,13 @@ export async function buildRedemptionBackstopEntry(
     }
   }
   const executionRoutes = await observeReviewedExitExecutionRoutes({
-    assetId: stablecoinId, circulatingUsd: supplyUsd, clockSec: now, lane: "redemption", db, signal: options.signal,
+    assetId: stablecoinId, circulatingUsd: supplyUsd, clockSec: now, lane: "redemption", db, signal: options.signal, rpcOptions: options.rpcOptions,
+    stablecoinsCache: options.stablecoinsCache, envelope: options.exitExecutionEnvelope, reviews: options.exitExecutionReviews,
   });
-  if (executionRoutes.observations.length > 0 && finalizedEntry.capacityProfile) {
+  if (executionRoutes.observations.length > 0) {
     finalizedEntry = { ...finalizedEntry, capacityProfile: {
-      ...finalizedEntry.capacityProfile,
-      exitRouteObservations: [...(finalizedEntry.capacityProfile.exitRouteObservations ?? []), ...executionRoutes.observations],
+      ...(finalizedEntry.capacityProfile ?? { scoringHorizon: "unknown", capacityProfileConfidence: "heuristic" }),
+      exitRouteObservations: [...(finalizedEntry.capacityProfile?.exitRouteObservations ?? []), ...executionRoutes.observations],
     } };
   }
   registerOutputDependencyResolution(finalizedEntry, config, now);

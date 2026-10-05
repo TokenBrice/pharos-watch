@@ -113,6 +113,7 @@
         {
           "controlRef": "MXNT Ethereum token owner and ProxyAdmin owner",
           "question": "Which independently verifiable human-independence, key-custody/HSM and signing-policy arrangements protect the six identified signer addresses in the 3-of-6 legacy wallet? Operational hold periods remain undisclosed and are not code-enforced delays.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
           "sources": [{"label": "Verified exact owner MultiSigWallet", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828"}, {"label": "Tether holder and operational terms", "url": "https://tether.to/en/legal/"}]
         }
