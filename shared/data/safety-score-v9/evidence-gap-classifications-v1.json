@@ -40156,6 +40156,94 @@
         "https://r.jina.ai/https://www.bvifsc.vg/regulated-entities?combine=Saturn"
       ],
       "rationale": "Token-specific Saturn issuer supervision remains undisclosed. Correct regulator combine filters (Saturn and exact Saturn Global Capital) now succeed and return no entity match, overcoming prior title-filter/403 blocker. SGCI interface terms and legacy BVI professional-fund custody claim supply no licence number or supervised token-issuance activity; Securitize/Ondo/Paxos oversight is not Saturn supervision. Preserve unknown enum, not none."
+    },
+    {
+      "id": "uw-mantrausd-mantra-fc427cb83415370a",
+      "assetId": "mantrausd-mantra",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:cd90caea07dec56c93f5e7e6",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:19:44Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R42)",
+      "sources": [
+        {
+          "url": "https://assets.mantrausd.com/whitepaper.pdf",
+          "observedAt": "2026-10-05T00:19:04Z",
+          "datumAsOf": null,
+          "location": "Risk Disclosure 2.2-2.3, PDF p.16",
+          "excerpt": "Settlement may be delayed or suspended due to:",
+          "assertion": "Conditional T+2 settlement is not an exhaustive realization horizon for the entire held M parent-token position."
+        },
+        {
+          "url": "https://docs.m0.org/build/accessing-liquidity",
+          "observedAt": "2026-10-05T00:17:23Z",
+          "datumAsOf": null,
+          "location": "Supported Routes and Limit Order Protocol",
+          "excerpt": "Coverage is per liquidity source, not uniform across the network.",
+          "assertion": "Atomic extension swaps, solver partial fills and institutional issuer onboarding do not publish a full-position realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://mantrausd.com/",
+        "https://docs.mantrausd.com/how-it-works/minting-burning",
+        "https://docs.mantrausd.com/resources/faq",
+        "https://assets.mantrausd.com/whitepaper.pdf",
+        "https://dashboard.m0.org/stablecoins/mantrausd",
+        "https://docs.m0.org/build/accessing-liquidity",
+        "https://docs.m0.org/api-reference/orchestration/supported-assets",
+        "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8"
+      ],
+      "rationale": "Missing is the full-position liquidityHorizon of the held M claim (live key m0-wrapper-underlying:m), not Treasury maturity or child-to-wM swap speed. The issuer permits suspension and liquidity-shortfall delays; T+2 applies to authorized participants. Issuer/parent docs and exact extension source disclose conversions, not an exhaustive realization horizon. No immediate/one-day/seven-day bound is inferred from T+2 or atomic swaps; unavailable API coverage is not the basis of this nondisclosure finding."
+    },
+    {
+      "id": "uw-ylds-figure-80965002d01a3a28",
+      "assetId": "ylds-figure",
+      "scope": {
+        "componentKey": "mechanism-review:lossRecoveryDesign",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "mechanism-review:lossRecoveryDesign",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:19:44Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R42)",
+      "sources": [
+        {
+          "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000011/fcc-20260630.htm",
+          "observedAt": "2026-10-05T00:10:55Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Note 1, Basis of Presentation, p.9",
+          "excerpt": "The interim financial information in this report has not been audited.",
+          "assertion": "The recovered quarterly financial schedules are expressly unaudited, not refreshed independent recovery assurance."
+        },
+        {
+          "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000011/fcc-20260630xex991commitme.htm",
+          "observedAt": "2026-10-05T00:10:55Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Exhibit 99.1, parent financial support commitment",
+          "excerpt": "through and including September 30, 2027.",
+          "assertion": "Parent support is published, but not an independently verified funded stress facility or certificate insolvency/default waterfall."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.ylds.com/",
+        "https://www.ylds.com/developers-and-ecosystems/",
+        "https://cdn.figure.com/docs/markets/fcc-prospectus.pdf",
+        "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000011/fcc-20260630.htm",
+        "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000011/fcc-20260630xex991commitme.htm",
+        "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000006/fcc-20251231.htm"
+      ],
+      "rationale": "Recovered the previously inaccessible full June 30 10-Q and Exhibit 99.1 via Jina. They disclose itemized qualified assets, unsecured liabilities, paid parent contributions and support through September 2027, not a certificate default waterfall or independently verified funded stress resources. Annual KPMG assurance remains December 2025; the current quarter is unaudited. These disclosures cannot renew expired assurance or establish whole-component recovery quality. Existing report dates and measured siblings are untouched."
     }
   ]
 }
