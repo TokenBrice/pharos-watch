@@ -6,6 +6,7 @@ export * from "./core";
 export * from "./cause-of-death";
 export * from "./digest";
 export * from "./market";
+export * from "./peg";
 export * from "./depeg-resolver";
 export * from "./depeg-resolver-review";
 export * from "./pricing-source-health";

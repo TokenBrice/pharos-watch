@@ -10,8 +10,7 @@ import {
   requiredV9Applicability,
 } from "@shared/lib/safety-score-v9/evidence";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
-import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import { SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "../../cron/sync-stablecoins/shared";
+import { getCirculatingRawOrNull, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
 import type {
   V9AssetFactsV2,
   V9FactStatusV2,

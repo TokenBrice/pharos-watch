@@ -1,5 +1,15 @@
 import { isFiniteNumber } from "./type-guards";
 
+/**
+ * Carry-forward ceiling for last-known-good supplemental supply. Restores
+ * preserve the original supplyObservedAt, so age compounds run-over-run;
+ * without a ceiling a weeks-stale XAUT/PAXG supply would keep publishing into
+ * homepage totals indistinguishable from fresh. Past the ceiling the asset
+ * publishes with its real (empty) supply and the expiry is reported.
+ */
+export const SUPPLEMENTAL_RESTORE_MAX_AGE_SEC = 7 * 86400;
+export const SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC = 60;
+
 /** Safely coerce to number, treating null/undefined/NaN/Infinity as 0 */
 const safeNum = (v: number | null | undefined): number => isFiniteNumber(v) ? v : 0;
 

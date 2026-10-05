@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Sha256Schema } from "@shared/types/safety-schema-primitives";
-import { PegSummaryCoinSchema } from "@shared/types/market";
+import { PegSummaryCoinSchema } from "@shared/types/peg";
 import { RedemptionBackstopMapSchema } from "@shared/types/redemption";
 import { ReserveSliceSchema } from "@shared/types/reserves";
 import { LiveReserveSnapshotProvenanceSchema } from "@shared/lib/safety-score-v9/reserve-provenance";

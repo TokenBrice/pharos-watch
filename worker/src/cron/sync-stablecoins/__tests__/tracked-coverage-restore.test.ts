@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
 import type { PeggedAsset } from "../enrich-prices-shared";
-import {
-  restoreMissingTrackedAssets,
-  SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
-} from "../shared";
+import { restoreMissingTrackedAssets } from "../shared";
 
 const NOW_SEC = 1_780_000_000;
 

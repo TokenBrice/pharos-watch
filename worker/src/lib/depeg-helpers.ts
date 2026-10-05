@@ -2,12 +2,8 @@ import { logWorkerEvent, logWorkerEventArgs } from "./structured-log";
 import { MAX_OPEN_DEPEG_EVENTS } from "./constants";
 import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { DepegAuditVerdictSchema } from "@shared/types/depeg-audit";
-import {
-  DEPEG_EVENT_CLOSE_REASON_VALUES,
-  DepegPriceCoverageSchema,
-  type DepegEvent,
-  type DepegEventCloseReason,
-} from "@shared/types/market";
+import { DEPEG_EVENT_CLOSE_REASON_VALUES, DepegPriceCoverageSchema } from "@shared/types/peg";
+import type { DepegEvent, DepegEventCloseReason } from "@shared/types/market";
 import {
   loadPublishedDexPoolChallengers,
   type DexPriceChallengerLoadRow,

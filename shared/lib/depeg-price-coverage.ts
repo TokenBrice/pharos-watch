@@ -1,4 +1,4 @@
-import type { DepegPriceCoverage } from "../types/market";
+import type { DepegPriceCoverage } from "../types/peg";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "./depeg-closure";
 
 /** Never bridge a missed run, an explicit gap, or unrecorded legacy history. */

@@ -4,14 +4,17 @@ import { normalizeDeploymentId } from "./deployment-id";
 import { CHAIN_META } from "./chain-identity";
 import { V9ControlCapabilitySchema, V9ControlCapSemanticsSchema, V9ClaimImpairmentSchema, V9EconomicLossScopeSchema } from "./safety-score-v9-fact-input-primitives";
 
+// Pure scopes let bundlers omit unused schema graphs, including nested Zod
+// constructor arguments; annotating only the outer call leaves those allocated.
+
 const Text = z.string().trim().min(1);
-export const V9ControlQuestionSubjectSchema = z.enum(["authority-semantics", "execution-scope", "key-custody-independence"]);
+export const V9ControlQuestionSubjectSchema = /* @__PURE__ */ (() => z.enum(["authority-semantics", "execution-scope", "key-custody-independence"]))();
 
 const Deployment = Text.refine((value) => normalizeDeploymentId(value) !== "", "Expected chain-qualified deployment").transform(normalizeDeploymentId);
 
 /** HyperCore credits and EVM escrow releases are executed by the same L1,
  * not an external bridge quorum. This identity is not a solvency certificate. */
-export const V9SameChainSystemTransportSchema = z.object({
+export const V9SameChainSystemTransportSchema = /* @__PURE__ */ (() => z.object({
   family: z.literal("hypercore-evm-spot"),
   tokenIndex: z.number().int().nonnegative().safe(),
   coreTokenId: z.string().regex(/^0x[0-9a-f]{32}$/),
@@ -21,10 +24,10 @@ export const V9SameChainSystemTransportSchema = z.object({
   const expected = `0x20${transport.tokenIndex.toString(16).padStart(38, "0")}`;
   if (transport.systemAddress !== expected) ctx.addIssue({ code: "custom", path: ["systemAddress"], message: "System address must encode the exact HyperCore token index" });
   if (!/^hyperevm:0x[0-9a-f]{40}$/.test(transport.evmToken)) ctx.addIssue({ code: "custom", path: ["evmToken"], message: "Spot transport requires an exact linked HyperEVM ERC20" });
-});
+}))();
 export type V9SameChainSystemTransport = z.output<typeof V9SameChainSystemTransportSchema>;
 const Pin = z.object({ position: Text, hash: Text.nullable(), runtimeIdentity: Text, signerIdentity: Text }).strict();
-export const V9ExactControlPolicySchema = z.object({
+export const V9ExactControlPolicySchema = /* @__PURE__ */ (() => z.object({
   activationStates: z.array(z.enum(["active", "counterfactual", "disabled-reactivatable", "disabled-final", "unknown"])),
   entrypointKinds: z.array(z.enum(["evm-selector", "solana-instruction", "xrpl-transaction"])),
   callModes: z.array(z.enum(["call", "delegatecall", "native"])),
@@ -36,8 +39,8 @@ export const V9ExactControlPolicySchema = z.object({
   moduleRule: z.literal("verified-noninterference-waives-presence-only"),
   weightedRule: z.literal("minimum-signatures-no-independence-credit"),
   issuedCurrencyAmount: z.object({ significantDigits: z.literal(16), minExponent: z.literal(-96), maxExponent: z.literal(80), maxInputLength: z.number().int().positive() }).strict(),
-}).strict();
-export const V9WeightedQuorumSchema = z.object({
+}).strict())();
+export const V9WeightedQuorumSchema = /* @__PURE__ */ (() => z.object({
   scheme: V9ExactControlPolicySchema.shape.weightedSchemes.element,
   deployment: Deployment,
   signers: z.array(z.object({ account: Text, weight: z.number().int().positive().safe() }).strict()).min(1),
@@ -70,11 +73,11 @@ export const V9WeightedQuorumSchema = z.object({
   if (row.scheme === "xrpl" && (row.masterKey == null || row.regularKey == null)) ctx.addIssue({ code: "custom", message: "XRPL quorum requires explicit master and RegularKey observations" });
   if (row.scheme === "contract" && (row.masterKey != null || row.regularKey != null)) ctx.addIssue({ code: "custom", message: "Contract quorum cannot claim XRPL key state" });
   if (row.expiresAt < row.reviewedAt) ctx.addIssue({ code: "custom", message: "Weighted review expiry precedes review" });
-}).transform((row) => ({ ...row, signers: row.signers.map((signer) => ({ ...signer, account: row.scheme === "contract" ? signer.account.toLowerCase() : signer.account })).sort((a, b) => a.account.localeCompare(b.account)), totalWeight: row.signers.reduce((sum, signer) => sum + signer.weight, 0) }));
+}).transform((row) => ({ ...row, signers: row.signers.map((signer) => ({ ...signer, account: row.scheme === "contract" ? signer.account.toLowerCase() : signer.account })).sort((a, b) => a.account.localeCompare(b.account)), totalWeight: row.signers.reduce((sum, signer) => sum + signer.weight, 0) })))();
 export type V9WeightedQuorum = z.output<typeof V9WeightedQuorumSchema>;
 
 /** Verified arbitrary execution admits an adverse upper envelope, never a target allowlist. */
-const V9MaximalDownstreamCallDomainSchema = z.object({
+const V9MaximalDownstreamCallDomainSchema = /* @__PURE__ */ (() => z.object({
   kind: z.literal("conservative-maximal"),
   controllerDeployment: Deployment,
   executorDeployment: Deployment,
@@ -89,9 +92,9 @@ const V9MaximalDownstreamCallDomainSchema = z.object({
   observedSourceRuntimeIdentity: Text,
   minimumDelaySec: z.number().int().nonnegative(),
   source: z.object({ url: z.string().url(), location: Text }).strict(),
-}).strict();
+}).strict())();
 
-const V9ControlExecutionPathSchema = z.object({
+const V9ControlExecutionPathSchema = /* @__PURE__ */ (() => z.object({
   id: Text, targetDeployment: Deployment,
   entrypointKind: V9ExactControlPolicySchema.shape.entrypointKinds.element,
   entrypoints: z.array(Text).min(1), callMode: V9ExactControlPolicySchema.shape.callModes.element,
@@ -107,13 +110,13 @@ const V9ControlExecutionPathSchema = z.object({
   reactivationRefs: z.array(Text), permissionChangeRefs: z.array(Text), upgradeRefs: z.array(Text), bypassRefs: z.array(Text),
   downstreamCallDomain: V9MaximalDownstreamCallDomainSchema.optional(),
   counterfactual: z.object({ factoryDeployment: Deployment, factoryRuntimeIdentity: Text, runtimeIdentity: Text, create2Address: Deployment, create2Salt: Text, initializerCalldata: Text, initializationIdentity: Text, fixedInitialization: z.literal(true), owners: z.array(Text).min(1), threshold: z.number().int().positive(), modules: z.array(Text), fallbackHandler: Text.nullable(), accountStatePin: Pin }).strict().optional(),
-}).strict();
+}).strict())();
 const Hash = z.string().regex(/^0x[0-9a-f]{64}$/);
 const Uint = z.string().regex(/^(0|[1-9][0-9]*)$/);
 const Count = z.number().finite().int().nonnegative().safe();
 const Refs = z.array(Text).min(1);
 
-export const V9ControlExecutionScopeObjectSchema = z.object({
+export const V9ControlExecutionScopeObjectSchema = /* @__PURE__ */ (() => z.object({
   controllerDeployment: Deployment,
   reviewedAt: z.string().date(), observedAt: z.string().date(), expiresAt: z.string().date(), reviewer: Text,
   confidence: z.enum(["verified", "partial", "unknown"]),
@@ -125,7 +128,7 @@ export const V9ControlExecutionScopeObjectSchema = z.object({
   paths: z.array(V9ControlExecutionPathSchema).min(1),
   extensions: z.object({ exhaustive: z.boolean(), paginationEnd: Text.nullable(), sourceRuntimeCorrespondence: z.boolean(), entries: z.array(z.object({ deployment: Deployment, runtimeIdentity: Text, kind: z.enum(["module", "guard", "module-guard", "fallback-handler"]), pathRefs: z.array(Text), mutableReachClosed: z.boolean() }).strict()) }).strict().optional(),
   authorityBinding: z.object({ graphId: Text, authorityStateHash: Hash, observedAuthorityStateHash: Hash }).strict().optional(),
-}).strict();
+}).strict())();
 
 /** Shared admission guard also protects compiler callers holding an unparsed typed scope. */
 export function isV9MaximalControlPathValid(scope: z.output<typeof V9ControlExecutionScopeObjectSchema>, path: z.output<typeof V9ControlExecutionPathSchema>): boolean {
@@ -156,7 +159,7 @@ export function isV9MaximalControlPathValid(scope: z.output<typeof V9ControlExec
     Number.isSafeInteger(domain.minimumDelaySec) && domain.minimumDelaySec >= 0 &&
     path.unavoidableDelaySec === domain.minimumDelaySec;
 }
-export const V9ControlExecutionScopeSchema = V9ControlExecutionScopeObjectSchema.superRefine((scope, ctx) => {
+export const V9ControlExecutionScopeSchema = /* @__PURE__ */ (() => V9ControlExecutionScopeObjectSchema.superRefine((scope, ctx) => {
   const ids = new Set(scope.paths.map((path) => path.id));
   if (ids.size !== scope.paths.length) ctx.addIssue({ code: "custom", message: "Duplicate execution path ids" });
   if (scope.expiresAt < scope.reviewedAt || scope.reviewedAt < scope.observedAt) ctx.addIssue({ code: "custom", message: "Inconsistent execution review dates" });
@@ -178,7 +181,7 @@ export const V9ControlExecutionScopeSchema = V9ControlExecutionScopeObjectSchema
     if ((path.capSemantics.kind === "bounded") !== (path.capSemantics.bound !== null)) ctx.addIssue({ code: "custom", message: "Only a bounded cap can carry an amount bound" });
   }
   if (scope.extensions?.entries.some((entry) => entry.pathRefs.some((ref) => !ids.has(ref)))) ctx.addIssue({ code: "custom", message: "Unknown extension execution path" });
-});
+}))();
 export type V9ControlExecutionScope = z.output<typeof V9ControlExecutionScopeSchema>;
 
 const admittedControlExecutionScopes = new WeakSet<object>();
@@ -187,10 +190,10 @@ export function isV9AdmittedControlExecutionScope(value: unknown): value is V9Co
   return value !== null && typeof value === "object" && Object.isFrozen(value) && admittedControlExecutionScopes.has(value);
 }
 
-const ControlExecutionScopeBatchSchema = z.union([
+const ControlExecutionScopeBatchSchema = /* @__PURE__ */ (() => z.union([
   z.custom<V9ControlExecutionScope>(isV9AdmittedControlExecutionScope),
   V9ControlExecutionScopeSchema,
-]).array();
+]).array())();
 
 function sealAdmittedControlExecutionScope(scope: V9ControlExecutionScope): V9ControlExecutionScope {
   deepFreeze(scope);
@@ -206,10 +209,10 @@ export function admitV9ControlExecutionScopeBatch(values: unknown[]): V9ControlE
 }
 
 /** Same strict scope contract; only immutable, previously admitted in-process identities bypass cloning. */
-export const V9InProcessControlExecutionScopeSchema = z.union([
+export const V9InProcessControlExecutionScopeSchema = /* @__PURE__ */ (() => z.union([
   z.custom<V9ControlExecutionScope>(isV9AdmittedControlExecutionScope),
   V9ControlExecutionScopeSchema.transform(sealAdmittedControlExecutionScope),
-]);
+]))();
 
 export type V9ControlExecutionScopeRootReuse = (scope: V9ControlExecutionScope) => V9ControlExecutionScope;
 
@@ -244,21 +247,21 @@ export function createV9ControlExecutionScopeRootReuse(): V9ControlExecutionScop
 }
 export type V9ModuleImpact = z.output<typeof V9ExactControlPolicySchema>["moduleImpactStates"][number];
 
-const V1005PinSchema = z.object({
+const V1005PinSchema = /* @__PURE__ */ (() => z.object({
   chain: Text, position: Uint, hash: Hash, timestamp: z.string().datetime({ offset: true }),
-}).strict();
-const V1005ReviewSchema = z.object({
+}).strict())();
+const V1005ReviewSchema = /* @__PURE__ */ (() => z.object({
   observedAt: z.string().date(), reviewedAt: z.string().date(), expiresAt: z.string().date(),
   reviewer: Text, pin: V1005PinSchema,
 }).strict().superRefine((row, ctx) => {
   if (row.reviewedAt < row.observedAt || row.expiresAt < row.reviewedAt) ctx.addIssue({ code: "custom", message: "Inconsistent process review dates" });
-});
+}))();
 /** `0x`-prefixed whole bytes (even hex digit count) with at least `minBytes` bytes. */
 function isHexBytes(value: string, minBytes: number): boolean {
   return value.length >= 2 + minBytes * 2 && value.length % 2 === 0 && /^0x[0-9a-fA-F]*$/.test(value);
 }
 
-const V1005EvidenceSchema = z.object({
+const V1005EvidenceSchema = /* @__PURE__ */ (() => z.object({
   id: Text, pin: V1005PinSchema, deployment: Deployment,
   kind: z.enum(["onchain-read", "verified-source", "controller-attribution"]),
   readType: z.enum(["evm-call", "storage", "code", "event-history", "read-bundle"]).nullable(),
@@ -295,12 +298,12 @@ const V1005EvidenceSchema = z.object({
     if (row.readType === "code" && (row.rawResult !== null || row.codeHash == null || row.codeSize == null)) issue("codeHash", "Code read requires compact runtime hash and size");
     if (row.readType === "event-history" && (row.rawResult !== null || row.fromBlock == null || row.toBlock == null || row.topics == null || row.logCount == null || row.logsHash == null)) issue("logsHash", "Event history requires compact pinned bounds and digest");
   }
-});
-const V1005ProofSchema = z.object({
+}))();
+const V1005ProofSchema = /* @__PURE__ */ (() => z.object({
   id: Text, conclusion: z.enum(["closed", "open", "unknown"]),
   statement: z.string().trim().min(40), evidenceRefIds: Refs,
-}).strict();
-const V1005RuntimeSchema = z.object({
+}).strict())();
+const V1005RuntimeSchema = /* @__PURE__ */ (() => z.object({
   deployment: Deployment, runtimeHash: Hash.nullable(), normalizedRuntimeHash: Hash.nullable(),
   proxyKind: z.enum(["none", "eip1967", "uups", "custom", "unknown"]),
   implementation: Deployment.nullable(), implementationRuntimeHash: Hash.nullable(),
@@ -311,14 +314,14 @@ const V1005RuntimeSchema = z.object({
     kind: z.enum(["compiler-metadata", "compiler-immutable"]), observedBytes: Text, sourceBytes: Text, evidenceRefIds: Refs,
   }).strict()),
   matchProofRef: Text, evidenceRefIds: Refs,
-}).strict();
-const V1005RuntimeIdentitySchema = V1005RuntimeSchema.omit({
+}).strict())();
+const V1005RuntimeIdentitySchema = /* @__PURE__ */ (() => V1005RuntimeSchema.omit({
   deployment: true, matchProofRef: true, evidenceRefIds: true, normalization: true,
 }).extend({
   normalization: z.array(V1005RuntimeSchema.shape.normalization.element.omit({ evidenceRefIds: true })),
-}).strict();
-const V1005PathRefSchema = z.object({ controlRef: Deployment, pathId: Text }).strict();
-const ConditionSchema = z.object({
+}).strict())();
+const V1005PathRefSchema = /* @__PURE__ */ (() => z.object({ controlRef: Deployment, pathId: Text }).strict())();
+const ConditionSchema = /* @__PURE__ */ (() => z.object({
   id: Text, kind: z.enum(["immutable", "storage", "authorization", "target", "selector", "accounting"]), description: Text,
   field: Text.optional(),
   test: z.discriminatedUnion("kind", [
@@ -326,28 +329,28 @@ const ConditionSchema = z.object({
     z.object({ kind: z.literal("one-of"), values: z.array(Text).min(1) }).strict(),
     z.object({ kind: z.literal("uint-range"), min: Uint, max: Uint }).strict(),
   ]), proofRef: Text,
-}).strict();
-const PathTemplateSchema = V9ControlExecutionPathSchema.omit({
+}).strict())();
+const PathTemplateSchema = /* @__PURE__ */ (() => V9ControlExecutionPathSchema.omit({
   targetDeployment: true, activation: true, unavoidableDelaySec: true, affectedLiabilityIds: true, affectedDeployments: true,
-}).extend({ proofRef: Text }).strict();
-const MemberConditionSchema = z.object({ conditionId: Text, observedValue: Text.nullable(), proofRef: Text }).strict();
-const PathBindingSchema = z.object({
+}).extend({ proofRef: Text }).strict())();
+const MemberConditionSchema = /* @__PURE__ */ (() => z.object({ conditionId: Text, observedValue: Text.nullable(), proofRef: Text }).strict())();
+const PathBindingSchema = /* @__PURE__ */ (() => z.object({
   templateId: Text, targetDeployment: Deployment,
   activation: V9ExactControlPolicySchema.shape.activationStates.element, unavoidableDelaySec: Count.nullable(),
   affectedLiabilityIds: Refs, affectedDeployments: z.array(Deployment),
   authorityNodeIds: Refs, provenanceNodeIds: z.array(Text), proofRef: Text,
-}).strict();
-const MemberRuntimeTemplateSchema = V1005RuntimeSchema.omit({ deployment: true });
+}).strict())();
+const MemberRuntimeTemplateSchema = /* @__PURE__ */ (() => V1005RuntimeSchema.omit({ deployment: true }))();
 const MemberTemplateFields = {
   censusIds: Refs, review: V1005ReviewSchema, runtime: MemberRuntimeTemplateSchema,
   conditions: z.array(MemberConditionSchema), extensions: V9ControlExecutionScopeObjectSchema.shape.extensions,
 };
-const PathBindingTemplateSchema = PathBindingSchema.omit({ targetDeployment: true }).extend({
+const PathBindingTemplateSchema = /* @__PURE__ */ (() => PathBindingSchema.omit({ targetDeployment: true }).extend({
   targetDeployment: Deployment.nullable(), targetIsMember: z.boolean(), affectedIncludesMember: z.boolean(),
 }).strict().superRefine((row, ctx) => {
   if (row.targetIsMember !== (row.targetDeployment === null)) ctx.addIssue({ code: "custom", path: ["targetDeployment"], message: "Member-target templates require a null fixed target; fixed targets require a deployment" });
-});
-const ClassSchema = z.object({
+}))();
+const ClassSchema = /* @__PURE__ */ (() => z.object({
   id: Text, review: V1005ReviewSchema, runtimeVariants: z.array(V1005RuntimeSchema).min(1),
   cloneRuntimeVariants: z.array(z.object({
     runtimeHash: Hash, proxyKind: z.literal("eip1167"),
@@ -370,17 +373,17 @@ const ClassSchema = z.object({
     if (new Set(refs).size !== refs.length || refs.length !== row.memberRefs.length || row.memberRefs.some((ref) => !refs.includes(ref))) ctx.addIssue({ code: "custom", path: ["compactMembers"], message: "Compact table must exactly equal the class member census" });
     if (row.requiredConditions.some((condition) => !condition.field || !/^(immutables|state)\.[^.]+$/.test(condition.field))) ctx.addIssue({ code: "custom", path: ["requiredConditions"], message: "Compact conditions require explicit instance field bindings" });
   }
-});
-export const V1005ExecutionMemberSchema = z.object({
+}))();
+export const V1005ExecutionMemberSchema = /* @__PURE__ */ (() => z.object({
   memberRef: Deployment, classId: Text, ...MemberTemplateFields, runtime: V1005RuntimeSchema,
   pathBindings: z.array(PathBindingSchema).min(1),
-}).strict();
-const ReferencedMemberSchema = z.object({
+}).strict())();
+const ReferencedMemberSchema = /* @__PURE__ */ (() => z.object({
   deployment: Deployment, classId: Text, templateRef: Text,
   overrides: z.object(MemberTemplateFields).partial().extend({ runtime: MemberRuntimeTemplateSchema.partial().optional() }).strict().optional(),
   pathBindingOverrides: z.array(PathBindingSchema.partial().required({ templateId: true })).optional(),
-}).strict();
-const CensusSchema = z.object({
+}).strict())();
+const CensusSchema = /* @__PURE__ */ (() => z.object({
   id: Text, review: V1005ReviewSchema, targetDeployment: Deployment,
   kind: z.enum(["ward", "role", "owner", "admin", "facilitator", "reachable-instance"]), role: Text,
   coverage: z.enum(["complete", "partial", "unknown"]), authoritativeMembers: z.array(Deployment),
@@ -391,8 +394,8 @@ const CensusSchema = z.object({
   observations: z.array(z.object({ memberRef: Deployment, authorized: z.union([z.boolean(), z.literal("unknown")]), evidenceRefIds: Refs }).strict()),
   completenessProofRef: Text,
   compactClassRef: Text.optional(),
-}).strict();
-export const V1005ExecutionCertificatesSchema = z.object({
+}).strict())();
+export const V1005ExecutionCertificatesSchema = /* @__PURE__ */ (() => z.object({
   schemaVersion: z.literal(1), liabilityBookId: Text,
   sharedBookRef: z.object({ assetId: Text, liabilityBookId: Text, authorityGraphId: Text, authorityStateHash: Hash }).strict().optional(),
   evidence: z.array(V1005EvidenceSchema), proofs: z.array(V1005ProofSchema),
@@ -400,14 +403,14 @@ export const V1005ExecutionCertificatesSchema = z.object({
 }).strict().superRefine((row, ctx) => {
   if (!row.sharedBookRef && (row.evidence.length === 0 || row.proofs.length === 0 || row.censuses.length === 0)) ctx.addIssue({ code: "custom", message: "A local authority book requires evidence, proofs and an authoritative census" });
   if (row.sharedBookRef && row.sharedBookRef.liabilityBookId !== row.liabilityBookId) ctx.addIssue({ code: "custom", path: ["sharedBookRef", "liabilityBookId"], message: "Shared and local liability book ids must match" });
-});
-export const V1005ExecutionClassRefSchema = z.object({ classId: Text, memberRef: Deployment }).strict();
-const V1005GraphEdgeKindSchema = z.enum([
+}))();
+export const V1005ExecutionClassRefSchema = /* @__PURE__ */ (() => z.object({ classId: Text, memberRef: Deployment }).strict())();
+const V1005GraphEdgeKindSchema = /* @__PURE__ */ (() => z.enum([
   "owner", "ward", "role", "admin", "upgrade", "delegatecall", "execution-hop", "vote-origin",
   "reactivation", "permission-change", "envelope-raise", "credit-origin", "recipient-hop",
   "claim-transfer", "liability-conversion", "delegate", "operator", "vote-cast", "vote-replacement",
-]);
-export const V1005AuthorityGraphSchema = z.object({
+]))();
+export const V1005AuthorityGraphSchema = /* @__PURE__ */ (() => z.object({
   id: Text, review: V1005ReviewSchema, liabilityBookId: Text, governorNodeId: Text,
   nodes: z.array(z.object({
     id: Text, deployment: Deployment.nullable(),
@@ -429,8 +432,8 @@ export const V1005AuthorityGraphSchema = z.object({
   pathBindings: z.array(z.object({
     path: V1005PathRefSchema, authorityNodeIds: Refs, provenanceNodeIds: z.array(Text), closureProofRef: Text,
   }).strict()).min(1), closureProofRef: Text,
-}).strict();
-export const V1005VotingControllerSchema = z.object({
+}).strict())();
+export const V1005VotingControllerSchema = /* @__PURE__ */ (() => z.object({
   id: Text, accounts: z.array(Deployment).min(1), votingPowerRaw: Uint.nullable(),
   affiliation: z.enum(["issuer", "council", "team", "independent", "unknown"]),
   beneficialControl: z.enum(["identified", "uncertain", "unknown"]), voteAuthorityNodeIds: Refs,
@@ -438,9 +441,9 @@ export const V1005VotingControllerSchema = z.object({
   ownedPositionIds: z.array(Text), ownVoteOwnershipProofRef: Text, otherHolderVoteAuthorityProofRef: Text,
   voteReplacementApproval: z.enum(["not-applicable", "onchain-token-holder-approval", "key-discretion", "unknown"]),
   attributionProofRef: Text,
-}).strict();
+}).strict())();
 const Comparator = z.enum(["gte", "gt", "not-applicable"]);
-export const V1005VotingControlSchema = z.object({
+export const V1005VotingControlSchema = /* @__PURE__ */ (() => z.object({
   id: Text, governorNodeId: Text, review: V1005ReviewSchema, votingToken: Deployment, totalVotingPowerRaw: Uint.nullable(),
   pinnedVotingSupply: z.object({ deployment: Deployment, function: Text, raw: Uint.nullable(), proofRef: Text }).strict(),
   controllerCensusProofRef: Text,
@@ -470,11 +473,11 @@ export const V1005VotingControlSchema = z.object({
   }).strict()).min(1),
   privilegedVoteCreation: z.object({ state: z.enum(["none", "governor-only", "independent", "unknown"]), pathRefs: z.array(V1005PathRefSchema), proofRef: Text }).strict(),
   forcedDelegation: z.object({ state: z.enum(["none", "governor-only", "independent", "unknown"]), pathRefs: z.array(V1005PathRefSchema), proofRef: Text }).strict(),
-}).strict();
-const EnvelopeSchema = z.object({
+}).strict())();
+const EnvelopeSchema = /* @__PURE__ */ (() => z.object({
   setterNodeIds: Refs, raisePathRefs: z.array(V1005PathRefSchema).min(1), enforcementProofRef: Text, raiseClosureProofRef: Text,
-}).strict();
-const FormulaSchema = z.object({
+}).strict())();
+const FormulaSchema = /* @__PURE__ */ (() => z.object({
   kind: z.literal("formula-interest"), path: V1005PathRefSchema,
   principal: z.object({
     kind: z.enum(["deposited-principal", "recorded-debt", "claim-shares"]), sourceDeployment: Deployment,
@@ -487,8 +490,8 @@ const FormulaSchema = z.object({
     yearSec: z.number().int().positive().safe(), operationalAnnualRatePpmUpper: Count.nullable(),
     conversionFormula: Text, capProofRef: Text, unitsCompoundingProofRef: Text,
   }).strict(), envelope: EnvelopeSchema,
-}).strict();
-const KeeperSchema = z.object({
+}).strict())();
+const KeeperSchema = /* @__PURE__ */ (() => z.object({
   kind: z.literal("keeper-incentive"), path: V1005PathRefSchema,
   lifecycle: z.enum(["initial-kick", "repeat", "other-activity"]), liabilityBookId: Text,
   principalProvenanceProofRef: Text, eligibilityProofRef: Text, debtBookChargeProofRef: Text,
@@ -503,8 +506,8 @@ const KeeperSchema = z.object({
   }).strict().nullable(),
   chosenRecipient: z.boolean(), sameActivityMayRepeat: z.union([z.boolean(), z.literal("unknown")]),
   lifetimeBudgetEnforced: z.union([z.boolean(), z.literal("unknown")]), envelope: EnvelopeSchema,
-}).strict();
-export const V1005OperationalIssuanceSchema = z.object({
+}).strict())();
+export const V1005OperationalIssuanceSchema = /* @__PURE__ */ (() => z.object({
   review: V1005ReviewSchema, liabilityBookId: Text,
   paths: z.array(z.union([FormulaSchema, KeeperSchema, z.object({
     kind: z.enum(["bounded-stock", "collateral-gated", "fixed-sink", "restriction-only", "atomic-flash", "paired-accounting", "no-issuance"]),
@@ -536,7 +539,7 @@ export const V1005OperationalIssuanceSchema = z.object({
     principalRaw: Uint.nullable(), principalUnits: Text, annualGrowthPpmUpper: Count.nullable(),
     formula: Text, deduplicationProofRef: Text, compoundingProofRef: Text, scopeProofRef: Text,
   }).strict().nullable(),
-}).strict();
+}).strict())();
 export type V1005ExecutionCertificates = z.output<typeof V1005ExecutionCertificatesSchema>;
 export type V1005ExecutionMember = z.output<typeof V1005ExecutionMemberSchema>;
 export type V1005AuthorityGraph = z.output<typeof V1005AuthorityGraphSchema>;

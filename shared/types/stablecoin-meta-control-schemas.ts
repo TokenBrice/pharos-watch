@@ -42,7 +42,10 @@ import {
   StablecoinLinkSchema,
 } from "./stablecoin-meta-schemas";
 
-export const OracleRiskBranchSchema = z
+// Pure scopes let bundlers omit unused schema graphs, including nested Zod
+// constructor arguments; annotating only the outer call leaves those allocated.
+
+export const OracleRiskBranchSchema = /* @__PURE__ */ (() => z
   .object({
     id: z.string().min(1),
     label: z.string().min(1),
@@ -132,12 +135,12 @@ export const OracleRiskBranchSchema = z
         });
       }
     }
-  });
+  }))();
 
 export type OracleRiskBranch = z.infer<typeof OracleRiskBranchSchema>;
 // An allocation facilitator is not a borrower market. Identity and the
 // reviewed pricing authority keep that exception local to the exact path.
-const OracleRiskPathSchema = z
+const OracleRiskPathSchema = /* @__PURE__ */ (() => z
   .object({
     id: z.string().min(1),
     chain: z.string().min(1),
@@ -171,10 +174,10 @@ const OracleRiskPathSchema = z
     if (disposition === "top-level-only" && path.branchId != null) {
       ctx.addIssue({ code: "custom", message: "Top-level pricing paths cannot declare borrower branches" });
     }
-  });
+  }))();
 
 
-export const OracleRiskProfileSchema = z
+export const OracleRiskProfileSchema = /* @__PURE__ */ (() => z
   .object({
     tier: z.enum(ORACLE_RISK_TIER_VALUES),
     summary: z.string().min(12),
@@ -274,9 +277,9 @@ export const OracleRiskProfileSchema = z
         path: ["branchModel"],
       });
     }
-  });
+  }))();
 
-const BridgeRouteProtocolEvidenceSchema = z
+const BridgeRouteProtocolEvidenceSchema = /* @__PURE__ */ (() => z
   .object({
     source: z.enum(BRIDGE_ROUTE_RISK_SOURCE_VALUES),
     name: z.string().min(1),
@@ -285,9 +288,9 @@ const BridgeRouteProtocolEvidenceSchema = z
     bridgeTypes: z.array(z.string().min(1)).min(1).optional(),
     note: z.string().min(1).optional(),
   })
-  .strict();
+  .strict())();
 
-const BridgeRouteDeploymentSchema = z
+const BridgeRouteDeploymentSchema = /* @__PURE__ */ (() => z
   .object({
     id: z.string().min(1),
     sourceChain: z.string().min(1).optional(),
@@ -376,9 +379,9 @@ const BridgeRouteDeploymentSchema = z
         path: ["issuanceModel"],
       });
     }
-  });
+  }))();
 
-const NativeInventoryReviewSchema = z
+const NativeInventoryReviewSchema = /* @__PURE__ */ (() => z
   .object({
     kind: z.literal("exhaustive-material-native-census"),
     exhaustive: z.literal(true),
@@ -393,9 +396,9 @@ const NativeInventoryReviewSchema = z
     if (new Set(review.routeIds).size !== review.routeIds.length) {
       ctx.addIssue({ code: "custom", path: ["routeIds"], message: "Native census route identities must be unique" });
     }
-  });
+  }))();
 
-export const BridgeRouteRiskProfileSchema = z
+export const BridgeRouteRiskProfileSchema = /* @__PURE__ */ (() => z
   .object({
     tier: z.enum(BRIDGE_ROUTE_RISK_TIER_VALUES),
     summary: z.string().min(12),
@@ -493,8 +496,8 @@ export const BridgeRouteRiskProfileSchema = z
         }
       }
     }
-  });
-const MintAuthoritySafeStateSchema = z
+  }))();
+const MintAuthoritySafeStateSchema = /* @__PURE__ */ (() => z
   .object({
     version: z.string().min(1).optional(),
     owners: z.array(z.string().min(1)).optional(),
@@ -517,9 +520,9 @@ const MintAuthoritySafeStateSchema = z
         path: ["threshold"],
       });
     }
-  });
+  }))();
 
-const MintAuthorityRouteChecksSchema = z
+const MintAuthorityRouteChecksSchema = /* @__PURE__ */ (() => z
   .object({
     lockboxOrEscrow: z.string().min(1).optional(),
     trustedPeerOrRemote: z.string().min(1).optional(),
@@ -531,16 +534,16 @@ const MintAuthorityRouteChecksSchema = z
     onchainAmountBounds: z.string().min(1).optional(),
     unsupportedReason: z.string().min(1).optional(),
   })
-  .strict();
+  .strict())();
 
-const MintAuthorityKeyCustodyAttestationSchema = z
+const MintAuthorityKeyCustodyAttestationSchema = /* @__PURE__ */ (() => z
     .object({
       kind: z.enum(MINT_AUTHORITY_KEY_CUSTODY_ATTESTATION_KIND_VALUES),
       sources: z.array(StablecoinLinkSchema).min(1),
     })
-    .strict();
+    .strict())();
 
-const MintAuthorityNoLocalIssuanceExceptionSchema = z
+const MintAuthorityNoLocalIssuanceExceptionSchema = /* @__PURE__ */ (() => z
   .object({
     kind: z.enum(MINT_AUTHORITY_NO_LOCAL_ISSUANCE_KIND_VALUES),
     reviewedAt: ReviewDateSchema,
@@ -548,7 +551,7 @@ const MintAuthorityNoLocalIssuanceExceptionSchema = z
     rationale: z.string().min(1),
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
   })
-  .strict();
+  .strict())();
 
 const AuthorityControlFields = {
   label: z.string().min(1),
@@ -605,7 +608,7 @@ function validateExactAuthority(control: z.output<z.ZodObject<typeof AuthorityCo
   }
 }
 
-const BridgeRouteControlSchema = z
+const BridgeRouteControlSchema = /* @__PURE__ */ (() => z
   .object({
     // Kebab-case without a nested quantifier: `^[a-z0-9]+(?:-[a-z0-9]+)*$` accepts
     // the same ids but trips security/detect-unsafe-regex. The character-class
@@ -649,9 +652,9 @@ const BridgeRouteControlSchema = z
         ctx.addIssue({ code: "custom", message: "System transport requires sourced, dated and pinned asset-link evidence" });
       }
     }
-  });
+  }))();
 
-const ControlScopedQuestionSchema = z
+const ControlScopedQuestionSchema = /* @__PURE__ */ (() => z
   .object({
     controlRef: z.string().min(1),
     question: z.string().min(12),
@@ -660,9 +663,9 @@ const ControlScopedQuestionSchema = z
     reviewer: z.string().min(1),
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
   })
-  .strict();
+  .strict())();
 
-const MintAuthorityControlSchema = z
+const MintAuthorityControlSchema = /* @__PURE__ */ (() => z
   .object({
     chain: z.string().min(1).optional(),
     address: z.string().min(1).optional(),
@@ -714,9 +717,9 @@ const MintAuthorityControlSchema = z
         path: ["safe", "owners"],
       });
     }
-  });
+  }))();
 
-const MintAuthorityReviewSchema = z
+const MintAuthorityReviewSchema = /* @__PURE__ */ (() => z
   .object({
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
     sourceFreeRationale: z.string().min(1).optional(),
@@ -746,9 +749,9 @@ const MintAuthorityReviewSchema = z
         path: ["unresolvedQuestions"],
       });
     }
-  });
+  }))();
 
-const MintAuthorityIncidentSchema = z
+const MintAuthorityIncidentSchema = /* @__PURE__ */ (() => z
   .object({
     date: ReviewDateSchema,
     status: z.enum(["active", "resolved"]),
@@ -772,9 +775,9 @@ const MintAuthorityIncidentSchema = z
         path: ["resolvedAt"],
       });
     }
-  });
+  }))();
 
-export const MintAuthorityProfileSchema = z
+const MintAuthorityProfileObjectSchema = /* @__PURE__ */ (() => z
   .object({
     mintPath: z.enum(MINT_AUTHORITY_MINT_PATH_VALUES),
     authorityPosture: z.enum(MINT_AUTHORITY_POSTURE_VALUES),
@@ -876,8 +879,11 @@ export const MintAuthorityProfileSchema = z
     supervision: z.enum(MINT_AUTHORITY_SUPERVISION_VALUES).optional(),
     review: MintAuthorityReviewSchema,
   })
-  .strict()
-  .superRefine(validateMintAuthorityProfile);
+  .strict())();
+
+// Keep the inferred object type independent of the refinement's profile type.
+export const MintAuthorityProfileSchema = /* @__PURE__ */ ((): typeof MintAuthorityProfileObjectSchema =>
+  MintAuthorityProfileObjectSchema.superRefine(validateMintAuthorityProfile))();
 
 export type OracleRiskProfile = z.output<typeof OracleRiskProfileSchema>;
 export type OracleRiskBranchApplicabilityReview = NonNullable<OracleRiskProfile["branchApplicability"]>;

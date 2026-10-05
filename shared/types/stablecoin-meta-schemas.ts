@@ -46,14 +46,17 @@ import {
 import { HttpUrlSchema } from "./validators";
 import { StrictIsoDateSchema } from "./safety-schema-primitives";
 
-const ContractDecimalsSchema = z.number().finite().int().min(0).max(255);
-const DependencyWeightNumberSchema = z.number().finite().positive().max(1);
-export const BlacklistabilityReviewStatusSchema = z.union([
+// Pure scopes let bundlers omit unused schema graphs, including nested Zod
+// constructor arguments; annotating only the outer call leaves those allocated.
+
+const ContractDecimalsSchema = /* @__PURE__ */ (() => z.number().finite().int().min(0).max(255))();
+const DependencyWeightNumberSchema = /* @__PURE__ */ (() => z.number().finite().positive().max(1))();
+export const BlacklistabilityReviewStatusSchema = /* @__PURE__ */ (() => z.union([
   z.boolean(),
   z.literal("possible"),
   z.literal("inherited"),
-]);
-export const PositiveIntegerSchema = z.number().finite().int().positive();
+]))();
+export const PositiveIntegerSchema = /* @__PURE__ */ (() => z.number().finite().int().positive())();
 
 export const ReviewDateSchema = StrictIsoDateSchema;
 
@@ -63,17 +66,17 @@ export const ReviewDateSchema = StrictIsoDateSchema;
 // normalized, and it runs in the merged catalog schema, `check:stablecoin-data`,
 // and the V9 compiler defence. Keep these admission checks rather than adding
 // a second normalization authority here.
-export const DeploymentIdSchema = z
+export const DeploymentIdSchema = /* @__PURE__ */ (() => z
   .string()
-  .regex(/^[a-z0-9][a-z0-9-]*:\S+$/, "Expected a chain:contractAddress deployment ID");
-export const DeploymentRefsSchema = z
+  .regex(/^[a-z0-9][a-z0-9-]*:\S+$/, "Expected a chain:contractAddress deployment ID"))();
+export const DeploymentRefsSchema = /* @__PURE__ */ (() => z
   .array(DeploymentIdSchema)
   .min(1)
   .refine((refs) => new Set(refs).size === refs.length, {
     message: "deploymentRefs must be unique",
-  });
+  }))();
 
-export const FuzzyDateSchema = z.string().refine(
+export const FuzzyDateSchema = /* @__PURE__ */ (() => z.string().refine(
   (value) => {
     if (/^\d{4}$/.test(value)) return true;
     if (/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return true;
@@ -84,12 +87,12 @@ export const FuzzyDateSchema = z.string().refine(
   {
     message: "Expected YYYY, YYYY-MM, YYYY-MM-DD, YYYY-Q[1-4], or YYYY-H[1-2]",
   },
-);
+))();
 
-const LocalPathOrHttpUrlSchema = z.union([
+const LocalPathOrHttpUrlSchema = /* @__PURE__ */ (() => z.union([
   HttpUrlSchema,
   z.string().regex(/^\/[A-Za-z0-9][A-Za-z0-9/_\-.]*$/, "Expected a local absolute asset path"),
-]);
+]))();
 
 /**
  * Source coin files omit the four modal members below; the schema supplies them.
@@ -97,7 +100,7 @@ const LocalPathOrHttpUrlSchema = z.union([
  * output is always the full flag set, so every generated aggregate and runtime
  * consumer still sees explicit values.
  */
-export const StablecoinFlagsSchema = z
+export const StablecoinFlagsSchema = /* @__PURE__ */ (() => z
   .object({
     backing: z.enum(BACKING_TYPE_VALUES),
     pegCurrency: z.enum(PEG_CURRENCY_VALUES).default("USD"),
@@ -106,9 +109,9 @@ export const StablecoinFlagsSchema = z
     rwa: z.boolean().default(false),
     navToken: z.boolean().default(false),
   })
-  .strict();
+  .strict())();
 
-export const StablecoinLinkSchema = z
+export const StablecoinLinkSchema = /* @__PURE__ */ (() => z
   .object({
     /**
      * editorial-selector identity for links whose url is not unique within the
@@ -130,9 +133,9 @@ export const StablecoinLinkSchema = z
      */
     quoted: z.boolean().optional(),
   })
-  .strict();
+  .strict())();
 
-export const MechanismArchetypeReviewSchema = z
+export const MechanismArchetypeReviewSchema = /* @__PURE__ */ (() => z
   .object({
     disposition: z.enum(MECHANISM_ARCHETYPE_REVIEW_DISPOSITION_VALUES),
     reviewedAt: ReviewDateSchema,
@@ -140,9 +143,9 @@ export const MechanismArchetypeReviewSchema = z
     rationale: z.string().min(12),
     sources: z.array(StablecoinLinkSchema).min(1),
   })
-  .strict();
+  .strict())();
 
-export const ParentBackingInheritanceSchema = z
+export const ParentBackingInheritanceSchema = /* @__PURE__ */ (() => z
   .object({
     state: z.literal("withheld"),
     reason: z.literal("mixed-strategy-without-measured-parent-claim"),
@@ -151,11 +154,11 @@ export const ParentBackingInheritanceSchema = z
     rationale: z.string().trim().min(1),
     sources: z.array(StablecoinLinkSchema).min(1),
   })
-  .strict();
+  .strict())();
 
 export type ParentBackingInheritance = z.output<typeof ParentBackingInheritanceSchema>;
 
-export const ProofOfReservesSchema = z
+export const ProofOfReservesSchema = /* @__PURE__ */ (() => z
   .object({
     type: z.enum(PROOF_OF_RESERVES_TYPE_VALUES),
     url: HttpUrlSchema,
@@ -221,7 +224,7 @@ export const ProofOfReservesSchema = z
       })
       .optional(),
   })
-  .strict();
+  .strict())();
 
 export type StablecoinFlags = z.infer<typeof StablecoinFlagsSchema>;
 export type StablecoinLink = z.infer<typeof StablecoinLinkSchema>;
@@ -229,10 +232,10 @@ export type MechanismArchetypeReview = z.infer<typeof MechanismArchetypeReviewSc
 export type ProofOfReserves = z.infer<typeof ProofOfReservesSchema>;
 export type ProofOfReservesLatestReport = NonNullable<ProofOfReserves["latestReport"]>;
 /** Case-sensitive Cosmos bank identity, not a token contract or native gas. */
-export const NativeBankDenomSchema = z.string().min(3).max(128)
+export const NativeBankDenomSchema = /* @__PURE__ */ (() => z.string().min(3).max(128)
   .regex(/^[a-zA-Z][a-zA-Z0-9/:._-]*$/)
-  .refine(value => !value.startsWith("0x"), "Native bank denoms cannot be EVM addresses");
-export const ContractDeploymentSchema = z.union([
+  .refine(value => !value.startsWith("0x"), "Native bank denoms cannot be EVM addresses"))();
+export const ContractDeploymentSchema = /* @__PURE__ */ (() => z.union([
   z.object({
     kind: z.literal("contract").optional(),
     chain: z.string(),
@@ -257,17 +260,17 @@ export const ContractDeploymentSchema = z.union([
     if (deployment.chain === "xrpl" && deployment.amountEncoding?.kind === "fixed-decimal") {
       ctx.addIssue({ code: "custom", message: "XRPL issued deployments cannot claim fixed decimals" });
     }
-  });
+  }))();
 
-export const DependencyWeightSchema = z
+export const DependencyWeightSchema = /* @__PURE__ */ (() => z
   .object({
     id: z.string(),
     weight: DependencyWeightNumberSchema,
     type: z.enum(DEPENDENCY_TYPE_VALUES).optional(),
   })
-  .strict();
+  .strict())();
 
-export const ReserveReviewSchema = z
+export const ReserveReviewSchema = /* @__PURE__ */ (() => z
   .object({
     reviewedAt: ReviewDateSchema,
     reviewer: z.string().min(1),
@@ -298,9 +301,9 @@ export const ReserveReviewSchema = z
       )
       .optional(),
   })
-  .strict();
+  .strict())();
 
-export const CustodyProfileSchema = z
+export const CustodyProfileSchema = /* @__PURE__ */ (() => z
   .object({
     providers: z
       .array(
@@ -342,9 +345,9 @@ export const CustodyProfileSchema = z
         path: ["knownUnknownExposurePct"],
       });
     }
-  });
+  }))();
 
-export const DependencyReviewSchema = z
+export const DependencyReviewSchema = /* @__PURE__ */ (() => z
   .object({
     reviewedAt: ReviewDateSchema,
     reviewer: z.string().min(1),
@@ -365,24 +368,24 @@ export const DependencyReviewSchema = z
       )
       .min(1),
   })
-  .strict();
+  .strict())();
 
-export const CoinNoticeSchema = z
+export const CoinNoticeSchema = /* @__PURE__ */ (() => z
   .object({
     type: z.enum(COIN_NOTICE_TYPE_VALUES),
     title: z.string(),
     message: z.string(),
   })
-  .strict();
+  .strict())();
 
-export const YieldConfigSchema = z
+export const YieldConfigSchema = /* @__PURE__ */ (() => z
   .object({
     yieldSource: z.string(),
     yieldType: z.enum(YIELD_TYPE_VALUES),
   })
-  .strict();
+  .strict())();
 
-export const LaunchMilestoneSchema = z
+export const LaunchMilestoneSchema = /* @__PURE__ */ (() => z
   .object({
     date: FuzzyDateSchema,
     type: z.enum(LAUNCH_MILESTONE_TYPE_VALUES),
@@ -390,16 +393,16 @@ export const LaunchMilestoneSchema = z
     description: z.string().optional(),
     sourceUrl: HttpUrlSchema.optional(),
   })
-  .strict();
+  .strict())();
 
-export const DateHistoryEntrySchema = z
+export const DateHistoryEntrySchema = /* @__PURE__ */ (() => z
   .object({
     date: FuzzyDateSchema,
     setOn: StrictIsoDateSchema,
   })
-  .strict();
+  .strict())();
 
-export const FeaturedContentSchema = z
+export const FeaturedContentSchema = /* @__PURE__ */ (() => z
   .object({
     type: z.enum(FEATURED_CONTENT_TYPE_VALUES),
     url: HttpUrlSchema,
@@ -408,7 +411,7 @@ export const FeaturedContentSchema = z
     image: LocalPathOrHttpUrlSchema.optional(),
     source: z.string().optional(),
   })
-  .strict();
+  .strict())();
 export type ContractDeployment = z.output<typeof ContractDeploymentSchema>;
 export type DependencyWeight = z.output<typeof DependencyWeightSchema>;
 export type ReserveReview = z.output<typeof ReserveReviewSchema>;

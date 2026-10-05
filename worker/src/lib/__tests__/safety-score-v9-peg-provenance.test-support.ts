@@ -1,5 +1,6 @@
 import { computePegScore } from "@shared/lib/peg-score";
-import type { DepegEvent, PegSummaryCoin } from "@shared/types/market";
+import type { DepegEvent } from "@shared/types/market";
+import type { PegSummaryCoin } from "@shared/types/peg";
 
 const ASSET_ID = "usdg-paxos";
 type EventOverrides = Partial<DepegEvent> & Pick<DepegEvent, "id" | "startedAt" | "peakDeviationBps">;

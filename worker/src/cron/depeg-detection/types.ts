@@ -1,6 +1,7 @@
 import type { PegRateSource } from "@shared/lib/peg-rates";
 import type { PegAssetBase, StablecoinMeta } from "@shared/types/core";
-import type { DepegEventCloseReason, DepegPriceCoverage } from "@shared/types/market";
+import type { DepegEventCloseReason } from "@shared/types/market";
+import type { DepegPriceCoverage } from "@shared/types/peg";
 import type {
   DepegRow,
   DexPoolSource,

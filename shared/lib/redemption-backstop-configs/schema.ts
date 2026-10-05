@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   RedemptionAccessModelSchema,
+  RedemptionBusinessDayTermsSchema,
   RedemptionCapacityBasisSchema,
   RedemptionCapacityConfidenceSchema,
   RedemptionDocSourceSupportSchema,
@@ -9,17 +10,15 @@ import {
   RedemptionHolderEligibilitySchema,
   RedemptionOutputAssetTypeSchema,
   RedemptionRouteExitCorrelationSchema,
+  RedemptionRouteSuspensionSchema,
   RedemptionRouteFamilySchema,
   RedemptionSettlementModelSchema,
-  HttpUrlSchema,
-  NonNegativeNumberSchema,
-  PositiveNumberSchema,
-} from "../../types";
-import type { RedemptionDocSource } from "../../types";
+  type RedemptionDocSource,
+} from "../../types/redemption";
+import { HttpUrlSchema, NonNegativeNumberSchema, PositiveNumberSchema } from "../../types/validators";
 import { isValidIsoDateOnly } from "../../types/date-primitives";
 import { formatUtcDateOnly } from "../format";
 import { isRedemptionSettlementFaster } from "./settlement";
-import { RedemptionBusinessDayTermsSchema, RedemptionRouteSuspensionSchema } from "../../types/redemption";
 import { LiveReserveRedemptionTelemetrySchema } from "../../types/live-reserves";
 
 const MAX_REDEMPTION_OUTPUT_ASSETS = 16;

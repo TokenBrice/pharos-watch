@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION as METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
-import type { PegSummaryCoin } from "@shared/types/market";
+import type { PegSummaryCoin } from "@shared/types/peg";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 const ASSET_ID = "usdc-circle";
