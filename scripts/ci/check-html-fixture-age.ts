@@ -74,6 +74,8 @@ const NON_HTML_FIXTURE_EXEMPTIONS: Readonly<Record<string, string>> = {
     "verbatim Apyx dashboard scalars captured 2026-07-27T22:45:43Z (payload ts 1785192343737), moved out of accountable.test.ts; JSON cannot carry an HTML-comment capture header",
   "ripio-wfiat-june-2026.json":
     "captured 2026-09-30 from Ripio's official HubSpot attestation index (payload capturedAt 2026-09-30, June 30 reports); JSON cannot carry an HTML-comment capture header",
+  "lido-earnusd-pinned-state.json":
+    "Ethereum state pinned at block 26122344 (blockTimestamp 1791157259, 2026-10-05) with code hashes; age is the pinned block, JSON cannot carry an HTML-comment capture header",
 };
 
 /**
