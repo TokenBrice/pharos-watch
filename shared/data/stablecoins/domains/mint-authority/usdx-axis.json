@@ -37,14 +37,6 @@
         "canRaiseCap": false,
         "capDescription": "Executes signed mint orders through account, signature/delegation, nonce, route/channel and capacity checks; the pinned market block-mint maximum is 20m USDx. Governance can change limits and separately mint directly.",
         "modulesOrGuardsStatus": "not-applicable",
-        "keyCustodyAttestation": {
-          "kind": "hsm",
-          "sources": [
-            { "label": "Exact mint operator KMS custody binding", "url": "https://docs.axis.to/reference/contract-addresses.md" },
-            { "label": "Axis identifies AWS KMS for key material", "url": "https://docs.axis.to/backing-reserves-and-transparency/security.md" },
-            { "label": "AWS KMS FIPS-validated HSM key protection", "url": "https://docs.aws.amazon.com/kms/latest/developerguide/data-protection.html" }
-          ]
-        },
         "observedAt": "2026-10-02",
         "observedBlock": 26107703,
         "sources": [
@@ -52,7 +44,7 @@
           { "label": "Mint operator permissions", "url": "https://docs.axis.to/reference/access-control.md" },
           { "label": "Pinned role observation block", "url": "https://etherscan.io/block/26107703" }
         ],
-        "evidence": "USDxMarket.hasRole(MINT_OPERATOR_ROLE, this published wallet) returned true at block 26107703. Complete RoleGranted/RoleRevoked history through block 26110188 identifies this as the sole current mint operator. On 2026-10-05, issuer contract-address docs bind this exact operator to KMS-secured signing; issuer security docs identify AWS KMS, whose provider documents FIPS-validated HSM protection. This establishes the disclosed HSM-backed custody model, not operator independence, IAM approval policy or recovery controls. It executes signed settlement, while the governance Safe separately retains direct token mint authority."
+        "evidence": "USDxMarket.hasRole(MINT_OPERATOR_ROLE, this published wallet) returned true at block 26107703. Complete RoleGranted/RoleRevoked history through block 26110188 identifies this as the sole current mint operator. On 2026-10-05, issuer contract-address docs identify this exact operator as \"Settles signed mint orders (KMS-secured)\"; issuer security docs say \"Key material is managed with AWS KMS.\" These disclosures name KMS but do not establish non-exportable asymmetric KMS signing, use of KMS Sign, or equivalent HSM-resident signing keys. AWS KMS also supports plaintext private data keys for signing outside KMS, so no HSM custody attestation is inferred. Operator independence, IAM approval policy and recovery controls remain unverified. It executes signed settlement, while the governance Safe separately retains direct token mint authority."
       },
       {
         "chain": "ethereum",
@@ -161,14 +153,14 @@
         },
         {
           "controlRef": "Axis published mint operator",
-          "question": "AWS KMS HSM-backed custody is disclosed for this exact mint operator and recorded separately. What controller-specific IAM signing/approval policy, operator independence and recovery arrangements govern use of that key? A protected key store does not establish independent authorization or a signing threshold.",
+          "question": "The exact mint operator is disclosed as KMS-secured, and Axis says key material is managed with AWS KMS. Is this operator's signing key a non-exportable asymmetric KMS key used through KMS Sign, or an equivalently HSM-resident key, rather than exportable data-key material? What controller-specific signing/approval policy, operator independence and recovery arrangements govern it? Naming KMS alone establishes neither HSM key residency nor independent authorization or a signing threshold.",
           "subject": "key-custody-independence",
           "reviewedAt": "2026-10-05",
-          "reviewer": "K07 primary-source custody and residual-policy review",
+          "reviewer": "AxisFix primary-source custody residency review",
           "sources": [
             { "label": "Published Axis operator and KMS disclosure", "url": "https://docs.axis.to/reference/contract-addresses.md" },
             { "label": "Axis AWS KMS key-management disclosure", "url": "https://docs.axis.to/backing-reserves-and-transparency/security.md" },
-            { "label": "AWS KMS HSM protection and customer-controlled authorization policies", "url": "https://docs.aws.amazon.com/kms/latest/developerguide/data-protection.html" },
+            { "label": "AWS KMS data-key pairs can return plaintext private keys for outside signing", "url": "https://docs.aws.amazon.com/kms/latest/APIReference/API_GenerateDataKeyPair.html" },
             { "label": "Native mint operator permissions", "url": "https://docs.axis.to/reference/access-control.md" }
           ]
         }
