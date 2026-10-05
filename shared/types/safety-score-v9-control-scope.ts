@@ -74,6 +74,24 @@ export const V9WeightedQuorumSchema = z.object({
 }).transform((row) => ({ ...row, signers: row.signers.map((signer) => ({ ...signer, account: row.scheme === "contract" ? signer.account.toLowerCase() : signer.account })).sort((a, b) => a.account.localeCompare(b.account)), totalWeight: row.signers.reduce((sum, signer) => sum + signer.weight, 0) }));
 export type V9WeightedQuorum = z.output<typeof V9WeightedQuorumSchema>;
 
+/** Verified arbitrary execution admits an adverse upper envelope, never a target allowlist. */
+const V9MaximalDownstreamCallDomainSchema = z.object({
+  kind: z.literal("conservative-maximal"),
+  controllerDeployment: Deployment,
+  executorDeployment: Deployment,
+  sourceDeployment: Deployment,
+  targets: z.enum(["any-contract", "any-address"]),
+  calldata: z.literal("arbitrary-bytes"),
+  capabilities: z.literal("all-reachable"),
+  arbitraryCallVerified: z.literal(true),
+  sourceRuntimeCorrespondence: z.literal("verified"),
+  executorPin: Pin,
+  sourceRuntimeIdentity: Text,
+  observedSourceRuntimeIdentity: Text,
+  minimumDelaySec: z.number().int().nonnegative(),
+  source: z.object({ url: z.string().url(), location: Text }).strict(),
+}).strict();
+
 const V9ControlExecutionPathSchema = z.object({
   id: Text, targetDeployment: Deployment,
   entrypointKind: V9ExactControlPolicySchema.shape.entrypointKinds.element,
@@ -88,6 +106,7 @@ const V9ControlExecutionPathSchema = z.object({
   reach: V9ExactControlPolicySchema.shape.reachStates.element,
   controlRefs: z.array(Text),
   reactivationRefs: z.array(Text), permissionChangeRefs: z.array(Text), upgradeRefs: z.array(Text), bypassRefs: z.array(Text),
+  downstreamCallDomain: V9MaximalDownstreamCallDomainSchema.optional(),
   counterfactual: z.object({ factoryDeployment: Deployment, factoryRuntimeIdentity: Text, runtimeIdentity: Text, create2Address: Deployment, create2Salt: Text, initializerCalldata: Text, initializationIdentity: Text, fixedInitialization: z.literal(true), owners: z.array(Text).min(1), threshold: z.number().int().positive(), modules: z.array(Text), fallbackHandler: Text.nullable(), accountStatePin: Pin }).strict().optional(),
 }).strict();
 const Hash = z.string().regex(/^0x[0-9a-f]{64}$/);
@@ -108,12 +127,43 @@ export const V9ControlExecutionScopeObjectSchema = z.object({
   extensions: z.object({ exhaustive: z.boolean(), paginationEnd: Text.nullable(), sourceRuntimeCorrespondence: z.boolean(), entries: z.array(z.object({ deployment: Deployment, runtimeIdentity: Text, kind: z.enum(["module", "guard", "module-guard", "fallback-handler"]), pathRefs: z.array(Text), mutableReachClosed: z.boolean() }).strict()) }).strict().optional(),
   authorityBinding: z.object({ graphId: Text, authorityStateHash: Hash, observedAuthorityStateHash: Hash }).strict().optional(),
 }).strict();
+
+/** Shared admission guard also protects compiler callers holding an unparsed typed scope. */
+export function isV9MaximalControlPathValid(scope: z.output<typeof V9ControlExecutionScopeObjectSchema>, path: z.output<typeof V9ControlExecutionPathSchema>): boolean {
+  const domain = path.downstreamCallDomain;
+  if (!domain) return true;
+  const chain = scope.controllerDeployment.split(":")[0] ?? "";
+  return domain.kind === "conservative-maximal" && domain.arbitraryCallVerified === true &&
+    domain.sourceRuntimeCorrespondence === "verified" && domain.calldata === "arbitrary-bytes" &&
+    domain.executorPin != null && domain.source != null &&
+    typeof domain.source.url === "string" && domain.source.url.length > 0 &&
+    typeof domain.source.location === "string" && domain.source.location.length > 0 &&
+    typeof domain.sourceRuntimeIdentity === "string" && domain.sourceRuntimeIdentity.length > 0 &&
+    typeof domain.executorPin.runtimeIdentity === "string" && domain.executorPin.runtimeIdentity.length > 0 &&
+    domain.capabilities === "all-reachable" && (domain.targets === "any-contract" || domain.targets === "any-address") &&
+    CHAIN_META[chain]?.type === "evm" && domain.controllerDeployment === scope.controllerDeployment &&
+    domain.executorDeployment === path.targetDeployment && domain.executorDeployment?.split(":")[0] === chain &&
+    domain.sourceDeployment?.split(":")[0] === chain && path.entrypointKind === "evm-selector" && path.callMode === "call" &&
+    domain.executorPin.position === scope.pin.position && domain.executorPin.hash === scope.pin.hash && scope.pin.hash !== null &&
+    domain.executorPin.signerIdentity === scope.pin.signerIdentity &&
+    (domain.executorDeployment !== scope.controllerDeployment || domain.executorPin.runtimeIdentity === scope.pin.runtimeIdentity) &&
+    domain.sourceRuntimeIdentity === domain.observedSourceRuntimeIdentity &&
+    (domain.sourceDeployment !== domain.executorDeployment || domain.sourceRuntimeIdentity === domain.executorPin.runtimeIdentity) &&
+    path.capabilities.length === V9ControlCapabilitySchema.options.length &&
+    V9ControlCapabilitySchema.options.every((capability) => path.capabilities.includes(capability)) &&
+    path.reach === "root" && path.activation === "active" &&
+    path.capSemantics.kind === "unbounded" && path.capSemantics.bound === null &&
+    path.claimImpairment === "unbounded" && path.economicLossScope === "global-claim" &&
+    Number.isSafeInteger(domain.minimumDelaySec) && domain.minimumDelaySec >= 0 &&
+    path.unavoidableDelaySec === domain.minimumDelaySec;
+}
 export const V9ControlExecutionScopeSchema = V9ControlExecutionScopeObjectSchema.superRefine((scope, ctx) => {
   const ids = new Set(scope.paths.map((path) => path.id));
   if (ids.size !== scope.paths.length) ctx.addIssue({ code: "custom", message: "Duplicate execution path ids" });
   if (scope.expiresAt < scope.reviewedAt || scope.reviewedAt < scope.observedAt) ctx.addIssue({ code: "custom", message: "Inconsistent execution review dates" });
   if (scope.inventory === "complete" && (scope.confidence !== "verified" || Object.values(scope.closure).some((closed) => !closed))) ctx.addIssue({ code: "custom", message: "Complete scope requires execution-complete closure certificate" });
   for (const path of scope.paths) {
+    if (!isV9MaximalControlPathValid(scope, path)) ctx.addIssue({ code: "custom", message: "Maximal reach requires a verified exact executor/controller and the complete adverse upper envelope", path: ["paths", scope.paths.indexOf(path), "downstreamCallDomain"] });
     if (scope.inventory === "complete" && (path.reach === "unknown" || path.activation === "unknown")) ctx.addIssue({ code: "custom", message: "Complete scope cannot retain unknown reach or activation" });
     const chain = path.targetDeployment.split(":")[0];
     if ((chain === "xrpl") !== (path.entrypointKind === "xrpl-transaction") || (chain === "solana") !== (path.entrypointKind === "solana-instruction")) ctx.addIssue({ code: "custom", message: "Entrypoint kind does not match target chain" });

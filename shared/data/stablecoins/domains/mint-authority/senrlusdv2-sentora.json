@@ -228,13 +228,119 @@
         ],
         "label": "Sentora allocator 0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1",
         "role": "other",
-        "authorityType": "contract",
+        "authorityType": "eoa",
         "directMintAbility": "parameter-only",
         "canRaiseCap": false,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-05",
+        "observedBlock": 26124911,
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-05",
+          "expiresAt": "2027-01-01",
+          "reviewer": "B03MaximalReach: independently re-pinned R10 root arbitrary execution adverse upper envelope",
+          "confidence": "verified",
+          "sources": [
+            {
+              "label": "Verified EIP-7702 root arbitrary-call executor source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x63c0c19a282a1b52b07dd5a65b58948a07dae32b"
+            },
+            {
+              "label": "Pinned Ethereum block and allocator role bindings",
+              "url": "https://etherscan.io/block/26124911"
+            }
+          ],
+          "pin": {
+            "position": "26124911",
+            "hash": "0x4928625841961c8196aa5e3af36affd63e85b5f4495912f739e3953bf24be7bb",
+            "runtimeIdentity": "sha256:7652a45dda6a3f58cf50f4b74a64b449053dba0d37db5c509169b6447b03dcd8",
+            "signerIdentity": "EIP-7702 root EOA ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1"
+          },
+          "observedState": {
+            "position": "26124911",
+            "hash": "0x4928625841961c8196aa5e3af36affd63e85b5f4495912f739e3953bf24be7bb",
+            "runtimeIdentity": "sha256:7652a45dda6a3f58cf50f4b74a64b449053dba0d37db5c509169b6447b03dcd8",
+            "signerIdentity": "EIP-7702 root EOA ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1"
+          },
+          "inventory": "complete",
+          "closure": {
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
+          },
+          "paths": [
+            {
+              "id": "maximal-execution",
+              "targetDeployment": "ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x5c1c6dcd",
+                "0xe9ae5c53",
+                "0xd691c964"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "senrlusdv2-sentora"
+              ],
+              "affectedDeployments": [],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1",
+                "executorDeployment": "ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1",
+                "sourceDeployment": "ethereum:0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
+                "targets": "any-address",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "26124911",
+                  "hash": "0x4928625841961c8196aa5e3af36affd63e85b5f4495912f739e3953bf24be7bb",
+                  "runtimeIdentity": "sha256:7652a45dda6a3f58cf50f4b74a64b449053dba0d37db5c509169b6447b03dcd8",
+                  "signerIdentity": "EIP-7702 root EOA ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1"
+                },
+                "sourceRuntimeIdentity": "sha256:deb51590e22cdf9f70292f763d6d3aea8b078148aae082f3af1eca19bf0aa58c",
+                "observedSourceRuntimeIdentity": "sha256:deb51590e22cdf9f70292f763d6d3aea8b078148aae082f3af1eca19bf0aa58c",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
+                  "location": "EIP7702DeleGatorCore.sol:197-277 execute/executeFromExecutor; EIP7702StatelessDeleGator._isValidSignature; arbitrary single/batch CALL with root EOA authorization, no executor delay"
+                }
+              }
+            }
+          ]
+        },
         "sources": [
           {
             "label": "Sentora RLUSD Main exact vault",
@@ -269,7 +375,7 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e"
           }
         ],
-        "evidence": "At pinned block 26107702, full deployment-history role logs and current mapping reads establish allocator and sentinel authority. Allocator can allocate/deallocate within caps, change liquidityAdapter/data and maxRate without delay; this can affect future fee accrual and cash-exit routing but is not arbitrary share minting. Sentinel can deallocate, reduce caps and revoke pending changes. Pinned EIP-7702 delegation designator 0xef010063c0c19a282a1b52b07dd5a65b58948a07dae32b; delegated authorization is not closed."
+        "evidence": "Ethereum block 26124911/hash 0x4928625841961c8196aa5e3af36affd63e85b5f4495912f739e3953bf24be7bb independently re-verifies the allocator role and EIP-7702 designator 0xef010063c0c19a282a1b52b07dd5a65b58948a07dae32b. Exact verified EIP7702StatelessDeleGator source/runtime recovers the root account EOA and permits arbitrary target/value/calldata single and batch CALLs through root self execution and signed contexts. The execution scope is a conservative adverse global upper envelope with every capability, unbounded loss and zero executor delay; it is not a claim that VaultV2 permits arbitrary unbacked share minting. Actual immutable deposit/fee accounting bounds remain separately documented. No outstanding-delegation enumeration, exact EntryPoint closure, key-custody, signer-independence or incident credit is inferred."
       },
       {
         "chain": "ethereum",
@@ -488,7 +594,7 @@
       "reviewer": "R10 wave-4 pinned registry and delegation research; retaining prior D14/A7/A10 evidence",
       "reviewedAt": "2026-10-05",
       "unresolvedQuestions": [
-        "At Ethereum block 26124911, allocator 0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1 remains authorized and its EIP-7702 designator targets source/runtime-matched EIP7702StatelessDeleGator 0x63c0c19a282a1b52b07dd5a65b58948a07dae32b. The source identifies EntryPoint 0x0000000071727de22e5e9d8baf0edac6f37da032 and source/runtime-matched DelegationManager 0xdb9b1e94b5b69df7e401ddbede43491141047db3 as execution routes; root signatures recover the allocator EOA. DelegationManager validates signed calldata permissionContexts, including arbitrary signed caveat-enforcer addresses; disabledDelegations indexes revoked hashes, not all outstanding signed delegations. The outstanding delegate/caveat set, full EntryPoint bypass reach and EIP-7702 reauthorization history remain unclosed. No complete authorization census or incident-free conclusion is asserted."
+        "The allocator root EOA, EIP-7702 designator and arbitrary single/batch CALL implementation were re-verified at Ethereum block 26124911. Conservative maximal reach now records complete adverse global execution without enumerating signed permission contexts, EntryPoint bypasses or future root reauthorization. Those routes receive no exclusions or benign-target credit. Independently attested human/organizational key custody and asset incident review remain unresolved; no cryptographic signer-independence or absence-of-incident claim is made."
       ],
       "scopedQuestions": [
         {
