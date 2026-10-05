@@ -289,6 +289,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "Issuer endpoints are authoritative; cached bodies are per-run fetch dedup only, bounded to a 16 MiB budget.",
   },
   {
+    sourcePath: "worker/src/cron/dex-liquidity/execution-targets/quoter-v2.ts",
+    stateNames: ["candidateIndexes"],
+    owner: "QuoterV2 execution-target candidate index",
+    kind: "cache",
+    resetOrTtl: "WeakMap keyed by each run's completed uniV3ExecutionCandidates map; indexes live only as long as that map object and reset with the isolate.",
+    durableTruth: "The run's source-stage candidate map is authoritative; the index only avoids rescanning it per pool.",
+  },
+  {
     sourcePath: "worker/src/lib/chain-registry.ts",
     stateNames: ["RPC_AUTH_BY_ORIGIN"],
     owner: "RPC provider auth routing (Alchemy bearer, Dwellir X-Api-Key)",
