@@ -42966,6 +42966,1121 @@
         "https://etherscan.io/address/0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7"
       ],
       "rationale": "Exact independent key controllers, custody scheme and configured signing policy for 4/6 Safe 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7, owner of local sUSDf ProxyAdmin 0x16a2605c026bfe4f4b7f4471933714d9b2149ace, are undisclosed. Fireblocks/Ceffu MPC, hardware-managed keys and assurance testing concern reserve assets, not this Safe's signers. Generic multiple approvals do not prove human independence. Public contract/audit/terms and transparency disclosures provide no exact controller binding. Retain question; no reserve-to-admin custody inference."
+    },
+    {
+      "id": "uw-ethenausdc-steakhouse-486c7810de6b5aea",
+      "assetId": "ethenausdc-steakhouse",
+      "scope": {
+        "componentKey": "control:mint-meta:ethenausdc-steakhouse:2e100b2f6f32ce6348f7",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Architecture; Deployments; Audit and source",
+          "excerpt": "A single Supervisor Owner (Steakhouse) controls the Supervisor v2 contract with a high-security multisig.",
+          "assertion": "Identifies the supervisory governance arrangement, not the exact owner/curator/allocator signing-key custody or human-independence map."
+        },
+        {
+          "url": "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Owner Multisig; differing configurations caveat",
+          "excerpt": "Any \u201cowner\u201d action also requires an internal process to ensure proper signature is enforced internally and ensure the signers of the validity of the operation.",
+          "assertion": "Generic internal approval process is disclosed, but no exact-controller MPC/HSM custody, signer independence or approval/recovery boundaries for these V2 Safes and allocator EOAs."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.steakhouse.financial/docs",
+        "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/portfolio-monitoring",
+        "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+        "https://www.steakhouse.financial/docs/documents/general/tcs",
+        "https://kitchen.steakhouse.financial/p/launching-supervisor-v2-and-migration",
+        "https://github.com/Steakhouse-Financial/vault-v2-supervisor/blob/main/audits/2026-02-23-cantina.pdf",
+        "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e",
+        "https://sourcify.dev/server/v2/contract/1/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f?fields=all"
+      ],
+      "rationale": "Exact-controller key custody, human signer independence and approval/recovery policy are not disclosed for the listed Safe/EOA roles. Generic five-person owner approval and high-security multisig descriptions do not bind the identified V2 controllers or their keys. MPC discussed for third-party Midas/Fasanara issuance is not these vault controls. Keep typed custody questions; do not infer humans or custody from onchain labels. This C covers private operational safeguards, not observable owner/threshold/module data."
+    },
+    {
+      "id": "uw-ethenausdc-steakhouse-1f2c36182f6bd4ad",
+      "assetId": "ethenausdc-steakhouse",
+      "scope": {
+        "componentKey": "control:mint-meta:ethenausdc-steakhouse:372b401fb0fdf9652468",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Architecture; Deployments; Audit and source",
+          "excerpt": "A single Supervisor Owner (Steakhouse) controls the Supervisor v2 contract with a high-security multisig.",
+          "assertion": "Identifies the supervisory governance arrangement, not the exact owner/curator/allocator signing-key custody or human-independence map."
+        },
+        {
+          "url": "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Owner Multisig; differing configurations caveat",
+          "excerpt": "Any \u201cowner\u201d action also requires an internal process to ensure proper signature is enforced internally and ensure the signers of the validity of the operation.",
+          "assertion": "Generic internal approval process is disclosed, but no exact-controller MPC/HSM custody, signer independence or approval/recovery boundaries for these V2 Safes and allocator EOAs."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.steakhouse.financial/docs",
+        "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/portfolio-monitoring",
+        "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+        "https://www.steakhouse.financial/docs/documents/general/tcs",
+        "https://kitchen.steakhouse.financial/p/launching-supervisor-v2-and-migration",
+        "https://github.com/Steakhouse-Financial/vault-v2-supervisor/blob/main/audits/2026-02-23-cantina.pdf",
+        "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e",
+        "https://sourcify.dev/server/v2/contract/1/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f?fields=all"
+      ],
+      "rationale": "Exact-controller key custody, human signer independence and approval/recovery policy are not disclosed for the listed Safe/EOA roles. Generic five-person owner approval and high-security multisig descriptions do not bind the identified V2 controllers or their keys. MPC discussed for third-party Midas/Fasanara issuance is not these vault controls. Keep typed custody questions; do not infer humans or custody from onchain labels. This C covers private operational safeguards, not observable owner/threshold/module data."
+    },
+    {
+      "id": "uw-ethenausdc-steakhouse-4a6eff3fd6799ff4",
+      "assetId": "ethenausdc-steakhouse",
+      "scope": {
+        "componentKey": "control:mint-meta:ethenausdc-steakhouse:3750f8b4c022cb0127be",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Architecture; Deployments; Audit and source",
+          "excerpt": "A single Supervisor Owner (Steakhouse) controls the Supervisor v2 contract with a high-security multisig.",
+          "assertion": "Identifies the supervisory governance arrangement, not the exact owner/curator/allocator signing-key custody or human-independence map."
+        },
+        {
+          "url": "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Owner Multisig; differing configurations caveat",
+          "excerpt": "Any \u201cowner\u201d action also requires an internal process to ensure proper signature is enforced internally and ensure the signers of the validity of the operation.",
+          "assertion": "Generic internal approval process is disclosed, but no exact-controller MPC/HSM custody, signer independence or approval/recovery boundaries for these V2 Safes and allocator EOAs."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.steakhouse.financial/docs",
+        "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/portfolio-monitoring",
+        "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+        "https://www.steakhouse.financial/docs/documents/general/tcs",
+        "https://kitchen.steakhouse.financial/p/launching-supervisor-v2-and-migration",
+        "https://github.com/Steakhouse-Financial/vault-v2-supervisor/blob/main/audits/2026-02-23-cantina.pdf",
+        "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e",
+        "https://sourcify.dev/server/v2/contract/1/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f?fields=all"
+      ],
+      "rationale": "Exact-controller key custody, human signer independence and approval/recovery policy are not disclosed for the listed Safe/EOA roles. Generic five-person owner approval and high-security multisig descriptions do not bind the identified V2 controllers or their keys. MPC discussed for third-party Midas/Fasanara issuance is not these vault controls. Keep typed custody questions; do not infer humans or custody from onchain labels. This C covers private operational safeguards, not observable owner/threshold/module data."
+    },
+    {
+      "id": "uw-ethenausdc-steakhouse-53232d9006bb535c",
+      "assetId": "ethenausdc-steakhouse",
+      "scope": {
+        "componentKey": "control:mint-meta:ethenausdc-steakhouse:5d5e39746311e26213fb",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Architecture; Deployments; Audit and source",
+          "excerpt": "A single Supervisor Owner (Steakhouse) controls the Supervisor v2 contract with a high-security multisig.",
+          "assertion": "Identifies the supervisory governance arrangement, not the exact owner/curator/allocator signing-key custody or human-independence map."
+        },
+        {
+          "url": "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Owner Multisig; differing configurations caveat",
+          "excerpt": "Any \u201cowner\u201d action also requires an internal process to ensure proper signature is enforced internally and ensure the signers of the validity of the operation.",
+          "assertion": "Generic internal approval process is disclosed, but no exact-controller MPC/HSM custody, signer independence or approval/recovery boundaries for these V2 Safes and allocator EOAs."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.steakhouse.financial/docs",
+        "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/portfolio-monitoring",
+        "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+        "https://www.steakhouse.financial/docs/documents/general/tcs",
+        "https://kitchen.steakhouse.financial/p/launching-supervisor-v2-and-migration",
+        "https://github.com/Steakhouse-Financial/vault-v2-supervisor/blob/main/audits/2026-02-23-cantina.pdf",
+        "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e",
+        "https://sourcify.dev/server/v2/contract/1/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f?fields=all"
+      ],
+      "rationale": "Exact-controller key custody, human signer independence and approval/recovery policy are not disclosed for the listed Safe/EOA roles. Generic five-person owner approval and high-security multisig descriptions do not bind the identified V2 controllers or their keys. MPC discussed for third-party Midas/Fasanara issuance is not these vault controls. Keep typed custody questions; do not infer humans or custody from onchain labels. This C covers private operational safeguards, not observable owner/threshold/module data."
+    },
+    {
+      "id": "uw-ethenausdc-steakhouse-e316cff3764c9f0b",
+      "assetId": "ethenausdc-steakhouse",
+      "scope": {
+        "componentKey": "control:mint-meta:ethenausdc-steakhouse:acec6ba140026022eb0d",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Architecture; Deployments; Audit and source",
+          "excerpt": "A single Supervisor Owner (Steakhouse) controls the Supervisor v2 contract with a high-security multisig.",
+          "assertion": "Identifies the supervisory governance arrangement, not the exact owner/curator/allocator signing-key custody or human-independence map."
+        },
+        {
+          "url": "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Owner Multisig; differing configurations caveat",
+          "excerpt": "Any \u201cowner\u201d action also requires an internal process to ensure proper signature is enforced internally and ensure the signers of the validity of the operation.",
+          "assertion": "Generic internal approval process is disclosed, but no exact-controller MPC/HSM custody, signer independence or approval/recovery boundaries for these V2 Safes and allocator EOAs."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.steakhouse.financial/docs",
+        "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/portfolio-monitoring",
+        "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+        "https://www.steakhouse.financial/docs/documents/general/tcs",
+        "https://kitchen.steakhouse.financial/p/launching-supervisor-v2-and-migration",
+        "https://github.com/Steakhouse-Financial/vault-v2-supervisor/blob/main/audits/2026-02-23-cantina.pdf",
+        "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e",
+        "https://sourcify.dev/server/v2/contract/1/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f?fields=all"
+      ],
+      "rationale": "Exact-controller key custody, human signer independence and approval/recovery policy are not disclosed for the listed Safe/EOA roles. Generic five-person owner approval and high-security multisig descriptions do not bind the identified V2 controllers or their keys. MPC discussed for third-party Midas/Fasanara issuance is not these vault controls. Keep typed custody questions; do not infer humans or custody from onchain labels. This C covers private operational safeguards, not observable owner/threshold/module data."
+    },
+    {
+      "id": "uw-ethenausdc-steakhouse-783a4cd7c4be4e4f",
+      "assetId": "ethenausdc-steakhouse",
+      "scope": {
+        "componentKey": "control:mint-meta:ethenausdc-steakhouse:b5de3eb6225df051bc52",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Architecture; Deployments; Audit and source",
+          "excerpt": "A single Supervisor Owner (Steakhouse) controls the Supervisor v2 contract with a high-security multisig.",
+          "assertion": "Identifies the supervisory governance arrangement, not the exact owner/curator/allocator signing-key custody or human-independence map."
+        },
+        {
+          "url": "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Owner Multisig; differing configurations caveat",
+          "excerpt": "Any \u201cowner\u201d action also requires an internal process to ensure proper signature is enforced internally and ensure the signers of the validity of the operation.",
+          "assertion": "Generic internal approval process is disclosed, but no exact-controller MPC/HSM custody, signer independence or approval/recovery boundaries for these V2 Safes and allocator EOAs."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.steakhouse.financial/docs",
+        "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/portfolio-monitoring",
+        "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+        "https://www.steakhouse.financial/docs/documents/general/tcs",
+        "https://kitchen.steakhouse.financial/p/launching-supervisor-v2-and-migration",
+        "https://github.com/Steakhouse-Financial/vault-v2-supervisor/blob/main/audits/2026-02-23-cantina.pdf",
+        "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e",
+        "https://sourcify.dev/server/v2/contract/1/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f?fields=all"
+      ],
+      "rationale": "Exact-controller key custody, human signer independence and approval/recovery policy are not disclosed for the listed Safe/EOA roles. Generic five-person owner approval and high-security multisig descriptions do not bind the identified V2 controllers or their keys. MPC discussed for third-party Midas/Fasanara issuance is not these vault controls. Keep typed custody questions; do not infer humans or custody from onchain labels. This C covers private operational safeguards, not observable owner/threshold/module data."
+    },
+    {
+      "id": "uw-steakeurcv-steakhouse-abfaa368899fb74d",
+      "assetId": "steakeurcv-steakhouse",
+      "scope": {
+        "componentKey": "control:mint-meta:steakeurcv-steakhouse:e80e53b199ecea4960cb",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Architecture; Deployments; Audit and source",
+          "excerpt": "A single Supervisor Owner (Steakhouse) controls the Supervisor v2 contract with a high-security multisig.",
+          "assertion": "Identifies the supervisory governance arrangement, not the exact owner/curator/allocator signing-key custody or human-independence map."
+        },
+        {
+          "url": "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Owner Multisig; differing configurations caveat",
+          "excerpt": "Any \u201cowner\u201d action also requires an internal process to ensure proper signature is enforced internally and ensure the signers of the validity of the operation.",
+          "assertion": "Generic internal approval process is disclosed, but no exact-controller MPC/HSM custody, signer independence or approval/recovery boundaries for these V2 Safes and allocator EOAs."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.steakhouse.financial/docs",
+        "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/portfolio-monitoring",
+        "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+        "https://www.steakhouse.financial/docs/documents/general/tcs",
+        "https://kitchen.steakhouse.financial/p/launching-supervisor-v2-and-migration",
+        "https://github.com/Steakhouse-Financial/vault-v2-supervisor/blob/main/audits/2026-02-23-cantina.pdf",
+        "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e",
+        "https://sourcify.dev/server/v2/contract/1/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f?fields=all"
+      ],
+      "rationale": "Exact-controller key custody, human signer independence and approval/recovery policy are not disclosed for the listed Safe/EOA roles. Generic five-person owner approval and high-security multisig descriptions do not bind the identified V2 controllers or their keys. MPC discussed for third-party Midas/Fasanara issuance is not these vault controls. Keep typed custody questions; do not infer humans or custody from onchain labels. This C covers private operational safeguards, not observable owner/threshold/module data."
+    },
+    {
+      "id": "uw-steakeurcv-steakhouse-35787a8dbb792a71",
+      "assetId": "steakeurcv-steakhouse",
+      "scope": {
+        "componentKey": "control:mint-meta:steakeurcv-steakhouse:f982de0844471231f63e",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Architecture; Deployments; Audit and source",
+          "excerpt": "A single Supervisor Owner (Steakhouse) controls the Supervisor v2 contract with a high-security multisig.",
+          "assertion": "Identifies the supervisory governance arrangement, not the exact owner/curator/allocator signing-key custody or human-independence map."
+        },
+        {
+          "url": "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Owner Multisig; differing configurations caveat",
+          "excerpt": "Any \u201cowner\u201d action also requires an internal process to ensure proper signature is enforced internally and ensure the signers of the validity of the operation.",
+          "assertion": "Generic internal approval process is disclosed, but no exact-controller MPC/HSM custody, signer independence or approval/recovery boundaries for these V2 Safes and allocator EOAs."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.steakhouse.financial/docs",
+        "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/portfolio-monitoring",
+        "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+        "https://www.steakhouse.financial/docs/documents/general/tcs",
+        "https://kitchen.steakhouse.financial/p/launching-supervisor-v2-and-migration",
+        "https://github.com/Steakhouse-Financial/vault-v2-supervisor/blob/main/audits/2026-02-23-cantina.pdf",
+        "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e",
+        "https://sourcify.dev/server/v2/contract/1/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f?fields=all"
+      ],
+      "rationale": "Exact-controller key custody, human signer independence and approval/recovery policy are not disclosed for the listed Safe/EOA roles. Generic five-person owner approval and high-security multisig descriptions do not bind the identified V2 controllers or their keys. MPC discussed for third-party Midas/Fasanara issuance is not these vault controls. Keep typed custody questions; do not infer humans or custody from onchain labels. This C covers private operational safeguards, not observable owner/threshold/module data."
+    },
+    {
+      "id": "uw-pendleusdc-pendle-4144273cbd25504f",
+      "assetId": "pendleusdc-pendle",
+      "scope": {
+        "componentKey": "control:mint-meta:pendleusdc-pendle:25d76d98888243be8ce5",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://armitage.wintermute.com/docs/vaults/ecosystem",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Pendle Ecosystem USDC; Deployment details",
+          "excerpt": "The Pendle Ecosystem USDC vault is an official Pendle ecosystem vault. Assets are selected and approved by the Pendle team.",
+          "assertion": "Exact vault and owner Safe 0xb83a77677c51aaf6c45b0b64199eae6938559e5e (4/6), curator Safe 0x4687e45bb5518a995913a24bb2816fe2031d74d8 (3/5) are disclosed; operational key safeguards are not."
+        },
+        {
+          "url": "https://armitage.wintermute.com/terms-of-use",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": "2026-05-19",
+          "location": "3.8 Operational Risk; 4.2 Regulatory Status",
+          "excerpt": "Outcomes may be affected by actions or omissions of onchain roles (including any allocator, sentinel, guardian, or equivalent), including strategy constraints, incident response, and any automation.",
+          "assertion": "Acknowledges operational roles without naming their key custody, signer independence or signing/recovery procedures; terms say CIMA does not supervise Covered Vaults."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://armitage.wintermute.com/",
+        "https://armitage.wintermute.com/docs/llms-full.txt",
+        "https://armitage.wintermute.com/docs/vaults/ecosystem",
+        "https://armitage.wintermute.com/docs/vault-infrastructure",
+        "https://armitage.wintermute.com/docs/risks-and-monitoring",
+        "https://armitage.wintermute.com/terms-of-use",
+        "https://docs.pendle.finance/pendle-v2/TermsOfUse",
+        "https://docs.pendle.finance/pendle-v2/AppGuide/LimitOrder",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x55c1b6e461a6334b567baf0feb5d728715446f05"
+      ],
+      "rationale": "Exact-controller human independence, key custody and signing/approval policy for the owner, curator, two allocators and sentinel remain unpublished across the issuer/curator/docs/legal/source surfaces. Public Safe thresholds and role addresses establish topology only. Non-custodial user asset statements do not establish custody of administrative private keys. Keep the typed scoped questions and existing onchain observations."
+    },
+    {
+      "id": "uw-pendleusdc-pendle-e6bff38f8008cf4a",
+      "assetId": "pendleusdc-pendle",
+      "scope": {
+        "componentKey": "control:mint-meta:pendleusdc-pendle:318cc897dbb629955b7e",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://armitage.wintermute.com/docs/vaults/ecosystem",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Pendle Ecosystem USDC; Deployment details",
+          "excerpt": "The Pendle Ecosystem USDC vault is an official Pendle ecosystem vault. Assets are selected and approved by the Pendle team.",
+          "assertion": "Exact vault and owner Safe 0xb83a77677c51aaf6c45b0b64199eae6938559e5e (4/6), curator Safe 0x4687e45bb5518a995913a24bb2816fe2031d74d8 (3/5) are disclosed; operational key safeguards are not."
+        },
+        {
+          "url": "https://armitage.wintermute.com/terms-of-use",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": "2026-05-19",
+          "location": "3.8 Operational Risk; 4.2 Regulatory Status",
+          "excerpt": "Outcomes may be affected by actions or omissions of onchain roles (including any allocator, sentinel, guardian, or equivalent), including strategy constraints, incident response, and any automation.",
+          "assertion": "Acknowledges operational roles without naming their key custody, signer independence or signing/recovery procedures; terms say CIMA does not supervise Covered Vaults."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://armitage.wintermute.com/",
+        "https://armitage.wintermute.com/docs/llms-full.txt",
+        "https://armitage.wintermute.com/docs/vaults/ecosystem",
+        "https://armitage.wintermute.com/docs/vault-infrastructure",
+        "https://armitage.wintermute.com/docs/risks-and-monitoring",
+        "https://armitage.wintermute.com/terms-of-use",
+        "https://docs.pendle.finance/pendle-v2/TermsOfUse",
+        "https://docs.pendle.finance/pendle-v2/AppGuide/LimitOrder",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x55c1b6e461a6334b567baf0feb5d728715446f05"
+      ],
+      "rationale": "Exact-controller human independence, key custody and signing/approval policy for the owner, curator, two allocators and sentinel remain unpublished across the issuer/curator/docs/legal/source surfaces. Public Safe thresholds and role addresses establish topology only. Non-custodial user asset statements do not establish custody of administrative private keys. Keep the typed scoped questions and existing onchain observations."
+    },
+    {
+      "id": "uw-pendleusdc-pendle-0d1deb9218d8b49f",
+      "assetId": "pendleusdc-pendle",
+      "scope": {
+        "componentKey": "control:mint-meta:pendleusdc-pendle:6f87e103d1f69a372f9c",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://armitage.wintermute.com/docs/vaults/ecosystem",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Pendle Ecosystem USDC; Deployment details",
+          "excerpt": "The Pendle Ecosystem USDC vault is an official Pendle ecosystem vault. Assets are selected and approved by the Pendle team.",
+          "assertion": "Exact vault and owner Safe 0xb83a77677c51aaf6c45b0b64199eae6938559e5e (4/6), curator Safe 0x4687e45bb5518a995913a24bb2816fe2031d74d8 (3/5) are disclosed; operational key safeguards are not."
+        },
+        {
+          "url": "https://armitage.wintermute.com/terms-of-use",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": "2026-05-19",
+          "location": "3.8 Operational Risk; 4.2 Regulatory Status",
+          "excerpt": "Outcomes may be affected by actions or omissions of onchain roles (including any allocator, sentinel, guardian, or equivalent), including strategy constraints, incident response, and any automation.",
+          "assertion": "Acknowledges operational roles without naming their key custody, signer independence or signing/recovery procedures; terms say CIMA does not supervise Covered Vaults."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://armitage.wintermute.com/",
+        "https://armitage.wintermute.com/docs/llms-full.txt",
+        "https://armitage.wintermute.com/docs/vaults/ecosystem",
+        "https://armitage.wintermute.com/docs/vault-infrastructure",
+        "https://armitage.wintermute.com/docs/risks-and-monitoring",
+        "https://armitage.wintermute.com/terms-of-use",
+        "https://docs.pendle.finance/pendle-v2/TermsOfUse",
+        "https://docs.pendle.finance/pendle-v2/AppGuide/LimitOrder",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x55c1b6e461a6334b567baf0feb5d728715446f05"
+      ],
+      "rationale": "Exact-controller human independence, key custody and signing/approval policy for the owner, curator, two allocators and sentinel remain unpublished across the issuer/curator/docs/legal/source surfaces. Public Safe thresholds and role addresses establish topology only. Non-custodial user asset statements do not establish custody of administrative private keys. Keep the typed scoped questions and existing onchain observations."
+    },
+    {
+      "id": "uw-pendleusdc-pendle-2d5b2733299f8ff9",
+      "assetId": "pendleusdc-pendle",
+      "scope": {
+        "componentKey": "control:mint-meta:pendleusdc-pendle:8cbb1cf7bb9c7c939d6c",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://armitage.wintermute.com/docs/vaults/ecosystem",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Pendle Ecosystem USDC; Deployment details",
+          "excerpt": "The Pendle Ecosystem USDC vault is an official Pendle ecosystem vault. Assets are selected and approved by the Pendle team.",
+          "assertion": "Exact vault and owner Safe 0xb83a77677c51aaf6c45b0b64199eae6938559e5e (4/6), curator Safe 0x4687e45bb5518a995913a24bb2816fe2031d74d8 (3/5) are disclosed; operational key safeguards are not."
+        },
+        {
+          "url": "https://armitage.wintermute.com/terms-of-use",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": "2026-05-19",
+          "location": "3.8 Operational Risk; 4.2 Regulatory Status",
+          "excerpt": "Outcomes may be affected by actions or omissions of onchain roles (including any allocator, sentinel, guardian, or equivalent), including strategy constraints, incident response, and any automation.",
+          "assertion": "Acknowledges operational roles without naming their key custody, signer independence or signing/recovery procedures; terms say CIMA does not supervise Covered Vaults."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://armitage.wintermute.com/",
+        "https://armitage.wintermute.com/docs/llms-full.txt",
+        "https://armitage.wintermute.com/docs/vaults/ecosystem",
+        "https://armitage.wintermute.com/docs/vault-infrastructure",
+        "https://armitage.wintermute.com/docs/risks-and-monitoring",
+        "https://armitage.wintermute.com/terms-of-use",
+        "https://docs.pendle.finance/pendle-v2/TermsOfUse",
+        "https://docs.pendle.finance/pendle-v2/AppGuide/LimitOrder",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x55c1b6e461a6334b567baf0feb5d728715446f05"
+      ],
+      "rationale": "Exact-controller human independence, key custody and signing/approval policy for the owner, curator, two allocators and sentinel remain unpublished across the issuer/curator/docs/legal/source surfaces. Public Safe thresholds and role addresses establish topology only. Non-custodial user asset statements do not establish custody of administrative private keys. Keep the typed scoped questions and existing onchain observations."
+    },
+    {
+      "id": "uw-pendleusdc-pendle-df2badc28a94ad34",
+      "assetId": "pendleusdc-pendle",
+      "scope": {
+        "componentKey": "control:mint-meta:pendleusdc-pendle:db2a318b6f30367507d3",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://armitage.wintermute.com/docs/vaults/ecosystem",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Pendle Ecosystem USDC; Deployment details",
+          "excerpt": "The Pendle Ecosystem USDC vault is an official Pendle ecosystem vault. Assets are selected and approved by the Pendle team.",
+          "assertion": "Exact vault and owner Safe 0xb83a77677c51aaf6c45b0b64199eae6938559e5e (4/6), curator Safe 0x4687e45bb5518a995913a24bb2816fe2031d74d8 (3/5) are disclosed; operational key safeguards are not."
+        },
+        {
+          "url": "https://armitage.wintermute.com/terms-of-use",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": "2026-05-19",
+          "location": "3.8 Operational Risk; 4.2 Regulatory Status",
+          "excerpt": "Outcomes may be affected by actions or omissions of onchain roles (including any allocator, sentinel, guardian, or equivalent), including strategy constraints, incident response, and any automation.",
+          "assertion": "Acknowledges operational roles without naming their key custody, signer independence or signing/recovery procedures; terms say CIMA does not supervise Covered Vaults."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://armitage.wintermute.com/",
+        "https://armitage.wintermute.com/docs/llms-full.txt",
+        "https://armitage.wintermute.com/docs/vaults/ecosystem",
+        "https://armitage.wintermute.com/docs/vault-infrastructure",
+        "https://armitage.wintermute.com/docs/risks-and-monitoring",
+        "https://armitage.wintermute.com/terms-of-use",
+        "https://docs.pendle.finance/pendle-v2/TermsOfUse",
+        "https://docs.pendle.finance/pendle-v2/AppGuide/LimitOrder",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x55c1b6e461a6334b567baf0feb5d728715446f05"
+      ],
+      "rationale": "Exact-controller human independence, key custody and signing/approval policy for the owner, curator, two allocators and sentinel remain unpublished across the issuer/curator/docs/legal/source surfaces. Public Safe thresholds and role addresses establish topology only. Non-custodial user asset statements do not establish custody of administrative private keys. Keep the typed scoped questions and existing onchain observations."
+    },
+    {
+      "id": "uw-gldon-ondo-9575c2ab58616721",
+      "assetId": "gldon-ondo",
+      "scope": {
+        "componentKey": "control:mint-meta:gldon-ondo:c7e0be586745be96d260",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://ondo.finance/blog/ondo-security-philosophy",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": "2026-04-23",
+          "location": "Operational security; Dedicated signing infrastructure",
+          "excerpt": "When we need to invoke administrative controls, we sign from purpose-built, isolated, hardened infrastructure \u2014 not general-purpose workstations.",
+          "assertion": "Discloses hardened signing and clear-signing practices generally, but no MPC/HSM provider, custody arrangement or independent signer map bound to GLDon Ethereum/BNB timelock Safes."
+        },
+        {
+          "url": "https://docs.ondo.finance/trust-and-security.md",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Transparency & Disclosure",
+          "excerpt": "Finally, Ondo and its related entities regularly undergo financial and information security audits, which are shared with authorized requesting parties.",
+          "assertion": "Public disclosures distinguish contract audits from privately shared information-security audits; public stock/asset verification reports cover backing, not exact admin-key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ondo.finance/llms.txt",
+        "https://docs.ondo.finance/trust-and-security.md",
+        "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
+        "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md",
+        "https://docs.ondo.finance/addresses.md",
+        "https://docs.ondo.finance/audits.md",
+        "https://docs.ondo.finance/legal/terms-of-service.md",
+        "https://ondo.finance/blog/ondo-security-philosophy",
+        "https://sourcify.dev/server/v2/contract/1/0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1?fields=compilation,sources",
+        "https://sourcify.dev/server/v2/contract/56/0x8860bbfc7a83e4788a981f4e9f30878331413b26?fields=compilation,sources"
+      ],
+      "rationale": "Ondo publishes hardened signing, human-readable transaction verification and timelocks, but not the exact GLDon Ethereum/BNB administrative Safe custody model, human signer independence or recovery/approval boundaries. Fireblocks support for customer trading wallets is not an admin-Safe custody attestation. No inference from institutional partnership or onchain quorum. Solana execution-scope questions are separate and are left U, not covered by this C."
+    },
+    {
+      "id": "uw-gldon-ondo-ecf356bccbb895df",
+      "assetId": "gldon-ondo",
+      "scope": {
+        "componentKey": "control:mint-meta:gldon-ondo:e1790941e16231666d8f",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://ondo.finance/blog/ondo-security-philosophy",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": "2026-04-23",
+          "location": "Operational security; Dedicated signing infrastructure",
+          "excerpt": "When we need to invoke administrative controls, we sign from purpose-built, isolated, hardened infrastructure \u2014 not general-purpose workstations.",
+          "assertion": "Discloses hardened signing and clear-signing practices generally, but no MPC/HSM provider, custody arrangement or independent signer map bound to GLDon Ethereum/BNB timelock Safes."
+        },
+        {
+          "url": "https://docs.ondo.finance/trust-and-security.md",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Transparency & Disclosure",
+          "excerpt": "Finally, Ondo and its related entities regularly undergo financial and information security audits, which are shared with authorized requesting parties.",
+          "assertion": "Public disclosures distinguish contract audits from privately shared information-security audits; public stock/asset verification reports cover backing, not exact admin-key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ondo.finance/llms.txt",
+        "https://docs.ondo.finance/trust-and-security.md",
+        "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
+        "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md",
+        "https://docs.ondo.finance/addresses.md",
+        "https://docs.ondo.finance/audits.md",
+        "https://docs.ondo.finance/legal/terms-of-service.md",
+        "https://ondo.finance/blog/ondo-security-philosophy",
+        "https://sourcify.dev/server/v2/contract/1/0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1?fields=compilation,sources",
+        "https://sourcify.dev/server/v2/contract/56/0x8860bbfc7a83e4788a981f4e9f30878331413b26?fields=compilation,sources"
+      ],
+      "rationale": "Ondo publishes hardened signing, human-readable transaction verification and timelocks, but not the exact GLDon Ethereum/BNB administrative Safe custody model, human signer independence or recovery/approval boundaries. Fireblocks support for customer trading wallets is not an admin-Safe custody attestation. No inference from institutional partnership or onchain quorum. Solana execution-scope questions are separate and are left U, not covered by this C."
+    },
+    {
+      "id": "uw-usdu-universal-b5cb550d14faadef",
+      "assetId": "usdu-universal",
+      "scope": {
+        "componentKey": "control:mint-meta:usdu-universal:4da0a6d4227e1d265a81",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": "2026-01-30",
+          "location": "Page 22, Appendix: Key Management System",
+          "excerpt": "It uses a custody MPC based wallet to secure the movement of funds and operates within a well-defined policy document for transfers.",
+          "assertion": "Issuer-level MPC/transfer-policy statement does not identify custody or policy for the four exact owner/controller/minter EOAs; policy document is not published here."
+        },
+        {
+          "url": "https://github.com/AquaNow/usdu-smart-contracts",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Deployment; Prerequisites for Deployment",
+          "excerpt": "In your `.env` file, specify the deployment method by setting `DEPLOY_METHOD=fireblocks`.",
+          "assertion": "Deployment tooling supports Fireblocks but does not bind production owner/controller/minter keys or their current MPC share/approval policy."
+        },
+        {
+          "url": "https://www.universal.ae/news/usdu-is-now-live-with-zodia-custody",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": "2026-07-24",
+          "location": "Regulated USD settlement, now in institutional custody",
+          "excerpt": "Hold USDU in fully segregated, HSM-backed cold wallets",
+          "assertion": "Zodia disclosure concerns institutional clients holding USDU, not custody of token/ProxyAdmin/controller/minter administrative keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.universal.ae/",
+        "https://www.universal.ae/transparency",
+        "https://www.universal.ae/ecosystem",
+        "https://www.universal.ae/news",
+        "https://www.universal.ae/legal/terms-of-services",
+        "https://www.universal.ae/news/usdu-is-now-live-with-zodia-custody",
+        "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf",
+        "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf",
+        "https://www.adgm.com/public-registers/fsra/firms/financial-firms/universal-digital-intl-limited-250089",
+        "https://github.com/AquaNow/usdu-smart-contracts",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe4972d660340cd915ae10b19064ca4854f7ca32f"
+      ],
+      "rationale": "MPC use is disclosed for the USDU system and a transfer policy is mentioned, but no primary evidence binds that custody arrangement or published signing policy to these four exact owner/controller/minter EOAs. Fireblocks deployment support is not proof of current operational custody; Zodia HSM-backed client holdings are a different key role. The missing exact-role binding, human independence and policy boundaries are researched non-disclosure, not unknown onchain signer topology."
+    },
+    {
+      "id": "uw-usdu-universal-064fe7c8b3a19ade",
+      "assetId": "usdu-universal",
+      "scope": {
+        "componentKey": "control:mint-meta:usdu-universal:5b213a6c0dec0e2ef5b0",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": "2026-01-30",
+          "location": "Page 22, Appendix: Key Management System",
+          "excerpt": "It uses a custody MPC based wallet to secure the movement of funds and operates within a well-defined policy document for transfers.",
+          "assertion": "Issuer-level MPC/transfer-policy statement does not identify custody or policy for the four exact owner/controller/minter EOAs; policy document is not published here."
+        },
+        {
+          "url": "https://github.com/AquaNow/usdu-smart-contracts",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Deployment; Prerequisites for Deployment",
+          "excerpt": "In your `.env` file, specify the deployment method by setting `DEPLOY_METHOD=fireblocks`.",
+          "assertion": "Deployment tooling supports Fireblocks but does not bind production owner/controller/minter keys or their current MPC share/approval policy."
+        },
+        {
+          "url": "https://www.universal.ae/news/usdu-is-now-live-with-zodia-custody",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": "2026-07-24",
+          "location": "Regulated USD settlement, now in institutional custody",
+          "excerpt": "Hold USDU in fully segregated, HSM-backed cold wallets",
+          "assertion": "Zodia disclosure concerns institutional clients holding USDU, not custody of token/ProxyAdmin/controller/minter administrative keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.universal.ae/",
+        "https://www.universal.ae/transparency",
+        "https://www.universal.ae/ecosystem",
+        "https://www.universal.ae/news",
+        "https://www.universal.ae/legal/terms-of-services",
+        "https://www.universal.ae/news/usdu-is-now-live-with-zodia-custody",
+        "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf",
+        "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf",
+        "https://www.adgm.com/public-registers/fsra/firms/financial-firms/universal-digital-intl-limited-250089",
+        "https://github.com/AquaNow/usdu-smart-contracts",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe4972d660340cd915ae10b19064ca4854f7ca32f"
+      ],
+      "rationale": "MPC use is disclosed for the USDU system and a transfer policy is mentioned, but no primary evidence binds that custody arrangement or published signing policy to these four exact owner/controller/minter EOAs. Fireblocks deployment support is not proof of current operational custody; Zodia HSM-backed client holdings are a different key role. The missing exact-role binding, human independence and policy boundaries are researched non-disclosure, not unknown onchain signer topology."
+    },
+    {
+      "id": "uw-usdu-universal-55a4af75e5b5c86c",
+      "assetId": "usdu-universal",
+      "scope": {
+        "componentKey": "control:mint-meta:usdu-universal:d1299e4873690f15b8fc",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": "2026-01-30",
+          "location": "Page 22, Appendix: Key Management System",
+          "excerpt": "It uses a custody MPC based wallet to secure the movement of funds and operates within a well-defined policy document for transfers.",
+          "assertion": "Issuer-level MPC/transfer-policy statement does not identify custody or policy for the four exact owner/controller/minter EOAs; policy document is not published here."
+        },
+        {
+          "url": "https://github.com/AquaNow/usdu-smart-contracts",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Deployment; Prerequisites for Deployment",
+          "excerpt": "In your `.env` file, specify the deployment method by setting `DEPLOY_METHOD=fireblocks`.",
+          "assertion": "Deployment tooling supports Fireblocks but does not bind production owner/controller/minter keys or their current MPC share/approval policy."
+        },
+        {
+          "url": "https://www.universal.ae/news/usdu-is-now-live-with-zodia-custody",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": "2026-07-24",
+          "location": "Regulated USD settlement, now in institutional custody",
+          "excerpt": "Hold USDU in fully segregated, HSM-backed cold wallets",
+          "assertion": "Zodia disclosure concerns institutional clients holding USDU, not custody of token/ProxyAdmin/controller/minter administrative keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.universal.ae/",
+        "https://www.universal.ae/transparency",
+        "https://www.universal.ae/ecosystem",
+        "https://www.universal.ae/news",
+        "https://www.universal.ae/legal/terms-of-services",
+        "https://www.universal.ae/news/usdu-is-now-live-with-zodia-custody",
+        "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf",
+        "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf",
+        "https://www.adgm.com/public-registers/fsra/firms/financial-firms/universal-digital-intl-limited-250089",
+        "https://github.com/AquaNow/usdu-smart-contracts",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe4972d660340cd915ae10b19064ca4854f7ca32f"
+      ],
+      "rationale": "MPC use is disclosed for the USDU system and a transfer policy is mentioned, but no primary evidence binds that custody arrangement or published signing policy to these four exact owner/controller/minter EOAs. Fireblocks deployment support is not proof of current operational custody; Zodia HSM-backed client holdings are a different key role. The missing exact-role binding, human independence and policy boundaries are researched non-disclosure, not unknown onchain signer topology."
+    },
+    {
+      "id": "uw-usdu-universal-c4deccd545427187",
+      "assetId": "usdu-universal",
+      "scope": {
+        "componentKey": "control:mint-meta:usdu-universal:eb6ed2f37f9ce2439d78",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": "2026-01-30",
+          "location": "Page 22, Appendix: Key Management System",
+          "excerpt": "It uses a custody MPC based wallet to secure the movement of funds and operates within a well-defined policy document for transfers.",
+          "assertion": "Issuer-level MPC/transfer-policy statement does not identify custody or policy for the four exact owner/controller/minter EOAs; policy document is not published here."
+        },
+        {
+          "url": "https://github.com/AquaNow/usdu-smart-contracts",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Deployment; Prerequisites for Deployment",
+          "excerpt": "In your `.env` file, specify the deployment method by setting `DEPLOY_METHOD=fireblocks`.",
+          "assertion": "Deployment tooling supports Fireblocks but does not bind production owner/controller/minter keys or their current MPC share/approval policy."
+        },
+        {
+          "url": "https://www.universal.ae/news/usdu-is-now-live-with-zodia-custody",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": "2026-07-24",
+          "location": "Regulated USD settlement, now in institutional custody",
+          "excerpt": "Hold USDU in fully segregated, HSM-backed cold wallets",
+          "assertion": "Zodia disclosure concerns institutional clients holding USDU, not custody of token/ProxyAdmin/controller/minter administrative keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.universal.ae/",
+        "https://www.universal.ae/transparency",
+        "https://www.universal.ae/ecosystem",
+        "https://www.universal.ae/news",
+        "https://www.universal.ae/legal/terms-of-services",
+        "https://www.universal.ae/news/usdu-is-now-live-with-zodia-custody",
+        "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf",
+        "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf",
+        "https://www.adgm.com/public-registers/fsra/firms/financial-firms/universal-digital-intl-limited-250089",
+        "https://github.com/AquaNow/usdu-smart-contracts",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe4972d660340cd915ae10b19064ca4854f7ca32f"
+      ],
+      "rationale": "MPC use is disclosed for the USDU system and a transfer policy is mentioned, but no primary evidence binds that custody arrangement or published signing policy to these four exact owner/controller/minter EOAs. Fireblocks deployment support is not proof of current operational custody; Zodia HSM-backed client holdings are a different key role. The missing exact-role binding, human independence and policy boundaries are researched non-disclosure, not unknown onchain signer topology."
+    },
+    {
+      "id": "uw-usdu-unitas-642b9e7cfc0b8048",
+      "assetId": "usdu-unitas",
+      "scope": {
+        "componentKey": "control:mint-meta:usdu-unitas:7207aec6f6290be2838c",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://github.com/UnipayFI/unitas-evm-contract",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Permission Addresses; UnitasMintingV2 DEFAULT_ADMIN_ROLE",
+          "excerpt": "Super admin managing all roles, global limits, and asset configuration",
+          "assertion": "Binds admin role to Safe 0x0a6Db8e8f0b79bA5B9f5AC7F5728843b830bB1c8; no operational signing-key custody or offchain approval/recovery policy for this exact Safe is supplied."
+        },
+        {
+          "url": "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas.md",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Advantages; Lower Counterparty Risk",
+          "excerpt": "Assets stay in multilateral-MPC vaults; only signed instructions leave the custodian.",
+          "assertion": "MPC statement binds backing held through Copper/Ceffu, not this BSC mint-administrator Safe."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.unitas.so/llms.txt",
+        "https://docs.unitas.so/backing-custody-and-security/overview.md",
+        "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas.md",
+        "https://docs.unitas.so/solution-design/minting-usdu.md",
+        "https://docs.unitas.so/mainnet-program-and-address-index.md",
+        "https://docs.unitas.so/resources/audits.md",
+        "https://docs.unitas.so/resources/terms-of-service.md",
+        "https://github.com/UnipayFI/unitas-evm-contract",
+        "https://sourcify.dev/server/v2/contract/56/0xbb984ce670100aa855f6152f88b26ee57f4ea82a?fields=sources,abi"
+      ],
+      "rationale": "Exact UnitasMintingV2 admin Safe role is public, but its operational signing-key custody and approval/recovery policy are not. Copper/Ceffu MPC backing custody does not attest the admin Safe's private keys. The public 3-of-5 topology remains intact; no independence is inferred from addresses. This C does not apply to the onchain-observable Solana mint/program authorization question, which remains U."
+    },
+    {
+      "id": "uw-usdx-axis-ef4a33124ac4677d",
+      "assetId": "usdx-axis",
+      "scope": {
+        "componentKey": "control:mint-meta:usdx-axis:5eff7a6bd9bd3c5bf8a4",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://docs.axis.to/backing-reserves-and-transparency/security.md",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Access, key management, and operational security; Key management",
+          "excerpt": "Multisig signer keys are held in **cold storage** on **hardware wallets**.",
+          "assertion": "Publicly disclosed governance multisig custody is cold hardware wallets, not an MPC/HSM claim."
+        },
+        {
+          "url": "https://docs.axis.to/reference/contract-addresses.md",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Governance, upgrade authority & operators",
+          "excerpt": "Governance Safe",
+          "assertion": "Official roster binds governance Safe to 0xdeB538917b1C1AE6B81550a6C42A66d818cc6d6D."
+        }
+      ]
+    },
+    {
+      "id": "uw-usdx-axis-d0390fac942d6465",
+      "assetId": "usdx-axis",
+      "scope": {
+        "componentKey": "control:mint-meta:usdx-axis:31ba20b1b4bb0d83b120",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://docs.axis.to/reference/contract-addresses.md",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Governance, upgrade authority & operators; Mint operator",
+          "excerpt": "Settles signed mint orders (KMS-secured)",
+          "assertion": "Binds KMS-secured custody to exact mint operator 0xDEca86926d2AEc9C3B0eEEB54AAcfDe6d0249370."
+        },
+        {
+          "url": "https://docs.axis.to/backing-reserves-and-transparency/security.md",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Key management",
+          "excerpt": "Key material is managed with **AWS KMS**.",
+          "assertion": "Names the operator key-management service; hardware-wallet multisig disclosure is distinct."
+        },
+        {
+          "url": "https://docs.aws.amazon.com/kms/latest/developerguide/data-protection.html",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Protecting key material generated in AWS KMS",
+          "excerpt": "To safeguard key material for KMS keys, AWS KMS relies on a distributed fleet of FIPS 140-3 Security Level 3\u2013validated hardware security modules (HSMs).",
+          "assertion": "Provider supports curated hsm custody attestation; customer controls authorization policies, which do not follow from HSM storage."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.axis.to/llms.txt",
+        "https://docs.axis.to/backing-reserves-and-transparency/security.md",
+        "https://docs.axis.to/backing-reserves-and-transparency/audits.md",
+        "https://docs.axis.to/reference/contract-addresses.md",
+        "https://docs.axis.to/reference/access-control.md",
+        "https://docs.axis.to/technical-and-architecture/governance.md",
+        "https://docs.axis.to/risk/risk-management.md",
+        "https://docs.axis.to/resources-and-legal/compliance.md",
+        "https://docs.aws.amazon.com/kms/latest/developerguide/data-protection.html"
+      ],
+      "rationale": "Curated the directly disclosed AWS KMS HSM-backed custody model for the exact mint operator using issuer and provider evidence. The remaining scoped datum is controller-specific IAM signing/approval policy, operator independence and recovery arrangements. No such policy or independence proof is published in the indexed issuer surfaces. HSM protection does not establish who can authorize Sign. Keep the narrowed typed custody question; its compiler gap therefore remains eligible for C rather than falsely KNOWN."
+    },
+    {
+      "id": "uw-xgz-goldzip-da2a33d5e5c3c3e6",
+      "assetId": "xgz-goldzip",
+      "scope": {
+        "componentKey": "control:mint-meta:xgz-goldzip:65b240a7ea10ee3756cb",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:26:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K07)",
+      "sources": [
+        {
+          "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Page 7; Custody",
+          "excerpt": "All physical gold backing GoldZip is:",
+          "assertion": "Custody section covers physical gold in accredited vaults and audits, not operational key custody of the custom owner wallet."
+        },
+        {
+          "url": "https://goldzip-1.gitbook.io/goldzip/goldzip-xgz/smart-contract.md",
+          "observedAt": "2026-10-05T12:26:50Z",
+          "datumAsOf": null,
+          "location": "Smart Contract Audit",
+          "excerpt": "Smart Contract Audit",
+          "assertion": "Linked security audit and token source were reviewed; neither supplies exact wallet-account human identity, private-key custody or operational signing policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://goldzip.info/",
+        "https://goldzip.info/transparency/",
+        "https://goldzip.info/document/",
+        "https://goldzip.info/terms-conditions/",
+        "https://goldzip.info/goldzip-rules/",
+        "https://goldzip.info/legal-policy/",
+        "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf",
+        "https://goldzip-1.gitbook.io/goldzip/llms.txt",
+        "https://goldzip-1.gitbook.io/goldzip/goldzip-xgz/smart-contract.md",
+        "https://goldzip-1.gitbook.io/goldzip/goldzip-xgz/physical-gold/backing-and-custody.md",
+        "https://hkgx.com.hk/cn/marketdata/goldzip",
+        "https://sourcify.dev/server/v2/contract/1/0x06b7c1460154a4d0cf79954298d6ba8d5b2d38f7?fields=sources,abi"
+      ],
+      "rationale": "Exact owner-wallet administrative key custody, human independence and signing/recovery safeguards remain unpublished after issuer/docs/transparency/legal/audit/regulatory/source search. Disclosed custody is of physical gold. Preserve the verified one-administrator authorization bypass and its 1-of-3 topology; this C does not claim unknown onchain authorization or infer independence from account labels."
     }
   ]
 }
