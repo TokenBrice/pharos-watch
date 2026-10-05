@@ -28,6 +28,21 @@ describe("Safety Score v9 methodology policy", () => {
     expect(Object.isFrozen(V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry)).toBe(true);
     expect(loadV9MethodologyPolicy(candidatePolicyAsset).semanticDigest).toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
   });
+  it("requires and semantically binds the fractional native-inventory dust limit", () => {
+    expect(V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.nativeInventoryUnmatchedDustShareMax).toBe(1e-5);
+    const changed = candidateClone();
+    changed.semantic.materiality.nativeInventoryUnmatchedDustShareMax = 2e-5;
+    const loaded = loadV9MethodologyPolicy(changed);
+    expect(loaded.policy.semantic.materiality.nativeInventoryUnmatchedDustShareMax).toBe(2e-5);
+    expect(loaded.semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+    for (const invalid of [-1e-5, 1.00001, Number.NaN, Number.POSITIVE_INFINITY, undefined]) {
+      const policy = candidateClone();
+      const raw = { ...policy, semantic: { ...policy.semantic, materiality: {
+        ...policy.semantic.materiality, nativeInventoryUnmatchedDustShareMax: invalid,
+      } } };
+      expect(() => loadV9MethodologyPolicy(raw)).toThrow();
+    }
+  });
   it("enforces unbounded delivery below bounded physical and bounded physical at most fiat par", () => {
     const equal = candidateClone();
     equal.semantic.exit.unboundedDeliveryCap = equal.semantic.exit.outputAssetScores["physical-commodity-delivery"];

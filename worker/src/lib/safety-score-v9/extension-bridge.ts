@@ -657,6 +657,46 @@ function hasCompleteSubthresholdBridgeInventory(
   return true;
 }
 
+/**
+ * A native census can forgive only unmatched dust, not a missing representation
+ * review or a controlled supply row. The supply book is never rewritten here.
+ */
+function hasReviewedNativeDustInventory(
+  profile: BridgeRouteRiskProfile,
+  supplyReview: ExtensionAsset["supplyReview"],
+  clockSec: number,
+): boolean {
+  const census = profile.nativeInventoryReview;
+  if (
+    census?.kind !== "exhaustive-material-native-census" ||
+    census.exhaustive !== true ||
+    census.sources.length === 0 ||
+    profile.confidence !== "verified" ||
+    researchReviewObservationState(census.reviewedAt, clockSec) !== "current" ||
+    supplyReview === null
+  ) return false;
+  const nativeIds = new Set(census.routeIds.map(normalizedBridgeDeploymentId));
+  const profileRoutes = profile.routes ?? [];
+  if (
+    nativeIds.size === 0 ||
+    nativeIds.size !== census.routeIds.length ||
+    nativeIds.size !== profileRoutes.length ||
+    profileRoutes.some((route) =>
+      !nativeIds.has(normalizedBridgeDeploymentId(route.id)) ||
+      route.reviewDisposition !== "reviewed" ||
+      route.routeClass !== "native" ||
+      route.issuanceModel !== "native-issuance")
+  ) return false;
+  const dustMax = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.nativeInventoryUnmatchedDustShareMax;
+  return supplyReview.selectedBridgeRoutes.every((row) =>
+    Number.isFinite(row.supplyShare) && row.supplyShare >= 0 &&
+    (row.reviewState === "unmatched"
+      ? row.supplyShare <= dustMax
+      : row.reviewState === "selected-reviewed" &&
+        row.reviewedRouteKind === "native" &&
+        nativeIds.has(normalizedBridgeDeploymentId(row.deploymentRouteKey))));
+}
+
 type BridgeJoinChainRows = Readonly<Record<string, { current: number }>>;
 
 function bridgeJoinSharesReconcile(left: number, right: number): boolean {
@@ -1102,11 +1142,14 @@ export function adaptBridgeReview(
   // resolve, so control emptiness alone cannot prove the absence of a bridge.
   const hasReviewedRepresentationRoute = reviewedRoutes.some((route) => isBridgeRepresentationRoute(route, profile, meta.id));
   const allMaterialRoutesReviewed = hasCompleteSubthresholdBridgeInventory(meta.id, profileRoutes, controls, supplyReview);
-  const hasToleratedUnmatchedRow = (supplyReview?.selectedBridgeRoutes ?? []).some(
-    (route) =>
-      route.reviewState === "unmatched" &&
-      classifyBridgeSupplyRow(route) !== "control-required",
+  const hasUnmatchedRow = (supplyReview?.selectedBridgeRoutes ?? []).some(
+    (route) => route.reviewState === "unmatched",
   );
+  const reviewedNativeDustInventory =
+    allMaterialRoutesReviewed &&
+    bridgeClaimControls.length === 0 &&
+    routes.length === 0 &&
+    hasReviewedNativeDustInventory(profile, supplyReview, clockSec);
   // Deliberately over the whole inventory, not `bridgeClaimControls`: a canonical
   // control carrying real supply must keep blocking this branch, so an unresolved
   // zero-share deployment stays an audit fact rather than proof of no bridge.
@@ -1121,15 +1164,28 @@ export function adaptBridgeReview(
     !reviewStale &&
     ((bridgeClaimControls.length === 0 &&
       !hasReviewedRepresentationRoute &&
-      !hasToleratedUnmatchedRow) ||
-      (allMaterialRoutesReviewed && onlyZeroShareUnroutedControls))
+      ((!hasUnmatchedRow && profile.nativeInventoryReview === undefined) || reviewedNativeDustInventory)) ||
+      (!hasUnmatchedRow && profile.nativeInventoryReview === undefined &&
+        allMaterialRoutesReviewed && onlyZeroShareUnroutedControls))
   ) {
+    const nativeEvidenceKeys = reviewedNativeDustInventory && profile.nativeInventoryReview
+      ? [...evidenceKeys, ...evidence.add({
+          componentKeys: ["economic-control:bridge"],
+          sourceId: "stablecoin-meta.native-inventory-census",
+          reviewedAt: profile.nativeInventoryReview.reviewedAt,
+          publishedBy: "unknown",
+          confidence: "verified",
+          sources: profile.nativeInventoryReview.sources,
+          payload: profile.nativeInventoryReview,
+          maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
+        })]
+      : evidenceKeys;
     return {
       review: {
         status: notApplicableStatus(
           "v9.control.bridge-review",
           "Every reviewed deployment route is native issuance; no bridge control carries the claim.",
-          evidenceKeys,
+          nativeEvidenceKeys,
         ),
         routes: [],
         diagnostics: buildBridgeJoinDiagnostics(

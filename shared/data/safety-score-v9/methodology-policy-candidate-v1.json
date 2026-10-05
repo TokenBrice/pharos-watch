@@ -357,6 +357,7 @@
       "serialRequiredPathsAlwaysBind": true,
       "basketExposureTreatment": "proportional",
       "deploymentMaterialSharePct": 10,
+      "nativeInventoryUnmatchedDustShareMax": 0.00001,
       "unresolvedDeploymentBlendStartSharePct": 5,
       "unresolvedDeploymentFullCeilingSharePct": 15,
       "commonModeOracleMinBranches": 2,
