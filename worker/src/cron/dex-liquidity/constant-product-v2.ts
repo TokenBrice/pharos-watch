@@ -182,12 +182,33 @@ export function attachEvmV2CandidateToRetainedPool(input: {
   if (!metric) return false;
   const exactPoolId = canonicalExitRouteAssetKey(input.chain, input.candidate.poolAddress);
   const fingerprint = buildPoolFingerprint(input.chain, input.candidate.source, input.candidate.tokenAddresses);
-  const retainedPool = metric.topPools.find(
-    (pool) =>
-      normalizeProtocol(pool.project) === normalizeProtocol(input.candidate.source) &&
-      (pool.poolId === exactPoolId || (fingerprint != null && pool.poolId === fingerprint)),
-  );
-  if (!retainedPool || retainedPool.extra?.ammExecutionModel) return false;
+  const protocol = normalizeProtocol(input.candidate.source);
+  let exactMatch: PoolEntry | undefined;
+  let fingerprintMatch: PoolEntry | undefined;
+  let exactCount = 0;
+  let fingerprintCount = 0;
+  for (const pool of metric.topPools) {
+    if (normalizeProtocol(pool.project) !== protocol) continue;
+    if (pool.poolId === exactPoolId) {
+      exactMatch = pool;
+      exactCount++;
+    } else if (fingerprint != null && pool.poolId === fingerprint) {
+      fingerprintMatch = pool;
+      fingerprintCount++;
+    }
+  }
+  if (exactCount > 1 || (exactCount === 0 && fingerprintCount !== 1)) return false;
+  const retainedPool = (exactMatch ?? fingerprintMatch)!;
+  if (retainedPool.extra?.ammExecutionModel) return false;
+  // A fingerprint is not a unique physical pool. Conflicting source rows
+  // must not replace the previous candidate by arrival order.
+  if (retainedPool.extra?.executionCapabilityGate?.family === "constant-product-v2" &&
+    retainedPool.extra.executionCapabilityGate.reason === "exact-pool-join-unresolved") return false;
+  const previous = retainedPool.extra?.evmV2ExecutionCandidate;
+  if (previous && candidateKey(previous) !== candidateKey(input.candidate)) {
+    gateReference({ stablecoinId: input.stablecoinId, pool: retainedPool, candidate: previous }, "exact-pool-join-unresolved");
+    return false;
+  }
   retainedPool.extra = {
     ...(retainedPool.extra ?? {}),
     evmV2ExecutionCandidate: input.candidate,
@@ -246,7 +267,7 @@ function decodeReservesResult(result: EvmMulticall3Result | undefined): [bigint,
       [{ type: "uint256" }, { type: "uint256" }, { type: "uint256" }],
       result.returnData,
     );
-    return reserve0 > 0n && reserve1 > 0n ? [reserve0, reserve1] : null;
+    return [reserve0, reserve1];
   } catch {
     return null;
   }
@@ -293,7 +314,7 @@ function parseVerifiedPairState(
   const balance0 = Number(reserves[0]) / 10 ** token0Decimals;
   const balance1 = Number(reserves[1]) / 10 ** token1Decimals;
   if (!Number.isFinite(balance0) || !Number.isFinite(balance1) || balance0 <= 0 || balance1 <= 0) {
-    return { ok: false, reason: "incomplete-exact-capture" };
+    return { ok: false, reason: "invalid-invariant-parameters" };
   }
   return {
     ok: true,

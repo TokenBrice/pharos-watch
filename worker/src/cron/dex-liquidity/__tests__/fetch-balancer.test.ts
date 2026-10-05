@@ -262,6 +262,62 @@ describe("fetchBalancerPools stable-math amp join", () => {
     expect(result.pools[0]?.amp).toBeUndefined();
   });
 
+  it("sends raw Sonic vault ids to idIn while retaining chain-scoped admission", async () => {
+    const sonic = weightedPool();
+    sonic.chain = "SONIC";
+    sonic.address = "0x25ca5451cd5a50ab1d324b5e64f32c0799661891";
+    sonic.id = `${sonic.address}0002000000000000000018`;
+    sonic.poolTokens[0]!.weight = "0.3";
+    sonic.poolTokens[1]!.weight = "0.7";
+    const fetch = mockFetch([
+      {
+        match: "api-v3.balancer.fi", matchBody: "aggregatorPools",
+        respond: async (request) => {
+          const body = await request.json() as { variables: { poolIds: string[] } };
+          // Match the real provider behavior, not a fixture independent of idIn.
+          return { body: { data: { aggregatorPools: body.variables.poolIds.includes(sonic.id)
+            ? [{ id: sonic.id, chain: sonic.chain, amp: null }] : [] } } };
+        },
+      },
+      {
+        match: "api-v3.balancer.fi", matchBody: "poolGetPools",
+        body: { data: { poolGetPools: [sonic] } },
+      },
+    ], { requireMatch: true });
+    const result = await fetchBalancerPools();
+    const sweepRequest = fetch.getHistory().find((entry) => entry.body?.includes("aggregatorPools"));
+    expect(JSON.parse(sweepRequest!.body!).variables.poolIds).toEqual([sonic.id]);
+    expect(result.pools[0]?.chain).toBe("sonic");
+    expect(result.pools[0]?.executionCapabilityGate).toBeUndefined();
+  });
+
+  it("never derives enabled flags or missing rates from provider membership", async () => {
+    const unknownPause = weightedPool();
+    const missingPause = { ...unknownPause, dynamicData: {
+      totalLiquidity: "5000000", volume24h: "1000000", swapFee: "0.0001", swapEnabled: true,
+    } };
+    const missingRate = stablePool();
+    missingRate.poolTokens = missingRate.poolTokens.map((token) => ({
+      ...token, priceRate: undefined,
+    }));
+    dispatchByQuery([missingPause, missingRate], [
+      { id: missingPause.id, chain: missingPause.chain, amp: null },
+      { id: missingRate.id, chain: missingRate.chain, amp: "250" },
+    ]);
+    const result = await fetchBalancerPools();
+    expect(result.pools).toHaveLength(2);
+    expect(result.pools.every((pool) => pool.executionCapabilityGate?.reason === "incomplete-exact-capture")).toBe(true);
+    expect(result.pools.every((pool) => pool.amp == null)).toBe(true);
+  });
+
+  it("keeps missing amplification unavailable even when membership is reviewed", async () => {
+    const pool = stablePool();
+    dispatchByQuery([pool], [{ id: pool.id, chain: pool.chain, amp: null }]);
+    const result = await fetchBalancerPools();
+    expect(result.pools[0]?.amp).toBeUndefined();
+    expect(result.pools[0]?.executionCapabilityGate?.reason).toBe("incomplete-exact-capture");
+  });
+
   it("retains a reviewed custom invariant as a gated diagnostic row", async () => {
     const custom = weightedPool();
     custom.type = "COW_AMM";

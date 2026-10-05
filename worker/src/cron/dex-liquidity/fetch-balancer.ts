@@ -307,11 +307,10 @@ async function fetchBalancerCapabilities(
 
   const rowsByPoolId = new Map<string, number | null>();
   for (const row of sweep.rows) {
-    const amp = row.amp == null ? null : parseStrictFiniteDecimal(row.amp);
-    rowsByPoolId.set(
-      ampJoinKey(row.chain, row.id),
-      amp != null && Number.isFinite(amp) && amp > 0 ? amp : null,
-    );
+    // Null is unavailable; a supplied malformed/nonpositive amp is an
+    // observed invalid parameter, not an absent observation.
+    const amp = row.amp == null ? null : parseStrictFiniteDecimal(row.amp) ?? Number.NaN;
+    rowsByPoolId.set(ampJoinKey(row.chain, row.id), amp);
   }
   warnings.push(...sweep.errors, ...sweep.warnings);
   return { rowsByPoolId, complete: sweep.completed };
@@ -461,7 +460,7 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
   const malformedRowsByPage = new Map<number, number>();
   const fetchResult = await runPaginatedDirectApiFetch<{
     pool: DexApiPool;
-    exactCandidate?: { poolId: string; stableMath: boolean };
+    exactCandidate?: { poolId: string; joinKey: string; stableMath: boolean };
   }>({
     source: "balancer",
     pageSize,
@@ -536,7 +535,10 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
         (STABLE_MATH_POOL_TYPES.has(pool.type) || pool.type === "WEIGHTED")
           ? {
               exactCandidate: {
-                poolId: ampJoinKey(pool.chain, pool.id),
+                // GraphQL idIn expects the provider's raw vault/pool id,
+                // not our chain-qualified key used to join returned rows.
+                poolId: pool.id.trim().toLowerCase(),
+                joinKey: ampJoinKey(pool.chain, pool.id),
                 stableMath: STABLE_MATH_POOL_TYPES.has(pool.type),
               },
             }
@@ -555,7 +557,7 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
   const errors = fetchResult.errors;
   const warnings = fetchResult.warnings;
   const successfulPages = fetchResult.successfulPages;
-  const exactCandidatePoolIdsByIndex = new Map<number, { poolId: string; stableMath: boolean }>();
+  const exactCandidatePoolIdsByIndex = new Map<number, { poolId: string; joinKey: string; stableMath: boolean }>();
   for (const [index, row] of fetchResult.rows.entries()) {
     if (row.exactCandidate) exactCandidatePoolIdsByIndex.set(index, row.exactCandidate);
   }
@@ -570,7 +572,7 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
     let capabilityGated = 0;
     for (const [index, candidate] of exactCandidatePoolIdsByIndex) {
       const result = results[index]!;
-      if (!capabilitySweep.rowsByPoolId.has(candidate.poolId)) {
+      if (!capabilitySweep.rowsByPoolId.has(candidate.joinKey)) {
         result.executionCapabilityGate = balancerGate(
           capabilitySweep.complete && candidate.stableMath
             ? "rate-bearing-inputs"
@@ -580,8 +582,13 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
         continue;
       }
       if (candidate.stableMath) {
-        const amp = capabilitySweep.rowsByPoolId.get(candidate.poolId);
+        const amp = capabilitySweep.rowsByPoolId.get(candidate.joinKey);
         if (amp == null) {
+          result.executionCapabilityGate = balancerGate("incomplete-exact-capture");
+          capabilityGated++;
+          continue;
+        }
+        if (!Number.isFinite(amp) || amp <= 0) {
           result.executionCapabilityGate = balancerGate("invalid-invariant-parameters");
           capabilityGated++;
           continue;
