@@ -1537,7 +1537,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(adapted.review.diagnostics?.applicabilityBranch).toBe("native-only-not-applicable");
     expect(adapted.review.diagnostics?.unmatchedRowIdentities).toContain("Tempo");
     expect(supply).toEqual(before);
-    expect(supply.selectedBridgeRoutes.at(-1)).toMatchObject({ reviewState: "unmatched", supplyShare: share, supplyUsd: share * 1_000_000 });
+    expect(supply.selectedBridgeRoutes[supply.selectedBridgeRoutes.length - 1]).toMatchObject({ reviewState: "unmatched", supplyShare: share, supplyUsd: share * 1_000_000 });
     expect([...evidence.evidence.values()]).toContainEqual(expect.objectContaining({
       sourceId: "stablecoin-meta.native-inventory-census",
       url: SOURCE.url,
@@ -1595,8 +1595,8 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       { ...remainder, deploymentRouteKey: `unmatched-chain:${metadata.id}:bittorrent`, supplyShare: 1e-5, supplyUsd: 10 },
     );
     expect(adaptBridgeFixture(metadata, supply).review.status.applicability.state).toBe("not-applicable");
-    supply.selectedBridgeRoutes.at(-1)!.supplyShare += 1e-8;
-    supply.selectedBridgeRoutes.at(-2)!.supplyShare -= 1e-8;
+    supply.selectedBridgeRoutes[supply.selectedBridgeRoutes.length - 1]!.supplyShare += 1e-8;
+    supply.selectedBridgeRoutes[supply.selectedBridgeRoutes.length - 2]!.supplyShare -= 1e-8;
     expect(adaptBridgeFixture(metadata, supply).review.status.applicability.state).toBe("required");
   });
 
