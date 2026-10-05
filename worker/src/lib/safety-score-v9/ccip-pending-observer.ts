@@ -53,6 +53,8 @@ const LogHeaderSchema = z.object({ number: z.string().regex(/^0x[0-9a-f]+$/), ha
 const word = (value: string) => `0x${BigInt(value).toString(16).padStart(64, "0")}`;
 const addressWord = (address: string) => `0x${address.slice(2).padStart(64, "0")}`;
 const call = (signature: string, args: `0x${string}` = "0x") => toFunctionSelector(signature) + args.slice(2);
+const nextSequenceCall = (lane: Lane) => lane.version === "2.0.0" ? call("getExpectedNextMessageNumber(uint64)", encodeAbiParameters(parseAbiParameters("uint64"), [BigInt(lane.destination.chainSelector)]))
+  : lane.version === "1.6" ? call("getExpectedNextSequenceNumber(uint64)", encodeAbiParameters(parseAbiParameters("uint64"), [BigInt(lane.destination.chainSelector)])) : call("getExpectedNextSequenceNumber()");
 function fail(reason: string): never { throw new Error(`ccip-pending:${reason}`); }
 function asLog(raw: unknown): Log {
   const parsed = LogSchema.safeParse(raw);
@@ -190,13 +192,16 @@ export async function observeCcipPending(input: {
     const cached = input.db && !input.checkpoint ? await getCache(input.db, cacheKey, input.signal) : null;
     if ((cached && cached.value.length > MAX_CHECKPOINT_BYTES) ||
       (input.checkpoint && stableJsonStringifyV1(input.checkpoint).length > MAX_CHECKPOINT_BYTES)) fail("checkpoint-capacity");
+    // Old lane-serial checkpoints are not admitted by the shared-page scheduler.
+    // Bootstrap afresh rather than interpreting their partial roster as complete.
     const decoded: unknown = input.checkpoint ?? (cached ? JSON.parse(cached.value) : null);
-    if (decoded !== null) {
+    if (decoded !== null && !(typeof decoded === "object" && "schemaVersion" in decoded && decoded.schemaVersion === 1)) {
       const parsed = CcipPendingCheckpointSchema.safeParse(decoded);
-      if (!parsed.success || parsed.data.sourceDigest !== sourceDigest || parsed.data.lanes.length > input.source.lanes.length || parsed.data.lanes.some((lane, i) => lane.id !== input.source.lanes[i]!.id)) fail("checkpoint-invalid");
+      if (!parsed.success || parsed.data.sourceDigest !== sourceDigest || parsed.data.nextChainIndex >= chains.length ||
+        parsed.data.lanes.length !== input.source.lanes.length || parsed.data.lanes.some((lane, i) => lane.id !== input.source.lanes[i]!.id)) fail("checkpoint-invalid");
       checkpoint = parsed.data;
     } else {
-      checkpoint = { schemaVersion: 1, sourceDigest, lanes: [] };
+      checkpoint = { schemaVersion: 2, sourceDigest, nextChainIndex: 0, lanes: [] };
     }
     const rpc = async (chain: string, requests: Parameters<typeof fetchEvmRpcBatch>[1]) => {
       const result = await fetchEvmRpcBatch(chain, requests, options);
@@ -219,7 +224,7 @@ export async function observeCcipPending(input: {
       }
       return values;
     };
-    let discoveryDigest = sha256Hex("ccip-indexer-discovery-v2"), pages = 0;
+    let discoveryDigest = sha256Hex("ccip-indexer-discovery-v2");
     const proofs: Proof["lanes"] = [];
     for (let i = 0; i < input.source.lanes.length; i++) {
       const lane = input.source.lanes[i]!, sourcePin = input.headers.get(lane.source.chainId)!, destPin = input.headers.get(lane.destination.chainId)!;
@@ -283,8 +288,7 @@ export async function observeCcipPending(input: {
         const [row] = decodeAbiParameters(parseAbiParameters("(address commitStore,uint64 chainSelector,uint64 sourceChainSelector,address onRamp,address prevOffRamp,address rmnProxy,address tokenAdminRegistry)"), config[0] as `0x${string}`);
         if (row.chainSelector !== BigInt(lane.destination.chainSelector) || row.sourceChainSelector !== BigInt(lane.source.chainSelector) || row.onRamp.toLowerCase() !== lane.onRampAddress) fail("lane-identity-mismatch");
       }
-      const nextSequenceCall = lane.version === "2.0.0" ? call("getExpectedNextMessageNumber(uint64)", encodeAbiParameters(parseAbiParameters("uint64"), [BigInt(lane.destination.chainSelector)]))
-        : lane.version === "1.6" ? call("getExpectedNextSequenceNumber(uint64)", encodeAbiParameters(parseAbiParameters("uint64"), [BigInt(lane.destination.chainSelector)])) : call("getExpectedNextSequenceNumber()");
+      const nextCall = nextSequenceCall(lane);
       if (!checkpoint.lanes[i]) {
         const previous = await fetchEvmBlockHeader(lane.source.chainId, lane.sourceStartBlock - 1, options);
         if (!previous) fail("history-unavailable");
@@ -293,7 +297,7 @@ export async function observeCcipPending(input: {
         if (code[0] !== "0x" && code[1] !== "0x") fail("history-start-unproved");
         let initialSequence = "1";
         if (code[0] !== "0x") {
-          const next = await rpc(lane.source.chainId, [{ method: "eth_call", params: [{ to: lane.onRampAddress, data: nextSequenceCall }, block] }]);
+          const next = await rpc(lane.source.chainId, [{ method: "eth_call", params: [{ to: lane.onRampAddress, data: nextCall }, block] }]);
           if (typeof next[0] !== "string" || !WORD.test(next[0]) || BigInt(next[0]) < 1n || BigInt(next[0]) >= 2n ** 64n) fail("send-census-mismatch");
           initialSequence = BigInt(next[0]).toString();
         }
@@ -346,74 +350,105 @@ export async function observeCcipPending(input: {
           if (!header || header.hash !== row.blockHash) fail("indexer-send-unproved");
         }
       }
-      const scan = async (sent: boolean) => {
-        const cursor = sent ? cp.sent : cp.executed, side = sent ? lane.source : lane.destination, pin = sent ? sourcePin : destPin;
-        let pageBlocks = PAGE_BLOCKS;
-        for (const endpoint of input.chainRpcs.get(side.chainId)?.endpoints ?? []) {
-          if (endpoint.position !== "registry" || endpoint.maxLogBlockSpan === undefined) continue;
-          if (!Number.isSafeInteger(endpoint.maxLogBlockSpan) || endpoint.maxLogBlockSpan < 1) fail("rpc-log-span-invalid");
-          pageBlocks = Math.min(pageBlocks, endpoint.maxLogBlockSpan);
+    }
+    type Scan = { lane: Lane; cp: CcipPendingCheckpoint["lanes"][number]; sent: boolean; topic: `0x${string}` };
+    const scansByChain = chains.map(chain => input.source.lanes.flatMap((lane, i): Scan[] => {
+      const cp = checkpoint!.lanes[i]!, scans: Scan[] = [];
+      if (lane.source.chainId === chain) scans.push({ lane, cp, sent: true,
+        topic: lane.version === "2.0.0" ? SEND_20 : lane.version === "1.6" ? SEND_16 : SEND_15 });
+      if (lane.destination.chainId === chain) scans.push({ lane, cp, sent: false,
+        topic: lane.version === "2.0.0" ? EXECUTION_20 : lane.version === "1.6" ? EXECUTION_16 : EXECUTION_15 });
+      return scans;
+    }));
+    let pages = 0, idleChains = 0;
+    while (pages < PAGES_PER_ATTEMPT && idleChains < chains.length) {
+      throwIfAborted(input.signal);
+      const chainIndex = checkpoint.nextChainIndex, chain = chains[chainIndex]!, pin = input.headers.get(chain)!;
+      checkpoint.nextChainIndex = (chainIndex + 1) % chains.length;
+      const backlog = scansByChain[chainIndex]!.filter(scan => (scan.sent ? scan.cp.sent : scan.cp.executed).nextBlock <= pin.number);
+      if (backlog.length === 0) { idleChains++; continue; }
+      idleChains = 0;
+      let pageBlocks = PAGE_BLOCKS;
+      for (const endpoint of input.chainRpcs.get(chain)?.endpoints ?? []) {
+        if (endpoint.position !== "registry" || endpoint.maxLogBlockSpan === undefined) continue;
+        if (!Number.isSafeInteger(endpoint.maxLogBlockSpan) || endpoint.maxLogBlockSpan < 1) fail("rpc-log-span-invalid");
+        pageBlocks = Math.min(pageBlocks, endpoint.maxLogBlockSpan);
+      }
+      // One physical log page covers every participating lane/side on this chain.
+      // Later cursors never rescan their prefix; they join when the oldest reaches them.
+      const from = Math.min(...backlog.map(scan => (scan.sent ? scan.cp.sent : scan.cp.executed).nextBlock));
+      const end = Math.min(pin.number, from + pageBlocks - 1);
+      const scans = backlog.filter(scan => (scan.sent ? scan.cp.sent : scan.cp.executed).nextBlock <= end);
+      const addresses = [...new Set(scans.map(scan => scan.sent ? scan.lane.onRampAddress : scan.lane.offRampAddress))];
+      const topics = [...new Set(scans.map(scan => scan.topic))];
+      const endHeader = await fetchEvmBlockHeader(chain, end, options);
+      if (!endHeader) fail("history-unavailable");
+      const [raw] = await rpc(chain, [{ method: "eth_getLogs", params: [{ address: addresses, topics: [topics],
+        fromBlock: `0x${from.toString(16)}`, toBlock: `0x${end.toString(16)}` }] }]);
+      if (!Array.isArray(raw) || raw.length > 2048) fail("history-capacity");
+      const logs = raw.map(asLog), blockHashes = new Map<string, string>();
+      let previousPosition = -1;
+      for (const log of logs) {
+        const height = Number(BigInt(log.blockNumber)), index = Number(BigInt(log.logIndex)), position = height * 1000000 + index;
+        if (!Number.isSafeInteger(position) || height < from || height > end || index >= 1000000 || position <= previousPosition) fail("history-gap");
+        previousPosition = position;
+        if (!addresses.includes(log.address) || !topics.includes(log.topics[0] as `0x${string}`)) fail("log-filter-mismatch");
+        const previous = blockHashes.get(log.blockNumber);
+        if (previous !== undefined && previous !== log.blockHash) fail("event-anchor-mismatch");
+        blockHashes.set(log.blockNumber, log.blockHash);
+      }
+      const blocks = [...blockHashes];
+      for (let offset = 0; offset < blocks.length; offset += 32) {
+        const chunk = blocks.slice(offset, offset + 32);
+        const headers = await rpc(chain, chunk.map(([number]) => ({ method: "eth_getBlockByNumber", params: [number, false] })));
+        if (headers.some((raw, j) => {
+          const parsed = LogHeaderSchema.safeParse(raw);
+          return !parsed.success || BigInt(parsed.data.number) !== BigInt(chunk[j]![0]) || parsed.data.hash !== chunk[j]![1];
+        })) fail("event-anchor-mismatch");
+      }
+      for (const { lane, cp, sent, topic } of scans) {
+        const cursor = sent ? cp.sent : cp.executed, additions: Message[] = [];
+        const laneLogs = logs.filter(log => {
+          if (Number(BigInt(log.blockNumber)) < cursor.nextBlock ||
+            log.address !== (sent ? lane.onRampAddress : lane.offRampAddress) ||
+            log.topics[0] !== topic) return false;
+          // Shared ramps also emit other directed lanes. Only our exact selector
+          // is in this census; ABI/identity validation remains below.
+          return lane.version === "1.5" || log.topics[1] === word(sent ? lane.destination.chainSelector : lane.source.chainSelector);
+        });
+        for (const log of laneLogs) {
+          if (sent) {
+            const message = decodeSend(log, lane);
+            if (message.sequence !== BigInt(cp.lastSequence) + 1n) fail("sequence-gap");
+            cp.lastSequence = message.sequence.toString();
+            if (message.amount > 0n) additions.push({ sequence: message.sequence.toString(), messageId: message.messageId, amount: message.amount.toString(), transactionHash: log.transactionHash,
+              sourceBlock: Number(BigInt(log.blockNumber)), sourceBlockHash: log.blockHash, executionState: 0 });
+          } else {
+            const event = decodeExecution(log, lane), message = cp.messages.find(message => message.sequence === event.sequence);
+            if (message && message.messageId !== event.messageId) fail("execution-message-mismatch");
+            // Only finalized state, below, removes a liability; logs alone do not.
+          }
         }
-        while (cursor.nextBlock <= pin.number && pages < PAGES_PER_ATTEMPT) {
-          throwIfAborted(input.signal);
-          const from = cursor.nextBlock, end = Math.min(pin.number, from + pageBlocks - 1);
-          const endHeader = await fetchEvmBlockHeader(side.chainId, end, options);
-          if (!endHeader) fail("history-unavailable");
-          const topics = sent ? lane.version !== "1.5" ? [lane.version === "2.0.0" ? SEND_20 : SEND_16, word(lane.destination.chainSelector)] : [SEND_15]
-            : lane.version !== "1.5" ? [lane.version === "2.0.0" ? EXECUTION_20 : EXECUTION_16, word(lane.source.chainSelector)] : [EXECUTION_15];
-          const [raw] = await rpc(side.chainId, [{ method: "eth_getLogs", params: [{ address: sent ? lane.onRampAddress : lane.offRampAddress, topics,
-            fromBlock: `0x${from.toString(16)}`, toBlock: `0x${end.toString(16)}` }] }]);
-          if (!Array.isArray(raw) || raw.length > 2048) fail("history-capacity");
-          const logs = raw.map(asLog);
-          const blockHashes = new Map<string, string>();
-          for (const log of logs) {
-            const previous = blockHashes.get(log.blockNumber);
-            if (previous !== undefined && previous !== log.blockHash) fail("event-anchor-mismatch");
-            blockHashes.set(log.blockNumber, log.blockHash);
-          }
-          const blocks = [...blockHashes];
-          for (let offset = 0; offset < blocks.length; offset += 32) {
-            const chunk = blocks.slice(offset, offset + 32);
-            const headers = await rpc(side.chainId, chunk.map(([number]) => ({ method: "eth_getBlockByNumber", params: [number, false] })));
-            if (headers.some((raw, j) => {
-              const parsed = LogHeaderSchema.safeParse(raw);
-              return !parsed.success || BigInt(parsed.data.number) !== BigInt(chunk[j]![0]) || parsed.data.hash !== chunk[j]![1];
-            })) fail("event-anchor-mismatch");
-          }
-          let previousPosition = -1;
-          const additions: Message[] = [];
-          for (const log of logs) {
-            const height = Number(BigInt(log.blockNumber)), index = Number(BigInt(log.logIndex)), position = height * 1000000 + index;
-            if (!Number.isSafeInteger(position) || height < from || height > end || index >= 1000000 || position <= previousPosition) fail("history-gap");
-            previousPosition = position;
-            if (sent) {
-              const message = decodeSend(log, lane);
-              if (message.sequence !== BigInt(cp.lastSequence) + 1n) fail("sequence-gap");
-              cp.lastSequence = message.sequence.toString();
-              if (message.amount > 0n) additions.push({ sequence: message.sequence.toString(), messageId: message.messageId, amount: message.amount.toString(), transactionHash: log.transactionHash,
-                sourceBlock: height, sourceBlockHash: log.blockHash, executionState: 0 });
-            } else {
-              const event = decodeExecution(log, lane), message = cp.messages.find(message => message.sequence === event.sequence);
-              if (message && message.messageId !== event.messageId) fail("execution-message-mismatch");
-              // Only finalized state, below, removes a liability; logs alone do not.
-            }
-          }
-          const states = await state(lane, additions);
-          additions.forEach((message, j) => { if (states[j] !== 2) cp.messages.push({ ...message, executionState: states[j] as 0 | 3 }); });
-          if (cp.messages.length > 512) fail("checkpoint-capacity");
-          const rechecked = await fetchEvmBlockHeader(side.chainId, end, options);
-          if (!rechecked || rechecked.hash !== endHeader.hash) fail("history-reorg");
-          cursor.digest = sha256Hex(stableJsonStringifyV1({ previous: cursor.digest, from, end, endHeader, logs: raw }));
-          cursor.nextBlock = end + 1; cursor.anchor = end; cursor.anchorHash = endHeader.hash; pages++;
-          if (input.db) {
-            const saved = stableJsonStringifyV1(checkpoint);
-            if (saved.length > MAX_CHECKPOINT_BYTES) fail("checkpoint-capacity");
-            await setCache(input.db, cacheKey, saved, input.signal);
-          }
-        }
-      };
-      await scan(true);
-      await scan(false);
+        const states = await state(lane, additions);
+        additions.forEach((message, j) => { if (states[j] !== 2) cp.messages.push({ ...message, executionState: states[j] as 0 | 3 }); });
+        if (cp.messages.length > 512) fail("checkpoint-capacity");
+        cursor.digest = sha256Hex(stableJsonStringifyV1({ previous: cursor.digest, from: cursor.nextBlock, end, endHeader, logs: laneLogs }));
+      }
+      const rechecked = await fetchEvmBlockHeader(chain, end, options);
+      if (!rechecked || rechecked.hash !== endHeader.hash) fail("history-reorg");
+      for (const scan of scans) {
+        const cursor = scan.sent ? scan.cp.sent : scan.cp.executed;
+        cursor.nextBlock = end + 1; cursor.anchor = end; cursor.anchorHash = endHeader.hash;
+      }
+      pages++;
+      if (input.db) {
+        const saved = stableJsonStringifyV1(checkpoint);
+        if (saved.length > MAX_CHECKPOINT_BYTES) fail("checkpoint-capacity");
+        await setCache(input.db, cacheKey, saved, input.signal);
+      }
+    }
+    for (let i = 0; i < input.source.lanes.length; i++) {
+      const lane = input.source.lanes[i]!, cp = checkpoint.lanes[i]!, sourcePin = input.headers.get(lane.source.chainId)!;
       const states = await state(lane, cp.messages);
       cp.messages = cp.messages.filter((message, j) => {
         if (message.executionState === 3 && states[j] === 0) fail("execution-state-regressed");
@@ -422,7 +457,7 @@ export async function observeCcipPending(input: {
         return true;
       });
       if (cp.sent.nextBlock === sourcePin.number + 1) {
-        const [next] = await rpc(lane.source.chainId, [{ method: "eth_call", params: [{ to: lane.onRampAddress, data: nextSequenceCall }, { blockHash: sourcePin.hash, requireCanonical: true }] }]);
+        const [next] = await rpc(lane.source.chainId, [{ method: "eth_call", params: [{ to: lane.onRampAddress, data: nextSequenceCall(lane) }, { blockHash: sourcePin.hash, requireCanonical: true }] }]);
         if (typeof next !== "string" || !WORD.test(next) || BigInt(next) !== BigInt(cp.lastSequence) + 1n) fail("send-census-mismatch");
       }
       let amount = cp.messages.reduce((sum, message) => sum + BigInt(message.amount), 0n);
@@ -437,7 +472,6 @@ export async function observeCcipPending(input: {
         sourceChainSelector: lane.source.chainSelector, destinationChainSelector: lane.destination.chainSelector,
         initialSequence: cp.initialSequence, lastSequence: cp.lastSequence, pendingCount: cp.messages.length,
         failedCount: cp.messages.filter(message => message.executionState === 3).length, amount: amount.toString() });
-      if (pages === PAGES_PER_ATTEMPT && (cp.sent.nextBlock <= sourcePin.number || cp.executed.nextBlock <= destPin.number)) break;
     }
     const serialized = stableJsonStringifyV1(checkpoint);
     if (serialized.length > MAX_CHECKPOINT_BYTES) fail("checkpoint-capacity");
