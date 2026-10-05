@@ -120,6 +120,20 @@ export const DEX_EXECUTION_CAPABILITY_REGISTRY: readonly DexExecutionCapabilityR
     eligibleDeploymentKeys: ACTIVE_QUOTER_V2_DEPLOYMENT_KEYS,
     proofKind: "evm-state-and-call-proof",
   }),
+  ...[
+    { profileId: "hyperswap-v3-quoter-v2", chain: "hyperevm" },
+    { profileId: "hybra-v3-quoter-v2", chain: "hyperevm" },
+    { profileId: "kodiak-v3-quoter-v2", chain: "berachain" },
+    { profileId: "xswap-v3-quoter-v2", chain: "xdc" },
+  ].map(({ profileId, chain }) => capabilityRegistration({
+    profileId,
+    capabilityId: "measured-adapter-shadow",
+    adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.quoterV2,
+    platform: "evm",
+    lifecycle: "shadow",
+    eligibleChains: [chain],
+    proofKind: "evm-state-and-call-proof",
+  })),
   capabilityRegistration({
     profileId: UNISWAP_V4_ADAPTER_PROFILE_ID,
     capabilityId: "uniswap-v4-hook-free-measured-exact",
