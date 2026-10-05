@@ -40590,6 +40590,55 @@
         "https://api.mainnet-beta.solana.com"
       ],
       "rationale": "D-24 C: the undisclosed datum is the issuer claim/loss perimeter of the duplicate-listed Solana mint, not its observable quorum or mint permissions. The issuer docs, LP conversion description, website, legal terms, transparency and contract observations disclose no authoritative canonical-FUSD versus FUSDLP liability mapping. Fresh single-slot mint/multisig/metadata reads retain the conflict. Keep economicLossScope unknown and retain adverse 1-of-3 exposure; never substitute global-claim, deployment or access-only."
+    },
+    {
+      "id": "uw-srusd-reservoir-5b500b881a0b17e7",
+      "assetId": "srusd-reservoir",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "supervision",
+        "pillar": "control",
+        "requiredDatum": "supervision",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T08:26:58Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (R04)",
+      "sources": [
+        {
+          "url": "https://docs.reservoir.xyz/products/proof-of-reserves.md",
+          "observedAt": "2026-10-05T08:11:40Z",
+          "datumAsOf": null,
+          "location": "Proof of Reserves / Liabilities / srUSD - Savings",
+          "excerpt": "Users can mint srUSD with rUSD to earn yield from the protocol, which will be determined by Reservoir governance.",
+          "assertion": "Describes native srUSD issuance and balance-sheet governance, but names no srUSD prudential supervisor or independent whole-supply financial assurance engagement."
+        },
+        {
+          "url": "https://docs.reservoir.xyz/security-and-compliance/audits.md",
+          "observedAt": "2026-10-05T08:11:40Z",
+          "datumAsOf": null,
+          "location": "Audits introduction and audit inventory",
+          "excerpt": "The Reservoir protocol has successfully completed four audits by Halborn (a leading security auditing firm).",
+          "assertion": "Disclosed audits are smart-contract security reviews, not an issuer-wide prudential or financial-attestation supervisory regime."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.reservoir.xyz/llms.txt",
+        "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd.md",
+        "https://docs.reservoir.xyz/products/proof-of-reserves.md",
+        "https://app.reservoir.xyz/api/reserves/raw",
+        "https://docs.reservoir.xyz/security-and-compliance/terms-of-service.md",
+        "https://docs.reservoir.xyz/security-and-compliance/risk-factors.md",
+        "https://docs.reservoir.xyz/security-and-compliance/faq.md",
+        "https://docs.reservoir.xyz/security-and-compliance/audits.md",
+        "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FuV2CWL0AZicnZxx3SgUP%2Fuploads%2FLNmg84HNDNlNKagf9jLo%2FReservoir%20Protocol%20-%20lz-bridge%20_%20SSC.pdf?alt=media&token=168abe3d-0650-454c-bfa5-592b7c08ad83",
+        "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md",
+        "https://sourcify.dev/server/v2/contract/1/0x738d1115b90efa71ae468f1287fc864775e23a31",
+        "https://www.cima.ky/search-entities-cima?search=Reservoir%20Foundation"
+      ],
+      "rationale": "The exact missing datum is the supervisory regime over srUSD native issuance and its whole-supply liability reconciliation. Exhaustive issuer documentation, transparency, legal, audit and contract review discloses governance, balances and smart-contract security audits but no prudential supervisor or independent financial assurance engagement. Regulator-index searches identify no token-specific regime; CIMA interactive register is CAPTCHA-blocked and is not claimed as a negative result. Keep supervision unknown; do not infer none or inherit a reserve asset manager licence."
     }
   ]
 }
