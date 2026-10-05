@@ -14,6 +14,7 @@ import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import { createReviewedAssetRegistry, ReviewedRegistryEntryError } from "./extension-reviewed-registry";
 import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
+import { authenticateCcipPendingObservation } from "./ccip-pending-observer";
 
 const REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec;
 const REVIEWED_DEPLOYMENT_SUPPLY_MAX_SKEW_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxSkewSec;
@@ -1129,7 +1130,7 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
   const apiObservationIds = new Set([
     ...input.plan.escrows.flatMap(escrow => escrow.receiptClaimSources.map(source => `receipt:${escrow.id}:${source.deploymentKey}`)),
     ...input.plan.escrows.filter(escrow => escrow.inFlightSource !== null && !("kind" in escrow.inFlightSource)).map(escrow => `in-flight:${escrow.id}`),
-    ...(input.plan.liabilityInFlightSource === null ? [] : ["in-flight:liability"]),
+    ...(input.plan.liabilityInFlightSource === null || "kind" in input.plan.liabilityInFlightSource ? [] : ["in-flight:liability"]),
   ]);
   const convert = (key: string, observation: EconomicSupplyObservation): EconomicFraction | null => {
     const row = input.plan.deployments.find(row => row.deploymentKey === key);
@@ -1206,7 +1207,10 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
                 });
             }) ||
             pendingObservation.responseSha256 !== sha256Hex(stableJsonStringifyV1({ proof, amount: pendingObservation.amount }))) return null;
-        } else if (pendingObservation.curvePendingProof !== undefined) return null;
+        } else if (escrow.inFlightSource.kind === "evm-ccip-pending") {
+          if (pendingObservation.curvePendingProof !== undefined ||
+            !authenticateCcipPendingObservation(escrow.inFlightSource, pendingObservation, input.observations, input.plan.deployments)) return null;
+        } else if (pendingObservation.curvePendingProof !== undefined || pendingObservation.ccipPendingProof !== undefined) return null;
       }
       const pending: EconomicFraction | null | undefined = escrow.inFlightSource === null && input.plan.inFlightTreatment === "atomic-native-wrapper"
         ? { n: 0n, d: 1n } : pendingObservation && convert(escrow.canonicalDeploymentKey, pendingObservation);
@@ -1231,6 +1235,10 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
     }
     if (input.plan.liabilityInFlightSource !== null) {
       const pendingObservation = observations.get("in-flight:liability");
+      if ("kind" in input.plan.liabilityInFlightSource &&
+        (input.plan.liabilityInFlightSource.kind !== "evm-ccip-pending" || !pendingObservation ||
+          pendingObservation.curvePendingProof !== undefined ||
+          !authenticateCcipPendingObservation(input.plan.liabilityInFlightSource, pendingObservation, input.observations, input.plan.deployments))) return null;
       const pending = pendingObservation && convert(input.plan.deployments[0]!.deploymentKey, pendingObservation);
       if (!pending) return null;
       remainder = addEconomicUnits(remainder, pending);

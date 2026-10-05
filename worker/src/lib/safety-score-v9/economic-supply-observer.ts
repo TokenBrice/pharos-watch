@@ -17,6 +17,7 @@ import { decodeEvmUint256, fetchSafetyScoreV9SolanaRpc, rewindEvmBlockHeaderToSc
 import { buildReviewedEconomicDeploymentInventory, deriveReviewedEconomicDeploymentPartition, economicProviderSupplyContradictionChain, economicSupplyInputDeploymentObservation, economicSupplyInputReferencePrice, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
 import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
 import { fetchMoveFungibleAssetSupply, fetchTonJettonSupply } from "../../cron/reserve-adapters/token-supply";
+import { observeCcipPending } from "./ccip-pending-observer";
 
 /** Finalized mint snapshot, case-preserved identity, pinned chronology and response hash. */
 export async function observeEconomicSolanaMint(input: {
@@ -544,7 +545,16 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
       failedRouteId = escrow.id;
       if ("kind" in escrow.inFlightSource) {
         let pending: EconomicSupplyObservation | null;
-        if (escrow.inFlightSource.kind === "evm-curve-lz-pending") {
+        if (escrow.inFlightSource.kind === "evm-ccip-pending") {
+          const source = escrow.inFlightSource;
+          const result = await observeCcipPending({ source, headers, clockSec: input.scoringClockSec,
+            chainRpcs: input.chainRpcs, signal: input.signal, db: input.db });
+          if (result.status !== "accepted") return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `${escrow.id}:${result.reason}` };
+          const header = headers.get(source.chainId)!;
+          pending = { id: `in-flight:${escrow.id}`, deploymentKey: escrow.canonicalDeploymentKey, amount: result.amount,
+            observedAtSec: header.timestamp, anchor: String(header.number), anchorHash: header.hash,
+            responseSha256: result.responseSha256, ccipPendingProof: result.proof };
+        } else if (escrow.inFlightSource.kind === "evm-curve-lz-pending") {
           const source = escrow.inFlightSource;
           const pins = source.sides.map(side => headers.get(side.chainId));
           if (pins.some(pin => pin === undefined)) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `${escrow.id}:pin-missing` };
@@ -566,10 +576,22 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
       }
     }
     if (plan.liabilityInFlightSource !== null) {
-      const pending = await readReviewedApiAmount(plan.liabilityInFlightSource, input.signal);
-      if (!pending) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: "in-flight:liability" };
-      inFlight.push({ id: "in-flight:liability", deploymentKey: plan.deployments[0]!.deploymentKey, amount: pending.value,
-        observedAtSec: pending.observedAtSec, anchor: pending.sourceGeneration, anchorHash: pending.responseSha256, responseSha256: pending.responseSha256 });
+      if ("kind" in plan.liabilityInFlightSource) {
+        const source = plan.liabilityInFlightSource;
+        if (source.kind !== "evm-ccip-pending") return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: "in-flight:liability:unsupported-read" };
+        const result = await observeCcipPending({ source, headers, clockSec: input.scoringClockSec,
+          chainRpcs: input.chainRpcs, signal: input.signal, db: input.db });
+        if (result.status !== "accepted") return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `in-flight:liability:${result.reason}` };
+        const header = headers.get(source.chainId)!;
+        inFlight.push({ id: "in-flight:liability", deploymentKey: plan.deployments[0]!.deploymentKey, amount: result.amount,
+          observedAtSec: header.timestamp, anchor: String(header.number), anchorHash: header.hash,
+          responseSha256: result.responseSha256, ccipPendingProof: result.proof });
+      } else {
+        const pending = await readReviewedApiAmount(plan.liabilityInFlightSource, input.signal);
+        if (!pending) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: "in-flight:liability" };
+        inFlight.push({ id: "in-flight:liability", deploymentKey: plan.deployments[0]!.deploymentKey, amount: pending.value,
+          observedAtSec: pending.observedAtSec, anchor: pending.sourceGeneration, anchorHash: pending.responseSha256, responseSha256: pending.responseSha256 });
+      }
     }
     for (const [chainId, header] of headers) {
       const rechecked = await fetchEvmBlockHeader(chainId, header.number, { chainRpcs: input.chainRpcs, signal: input.signal });
