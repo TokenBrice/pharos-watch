@@ -41849,6 +41849,1123 @@
         "https://eth.blockscout.com/api/v2/smart-contracts/0x3300f198988e4c9c63f75df86de36421f06af8c4"
       ],
       "rationale": "Required: human-control independence, operational signing policy and key-custody assurance for the participants governing Legacy UsdcVault SPARK_PROXY 0x3300f198988e4c9c63f75df86de36421f06af8c4. Primary docs disclose token voting, spell review and delayed execution; investor self-custody and individual institutional SKY-holder custody do not bind the complete identified execution chain. No controller-specific custody/independence assurance was found. C applies only to off-chain custody safeguards, not known authority or delay. Typed question remains."
+    },
+    {
+      "id": "uw-safo-spiko-usd-2c9d3a4fa3d94375",
+      "assetId": "safo-spiko-usd",
+      "scope": {
+        "componentKey": "control:mint-meta:safo-spiko-usd:283e00e51084f0ba674b",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:28:34Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-05-04",
+          "location": "Managing Permissions, daily-operator",
+          "excerpt": "The **daily-operator** is an in-house relayer responsible for minting tokens to investor addresses and handling redemptions.",
+          "assertion": "Issuer describes the operator role, not current group-9/10 addresses, their individual custody arrangements or human independence."
+        },
+        {
+          "url": "https://tech.spiko.io/posts/solana-integration/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2026-07-10",
+          "location": "Operations / Relaying and Squads",
+          "excerpt": "Signing itself is delegated to DFNS.",
+          "assertion": "Solana relayer uses DFNS, but no binding names current mint initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd or program upgrader GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h and their independent key controllers."
+        },
+        {
+          "url": "https://dfns.co/article/announcing-spiko",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-08-05",
+          "location": "Wallet access controls and signing policies",
+          "excerpt": "Spiko started using DFNS wallets both for its own treasury and for client-facing activities.",
+          "assertion": "Provider confirms Spiko adoption, not exact current privileged-key mappings, configured approval policies or independent signer principals."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://tech.spiko.io/posts/solana-integration/",
+        "https://tech.spiko.io/posts/stellar-integration/",
+        "https://docs.spiko.io/documentation/tokenization/tokenization/",
+        "https://dfns.co/article/announcing-spiko",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://geco.amf-france.org/produit-d-epargne/c79399",
+        "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+        "https://raw.githubusercontent.com/spiko-tech/contracts/main/contracts/permissions/PermissionManager.sol"
+      ],
+      "rationale": "Exact custody, human/organizational independence and configured signing policy for current Ethereum native initiators/approvers and Solana initiator/upgrader are not disclosed. Issuer/provider disclose relayer DFNS and wallet-policy capability; 2023 audit describes privileged multisigs/hardware wallets without current address bindings. Prospectus/AMF materials concern shareholder register and fund-asset custody. No attestation binds each identified controller to MPC/HSM or independent operators. Address/quorum observability does not reveal off-chain key custody. Keep typed questions."
+    },
+    {
+      "id": "uw-safo-spiko-usd-cfcefbb68f8468bc",
+      "assetId": "safo-spiko-usd",
+      "scope": {
+        "componentKey": "control:mint-meta:safo-spiko-usd:2bf10f99ec9b0aea684a:path:approve-pending",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:28:34Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-05-04",
+          "location": "Managing Permissions, daily-operator",
+          "excerpt": "The **daily-operator** is an in-house relayer responsible for minting tokens to investor addresses and handling redemptions.",
+          "assertion": "Issuer describes the operator role, not current group-9/10 addresses, their individual custody arrangements or human independence."
+        },
+        {
+          "url": "https://tech.spiko.io/posts/solana-integration/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2026-07-10",
+          "location": "Operations / Relaying and Squads",
+          "excerpt": "Signing itself is delegated to DFNS.",
+          "assertion": "Solana relayer uses DFNS, but no binding names current mint initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd or program upgrader GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h and their independent key controllers."
+        },
+        {
+          "url": "https://dfns.co/article/announcing-spiko",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-08-05",
+          "location": "Wallet access controls and signing policies",
+          "excerpt": "Spiko started using DFNS wallets both for its own treasury and for client-facing activities.",
+          "assertion": "Provider confirms Spiko adoption, not exact current privileged-key mappings, configured approval policies or independent signer principals."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://tech.spiko.io/posts/solana-integration/",
+        "https://tech.spiko.io/posts/stellar-integration/",
+        "https://docs.spiko.io/documentation/tokenization/tokenization/",
+        "https://dfns.co/article/announcing-spiko",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://geco.amf-france.org/produit-d-epargne/c79399",
+        "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+        "https://raw.githubusercontent.com/spiko-tech/contracts/main/contracts/permissions/PermissionManager.sol"
+      ],
+      "rationale": "Exact custody, human/organizational independence and configured signing policy for current Ethereum native initiators/approvers and Solana initiator/upgrader are not disclosed. Issuer/provider disclose relayer DFNS and wallet-policy capability; 2023 audit describes privileged multisigs/hardware wallets without current address bindings. Prospectus/AMF materials concern shareholder register and fund-asset custody. No attestation binds each identified controller to MPC/HSM or independent operators. Address/quorum observability does not reveal off-chain key custody. Keep typed questions."
+    },
+    {
+      "id": "uw-safo-spiko-usd-175ca4b25afb8cd5",
+      "assetId": "safo-spiko-usd",
+      "scope": {
+        "componentKey": "control:mint-meta:safo-spiko-usd:2bf10f99ec9b0aea684a:path:cancel-pending",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:28:34Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-05-04",
+          "location": "Managing Permissions, daily-operator",
+          "excerpt": "The **daily-operator** is an in-house relayer responsible for minting tokens to investor addresses and handling redemptions.",
+          "assertion": "Issuer describes the operator role, not current group-9/10 addresses, their individual custody arrangements or human independence."
+        },
+        {
+          "url": "https://tech.spiko.io/posts/solana-integration/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2026-07-10",
+          "location": "Operations / Relaying and Squads",
+          "excerpt": "Signing itself is delegated to DFNS.",
+          "assertion": "Solana relayer uses DFNS, but no binding names current mint initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd or program upgrader GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h and their independent key controllers."
+        },
+        {
+          "url": "https://dfns.co/article/announcing-spiko",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-08-05",
+          "location": "Wallet access controls and signing policies",
+          "excerpt": "Spiko started using DFNS wallets both for its own treasury and for client-facing activities.",
+          "assertion": "Provider confirms Spiko adoption, not exact current privileged-key mappings, configured approval policies or independent signer principals."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://tech.spiko.io/posts/solana-integration/",
+        "https://tech.spiko.io/posts/stellar-integration/",
+        "https://docs.spiko.io/documentation/tokenization/tokenization/",
+        "https://dfns.co/article/announcing-spiko",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://geco.amf-france.org/produit-d-epargne/c79399",
+        "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+        "https://raw.githubusercontent.com/spiko-tech/contracts/main/contracts/permissions/PermissionManager.sol"
+      ],
+      "rationale": "Exact custody, human/organizational independence and configured signing policy for current Ethereum native initiators/approvers and Solana initiator/upgrader are not disclosed. Issuer/provider disclose relayer DFNS and wallet-policy capability; 2023 audit describes privileged multisigs/hardware wallets without current address bindings. Prospectus/AMF materials concern shareholder register and fund-asset custody. No attestation binds each identified controller to MPC/HSM or independent operators. Address/quorum observability does not reveal off-chain key custody. Keep typed questions."
+    },
+    {
+      "id": "uw-safo-spiko-usd-2590fd6631fe41db",
+      "assetId": "safo-spiko-usd",
+      "scope": {
+        "componentKey": "control:mint-meta:safo-spiko-usd:5f5aa4706e1ca4febbae",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:28:34Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-05-04",
+          "location": "Managing Permissions, daily-operator",
+          "excerpt": "The **daily-operator** is an in-house relayer responsible for minting tokens to investor addresses and handling redemptions.",
+          "assertion": "Issuer describes the operator role, not current group-9/10 addresses, their individual custody arrangements or human independence."
+        },
+        {
+          "url": "https://tech.spiko.io/posts/solana-integration/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2026-07-10",
+          "location": "Operations / Relaying and Squads",
+          "excerpt": "Signing itself is delegated to DFNS.",
+          "assertion": "Solana relayer uses DFNS, but no binding names current mint initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd or program upgrader GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h and their independent key controllers."
+        },
+        {
+          "url": "https://dfns.co/article/announcing-spiko",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-08-05",
+          "location": "Wallet access controls and signing policies",
+          "excerpt": "Spiko started using DFNS wallets both for its own treasury and for client-facing activities.",
+          "assertion": "Provider confirms Spiko adoption, not exact current privileged-key mappings, configured approval policies or independent signer principals."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://tech.spiko.io/posts/solana-integration/",
+        "https://tech.spiko.io/posts/stellar-integration/",
+        "https://docs.spiko.io/documentation/tokenization/tokenization/",
+        "https://dfns.co/article/announcing-spiko",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://geco.amf-france.org/produit-d-epargne/c79399",
+        "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+        "https://raw.githubusercontent.com/spiko-tech/contracts/main/contracts/permissions/PermissionManager.sol"
+      ],
+      "rationale": "Exact custody, human/organizational independence and configured signing policy for current Ethereum native initiators/approvers and Solana initiator/upgrader are not disclosed. Issuer/provider disclose relayer DFNS and wallet-policy capability; 2023 audit describes privileged multisigs/hardware wallets without current address bindings. Prospectus/AMF materials concern shareholder register and fund-asset custody. No attestation binds each identified controller to MPC/HSM or independent operators. Address/quorum observability does not reveal off-chain key custody. Keep typed questions."
+    },
+    {
+      "id": "uw-safo-spiko-usd-ecd77636a5e7d945",
+      "assetId": "safo-spiko-usd",
+      "scope": {
+        "componentKey": "control:mint-meta:safo-spiko-usd:6de5504080d47935e511",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:28:34Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-05-04",
+          "location": "Managing Permissions, daily-operator",
+          "excerpt": "The **daily-operator** is an in-house relayer responsible for minting tokens to investor addresses and handling redemptions.",
+          "assertion": "Issuer describes the operator role, not current group-9/10 addresses, their individual custody arrangements or human independence."
+        },
+        {
+          "url": "https://tech.spiko.io/posts/solana-integration/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2026-07-10",
+          "location": "Operations / Relaying and Squads",
+          "excerpt": "Signing itself is delegated to DFNS.",
+          "assertion": "Solana relayer uses DFNS, but no binding names current mint initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd or program upgrader GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h and their independent key controllers."
+        },
+        {
+          "url": "https://dfns.co/article/announcing-spiko",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-08-05",
+          "location": "Wallet access controls and signing policies",
+          "excerpt": "Spiko started using DFNS wallets both for its own treasury and for client-facing activities.",
+          "assertion": "Provider confirms Spiko adoption, not exact current privileged-key mappings, configured approval policies or independent signer principals."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://tech.spiko.io/posts/solana-integration/",
+        "https://tech.spiko.io/posts/stellar-integration/",
+        "https://docs.spiko.io/documentation/tokenization/tokenization/",
+        "https://dfns.co/article/announcing-spiko",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://geco.amf-france.org/produit-d-epargne/c79399",
+        "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+        "https://raw.githubusercontent.com/spiko-tech/contracts/main/contracts/permissions/PermissionManager.sol"
+      ],
+      "rationale": "Exact custody, human/organizational independence and configured signing policy for current Ethereum native initiators/approvers and Solana initiator/upgrader are not disclosed. Issuer/provider disclose relayer DFNS and wallet-policy capability; 2023 audit describes privileged multisigs/hardware wallets without current address bindings. Prospectus/AMF materials concern shareholder register and fund-asset custody. No attestation binds each identified controller to MPC/HSM or independent operators. Address/quorum observability does not reveal off-chain key custody. Keep typed questions."
+    },
+    {
+      "id": "uw-safo-spiko-usd-a7db4da70009ba57",
+      "assetId": "safo-spiko-usd",
+      "scope": {
+        "componentKey": "control:mint-meta:safo-spiko-usd:77264fc6a2ac11c6d8d5:path:initiate",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:28:34Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-05-04",
+          "location": "Managing Permissions, daily-operator",
+          "excerpt": "The **daily-operator** is an in-house relayer responsible for minting tokens to investor addresses and handling redemptions.",
+          "assertion": "Issuer describes the operator role, not current group-9/10 addresses, their individual custody arrangements or human independence."
+        },
+        {
+          "url": "https://tech.spiko.io/posts/solana-integration/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2026-07-10",
+          "location": "Operations / Relaying and Squads",
+          "excerpt": "Signing itself is delegated to DFNS.",
+          "assertion": "Solana relayer uses DFNS, but no binding names current mint initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd or program upgrader GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h and their independent key controllers."
+        },
+        {
+          "url": "https://dfns.co/article/announcing-spiko",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-08-05",
+          "location": "Wallet access controls and signing policies",
+          "excerpt": "Spiko started using DFNS wallets both for its own treasury and for client-facing activities.",
+          "assertion": "Provider confirms Spiko adoption, not exact current privileged-key mappings, configured approval policies or independent signer principals."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://tech.spiko.io/posts/solana-integration/",
+        "https://tech.spiko.io/posts/stellar-integration/",
+        "https://docs.spiko.io/documentation/tokenization/tokenization/",
+        "https://dfns.co/article/announcing-spiko",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://geco.amf-france.org/produit-d-epargne/c79399",
+        "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+        "https://raw.githubusercontent.com/spiko-tech/contracts/main/contracts/permissions/PermissionManager.sol"
+      ],
+      "rationale": "Exact custody, human/organizational independence and configured signing policy for current Ethereum native initiators/approvers and Solana initiator/upgrader are not disclosed. Issuer/provider disclose relayer DFNS and wallet-policy capability; 2023 audit describes privileged multisigs/hardware wallets without current address bindings. Prospectus/AMF materials concern shareholder register and fund-asset custody. No attestation binds each identified controller to MPC/HSM or independent operators. Address/quorum observability does not reveal off-chain key custody. Keep typed questions."
+    },
+    {
+      "id": "uw-safo-spiko-usd-d41c86d4c5f46dfd",
+      "assetId": "safo-spiko-usd",
+      "scope": {
+        "componentKey": "control:mint-meta:safo-spiko-usd:7aac08d93fae5935a86b",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:28:34Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-05-04",
+          "location": "Managing Permissions, daily-operator",
+          "excerpt": "The **daily-operator** is an in-house relayer responsible for minting tokens to investor addresses and handling redemptions.",
+          "assertion": "Issuer describes the operator role, not current group-9/10 addresses, their individual custody arrangements or human independence."
+        },
+        {
+          "url": "https://tech.spiko.io/posts/solana-integration/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2026-07-10",
+          "location": "Operations / Relaying and Squads",
+          "excerpt": "Signing itself is delegated to DFNS.",
+          "assertion": "Solana relayer uses DFNS, but no binding names current mint initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd or program upgrader GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h and their independent key controllers."
+        },
+        {
+          "url": "https://dfns.co/article/announcing-spiko",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-08-05",
+          "location": "Wallet access controls and signing policies",
+          "excerpt": "Spiko started using DFNS wallets both for its own treasury and for client-facing activities.",
+          "assertion": "Provider confirms Spiko adoption, not exact current privileged-key mappings, configured approval policies or independent signer principals."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://tech.spiko.io/posts/solana-integration/",
+        "https://tech.spiko.io/posts/stellar-integration/",
+        "https://docs.spiko.io/documentation/tokenization/tokenization/",
+        "https://dfns.co/article/announcing-spiko",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://geco.amf-france.org/produit-d-epargne/c79399",
+        "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+        "https://raw.githubusercontent.com/spiko-tech/contracts/main/contracts/permissions/PermissionManager.sol"
+      ],
+      "rationale": "Exact custody, human/organizational independence and configured signing policy for current Ethereum native initiators/approvers and Solana initiator/upgrader are not disclosed. Issuer/provider disclose relayer DFNS and wallet-policy capability; 2023 audit describes privileged multisigs/hardware wallets without current address bindings. Prospectus/AMF materials concern shareholder register and fund-asset custody. No attestation binds each identified controller to MPC/HSM or independent operators. Address/quorum observability does not reveal off-chain key custody. Keep typed questions."
+    },
+    {
+      "id": "uw-safo-spiko-usd-96c2f1b2fe719c4d",
+      "assetId": "safo-spiko-usd",
+      "scope": {
+        "componentKey": "control:mint-meta:safo-spiko-usd:937f5001660fea59c40d:path:approve-pending",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:28:34Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-05-04",
+          "location": "Managing Permissions, daily-operator",
+          "excerpt": "The **daily-operator** is an in-house relayer responsible for minting tokens to investor addresses and handling redemptions.",
+          "assertion": "Issuer describes the operator role, not current group-9/10 addresses, their individual custody arrangements or human independence."
+        },
+        {
+          "url": "https://tech.spiko.io/posts/solana-integration/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2026-07-10",
+          "location": "Operations / Relaying and Squads",
+          "excerpt": "Signing itself is delegated to DFNS.",
+          "assertion": "Solana relayer uses DFNS, but no binding names current mint initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd or program upgrader GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h and their independent key controllers."
+        },
+        {
+          "url": "https://dfns.co/article/announcing-spiko",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-08-05",
+          "location": "Wallet access controls and signing policies",
+          "excerpt": "Spiko started using DFNS wallets both for its own treasury and for client-facing activities.",
+          "assertion": "Provider confirms Spiko adoption, not exact current privileged-key mappings, configured approval policies or independent signer principals."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://tech.spiko.io/posts/solana-integration/",
+        "https://tech.spiko.io/posts/stellar-integration/",
+        "https://docs.spiko.io/documentation/tokenization/tokenization/",
+        "https://dfns.co/article/announcing-spiko",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://geco.amf-france.org/produit-d-epargne/c79399",
+        "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+        "https://raw.githubusercontent.com/spiko-tech/contracts/main/contracts/permissions/PermissionManager.sol"
+      ],
+      "rationale": "Exact custody, human/organizational independence and configured signing policy for current Ethereum native initiators/approvers and Solana initiator/upgrader are not disclosed. Issuer/provider disclose relayer DFNS and wallet-policy capability; 2023 audit describes privileged multisigs/hardware wallets without current address bindings. Prospectus/AMF materials concern shareholder register and fund-asset custody. No attestation binds each identified controller to MPC/HSM or independent operators. Address/quorum observability does not reveal off-chain key custody. Keep typed questions."
+    },
+    {
+      "id": "uw-safo-spiko-usd-8d3346316a0336c5",
+      "assetId": "safo-spiko-usd",
+      "scope": {
+        "componentKey": "control:mint-meta:safo-spiko-usd:937f5001660fea59c40d:path:cancel-pending",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:28:34Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-05-04",
+          "location": "Managing Permissions, daily-operator",
+          "excerpt": "The **daily-operator** is an in-house relayer responsible for minting tokens to investor addresses and handling redemptions.",
+          "assertion": "Issuer describes the operator role, not current group-9/10 addresses, their individual custody arrangements or human independence."
+        },
+        {
+          "url": "https://tech.spiko.io/posts/solana-integration/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2026-07-10",
+          "location": "Operations / Relaying and Squads",
+          "excerpt": "Signing itself is delegated to DFNS.",
+          "assertion": "Solana relayer uses DFNS, but no binding names current mint initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd or program upgrader GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h and their independent key controllers."
+        },
+        {
+          "url": "https://dfns.co/article/announcing-spiko",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-08-05",
+          "location": "Wallet access controls and signing policies",
+          "excerpt": "Spiko started using DFNS wallets both for its own treasury and for client-facing activities.",
+          "assertion": "Provider confirms Spiko adoption, not exact current privileged-key mappings, configured approval policies or independent signer principals."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://tech.spiko.io/posts/solana-integration/",
+        "https://tech.spiko.io/posts/stellar-integration/",
+        "https://docs.spiko.io/documentation/tokenization/tokenization/",
+        "https://dfns.co/article/announcing-spiko",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://geco.amf-france.org/produit-d-epargne/c79399",
+        "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+        "https://raw.githubusercontent.com/spiko-tech/contracts/main/contracts/permissions/PermissionManager.sol"
+      ],
+      "rationale": "Exact custody, human/organizational independence and configured signing policy for current Ethereum native initiators/approvers and Solana initiator/upgrader are not disclosed. Issuer/provider disclose relayer DFNS and wallet-policy capability; 2023 audit describes privileged multisigs/hardware wallets without current address bindings. Prospectus/AMF materials concern shareholder register and fund-asset custody. No attestation binds each identified controller to MPC/HSM or independent operators. Address/quorum observability does not reveal off-chain key custody. Keep typed questions."
+    },
+    {
+      "id": "uw-safo-spiko-usd-3b7670c7aa799cbd",
+      "assetId": "safo-spiko-usd",
+      "scope": {
+        "componentKey": "control:mint-meta:safo-spiko-usd:a9a897c52af2d64dfb2f:path:approve-pending",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:28:34Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-05-04",
+          "location": "Managing Permissions, daily-operator",
+          "excerpt": "The **daily-operator** is an in-house relayer responsible for minting tokens to investor addresses and handling redemptions.",
+          "assertion": "Issuer describes the operator role, not current group-9/10 addresses, their individual custody arrangements or human independence."
+        },
+        {
+          "url": "https://tech.spiko.io/posts/solana-integration/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2026-07-10",
+          "location": "Operations / Relaying and Squads",
+          "excerpt": "Signing itself is delegated to DFNS.",
+          "assertion": "Solana relayer uses DFNS, but no binding names current mint initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd or program upgrader GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h and their independent key controllers."
+        },
+        {
+          "url": "https://dfns.co/article/announcing-spiko",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-08-05",
+          "location": "Wallet access controls and signing policies",
+          "excerpt": "Spiko started using DFNS wallets both for its own treasury and for client-facing activities.",
+          "assertion": "Provider confirms Spiko adoption, not exact current privileged-key mappings, configured approval policies or independent signer principals."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://tech.spiko.io/posts/solana-integration/",
+        "https://tech.spiko.io/posts/stellar-integration/",
+        "https://docs.spiko.io/documentation/tokenization/tokenization/",
+        "https://dfns.co/article/announcing-spiko",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://geco.amf-france.org/produit-d-epargne/c79399",
+        "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+        "https://raw.githubusercontent.com/spiko-tech/contracts/main/contracts/permissions/PermissionManager.sol"
+      ],
+      "rationale": "Exact custody, human/organizational independence and configured signing policy for current Ethereum native initiators/approvers and Solana initiator/upgrader are not disclosed. Issuer/provider disclose relayer DFNS and wallet-policy capability; 2023 audit describes privileged multisigs/hardware wallets without current address bindings. Prospectus/AMF materials concern shareholder register and fund-asset custody. No attestation binds each identified controller to MPC/HSM or independent operators. Address/quorum observability does not reveal off-chain key custody. Keep typed questions."
+    },
+    {
+      "id": "uw-safo-spiko-usd-6f328e496c665cfa",
+      "assetId": "safo-spiko-usd",
+      "scope": {
+        "componentKey": "control:mint-meta:safo-spiko-usd:a9a897c52af2d64dfb2f:path:cancel-pending",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:28:34Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-05-04",
+          "location": "Managing Permissions, daily-operator",
+          "excerpt": "The **daily-operator** is an in-house relayer responsible for minting tokens to investor addresses and handling redemptions.",
+          "assertion": "Issuer describes the operator role, not current group-9/10 addresses, their individual custody arrangements or human independence."
+        },
+        {
+          "url": "https://tech.spiko.io/posts/solana-integration/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2026-07-10",
+          "location": "Operations / Relaying and Squads",
+          "excerpt": "Signing itself is delegated to DFNS.",
+          "assertion": "Solana relayer uses DFNS, but no binding names current mint initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd or program upgrader GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h and their independent key controllers."
+        },
+        {
+          "url": "https://dfns.co/article/announcing-spiko",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-08-05",
+          "location": "Wallet access controls and signing policies",
+          "excerpt": "Spiko started using DFNS wallets both for its own treasury and for client-facing activities.",
+          "assertion": "Provider confirms Spiko adoption, not exact current privileged-key mappings, configured approval policies or independent signer principals."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://tech.spiko.io/posts/solana-integration/",
+        "https://tech.spiko.io/posts/stellar-integration/",
+        "https://docs.spiko.io/documentation/tokenization/tokenization/",
+        "https://dfns.co/article/announcing-spiko",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://geco.amf-france.org/produit-d-epargne/c79399",
+        "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+        "https://raw.githubusercontent.com/spiko-tech/contracts/main/contracts/permissions/PermissionManager.sol"
+      ],
+      "rationale": "Exact custody, human/organizational independence and configured signing policy for current Ethereum native initiators/approvers and Solana initiator/upgrader are not disclosed. Issuer/provider disclose relayer DFNS and wallet-policy capability; 2023 audit describes privileged multisigs/hardware wallets without current address bindings. Prospectus/AMF materials concern shareholder register and fund-asset custody. No attestation binds each identified controller to MPC/HSM or independent operators. Address/quorum observability does not reveal off-chain key custody. Keep typed questions."
+    },
+    {
+      "id": "uw-safo-spiko-usd-bfcc6495ed76f262",
+      "assetId": "safo-spiko-usd",
+      "scope": {
+        "componentKey": "control:mint-meta:safo-spiko-usd:b3112085fb3b09bed3d3:path:approve-pending",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:28:34Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-05-04",
+          "location": "Managing Permissions, daily-operator",
+          "excerpt": "The **daily-operator** is an in-house relayer responsible for minting tokens to investor addresses and handling redemptions.",
+          "assertion": "Issuer describes the operator role, not current group-9/10 addresses, their individual custody arrangements or human independence."
+        },
+        {
+          "url": "https://tech.spiko.io/posts/solana-integration/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2026-07-10",
+          "location": "Operations / Relaying and Squads",
+          "excerpt": "Signing itself is delegated to DFNS.",
+          "assertion": "Solana relayer uses DFNS, but no binding names current mint initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd or program upgrader GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h and their independent key controllers."
+        },
+        {
+          "url": "https://dfns.co/article/announcing-spiko",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-08-05",
+          "location": "Wallet access controls and signing policies",
+          "excerpt": "Spiko started using DFNS wallets both for its own treasury and for client-facing activities.",
+          "assertion": "Provider confirms Spiko adoption, not exact current privileged-key mappings, configured approval policies or independent signer principals."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://tech.spiko.io/posts/solana-integration/",
+        "https://tech.spiko.io/posts/stellar-integration/",
+        "https://docs.spiko.io/documentation/tokenization/tokenization/",
+        "https://dfns.co/article/announcing-spiko",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://geco.amf-france.org/produit-d-epargne/c79399",
+        "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+        "https://raw.githubusercontent.com/spiko-tech/contracts/main/contracts/permissions/PermissionManager.sol"
+      ],
+      "rationale": "Exact custody, human/organizational independence and configured signing policy for current Ethereum native initiators/approvers and Solana initiator/upgrader are not disclosed. Issuer/provider disclose relayer DFNS and wallet-policy capability; 2023 audit describes privileged multisigs/hardware wallets without current address bindings. Prospectus/AMF materials concern shareholder register and fund-asset custody. No attestation binds each identified controller to MPC/HSM or independent operators. Address/quorum observability does not reveal off-chain key custody. Keep typed questions."
+    },
+    {
+      "id": "uw-safo-spiko-usd-ad5d992215c74843",
+      "assetId": "safo-spiko-usd",
+      "scope": {
+        "componentKey": "control:mint-meta:safo-spiko-usd:b3112085fb3b09bed3d3:path:cancel-pending",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:28:34Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-05-04",
+          "location": "Managing Permissions, daily-operator",
+          "excerpt": "The **daily-operator** is an in-house relayer responsible for minting tokens to investor addresses and handling redemptions.",
+          "assertion": "Issuer describes the operator role, not current group-9/10 addresses, their individual custody arrangements or human independence."
+        },
+        {
+          "url": "https://tech.spiko.io/posts/solana-integration/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2026-07-10",
+          "location": "Operations / Relaying and Squads",
+          "excerpt": "Signing itself is delegated to DFNS.",
+          "assertion": "Solana relayer uses DFNS, but no binding names current mint initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd or program upgrader GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h and their independent key controllers."
+        },
+        {
+          "url": "https://dfns.co/article/announcing-spiko",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-08-05",
+          "location": "Wallet access controls and signing policies",
+          "excerpt": "Spiko started using DFNS wallets both for its own treasury and for client-facing activities.",
+          "assertion": "Provider confirms Spiko adoption, not exact current privileged-key mappings, configured approval policies or independent signer principals."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://tech.spiko.io/posts/solana-integration/",
+        "https://tech.spiko.io/posts/stellar-integration/",
+        "https://docs.spiko.io/documentation/tokenization/tokenization/",
+        "https://dfns.co/article/announcing-spiko",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://geco.amf-france.org/produit-d-epargne/c79399",
+        "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+        "https://raw.githubusercontent.com/spiko-tech/contracts/main/contracts/permissions/PermissionManager.sol"
+      ],
+      "rationale": "Exact custody, human/organizational independence and configured signing policy for current Ethereum native initiators/approvers and Solana initiator/upgrader are not disclosed. Issuer/provider disclose relayer DFNS and wallet-policy capability; 2023 audit describes privileged multisigs/hardware wallets without current address bindings. Prospectus/AMF materials concern shareholder register and fund-asset custody. No attestation binds each identified controller to MPC/HSM or independent operators. Address/quorum observability does not reveal off-chain key custody. Keep typed questions."
+    },
+    {
+      "id": "uw-safo-spiko-usd-88881833e41c3eda",
+      "assetId": "safo-spiko-usd",
+      "scope": {
+        "componentKey": "control:mint-meta:safo-spiko-usd:d2b666b7ca2876340ad5:path:approve-pending",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:28:34Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-05-04",
+          "location": "Managing Permissions, daily-operator",
+          "excerpt": "The **daily-operator** is an in-house relayer responsible for minting tokens to investor addresses and handling redemptions.",
+          "assertion": "Issuer describes the operator role, not current group-9/10 addresses, their individual custody arrangements or human independence."
+        },
+        {
+          "url": "https://tech.spiko.io/posts/solana-integration/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2026-07-10",
+          "location": "Operations / Relaying and Squads",
+          "excerpt": "Signing itself is delegated to DFNS.",
+          "assertion": "Solana relayer uses DFNS, but no binding names current mint initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd or program upgrader GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h and their independent key controllers."
+        },
+        {
+          "url": "https://dfns.co/article/announcing-spiko",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-08-05",
+          "location": "Wallet access controls and signing policies",
+          "excerpt": "Spiko started using DFNS wallets both for its own treasury and for client-facing activities.",
+          "assertion": "Provider confirms Spiko adoption, not exact current privileged-key mappings, configured approval policies or independent signer principals."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://tech.spiko.io/posts/solana-integration/",
+        "https://tech.spiko.io/posts/stellar-integration/",
+        "https://docs.spiko.io/documentation/tokenization/tokenization/",
+        "https://dfns.co/article/announcing-spiko",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://geco.amf-france.org/produit-d-epargne/c79399",
+        "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+        "https://raw.githubusercontent.com/spiko-tech/contracts/main/contracts/permissions/PermissionManager.sol"
+      ],
+      "rationale": "Exact custody, human/organizational independence and configured signing policy for current Ethereum native initiators/approvers and Solana initiator/upgrader are not disclosed. Issuer/provider disclose relayer DFNS and wallet-policy capability; 2023 audit describes privileged multisigs/hardware wallets without current address bindings. Prospectus/AMF materials concern shareholder register and fund-asset custody. No attestation binds each identified controller to MPC/HSM or independent operators. Address/quorum observability does not reveal off-chain key custody. Keep typed questions."
+    },
+    {
+      "id": "uw-safo-spiko-usd-03c61a79898abc66",
+      "assetId": "safo-spiko-usd",
+      "scope": {
+        "componentKey": "control:mint-meta:safo-spiko-usd:d2b666b7ca2876340ad5:path:cancel-pending",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:28:34Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-05-04",
+          "location": "Managing Permissions, daily-operator",
+          "excerpt": "The **daily-operator** is an in-house relayer responsible for minting tokens to investor addresses and handling redemptions.",
+          "assertion": "Issuer describes the operator role, not current group-9/10 addresses, their individual custody arrangements or human independence."
+        },
+        {
+          "url": "https://tech.spiko.io/posts/solana-integration/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2026-07-10",
+          "location": "Operations / Relaying and Squads",
+          "excerpt": "Signing itself is delegated to DFNS.",
+          "assertion": "Solana relayer uses DFNS, but no binding names current mint initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd or program upgrader GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h and their independent key controllers."
+        },
+        {
+          "url": "https://dfns.co/article/announcing-spiko",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-08-05",
+          "location": "Wallet access controls and signing policies",
+          "excerpt": "Spiko started using DFNS wallets both for its own treasury and for client-facing activities.",
+          "assertion": "Provider confirms Spiko adoption, not exact current privileged-key mappings, configured approval policies or independent signer principals."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://tech.spiko.io/posts/solana-integration/",
+        "https://tech.spiko.io/posts/stellar-integration/",
+        "https://docs.spiko.io/documentation/tokenization/tokenization/",
+        "https://dfns.co/article/announcing-spiko",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://geco.amf-france.org/produit-d-epargne/c79399",
+        "https://raw.githubusercontent.com/trailofbits/publications/master/reviews/2023-10-spiko-securityreview.pdf",
+        "https://raw.githubusercontent.com/spiko-tech/contracts/main/contracts/permissions/PermissionManager.sol"
+      ],
+      "rationale": "Exact custody, human/organizational independence and configured signing policy for current Ethereum native initiators/approvers and Solana initiator/upgrader are not disclosed. Issuer/provider disclose relayer DFNS and wallet-policy capability; 2023 audit describes privileged multisigs/hardware wallets without current address bindings. Prospectus/AMF materials concern shareholder register and fund-asset custody. No attestation binds each identified controller to MPC/HSM or independent operators. Address/quorum observability does not reveal off-chain key custody. Keep typed questions."
+    },
+    {
+      "id": "uw-rlusd-ripple-69cc721dd288058a",
+      "assetId": "rlusd-ripple",
+      "scope": {
+        "componentKey": "control:mint-meta:rlusd-ripple:95cb642a49618aa9ce13",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-05T12:28:34Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
+      "sources": [
+        {
+          "url": "https://ripple.com/reports/rlusd-whitepaper.pdf",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2026-06-04",
+          "location": "Page 7 Cyber Risk; page 9 XRPL issuer rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
+          "excerpt": "The private/signing keys for SCTC\u02bcs RLUSD XRPL and ETH Stablecoin accounts are either;\n1. Stored on hardware wallets; or\n2. Stored on a combination of Ripple's Custody offering and hardware wallets.",
+          "assertion": "XRPL issuer signing-key custody is disclosed as hardware wallets or Ripple Custody plus hardware wallets. Neither alternative is representable by the mpc|hsm attestation enum."
+        }
+      ]
+    },
+    {
+      "id": "uw-rlusd-ripple-ebd84173845f2776",
+      "assetId": "rlusd-ripple",
+      "scope": {
+        "componentKey": "control:mint-meta:rlusd-ripple:a77160b7bec6825f9f4c:path:maximal-execution",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:28:34Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
+      "sources": [
+        {
+          "url": "https://ripple.com/reports/rlusd-whitepaper.pdf",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2026-06-04",
+          "location": "Page 7 Operational Risk",
+          "excerpt": "There are policies in place around the segregation of duties/roles and responsibilities for key and wallet management.",
+          "assertion": "Generic policy statement does not map admin MultiSign 0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e or upgrader MultiSign 0x863c8754c298d3efec3863f2a46f1c71a355ce6c to independently controlled human signers or exact custody policy."
+        },
+        {
+          "url": "https://ripple.com/reports/rlusd-whitepaper.pdf",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2026-06-04",
+          "location": "Page 10 key custody",
+          "excerpt": "All keypairs to wallets controlled by Ripple are custodied within the Ripple Custody platform (previously Metaco).",
+          "assertion": "Ripple-wide platform assertion is not an exact controller/signer custody binding for SCTC's two EVM administrative MultiSign contracts; offline backups and provider platform claims do not establish independence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ripple.com/reports/rlusd-whitepaper.pdf",
+        "https://docs.ripple.com/products/stablecoin/overview/rlusd.md",
+        "https://ripple.com/legal/stablecoin/",
+        "https://ripple.com/products/stablecoin/transparency/",
+        "https://cdn.sanity.io/files/ior4a5y3/production/4981331c98a2bb203c0c9ab2584e8b2a0da80938.pdf/RLUSD%20Attestation%20Report%20(Aug)_Final%20Signed.pdf",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e"
+      ],
+      "rationale": "Missing datum is exact EVM admin/upgrader signer-to-human independence, approval-policy configuration and role-specific custody binding, not on-chain weighted topology. Whitepaper describes stablecoin-account hardware custody, Ripple-wide custody and generic segregation, but never names these two MultiSign addresses or their independent key controllers. Public reserve assurance/NYDFS authorization are not signing-policy attestations; SOC reports are customer/NDA-access only. No exact MPC/HSM attestation admitted. Keep scoped questions and adverse maximal reach."
+    },
+    {
+      "id": "uw-rlusd-ripple-d4e4ee6f2d9bf87e",
+      "assetId": "rlusd-ripple",
+      "scope": {
+        "componentKey": "control:mint-meta:rlusd-ripple:c2ce44cb409d819eb3b4:path:maximal-execution",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:28:34Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
+      "sources": [
+        {
+          "url": "https://ripple.com/reports/rlusd-whitepaper.pdf",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2026-06-04",
+          "location": "Page 7 Operational Risk",
+          "excerpt": "There are policies in place around the segregation of duties/roles and responsibilities for key and wallet management.",
+          "assertion": "Generic policy statement does not map admin MultiSign 0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e or upgrader MultiSign 0x863c8754c298d3efec3863f2a46f1c71a355ce6c to independently controlled human signers or exact custody policy."
+        },
+        {
+          "url": "https://ripple.com/reports/rlusd-whitepaper.pdf",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2026-06-04",
+          "location": "Page 10 key custody",
+          "excerpt": "All keypairs to wallets controlled by Ripple are custodied within the Ripple Custody platform (previously Metaco).",
+          "assertion": "Ripple-wide platform assertion is not an exact controller/signer custody binding for SCTC's two EVM administrative MultiSign contracts; offline backups and provider platform claims do not establish independence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ripple.com/reports/rlusd-whitepaper.pdf",
+        "https://docs.ripple.com/products/stablecoin/overview/rlusd.md",
+        "https://ripple.com/legal/stablecoin/",
+        "https://ripple.com/products/stablecoin/transparency/",
+        "https://cdn.sanity.io/files/ior4a5y3/production/4981331c98a2bb203c0c9ab2584e8b2a0da80938.pdf/RLUSD%20Attestation%20Report%20(Aug)_Final%20Signed.pdf",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e"
+      ],
+      "rationale": "Missing datum is exact EVM admin/upgrader signer-to-human independence, approval-policy configuration and role-specific custody binding, not on-chain weighted topology. Whitepaper describes stablecoin-account hardware custody, Ripple-wide custody and generic segregation, but never names these two MultiSign addresses or their independent key controllers. Public reserve assurance/NYDFS authorization are not signing-policy attestations; SOC reports are customer/NDA-access only. No exact MPC/HSM attestation admitted. Keep scoped questions and adverse maximal reach."
+    },
+    {
+      "id": "uw-umint-ubs-1aa3e93178e1a4a4",
+      "assetId": "umint-ubs",
+      "scope": {
+        "componentKey": "control:mint-meta:umint-ubs:01f2b50d026c7545e719",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:28:34Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
+      "sources": [
+        {
+          "url": "https://www.ubs.com/global/en/investment-bank/tokenize.html",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": null,
+          "location": "Custody",
+          "excerpt": "UBS engages regulated custodians for the custody of UBS Tokenize assets.",
+          "assertion": "Asset-custody offering does not identify the custody arrangement or signing policy of uMINT default-admin and minter/enforcer EOAs."
+        },
+        {
+          "url": "https://komainu.com/insights/komainu-introduces-custody-support-for-ubs-umint-token-in-partnership-with-digift/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2024-12-17",
+          "location": "Second paragraph",
+          "excerpt": "This integration provides uMINT token holders with a secure, regulated custody solution, backed by Komainu\u2019s robust security measures and compliance framework.",
+          "assertion": "Komainu explicitly supports tokenholder custody, not native privileged keys 0xdac87349d8afd2989515deadb3692bb8edf749c4 and 0x3797416c447778b514939362cf1b41bbe23dcf58."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.ubs.com/global/en/media/display-page-ndp/en-20241101-first-tokenized-investment-fund.html",
+        "https://www.ubs.com/global/en/media/display-page-ndp/en-20251104-chainlink.html",
+        "https://www.ubs.com/global/en/investment-bank/tokenize.html",
+        "https://forum.arbitrum.foundation/t/digift-dr-umint-step2-application/28764",
+        "https://komainu.com/insights/komainu-introduces-custody-support-for-ubs-umint-token-in-partnership-with-digift/",
+        "https://eservices.mas.gov.sg/fid/institution/detail/3324-UBS-AG",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xc06036793272219179f846ef6bfc3b16e820df0b"
+      ],
+      "rationale": "No public primary binding identifies MPC/HSM/device custody, independent principals or approval policy for default-admin 0xdac87349d8afd2989515deadb3692bb8edf749c4 and minter/enforcer 0x3797416c447778b514939362cf1b41bbe23dcf58. UBS Tokenize/Chainlink releases discuss issuance and institutional custody; Komainu's statement is expressly tokenholder custody. DigiFT application describes native UBS deployment and nonpublic eligible-investor PPM; MAS register shows licensed activities, not key handling. Verified token roles do not reveal off-chain custody. Keep questions."
+    },
+    {
+      "id": "uw-umint-ubs-83a9f642f86e36ca",
+      "assetId": "umint-ubs",
+      "scope": {
+        "componentKey": "control:mint-meta:umint-ubs:d4fb6093238804b93330",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:28:34Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
+      "sources": [
+        {
+          "url": "https://www.ubs.com/global/en/investment-bank/tokenize.html",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": null,
+          "location": "Custody",
+          "excerpt": "UBS engages regulated custodians for the custody of UBS Tokenize assets.",
+          "assertion": "Asset-custody offering does not identify the custody arrangement or signing policy of uMINT default-admin and minter/enforcer EOAs."
+        },
+        {
+          "url": "https://komainu.com/insights/komainu-introduces-custody-support-for-ubs-umint-token-in-partnership-with-digift/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2024-12-17",
+          "location": "Second paragraph",
+          "excerpt": "This integration provides uMINT token holders with a secure, regulated custody solution, backed by Komainu\u2019s robust security measures and compliance framework.",
+          "assertion": "Komainu explicitly supports tokenholder custody, not native privileged keys 0xdac87349d8afd2989515deadb3692bb8edf749c4 and 0x3797416c447778b514939362cf1b41bbe23dcf58."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.ubs.com/global/en/media/display-page-ndp/en-20241101-first-tokenized-investment-fund.html",
+        "https://www.ubs.com/global/en/media/display-page-ndp/en-20251104-chainlink.html",
+        "https://www.ubs.com/global/en/investment-bank/tokenize.html",
+        "https://forum.arbitrum.foundation/t/digift-dr-umint-step2-application/28764",
+        "https://komainu.com/insights/komainu-introduces-custody-support-for-ubs-umint-token-in-partnership-with-digift/",
+        "https://eservices.mas.gov.sg/fid/institution/detail/3324-UBS-AG",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xc06036793272219179f846ef6bfc3b16e820df0b"
+      ],
+      "rationale": "No public primary binding identifies MPC/HSM/device custody, independent principals or approval policy for default-admin 0xdac87349d8afd2989515deadb3692bb8edf749c4 and minter/enforcer 0x3797416c447778b514939362cf1b41bbe23dcf58. UBS Tokenize/Chainlink releases discuss issuance and institutional custody; Komainu's statement is expressly tokenholder custody. DigiFT application describes native UBS deployment and nonpublic eligible-investor PPM; MAS register shows licensed activities, not key handling. Verified token roles do not reveal off-chain custody. Keep questions."
+    },
+    {
+      "id": "uw-mxnt-tether-ff81197f0fedb989",
+      "assetId": "mxnt-tether",
+      "scope": {
+        "componentKey": "control:mint-meta:mxnt-tether:e5e45f2f79bb1dc63f74",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:28:34Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
+      "sources": [
+        {
+          "url": "https://tether.to/en/security/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": null,
+          "location": "User's Account / While using the product",
+          "excerpt": "MFA is required to perform a redeem/withdrawal and deposit/acquire.",
+          "assertion": "Disclosed customer account authentication is not privileged multisig signer-key custody or independent-controller policy."
+        },
+        {
+          "url": "https://tether.to/en/tether-issuance-primer/",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2021-05-28",
+          "location": "Authorized",
+          "excerpt": "Authorized transactions can be generated ahead of time and then signed by multiple signers involved in the Tether tokens issuance process.",
+          "assertion": "USDt generic issuance statement does not identify current MXNT owner/ProxyAdmin wallet key custody or organizational independence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tether.to/en/security/",
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/transparency/",
+        "https://tether.to/en/tether-issuance-primer/",
+        "https://tether.to/en/faqs/?only-questions=true&search=How-often-does-Tether-provide-its-transparency-information",
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://cnad.gob.sv/es/issuers/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828"
+      ],
+      "rationale": "Exact custody and organizational independence of six signers for MXNT's 3/6 owner/ProxyAdmin wallet 0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828 are not publicly disclosed. Legal terms identify issuance/redemption; transparency/BDO concern reserves; account MFA and generic USDt multiple-signature issuance do not bind this MXNT control to MPC/HSM or independent signer principals. Regulator register and verified MultiSigWallet source add no off-chain key policy. Do not equate cryptographic owner addresses with human independence; retain question."
+    },
+    {
+      "id": "uw-susdf-falcon-b4c227c58c154572",
+      "assetId": "susdf-falcon",
+      "scope": {
+        "componentKey": "control:mint-meta:susdf-falcon:286efb320e85b6a80a03",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:28:34Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
+      "sources": [
+        {
+          "url": "https://docs.falcon.finance/resources/frequently-asked-questions-faq.md",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": null,
+          "location": "Where is deposited collateral stored?",
+          "excerpt": "Your deposited collateral is securely stored through Falcon\u2019s comprehensive custody framework. This includes off-exchange solutions with qualified custodians, Multi-Party Computation (MPC) and multi-signature schemes, and hardware-managed keys.",
+          "assertion": "Collateral-custody statement does not identify signer keys for sUSDf local ProxyAdmin owner Safe 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7."
+        },
+        {
+          "url": "https://falcon.finance/news/a-guide-to-transparency-and-security-in-falcon-finance",
+          "observedAt": "2026-10-05T12:28:34Z",
+          "datumAsOf": "2025-11-17",
+          "location": "Decentralized Governance and Controls",
+          "excerpt": "Administrative actions (like moving funds or changing parameters) require multiple approvals via a multisignature scheme.",
+          "assertion": "Generic administrative multiple-approval assertion gives no exact 4/6 Safe signer custody, named independent principals or configured off-chain approval policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://falcon.finance/news/a-guide-to-transparency-and-security-in-falcon-finance",
+        "https://docs.falcon.finance/resources/frequently-asked-questions-faq.md",
+        "https://docs.falcon.finance/resources/smart-contracts.md",
+        "https://docs.falcon.finance/resources/terms-of-use.md",
+        "https://app.falcon.finance/transparency",
+        "https://falcon.finance/api/media/file/Final%20Combined%20Assurance%20report%2031.10.25.pdf",
+        "https://etherscan.io/address/0x0D132bEE412E6619a4863AEEdad97541BfDa3F34",
+        "https://etherscan.io/address/0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7"
+      ],
+      "rationale": "Exact independent key controllers, custody scheme and configured signing policy for 4/6 Safe 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7, owner of local sUSDf ProxyAdmin 0x16a2605c026bfe4f4b7f4471933714d9b2149ace, are undisclosed. Fireblocks/Ceffu MPC, hardware-managed keys and assurance testing concern reserve assets, not this Safe's signers. Generic multiple approvals do not prove human independence. Public contract/audit/terms and transparency disclosures provide no exact controller binding. Retain question; no reserve-to-admin custody inference."
     }
   ]
 }
