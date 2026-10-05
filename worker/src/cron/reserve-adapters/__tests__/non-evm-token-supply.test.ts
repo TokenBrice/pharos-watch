@@ -29,7 +29,7 @@ describe("fetchStarknetTotalSupply", () => {
       .resolves.toBe(175_676_210_017_239_649_676_533n);
 
     const [url, body] = vi.mocked(fetchJsonPostWithRetry).mock.calls[0] ?? [];
-    expect(url).toBe("https://rpc.starknet.lava.build");
+    expect(url).toBe("https://api.cartridge.gg/x/starknet/mainnet");
     expect(body).toMatchObject({
       method: "starknet_call",
       params: { request: { contract_address: STARKNET_CONTRACT, calldata: [] }, block_id: "latest" },
@@ -55,7 +55,7 @@ describe("fetchStarknetTotalSupply", () => {
     })).resolves.toBe(10n);
 
     expect(vi.mocked(fetchJsonPostWithRetry).mock.calls[0]?.[0]).toBe("https://starknet.example");
-    expect(vi.mocked(fetchJsonPostWithRetry).mock.calls[1]?.[0]).toBe("https://rpc.starknet.lava.build");
+    expect(vi.mocked(fetchJsonPostWithRetry).mock.calls[1]?.[0]).toBe("https://api.cartridge.gg/x/starknet/mainnet");
   });
 
   it("fails closed when every endpoint fails", async () => {
