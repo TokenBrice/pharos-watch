@@ -17727,56 +17727,6 @@
       "rationale": "The maximum contractual maturity of EUR bank reserves at EU CRR credit institutions is not disclosed. Public reserve envelope, bank backing and redemption entitlement do not establish a deposit maturity maximum; no zero-day assumption is made."
     },
     {
-      "id": "uw-europ-schuman-c53f346c4b4c3210",
-      "assetId": "europ-schuman",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
-      "sources": [
-        {
-          "url": "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": "2026-06-30",
-          "location": "Reserve Report definitions p.4",
-          "excerpt": "Permitted Blockchains are Ethereum, Polygon, Avalanche, and Plasma",
-          "assertion": "Quarterly report explicitly scopes liabilities to four chains, excluding issuer-listed XRPL and Solana."
-        },
-        {
-          "url": "https://schuman.io/smart-contracts/",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": null,
-          "location": "Issuer documentation",
-          "excerpt": "XRPL",
-          "assertion": "Issuer roster contains XRPL and Solana beyond the attestation scope."
-        },
-        {
-          "url": "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": "2026-03-23",
-          "location": "I.08",
-          "excerpt": "can be regularly demonstrated through periodic publication of Proof of Reserve",
-          "assertion": "Periodic reserve assertions do not disclose complete common-clock reconciliation for every listed chain."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://schuman.io/reserve-attestations/",
-        "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
-        "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf",
-        "https://schuman.io/smart-contracts/",
-        "https://schuman.io/"
-      ],
-      "rationale": "A dated recurring whole-supply reconciliation covering every on/off-chain EUR\u00d8P liability is not published: Q2 KPMG report tests four EVM chains while official roster and whitepaper also list XRPL/Solana. Generic 1:1/periodic PoR statements and controlled minting are not evidence of a complete all-deployment regime."
-    },
-    {
       "id": "uw-europ-schuman-47acfb4e764e15ef",
       "assetId": "europ-schuman",
       "scope": {
@@ -39702,6 +39652,233 @@
         "https://berascan.com/address/0xe357b38f9871da3f8320e132e272d93721aa6582"
       ],
       "rationale": "Recovered full issuer product documentation and governing legal terms overcome the prior 403 blocker. The previously pinned exact collateral is xSolvBTC. Instant conversion produces SolvBTC, not final USD; subsequent BTC redemption follows next-Monday/holiday processing, without an assured complete realization maximum. The xSolvBTC supported-chain table also omits Berachain. No exact whole-position liquidityHorizon for this Beraborrow collateral is published in the reviewed product, legal, bridge and collateral surfaces."
+    },
+    {
+      "id": "uw-sbc-brale-2d7fdc3949613550",
+      "assetId": "sbc-brale",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:38d428ad13b1ba01ec656611",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:11:53Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R43)",
+      "sources": [
+        {
+          "url": "https://brale.xyz/security",
+          "observedAt": "2026-10-05T00:11:53Z",
+          "datumAsOf": null,
+          "location": "Reserve composition",
+          "excerpt": "Short-duration US Treasury bills (\u226490-day)",
+          "assertion": "A bill-specific maximum is public, but the same reserve policy also permits government money market funds; it does not identify the entire attested government-debt slice as bills."
+        },
+        {
+          "url": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-08-2026.pdf",
+          "observedAt": "2026-10-05T00:11:53Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2, SBC Reserve Report",
+          "excerpt": "|US government backed debt|$575,265|",
+          "assertion": "The exact category is measured without security identifiers, instrument split, or an all-category maximum maturity."
+        },
+        {
+          "url": "https://gateway.pinata.cloud/ipfs/QmRasD2fd8xt7gQphCHb4tLw2kwkCu1oekgfJzNp7QuPeA",
+          "observedAt": "2026-10-05T00:11:53Z",
+          "datumAsOf": "2023-04-27",
+          "location": "SBC whitepaper v1.1, page 7, Liquid",
+          "excerpt": "Treasury is managed across multiple accounts with various redemption timelines.",
+          "assertion": "Recovered previously inaccessible official whitepaper; its Treasury section supplies no instrument roster or hard maximum for the government-backed-debt category."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://brale.xyz/stablecoins/SBC",
+        "https://brale.xyz/security",
+        "https://docs.brale.xyz/documentation/platform/reserves.md",
+        "https://brale.xyz/legal/terms",
+        "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-08-2026.pdf",
+        "https://gateway.pinata.cloud/ipfs/QmRasD2fd8xt7gQphCHb4tLw2kwkCu1oekgfJzNp7QuPeA"
+      ],
+      "rationale": "The hard maximum maturity of the exact attested U.S. government-backed-debt slice remains undisclosed. Pinata recovered the prior IPFS blocker and the full whitepaper was read. The security page discloses \u226490 days specifically for Treasury bills, while government money-market funds are also permitted. Neither the current report, reserve docs, terms nor recovered whitepaper identifies every instrument in this aggregate category or extends the bill maximum to its entire scope. No fund-share maturity or zero is invented."
+    },
+    {
+      "id": "uw-usdso-somnia-17aef274b984d406",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2e5f5fd6dbf86144b7e6ba4a",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:21:32Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R43)",
+      "sources": [
+        {
+          "url": "https://docs.frax.com/frxusd/fiat-onramp-offramp",
+          "observedAt": "2026-10-05T00:11:53Z",
+          "datumAsOf": null,
+          "location": "Off-Ramp, Settlement",
+          "excerpt": "Typically 1-3 business days",
+          "assertion": "ACH timing is a typical estimate, not an enforceable maximum for liquidation of the whole Somnia frxUSD reserve position."
+        },
+        {
+          "url": "https://docs.frax.com/protocol/assets/frxusd/frxusd",
+          "observedAt": "2026-10-05T00:11:53Z",
+          "datumAsOf": null,
+          "location": "Enshrined Custodians",
+          "excerpt": "there is no guarantee that frxUSD is redeemable for a particular asset or from a particular enshrined custodian.",
+          "assertion": "Available collateral and whitelist conditions bind downstream redemption; no whole-position realization horizon is disclosed."
+        },
+        {
+          "url": "https://somnia.network/usdso-terms-of-service",
+          "observedAt": "2026-10-05T00:11:53Z",
+          "datumAsOf": "2026-05-05",
+          "location": "3.2 No Redemption Obligation",
+          "excerpt": "All redemption of USDso is handled exclusively through Frax\u2019s infrastructure and is subject to Frax\u2019s terms, policies, and operational procedures.",
+          "assertion": "Somnia does not add a final USD completion commitment."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://somnia.network/usdso-stablecoin",
+        "https://somnia.network/usdso-terms-of-service",
+        "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian",
+        "https://docs.frax.com/frxusd/fiat-onramp-offramp",
+        "https://docs.frax.com/frxusd/mint-and-redeem-routes",
+        "https://docs.frax.com/protocol/assets/frxusd/frxusd",
+        "https://api.frax.finance/v2/frxusd/balance-sheet/latest",
+        "https://explorer.somnia.network/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370",
+        "https://api.infra.mainnet.somnia.network"
+      ],
+      "rationale": "No bounded full-slice realization horizon into spendable USD is disclosed for the frxUSD held by USDso BrandedCustodian. Pinned block 430053425 confirms matching frxUSD custody/child supply, redeemFee 0 and isolatedBacking false; verified code burns USDso and transfers frxUSD atomically. Those on-chain facts were read, not classified as undisclosed. They establish parent-token availability only. Parent docs give collateral-dependent redemption and typical ACH/wire timing, without a full-position maximum or guaranteed Somnia-to-bank completion."
+    },
+    {
+      "id": "uw-usdso-somnia-35cccb6eaabf4c61",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:redemption:usdso-somnia:collateral-redeem"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-05T00:11:53Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R43)",
+      "sources": [
+        {
+          "url": "https://explorer.somnia.network/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370",
+          "observedAt": "2026-10-05T00:11:53Z",
+          "datumAsOf": null,
+          "location": "BrandedCustodian.sol, previewRedeem",
+          "excerpt": "if (fee > 0) _assetsOut = Math.mulDiv((1e18 - fee), _assetsOut, 1e18, Math.Rounding.Floor);",
+          "assertion": "Exact public fee formula uses owner-configurable redeemFee; collateral-redeem.ts already records it, but producer lacks a fresh same-notional formula/gas evaluation. W15 B, not permanent zero cost."
+        },
+        {
+          "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian",
+          "observedAt": "2026-10-05T00:11:53Z",
+          "datumAsOf": null,
+          "location": "Key Features",
+          "excerpt": "Configurable mint and redeem fees",
+          "assertion": "Documented variable fee is public and representable as formula context, but not as a static complete executable cost bound."
+        }
+      ]
+    },
+    {
+      "id": "uw-xgz-goldzip-8a127fc2a06be714",
+      "assetId": "xgz-goldzip",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "supervision",
+        "pillar": "control",
+        "requiredDatum": "supervision",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:11:53Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R43)",
+      "sources": [
+        {
+          "url": "https://goldzip.info/",
+          "observedAt": "2026-10-05T00:11:53Z",
+          "datumAsOf": null,
+          "location": "What is GoldZip?",
+          "excerpt": "GoldZip operates in Singapore by GoldZip Digital Pte. Ltd.",
+          "assertion": "Exact issuer/operator identity is disclosed; the claimed regime is MinLaw, with no issuer prudential licence/activity identity."
+        },
+        {
+          "url": "https://acd.mlaw.gov.sg/regulated-dealers/regulation-coverage/",
+          "observedAt": "2026-10-05T00:11:53Z",
+          "datumAsOf": "2026-05-01",
+          "location": "Regulation Coverage",
+          "excerpt": "The Ministry of Law does not audit, supervise or certify the registered dealer for any other purpose.",
+          "assertion": "MinLaw expressly limits the claimed regime to AML/CFT/CPF; it cannot establish prudential mint supervision."
+        },
+        {
+          "url": "https://eservices.mas.gov.sg/fid/institution?term=GoldZip",
+          "observedAt": "2026-10-05T00:11:53Z",
+          "datumAsOf": null,
+          "location": "Search results before suggested Goldman matches",
+          "excerpt": "No result for: goldzip",
+          "assertion": "Previously unavailable live register recovered; no exact GoldZip result, and suggested Goldman entities are unrelated. This does not prove absence of every applicable regime."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://goldzip.info/",
+        "https://goldzip.info/about/",
+        "https://goldzip.info/faq/",
+        "https://goldzip.info/transparency/",
+        "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf",
+        "https://acd.mlaw.gov.sg/regulated-dealers/list-of-registered-dealers/",
+        "https://acd.mlaw.gov.sg/regulated-dealers/regulation-coverage/",
+        "https://eservices.mas.gov.sg/fid/institution?term=GoldZip",
+        "https://eservices.mas.gov.sg/fid/institution?term=GoldZip%20Digital%20Pte.%20Ltd."
+      ],
+      "rationale": "An applicable issuer-level prudential licence, regulated activity and XGZ mint/product-scope join remain undisclosed. The prior MAS outage was overcome: live GoldZip query returns no exact result (only suggested Goldman entities); the longer-name query is broad and is not treated as an exact absence proof. Full litepaper and issuer legal/product disclosures claim only PSPM/MinLaw, whose current official scope expressly excludes other supervision. No prudential scalar or blanket absence of all regimes is inferred."
+    },
+    {
+      "id": "uw-usdglo-glo-11d814c8b4c5ac6e",
+      "assetId": "usdglo-glo",
+      "scope": {
+        "componentKey": "economic-control:bridge",
+        "exposureId": null,
+        "factorKey": "tier",
+        "pillar": "control",
+        "requiredDatum": "tier",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-05T00:11:53Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R43)",
+      "sources": [
+        {
+          "url": "https://docs.brale.xyz/guides/stablecoin-to-stablecoin-swap.md",
+          "observedAt": "2026-10-05T00:11:53Z",
+          "datumAsOf": null,
+          "location": "Swap Your Stablecoin Cross Chain",
+          "excerpt": "Stablecoins are issued natively on each chain and can be swapped 1:1 between chains at any time. Stablecoins are burned on the source chain, and minted on the destination chain.",
+          "assertion": "Issuer-native-burn-mint tier is public and already authored. Full census admission needs unsupported VeChain identity and deployment integration; adding only a sidecar route cannot meet catalog joins."
+        },
+        {
+          "url": "https://brale.xyz/stablecoins/USDGLO",
+          "observedAt": "2026-10-05T00:11:53Z",
+          "datumAsOf": null,
+          "location": "Contracts, VeChain deployment",
+          "excerpt": "0x29c630cce4ddb23900f5fe66ab55e488c15b9f5e",
+          "assertion": "Issuer registry binds the missing eighth chain to USDGLO; native tier is public, but current canonical chain metadata/contract-route census cannot admit it. No manual supply share is authored."
+        }
+      ]
     }
   ]
 }
