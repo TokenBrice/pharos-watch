@@ -196,7 +196,7 @@ export const DEX_EXECUTION_CAPABILITY_REGISTRY: readonly DexExecutionCapabilityR
     adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.evmV2,
     platform: "evm",
     lifecycle: "active",
-    eligibleChains: ["ethereum", "base", "bsc"],
+    eligibleChains: ["ethereum", "bsc"],
     proofKind: "evm-reserve-proof",
   }),
   capabilityRegistration({
@@ -304,6 +304,7 @@ export interface DexRouteSourceCapability {
     | "constant-product"
     | "weighted-constant-mean"
     | "stableswap"
+    | "solidly-v2"
     | "measured-quote"
     | "curve-stableswap-retained"
     | "amm-tvl-proxy"
@@ -477,9 +478,29 @@ export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] 
     commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
     scoreEligible: true,
     limitations: [
-      "Supports factory-verified Uniswap V2 pools on Ethereum, PancakeSwap V2 pools on BSC, and classic Aerodrome volatile pools on Base.",
-      "Aerodrome requires the reviewed factory and implementation runtimes, exact volatile factory binding, an unpaused factory, and the same-block per-pool fee.",
+      "Supports factory-verified Uniswap V2 pools on Ethereum and its byte-identical BSC factory, and PancakeSwap V2 pools on BSC.",
       "Untracked counter-asset reference prices are pool-implied from same-block reserves and the tracked input's market price.",
+    ],
+  },
+  {
+    id: "solidly-v2-exact-shadow",
+    sourceFamilies: ["dl", "cg_onchain", "gecko_terminal", "dexscreener", "direct_api"],
+    model: "solidly-v2",
+    tokenIdentity: "exact",
+    exactBalancesOrReserves: "exact",
+    poolInvariantParameters: "exact",
+    outputIdentity: "exact",
+    fees: "exact",
+    observationTime: "producer-run",
+    outputEvidenceKind: "reserve-based-amm-simulation",
+    confidence: "high",
+    outputKinds: ["tracked-stablecoin", "collateral"],
+    commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
+    scoreEligible: false,
+    limitations: [
+      "Collection-only Solidly V2 stable/volatile exact integer invariant with same-block getAmountOut equivalence.",
+      "Reviewed Aerodrome Base, Velodrome Optimism and Shadow legacy Sonic factories; CL pools never inherit this capability.",
+      "Activation requires post-deploy drift/capture/replay and publication review; current observations are diagnostic only.",
     ],
   },
   {
@@ -849,6 +870,9 @@ export function capabilityForPool(
     pool.extra.orderbookDepthUsd > 0
   ) {
     return capabilityById("cg-tickers-orderbook-depth-2pct");
+  }
+  if (pool.extra?.ammExecutionModel?.source === "solidly-v2") {
+    return capabilityById("solidly-v2-exact-shadow");
   }
   if (pool.extra?.ammExecutionModel?.invariant === "constant-product") {
     return capabilityById(

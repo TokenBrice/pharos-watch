@@ -11,6 +11,7 @@ import {
   canonicalExitRouteScopedId,
 } from "../types/exit-route-identity";
 import { buildCapacityPoint } from "./p4-exit-route-capability-policy";
+import { quoteSolidlyV2Raw } from "./solidly-v2-math";
 
 const AMM_EXECUTION_COST_TOLERANCE_BPS = 0.02;
 export const P4_AMM_MODELED_TVL_MIN_RATIO = 0.5;
@@ -52,9 +53,46 @@ export function validateAmmExecutionModel(
     if (modeledTvlRatio < P4_AMM_MODELED_TVL_MIN_RATIO) issues.push("modeled-tvl-below-retained-bound");
     if (modeledTvlRatio > P4_AMM_MODELED_TVL_MAX_RATIO) issues.push("modeled-tvl-above-retained-bound");
   }
+  if (model.source === "solidly-v2") {
+    const state = model.solidlyState;
+    const chain = state?.variant === "aerodrome" ? "base" : state?.variant === "velodrome" ? "optimism" : "sonic";
+    if (!state || context.chain !== chain || model.tokens.length !== 2 ||
+      model.invariant !== (state.stable ? "solidly-stable" : "constant-product") ||
+      model.feeRate !== state.fee / (state.variant === "shadow" ? 1_000_000 : 10_000) ||
+      !Array.isArray(state.quoteChecks) || state.verifiedQuoteCount !== state.quoteChecks.length ||
+      state.quoteChecks.length > 32 ||
+      new Set(state.quoteChecks.filter((point) => point.tokenInIndex === model.trackedTokenIndex).map((point) => point.amountIn)).size < EXIT_ROUTE_SCORING_TABLES.request.notionalGridUsd.length) {
+      issues.push("invalid-solidly-proof");
+    } else {
+      try {
+        const reserves = [BigInt(state.reserve0), BigInt(state.reserve1)];
+        if (reserves.some((reserve, index) => Number(reserve) / 10 ** model.tokens[index]!.decimals !== model.tokens[index]!.balance)) {
+          issues.push("invalid-solidly-proof");
+        }
+        for (const point of state.quoteChecks) {
+          if ((point.tokenInIndex !== 0 && point.tokenInIndex !== 1) || !/^[1-9][0-9]{0,77}$/.test(point.amountIn)) {
+            issues.push("invalid-solidly-proof");
+            break;
+          }
+          const amountOut = quoteSolidlyV2Raw({
+            reserve0: reserves[0]!, reserve1: reserves[1]!,
+            decimals0: model.tokens[0]!.decimals, decimals1: model.tokens[1]!.decimals,
+            stable: state.stable, fee: BigInt(state.fee), variant: state.variant,
+          }, BigInt(point.amountIn), point.tokenInIndex);
+          if (amountOut === null || amountOut.toString() !== point.amountOut) {
+            issues.push("solidly-quote-equivalence-failed");
+            break;
+          }
+        }
+      } catch {
+        issues.push("invalid-solidly-proof");
+      }
+    }
+    return [...new Set(issues)];
+  }
   if (model.invariant === "constant-product") {
     if (
-      !["raydium", "uniswap-v2", "pancakeswap-v2", "aerodrome-volatile"].includes(model.source) ||
+      !["raydium", "uniswap-v2", "pancakeswap-v2"].includes(model.source) ||
       model.tokens.length !== 2
     ) {
       issues.push("invalid-constant-product-model");
@@ -127,6 +165,18 @@ function stableswapOutputBalance(
 function simulateAmmOutput(model: DexAmmExecutionModel, outputTokenIndex: number, inputAmount: number): number {
   const input = model.tokens[model.trackedTokenIndex]!;
   const output = model.tokens[outputTokenIndex]!;
+  if (model.source === "solidly-v2") {
+    const state = model.solidlyState!;
+    const scaledInput = Math.floor(inputAmount * 1_000_000);
+    if (!Number.isFinite(scaledInput) || scaledInput <= 0) return 0;
+    const rawInput = BigInt(scaledInput) * 10n ** BigInt(input.decimals) / 1_000_000n;
+    const rawOutput = quoteSolidlyV2Raw({
+      reserve0: BigInt(state.reserve0), reserve1: BigInt(state.reserve1),
+      decimals0: model.tokens[0]!.decimals, decimals1: model.tokens[1]!.decimals,
+      stable: state.stable, fee: BigInt(state.fee), variant: state.variant,
+    }, rawInput, model.trackedTokenIndex as 0 | 1);
+    return rawOutput == null ? 0 : Number(rawOutput) / 10 ** output.decimals;
+  }
   const effectiveInput = inputAmount * (1 - model.feeRate);
   if (!Number.isFinite(effectiveInput) || effectiveInput <= 0) return 0;
 
@@ -177,7 +227,7 @@ function executableAmmInputUsd(
   const marginalOutputRatio =
     model.invariant === "constant-product"
       ? ((output.balance / input.balance) * (1 - model.feeRate) * output.referencePriceUsd) / input.referencePriceUsd
-      : model.invariant === "stableswap"
+      : model.invariant === "stableswap" || model.invariant === "solidly-stable"
         ? stableswapMarginalRatio()
         : ((output.balance / input.balance) *
             (input.weight! / output.weight!) *
