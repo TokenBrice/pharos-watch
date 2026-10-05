@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
-    "summary": "GBPA has five issuer-native deployments. Ethereum, Base and Arc retain a direct EOA fiat minter and an EOA owner of upgrade administration. The same codeless minter and sole role/cap administrator are resolved on Tempo by complete role-event history; its additional token-bound transfer proxy retains an execution-closure gap. Solana minting uses a 1-of-2 Token-2022 multisig. LayerZero transfer machinery is reviewed separately under Bridge Risk.",
+    "summary": "GBPA has five issuer-native deployments. Ethereum, Base and Arc retain a direct EOA fiat minter and an EOA owner of upgrade administration; Arc's complete explorer role-grant/revoke inventory is now corroborated by pinned state. Tempo retains the same minter and sole role/cap administrator, while its token-bound transfer proxy still lacks deployed-executable closure. TIP-403 policy 552 uses built-in always-allow mint-recipient policy 1, separately from its sender blacklist. Solana uses a 1-of-2 Token-2022 multisig; LayerZero program and transfer controls remain separately reviewed under Bridge Risk.",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
@@ -193,8 +193,8 @@
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
+      "reviewedAt": "2026-10-05",
+      "reviewer": "Unknown-resolver wave 3 (W3R05)",
       "disposition": "scoreable",
       "sources": [
         {
@@ -244,13 +244,35 @@
         {
           "label": "GBPA Solana 1-of-2 mint multisig",
           "url": "https://explorer.solana.com/address/B97UNTZsqZfmK8shTRvhCZ43t8JizkTYSBokiQr6Xz2c"
+        },
+        {
+          "label": "Arc exhaustive minter grant history",
+          "url": "https://explorer.arc.io/api/v2/addresses/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b/logs?topic=0x21f2957595dc56e58f3035c82886e62fad479bccf4c035113f628d988a8f39a1"
+        },
+        {
+          "label": "Arc exhaustive minter revoke history",
+          "url": "https://explorer.arc.io/api/v2/addresses/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b/logs?topic=0xb0c9eb0ac9f8f1c01b8d9be64295c150c9b09ac405f1cd17f4d99ebe7a2f3848"
+        },
+        {
+          "label": "Arc exhaustive administrator grant history",
+          "url": "https://explorer.arc.io/api/v2/addresses/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b/logs?topic=0x75f5f7b6b03ef1c0bfc7445f5f5749b69ba4e3be14a7c4d11e48323f9e05cffb"
+        },
+        {
+          "label": "Arc exhaustive administrator revoke history",
+          "url": "https://explorer.arc.io/api/v2/addresses/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b/logs?topic=0xff056b54863f72d44c5d5da6661b36f5c54f84999bdaab2d923a2e155316b18d"
+        },
+        {
+          "label": "Exact verified Arc GBPA implementation",
+          "url": "https://explorer.arc.io/api/v2/smart-contracts/0x302a8a24e79c4f987cb7dd4993a8c998079784b1"
+        },
+        {
+          "label": "Tempo compound-policy directional authorization source",
+          "url": "https://github.com/tempoxyz/tempo/blob/main/crates/precompiles/src/tip403_registry/mod.rs"
         }
       ],
-      "evidence": "Complete custom role-event history through Ethereum 26110208 and Base 52110932 identifies sole fiat minter 0x5c32ec946062109c61260c738e2fd794b18499d8 and role admin 0xbecf04e2348d00885c62d97d9629c99e581fe00f. Current owner/mint/admin calls corroborate Ethereum/Base and Arc 24011799; Arc chunked history queries returned rate-limit/range failures, so its exhaustive census remains open. A complete 424-chunk Tempo membership/admin-event census with zero failures resolves sole default admin 0xbecf04e2348d00885c62d97d9629c99e581fe00f and issuers 0x5c32ec946062109c61260c738e2fd794b18499d8 plus token-bound proxy 0x5575151bf6076129d0729c0f40d967d41df34a63 at block 42377525. The latter returns GBPA token(), LayerZero endpoint(), approvalRequired=true and the same owner, but exact controller source/reach is unreviewed. supplyCap=uint128.max and transferPolicyId=552. Policy type 2/zero admin does not establish renunciation or policy-controller absence. Earlier Solana 1-of-2 and September 30 financial evidence remain unchanged, including the Nephos assurance-method contradiction. Independent key-custody, signer independence, replacement and recovery policies for the identified Tempo/EVM controllers are not established; these record-keeping questions are scoped to each identified control. Exact transfer-proxy mint reach, upgrade closure and native token-policy controllers remain genuine umbrella mint-path questions under calibration v2 despite their additional bridge/transfer-domain coverage. Public Holder Terms or a trust deed establishing enforceable holder priority and insolvency treatment were not retrieved; this remains a Backing/legal gap. Research update 2026-10-03: the public Trust Center publishes June, July, August and September 2026 GBPA reserve reports. Nephos's August 31 and September 30 reports reconcile designated Griffin cash and State Street MMF reserve bank statements against the full GBPA supply observed across approved chains on each common month-end clock; September explicitly includes all five deployments, including Arc. This establishes periodic whole-supply reserve reconciliation, not continuous transaction-by-transaction reconciliation. Named independent attestation-provider oversight supports attestation-only supervision, not prudential issuer supervision: the company footer limits FCA FRN 1037671 registration to the Money Laundering Regulations. The reports contradict their ISAE 3000 language by disclaiming formal assurance and regulated-auditor status; no audit or reasonable-assurance quality is inferred. Native execution/control questions above remain unresolved.",
+      "evidence": "Complete custom role-event history through Ethereum 26110208 and Base 52110932 identifies sole fiat minter 0x5c32ec946062109c61260c738e2fd794b18499d8 and role admin 0xbecf04e2348d00885c62d97d9629c99e581fe00f. On October 5 the Arc explorer's four topic-filtered histories each terminate with next_page_params=null: one MintRoleGranted at 11771886, one AdminRoleGranted at 11475906, and no corresponding revocations. Pinned Arc block 24299510 corroborates both role memberships and owner. This answers the Arc roster question despite primary RPC range/rate-limit failures; it does not certify immutable role administration. Complete 424-chunk Tempo membership/admin-event history at 42377525 identifies sole default admin 0xbecf04e2348d00885c62d97d9629c99e581fe00f and issuers 0x5c32ec946062109c61260c738e2fd794b18499d8 plus token-bound proxy 0x5575151bf6076129d0729c0f40d967d41df34a63. That proxy's exact deployed executable and replacement/authorization closure remain unresolved. New Tempo block 42640743 reads transferPolicyId=552, policyData(552)=(COMPOUND,zero), compoundPolicyData(552)=(sender551,recipient1,mintRecipient1). Policy551 is BLACKLIST with admin 0x5c32ec946062109c61260c738e2fd794b18499d8. The official TIP-1015 implementation documents immutable compound references, mutable simple sub-policies and role-specific mint-recipient checking; built-in policy1 is always-allow. Thus no unknown composite administrator is inferred from zero and no independent native mint bound is asserted. Independent key-custody/recovery/replacement disclosures for named EVM/Tempo controllers remain scoped questions. Solana's 1-of-2 mint threshold is unchanged; its separately inventoried OFT upgrade wallet and unresolved validation closure belong to Bridge Risk. The June-September Nephos reports establish periodic whole-supply month-end reserve reconciliation across the approved deployments and attestation-only supervision, not continuous reconciliation or prudential oversight. Their contradictory assurance disclaimers remain unchanged. Incident absence cannot be admitted while the exact Tempo mint-capable proxy remains unresolved.",
       "unresolvedQuestions": [
-        "What is the exhaustive current Arc native issuer/admin role roster? Ethereum/Base full role-event censuses are complete through blocks 26110208/52110932, but Arc whole-history and chunked queries returned range/rate-limit failures.",
-        "What is the exact executable native mint reach and upgrade/authorization closure of Tempo transfer proxy 0x5575151bf6076129d0729c0f40d967d41df34a63? Its native ISSUER_ROLE, token(), owner(), endpoint() and proxy slots are observed, but no deployed-runtime equivalence proof or complete upstream controller closure is established.",
-        "Who controls TIP-403 composite policy 552 and what are its exact executable native issuance authorization semantics? The observed type 2 and zero admin do not establish controller absence or renunciation."
+        "What is the exact executable native mint reach and upgrade/authorization closure of Tempo transfer proxy 0x5575151bf6076129d0729c0f40d967d41df34a63? Its native ISSUER_ROLE, token(), owner(), endpoint() and proxy slots are observed, but no deployed-runtime equivalence proof or complete upstream controller closure is established."
       ],
       "scopedQuestions": [
         {

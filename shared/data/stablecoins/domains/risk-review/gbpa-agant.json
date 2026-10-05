@@ -61,9 +61,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "All five authored deployments are issuer-native liabilities. Agant documents LayerZero OFT source-burn/destination-mint interoperability, distinct from fiat-originating native issuance. The EVM owner controls OFT peers, delegates, bridge pausing and proxy upgrades. Full active DVN/peer/limit configuration, Solana bridge program control and Tempo bridge administration are unpinned and receive no favorable quorum or limit assumptions.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "summary": "All five deployments are issuer-native liabilities with separate LayerZero interoperability. Ethereum/Base/Arc token-specific peers, libraries, four required DVNs and worker signing rosters are pinned; each worker has one signer and quorum one, without an independence claim. Solana's OFT program has a live wallet upgrade authority that can replace the Store's mint-signing logic. Solana validation and Tempo executable-controller closure remain unresolved; no favorable limit or conservation bound is asserted.",
+    "reviewedAt": "2026-10-05",
+    "reviewer": "Unknown-resolver wave 3 (W3R05)",
     "confidence": "manual-review",
     "sources": [
       {
@@ -93,6 +93,18 @@
       {
         "label": "Solana GBPA Token-2022 mint",
         "url": "https://explorer.solana.com/address/DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ"
+      },
+      {
+        "label": "Verified LayerZero DVN execution and signer-reconfiguration source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x373a6e5c0c4e89e24819f00aa37ea370917aaff4"
+      },
+      {
+        "label": "Solana OFT Store, program and upgrade authority architecture",
+        "url": "https://docs.layerzero.network/v2/developers/solana/oft/overview"
+      },
+      {
+        "label": "Solana program replacement authority semantics",
+        "url": "https://solana.com/docs/programs/deploying"
       }
     ],
     "routes": [
@@ -299,21 +311,19 @@
         "routeRefs": [
           "ethereum:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
           "base:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
-          "arc:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
-          "tempo:0x20c0000000000000000000000a6da882d075a4c3",
-          "solana:DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ"
+          "arc:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
         ],
         "capabilities": [
           "bridge-mint",
           "bridge-burn",
           "validator"
         ],
-        "authorityType": "unknown",
+        "authorityType": "validator-quorum",
         "canRaiseCap": "unknown",
         "failureDomainKeys": [
           "protocol:layerzero"
         ],
-        "observedAt": "2026-10-02",
+        "observedAt": "2026-10-05",
         "sources": [
           {
             "label": "Agant GBPA token design",
@@ -324,25 +334,63 @@
             "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"
           },
           {
-            "label": "Verified GBPA Ethereum implementation and imported OFT source",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0"
+            "label": "Verified DVN execution and signer reconfiguration",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x373a6e5c0c4e89e24819f00aa37ea370917aaff4"
           }
         ],
         "routeChecks": {
           "onchainAmountBounds": "OFT debit/credit implements supply-conserving transfers, not a bound on native fiat issuance.",
-          "attestorQuorum": "LayerZero is the documented validation domain; exact active token-specific DVN quorum and libraries remain unpinned.",
-          "trustedPeerOrRemote": "Tempo token-bound transfer proxy 0x5575151bf6076129d0729c0f40d967d41df34a63 and its current owner/token/endpoint were pinned at block 42377525. Complete five-deployment peer/adapter/program inventory is not closed.",
-          "rateLimits": "Current token-specific limits, controller identities and upgrade paths on Solana and Tempo remain unresolved."
+          "attestorQuorum": "At Ethereum 26122372, Base 52184128 and Arc 24300270, every authored remote lane has four required DVN contracts, zero optional DVNs and optional threshold zero. Each DVN worker has quorum one and one current signing address; these are network requirements, not a certified independent 4-of-4 wallet multisig.",
+          "trustedPeerOrRemote": "Each EVM deployment pins all four peers: the common Ethereum/Base/Arc token, Tempo adapter 0x5575151bf6076129d0729c0f40d967d41df34a63 and Solana Store 2Z1jwnD78v1q4Nt6suH5YkgskqRgNySdbPbdYWcYxug4.",
+          "rateLimits": "No favorable fixed cap is established. The separately identified issuer-owned EVM proxy-upgrade path preserves unbounded impairment."
         },
-        "evidence": "Agant documents direct native LayerZero OFT interoperability without wrapped tokens. Verified EVM OFT source establishes bridge burn/mint; the exact active validation/controllers for all five lanes have not been independently closed. This unknown structured control preserves the capability and disclosure gap without inventing DVN threshold, Solana program identity or Tempo administrator."
+        "evidence": "Token-bound endpoint getSendLibrary/getReceiveLibrary/getConfig reads at Ethereum 26122372, Base 52184128 and Arc 24300270 establish the current four-required-DVN validation model on every authored lane. getSigners/quorum return one signer/quorum one for eleven workers; legacy Ethereum worker 0x58249a2ec05c1978bf21df1f5ec1847e42455cf4 instead returns signerSize=1 and signers(0xf5e075609ac2376572752d16f5152d59601183df)=true. The four signing identities are 0xd031f474f7e6e28845e1d4856b9b1aef28970397, 0xa714e62887ec74a324479ec532444394e115495e, 0xf5e075609ac2376572752d16f5152d59601183df and 0x6d695bdb416274d37fb877f5f46a3f20c9343d80, reused across chains. Verified DVN source gates execution and signer/quorum replacement on signatures. This identifies the validation model, not custody independence, immutable configuration or complete execution scope."
+      },
+      {
+        "id": "gbpa-solana-tempo-message-validation",
+        "label": "GBPA Solana and Tempo unresolved validation closure",
+        "routeRefs": [
+          "tempo:0x20c0000000000000000000000a6da882d075a4c3",
+          "solana:DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ"
+        ],
+        "capabilities": ["bridge-mint", "bridge-burn", "validator"],
+        "authorityType": "unknown",
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": ["protocol:layerzero"],
+        "observedAt": "2026-10-05",
+        "sources": [
+          {"label": "Agant complete native deployment registry", "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"},
+          {"label": "Exact Solana OFT Store", "url": "https://explorer.solana.com/address/2Z1jwnD78v1q4Nt6suH5YkgskqRgNySdbPbdYWcYxug4"},
+          {"label": "Exact Tempo transfer adapter", "url": "https://explore.tempo.xyz/address/0x5575151bf6076129d0729c0f40d967d41df34a63"}
+        ],
+        "evidence": "The original five-route contributor is split without dropping any route or capability: its EVM three-chain validation model is now observed, while this contributor retains the two unresolved lanes. Tempo block 42641088 pins all four peers and four required DVNs, each quorum one with one signer, but the adapter's deployed executable/upgrade closure remains unverified. The Solana Store/program/programData/mint/multisig/upgrade wallet were fetched atomically at finalized slot 453406766; the live upgrade authority is separately inventoried. Solana receive-library/DVN configuration and deployed executable correspondence remain unresolved."
+      },
+      {
+        "id": "gbpa-solana-oft-program-upgrade",
+        "label": "GBPA Solana OFT program upgrade wallet",
+        "routeRefs": ["solana:DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ"],
+        "capabilities": ["upgrade"],
+        "controllerChain": "solana",
+        "controllerAddress": "BRi183SZJLrCVAqFQ69Zi95UdrumSpazdeuM4nLKQz2X",
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-05",
+        "observedBlock": 453406766,
+        "sources": [
+          {"label": "GBPA OFT program", "url": "https://explorer.solana.com/address/Cxb1kfkcNVWEBhxC6R76He8orpfYyCE2j1pps3t6FVuM"},
+          {"label": "Exact programData and upgrade authority", "url": "https://explorer.solana.com/address/4KDWCMGSUx3EykHeReXhZ9JwyTj3zujguUHvRSoNDxYD"},
+          {"label": "Solana program replacement semantics", "url": "https://solana.com/docs/programs/deploying"},
+          {"label": "OFT Store mint-signing architecture", "url": "https://docs.layerzero.network/v2/developers/solana/oft/overview"}
+        ],
+        "evidence": "One finalized getMultipleAccounts response at slot 453406766 binds GBPA mint DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ to Token-2022 mint-authority multisig B97UNTZsqZfmK8shTRvhCZ43t8JizkTYSBokiQr6Xz2c (1-of-2); Store 2Z1jwnD78v1q4Nt6suH5YkgskqRgNySdbPbdYWcYxug4 is one signer. The Store is owned by program Cxb1kfkcNVWEBhxC6R76He8orpfYyCE2j1pps3t6FVuM; SHA-256 PDA derivation using seeds OFT, observed escrow EWxqSpPfkBLZWRNdkMMQPz1vAhN8YQLLSfg4f5771Bff and bump 255 exactly reproduces it. The loader program account points to programData 4KDWCMGSUx3EykHeReXhZ9JwyTj3zujguUHvRSoNDxYD, whose upgrade-authority option is Some(BRi183SZJLrCVAqFQ69Zi95UdrumSpazdeuM4nLKQz2X). That authority is a non-executable, zero-data System Program wallet. Replacing this program can change its Store mint-signing logic; the reachable upgrade is unbounded impairment, not a protective transfer cap or certified complete execution scope."
       }
     ],
     "scopedQuestions": [
       {
-        "controlRef": "gbpa-layerzero-message-validation",
-        "question": "What are the full current DVN quorum, peer set, Solana OFT program/Store upgrade authorities, Tempo adapter administrators and route limits for each deployed lane?",
-        "reviewedAt": "2026-10-02",
-        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "controlRef": "gbpa-solana-tempo-message-validation",
+        "question": "What are the Solana Store-specific receive-library/DVN and peer configurations with deployed-executable correspondence, and the complete Tempo adapter replacement/authorization and route-limit closure?",
+        "reviewedAt": "2026-10-05",
+        "reviewer": "Unknown-resolver wave 3 (W3R05)",
         "sources": [
           {
             "label": "Agant official mainnet deployment registry",
