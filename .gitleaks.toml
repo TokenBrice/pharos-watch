@@ -170,6 +170,16 @@ regexTarget = "secret"
 regexes = ['''^(?:58c911b9-1ab7-495c-97ba-d379fe9c4e5e|9bfe7105-c648-406b-b51c-b9c4431bc335)$''']
 paths = ['''(?:^|/)shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit\.ts$''']
 
+# Wave-4 custody research cites krUSDC's reviewed mint control by its hash-derived
+# control key; its 20-hex digest suffix resembles an API key. Exact value only.
+[[allowlists]]
+description = "Reviewed krUSDC mint-control key digest in evidence-gap classification scopes"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^fe24dc683177afe51d19$''']
+paths = ['''(?:^|/)shared/data/safety-score-v9/evidence-gap-classifications-v1\.json$''']
+
 # Gold DAO's GLDT symbol in reviewed wave ids and the issuer's public article slug
 # resembles a GitLab deploy token. Pin only the exact default-rule match spans.
 [[allowlists]]
