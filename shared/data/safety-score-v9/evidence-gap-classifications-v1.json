@@ -18143,158 +18143,6 @@
       "rationale": "An actual recurring whole-supply supply-to-reserve reconciliation cadence covering all four native deployments is not disclosed. Whitepaper monthly procedures and transaction-level deposit validation do not establish that actual cadence; the sole July AUP expressly excludes events outside its snapshot and identifies only Solana. Legal mint/burn processing does not supply recurring financial reconciliation."
     },
     {
-      "id": "uw-zaru-blocktower-546af7adc83172a3",
-      "assetId": "zaru-blocktower",
-      "scope": {
-        "componentKey": "control:mint-meta:zaru-blocktower:1660b417cce0e7f5b4d4",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:zaru-blocktower:1660b417cce0e7f5b4d4",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:01Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
-      "sources": [
-        {
-          "url": "https://zaru.network/blog/zar-universal-white-paper",
-          "observedAt": "2026-10-03T23:16:00Z",
-          "datumAsOf": "2026-07-21",
-          "location": "4.09 Architecture & Access Control",
-          "excerpt": "secured under multi-signature controls and hardware security modules (HSMs) to prevent unauthorised issuance.",
-          "assertion": "Generic security claim supplies no exact ordinary-signer quorum, HSM attestation, independent operator roster or recovery/signing policy."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://zaru.network/",
-        "https://zaru.network/blog/zar-universal-white-paper",
-        "https://blocktower.tech/legal/zaru-terms-of-use",
-        "https://blocktower.tech/legal/platform-user-agreement",
-        "https://blocktower.tech/legal/fais-disclosure-notice",
-        "https://blocktower.tech/legal",
-        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
-        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
-      ],
-      "rationale": "For each of the four named ordinary native mint signers, independently verifiable human independence, HSM/key-custody attestation and exact signing/recovery policy are undisclosed. Whitepaper security claims do not bind these arrangements to the Solana signer or shared EVM EOA. Legal terms address customer account security, not issuer signer safeguards. Existing source/runtime and Arc census uncertainty is retained; no incident-free state is claimed."
-    },
-    {
-      "id": "uw-zaru-blocktower-b5aaafe1be7346b5",
-      "assetId": "zaru-blocktower",
-      "scope": {
-        "componentKey": "control:mint-meta:zaru-blocktower:9271bbd8a2c2d4204d5b",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:zaru-blocktower:9271bbd8a2c2d4204d5b",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:01Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
-      "sources": [
-        {
-          "url": "https://zaru.network/blog/zar-universal-white-paper",
-          "observedAt": "2026-10-03T23:16:00Z",
-          "datumAsOf": "2026-07-21",
-          "location": "4.09 Architecture & Access Control",
-          "excerpt": "secured under multi-signature controls and hardware security modules (HSMs) to prevent unauthorised issuance.",
-          "assertion": "Generic security claim supplies no exact ordinary-signer quorum, HSM attestation, independent operator roster or recovery/signing policy."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://zaru.network/",
-        "https://zaru.network/blog/zar-universal-white-paper",
-        "https://blocktower.tech/legal/zaru-terms-of-use",
-        "https://blocktower.tech/legal/platform-user-agreement",
-        "https://blocktower.tech/legal/fais-disclosure-notice",
-        "https://blocktower.tech/legal",
-        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
-        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
-      ],
-      "rationale": "For each of the four named ordinary native mint signers, independently verifiable human independence, HSM/key-custody attestation and exact signing/recovery policy are undisclosed. Whitepaper security claims do not bind these arrangements to the Solana signer or shared EVM EOA. Legal terms address customer account security, not issuer signer safeguards. Existing source/runtime and Arc census uncertainty is retained; no incident-free state is claimed."
-    },
-    {
-      "id": "uw-zaru-blocktower-6367c80c64d1cbce",
-      "assetId": "zaru-blocktower",
-      "scope": {
-        "componentKey": "control:mint-meta:zaru-blocktower:96d61cf9294a798a2697",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:zaru-blocktower:96d61cf9294a798a2697",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:01Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
-      "sources": [
-        {
-          "url": "https://zaru.network/blog/zar-universal-white-paper",
-          "observedAt": "2026-10-03T23:16:00Z",
-          "datumAsOf": "2026-07-21",
-          "location": "4.09 Architecture & Access Control",
-          "excerpt": "secured under multi-signature controls and hardware security modules (HSMs) to prevent unauthorised issuance.",
-          "assertion": "Generic security claim supplies no exact ordinary-signer quorum, HSM attestation, independent operator roster or recovery/signing policy."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://zaru.network/",
-        "https://zaru.network/blog/zar-universal-white-paper",
-        "https://blocktower.tech/legal/zaru-terms-of-use",
-        "https://blocktower.tech/legal/platform-user-agreement",
-        "https://blocktower.tech/legal/fais-disclosure-notice",
-        "https://blocktower.tech/legal",
-        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
-        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
-      ],
-      "rationale": "For each of the four named ordinary native mint signers, independently verifiable human independence, HSM/key-custody attestation and exact signing/recovery policy are undisclosed. Whitepaper security claims do not bind these arrangements to the Solana signer or shared EVM EOA. Legal terms address customer account security, not issuer signer safeguards. Existing source/runtime and Arc census uncertainty is retained; no incident-free state is claimed."
-    },
-    {
-      "id": "uw-zaru-blocktower-9670a89fe65f5293",
-      "assetId": "zaru-blocktower",
-      "scope": {
-        "componentKey": "control:mint-meta:zaru-blocktower:da3ca105f723823b246c",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:zaru-blocktower:da3ca105f723823b246c",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:01Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
-      "sources": [
-        {
-          "url": "https://zaru.network/blog/zar-universal-white-paper",
-          "observedAt": "2026-10-03T23:16:00Z",
-          "datumAsOf": "2026-07-21",
-          "location": "4.09 Architecture & Access Control",
-          "excerpt": "secured under multi-signature controls and hardware security modules (HSMs) to prevent unauthorised issuance.",
-          "assertion": "Generic security claim supplies no exact ordinary-signer quorum, HSM attestation, independent operator roster or recovery/signing policy."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://zaru.network/",
-        "https://zaru.network/blog/zar-universal-white-paper",
-        "https://blocktower.tech/legal/zaru-terms-of-use",
-        "https://blocktower.tech/legal/platform-user-agreement",
-        "https://blocktower.tech/legal/fais-disclosure-notice",
-        "https://blocktower.tech/legal",
-        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
-        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
-      ],
-      "rationale": "For each of the four named ordinary native mint signers, independently verifiable human independence, HSM/key-custody attestation and exact signing/recovery policy are undisclosed. Whitepaper security claims do not bind these arrangements to the Solana signer or shared EVM EOA. Legal terms address customer account security, not issuer signer safeguards. Existing source/runtime and Arc census uncertainty is retained; no incident-free state is claimed."
-    },
-    {
       "id": "uw-ctusd-citrea-ed9a79233d0b7b35",
       "assetId": "ctusd-citrea",
       "scope": {
@@ -23466,42 +23314,6 @@
       "rationale": "The current issuer page links only a 31 March 2024 bank-held aggregate reserve snapshot; no fresh dated reserve composition is disclosed. Its audit claim and historical independent backing checks do not provide current whole-supply financial assurance. The whitepaper describes mint orders after BRL deposits and promises periodical proof of funds, but states no verified recurring reconciliation cadence covering all issued/treasury tokens and Reserve Manager accounts. No report dates are advanced."
     },
     {
-      "id": "uw-usdfc-secured-finance-4699791c1a8172a5",
-      "assetId": "usdfc-secured-finance",
-      "scope": {
-        "componentKey": "control:mint-meta:usdfc-secured-finance:64f231a10265f0186544",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:usdfc-secured-finance:64f231a10265f0186544",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:26Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
-      "sources": [
-        {
-          "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts/contract-upgrade-history.md",
-          "observedAt": "2026-10-03T22:56:04Z",
-          "datumAsOf": "2026-09-25",
-          "location": "Execution status",
-          "excerpt": "Both transactions were successfully executed through the Safe multisig wallet on Filecoin.",
-          "assertion": "Discloses exercised Safe upgrade authority, not beneficial signer identities, independence, key custody or a signing policy for the identified 2-of-3 controller."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts.md",
-        "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts/contract-upgrade-history.md",
-        "https://docs.secured.finance/llms.txt",
-        "https://docs.secured.finance/resources/legal/risk-disclaimer.md",
-        "https://secured.finance",
-        "https://api.node.glif.io/rpc/v1",
-        "https://sourcify.dev/server/v2/contract/314/0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b?fields=compilation,sources,proxyResolution"
-      ],
-      "rationale": "The identified owner/ProxyAdmin-owner Safe has an on-chain 2-of-3 quorum and exercised upgrade authority, but beneficial signer identities, independence, key-custody safeguards and signing policy are not disclosed. Thus the reviewer-scoped signer-safeguard question is researched non-disclosure, not missing controller identity. Addresses/quorum and published upgrade transactions cannot establish independent human control or off-chain safeguards; no favorable timelock is inferred."
-    },
-    {
       "id": "uw-susdd-tron-dao-reserve-c122c31bff8b344e",
       "assetId": "susdd-tron-dao-reserve",
       "scope": {
@@ -23695,138 +23507,6 @@
         "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561"
       ],
       "rationale": "The exact whole-supply-versus-reserves reconciliation cadence/mechanism is not published. Mint-after-received-deposit, unique mint request IDs, signed on-chain supply, user account statements and unspecified regular regulatory reporting do not establish daily/monthly reconciliation of all four-chain liabilities against safeguarded assets. No reconciliation tier is inferred."
-    },
-    {
-      "id": "uw-usdsm-stable-mint-5dad619f00872d55",
-      "assetId": "usdsm-stable-mint",
-      "scope": {
-        "componentKey": "control:mint-meta:usdsm-stable-mint:5951c00b5ef7965fec9f",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:usdsm-stable-mint:5951c00b5ef7965fec9f",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:04:35Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R21)",
-      "sources": [
-        {
-          "url": "https://stablemint.io/stablecoins/",
-          "observedAt": "2026-10-03T23:04:33Z",
-          "datumAsOf": null,
-          "location": "Custody infrastructure",
-          "excerpt": "Utila MPC \u2014 key material distributed across multiple parties, never reconstructed in a single location",
-          "assertion": "No threshold, signer identities/independence, administrative recovery bypass or mapping of this policy to either privileged EOA is given."
-        },
-        {
-          "url": "https://stablemint.io/faq/",
-          "observedAt": "2026-10-03T23:04:33Z",
-          "datumAsOf": null,
-          "location": "How is my business account secured? / Custody",
-          "excerpt": "keys are split across multiple independent parties and never reconstructed.",
-          "assertion": "The general MPC statement does not provide the exact issuer-specific independent authorization quorum for privileged mint and upgrade keys."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://stablemint.io/stablecoins/",
-        "https://stablemint.io/faq/",
-        "https://stablemint.io/legal/terms-conditions/",
-        "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html",
-        "https://docs.stablemint.io/llms.txt",
-        "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561",
-        "https://explorer.etherlink.com/api/v2/smart-contracts/0xe7f117f87fa650350c3e363ca2c644951d273d1f"
-      ],
-      "rationale": "For the exact scoped MPC questions on native upgrade/admin/minter EOA 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd and additional minter 0xab42b550b6d757f3d17eac8e045af095961d75bc, issuer materials publish no enforceable quorum, signer identities/independence, recovery bypass or proof the extra minter uses the same policy. Contract role gating cannot reveal off-chain MPC policy. This classification does not claim incident-free history or close aggregate adapter reach."
-    },
-    {
-      "id": "uw-usdsm-stable-mint-61e4297190eff829",
-      "assetId": "usdsm-stable-mint",
-      "scope": {
-        "componentKey": "control:mint-meta:usdsm-stable-mint:8ea62eea76364fb14c11",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:usdsm-stable-mint:8ea62eea76364fb14c11",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:04:35Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R21)",
-      "sources": [
-        {
-          "url": "https://stablemint.io/stablecoins/",
-          "observedAt": "2026-10-03T23:04:33Z",
-          "datumAsOf": null,
-          "location": "Custody infrastructure",
-          "excerpt": "Utila MPC \u2014 key material distributed across multiple parties, never reconstructed in a single location",
-          "assertion": "No threshold, signer identities/independence, administrative recovery bypass or mapping of this policy to either privileged EOA is given."
-        },
-        {
-          "url": "https://stablemint.io/faq/",
-          "observedAt": "2026-10-03T23:04:33Z",
-          "datumAsOf": null,
-          "location": "How is my business account secured? / Custody",
-          "excerpt": "keys are split across multiple independent parties and never reconstructed.",
-          "assertion": "The general MPC statement does not provide the exact issuer-specific independent authorization quorum for privileged mint and upgrade keys."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://stablemint.io/stablecoins/",
-        "https://stablemint.io/faq/",
-        "https://stablemint.io/legal/terms-conditions/",
-        "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html",
-        "https://docs.stablemint.io/llms.txt",
-        "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561",
-        "https://explorer.etherlink.com/api/v2/smart-contracts/0xe7f117f87fa650350c3e363ca2c644951d273d1f"
-      ],
-      "rationale": "For the exact scoped MPC questions on native upgrade/admin/minter EOA 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd and additional minter 0xab42b550b6d757f3d17eac8e045af095961d75bc, issuer materials publish no enforceable quorum, signer identities/independence, recovery bypass or proof the extra minter uses the same policy. Contract role gating cannot reveal off-chain MPC policy. This classification does not claim incident-free history or close aggregate adapter reach."
-    },
-    {
-      "id": "uw-usdsm-stable-mint-bd334844770d4c52",
-      "assetId": "usdsm-stable-mint",
-      "scope": {
-        "componentKey": "control:mint-meta:usdsm-stable-mint:bbb3136e12def53ad156",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:usdsm-stable-mint:bbb3136e12def53ad156",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:04:35Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R21)",
-      "sources": [
-        {
-          "url": "https://stablemint.io/stablecoins/",
-          "observedAt": "2026-10-03T23:04:33Z",
-          "datumAsOf": null,
-          "location": "Custody infrastructure",
-          "excerpt": "Utila MPC \u2014 key material distributed across multiple parties, never reconstructed in a single location",
-          "assertion": "No threshold, signer identities/independence, administrative recovery bypass or mapping of this policy to either privileged EOA is given."
-        },
-        {
-          "url": "https://stablemint.io/faq/",
-          "observedAt": "2026-10-03T23:04:33Z",
-          "datumAsOf": null,
-          "location": "How is my business account secured? / Custody",
-          "excerpt": "keys are split across multiple independent parties and never reconstructed.",
-          "assertion": "The general MPC statement does not provide the exact issuer-specific independent authorization quorum for privileged mint and upgrade keys."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://stablemint.io/stablecoins/",
-        "https://stablemint.io/faq/",
-        "https://stablemint.io/legal/terms-conditions/",
-        "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html",
-        "https://docs.stablemint.io/llms.txt",
-        "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561",
-        "https://explorer.etherlink.com/api/v2/smart-contracts/0xe7f117f87fa650350c3e363ca2c644951d273d1f"
-      ],
-      "rationale": "For the exact scoped MPC questions on native upgrade/admin/minter EOA 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd and additional minter 0xab42b550b6d757f3d17eac8e045af095961d75bc, issuer materials publish no enforceable quorum, signer identities/independence, recovery bypass or proof the extra minter uses the same policy. Contract role gating cannot reveal off-chain MPC policy. This classification does not claim incident-free history or close aggregate adapter reach."
     },
     {
       "id": "uw-ousd-open-standard-b32e265680f477b6",
@@ -25499,44 +25179,6 @@
         "https://www.crown-brlv.com/taxas"
       ],
       "rationale": "Exact same-notional total redemption cost is undisclosed: terms permit max(fixed minimum, market-variable fee), payable under the platform tariff, without numerical parameters. The official linked public tariff resolves to 404; docs and current public reserve/terms archive supply no alternate numeric schedule. This is missing issuer tariff data, not an unsupported calculable public formula."
-    },
-    {
-      "id": "uw-usdfr-forest-road-4ea58c3a7d9ac3dd",
-      "assetId": "usdfr-forest-road",
-      "scope": {
-        "componentKey": "control:mint-meta:usdfr-forest-road:e55f36a3d94667588f1b",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:usdfr-forest-road:e55f36a3d94667588f1b",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:46Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
-      "sources": [
-        {
-          "url": "https://forestroadvault.com/docs/roles-and-governance",
-          "observedAt": "2026-10-03T22:57:49Z",
-          "datumAsOf": null,
-          "location": "Role roster, ATTESTER_ROLE",
-          "excerpt": "The m-of-n attester keys",
-          "assertion": "The authorized key role is public; human owners, custody model and signing policy/independence are not disclosed."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://forestroadvault.com",
-        "https://forestroadvault.com/docs/roles-and-governance",
-        "https://forestroadvault.com/docs/overview",
-        "https://forestroadvault.com/docs/addresses",
-        "https://forestroadvault.com/docs/audit",
-        "https://forestroadvault.com/docs/security",
-        "https://forestroadvault.com/transparency",
-        "https://forestroadvault.com/legal",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x870deb459512099e70e9a640cf3140a0d969fc18"
-      ],
-      "rationale": "The scoped controller question asks for custody and signing policy of its two observed oracle attester keys, not enumeration of onchain role bytes. Published verified code and roles specify key roster/threshold authorization but no human ownership, independent custody, or actual signing-policy attestations. Broader timelock census remains U separately."
     },
     {
       "id": "uw-usdfr-forest-road-a629f500a2bb1558",
@@ -29204,49 +28846,6 @@
       "rationale": "Exact Frax Inc/affiliate issuer supervision applicable to USDso remains undisclosed: own terms identify Frax but no granted licence/activity, Frax issuer docs identify delegated compliance and regulated reserve custodians, and OCC/NYDFS name searches found no matching issuer approval. GENIUS-compatible and regulated underlying custodians are not issuer prudential supervision."
     },
     {
-      "id": "uw-usdso-somnia-6ca1a6049ebf7558",
-      "assetId": "usdso-somnia",
-      "scope": {
-        "componentKey": "control:mint-meta:usdso-somnia:41487c7fcef92f13148c",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:usdso-somnia:41487c7fcef92f13148c",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:09:56Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R74)",
-      "sources": [
-        {
-          "url": "https://somnia.network/usdso-terms-of-service",
-          "observedAt": "2026-10-03T23:09:56Z",
-          "datumAsOf": "2026-05-05",
-          "location": "section 5.3",
-          "excerpt": "The Company does not develop, deploy, audit, or maintain these smart contracts.",
-          "assertion": "Somnia terms disclaim contract responsibility; they do not disclose named Safe operators or signing custody policies."
-        },
-        {
-          "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian",
-          "observedAt": "2026-10-03T23:09:56Z",
-          "datumAsOf": null,
-          "location": "Published documentation",
-          "excerpt": "Configurable mint and redeem fees",
-          "assertion": "Technical docs explain protocol configuration rather than independently evidenced human key custody/signing policy."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://somnia.network/usdso-stablecoin",
-        "https://somnia.network/usdso-terms-of-service",
-        "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian",
-        "https://docs.frax.com/protocol/assets/frxusd/frxusd",
-        "https://explorer.somnia.network/api/v2/smart-contracts/0x690575465af47835b72c5b74c334234624cfd942",
-        "https://explorer.somnia.network/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
-      ],
-      "rationale": "The named scoped question asks independent human control, operational key custody and signing policy of the identified USDso 3-of-6 owner Safe. Issuer/product/terms/technical and exact implementation disclosures do not publish operator identities, independence or custody/signing attestation. Public address/quorum code is not those safeguards. Other incident and execution uncertainties remain U."
-    },
-    {
       "id": "uw-susdc-spark-cd291dccce296499",
       "assetId": "susdc-spark",
       "scope": {
@@ -29463,78 +29062,6 @@
         "https://eth.blockscout.com/api/v2/smart-contracts/0xef4cb7e87f212f128f0b24cf35861e52b3c78a6a"
       ],
       "rationale": "The scoped idle-plus-Morpho lender aggregate has no guaranteed realization horizon: all assets are supplied across four markets; zero idle USDT at the pinned block. Source permits ordinary selected-adapter exit conditional on market liquidity, plus separate force-deallocation paths, not a promised repayment maximum. Strategy documents describe junior stress priority and historical allocation rather than a current contractual bound for the whole lender claim."
-    },
-    {
-      "id": "uw-sparkusdc-spark-c15f4e5d093eaf75",
-      "assetId": "sparkusdc-spark",
-      "scope": {
-        "componentKey": "control:mint-meta:sparkusdc-spark:836f8253a7150ceeed01",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:sparkusdc-spark:836f8253a7150ceeed01",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:37Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
-      "sources": [
-        {
-          "url": "https://vote.sky.money/executive/template-executive-vote-reduce-rewards-emissions-complete-guni-vault-offboardings-whitelist-keel-subproxy-to-send-cross-chain-messages-adjust-grove-dc-iam-parameters-delegate-compensation-star-agent-proxy-spells-january-15-2026",
-          "observedAt": "2026-10-03T23:00:37Z",
-          "datumAsOf": "2026-01-15",
-          "location": "Spark Morpho Vault - Update Vault Roles",
-          "excerpt": "Threshold: **3 of 5**",
-          "assertion": "Governance publishes exact Safe address/quorum, but not signer human/operator independence, key custody or recovery controls."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://vote.sky.money/executive/template-executive-vote-reduce-rewards-emissions-complete-guni-vault-offboardings-whitelist-keel-subproxy-to-send-cross-chain-messages-adjust-grove-dc-iam-parameters-delegate-compensation-star-agent-proxy-spells-january-15-2026",
-        "https://docs.spark.finance/dev/security/security-and-audits",
-        "https://docs.spark.finance/products/isolated-markets",
-        "https://docs.spark.finance/mica/4",
-        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
-        "https://base.blockscout.com/api/v2/smart-contracts/0x0f963a8a8c01042b69054e787e5763abbb0646a3",
-        "https://docs.morpho.org/curate/concepts/roles/"
-      ],
-      "rationale": "Scoped question asks independently evidenced Safe signer independence and offchain key custody. Official governance, security/role docs, legal and financial disclosures name the exact curator/quorum but publish no identity-to-owner mapping, independent operator attestations, custody/recovery policy. Fresh block-pinned getOwners/getThreshold/modules confirm 3-of-5 cryptographic topology on both chains, not independent humans. Incident-state uncertainty remains a separate U and is not asserted resolved."
-    },
-    {
-      "id": "uw-sparkusdtbc-spark-b95dd0bfa8fc93b8",
-      "assetId": "sparkusdtbc-spark",
-      "scope": {
-        "componentKey": "control:mint-meta:sparkusdtbc-spark:c1b6ffe83625f92cee82",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:sparkusdtbc-spark:c1b6ffe83625f92cee82",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:37Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R14)",
-      "sources": [
-        {
-          "url": "https://vote.sky.money/executive/template-executive-vote-reduce-rewards-emissions-complete-guni-vault-offboardings-whitelist-keel-subproxy-to-send-cross-chain-messages-adjust-grove-dc-iam-parameters-delegate-compensation-star-agent-proxy-spells-january-15-2026",
-          "observedAt": "2026-10-03T23:00:37Z",
-          "datumAsOf": "2026-01-15",
-          "location": "Spark Morpho Vault - Update Vault Roles",
-          "excerpt": "Threshold: **3 of 5**",
-          "assertion": "Governance publishes exact Safe address/quorum, but not signer human/operator independence, key custody or recovery controls."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://vote.sky.money/executive/template-executive-vote-reduce-rewards-emissions-complete-guni-vault-offboardings-whitelist-keel-subproxy-to-send-cross-chain-messages-adjust-grove-dc-iam-parameters-delegate-compensation-star-agent-proxy-spells-january-15-2026",
-        "https://docs.spark.finance/dev/security/security-and-audits",
-        "https://docs.spark.finance/products/isolated-markets",
-        "https://docs.spark.finance/mica/4",
-        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f963a8a8c01042b69054e787e5763abbb0646a3",
-        "https://docs.morpho.org/curate/concepts/roles/"
-      ],
-      "rationale": "Scoped question asks independently evidenced Safe signer independence and offchain key custody. Official governance, security/role docs, legal and financial disclosures name the exact curator/quorum but publish no identity-to-owner mapping, independent operator attestations, custody/recovery policy. Fresh block-pinned getOwners/getThreshold/modules confirm 3-of-5 cryptographic topology on both chains, not independent humans. Incident-state uncertainty remains a separate U and is not asserted resolved."
     },
     {
       "id": "uw-witry-brix-4c257c87c5c1bfcb",
@@ -30539,116 +30066,6 @@
       "rationale": "FCC discloses an ecosystem coverage calculation, not the exact required recurring common-clock mint/burn and liability-to-backing reconciliation cadence. Its feed sums three token supplies and public bonds plus restricted cash; input timestamps, restricted-cash reconciliation controls and complete movement procedure remain unpublished. Do not misclassify this as no reconciliation or dismiss the new coverage mechanism."
     },
     {
-      "id": "uw-senrlusdv2-sentora-2d4d1e5e596b7680",
-      "assetId": "senrlusdv2-sentora",
-      "scope": {
-        "componentKey": "control:mint-meta:senrlusdv2-sentora:703345b7103b2cf26915",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:senrlusdv2-sentora:703345b7103b2cf26915",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R24)",
-      "sources": [
-        {
-          "url": "https://forum.morpho.org/t/introducing-sentora/2102",
-          "observedAt": "2026-10-03T22:59:46Z",
-          "datumAsOf": "2025-12-05",
-          "location": "How We Work; How We Engage with Governance",
-          "excerpt": "Execution with segregated keys and policy controls, followed by automated state verification",
-          "assertion": "Describes policy-controlled execution but does not identify either exact Safe signer or independently attest custody, recovery or inter-role key independence."
-        },
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": null,
-          "location": "Section 4.3; Appendix B-1 non-custodial structure",
-          "excerpt": "Sentora does not have access to private keys, seed phrases, or wallet credentials and does not maintain omnibus wallets or pooled custody structures.",
-          "assertion": "This statement concerns user assets/keys, not the organizational controllers of Safe signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 or 0x992592e073aa9b98daed79ee05c4af832e1d0abe."
-        },
-        {
-          "url": "https://etherscan.io/block/26114894",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Ethereum pinned eth_call getOwners/getThreshold at block 26114894",
-          "excerpt": "26114894",
-          "assertion": "Pinned role binding confirms both vaults use the same owner/curator Safes, each 1-of-1 with empty-code EOA signer. This proves topology, not human identity or independent attested custody."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/legal/disclaimer",
-        "https://sentora.com/about",
-        "https://sentora.com/platform/risk-management",
-        "https://forum.morpho.org/t/introducing-sentora/2102",
-        "https://sentora.com/research/reports",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
-        "https://etherscan.io/address/0xe8c9c99ecad0686a14a00d8521c572281e938008",
-        "https://etherscan.io/address/0x9e396de3312d373b87f9bd8763fb48184b42aac0"
-      ],
-      "rationale": "The exact scoped questions ask the human/organizational controller, independence from other Sentora role signers and independently attested key custody/signing policy for the owner and curator 1-of-1 Safes. Issuer legal, security, team, governance, reporting and audit surfaces describe non-custody and segregated execution but do not bind those assurances to either exact sole EOA signer. Pinned reads establish topology only. IncidentState and unclosed delegated/registry reach are separately retained U; no incident-free or complete execution claim is inferred."
-    },
-    {
-      "id": "uw-senrlusdv2-sentora-fd7eec6fbd49fb35",
-      "assetId": "senrlusdv2-sentora",
-      "scope": {
-        "componentKey": "control:mint-meta:senrlusdv2-sentora:e5ff3e67a87264457270",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:senrlusdv2-sentora:e5ff3e67a87264457270",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R24)",
-      "sources": [
-        {
-          "url": "https://forum.morpho.org/t/introducing-sentora/2102",
-          "observedAt": "2026-10-03T22:59:46Z",
-          "datumAsOf": "2025-12-05",
-          "location": "How We Work; How We Engage with Governance",
-          "excerpt": "Execution with segregated keys and policy controls, followed by automated state verification",
-          "assertion": "Describes policy-controlled execution but does not identify either exact Safe signer or independently attest custody, recovery or inter-role key independence."
-        },
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": null,
-          "location": "Section 4.3; Appendix B-1 non-custodial structure",
-          "excerpt": "Sentora does not have access to private keys, seed phrases, or wallet credentials and does not maintain omnibus wallets or pooled custody structures.",
-          "assertion": "This statement concerns user assets/keys, not the organizational controllers of Safe signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 or 0x992592e073aa9b98daed79ee05c4af832e1d0abe."
-        },
-        {
-          "url": "https://etherscan.io/block/26114894",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Ethereum pinned eth_call getOwners/getThreshold at block 26114894",
-          "excerpt": "26114894",
-          "assertion": "Pinned role binding confirms both vaults use the same owner/curator Safes, each 1-of-1 with empty-code EOA signer. This proves topology, not human identity or independent attested custody."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/legal/disclaimer",
-        "https://sentora.com/about",
-        "https://sentora.com/platform/risk-management",
-        "https://forum.morpho.org/t/introducing-sentora/2102",
-        "https://sentora.com/research/reports",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
-        "https://etherscan.io/address/0xe8c9c99ecad0686a14a00d8521c572281e938008",
-        "https://etherscan.io/address/0x9e396de3312d373b87f9bd8763fb48184b42aac0"
-      ],
-      "rationale": "The exact scoped questions ask the human/organizational controller, independence from other Sentora role signers and independently attested key custody/signing policy for the owner and curator 1-of-1 Safes. Issuer legal, security, team, governance, reporting and audit surfaces describe non-custody and segregated execution but do not bind those assurances to either exact sole EOA signer. Pinned reads establish topology only. IncidentState and unclosed delegated/registry reach are separately retained U; no incident-free or complete execution claim is inferred."
-    },
-    {
       "id": "uw-senrlusdv2-sentora-8dfba0c9ae36cdae",
       "assetId": "senrlusdv2-sentora",
       "scope": {
@@ -30735,116 +30152,6 @@
           "assertion": "Exact immutable runtime has no upgrade entrypoint. Independent immutable-code fact cannot currently clear wrapper contractMutability while unrelated registry/delegated authorization questions keep aggregate mint non-known."
         }
       ]
-    },
-    {
-      "id": "uw-senpyusdprimev2-sentora-7e21eafcc9f0bf38",
-      "assetId": "senpyusdprimev2-sentora",
-      "scope": {
-        "componentKey": "control:mint-meta:senpyusdprimev2-sentora:7f7faab82dd411f7eb89",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:senpyusdprimev2-sentora:7f7faab82dd411f7eb89",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R24)",
-      "sources": [
-        {
-          "url": "https://forum.morpho.org/t/introducing-sentora/2102",
-          "observedAt": "2026-10-03T22:59:46Z",
-          "datumAsOf": "2025-12-05",
-          "location": "How We Work; How We Engage with Governance",
-          "excerpt": "Execution with segregated keys and policy controls, followed by automated state verification",
-          "assertion": "Describes policy-controlled execution but does not identify either exact Safe signer or independently attest custody, recovery or inter-role key independence."
-        },
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": null,
-          "location": "Section 4.3; Appendix B-1 non-custodial structure",
-          "excerpt": "Sentora does not have access to private keys, seed phrases, or wallet credentials and does not maintain omnibus wallets or pooled custody structures.",
-          "assertion": "This statement concerns user assets/keys, not the organizational controllers of Safe signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 or 0x992592e073aa9b98daed79ee05c4af832e1d0abe."
-        },
-        {
-          "url": "https://etherscan.io/block/26114894",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Ethereum pinned eth_call getOwners/getThreshold at block 26114894",
-          "excerpt": "26114894",
-          "assertion": "Pinned role binding confirms both vaults use the same owner/curator Safes, each 1-of-1 with empty-code EOA signer. This proves topology, not human identity or independent attested custody."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/legal/disclaimer",
-        "https://sentora.com/about",
-        "https://sentora.com/platform/risk-management",
-        "https://forum.morpho.org/t/introducing-sentora/2102",
-        "https://sentora.com/research/reports",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
-        "https://etherscan.io/address/0xe8c9c99ecad0686a14a00d8521c572281e938008",
-        "https://etherscan.io/address/0x9e396de3312d373b87f9bd8763fb48184b42aac0"
-      ],
-      "rationale": "The exact scoped questions ask the human/organizational controller, independence from other Sentora role signers and independently attested key custody/signing policy for the owner and curator 1-of-1 Safes. Issuer legal, security, team, governance, reporting and audit surfaces describe non-custody and segregated execution but do not bind those assurances to either exact sole EOA signer. Pinned reads establish topology only. IncidentState and unclosed delegated/registry reach are separately retained U; no incident-free or complete execution claim is inferred."
-    },
-    {
-      "id": "uw-senpyusdprimev2-sentora-5c30895cb288f63f",
-      "assetId": "senpyusdprimev2-sentora",
-      "scope": {
-        "componentKey": "control:mint-meta:senpyusdprimev2-sentora:f832165a7ecac2c871ca",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:senpyusdprimev2-sentora:f832165a7ecac2c871ca",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:00:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R24)",
-      "sources": [
-        {
-          "url": "https://forum.morpho.org/t/introducing-sentora/2102",
-          "observedAt": "2026-10-03T22:59:46Z",
-          "datumAsOf": "2025-12-05",
-          "location": "How We Work; How We Engage with Governance",
-          "excerpt": "Execution with segregated keys and policy controls, followed by automated state verification",
-          "assertion": "Describes policy-controlled execution but does not identify either exact Safe signer or independently attest custody, recovery or inter-role key independence."
-        },
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": null,
-          "location": "Section 4.3; Appendix B-1 non-custodial structure",
-          "excerpt": "Sentora does not have access to private keys, seed phrases, or wallet credentials and does not maintain omnibus wallets or pooled custody structures.",
-          "assertion": "This statement concerns user assets/keys, not the organizational controllers of Safe signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 or 0x992592e073aa9b98daed79ee05c4af832e1d0abe."
-        },
-        {
-          "url": "https://etherscan.io/block/26114894",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Ethereum pinned eth_call getOwners/getThreshold at block 26114894",
-          "excerpt": "26114894",
-          "assertion": "Pinned role binding confirms both vaults use the same owner/curator Safes, each 1-of-1 with empty-code EOA signer. This proves topology, not human identity or independent attested custody."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/legal/disclaimer",
-        "https://sentora.com/about",
-        "https://sentora.com/platform/risk-management",
-        "https://forum.morpho.org/t/introducing-sentora/2102",
-        "https://sentora.com/research/reports",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
-        "https://etherscan.io/address/0xe8c9c99ecad0686a14a00d8521c572281e938008",
-        "https://etherscan.io/address/0x9e396de3312d373b87f9bd8763fb48184b42aac0"
-      ],
-      "rationale": "The exact scoped questions ask the human/organizational controller, independence from other Sentora role signers and independently attested key custody/signing policy for the owner and curator 1-of-1 Safes. Issuer legal, security, team, governance, reporting and audit surfaces describe non-custody and segregated execution but do not bind those assurances to either exact sole EOA signer. Pinned reads establish topology only. IncidentState and unclosed delegated/registry reach are separately retained U; no incident-free or complete execution claim is inferred."
     },
     {
       "id": "uw-senpyusdprimev2-sentora-36ad61c761d30c55",
@@ -34989,282 +34296,6 @@
         "https://eth.blockscout.com/address/0x8888888199b2Df864bf678259607d6D5EBb4e3Ce"
       ],
       "rationale": "Exact missing data are USDCx-holder reserve segregation/insolvency protection and complete local reserve-reuse terms. Circle's September 16 developer terms newly disclose non-Circle ownership, noncustody and no Circle lien, but disclaim a trust and make the partner token nonredeemable with Circle. Movement's April 6 non-rehypothecation provision is staking-only. Product, technical, deployment and legal surfaces disclose mechanics rather than these complete protections. No prohibition or bankruptcy remoteness is inferred from smart-contract custody."
-    },
-    {
-      "id": "uw-senpyusdmwin-sentora-22c3401a575b6341",
-      "assetId": "senpyusdmwin-sentora",
-      "scope": {
-        "componentKey": "control:mint-meta:senpyusdmwin-sentora:1be9607c721d81c35ac8",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:senpyusdmwin-sentora:1be9607c721d81c35ac8",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-04T00:02:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
-      "sources": [
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T23:59:20Z",
-          "datumAsOf": null,
-          "location": "Section 4.3: Vaults",
-          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
-          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
-        },
-        {
-          "url": "https://ethereum-rpc.publicnode.com",
-          "observedAt": "2026-10-04T00:02:38Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Block 26115203; owner Safe getOwners()",
-          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
-          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/",
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/platform/risk-management",
-        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
-        "https://sentora.com/asset-risk-reviews/huma",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
-        "https://ethereum-rpc.publicnode.com"
-      ],
-      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
-    },
-    {
-      "id": "uw-senpyusdmwin-sentora-b4695b740d839ab9",
-      "assetId": "senpyusdmwin-sentora",
-      "scope": {
-        "componentKey": "control:mint-meta:senpyusdmwin-sentora:f188864829dfe0fe3ccd",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:senpyusdmwin-sentora:f188864829dfe0fe3ccd",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-04T00:02:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
-      "sources": [
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T23:59:20Z",
-          "datumAsOf": null,
-          "location": "Section 4.3: Vaults",
-          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
-          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
-        },
-        {
-          "url": "https://ethereum-rpc.publicnode.com",
-          "observedAt": "2026-10-04T00:02:38Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Block 26115203; owner Safe getOwners()",
-          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
-          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/",
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/platform/risk-management",
-        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
-        "https://sentora.com/asset-risk-reviews/huma",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
-        "https://ethereum-rpc.publicnode.com"
-      ],
-      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
-    },
-    {
-      "id": "uw-senpyusdmwin-sentora-9d0c8c104a3d32af",
-      "assetId": "senpyusdmwin-sentora",
-      "scope": {
-        "componentKey": "deployment-controls",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "deployment-controls",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-04T00:02:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
-      "sources": [
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T23:59:20Z",
-          "datumAsOf": null,
-          "location": "Section 4.3: Vaults",
-          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
-          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
-        },
-        {
-          "url": "https://ethereum-rpc.publicnode.com",
-          "observedAt": "2026-10-04T00:02:38Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Block 26115203; owner Safe getOwners()",
-          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
-          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/",
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/platform/risk-management",
-        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
-        "https://sentora.com/asset-risk-reviews/huma",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
-        "https://ethereum-rpc.publicnode.com"
-      ],
-      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
-    },
-    {
-      "id": "uw-senpyusdpst-sentora-8d80637939486aaf",
-      "assetId": "senpyusdpst-sentora",
-      "scope": {
-        "componentKey": "control:mint-meta:senpyusdpst-sentora:b7310f8ffc318dc58be7",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:senpyusdpst-sentora:b7310f8ffc318dc58be7",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-04T00:02:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
-      "sources": [
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T23:59:20Z",
-          "datumAsOf": null,
-          "location": "Section 4.3: Vaults",
-          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
-          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
-        },
-        {
-          "url": "https://ethereum-rpc.publicnode.com",
-          "observedAt": "2026-10-04T00:02:38Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Block 26115203; owner Safe getOwners()",
-          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
-          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/",
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/platform/risk-management",
-        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
-        "https://sentora.com/asset-risk-reviews/huma",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
-        "https://ethereum-rpc.publicnode.com"
-      ],
-      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
-    },
-    {
-      "id": "uw-senpyusdpst-sentora-bc2edfa58b4612d7",
-      "assetId": "senpyusdpst-sentora",
-      "scope": {
-        "componentKey": "control:mint-meta:senpyusdpst-sentora:c2c2e21589eb38c9ac47",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:senpyusdpst-sentora:c2c2e21589eb38c9ac47",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-04T00:02:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
-      "sources": [
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T23:59:20Z",
-          "datumAsOf": null,
-          "location": "Section 4.3: Vaults",
-          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
-          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
-        },
-        {
-          "url": "https://ethereum-rpc.publicnode.com",
-          "observedAt": "2026-10-04T00:02:38Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Block 26115203; owner Safe getOwners()",
-          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
-          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/",
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/platform/risk-management",
-        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
-        "https://sentora.com/asset-risk-reviews/huma",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
-        "https://ethereum-rpc.publicnode.com"
-      ],
-      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
-    },
-    {
-      "id": "uw-senpyusdpst-sentora-8336c0da2d7693f2",
-      "assetId": "senpyusdpst-sentora",
-      "scope": {
-        "componentKey": "deployment-controls",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "deployment-controls",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-04T00:02:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R46)",
-      "sources": [
-        {
-          "url": "https://sentora.com/legal/terms-of-use",
-          "observedAt": "2026-10-03T23:59:20Z",
-          "datumAsOf": null,
-          "location": "Section 4.3: Vaults",
-          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
-          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
-        },
-        {
-          "url": "https://ethereum-rpc.publicnode.com",
-          "observedAt": "2026-10-04T00:02:38Z",
-          "datumAsOf": "2026-10-03",
-          "location": "Block 26115203; owner Safe getOwners()",
-          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
-          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://sentora.com/",
-        "https://sentora.com/legal/terms-of-use",
-        "https://sentora.com/platform/risk-management",
-        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
-        "https://sentora.com/asset-risk-reviews/huma",
-        "https://docs.morpho.org/get-started/resources/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
-        "https://ethereum-rpc.publicnode.com"
-      ],
-      "rationale": "The exact organizational controller, signer independence and independently attested key-custody/signing policies of the two 1-of-1 owner/curator Safes are not publicly disclosed. Current pinned full Safe/role/registry reads and complete issuance/ownership history resolve execution and incident prerequisites, not offchain key holders. Issuer legal/security/product/transparency surfaces describe user noncustody only. Preserve both sourced scoped questions; these and their deployment-controls umbrella are C, not fabricated signing protection."
     },
     {
       "id": "uw-acrdx-anemoy-apollo-1485ddb454b91b34",
@@ -40550,6 +39581,883 @@
         "https://etherscan.io/address/0x992592e073aa9b98daed79ee05c4af832e1d0abe"
       ],
       "rationale": "The exact scoped questions ask for the human or organizational controller, signer independence and independently attested operational-key custody/signing policy of the owner and curator 1-of-1 Safes. Pinned reads on both chains reconfirm sole signers 0x295d\u2026d7e9 and 0x9925\u20260abe, thresholds 1 and no modules. The issuer site, terms, product pages, protocol audit archive and exact-address searches publish no identity or attestation answering those questions. This C does not replace known onchain quorum facts or establish incident absence."
+    },
+    {
+      "id": "uw-zaru-blocktower-34c8b11deaa4c028",
+      "assetId": "zaru-blocktower",
+      "scope": {
+        "componentKey": "control:mint-meta:zaru-blocktower:1660b417cce0e7f5b4d4",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T10:10:29Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsB)",
+      "sources": [
+        {
+          "url": "https://zaru.network/blog/zar-universal-white-paper",
+          "observedAt": "2026-10-03T23:16:00Z",
+          "datumAsOf": "2026-07-21",
+          "location": "4.09 Architecture & Access Control",
+          "excerpt": "secured under multi-signature controls and hardware security modules (HSMs) to prevent unauthorised issuance.",
+          "assertion": "Generic security claim supplies no exact ordinary-signer quorum, HSM attestation, independent operator roster or recovery/signing policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://zaru.network/",
+        "https://zaru.network/blog/zar-universal-white-paper",
+        "https://blocktower.tech/legal/zaru-terms-of-use",
+        "https://blocktower.tech/legal/platform-user-agreement",
+        "https://blocktower.tech/legal/fais-disclosure-notice",
+        "https://blocktower.tech/legal",
+        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
+        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+      ],
+      "rationale": "Rebind the prior custody-only proof to this exact native signer keyCustody factor. Whitepaper HSM/multisig claims do not bind independent operator identities, HSM attestations or signing/recovery policy to the Solana signer or shared EVM EOA. Existing issuer/legal/contract research establishes offchain nondisclosure, not unknown onchain authority. No execution, incident or favorable independence claim is made."
+    },
+    {
+      "id": "uw-zaru-blocktower-34a39e842aa9e84b",
+      "assetId": "zaru-blocktower",
+      "scope": {
+        "componentKey": "control:mint-meta:zaru-blocktower:9271bbd8a2c2d4204d5b",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T10:10:29Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsB)",
+      "sources": [
+        {
+          "url": "https://zaru.network/blog/zar-universal-white-paper",
+          "observedAt": "2026-10-03T23:16:00Z",
+          "datumAsOf": "2026-07-21",
+          "location": "4.09 Architecture & Access Control",
+          "excerpt": "secured under multi-signature controls and hardware security modules (HSMs) to prevent unauthorised issuance.",
+          "assertion": "Generic security claim supplies no exact ordinary-signer quorum, HSM attestation, independent operator roster or recovery/signing policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://zaru.network/",
+        "https://zaru.network/blog/zar-universal-white-paper",
+        "https://blocktower.tech/legal/zaru-terms-of-use",
+        "https://blocktower.tech/legal/platform-user-agreement",
+        "https://blocktower.tech/legal/fais-disclosure-notice",
+        "https://blocktower.tech/legal",
+        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
+        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+      ],
+      "rationale": "Rebind the prior custody-only proof to this exact native signer keyCustody factor. Whitepaper HSM/multisig claims do not bind independent operator identities, HSM attestations or signing/recovery policy to the Solana signer or shared EVM EOA. Existing issuer/legal/contract research establishes offchain nondisclosure, not unknown onchain authority. No execution, incident or favorable independence claim is made."
+    },
+    {
+      "id": "uw-zaru-blocktower-bc30df39c587a97f",
+      "assetId": "zaru-blocktower",
+      "scope": {
+        "componentKey": "control:mint-meta:zaru-blocktower:96d61cf9294a798a2697",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T10:10:29Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsB)",
+      "sources": [
+        {
+          "url": "https://zaru.network/blog/zar-universal-white-paper",
+          "observedAt": "2026-10-03T23:16:00Z",
+          "datumAsOf": "2026-07-21",
+          "location": "4.09 Architecture & Access Control",
+          "excerpt": "secured under multi-signature controls and hardware security modules (HSMs) to prevent unauthorised issuance.",
+          "assertion": "Generic security claim supplies no exact ordinary-signer quorum, HSM attestation, independent operator roster or recovery/signing policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://zaru.network/",
+        "https://zaru.network/blog/zar-universal-white-paper",
+        "https://blocktower.tech/legal/zaru-terms-of-use",
+        "https://blocktower.tech/legal/platform-user-agreement",
+        "https://blocktower.tech/legal/fais-disclosure-notice",
+        "https://blocktower.tech/legal",
+        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
+        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+      ],
+      "rationale": "Rebind the prior custody-only proof to this exact native signer keyCustody factor. Whitepaper HSM/multisig claims do not bind independent operator identities, HSM attestations or signing/recovery policy to the Solana signer or shared EVM EOA. Existing issuer/legal/contract research establishes offchain nondisclosure, not unknown onchain authority. No execution, incident or favorable independence claim is made."
+    },
+    {
+      "id": "uw-zaru-blocktower-c6901dbcc4224685",
+      "assetId": "zaru-blocktower",
+      "scope": {
+        "componentKey": "control:mint-meta:zaru-blocktower:da3ca105f723823b246c",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T10:10:29Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsB)",
+      "sources": [
+        {
+          "url": "https://zaru.network/blog/zar-universal-white-paper",
+          "observedAt": "2026-10-03T23:16:00Z",
+          "datumAsOf": "2026-07-21",
+          "location": "4.09 Architecture & Access Control",
+          "excerpt": "secured under multi-signature controls and hardware security modules (HSMs) to prevent unauthorised issuance.",
+          "assertion": "Generic security claim supplies no exact ordinary-signer quorum, HSM attestation, independent operator roster or recovery/signing policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://zaru.network/",
+        "https://zaru.network/blog/zar-universal-white-paper",
+        "https://blocktower.tech/legal/zaru-terms-of-use",
+        "https://blocktower.tech/legal/platform-user-agreement",
+        "https://blocktower.tech/legal/fais-disclosure-notice",
+        "https://blocktower.tech/legal",
+        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
+        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+      ],
+      "rationale": "Rebind the prior custody-only proof to this exact native signer keyCustody factor. Whitepaper HSM/multisig claims do not bind independent operator identities, HSM attestations or signing/recovery policy to the Solana signer or shared EVM EOA. Existing issuer/legal/contract research establishes offchain nondisclosure, not unknown onchain authority. No execution, incident or favorable independence claim is made."
+    },
+    {
+      "id": "uw-usdfc-secured-finance-97e6abdf22247f6b",
+      "assetId": "usdfc-secured-finance",
+      "scope": {
+        "componentKey": "control:mint-meta:usdfc-secured-finance:64f231a10265f0186544",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T10:10:29Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsB)",
+      "sources": [
+        {
+          "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts/contract-upgrade-history.md",
+          "observedAt": "2026-10-03T22:56:04Z",
+          "datumAsOf": "2026-09-25",
+          "location": "Execution status",
+          "excerpt": "Both transactions were successfully executed through the Safe multisig wallet on Filecoin.",
+          "assertion": "Discloses exercised Safe upgrade authority, not beneficial signer identities, independence, key custody or a signing policy for the identified 2-of-3 controller."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts.md",
+        "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts/contract-upgrade-history.md",
+        "https://docs.secured.finance/llms.txt",
+        "https://docs.secured.finance/resources/legal/risk-disclaimer.md",
+        "https://secured.finance",
+        "https://api.node.glif.io/rpc/v1",
+        "https://sourcify.dev/server/v2/contract/314/0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b?fields=compilation,sources,proxyResolution"
+      ],
+      "rationale": "Rebind the prior custody-only proof to the exact 2-of-3 owner/ProxyAdmin-owner Safe keyCustody factor. Published Safe-executed upgrades and enumerated onchain owners/quorum disclose authority, not beneficial signer identities, independent custody safeguards or signing policy. Prior issuer/docs/legal/source research addresses these undisclosed offchain facts; no executable-delay or incident gap is classified C."
+    },
+    {
+      "id": "uw-usdsm-stable-mint-dc6a35d343b2f8bf",
+      "assetId": "usdsm-stable-mint",
+      "scope": {
+        "componentKey": "control:mint-meta:usdsm-stable-mint:5951c00b5ef7965fec9f",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T10:10:29Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsB)",
+      "sources": [
+        {
+          "url": "https://stablemint.io/stablecoins/",
+          "observedAt": "2026-10-03T23:04:33Z",
+          "datumAsOf": null,
+          "location": "Custody infrastructure",
+          "excerpt": "Utila MPC \u2014 key material distributed across multiple parties, never reconstructed in a single location",
+          "assertion": "No threshold, signer identities/independence, administrative recovery bypass or mapping of this policy to either privileged EOA is given."
+        },
+        {
+          "url": "https://stablemint.io/faq/",
+          "observedAt": "2026-10-03T23:04:33Z",
+          "datumAsOf": null,
+          "location": "How is my business account secured? / Custody",
+          "excerpt": "keys are split across multiple independent parties and never reconstructed.",
+          "assertion": "The general MPC statement does not provide the exact issuer-specific independent authorization quorum for privileged mint and upgrade keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://stablemint.io/stablecoins/",
+        "https://stablemint.io/faq/",
+        "https://stablemint.io/legal/terms-conditions/",
+        "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html",
+        "https://docs.stablemint.io/llms.txt",
+        "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561",
+        "https://explorer.etherlink.com/api/v2/smart-contracts/0xe7f117f87fa650350c3e363ca2c644951d273d1f"
+      ],
+      "rationale": "Rebind the prior custody-only proof to this exact privileged EOA keyCustody factor. Issuer Utila MPC statements disclose no independently evidenced authorization quorum, signer identities/independence, recovery policy or exact mapping to the admin/upgrade/minter and additional minter EOAs. Prior issuer/FAQ/legal/whitepaper/contract search establishes offchain nondisclosure. Retain separate execution/reach and incident gaps U."
+    },
+    {
+      "id": "uw-usdsm-stable-mint-946deb2b81142e9e",
+      "assetId": "usdsm-stable-mint",
+      "scope": {
+        "componentKey": "control:mint-meta:usdsm-stable-mint:8ea62eea76364fb14c11",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T10:10:29Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsB)",
+      "sources": [
+        {
+          "url": "https://stablemint.io/stablecoins/",
+          "observedAt": "2026-10-03T23:04:33Z",
+          "datumAsOf": null,
+          "location": "Custody infrastructure",
+          "excerpt": "Utila MPC \u2014 key material distributed across multiple parties, never reconstructed in a single location",
+          "assertion": "No threshold, signer identities/independence, administrative recovery bypass or mapping of this policy to either privileged EOA is given."
+        },
+        {
+          "url": "https://stablemint.io/faq/",
+          "observedAt": "2026-10-03T23:04:33Z",
+          "datumAsOf": null,
+          "location": "How is my business account secured? / Custody",
+          "excerpt": "keys are split across multiple independent parties and never reconstructed.",
+          "assertion": "The general MPC statement does not provide the exact issuer-specific independent authorization quorum for privileged mint and upgrade keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://stablemint.io/stablecoins/",
+        "https://stablemint.io/faq/",
+        "https://stablemint.io/legal/terms-conditions/",
+        "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html",
+        "https://docs.stablemint.io/llms.txt",
+        "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561",
+        "https://explorer.etherlink.com/api/v2/smart-contracts/0xe7f117f87fa650350c3e363ca2c644951d273d1f"
+      ],
+      "rationale": "Rebind the prior custody-only proof to this exact privileged EOA keyCustody factor. Issuer Utila MPC statements disclose no independently evidenced authorization quorum, signer identities/independence, recovery policy or exact mapping to the admin/upgrade/minter and additional minter EOAs. Prior issuer/FAQ/legal/whitepaper/contract search establishes offchain nondisclosure. Retain separate execution/reach and incident gaps U."
+    },
+    {
+      "id": "uw-usdsm-stable-mint-ad598f9a9a45844f",
+      "assetId": "usdsm-stable-mint",
+      "scope": {
+        "componentKey": "control:mint-meta:usdsm-stable-mint:bbb3136e12def53ad156",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T10:10:29Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsB)",
+      "sources": [
+        {
+          "url": "https://stablemint.io/stablecoins/",
+          "observedAt": "2026-10-03T23:04:33Z",
+          "datumAsOf": null,
+          "location": "Custody infrastructure",
+          "excerpt": "Utila MPC \u2014 key material distributed across multiple parties, never reconstructed in a single location",
+          "assertion": "No threshold, signer identities/independence, administrative recovery bypass or mapping of this policy to either privileged EOA is given."
+        },
+        {
+          "url": "https://stablemint.io/faq/",
+          "observedAt": "2026-10-03T23:04:33Z",
+          "datumAsOf": null,
+          "location": "How is my business account secured? / Custody",
+          "excerpt": "keys are split across multiple independent parties and never reconstructed.",
+          "assertion": "The general MPC statement does not provide the exact issuer-specific independent authorization quorum for privileged mint and upgrade keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://stablemint.io/stablecoins/",
+        "https://stablemint.io/faq/",
+        "https://stablemint.io/legal/terms-conditions/",
+        "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html",
+        "https://docs.stablemint.io/llms.txt",
+        "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561",
+        "https://explorer.etherlink.com/api/v2/smart-contracts/0xe7f117f87fa650350c3e363ca2c644951d273d1f"
+      ],
+      "rationale": "Rebind the prior custody-only proof to this exact privileged EOA keyCustody factor. Issuer Utila MPC statements disclose no independently evidenced authorization quorum, signer identities/independence, recovery policy or exact mapping to the admin/upgrade/minter and additional minter EOAs. Prior issuer/FAQ/legal/whitepaper/contract search establishes offchain nondisclosure. Retain separate execution/reach and incident gaps U."
+    },
+    {
+      "id": "uw-usdfr-forest-road-feb0928ab51c9bf3",
+      "assetId": "usdfr-forest-road",
+      "scope": {
+        "componentKey": "control:mint-meta:usdfr-forest-road:e55f36a3d94667588f1b",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T10:10:29Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsB)",
+      "sources": [
+        {
+          "url": "https://forestroadvault.com/docs/roles-and-governance",
+          "observedAt": "2026-10-03T22:57:49Z",
+          "datumAsOf": null,
+          "location": "Role roster, ATTESTER_ROLE",
+          "excerpt": "The m-of-n attester keys",
+          "assertion": "The authorized key role is public; human owners, custody model and signing policy/independence are not disclosed."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://forestroadvault.com",
+        "https://forestroadvault.com/docs/roles-and-governance",
+        "https://forestroadvault.com/docs/overview",
+        "https://forestroadvault.com/docs/addresses",
+        "https://forestroadvault.com/docs/audit",
+        "https://forestroadvault.com/docs/security",
+        "https://forestroadvault.com/transparency",
+        "https://forestroadvault.com/legal",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x870deb459512099e70e9a640cf3140a0d969fc18"
+      ],
+      "rationale": "Rebind the prior custody-only proof to the exact MintRedeemController keyCustody factor for its two observed oracle attester keys. Published roles/source establish authorization roster and per-kind thresholds, not human key ownership, independent custody or actual signing-policy attestations. Prior issuer/docs/security/legal/transparency/source search establishes offchain nondisclosure; broader timelock/execution census remains U."
+    },
+    {
+      "id": "uw-usdso-somnia-d5ae1a8b487f47cc",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "componentKey": "control:mint-meta:usdso-somnia:41487c7fcef92f13148c",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T10:10:29Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsB)",
+      "sources": [
+        {
+          "url": "https://somnia.network/usdso-terms-of-service",
+          "observedAt": "2026-10-03T23:09:56Z",
+          "datumAsOf": "2026-05-05",
+          "location": "section 5.3",
+          "excerpt": "The Company does not develop, deploy, audit, or maintain these smart contracts.",
+          "assertion": "Somnia terms disclaim contract responsibility; they do not disclose named Safe operators or signing custody policies."
+        },
+        {
+          "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian",
+          "observedAt": "2026-10-03T23:09:56Z",
+          "datumAsOf": null,
+          "location": "Published documentation",
+          "excerpt": "Configurable mint and redeem fees",
+          "assertion": "Technical docs explain protocol configuration rather than independently evidenced human key custody/signing policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://somnia.network/usdso-stablecoin",
+        "https://somnia.network/usdso-terms-of-service",
+        "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian",
+        "https://docs.frax.com/protocol/assets/frxusd/frxusd",
+        "https://explorer.somnia.network/api/v2/smart-contracts/0x690575465af47835b72c5b74c334234624cfd942",
+        "https://explorer.somnia.network/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+      ],
+      "rationale": "Rebind the prior custody-only proof to the exact identified 3-of-6 ProxyAdmin-owner Safe keyCustody factor. Somnia/Frax product, legal and implementation disclosures do not publish Safe operator identities, independence or custody/signing attestation. Public address/quorum code is not an offchain assurance. Separate execution and incident uncertainties remain U."
+    },
+    {
+      "id": "uw-sparkusdc-spark-871e84268a509f3c",
+      "assetId": "sparkusdc-spark",
+      "scope": {
+        "componentKey": "control:mint-meta:sparkusdc-spark:836f8253a7150ceeed01",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T10:10:29Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsB)",
+      "sources": [
+        {
+          "url": "https://vote.sky.money/executive/template-executive-vote-reduce-rewards-emissions-complete-guni-vault-offboardings-whitelist-keel-subproxy-to-send-cross-chain-messages-adjust-grove-dc-iam-parameters-delegate-compensation-star-agent-proxy-spells-january-15-2026",
+          "observedAt": "2026-10-03T23:00:37Z",
+          "datumAsOf": "2026-01-15",
+          "location": "Spark Morpho Vault - Update Vault Roles",
+          "excerpt": "Threshold: **3 of 5**",
+          "assertion": "Governance publishes exact Safe address/quorum, but not signer human/operator independence, key custody or recovery controls."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vote.sky.money/executive/template-executive-vote-reduce-rewards-emissions-complete-guni-vault-offboardings-whitelist-keel-subproxy-to-send-cross-chain-messages-adjust-grove-dc-iam-parameters-delegate-compensation-star-agent-proxy-spells-january-15-2026",
+        "https://docs.spark.finance/dev/security/security-and-audits",
+        "https://docs.spark.finance/products/isolated-markets",
+        "https://docs.spark.finance/mica/4",
+        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
+        "https://base.blockscout.com/api/v2/smart-contracts/0x0f963a8a8c01042b69054e787e5763abbb0646a3",
+        "https://docs.morpho.org/curate/concepts/roles/"
+      ],
+      "rationale": "Rebind the prior custody-only proof to this exact curator Safe keyCustody factor. Governance publishes the exact curator and 3-of-5 quorum, but issuer governance/security/role/legal/financial and contract surfaces disclose no owner-to-human mapping, independent operator attestations or custody/recovery policy. Pinned topology is not human independence. Separate execution and incident uncertainty remains U."
+    },
+    {
+      "id": "uw-sparkusdtbc-spark-12de2dd94a3b12ff",
+      "assetId": "sparkusdtbc-spark",
+      "scope": {
+        "componentKey": "control:mint-meta:sparkusdtbc-spark:c1b6ffe83625f92cee82",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T10:10:29Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsB)",
+      "sources": [
+        {
+          "url": "https://vote.sky.money/executive/template-executive-vote-reduce-rewards-emissions-complete-guni-vault-offboardings-whitelist-keel-subproxy-to-send-cross-chain-messages-adjust-grove-dc-iam-parameters-delegate-compensation-star-agent-proxy-spells-january-15-2026",
+          "observedAt": "2026-10-03T23:00:37Z",
+          "datumAsOf": "2026-01-15",
+          "location": "Spark Morpho Vault - Update Vault Roles",
+          "excerpt": "Threshold: **3 of 5**",
+          "assertion": "Governance publishes exact Safe address/quorum, but not signer human/operator independence, key custody or recovery controls."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vote.sky.money/executive/template-executive-vote-reduce-rewards-emissions-complete-guni-vault-offboardings-whitelist-keel-subproxy-to-send-cross-chain-messages-adjust-grove-dc-iam-parameters-delegate-compensation-star-agent-proxy-spells-january-15-2026",
+        "https://docs.spark.finance/dev/security/security-and-audits",
+        "https://docs.spark.finance/products/isolated-markets",
+        "https://docs.spark.finance/mica/4",
+        "https://paragraph.com/@spark-11/spark-q2-2026-financial-report",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f963a8a8c01042b69054e787e5763abbb0646a3",
+        "https://docs.morpho.org/curate/concepts/roles/"
+      ],
+      "rationale": "Rebind the prior custody-only proof to this exact curator Safe keyCustody factor. Governance publishes the exact curator and 3-of-5 quorum, but issuer governance/security/role/legal/financial and contract surfaces disclose no owner-to-human mapping, independent operator attestations or custody/recovery policy. Pinned topology is not human independence. Separate execution and incident uncertainty remains U."
+    },
+    {
+      "id": "uw-senrlusdv2-sentora-3c1c7011fc978bab",
+      "assetId": "senrlusdv2-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senrlusdv2-sentora:703345b7103b2cf26915",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T10:10:29Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsB)",
+      "sources": [
+        {
+          "url": "https://forum.morpho.org/t/introducing-sentora/2102",
+          "observedAt": "2026-10-03T22:59:46Z",
+          "datumAsOf": "2025-12-05",
+          "location": "How We Work; How We Engage with Governance",
+          "excerpt": "Execution with segregated keys and policy controls, followed by automated state verification",
+          "assertion": "Describes policy-controlled execution but does not identify either exact Safe signer or independently attest custody, recovery or inter-role key independence."
+        },
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T22:59:47Z",
+          "datumAsOf": null,
+          "location": "Section 4.3; Appendix B-1 non-custodial structure",
+          "excerpt": "Sentora does not have access to private keys, seed phrases, or wallet credentials and does not maintain omnibus wallets or pooled custody structures.",
+          "assertion": "This statement concerns user assets/keys, not the organizational controllers of Safe signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 or 0x992592e073aa9b98daed79ee05c4af832e1d0abe."
+        },
+        {
+          "url": "https://etherscan.io/block/26114894",
+          "observedAt": "2026-10-03T22:59:47Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Ethereum pinned eth_call getOwners/getThreshold at block 26114894",
+          "excerpt": "26114894",
+          "assertion": "Pinned role binding confirms both vaults use the same owner/curator Safes, each 1-of-1 with empty-code EOA signer. This proves topology, not human identity or independent attested custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/legal/disclaimer",
+        "https://sentora.com/about",
+        "https://sentora.com/platform/risk-management",
+        "https://forum.morpho.org/t/introducing-sentora/2102",
+        "https://sentora.com/research/reports",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+        "https://etherscan.io/address/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://etherscan.io/address/0x9e396de3312d373b87f9bd8763fb48184b42aac0"
+      ],
+      "rationale": "Rebind the prior custody-only proof to this exact owner/curator 1-of-1 Safe keyCustody factor. Prior issuer legal/security/product/governance/reporting/audit and contract research establishes no public identity-to-sole-EOA mapping, independently attested signing/custody/recovery policy or inter-role human independence. Noncustodial user-asset terms and segregated-key execution claims do not bind these exact signers. Preserve any separate incident, delegated-reach and execution gaps U."
+    },
+    {
+      "id": "uw-senrlusdv2-sentora-adcacc20f9ba0783",
+      "assetId": "senrlusdv2-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senrlusdv2-sentora:e5ff3e67a87264457270",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T10:10:29Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsB)",
+      "sources": [
+        {
+          "url": "https://forum.morpho.org/t/introducing-sentora/2102",
+          "observedAt": "2026-10-03T22:59:46Z",
+          "datumAsOf": "2025-12-05",
+          "location": "How We Work; How We Engage with Governance",
+          "excerpt": "Execution with segregated keys and policy controls, followed by automated state verification",
+          "assertion": "Describes policy-controlled execution but does not identify either exact Safe signer or independently attest custody, recovery or inter-role key independence."
+        },
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T22:59:47Z",
+          "datumAsOf": null,
+          "location": "Section 4.3; Appendix B-1 non-custodial structure",
+          "excerpt": "Sentora does not have access to private keys, seed phrases, or wallet credentials and does not maintain omnibus wallets or pooled custody structures.",
+          "assertion": "This statement concerns user assets/keys, not the organizational controllers of Safe signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 or 0x992592e073aa9b98daed79ee05c4af832e1d0abe."
+        },
+        {
+          "url": "https://etherscan.io/block/26114894",
+          "observedAt": "2026-10-03T22:59:47Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Ethereum pinned eth_call getOwners/getThreshold at block 26114894",
+          "excerpt": "26114894",
+          "assertion": "Pinned role binding confirms both vaults use the same owner/curator Safes, each 1-of-1 with empty-code EOA signer. This proves topology, not human identity or independent attested custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/legal/disclaimer",
+        "https://sentora.com/about",
+        "https://sentora.com/platform/risk-management",
+        "https://forum.morpho.org/t/introducing-sentora/2102",
+        "https://sentora.com/research/reports",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+        "https://etherscan.io/address/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://etherscan.io/address/0x9e396de3312d373b87f9bd8763fb48184b42aac0"
+      ],
+      "rationale": "Rebind the prior custody-only proof to this exact owner/curator 1-of-1 Safe keyCustody factor. Prior issuer legal/security/product/governance/reporting/audit and contract research establishes no public identity-to-sole-EOA mapping, independently attested signing/custody/recovery policy or inter-role human independence. Noncustodial user-asset terms and segregated-key execution claims do not bind these exact signers. Preserve any separate incident, delegated-reach and execution gaps U."
+    },
+    {
+      "id": "uw-senpyusdprimev2-sentora-9a7a7e488aed50e9",
+      "assetId": "senpyusdprimev2-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senpyusdprimev2-sentora:7f7faab82dd411f7eb89",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T10:10:29Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsB)",
+      "sources": [
+        {
+          "url": "https://forum.morpho.org/t/introducing-sentora/2102",
+          "observedAt": "2026-10-03T22:59:46Z",
+          "datumAsOf": "2025-12-05",
+          "location": "How We Work; How We Engage with Governance",
+          "excerpt": "Execution with segregated keys and policy controls, followed by automated state verification",
+          "assertion": "Describes policy-controlled execution but does not identify either exact Safe signer or independently attest custody, recovery or inter-role key independence."
+        },
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T22:59:47Z",
+          "datumAsOf": null,
+          "location": "Section 4.3; Appendix B-1 non-custodial structure",
+          "excerpt": "Sentora does not have access to private keys, seed phrases, or wallet credentials and does not maintain omnibus wallets or pooled custody structures.",
+          "assertion": "This statement concerns user assets/keys, not the organizational controllers of Safe signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 or 0x992592e073aa9b98daed79ee05c4af832e1d0abe."
+        },
+        {
+          "url": "https://etherscan.io/block/26114894",
+          "observedAt": "2026-10-03T22:59:47Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Ethereum pinned eth_call getOwners/getThreshold at block 26114894",
+          "excerpt": "26114894",
+          "assertion": "Pinned role binding confirms both vaults use the same owner/curator Safes, each 1-of-1 with empty-code EOA signer. This proves topology, not human identity or independent attested custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/legal/disclaimer",
+        "https://sentora.com/about",
+        "https://sentora.com/platform/risk-management",
+        "https://forum.morpho.org/t/introducing-sentora/2102",
+        "https://sentora.com/research/reports",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
+        "https://etherscan.io/address/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://etherscan.io/address/0x9e396de3312d373b87f9bd8763fb48184b42aac0"
+      ],
+      "rationale": "Rebind the prior custody-only proof to this exact owner/curator 1-of-1 Safe keyCustody factor. Prior issuer legal/security/product/governance/reporting/audit and contract research establishes no public identity-to-sole-EOA mapping, independently attested signing/custody/recovery policy or inter-role human independence. Noncustodial user-asset terms and segregated-key execution claims do not bind these exact signers. Preserve any separate incident, delegated-reach and execution gaps U."
+    },
+    {
+      "id": "uw-senpyusdprimev2-sentora-40f7dfed08c50778",
+      "assetId": "senpyusdprimev2-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senpyusdprimev2-sentora:f832165a7ecac2c871ca",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T10:10:29Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsB)",
+      "sources": [
+        {
+          "url": "https://forum.morpho.org/t/introducing-sentora/2102",
+          "observedAt": "2026-10-03T22:59:46Z",
+          "datumAsOf": "2025-12-05",
+          "location": "How We Work; How We Engage with Governance",
+          "excerpt": "Execution with segregated keys and policy controls, followed by automated state verification",
+          "assertion": "Describes policy-controlled execution but does not identify either exact Safe signer or independently attest custody, recovery or inter-role key independence."
+        },
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T22:59:47Z",
+          "datumAsOf": null,
+          "location": "Section 4.3; Appendix B-1 non-custodial structure",
+          "excerpt": "Sentora does not have access to private keys, seed phrases, or wallet credentials and does not maintain omnibus wallets or pooled custody structures.",
+          "assertion": "This statement concerns user assets/keys, not the organizational controllers of Safe signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 or 0x992592e073aa9b98daed79ee05c4af832e1d0abe."
+        },
+        {
+          "url": "https://etherscan.io/block/26114894",
+          "observedAt": "2026-10-03T22:59:47Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Ethereum pinned eth_call getOwners/getThreshold at block 26114894",
+          "excerpt": "26114894",
+          "assertion": "Pinned role binding confirms both vaults use the same owner/curator Safes, each 1-of-1 with empty-code EOA signer. This proves topology, not human identity or independent attested custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/legal/disclaimer",
+        "https://sentora.com/about",
+        "https://sentora.com/platform/risk-management",
+        "https://forum.morpho.org/t/introducing-sentora/2102",
+        "https://sentora.com/research/reports",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
+        "https://etherscan.io/address/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://etherscan.io/address/0x9e396de3312d373b87f9bd8763fb48184b42aac0"
+      ],
+      "rationale": "Rebind the prior custody-only proof to this exact owner/curator 1-of-1 Safe keyCustody factor. Prior issuer legal/security/product/governance/reporting/audit and contract research establishes no public identity-to-sole-EOA mapping, independently attested signing/custody/recovery policy or inter-role human independence. Noncustodial user-asset terms and segregated-key execution claims do not bind these exact signers. Preserve any separate incident, delegated-reach and execution gaps U."
+    },
+    {
+      "id": "uw-senpyusdmwin-sentora-4cc8d2260227bed6",
+      "assetId": "senpyusdmwin-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senpyusdmwin-sentora:1be9607c721d81c35ac8",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T10:10:29Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsB)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T23:59:20Z",
+          "datumAsOf": null,
+          "location": "Section 4.3: Vaults",
+          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
+          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
+        },
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "observedAt": "2026-10-04T00:02:38Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Block 26115203; owner Safe getOwners()",
+          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
+          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
+        "https://sentora.com/asset-risk-reviews/huma",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+        "https://ethereum-rpc.publicnode.com"
+      ],
+      "rationale": "Rebind the prior custody-only proof to this exact owner/curator 1-of-1 Safe keyCustody factor. Prior issuer legal/security/product/governance/reporting/audit and contract research establishes no public identity-to-sole-EOA mapping, independently attested signing/custody/recovery policy or inter-role human independence. Noncustodial user-asset terms and segregated-key execution claims do not bind these exact signers. Preserve any separate incident, delegated-reach and execution gaps U."
+    },
+    {
+      "id": "uw-senpyusdmwin-sentora-48ef66703f0215b2",
+      "assetId": "senpyusdmwin-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senpyusdmwin-sentora:f188864829dfe0fe3ccd",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T10:10:29Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsB)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T23:59:20Z",
+          "datumAsOf": null,
+          "location": "Section 4.3: Vaults",
+          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
+          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
+        },
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "observedAt": "2026-10-04T00:02:38Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Block 26115203; owner Safe getOwners()",
+          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
+          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
+        "https://sentora.com/asset-risk-reviews/huma",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+        "https://ethereum-rpc.publicnode.com"
+      ],
+      "rationale": "Rebind the prior custody-only proof to this exact owner/curator 1-of-1 Safe keyCustody factor. Prior issuer legal/security/product/governance/reporting/audit and contract research establishes no public identity-to-sole-EOA mapping, independently attested signing/custody/recovery policy or inter-role human independence. Noncustodial user-asset terms and segregated-key execution claims do not bind these exact signers. Preserve any separate incident, delegated-reach and execution gaps U."
+    },
+    {
+      "id": "uw-senpyusdpst-sentora-618ba8f4c56a10e2",
+      "assetId": "senpyusdpst-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senpyusdpst-sentora:b7310f8ffc318dc58be7",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T10:10:29Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsB)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T23:59:20Z",
+          "datumAsOf": null,
+          "location": "Section 4.3: Vaults",
+          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
+          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
+        },
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "observedAt": "2026-10-04T00:02:38Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Block 26115203; owner Safe getOwners()",
+          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
+          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
+        "https://sentora.com/asset-risk-reviews/huma",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+        "https://ethereum-rpc.publicnode.com"
+      ],
+      "rationale": "Rebind the prior custody-only proof to this exact owner/curator 1-of-1 Safe keyCustody factor. Prior issuer legal/security/product/governance/reporting/audit and contract research establishes no public identity-to-sole-EOA mapping, independently attested signing/custody/recovery policy or inter-role human independence. Noncustodial user-asset terms and segregated-key execution claims do not bind these exact signers. Preserve any separate incident, delegated-reach and execution gaps U."
+    },
+    {
+      "id": "uw-senpyusdpst-sentora-96b8e5aa4b52c192",
+      "assetId": "senpyusdpst-sentora",
+      "scope": {
+        "componentKey": "control:mint-meta:senpyusdpst-sentora:c2c2e21589eb38c9ac47",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T10:10:29Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsB)",
+      "sources": [
+        {
+          "url": "https://sentora.com/legal/terms-of-use",
+          "observedAt": "2026-10-03T23:59:20Z",
+          "datumAsOf": null,
+          "location": "Section 4.3: Vaults",
+          "excerpt": "Sentora does not custody, possess, control, or manage assets deposited into Vaults and does not have unilateral authority to access, withdraw, redirect, or otherwise control user assets.",
+          "assertion": "General noncustodial legal wording does not identify organizational control or independently attested custody of the two exact sole Safe signer EOAs."
+        },
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "observedAt": "2026-10-04T00:02:38Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Block 26115203; owner Safe getOwners()",
+          "excerpt": "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9",
+          "assertion": "Successful pinned owner/curator reads establish sole signers 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9 and 0x992592e073aa9b98daed79ee05c4af832e1d0abe, not their human owners or key custody."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sentora.com/",
+        "https://sentora.com/legal/terms-of-use",
+        "https://sentora.com/platform/risk-management",
+        "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment",
+        "https://sentora.com/asset-risk-reviews/huma",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+        "https://ethereum-rpc.publicnode.com"
+      ],
+      "rationale": "Rebind the prior custody-only proof to this exact owner/curator 1-of-1 Safe keyCustody factor. Prior issuer legal/security/product/governance/reporting/audit and contract research establishes no public identity-to-sole-EOA mapping, independently attested signing/custody/recovery policy or inter-role human independence. Noncustodial user-asset terms and segregated-key execution claims do not bind these exact signers. Preserve any separate incident, delegated-reach and execution gaps U."
     }
   ]
 }
