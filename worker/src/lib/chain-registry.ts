@@ -59,9 +59,7 @@ export const ALCHEMY_CHAINS: Record<string, string> = {
 
 /** Numbered supply/decimals probes verified 2026-10-05; state reads only. */
 const CENSUS_STATE_ALCHEMY_CHAINS: Record<string, string> = {
-  berachain: "berachain-mainnet",
   hyperevm: "hyperliquid-mainnet",
-  ink: "ink-mainnet",
   linea: "linea-mainnet",
   scroll: "scroll-mainnet",
   zksync: "zksync-mainnet",
@@ -75,6 +73,13 @@ const CENSUS_STATE_ALCHEMY_CHAINS: Record<string, string> = {
 /** Keyless, numbered-state supply readers; deliberately outside log inventories. */
 const CENSUS_STATE_PUBLIC_RPCS: Record<string, readonly string[]> = {
   pharos: ["https://rpc.pharos.xyz", "https://api.zan.top/public/pharos-mainnet"],
+};
+
+/** Finalized, hash-pinned state and historical CCIP logs verified 2026-10-05. */
+const CCIP_ARCHIVE_ALCHEMY_CHAINS: Readonly<Record<string, string>> = {
+  monad: "monad-mainnet",
+  ink: "ink-mainnet",
+  berachain: "berachain-mainnet",
 };
 
 export type RpcAuthProvider = "alchemy" | "dwellir";
@@ -404,6 +409,22 @@ export function buildChainRpcs(
   const map = new Map<string, ChainRpcConfig>();
   for (const config of configs) {
     map.set(config.chainId, config);
+  }
+  if (alchemyApiKey) {
+    for (const [chainId, slug] of Object.entries(CCIP_ARCHIVE_ALCHEMY_CHAINS)) {
+      const meta = CHAIN_META[chainId]!;
+      const endpoint = {
+        url: buildAlchemyRpcUrl(slug, alchemyApiKey),
+        operator: "alchemy" as const, keyed: true, position: "registry" as const,
+        stateHistory: "archive" as const, logsHistory: "full" as const,
+        maxLogBlockSpan: 1000, verifiedAt: "2026-10-05",
+      };
+      const existing = map.get(chainId);
+      map.set(chainId, {
+        chainId, chainName: meta.name, type: "evm", explorerUrl: meta.explorerUrl,
+        endpoints: [endpoint, ...(existing?.endpoints ?? [])],
+      });
+    }
   }
   for (const [chainId, urls] of Object.entries(CENSUS_STATE_PUBLIC_RPCS)) {
     const meta = CHAIN_META[chainId]!;

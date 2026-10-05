@@ -68,7 +68,7 @@ const KEY_COMBINATIONS = [
       gnosis: ["https://rpc.gnosischain.com"],
       fantom: ["https://fantom.drpc.org"],
       tempo: ["https://rpc.tempo.xyz"],
-      monad: ["https://rpc.monad.xyz"],
+      monad: ["https://monad-mainnet.g.alchemy.com/v2/", "https://rpc.monad.xyz"],
       solana: ["https://solana-mainnet.g.alchemy.com/v2/"],
       tron: ["https://tron-mainnet.g.alchemy.com/v2/", "https://api.trongrid.io"],
     },
@@ -98,7 +98,7 @@ const KEY_COMBINATIONS = [
       gnosis: [`https://lb.drpc.org/ogrpc?network=gnosis&dkey=${DRPC_KEY}`, "https://rpc.gnosischain.com"],
       fantom: [`https://lb.drpc.org/ogrpc?network=fantom&dkey=${DRPC_KEY}`, "https://fantom.drpc.org"],
       tempo: ["https://rpc.tempo.xyz"],
-      monad: ["https://rpc.monad.xyz"],
+      monad: ["https://monad-mainnet.g.alchemy.com/v2/", "https://rpc.monad.xyz"],
       solana: ["https://solana-mainnet.g.alchemy.com/v2/", `https://lb.drpc.org/ogrpc?network=solana&dkey=${DRPC_KEY}`],
       tron: ["https://tron-mainnet.g.alchemy.com/v2/", "https://api.trongrid.io"],
     },
@@ -156,6 +156,19 @@ describe("buildChainRpcs", () => {
       { url: "https://rpc.pharos.xyz", operator: "public", keyed: false, position: "supplemental", stateHistory: "archive", logsHistory: "none", verifiedAt: "2026-10-05" },
       { url: "https://api.zan.top/public/pharos-mainnet", operator: "public", keyed: false, position: "supplemental", stateHistory: "archive", logsHistory: "none", verifiedAt: "2026-10-05" },
     ]);
+  });
+
+  it.each(["monad", "ink", "berachain"])("admits reviewed %s archive logs only with the keyed provider", chainId => {
+    const unkeyed = buildChainRpcs().get(chainId);
+    expect(logScanRpcEndpoints(unkeyed).some(endpoint => endpoint.operator === "alchemy")).toBe(false);
+    const keyed = buildChainRpcs(ALCHEMY_KEY).get(chainId)!;
+    expect(primaryRpcUrl(keyed)).toBe(`https://${chainId}-mainnet.g.alchemy.com/v2/`);
+    expect(logScanRpcEndpoints(keyed)[0]).toMatchObject({
+      operator: "alchemy", position: "registry", stateHistory: "archive",
+      logsHistory: "full", maxLogBlockSpan: 1000, verifiedAt: "2026-10-05",
+    });
+    expect(keyed.endpoints.filter(endpoint => endpoint.operator === "alchemy")).toHaveLength(1);
+    expect(getRpcAuthHeaders(primaryRpcUrl(keyed)!)).toBeDefined();
   });
 
   it("maps registry operators to alchemy/drpc keyed and public unkeyed", () => {
@@ -228,7 +241,7 @@ describe("buildChainRpcs", () => {
 
   it("does not count state-only Alchemy census configs as registry RPC-readable", () => {
     const chainRpcs = buildChainRpcs(ALCHEMY_KEY);
-    for (const chainId of ["berachain", "hyperevm", "ink", "linea", "scroll", "zksync", "abstract", "unichain", "worldchain", "megaeth", "stable"]) {
+    for (const chainId of ["hyperevm", "linea", "scroll", "zksync", "abstract", "unichain", "worldchain", "megaeth", "stable"]) {
       const config = chainRpcs.get(chainId);
       expect(config, chainId).toBeDefined();
       expect(hasRegistryRpc(config), chainId).toBe(false);
