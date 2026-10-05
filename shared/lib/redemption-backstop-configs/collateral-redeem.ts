@@ -71,6 +71,19 @@ function defineReviewedCollateralConfig(reviewedAt: string, overrides: Partial<R
   return { ...collateralRedeemBase, ...documentedBoundSupplyFull(reviewedAt), ...overrides };
 }
 
+const xgldRedemptionConfig = defineCollateralConfig({
+  reviewedAt: "2026-10-05",
+  capacityModel: { kind: "unquantified" },
+  accessModel: "whitelisted-onchain",
+  holderEligibility: "whitelisted-primary",
+  settlementModel: "queued",
+  executionModel: "rules-based-nav",
+  outputAssetType: "stable-single",
+  outputAssets: ["xaut-tether"],
+  costModel: fixedFee(10, "Published native BNB XAUt redemption fee is 0.1%; gas and any bridge costs are separate"),
+  docs: [sourceRef("Unitas XGLD native redemption", "https://docs.unitas.so/overview/xgld.md", ["route", "capacity", "access", "fees", "settlement"])],
+  notes: ["Whitelisted native BNB holders redeem to XAUt 0x21cAef8A43163Eea865baeE23b9C2E327696A3bf, not physical gold or USD. The seven-day cooldown is not an end-to-end completion SLA. Base holders must bridge to BNB. No measured funded capacity, static buffer or full-supply bound is inferred."],
+});
 // JPYm/CHFm: live telemetry now reads the coin's Mento V3 FPMM pool USDm
 // balance as direct redemption capacity; the underlying CDP fee mechanics
 // (and its costModel) are unchanged, per reviewed docs.
@@ -227,6 +240,7 @@ const MENTO_ROUTE_CONFIGS = defineConfigFamily(
 );
 
 const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
+  ...defineCollateralRecordEntries({ "xgld-unitas": xgldRedemptionConfig }),
   ...defineBatch(BASE_COLLATERAL_REDEEM_IDS, collateralRedeemBase, { sourceFilePath: SOURCE_FILE_PATH }),
   ...defineBatch(
     ["jpym-mento"],

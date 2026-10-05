@@ -289,6 +289,7 @@
         {
           "controlRef": "monad:0xee7e9bb21d5589bf657b94083db2fa349a3918c8",
           "question": "For this identified hyperUSDCa owner controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address and Safe quorum/owner inventory is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [
@@ -329,6 +330,7 @@
         {
           "controlRef": "monad:0x75178137d3b4b9a0f771e0e149b00fb8167ba325",
           "question": "For this identified hyperUSDCa curator controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [
@@ -369,6 +371,7 @@
         {
           "controlRef": "monad:0x345e93f786e485b9f738b9a1a528c6eef1c73c5f",
           "question": "For this identified Hyperithm USDC Apex allocator 0x345e93f786e485b9f738b9a1a528c6eef1c73c5f controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [

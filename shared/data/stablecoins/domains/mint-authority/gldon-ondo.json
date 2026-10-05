@@ -352,6 +352,7 @@
         {
           "controlRef": "GLDon native beacon-owner timelocks",
           "question": "Human independence and operational signer-key custody for the identified Ethereum timelock proposer/admin Safe owners remain unpublished. Current on-chain quorums, module inventory, guard and standard fallback-handler identity are verified separately.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine06 sibling-consistency review",
           "sources": [{
@@ -362,6 +363,7 @@
         {
           "controlRef": "GLDon BNB beacon-owner timelock",
           "question": "Human independence and operational signer-key custody for the identified BNB timelock proposer/admin Safe owners remain unpublished. Current on-chain quorums, module inventory, guard and standard fallback-handler identity are verified separately.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine06 sibling-consistency review",
           "sources": [{
@@ -372,6 +374,7 @@
         {
           "controlRef": "GLDon Solana GM program upgrade authority",
           "question": "The upgrade authority is now bound to Squads v4 vault index 0 of EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr, with current 4-of-7 quorum and 7200-second configured delay. Complete spending-limit, reconfiguration and Squads-program upgrade/bypass reach plus human key independence remain unverified; the topology observation is not a full execution certificate.",
+          "subject": "execution-scope",
           "reviewedAt": "2026-10-03",
           "reviewer": "W1R54 primary-source and finalized account review",
           "sources": [{

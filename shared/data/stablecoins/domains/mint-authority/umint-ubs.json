@@ -119,6 +119,7 @@
         {
           "controlRef": "uMINT default-admin EOA",
           "question": "Organizational identity, independence and MPC/HSM/signing policy of this identified default-admin EOA remain undisclosed; its on-chain role membership and uncapped native mint authority are established.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine04 calibration v2",
           "sources": [{"label": "Verified standalone native authorization source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc06036793272219179f846ef6bfc3b16e820df0b"}]
@@ -126,6 +127,7 @@
         {
           "controlRef": "uMINT minter and enforcer EOA",
           "question": "Organizational identity, independence and MPC/HSM/signing policy of this identified minter/enforcer EOA remain undisclosed. Its role membership is established, without any independently attested organizational signing threshold.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine04 calibration v2",
           "sources": [{"label": "Verified standalone native authorization source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc06036793272219179f846ef6bfc3b16e820df0b"}]

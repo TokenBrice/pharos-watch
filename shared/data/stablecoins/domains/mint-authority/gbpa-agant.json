@@ -268,16 +268,21 @@
         {
           "label": "Tempo compound-policy directional authorization source",
           "url": "https://github.com/tempoxyz/tempo/blob/main/crates/precompiles/src/tip403_registry/mod.rs"
+        },
+        {
+          "label": "Tempo exact deployed transfer-controller runtime and proxy-state observation",
+          "url": "https://rpc.tempo.xyz"
         }
       ],
       "evidence": "Complete custom role-event history through Ethereum 26110208 and Base 52110932 identifies sole fiat minter 0x5c32ec946062109c61260c738e2fd794b18499d8 and role admin 0xbecf04e2348d00885c62d97d9629c99e581fe00f. On October 5 the Arc explorer's four topic-filtered histories each terminate with next_page_params=null: one MintRoleGranted at 11771886, one AdminRoleGranted at 11475906, and no corresponding revocations. Pinned Arc block 24299510 corroborates both role memberships and owner. This answers the Arc roster question despite primary RPC range/rate-limit failures; it does not certify immutable role administration. Complete 424-chunk Tempo membership/admin-event history at 42377525 identifies sole default admin 0xbecf04e2348d00885c62d97d9629c99e581fe00f and issuers 0x5c32ec946062109c61260c738e2fd794b18499d8 plus token-bound proxy 0x5575151bf6076129d0729c0f40d967d41df34a63. That proxy's exact deployed executable and replacement/authorization closure remain unresolved. New Tempo block 42640743 reads transferPolicyId=552, policyData(552)=(COMPOUND,zero), compoundPolicyData(552)=(sender551,recipient1,mintRecipient1). Policy551 is BLACKLIST with admin 0x5c32ec946062109c61260c738e2fd794b18499d8. The official TIP-1015 implementation documents immutable compound references, mutable simple sub-policies and role-specific mint-recipient checking; built-in policy1 is always-allow. Thus no unknown composite administrator is inferred from zero and no independent native mint bound is asserted. Independent key-custody/recovery/replacement disclosures for named EVM/Tempo controllers remain scoped questions. Solana's 1-of-2 mint threshold is unchanged; its separately inventoried OFT upgrade wallet and unresolved validation closure belong to Bridge Risk. The June-September Nephos reports establish periodic whole-supply month-end reserve reconciliation across the approved deployments and attestation-only supervision, not continuous reconciliation or prudential oversight. Their contradictory assurance disclaimers remain unchanged. Incident absence cannot be admitted while the exact Tempo mint-capable proxy remains unresolved.",
       "unresolvedQuestions": [
-        "What is the exact executable native mint reach and upgrade/authorization closure of Tempo transfer proxy 0x5575151bf6076129d0729c0f40d967d41df34a63? Its native ISSUER_ROLE, token(), owner(), endpoint() and proxy slots are observed, but no deployed-runtime equivalence proof or complete upstream controller closure is established."
+        "What is the exact executable native mint reach and upgrade/authorization closure of Tempo transfer proxy 0x5575151bf6076129d0729c0f40d967d41df34a63? At October 5 block 42697239 its EIP-1967 implementation/admin and adapter/admin owners match the prior pin; the implementation runtime SHA-256 is a1dd9b368b81b963b744a12bf32e0200d00c846b0822115da8967df6feaf178c. Its metadata CID QmZj1as9t5SKSYUNgqKXsDt9BJZNRcWFHn59mGzsQAfToR still cannot be retrieved: Sourcify v2/repository are 404, ipfs.io/dweb are 429, Filebase/4everland are 504 and Pinata times out. Configured DVNs and an observed EOA owner do not establish executable mint authorization or complete replacement closure."
       ],
       "scopedQuestions": [
         {
           "controlRef": "GBPA EVM fiat minter",
           "question": "What independently evidenced signing policy, key custody, operator independence and recovery/replacement process governs this identified EVM fiat-minter EOA?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
           "sources": [
@@ -288,6 +293,7 @@
         {
           "controlRef": "GBPA EVM ProxyAdmin owner",
           "question": "What independently evidenced signing policy, key custody, operator independence and recovery/replacement process governs this identified EVM mint-logic owner EOA?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
           "sources": [
@@ -298,6 +304,7 @@
         {
           "controlRef": "GBPA Tempo native issuance role inventory",
           "question": "What independently evidenced signing policy, key custody, operator independence and recovery/replacement process governs this identified Tempo issuer EOA? Its complete role census does not establish human or key-custody independence.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
           "sources": [
@@ -308,6 +315,7 @@
         {
           "controlRef": "GBPA Tempo native role and supply-cap administrator",
           "question": "What independently evidenced signing policy, key custody, operator independence and recovery/replacement process governs this identified Tempo role/cap-admin EOA?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
           "sources": [

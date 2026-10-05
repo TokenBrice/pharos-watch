@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { execFileSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { run as runRedemptionBackstopCli } from "../ci/check-redemption-backstops";
 import { validateRedemptionBackstopRegistry } from "../lib/redemption-backstop-validation";
@@ -9,6 +9,7 @@ import type { RedemptionBackstopConfigManifestEntry } from "@shared/lib/redempti
 import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
 import { createTempRepoTracker } from "./helpers/test-state";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 
 const { makeRoot, cleanup } = createTempRepoTracker("redemption-backstops");
 afterEach(() => {
@@ -64,13 +65,15 @@ function validateFixture(
 describe("check-redemption-backstops CLI", () => {
   it("serializes a valid production registry to stdout and a nested report file", () => {
     const reportPath = join(makeRoot(), "nested", "reports", "report.json");
-    const stdout = execFileSync("node_modules/.bin/tsx", [
+    const result = spawnSync("node_modules/.bin/tsx", [
       "scripts/ci/check-redemption-backstops.ts", "--json", "--report", reportPath,
     ], {
       cwd: process.cwd(),
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
     });
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+    const stdout = result.stdout;
 
     expect(readFileSync(reportPath, "utf8")).toBe(stdout);
     const report = JSON.parse(stdout) as {
@@ -83,6 +86,39 @@ describe("check-redemption-backstops CLI", () => {
     expect(new Set(report.auditRows.map((row) => row.stablecoinId)).size).toBe(report.auditRows.length);
     expect(report.findings.filter((finding) => finding.severity === "error")).toEqual([]);
   }, GATE_LOAD_TIMEOUT_MS);
+
+  it.each(["krusdc-keyrock", "steakusdg-steakhouse", "steakeurcv-steakhouse"])(
+    "requires %s to retain its execution-only baseline rather than unconditionally consume reserve telemetry",
+    (id) => {
+      const config = getRedemptionBackstopConfig(id)!;
+      const executionOnly = validateFixture({ [id]: config });
+      expect(executionOnly.findings.filter((finding) => finding.stablecoinId === id && finding.severity === "error")).toEqual([]);
+
+      const reserveConsuming = validateFixture({
+        [id]: { ...config, capacityModel: { kind: "reserve-sync-metadata" } },
+      });
+      expect(reserveConsuming.findings).toContainEqual(expect.objectContaining({
+        severity: "error", code: "unused-live-telemetry-policy-stale", stablecoinId: id,
+      }));
+    },
+  );
+
+  it.each([false, true])("retains unused native-M policy only with exact payout admission (bound=%s)", (bound) => {
+    const config = getRedemptionBackstopConfig("usdr-rise")!;
+    const report = validateFixture({
+      "usdr-rise": {
+        ...config,
+        capacityModel: {
+          kind: "reserve-sync-metadata",
+          ...(bound ? { requiredOutputAssetKeys: ["wm-m0"] } : {}),
+        },
+      },
+    });
+    const stale = report.findings.some((finding) =>
+      finding.code === "unused-live-telemetry-policy-stale" && finding.stablecoinId === "usdr-rise",
+    );
+    expect(stale).toBe(!bound);
+  });
 
   it("orders fixture audit rows deterministically regardless of insertion order", () => {
     const first = validateFixture({ "usdt-tether": baseConfig, "usdc-circle": baseConfig });

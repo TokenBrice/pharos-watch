@@ -7,6 +7,7 @@ import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { reserveBoundScopeKey, reserveBoundTermDays } from "@shared/lib/safety-score-v9/reserve-bound-facts";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { maximumBusinessDaySettlement } from "@shared/lib/business-calendars";
 import { addEvidence, addGap, type AssetBuildContext } from "./fact-set-context";
 import { computeSafetyScoreV9ReserveExposureKey } from "./fact-set-schema";
 
@@ -54,6 +55,10 @@ function admitReserveBound(payload: ReserveBoundedFact, rows: readonly ReserveSl
     else if (clock - reviewSec > expiry.reviewedReserveClassificationMaxAgeSec) rejectionReason = "review-stale";
   }
   if (clock - payload.asOfSec > maxAge) rejectionReason = "snapshot-stale";
+  if (payload.kind === "business-calendar-liquidity" && !payload.businessDayTerms.conditional && payload.businessDayTerms.assurance === "binding-guarantee") {
+    const bound = maximumBusinessDaySettlement(payload.businessDayTerms, clock);
+    if (bound.state === "unknown") rejectionReason = `business-calendar-${bound.reason}`;
+  }
   return { fact, maxAge, rejectionReason };
 }
 

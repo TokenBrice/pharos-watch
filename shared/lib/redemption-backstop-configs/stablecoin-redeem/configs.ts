@@ -121,6 +121,70 @@ const RESERVOIR_REDEEM_CONFIGS = defineConfigFamily(
 
 const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   ...DISCOVERY_STABLECOIN_REDEEM_CONFIGS,
+  "usdr-rise": defineStablecoinRedeemConfig({
+    reviewedAt: "2026-10-05",
+    outputAssets: ["wm-m0"],
+    capacityModel: { kind: "reserve-sync-metadata", requiredOutputAssetKeys: ["wm-m0"] },
+    costModel: documentedVariableFee("SwapFacility extension-to-extension unwrap/wrap contains no additional protocol deduction; exact wM rounding and gas require same-notional observation", "formula"),
+    docs: [
+      sourceRef("RISE SwapFacility implementation", "https://explorer.risechain.com/api/v2/smart-contracts/0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e", ["route", "access", "fees", "settlement"]),
+      sourceRef("M0 liquidity routes", "https://docs.m0.org/build/accessing-liquidity", ["route", "access", "settlement"]),
+    ],
+    notes: ["The holder path swaps USDR to wM via RISE SwapFacility 0xb6807116b3b1b321a390594e31ecd6e0076f6278. Extension approval, pauses and permissioning apply. Native-M approved-swapper telemetry is not wM output capacity and must not be inherited. Downstream wM-to-USDC liquidity is separate."],
+  }),
+  ...defineConfigFamily(
+    [
+      {
+        id: "steakusdg-steakhouse",
+        outputAsset: "usdg-paxos",
+        sourceUrl: "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all",
+        note: "Robinhood VaultV2 redeem burns steakUSDG and synchronously pays USDG. Withdrawal gates and executable liquidity are checked by the block-bound execution observer.",
+      },
+      {
+        id: "krusdc-keyrock",
+        outputAsset: "usdc-circle",
+        sourceUrl: "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode",
+        note: "The Arc Keyrock vault's functional runtime matches the verified VaultV2 reference outside compiler-declared immutable/CBOR regions; all immutable asset, decimals and virtual-share values were separately matched. Its sole registered underlying endpoint is USDC.",
+      },
+      {
+        id: "steakeurcv-steakhouse",
+        outputAsset: "eurcv-societe-generale-forge",
+        sourceUrl: "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f",
+        note: "The reviewed Ethereum VaultV2 redeem path pays EURCV, not dollars. A fresh observed EURCV valuation reference is required; no USD parity or favorable capacity is inferred.",
+      },
+      {
+        id: "susdc-spark-v1",
+        outputAsset: "usdc-circle",
+        sourceUrl: "https://eth.blockscout.com/api/v2/smart-contracts/0xf943Cb8D5f06f2bBF352878ebEF3Ec5C537A20bA",
+        note: "This config covers only UsdcVault redeem into USDC through sUSDS redemption and the PSM. The alternate exit() payout in sUSDS is not registered or conflated with this endpoint; current PSM fees, enablement and USDC liquidity must be measured.",
+      },
+    ],
+    ({ id: _id, outputAsset, sourceUrl, note }) => {
+      const docs = [sourceRef("Reviewed synchronous underlying redemption implementation", sourceUrl, ["route", "access", "settlement", "fees", "capacity"])];
+      return defineStablecoinRedeemConfig({
+        capacityModel: { kind: "unquantified" },
+        outputAssets: [outputAsset],
+        executionModel: "rules-based-nav",
+        routeExitCorrelation: "wrapper-to-parent-dependency",
+        costModel: documentedVariableFee(
+          "Pinned convertToAssets/previewRedeem and the actual synchronous underlying receipt quantify the withdrawal haircut; no static fee or cost ceiling is assumed. Network gas is excluded as for exact DEX routes.",
+          "formula",
+        ),
+        reviewedAt: "2026-10-05",
+        v9RouteReviewTerms: {
+          settlementModel: "atomic",
+          settlementDelaySec: 0,
+          scoringDisposition: "bounded-terms-gap",
+          missingScoringFields: ["capacity", "cost"],
+          rationale: "Source-confirmed synchronous underlying redemption is a real route, but only a fresh admitted execution certificate quantifies same-notional capacity and cost.",
+          reviewedAt: "2026-10-05",
+          docs,
+        },
+        docs,
+        notes: [note, "Without a certified execution observation, immediate, scoring and eventual capacity remain null; neither token supply, an idle balance nor an absent observation is substituted for full or zero capacity."],
+      });
+    },
+  ),
   "onyc-onre": defineStablecoinRedeemConfig({
     outputAssets: ["usdg-paxos"],
     capacityModel: { kind: "fixed-usd", amountUsd: 0, confidence: "dynamic" },

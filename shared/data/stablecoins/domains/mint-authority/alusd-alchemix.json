@@ -901,11 +901,19 @@
         "canRaiseCap": "unknown",
         "observedAt": "2026-10-01",
         "observedBlock": 510584266,
-        "evidence": "At Arbitrum block 510584266, debtToken() returned tracked alUSD, underlyingToken() returned native USDC, token.whitelisted(this Alchemist) was true, and mintCeiling()/totalMinted() were zero. EIP-1967 implementation was 0x40ba0d16ec0a0df332de9fa394a4591b2264999e and admin was 0x31058ad1296f72203ec563f18b2f48764d7c380c; ProxyAdmin.owner() returned existing V3 admin 0xee1aa1c3d0622fced823c7720cf9e8079558484b. Zero ceiling semantics and callable current mint capacity are not assumed.",
+        "evidence": "At Arbitrum block 510584266, debtToken() returned tracked alUSD and underlyingToken() returned native USDC. Historical Alchemist EIP-1967 implementation was 0x40ba0d16ec0a0df332de9fa394a4591b2264999e, admin 0x31058ad1296f72203ec563f18b2f48764d7c380c, and ProxyAdmin.owner() 0xee1aa1c3d0622fced823c7720cf9e8079558484b. New token-side pin at block 511874411 on 2026-10-05 binds token implementation 0x37704b70cba0ffd12eb039274ff46992544a1f16 to its fully verified deployed runtime; this Alchemist is whitelisted and not paused, and mintingMaxLimitOf is zero. Exact AlchemicTokenV2Base.mint therefore skips the optional xBridge rate-limit branch and calls _mint. Zero mintCeiling/totalMinted belong to the separate CrossChainCanonicalBase bridge-token exchange path, not a native Alchemist mint ceiling. This closes the zero-ceiling ambiguity, not the Alchemist's internal debt/collateral constraints or whole native minter census.",
         "sources": [
           {
             "label": "Official Alchemix V3 Arbitrum contracts",
             "url": "https://docs.alchemix.fi/dev/contracts/arbitrum"
+          },
+          {
+            "label": "Fully verified token implementation and inherited native mint versus bridge-exchange source, exact runtime matched at Arbitrum block 511874411",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x37704b70cba0ffd12eb039274ff46992544a1f16"
+          },
+          {
+            "label": "Pinned token implementation, native whitelist/pause and zero optional xBridge max limit on 2026-10-05",
+            "url": "https://arbiscan.io/block/511874411"
           }
         ]
       },
@@ -922,11 +930,19 @@
         "canRaiseCap": "unknown",
         "observedAt": "2026-10-01",
         "observedBlock": 157619416,
-        "evidence": "At Optimism block 157619416, debtToken() returned tracked alUSD, underlyingToken() returned native USDC, token.whitelisted(this Alchemist) was true, and mintCeiling()/totalMinted() were zero. EIP-1967 implementation was 0x031b6228a825e0e1a37653e153cea6c02b571385 and admin was 0x31058ad1296f72203ec563f18b2f48764d7c380c; ProxyAdmin.owner() returned existing V3 admin 0x3dda174aa9e897e18b8e10e6ce39c2a52398181d. Zero ceiling semantics and callable current mint capacity are not assumed.",
+        "evidence": "At Optimism block 157619416, debtToken() returned tracked alUSD and underlyingToken() returned native USDC. Historical Alchemist EIP-1967 implementation was 0x031b6228a825e0e1a37653e153cea6c02b571385, admin 0x31058ad1296f72203ec563f18b2f48764d7c380c, and ProxyAdmin.owner() 0x3dda174aa9e897e18b8e10e6ce39c2a52398181d. New token-side pin at block 157795772 on 2026-10-05 binds token implementation 0x29ef9f2fa6f636eafe74e5fba057c7949a37ffa6 to its fully verified deployed runtime; this Alchemist is whitelisted and not paused, and mintingMaxLimitOf is zero. Exact AlchemicTokenV2Base.mint therefore skips the optional xBridge rate-limit branch and calls _mint. Zero mintCeiling/totalMinted belong to the separate CrossChainCanonicalBase bridge-token exchange path, not a native Alchemist mint ceiling. This closes the zero-ceiling ambiguity, not the Alchemist's internal debt/collateral constraints or whole native minter census.",
         "sources": [
           {
             "label": "Official Alchemix V3 Optimism contracts",
             "url": "https://docs.alchemix.fi/dev/contracts/optimism"
+          },
+          {
+            "label": "Fully verified token implementation and inherited native mint versus bridge-exchange source, exact runtime matched at Optimism block 157795772",
+            "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0x29ef9f2fa6f636eafe74e5fba057c7949a37ffa6"
+          },
+          {
+            "label": "Pinned token implementation, native whitelist/pause and zero optional xBridge max limit on 2026-10-05",
+            "url": "https://optimistic.etherscan.io/block/157795772"
           }
         ]
       }
@@ -958,7 +974,7 @@
       "reviewedAt": "2026-10-01",
       "disposition": "unresolved",
       "unresolvedQuestions": [
-        "Complete the deployment-scoped V3 native upgradeability envelope and determine current L2 mint-cap semantics where whitelisted V3 Alchemists have zero mintCeiling and totalMinted.",
+        "Complete the deployment-scoped V3 Alchemist/MYT upgradeability and internal debt/collateral authorization envelope. Token-side L2 zero-ceiling ambiguity was resolved on 2026-10-05: mintCeiling belongs to bridge-token exchanges, while native whitelisted mint skips xBridge rate limits when maxLimit is zero.",
         "Reconcile all current and legacy token-authorized minters with the issuer's V3 deployment list before treating this multi-chain native mint review as complete."
       ],
       "sources": [

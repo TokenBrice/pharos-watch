@@ -195,6 +195,7 @@
         {
           "controlRef": "ONED authorized minter",
           "question": "MPC/HSM safeguards and beneficial signer identity of the identified mint key remain undisclosed. What key-custody and signing-policy controls protect this exact MINT_ROLE holder? Its no-code account does not establish single-person or independent MPC control.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement Refine03",
           "sources": [{"label": "Exact ONED Base mint-role deployment", "url": "https://basescan.org/address/0x10ed0050b7a5d5e1e9cc164f77a71d0bf69f64bd"}, {"label": "Reviewed EVM role semantics", "url": "https://github.com/coinbase/custom-stablecoin/blob/main/evm/src/Stablecoin.sol"}]
@@ -202,6 +203,7 @@
         {
           "controlRef": "ONED mint rate-limit administrator",
           "question": "MPC/HSM safeguards and beneficial signer identity of the identified rate-limit key remain undisclosed. What key-custody and signing-policy controls protect this exact MINT_RATE_LIMIT_ROLE holder's power to raise mutable issuance allowances?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement Refine03",
           "sources": [{"label": "Exact rate-limit role grant", "url": "https://basescan.org/tx/0xe9307193bdd4e5bd0590b78be41d47ff2b7968f3a9ecddf08d095e3b867d7201"}, {"label": "Reviewed EVM rate-limit semantics", "url": "https://github.com/coinbase/custom-stablecoin/blob/main/evm/src/Stablecoin.sol"}]
@@ -209,6 +211,7 @@
         {
           "controlRef": "ONED default admin",
           "question": "MPC/HSM safeguards and beneficial signer identity of the identified default-admin key remain undisclosed. What key-custody and signing-policy controls protect its minter-authorization and immediate beacon-replacement authority? The admin-transfer delay does not establish these safeguards.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement Refine03",
           "sources": [{"label": "Exact ONED default-admin deployment", "url": "https://basescan.org/address/0x10ed0050b7a5d5e1e9cc164f77a71d0bf69f64bd"}, {"label": "Reviewed EVM admin and upgrade semantics", "url": "https://github.com/coinbase/custom-stablecoin/blob/main/evm/src/Stablecoin.sol"}]
@@ -216,6 +219,7 @@
         {
           "controlRef": "ONED beacon owner",
           "question": "MPC/HSM safeguards and beneficial signer identity of the identified beacon-owner key remain undisclosed. What key-custody and signing-policy controls protect its power to replace the shared ONED token implementation?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement Refine03",
           "sources": [{"label": "Exact shared ONED beacon", "url": "https://basescan.org/address/0x57ab1ec39f403e6946c944812888bf77fd64f0af"}, {"label": "Verified ONED implementation", "url": "https://basescan.org/address/0x57ab1e54fca80105a93a735b59f850f8420b5e2c#code"}]

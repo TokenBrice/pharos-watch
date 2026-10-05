@@ -388,6 +388,7 @@
         {
           "controlRef": "ethereum:0xb83a77677c51aaf6c45b0b64199eae6938559e5e",
           "question": "For this identified Pendle Ecosystem USDC owner parameter authority controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address and Safe quorum/owner inventory is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [
@@ -428,6 +429,7 @@
         {
           "controlRef": "ethereum:0x4687e45bb5518a995913a24bb2816fe2031d74d8",
           "question": "For this identified Pendle Ecosystem USDC curator — Armitage by Wintermute controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address and Safe quorum/owner inventory is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [
@@ -448,6 +450,7 @@
         {
           "controlRef": "ethereum:0x73b40e49eb625e6b2ee8e41c8a5509f3e206a53b",
           "question": "For this identified Pendle Ecosystem USDC allocator 0x73b40e49eb625e6b2ee8e41c8a5509f3e206a53b controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [
@@ -464,6 +467,7 @@
         {
           "controlRef": "ethereum:0xc007eb51e3d3285d192f43a35a7a5dacc35a8d99",
           "question": "For this identified Pendle Ecosystem USDC allocator 0xc007eb51e3d3285d192f43a35a7a5dacc35a8d99 controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [
@@ -480,6 +484,7 @@
         {
           "controlRef": "ethereum:0x77fcf2c8bb9c6a0da2d21f331e15fd83a63e9fbe",
           "question": "For this identified Pendle Ecosystem USDC sentinel 0x77fcf2c8bb9c6a0da2d21f331e15fd83a63e9fbe controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
           "sources": [

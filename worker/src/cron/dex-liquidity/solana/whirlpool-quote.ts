@@ -201,11 +201,11 @@ export async function whirlpoolTickArrayAddress(poolAddress: string, startTickIn
   return programAddress(ORCA_WHIRLPOOL_PROGRAM_ID, seeds);
 }
 
-export async function fetchWhirlpoolSnapshot(poolAddress: string, discovery: { tickCurrentIndex: number; tickSpacing: number }, signal: AbortSignal, ctx?: AdapterContext): Promise<WhirlpoolSnapshot> {
+export async function fetchWhirlpoolSnapshot(poolAddress: string, discovery: Pick<WhirlpoolState, "tickCurrentIndex" | "tickSpacing" | "slot" | "tokenMintA" | "tokenMintB">, signal: AbortSignal, ctx?: AdapterContext, minContextSlot = discovery.slot): Promise<WhirlpoolSnapshot> {
   const starts = [...new Set([...tickArrayStarts(discovery.tickCurrentIndex, discovery.tickSpacing, true), ...tickArrayStarts(discovery.tickCurrentIndex, discovery.tickSpacing, false)])];
   const addresses: string[] = [];
   for (const start of starts) addresses.push(await whirlpoolTickArrayAddress(poolAddress, start));
-  const batch = await fetchSolanaAccountBatch([poolAddress, ...addresses], signal, ctx);
+  const batch = await fetchSolanaAccountBatch([poolAddress, ...addresses], signal, ctx, Math.max(discovery.slot, minContextSlot));
   function ownedAccount(address: string): SolanaAccount | null {
     const account = batch.accounts.get(address) ?? null;
     if (account && account.owner !== ORCA_WHIRLPOOL_PROGRAM_ID) throw new Error("Whirlpool account owner mismatch");
@@ -214,6 +214,7 @@ export async function fetchWhirlpoolSnapshot(poolAddress: string, discovery: { t
   const account = ownedAccount(poolAddress);
   if (!account) throw new Error("Missing Whirlpool pool account");
   const pool = decodeWhirlpool(account.data, batch.slot);
+  if (pool.tokenMintA !== discovery.tokenMintA || pool.tokenMintB !== discovery.tokenMintB) throw new Error("Whirlpool discovery identity changed");
   if (pool.tickSpacing !== discovery.tickSpacing || [...tickArrayStarts(pool.tickCurrentIndex, pool.tickSpacing, true), ...tickArrayStarts(pool.tickCurrentIndex, pool.tickSpacing, false)].some((start) => !starts.includes(start))) throw new Error("Whirlpool moved outside discovered tick arrays");
   const tickArrays: WhirlpoolTickArray[] = [];
   for (let i = 0; i < addresses.length; i++) {

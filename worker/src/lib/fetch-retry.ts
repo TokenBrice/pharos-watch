@@ -16,6 +16,8 @@ export const DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES = 16 * 1024 * 1024;
 
 interface FetchWithRetryOptions {
   logUrl?: string;
+  /** Observes each received HTTP response before body handling or retry. */
+  onResponse?: (response: Response) => void;
   passthrough404?: boolean;
   passthroughStatuses?: number[];
   returnFinalResponse?: boolean;
@@ -266,6 +268,7 @@ async function fetchWithRetryInternal<TResult>(
           signal: perRequestTimeout.signal,
         });
         responseReceived = true;
+        options?.onResponse?.(res);
         if (res.ok) return await readFinalResponse(res);
         if (passthroughStatuses.has(res.status)) {
           const passthroughDelayMs = res.status === 429 ? getRetryDelayMs(res, i, maxRetryDelayMs) : null;

@@ -164,6 +164,18 @@
         {
           "label": "Exact deployment creation transaction and timestamp",
           "url": "https://eth.blockscout.com/tx/0x9ddf415a09a25af3a72dd6a81acb61ab7771e7304a5cc50ce33b51f50ed6da95"
+        },
+        {
+          "label": "Verified StarGuard code-bound plots, execution and maximum deadline",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6605aa120fe8b656482903e7757babf56947e45e"
+        },
+        {
+          "label": "Verified ESM governance-revocation capability, distinct from arbitrary execution",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x09e05ff6142f2f9de8b6b65855a1d56b6cfe4c58"
+        },
+        {
+          "label": "Supplemental Ethereum control observation block 26124951",
+          "url": "https://etherscan.io/block/26124951"
         }
       ],
       "evidence": "Observed 2026-10-02T22:43:49.516688+00:00 at ethereum block 26107702 (hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6). Native totalSupply 88558225018782413763816976 (18 decimals), asset 0xdac17f958d2ee523a2206206994597c13d831ec7 (6 decimals), totalAssets 89911293130474, convertToAssets(10^18) 1015278. One-share redeem from actual holder 0x1601843c5e9bc251a3272907010afa41fa18347e returned 1015278 asset base units via eth_call at that same block; no transaction broadcast. Parent mint authority remains inherited. Current exact-token operational controls are recorded without promoting local accounting into independent reserve assurance. Exact implementation creation transaction 0x9ddf415a09a25af3a72dd6a81acb61ab7771e7304a5cc50ce33b51f50ed6da95, block 24794487, timestamp 2026-04-02T21:02:35+00:00, was independently joined from Blockscout creation identity to RPC transaction receipt and block timestamp; issuer founding and parent launch were not substituted. Separate signer/key-custody observation, recorded per identified control rather than as an aggregate issuance-census gap: Safe signer independence and offchain key custody are not publicly established. Calibration v2 field re-justification: reconciliation=not-applicable describes the immutable deposit-backed local share mechanism and does not assert parent reserve-to-total-liability financial assurance; supervision=none grants no prudential-supervision credit. Source-defined share accounting and independent financial assurance retain separate scopes. D14/A7/A10 review 2026-10-03, pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). The pinned immutable VaultV2 source routes deposit/mint through enter(), which transfers underlying assets before createShares(). Curator increaseAbsoluteCap/increaseRelativeCap and addAdapter govern allocation limits, not arbitrary recipient minting; owner/curator, deposit-gate and fee-recipient settings cannot bypass this accounting. accrueInterest() separately creates fee shares under immutable MAX_PERFORMANCE_FEE (50% of interest) and MAX_MANAGEMENT_FEE (5% annualized) limits, not discretionary arbitrary-share issuance. There is no local upgrade entrypoint. Inherited controls concern usdt-tether, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
@@ -171,12 +183,13 @@
       "reviewedAt": "2026-10-03",
       "disposition": "unresolved",
       "unresolvedQuestions": [
-        "Complete executable/storage-write closure of SubProxy delegatecall targets and governance authorizations behind active DSPauseProxy/ESM/StarGuard alternatives is not established. Full recorded Rely/Deny census and current wards do not exclude unlogged delegatecall changes."
+        "Complete executable/storage-write closure of SubProxy delegatecall targets remains unestablished. Supplemental 2026-10-05 source/runtime and pinned Ethereum block 26124951 census narrow the known alternatives: StarGuard's only live event-derived ward is Pause Proxy, spellData is empty, and maxDelay=604800 is a deadline, not a minimum delay; ESM's verified source exposes denyProxy, not SubProxy.exec. Neither an empty current spell nor event-derived wards proves absence of historical unlogged SubProxy delegatecall writes. Aggregate review and incidentState=none are therefore not promoted; immutable wrapper-local D14 and binding Sky D29/D32 doctrine are unchanged."
       ],
       "scopedQuestions": [
         {
           "controlRef": "ethereum:0x0f963a8a8c01042b69054e787e5763abbb0646a3",
           "question": "For Spark current curator Safe (ethereum:0x0f963a8a8c01042b69054e787e5763abbb0646a3): Safe signer independence and offchain key custody are not publicly established.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement Refine11",
           "sources": [

@@ -10,7 +10,7 @@ import {
   validateRedemptionOutputIdentity,
   type RedemptionBackstopConfig,
 } from "@shared/lib/redemption-backstops";
-import { isRedemptionSettlementFaster } from "@shared/lib/redemption-backstop-configs/settlement";
+import { isRedemptionSettlementFaster, resolveReviewedRedemptionSettlementDelay } from "@shared/lib/redemption-backstop-configs/settlement";
 import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-backstop-configs/schema";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
@@ -691,7 +691,7 @@ function redemptionCoverageClass(
   return requiresCurrentOpenAttribution && !hasCurrentOpenAttribution ? "diagnostic" : "exact-lower-bound";
 }
 
-function redemptionReviewTerms(entry: RedemptionBackstopEntry, clockSec: number): {
+function redemptionReviewTerms(entry: RedemptionBackstopEntry, clockSec: number, outputIdentityMatches = true): {
   settlementModel: RedemptionSettlementModel;
   settlementDelaySec: number | undefined;
   settlementHorizonSec: number;
@@ -700,13 +700,17 @@ function redemptionReviewTerms(entry: RedemptionBackstopEntry, clockSec: number)
 } {
   const config = getRedemptionBackstopConfig(entry.stablecoinId);
   const reviewed = config?.v9RouteReviewTerms;
-  const capturedBaseSettlementModel = reviewed?.settlementModel !== undefined
+  const capturedBaseSettlementModel = outputIdentityMatches && (reviewed?.settlementModel !== undefined || reviewed?.businessDayTerms !== undefined)
     ? config?.settlementModel ?? entry.settlementModel
     : entry.settlementModel;
-  const capturedBaseSettlementDelaySec = entry.settlementModel === capturedBaseSettlementModel
-    ? entry.settlementDelaySec
-    : undefined;
-  const reviewedSettlementDelaySec = reviewed?.settlementDelaySec;
+  // Business-day terms supersede generated/persisted scalar guesses. If the
+  // calendar or guarantee fails admission, no captured scalar becomes an SLA.
+  const capturedBaseSettlementDelaySec = reviewed?.businessDayTerms !== undefined
+    ? undefined
+    : entry.settlementModel === capturedBaseSettlementModel
+      ? entry.settlementDelaySec
+      : undefined;
+  const reviewedSettlementDelaySec = resolveReviewedRedemptionSettlementDelay(reviewed, clockSec);
   const reviewedSettlementModel = reviewed?.settlementModel ?? entry.settlementModel;
   const capturedSettlementHorizonSec = Math.max(
     REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC[capturedBaseSettlementModel],
@@ -731,7 +735,7 @@ function redemptionReviewTerms(entry: RedemptionBackstopEntry, clockSec: number)
   // Score-improving settlement research shares V9's existing reviewed-evidence
   // expiry window. Conservative overlays remain admissible without evidence.
   const admitsReviewedFasterSettlement =
-    reviewedSettlementIsFaster && reviewedSettlementEvidenceIsCurrent;
+    outputIdentityMatches && reviewedSettlementIsFaster && reviewedSettlementEvidenceIsCurrent;
   const reviewedFasterSettlementDelaySec = admitsReviewedFasterSettlement
     ? reviewedSettlementDelaySec
     : undefined;
@@ -752,11 +756,13 @@ function redemptionReviewTerms(entry: RedemptionBackstopEntry, clockSec: number)
         settlementModel === reviewedSettlementModel &&
         reviewedSettlementDelaySec !== undefined
       ? reviewedSettlementDelaySec
-      : settlementModel === capturedBaseSettlementModel
-        ? capturedBaseSettlementDelaySec
-        : settlementModel === entry.settlementModel
-          ? entry.settlementDelaySec
-          : undefined;
+      : reviewed?.businessDayTerms !== undefined
+        ? undefined
+        : settlementModel === capturedBaseSettlementModel
+          ? capturedBaseSettlementDelaySec
+          : settlementModel === entry.settlementModel
+            ? entry.settlementDelaySec
+            : undefined;
   const minimums = [entry.minRedeemUsd, reviewed?.minRedeemUsd].filter(
     (value): value is number => value != null,
   );
@@ -839,14 +845,18 @@ function buildRedemptionRouteReview(
         : ("producer-failed" as const);
   const scope = observation.scope;
   const modelConfidence = observation.modelConfidence ?? entry.modelConfidence;
-  const reviewedTerms = redemptionReviewTerms(entry, fixedInput.clockSec);
+  const outputIdentityIssues = validateRedemptionOutputIdentity(entry.stablecoinId, observation.output);
+  const stableOutputIdentityMatches = !staticConfig?.outputAssets?.length ||
+    (staticConfig.outputAssetType !== "stable-single" && staticConfig.outputAssetType !== "stable-basket") ||
+    (observation.output.kind === "tracked-stablecoin" &&
+      outputIdentityIssues.length === 0);
+  const reviewedTerms = redemptionReviewTerms(entry, fixedInput.clockSec, stableOutputIdentityMatches);
   const physicalResourceKeys =
     scope.kind === "issuer"
       ? [`issuer:${scope.issuerId}`]
       : scope.kind === "protocol"
         ? [`protocol:${scope.protocol}${scope.chain ? `:${scope.chain}` : ""}`]
         : dexPhysicalResourceKeys(observation);
-  const outputIdentityIssues = validateRedemptionOutputIdentity(entry.stablecoinId, observation.output);
   const outputReview =
     outputIdentityIssues.every((issue) => issue.code === "output-identity-mismatch")
       ? buildOutputReview(fixedInput, observation, fixedInput.redemptionGenerationId, entry.stablecoinId)

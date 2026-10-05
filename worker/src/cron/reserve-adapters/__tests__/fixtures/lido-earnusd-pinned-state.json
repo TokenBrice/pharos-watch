@@ -1,0 +1,211 @@
+{
+  "blockNumber": 26122344,
+  "blockHash": "0xf0f4f475c8b02ad021923459ca3f55b881323b88421dc4940fd1b8a46d68da80",
+  "blockTimestamp": 1791157259,
+  "identities": {
+    "vault": {
+      "address": "0x014e6da8f283c4af65b2aa0f201438680a004452",
+      "codeHash": "0x0e8e15f11b1c5792ac1c2f88fbdd7582231833390c1d9a3a9e8fc162a35b215f",
+      "implementationAddress": "0x0000000615b2771511daa693ac07be5622869e01",
+      "implementationCodeHash": "0x11fb0ab5367981cbb312ede4696498595a6ae4c9941ff89fb1bba2152825729e"
+    },
+    "queue": {
+      "address": "0x9e36a74fe278906a76e7615263e46a83fc40c47f",
+      "codeHash": "0x7cfc386711219d03876f80cf3a46b284116bad05341775129b93007df27bd120",
+      "implementationAddress": "0x000000000c139266ba06170ed1deaca6d11903c1",
+      "implementationCodeHash": "0xd434332fc5878b78e8c7f20698d7809d6fec9e2b8831282bac46a540d17fbb5d"
+    },
+    "sync": {
+      "address": "0xe0eee7e956a94bd00546d9ca07e5012f11a5059d",
+      "codeHash": "0x12a2e1f5c4bc6cb96cf9a5530c1ea1977e249aa6777769c6d4f81221af481fe1",
+      "implementationAddress": "0x0000000038801c7281284f8f68b80b679f64a074",
+      "implementationCodeHash": "0x37974a5ab05a2c078efc55032cd555238750b8abd7923ff232abaacb8293b344"
+    },
+    "fee": {
+      "address": "0x72fa23f40e08eb9e45953233b2dd9665e347e8dc",
+      "codeHash": "0xefb74284de000905b4b0cb7395e74969bdd7c69cf09358d0cd32255292795401",
+      "implementationAddress": "0x0000000de74e5d51651326e0a3e1aca94beaf6e1",
+      "implementationCodeHash": "0x7b1d70958161427202b208d7b2363bb18cc83be5347ed5db1425c1c37a4e90dd"
+    },
+    "oracle": {
+      "address": "0x827044735c9708a2cf850e7ea37eba43bc786028",
+      "codeHash": "0xdde18143096c956a0207a2a3391646c57dfd4681570afb5d76b0e2b4c3a69784",
+      "implementationAddress": "0x0000000f0d3d1c31b72368366a4049c05e291d58",
+      "implementationCodeHash": "0x338532a31ad88ba18f46a0a86e10e6a0303d490014046bcaf928e0e37672408e"
+    },
+    "shares": {
+      "address": "0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981",
+      "codeHash": "0x59f5343659cb7fe5dd7516a1b0faf518aeb749352ff14164e0b142c641332de6",
+      "implementationAddress": "0x000000000c79d2b5cd58ae545afc83030233d7b6",
+      "implementationCodeHash": "0xaf363b1b3ce25e92f326fc51d882ec90ba98d3e43e870d6f4c4b39cd90a228d1"
+    }
+  },
+  "reads": [
+    {
+      "name": "vault",
+      "func": "shareManager",
+      "args": [],
+      "raw": "0x0000000000000000000000004ce1ac8f43e0e5bd7a346a98af777bf8fbea1981",
+      "value": "0x4Ce1ac8F43E0E5BD7A346A98aF777bF8fbeA1981"
+    },
+    {
+      "name": "vault",
+      "func": "feeManager",
+      "args": [],
+      "raw": "0x00000000000000000000000072fa23f40e08eb9e45953233b2dd9665e347e8dc",
+      "value": "0x72fa23f40e08eB9E45953233b2Dd9665E347e8Dc"
+    },
+    {
+      "name": "vault",
+      "func": "oracle",
+      "args": [],
+      "raw": "0x000000000000000000000000827044735c9708a2cf850e7ea37eba43bc786028",
+      "value": "0x827044735c9708a2cf850e7Ea37EBa43bc786028"
+    },
+    {
+      "name": "vault",
+      "func": "hasQueue",
+      "args": [
+        "0x9e36a74fe278906a76e7615263e46a83fc40c47f"
+      ],
+      "raw": "0x0000000000000000000000000000000000000000000000000000000000000001",
+      "value": true
+    },
+    {
+      "name": "vault",
+      "func": "isPausedQueue",
+      "args": [
+        "0x9e36a74fe278906a76e7615263e46a83fc40c47f"
+      ],
+      "raw": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "value": false
+    },
+    {
+      "name": "vault",
+      "func": "getHook",
+      "args": [
+        "0x9e36a74fe278906a76e7615263e46a83fc40c47f"
+      ],
+      "raw": "0x0000000000000000000000000000000637f1b1ccda4af2db6cddf5e5ec45fd93",
+      "value": "0x0000000637f1b1ccDA4Af2dB6CDDf5e5Ec45fd93"
+    },
+    {
+      "name": "queue",
+      "func": "asset",
+      "args": [],
+      "raw": "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "value": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+    },
+    {
+      "name": "queue",
+      "func": "vault",
+      "args": [],
+      "raw": "0x000000000000000000000000014e6da8f283c4af65b2aa0f201438680a004452",
+      "value": "0x014e6DA8F283C4aF65B2AA0f201438680A004452"
+    },
+    {
+      "name": "queue",
+      "func": "getState",
+      "args": [],
+      "raw": "0x000000000000000000000000000000000000000000000000000000000000009a000000000000000000000000000000000000000000000000000000000000009a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e20bc5e822f38540000",
+      "value": [
+        "154",
+        "154",
+        "0",
+        "66717000000000000000000"
+      ]
+    },
+    {
+      "name": "sync",
+      "func": "asset",
+      "args": [],
+      "raw": "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "value": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+    },
+    {
+      "name": "sync",
+      "func": "vault",
+      "args": [],
+      "raw": "0x000000000000000000000000014e6da8f283c4af65b2aa0f201438680a004452",
+      "value": "0x014e6DA8F283C4aF65B2AA0f201438680A004452"
+    },
+    {
+      "name": "sync",
+      "func": "syncRedeemParams",
+      "args": [],
+      "raw": "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001518000000000000000000000000000000000000000000000000552faa34720afd2d400000000000000000000000000000000000000000000028a857425466f7ed400000000000000000000000000000000000000000000000000000000006ac2c467",
+      "value": [
+        "0",
+        86400,
+        "98212991349721912020",
+        "11999999999999999923200",
+        "1791149159"
+      ]
+    },
+    {
+      "name": "sync",
+      "func": "remainingDailyLimit",
+      "args": [],
+      "raw": "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000028a857425466f7ed400",
+      "value": [
+        "0",
+        "11999999999999999923200"
+      ]
+    },
+    {
+      "name": "sync",
+      "func": "getLiquidAssets",
+      "args": [],
+      "raw": "0x0000000000000000000000000000000000000000000000000000001e2f3ee876",
+      "value": "129641670774"
+    },
+    {
+      "name": "oracle",
+      "func": "getReport",
+      "args": [
+        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+      ],
+      "raw": "0x000000000000000000000000000000000000000c33b54b3fc2eec95bbcee1282000000000000000000000000000000000000000000000000000000006ac1f9b70000000000000000000000000000000000000000000000000000000000000000",
+      "value": {
+        "priceD18": "966740856599088375058869916290",
+        "timestamp": 1791097271,
+        "isSuspicious": false
+      }
+    },
+    {
+      "name": "oracle",
+      "func": "vault",
+      "args": [],
+      "raw": "0x000000000000000000000000014e6da8f283c4af65b2aa0f201438680a004452",
+      "value": "0x014e6DA8F283C4aF65B2AA0f201438680A004452"
+    },
+    {
+      "name": "shares",
+      "func": "flags",
+      "args": [],
+      "raw": "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "value": {
+        "hasMintPause": false,
+        "hasBurnPause": false,
+        "hasTransferPause": false,
+        "hasWhitelist": false,
+        "hasTransferWhitelist": false,
+        "globalLockup": 0
+      }
+    },
+    {
+      "name": "shares",
+      "func": "vault",
+      "args": [],
+      "raw": "0x000000000000000000000000014e6da8f283c4af65b2aa0f201438680a004452",
+      "value": "0x014e6DA8F283C4aF65B2AA0f201438680A004452"
+    },
+    {
+      "name": "fee",
+      "func": "redeemFeeD6",
+      "args": [],
+      "raw": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "value": 0
+    }
+  ]
+}

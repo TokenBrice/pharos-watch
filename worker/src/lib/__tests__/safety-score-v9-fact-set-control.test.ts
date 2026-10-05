@@ -3,7 +3,14 @@ import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { evaluateV9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/control";
 import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-facts";
-import { reviewedScope, SCOPE_CONTROLLER } from "@shared/lib/__tests__/safety-score-v9-control-scope.test-support";
+import { reviewedScope, weightedQuorum, SCOPE_CLOCK, SCOPE_CONTROLLER } from "@shared/lib/__tests__/safety-score-v9-control-scope.test-support";
+import { effectiveAuthoritySignatureRequirement } from "@shared/lib/safety-score-v9/control-scope";
+import type { V9WeightedQuorum } from "@shared/types/safety-score-v9-control-scope";
+import { makeAccessGraph } from "@shared/lib/__tests__/safety-score-v9-access-lookthrough.test-support";
+import { evaluateV9AccessLookthrough } from "@shared/lib/safety-score-v9/access-lookthrough";
+import { controlCanCarryKnownStatus } from "../safety-score-v9/fact-set-control";
+import type { ControlOverlay } from "../safety-score-v9/extension-shared";
+import { MintAuthorityProfileSchema, BridgeRouteRiskProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
 import { makeCompiledVotingControl, makeOperationalIssuanceProcess } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { buildSafetyScoreV9RetainedRedemptionRoutes, buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
@@ -357,6 +364,27 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
     expect(ambiguousOutcome(0.0002, false).state).toBe("bounded-unknown");
   });
 
+  it("denies freeze lookthrough through an unestablished serial dependency instead of trusting a reviewed graph edge", () => {
+    const fixed = exactFixedInput();
+    const extension = makeV9Extension({ clockSec: fixed.clockSec });
+    const graph = makeAccessGraph();
+    graph.clockSec = fixed.clockSec;
+    graph.generationId = fixed.baseInputGenerationId;
+    const serial = graph.edges.find((edge) => edge.edgeKey === "receipt-bridge")!;
+    if (serial.basis.kind !== "serial-claim") throw new Error("Expected serial claim");
+    serial.basis.dependencyEdgeKey = "missing-parent-dependency";
+    extension.assets[0]!.accessReview!.freeze.claimGraph = graph;
+    const factSet = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+    const asset = factSet.assets[0]!;
+    const compiled = asset.accessReview.freeze.claimGraph!;
+    expect(compiled.edges.find((edge) => edge.edgeKey === serial.edgeKey)).toMatchObject({
+      weight: null, reachesHeldClaim: false,
+    });
+    expect(compiled.partitions.find((partition) => partition.partitionKey === "receipt")!.denominatorEstablished).toBe(false);
+    expect(serial).toMatchObject({ weight: 1, reachesHeldClaim: true });
+    expect(evaluateV9AccessLookthrough(compiled)).toMatchObject({ coverageState: "incomplete", unresolvedCoverageShare: null });
+  });
+
   it("keeps access-only controls known without an unresolved identity gap", () => {
     const fixed = exactFixedInput();
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(accessOnlyMeta()) });
@@ -522,4 +550,187 @@ describe("v10.01 control atomic cause scopes", () => {
       expect(result.structuralFailures).not.toContainEqual(expect.objectContaining({ kind: "centralized-mint" }));
     },
   );
+});
+
+describe("v10.08 weighted topology and reviewer-scoped control questions", () => {
+  const compileControls = (controls: ControlOverlay[]) => {
+    const fixed = exactFixedInput({ clockSec: SCOPE_CLOCK });
+    const extension = makeV9Extension({ clockSec: SCOPE_CLOCK });
+    extension.assets[0]!.controlReview = { state: "reviewed-controls", controls };
+    return compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+  };
+  const weightedControl = (weighted: V9WeightedQuorum) => localControl({
+    authority: { authorityKey: weighted.deployment, model: "multisig", threshold: null, weightedQuorum: weighted },
+  });
+
+  it.each([
+    [[3, 1, 1], 3, 1],
+    [[3, 2, 1], 4, 2],
+    [[3, 2, 1], 6, 3],
+  ] as const)("admits fresh weighted topology %j at quorum %i as %i signatures", (weights, quorum, minimum) => {
+    const asset = compileControls([weightedControl(weightedQuorum([...weights], quorum))]);
+    const control = asset.controls[0]!;
+    expect(control.status.observationState).toBe("known");
+    expect(control.factorStatuses?.multisigTopology).toBeUndefined();
+    expect(asset.gaps.some((gap) => gap.causeScope?.factorKey === "multisigTopology")).toBe(false);
+    expect(effectiveAuthoritySignatureRequirement(control.authority)).toBe(minimum);
+    expect(control.authority?.threshold).toBeNull();
+    expect(control.keyCustody).toBe("unknown");
+  });
+
+  it.each([
+    ["expired", { reviewedAt: "2026-09-01", expiresAt: "2026-10-01" }],
+    ["over-age", { reviewedAt: new Date((SCOPE_CLOCK - V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec - 86400) * 1000).toISOString().slice(0, 10), expiresAt: "2026-12-01" }],
+    ["future", { reviewedAt: "2026-10-03", expiresAt: "2026-10-31" }],
+    ["unverified", { status: "unknown" as const }],
+  ] satisfies [string, Partial<V9WeightedQuorum>][])("keeps %s weighted topology unknown", (_label, patch) => {
+    const asset = compileControls([weightedControl({ ...weightedQuorum(), ...patch })]);
+    const control = asset.controls[0]!;
+    expect(control.authority?.weightedQuorum?.status).toBe("unknown");
+    expect(effectiveAuthoritySignatureRequirement(control.authority)).toBeNull();
+    expect(control.factorStatuses?.multisigTopology?.observationState).toBe("missing");
+    expect(asset.gaps).toContainEqual(expect.objectContaining({
+      causeScope: expect.objectContaining({ factorKey: "multisigTopology" }),
+      causeProof: expect.objectContaining({ cause: "U" }),
+    }));
+  });
+
+  it.each(["master", "regular"] as const)("preserves the XRPL %s key one-signature bypass", (key) => {
+    const weighted = weightedQuorum([1, 1, 1], 3);
+    if (key === "master") weighted.masterKey = "enabled";
+    else weighted.regularKey = { state: "enabled", address: weighted.signers[0]!.account };
+    const control = compileControls([weightedControl(weighted)]).controls[0]!;
+    expect(effectiveAuthoritySignatureRequirement(control.authority)).toBe(1);
+    expect(control.factorStatuses?.multisigTopology).toBeUndefined();
+    expect(control.authority?.weightedQuorum).toMatchObject(key === "master"
+      ? { masterKey: "enabled" } : { regularKey: { state: "enabled" } });
+  });
+
+  it.each(["master", "regular"] as const)("does not infer known topology with an unknown XRPL %s key alternative", (key) => {
+    const weighted = weightedQuorum([1, 1, 1], 3);
+    if (key === "master") weighted.masterKey = "unknown";
+    else weighted.regularKey = { state: "unknown" };
+    const control = compileControls([weightedControl(weighted)]).controls[0]!;
+    expect(effectiveAuthoritySignatureRequirement(control.authority)).toBeNull();
+    expect(control.factorStatuses?.multisigTopology?.observationState).toBe("missing");
+  });
+
+  it("keeps weighted EVM controllers distinct and rejects identity-unbound topology", () => {
+    const xrpl = weightedQuorum([3, 2, 1], 4);
+    const { masterKey: _master, regularKey: _regular, ...common } = xrpl;
+    const contract: V9WeightedQuorum = { ...common, scheme: "contract", deployment: SCOPE_CONTROLLER,
+      signers: [1, 2, 3].map((digit, index) => ({ account: `0x${String(digit).repeat(40)}`, weight: [3, 2, 1][index]! })) };
+    const first = weightedControl(contract);
+    const second = weightedControl({ ...contract, deployment: SCOPE_CONTROLLER.replace("ethereum", "arbitrum") });
+    second.controlKey = "custody:arbitrum";
+    const asset = compileControls([first, second]);
+    expect(asset.controls.map((control) => control.authority?.authorityKey).sort()).toEqual([
+      SCOPE_CONTROLLER, SCOPE_CONTROLLER.replace("ethereum", "arbitrum"),
+    ].sort());
+    expect(asset.controls.every((control) => !control.factorStatuses?.multisigTopology)).toBe(true);
+    first.authority!.authorityKey = second.authority!.authorityKey;
+    const rejected = compileControls([first]);
+    expect(rejected.controls).toEqual([]);
+    expect(rejected.gaps).toContainEqual(expect.objectContaining({
+      gapId: "alpha:gap:asset-compilation", causeProof: expect.objectContaining({ cause: "A" }),
+    }));
+  });
+
+  it.each(["known-semantics", "access-only", "subthreshold"] as const)(
+    "keeps a fresh scoped question bounded for %s without taking a known-inventory shortcut",
+    (kind) => {
+      const source = localControl({
+        scopedQuestionFresh: true,
+        ...(kind === "access-only" ? { economicLossScope: "access-only" as const, authority: null,
+          capSemantics: { kind: "unknown" as const, bound: null }, claimImpairment: "none" as const } : {}),
+        ...(kind === "subthreshold" ? { scope: "deployment" as const, economicLossScope: "deployment" as const,
+          materialSupplyShare: 0.001, authority: null } : {}),
+      });
+      expect(controlCanCarryKnownStatus(source)).toBe(false);
+      const asset = compileControls([source]);
+      expect(asset.controlStatus.observationState).toBe("bounded-unknown");
+      expect(asset.controls[0]!.status).toMatchObject({
+        observationState: "bounded-unknown", applicability: { state: "required" },
+        gapIds: ["alpha:gap:deployment-control:custody:reviewed"],
+      });
+      expect(asset.gaps.find((gap) => gap.gapId === "alpha:gap:deployment-control:custody:reviewed"))
+        .toMatchObject({ reasonCode: "scoped-control-question" });
+      source.scopedQuestionFresh = false;
+      expect(controlCanCarryKnownStatus(source)).toBe(true);
+      const resolved = compileControls([source]);
+      expect(resolved.controlStatus.observationState).toBe("known");
+      expect(resolved.gaps.some((gap) => gap.reasonCode === "scoped-control-question")).toBe(false);
+      if (kind !== "subthreshold") expect(resolved.controls[0]!.status.observationState).toBe("known");
+    },
+  );
+
+  it.each([undefined, "authority-semantics", "execution-scope", "key-custody-independence"] as const)(
+    "admits authored %s question subjects without letting custody-only uncertainty gate native economics",
+    (subject) => {
+      const fixed = exactFixedInput();
+      const metadata = cappedMinterMeta();
+      metadata.mintAuthority!.review.scopedQuestions = [{
+        controlRef: SCOPE_CONTROLLER, subject, question: "Which entity protects this exact signer key?",
+        reviewedAt: "1970-01-01", reviewer: "Fixture reviewer",
+      }];
+      metadata.mintAuthority = MintAuthorityProfileSchema.parse(metadata.mintAuthority);
+      const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(metadata) });
+      const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+      const control = asset.controls.find((row) => row.authority?.authorityKey === SCOPE_CONTROLLER)!;
+      expect(control.status.observationState).toBe(subject === "key-custody-independence" ? "known" : "bounded-unknown");
+      if (subject === "key-custody-independence") {
+        expect(control.keyCustody).toBe("unknown");
+        expect(control.factorStatuses?.keyCustody?.observationState).toBe("missing");
+        expect(asset.gaps.some((gap) => gap.reasonCode === "scoped-control-question")).toBe(false);
+      }
+      expect(() => MintAuthorityProfileSchema.parse({ ...metadata.mintAuthority,
+        review: { ...metadata.mintAuthority!.review, scopedQuestions: [{ ...metadata.mintAuthority!.review.scopedQuestions![0], subject: "invented" }] } })).toThrow();
+    },
+  );
+
+  it("does not let a typed custody question hide an untyped semantic sibling on the same controller", () => {
+    const fixed = exactFixedInput();
+    const metadata = cappedMinterMeta();
+    const question = { controlRef: SCOPE_CONTROLLER, question: "Which entity controls the native issuance authority?",
+      reviewedAt: "1970-01-01", reviewer: "Fixture reviewer" };
+    metadata.mintAuthority!.review.scopedQuestions = [
+      { ...question, subject: "key-custody-independence" }, question,
+    ];
+    const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(metadata) });
+    const control = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!.controls
+      .find((row) => row.authority?.authorityKey === SCOPE_CONTROLLER)!;
+    expect(control.status.observationState).toBe("bounded-unknown");
+    expect(control.scopedQuestionSubject).not.toBe("key-custody-independence");
+  });
+
+  it("retains typed bridge custody uncertainty separately from resolved route semantics", () => {
+    const fixed = exactFixedInput();
+    const route = reviewedLockMintRoute(SCOPE_CONTROLLER);
+    const metadata = bridgeMeta([route], {
+      controls: [{ id: "controller", label: "Bridge controller", controllerChain: "ethereum",
+        controllerAddress: SCOPE_CONTROLLER.split(":")[1]!, authorityType: "multisig", threshold: 2, signerCount: 6,
+        routeRefs: [route.id], capabilities: ["bridge-mint"], canRaiseCap: true,
+        sources: [{ label: "Pinned bridge", url: "https://example.com/bridge" }] }],
+      scopedQuestions: [{ controlRef: "controller", subject: "key-custody-independence",
+        question: "Which custody provider protects the controller keys?", reviewedAt: "1970-01-01", reviewer: "Fixture reviewer" }],
+    });
+    metadata.bridgeRouteRisk = BridgeRouteRiskProfileSchema.parse(metadata.bridgeRouteRisk);
+    const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(metadata) });
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+    const control = asset.controls.find((row) => row.controlKind === "bridge")!;
+    expect(control.status.observationState).toBe("known");
+    expect(control.keyCustody).toBe("unknown");
+    expect(control.factorStatuses?.keyCustody?.observationState).toBe("missing");
+  });
+
+  it("revalidates complete scope before allowing execution-proof precedence", () => {
+    const source = localControl({ scopedQuestionFresh: true, authority: { authorityKey: SCOPE_CONTROLLER, model: "contract", threshold: null },
+      executionScope: reviewedScope(), executionScopeComplete: true });
+    const known = compileControls([source]);
+    expect(known.controls[0]!.status.observationState).toBe("known");
+    source.executionScope!.expiresAt = "2026-10-01";
+    const expired = compileControls([source]);
+    expect(expired.controls[0]!.status.observationState).toBe("bounded-unknown");
+    expect(expired.controls[0]!.scopeDiagnostics).toContain("execution-review-expired");
+  });
 });

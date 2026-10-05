@@ -109,6 +109,7 @@
         {
           "controlRef": "Anzens issuance backend",
           "question": "What authorization semantics does the PlutusV2 policy assign to the visible reference configuration, and what threshold is independently reproducible? Re-fetched on 2026-10-01, mint c11effdaa66d31b7ed95c1cec5716490391baed46cdc144d28d336b218eced8f at Cardano block 14008131 still references b91c80748190c7280be0a41da2b80fd9690af6e174bca2e388476f8eea200b86#0. Its datum contains key hashes b2136f4e… and 57dc15b1… and the integer 1, but constructor-to-signature semantics and any cold 3-of-7 policy remain unverified without independently reproduced script semantics.",
+          "subject": "authority-semantics",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (CurB43scrvUSD)",
           "sources": [

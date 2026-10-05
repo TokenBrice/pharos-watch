@@ -129,6 +129,11 @@ function resolveOutput(
   outputValuation?: LiveReserveRedemptionOutputValuation | null,
 ): ExitRouteOutput {
   const meta = TRACKED_META_BY_ID.get(stablecoinId);
+  // Explicit unresolved identities override variantOf and issuer peg currency.
+  // Alternative payouts must not silently become the parent token or fiat.
+  if (config.unresolvedOutputAssetKeys?.length && !config.outputAssets?.length && config.outputAssetType !== "stable-basket") {
+    return { kind: "unresolved-asset", assetKeys: [...config.unresolvedOutputAssetKeys] };
+  }
   if (config.outputAssetType === "physical-commodity-delivery" && config.physicalCommodityDelivery) {
     return {
       kind: "physical-commodity-delivery",

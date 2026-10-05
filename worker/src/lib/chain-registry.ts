@@ -29,6 +29,10 @@ export interface RpcEndpoint {
   readonly position: RpcEndpointPosition;
   readonly stateHistory: RpcStateHistory;
   readonly logsHistory: RpcLogsHistory;
+  /** Maximum inclusive eth_getLogs block span; absence preserves caller defaults. */
+  readonly maxLogBlockSpan?: number;
+  /** Send JSON-RPC calls as sequential single objects, never batch arrays. */
+  readonly noBatch?: boolean;
   /** ISO date of the capability probe (Dwellir entries). */
   readonly verifiedAt?: string;
 }
@@ -59,9 +63,7 @@ export const ALCHEMY_CHAINS: Record<string, string> = {
 
 /** Numbered supply/decimals probes verified 2026-10-05; state reads only. */
 const CENSUS_STATE_ALCHEMY_CHAINS: Record<string, string> = {
-  berachain: "berachain-mainnet",
   hyperevm: "hyperliquid-mainnet",
-  ink: "ink-mainnet",
   linea: "linea-mainnet",
   scroll: "scroll-mainnet",
   zksync: "zksync-mainnet",
@@ -70,6 +72,21 @@ const CENSUS_STATE_ALCHEMY_CHAINS: Record<string, string> = {
   worldchain: "worldchain-mainnet",
   megaeth: "megaeth-mainnet",
   stable: "stable-mainnet",
+};
+
+/** Keyless, numbered-state supply readers; deliberately outside log inventories. */
+const CENSUS_STATE_PUBLIC_RPCS: Record<string, readonly Pick<RpcEndpoint, "url" | "maxLogBlockSpan" | "noBatch">[]> = {
+  pharos: [
+    { url: "https://rpc.pharos.xyz", maxLogBlockSpan: 1000, noBatch: true },
+    { url: "https://api.zan.top/public/pharos-mainnet", maxLogBlockSpan: 1000, noBatch: true },
+  ],
+};
+
+/** Finalized, hash-pinned state and historical CCIP logs verified 2026-10-05. */
+const CCIP_ARCHIVE_ALCHEMY_CHAINS: Readonly<Record<string, string>> = {
+  monad: "monad-mainnet",
+  ink: "ink-mainnet",
+  berachain: "berachain-mainnet",
 };
 
 export type RpcAuthProvider = "alchemy" | "dwellir";
@@ -170,7 +187,7 @@ function publicRegistryEndpoints(...urls: readonly (string | undefined)[]): RpcE
 // first registry operator.
 // `hemi` is public-only for vcred-vcred's reviewed on-chain circulating-supply
 // probe over its single tracked Hemi deployment.
-const PUBLIC_ONLY_EVM_CHAINS = ["tempo", "plasma", "plume", "monad", "mantle", "morph-l2", "abcore", "xlayer", "sonic", "etherlink", "arc", "hemi"] as const;
+const PUBLIC_ONLY_EVM_CHAINS = ["tempo", "plasma", "plume", "monad", "mantle", "morph-l2", "abcore", "xlayer", "sonic", "etherlink", "arc", "hemi", "robinhood"] as const;
 const PUBLIC_ONLY_OTHER_CHAINS = ["movement"] as const;
 const SOLANA_PUBLIC_RPC_CHAIN_ID = "solana";
 
@@ -399,6 +416,34 @@ export function buildChainRpcs(
   const map = new Map<string, ChainRpcConfig>();
   for (const config of configs) {
     map.set(config.chainId, config);
+  }
+  if (alchemyApiKey) {
+    for (const [chainId, slug] of Object.entries(CCIP_ARCHIVE_ALCHEMY_CHAINS)) {
+      const meta = CHAIN_META[chainId]!;
+      const endpoint: RpcEndpoint = {
+        url: buildAlchemyRpcUrl(slug, alchemyApiKey),
+        operator: "alchemy", keyed: true, position: "registry",
+        stateHistory: "archive", logsHistory: "full",
+        maxLogBlockSpan: 1000, noBatch: false, verifiedAt: "2026-10-05",
+      };
+      const existing = map.get(chainId);
+      map.set(chainId, {
+        chainId, chainName: meta.name, type: "evm", explorerUrl: meta.explorerUrl,
+        endpoints: [endpoint, ...(existing?.endpoints ?? [])],
+      });
+    }
+  }
+  for (const [chainId, endpointConfigs] of Object.entries(CENSUS_STATE_PUBLIC_RPCS)) {
+    const meta = CHAIN_META[chainId]!;
+    const endpoints: RpcEndpoint[] = endpointConfigs.map(endpoint => ({
+      ...endpoint, operator: "public", keyed: false, position: "supplemental",
+      stateHistory: "archive", logsHistory: "none", verifiedAt: "2026-10-05",
+    }));
+    const existing = map.get(chainId);
+    map.set(chainId, {
+      chainId, chainName: meta.name, type: "evm", explorerUrl: meta.explorerUrl,
+      endpoints: [...(existing?.endpoints ?? []), ...endpoints],
+    });
   }
   if (alchemyApiKey) {
     for (const [chainId, slug] of Object.entries(CENSUS_STATE_ALCHEMY_CHAINS)) {

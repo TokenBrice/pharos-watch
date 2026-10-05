@@ -164,6 +164,18 @@
         {
           "label": "Exact deployment creation transaction and timestamp",
           "url": "https://base.blockscout.com/tx/0x4ce6e5d051d2a7951781dc6dd7dc7e0e0cbac3d4723d0ba63faa4f24850370cd"
+        },
+        {
+          "label": "Verified exact OptimismReceiver immutable authority and canonical messenger checks",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0xfda082e00ef89185d9db7e5dcd8c5505070f5a3b"
+        },
+        {
+          "label": "Verified exact Executor queued and admin delegatecall capabilities",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf93b7122450a50af3e5a76e1d546e95ac1d0f579"
+        },
+        {
+          "label": "Supplemental Base observation block 52199652",
+          "url": "https://base.blockscout.com/block/52199652"
         }
       ],
       "evidence": "Observed 2026-10-02T22:43:43.966947+00:00 at base block 52095837 (hash 0x03974c717b8f0205ba3eef8dccfae70f5e044d6a8ac0a3f6e1b00ac938652604). Native totalSupply 306832432087111435323561004 (18 decimals), asset 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913 (6 decimals), totalAssets 331690048897426, convertToAssets(10^18) 1081013. One-share redeem from actual holder 0x2917956eff0b5eaf030abdb4ef4296df775009ca returned 1081013 asset base units via eth_call at that same block; no transaction broadcast. Parent mint authority remains inherited. Current exact-token operational controls are recorded without promoting local accounting into independent reserve assurance. Exact implementation creation transaction 0x4ce6e5d051d2a7951781dc6dd7dc7e0e0cbac3d4723d0ba63faa4f24850370cd, block 24392934, timestamp 2024-12-30T16:13:35+00:00, was independently joined from Blockscout creation identity to RPC transaction receipt and block timestamp; issuer founding and parent launch were not substituted. Separate signer/key-custody observation, recorded per identified control rather than as an aggregate issuance-census gap: Safe signer independence and offchain key custody are not publicly established. Calibration v2 field re-justification: reconciliation=not-applicable describes the immutable deposit-backed local share mechanism and does not assert parent reserve-to-total-liability financial assurance; supervision=none grants no prudential-supervision credit. Source-defined share accounting and independent financial assurance retain separate scopes. D14/A7/A10 review 2026-10-03, pinned base block 52131494 (hash 0x3d31cbc91a3065f9b4817af44865cd30cc82c4e13d49a1e322571745d55e15e5). The pinned exact immutable MetaMorphoV1_1 source inherits ERC4626 deposit/mint: _deposit transfers USDC before _mint. Owner/curator submitCap changes market allocation limits and setFee changes a source-capped fraction of earned interest; accrued fee shares are formula-derived, not an arbitrary privileged recipient mint. Configuration and delegated owner execution cannot replace this immutable vault code or bypass the asset-funded user issuance path. Inherited controls concern usdc-circle, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
@@ -171,12 +183,13 @@
       "reviewedAt": "2026-10-03",
       "disposition": "unresolved",
       "unresolvedQuestions": [
-        "Complete executable/storage-write closure of queued/admin delegatecall targets and L1 cross-domain governance authorization behind OptimismReceiver 0xfda082e00ef89185d9db7e5dcd8c5505070f5a3b is not established. Full recorded role-log census and current hasRole results do not prove absence of unlogged delegatecall changes."
+        "Complete executable/storage-write closure of queued/admin delegatecall targets remains unestablished. Supplemental 2026-10-05 exact runtime/source and pinned Base block 52199652 observations bind OptimismReceiver's immutable l1Authority to SubProxy 0x3300f198988e4c9c63f75df86de36421f06af8c4 and target to this Executor; lifetime role logs retain the receiver as SUBMISSION_ROLE and Executor as sole event-derived self-admin. delay() remains zero. Receiver enforces canonical messenger and xDomainMessageSender but forwards arbitrary calldata; Executor permits arbitrary queued/admin delegatecalls. Event-derived role topology does not exclude historical unlogged delegatecall writes. Aggregate review and incidentState=none remain unresolved; immutable wrapper-local D14 and binding Sky D29/D32 doctrine are unchanged."
       ],
       "scopedQuestions": [
         {
           "controlRef": "base:0x0f963a8a8c01042b69054e787e5763abbb0646a3",
           "question": "For Spark current curator Safe (base:0x0f963a8a8c01042b69054e787e5763abbb0646a3): Safe signer independence and offchain key custody are not publicly established.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement Refine11",
           "sources": [

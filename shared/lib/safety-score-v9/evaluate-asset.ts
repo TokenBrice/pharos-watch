@@ -763,7 +763,14 @@ function exitPillar(
           const routeKey = gap.causeScope?.routeKey;
           return routeKey != null && asset.exitRoutes.some((route) => route.routeKey === routeKey);
         });
-        const causalGaps = matchingGaps.length > 0 ? matchingGaps : equivalentSurfaceGaps;
+        const settlementGaps = sourceCode === "unproven-settlement-bound"
+          ? gapsForV9Ids(gapIndex, asset.exitRoutes
+              .filter((route) => route.settlementBoundUnproven)
+              .flatMap((route) => route.factorStatuses?.settlement?.gapIds ?? []))
+          : [];
+        const causalGaps = settlementGaps.length > 0
+          ? settlementGaps
+          : matchingGaps.length > 0 ? matchingGaps : equivalentSurfaceGaps;
         const path =
           profileFactKeys.length > 0
             ? `exit:mechanism-profile:${profileFactKeys.join("+")}`
@@ -788,6 +795,30 @@ function exitPillar(
           capacityFloor !== undefined &&
           causalGaps.length === 0 &&
           profileFactKeys.length === 0;
+        if (code === "correlated-exit-routes" && primary !== null && causalGaps.length === 0) {
+          const includedRoutes = asset.exitRoutes.filter((route) =>
+            result.routes.some((trace) => trace.routeKey === route.routeKey && trace.included));
+          // Correlation is a known diagnostic only when every included
+          // alternative has a sourced, current shared domain or resource.
+          // Withholding diversification is unchanged; missing identity proof
+          // must still fall through to bounded U.
+          if (primary.status.observationState === "known" && primary.status.evidenceRefIds.length > 0 &&
+            includedRoutes.length > 1 && includedRoutes.every((route) =>
+              route.status.observationState === "known" && route.status.evidenceRefIds.length > 0 &&
+              (route === primary ||
+                primary.failureDomains.some((domain) =>
+                  route.failureDomains.some((other) => domainKey(domain) === domainKey(other))) ||
+                primary.physicalResourceKeys.some((key) => route.physicalResourceKeys.includes(key))))) {
+            return [{
+              ...pillarReason(envelope, code, path, undefined, "measured-adverse"),
+              causeProof: {
+                cause: "D",
+                adverseFactId: `${asset.assetId}:exit:correlated-route-inventory`,
+                evidenceRefIds: uniqueSorted(includedRoutes.flatMap((route) => route.status.evidenceRefIds)),
+              },
+            }];
+          }
+        }
         if (nativeMeasuredCompleteEmpty || nativeMeasuredCapacityFloor) {
           // These are admitted adverse facts, not missing-gap fallbacks. An
           // empty gap list otherwise defaults to U and loses the measured D.
@@ -884,6 +915,19 @@ function controlPillar(
   const causalGapsForReason = (
     reason: V9EconomicControlResult["reasons"][number],
   ): V9AssetFactsV3["gaps"] => {
+    if (reason.code === "runtime-bridge-materiality-unavailable") {
+      const materialityGaps = gapsForV9Ids(gapIndex, asset.controls
+        .filter((control) => control.controlKind === "bridge" &&
+          control.scope === "deployment" &&
+          (reason.controlKey === null || control.controlKey === reason.controlKey))
+        .flatMap((control) => control.factorStatuses?.materialSupplyShare?.gapIds ?? []));
+      if (materialityGaps.length > 0) return materialityGaps;
+    }
+    if (reason.code === "unresolved-oracle-branch-applicability") {
+      const status = asset.economicControlReview.oracle.status;
+      return gapsForV9Ids(gapIndex, status.applicability.gapId === null
+        ? status.gapIds : [status.applicability.gapId]);
+    }
     if (reason.controlKey !== null) {
       const control = asset.controls.find(
         (candidate) => candidate.controlKey === reason.controlKey,

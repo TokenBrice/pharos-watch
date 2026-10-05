@@ -1,6 +1,7 @@
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { parseStablecoinMetaAssets } from "@shared/lib/stablecoins/schema";
 import fusdRiskReview from "@shared/data/stablecoins/domains/risk-review/fusd-finchain.json";
+import { BridgeRouteRiskProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
 import type {
   BridgeRouteControl,
   BridgeRouteDeployment,
@@ -271,6 +272,38 @@ function adaptBridgeFixture(
     clockSec,
     chainRows,
   );
+}
+
+function nativeDustFixture(share = 1e-5) {
+  const assetId = "fixture-native-dust";
+  const routes = [route(ETHEREUM_ROUTE), route(ARBITRUM_ROUTE)];
+  const profile = bridgeProfile(routes, {
+    nativeInventoryReview: {
+      kind: "exhaustive-material-native-census",
+      exhaustive: true,
+      reviewedAt: "1970-01-01",
+      reviewer: "Fixture native census reviewer",
+      routeIds: routes.map((candidate) => candidate.id),
+      rationale: "The exact material issuance roster is exhaustively reviewed as native.",
+      sources: [SOURCE],
+    },
+  });
+  const supply: NonNullable<Parameters<typeof adaptBridgeReview>[1]> = {
+    selectedBridgeRoutes: [
+      ...routes.map((candidate) => ({
+        deploymentRouteKey: candidate.id, supplyUsd: 1_000_000 * (1 - share) / routes.length,
+        supplyShare: (1 - share) / routes.length,
+        reviewState: "selected-reviewed" as const, reviewedRouteKind: "native" as const,
+      })),
+      { deploymentRouteKey: `unmatched-chain:${assetId}:tempo`, supplyUsd: 1_000_000 * share,
+        supplyShare: share, reviewState: "unmatched" },
+    ],
+    selectedRouteSupplyShare: 1 - share,
+    unknownRouteSupplyShare: share,
+    unreviewedRouteSupplyShare: 0,
+    failureDomains: [{ kind: "chain", key: "tempo" }],
+  };
+  return { metadata: meta(assetId, { bridgeRouteRisk: profile }), profile, supply };
 }
 
 /**
@@ -893,7 +926,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     });
   });
 
-  it("compiles a representation group only when every member is reviewed wrapped lock-mint", () => {
+  it("preserves a wrapped lock-mint group while an unreviewed member keeps its authority unknown", () => {
     const representationId = "fixture-wrapped-representation";
     const acceptingRoute = representationRoute(BASE_ROUTE, {
       representationId,
@@ -930,10 +963,151 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       representationSupplyReview(rejectingMetadata.id, representationId),
     );
 
-    expect(rejecting.controls.some((control) => control.controlKey.startsWith("bridge-group:"))).toBe(false);
-    expect(rejecting.controls).toContainEqual(
-      expect.objectContaining({ deploymentKey: BASE_ROUTE, controlKind: "bridge" }),
+    expect(rejecting.controls).toHaveLength(1);
+    expect(rejecting.controls[0]).toMatchObject({
+      controlKey: expect.stringMatching(/^bridge-group:/),
+      authority: { model: "unknown", threshold: null },
+      capSemantics: { kind: "unknown" },
+      incidentState: "unknown",
+    });
+  });
+
+  describe("loss-preserving representation-group authorities", () => {
+    const representationId = "fixture-authority-group";
+    function groupFixture(
+      controls: BridgeRouteControl[],
+      routeOverrides: Partial<BridgeRouteDeployment>[] = [{}, {}],
+    ) {
+      const routes = [BASE_ROUTE, ARBITRUM_ROUTE].slice(0, routeOverrides.length).map((id, index) =>
+        representationRoute(id, {
+          representationId, issuanceModel: "wrapped-representation",
+          failureDomainKeys: [`contract:${id}`], ...routeOverrides[index],
+        }));
+      const metadata = meta("fixture-group-authorities", { bridgeRouteRisk: bridgeProfile(routes, { controls }) });
+      const supply = representationSupplyReview(metadata.id, representationId);
+      supply.failureDomains = [{ kind: "bridge-route", key: `contract:${ETHEREUM_ROUTE}` }];
+      return { metadata, result: adaptBridgeFixture(metadata, supply) };
+    }
+    function safe(id: string, routeRef: string, required: number, total: number) {
+      return bridgeControl({
+        id, routeRefs: [routeRef], controllerChain: routeRef.split(":")[0],
+        controllerAddress: routeRef.split(":")[1], authorityType: "multisig",
+        threshold: required, signerCount: total,
+      });
+    }
+
+    it("retains the weakest heterogeneous signing member and all destination failure domains", () => {
+      const { result } = groupFixture([safe("strong", BASE_ROUTE, 3, 5), safe("weak", ARBITRUM_ROUTE, 1, 2)]);
+      expect(result.controls).toHaveLength(1);
+      expect(result.controls[0]).toMatchObject({
+        authority: { authorityKey: ARBITRUM_ROUTE, model: "multisig", threshold: { required: 1, total: 2 } },
+        materialSupplyShare: 1, keyCustody: "unknown",
+        failureDomains: expect.arrayContaining([
+          { kind: "bridge-route", key: `contract:${BASE_ROUTE}` },
+          { kind: "bridge-route", key: `contract:${ARBITRUM_ROUTE}` },
+          { kind: "bridge-route", key: `contract:${ETHEREUM_ROUTE}` },
+        ]),
+      });
+      expect(result.review.routes).toEqual([{ controlKey: result.controls[0]!.controlKey, tier: "external-lock-mint" }]);
+    });
+
+    it("uses minimum signatures rather than the lowest threshold ratio, independent of member order", () => {
+      const strong = safe("strong", BASE_ROUTE, 3, 5);
+      const weak = safe("weak", ARBITRUM_ROUTE, 2, 2);
+      for (const controls of [[strong, weak], [weak, strong]]) {
+        expect(groupFixture(controls).result.controls[0]?.authority).toEqual({
+          authorityKey: ARBITRUM_ROUTE, model: "multisig", threshold: { required: 2, total: 2 },
+        });
+      }
+    });
+
+    it("retains a weaker upgrade key and proven modules even when the mint quorum is stronger", () => {
+      const upgrade = bridgeControl({
+        id: "upgrade-key", routeRefs: [BASE_ROUTE], authorityType: "eoa",
+        capabilities: ["upgrade"], controllerAddress: "0xcccccccccccccccccccccccccccccccccccccccc",
+        modulesOrGuardsStatus: "present",
+      });
+      const { result } = groupFixture([safe("strong", BASE_ROUTE, 3, 5), safe("sibling", ARBITRUM_ROUTE, 3, 5), upgrade]);
+      expect(result.controls[0]).toMatchObject({
+        authority: { model: "eoa", authorityKey: "base:0xcccccccccccccccccccccccccccccccccccccccc" },
+        capabilities: ["bridge-mint", "upgrade"], modulesOrGuards: "present", keyCustody: "unknown",
+      });
+    });
+
+    it("pools the shortest reviewed delay without granting a sibling's execution certificate to the group", () => {
+      const scoped = safe("scoped", BASE_ROUTE, 3, 5);
+      scoped.executionScope = reviewedScope({
+        controllerDeployment: BASE_ROUTE, reviewedAt: "1970-01-01", observedAt: "1970-01-01",
+      });
+      scoped.executionScope.paths[0]!.capabilities = ["bridge-mint"];
+      scoped.executionScope.paths[0]!.unavoidableDelaySec = 172800;
+      const sibling = safe("unscoped", ARBITRUM_ROUTE, 2, 3);
+      sibling.timelockDelaySec = 3600;
+      sibling.modulesOrGuardsStatus = "present";
+      const { result } = groupFixture([scoped, sibling]);
+      expect(result.controls[0]).toMatchObject({
+        authority: { authorityKey: ARBITRUM_ROUTE },
+        delaySec: 3600, modulesOrGuards: "present", executionScopeComplete: false,
+        moduleImpact: "unresolved",
+        executionScopeContributors: [
+          { authorityKey: BASE_ROUTE, scope: scoped.executionScope },
+          { authorityKey: ARBITRUM_ROUTE },
+        ],
+      });
+      expect(result.controls[0]!.executionScopeContributors![1]).not.toHaveProperty("scope");
+      expect(result.controls[0]!.scopeDiagnostics).toContain("execution-scope-unreviewed");
+    });
+
+    it.each([
+      { riskTier: "canonical-rollup-bridge" as const },
+      { routeClass: "native" as const },
+      { issuanceModel: "bridge-representation" as const },
+      { semantics: "burn-mint" as const },
+    ])("does not pool an incompatible representation member %j", (overrides) => {
+      const { result } = groupFixture(
+        [safe("first", BASE_ROUTE, 3, 5), safe("second", ARBITRUM_ROUTE, 3, 5)],
+        [{}, overrides],
+      );
+      expect(result.controls.some((control) => control.controlKey.startsWith("bridge-group:"))).toBe(false);
+      expect(result.controls.map((control) => control.deploymentKey).sort()).toEqual([ARBITRUM_ROUTE, BASE_ROUTE]);
+      expect(result.controls.every((control) => control.authority?.model === "multisig")).toBe(true);
+    });
+
+    it.each(["missing", "unknown", "threshold-unreviewed", "stale", "unreviewed", "upgrade-unknown"] as const)(
+      "keeps the group unknown for a %s member instead of substituting the common adapter",
+      (condition) => {
+        const sibling = safe("sibling", ARBITRUM_ROUTE, 3, 5);
+        if (condition === "unknown") sibling.authorityType = "unknown";
+        if (condition === "threshold-unreviewed") { delete sibling.threshold; delete sibling.signerCount; }
+        if (condition === "stale") sibling.observedAt = "1970-01-01";
+        const controls = [safe("strong", BASE_ROUTE, 3, 5), ...(condition === "missing" ? [] : [sibling])];
+        if (condition === "upgrade-unknown") controls.push(bridgeControl({
+          id: "unknown-upgrade", routeRefs: [ARBITRUM_ROUTE], capabilities: ["upgrade"], authorityType: "unknown",
+        }));
+        const { metadata, result } = groupFixture(controls, [{}, condition === "unreviewed" ? { reviewDisposition: "unresolved" } : {}]);
+        const adapted = condition === "stale"
+          ? adaptBridgeFixture({
+            ...metadata,
+            bridgeRouteRisk: { ...metadata.bridgeRouteRisk!, reviewedAt: "2026-10-01",
+              routes: metadata.bridgeRouteRisk!.routes!.map((member) => ({ ...member, observedAt: "2026-10-01" })),
+              controls: controls.map((control) => ({ ...control, observedAt: control.id === "sibling" ? "1970-01-01" : "2026-10-01" })),
+            },
+          }, representationSupplyReview(metadata.id, representationId), undefined, Date.parse("2026-10-05T12:00:00Z") / 1_000)
+          : result;
+        expect(adapted.controls).toHaveLength(1);
+        expect(adapted.controls[0]?.authority).toEqual({
+          authorityKey: `bridge-route:${v9RepresentationGroupRouteKey(metadata.id, representationId)}`,
+          model: "unknown", threshold: null,
+        });
+      },
     );
+
+    it("leaves a single researched member authority unchanged", () => {
+      const { metadata, result } = groupFixture([safe("only", BASE_ROUTE, 3, 5)], [{}]);
+      const standalone = adaptBridgeFixture(metadata, null).controls[0];
+      expect(result.controls[0]?.authority).toEqual(standalone?.authority);
+      expect(result.controls[0]?.authority).toMatchObject({ model: "multisig", threshold: { required: 3, total: 5 } });
+    });
   });
 
   it("keeps a shared Safe identity-linked while separating native mint from bridge capabilities", () => {
@@ -1493,6 +1667,80 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(adapted.controls.length).toBeGreaterThan(0);
   });
 
+  it.each([0, 1e-8, 1e-5])("admits exhaustively reviewed native inventory with unmatched share %s without rewriting supply", (share) => {
+    const { metadata, supply } = nativeDustFixture(share);
+    const before = structuredClone(supply);
+    const evidence = new ReviewEvidenceBuilder(metadata.id, 10_000);
+    const adapted = adaptBridgeReview(metadata, supply, 3, evidence, 10_000,
+      { Ethereum: { current: 1 }, Arbitrum: { current: 1 }, Tempo: { current: share } });
+    expect(adapted.review.status.applicability.state).toBe("not-applicable");
+    expect(adapted.review.routes).toEqual([]);
+    expect(adapted.review.diagnostics?.applicabilityBranch).toBe("native-only-not-applicable");
+    expect(adapted.review.diagnostics?.unmatchedRowIdentities).toContain("Tempo");
+    expect(supply).toEqual(before);
+    expect(supply.selectedBridgeRoutes[supply.selectedBridgeRoutes.length - 1]).toMatchObject({ reviewState: "unmatched", supplyShare: share, supplyUsd: share * 1_000_000 });
+    expect([...evidence.evidence.values()]).toContainEqual(expect.objectContaining({
+      sourceId: "stablecoin-meta.native-inventory-census",
+      url: SOURCE.url,
+      observedAtSec: 0,
+    }));
+  });
+
+  it.each(["over-dust", "material", "missing-census", "stale-census", "incomplete-census", "incomplete-book", "controlled-row", "representation-inventory", "documented-oft", "unreviewed-route"] as const)(
+    "fails closed for native dust inventory with %s",
+    (scenario) => {
+      const { metadata, profile, supply } = nativeDustFixture(
+        scenario === "over-dust" ? 2e-5 : scenario === "material" ? 0.2 : 1e-5,
+      );
+      let clock = 10_000;
+      if (scenario === "missing-census") delete profile.nativeInventoryReview;
+      if (scenario === "stale-census") {
+        profile.reviewedAt = "1971-02-02";
+        clock = Date.parse("1971-02-03T00:00:00Z") / 1000;
+      }
+      if (scenario === "incomplete-census") profile.nativeInventoryReview!.routeIds.pop();
+      if (scenario === "incomplete-book") supply.selectedBridgeRoutes.pop();
+      if (scenario === "controlled-row") supply.selectedBridgeRoutes[0]!.reviewedRouteKind = "controlled";
+      if (scenario === "representation-inventory") {
+        profile.routes![0] = representationRoute(ETHEREUM_ROUTE);
+        supply.selectedBridgeRoutes[0]!.reviewedRouteKind = "controlled";
+      }
+      if (scenario === "documented-oft") profile.routes!.push(representationRoute(BASE_ROUTE, { protocol: "Documented LayerZero OFT", semantics: "burn-mint" }));
+      if (scenario === "unreviewed-route") profile.routes![0]!.reviewDisposition = "unresolved";
+      const adapted = adaptBridgeFixture(metadata, supply, undefined, clock);
+      expect(adapted.review.status.applicability.state).toBe("required");
+    },
+  );
+
+  it("requires a sourced dated exhaustive census with exact native route identities", () => {
+    const { profile } = nativeDustFixture();
+    expect(BridgeRouteRiskProfileSchema.safeParse(profile).success).toBe(true);
+    for (const patch of [
+      { exhaustive: false }, { reviewedAt: undefined }, { sources: [] },
+      { routeIds: [ETHEREUM_ROUTE] }, { routeIds: [ETHEREUM_ROUTE, ETHEREUM_ROUTE] },
+    ]) {
+      expect(BridgeRouteRiskProfileSchema.safeParse({
+        ...profile, nativeInventoryReview: { ...profile.nativeInventoryReview, ...patch },
+      }).success).toBe(false);
+    }
+    expect(BridgeRouteRiskProfileSchema.safeParse({
+      ...profile, routes: [...profile.routes!, representationRoute(BASE_ROUTE)],
+    }).success).toBe(false);
+  });
+
+  it("tests each unmatched row independently without pooling or dropping its supply", () => {
+    const { metadata, supply } = nativeDustFixture(2e-5);
+    const remainder = supply.selectedBridgeRoutes.pop()!;
+    supply.selectedBridgeRoutes.push(
+      { ...remainder, supplyShare: 1e-5, supplyUsd: 10 },
+      { ...remainder, deploymentRouteKey: `unmatched-chain:${metadata.id}:bittorrent`, supplyShare: 1e-5, supplyUsd: 10 },
+    );
+    expect(adaptBridgeFixture(metadata, supply).review.status.applicability.state).toBe("not-applicable");
+    supply.selectedBridgeRoutes[supply.selectedBridgeRoutes.length - 1]!.supplyShare += 1e-8;
+    supply.selectedBridgeRoutes[supply.selectedBridgeRoutes.length - 2]!.supplyShare -= 1e-8;
+    expect(adaptBridgeFixture(metadata, supply).review.status.applicability.state).toBe("required");
+  });
+
   it("keeps USDGLO's unmatched VeChain liability bridge-applicable after canonical registration", () => {
     const metadata = ACTIVE_META_BY_ID.get("usdglo-glo")!;
     const profile = metadata.bridgeRouteRisk!;
@@ -1536,10 +1784,12 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(supplyReview).toEqual(before);
   });
 
-  it("records the native bridge join decision for all five reviewed FUSD deployments", () => {
+  it("records the native bridge join decision for all six reviewed FUSD deployments", () => {
     const profile = fusdRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile;
     const routes = profile.routes ?? [];
-    expect(routes).toHaveLength(5);
+    expect(routes).toHaveLength(6);
+    expect(routes.find((candidate) => candidate.destinationChain === "exsat")?.id)
+      .toBe("exsat:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c");
     const supplyReview: NonNullable<Parameters<typeof adaptBridgeReview>[1]> = {
       selectedBridgeRoutes: routes.map((candidate) => ({
         deploymentRouteKey: candidate.id,
@@ -1554,7 +1804,10 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       failureDomains: [],
     };
     const chainRows = Object.fromEntries(
-      routes.map((candidate) => [candidate.destinationChain, { current: 1 }]),
+      routes.map((candidate) => [
+        candidate.destinationChain === "exsat" ? "exSat" : candidate.destinationChain,
+        { current: 1 },
+      ]),
     );
     const adapted = adaptBridgeFixture(
       meta("fusd-finchain", { bridgeRouteRisk: profile }),
@@ -1565,13 +1818,13 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
 
     expect(adapted.review.status.applicability.state).toBe("not-applicable");
     expect(adapted.review.diagnostics).toEqual({
-      profileRouteCount: 5,
-      canonicalSupplyRowCount: 5,
+      profileRouteCount: 6,
+      canonicalSupplyRowCount: 6,
       unmatchedRowIdentities: [],
       reviewedNativeCoverage: {
-        reviewedRowCount: 5,
-        canonicalSupplyRowCount: 5,
-        supplyShare: 1,
+        reviewedRowCount: 6,
+        canonicalSupplyRowCount: 6,
+        supplyShare: expect.closeTo(1, 12),
         complete: true,
       },
       bridgeClaimControls: [],
@@ -1582,9 +1835,12 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(adapted.controls.some((control) => control.capabilities.includes("bridge-mint"))).toBe(true);
   });
 
-  it("keeps the FUSD join applicable and names an unmatched raw chain label", () => {
-    const profile = fusdRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile;
-    const routes = profile.routes ?? [];
+  it("keeps a native fixture join applicable and names an unmatched raw chain label", () => {
+    const assetId = "fixture-native-unmatched";
+    const routes = [route(ETHEREUM_ROUTE), route(BASE_ROUTE)];
+    const profile = bridgeProfile(routes, {
+      controls: [bridgeControl({ routeRefs: routes.map((candidate) => candidate.id) })],
+    });
     const supplyReview: NonNullable<Parameters<typeof adaptBridgeReview>[1]> = {
       selectedBridgeRoutes: [
         ...routes.map((candidate) => ({
@@ -1595,7 +1851,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
           reviewedRouteKind: "native" as const,
         })),
         {
-          deploymentRouteKey: "unmatched-chain:fusd-finchain:future-network",
+          deploymentRouteKey: `unmatched-chain:${assetId}:future-network`,
           supplyUsd: 1,
           supplyShare: 0.2,
           reviewState: "unmatched" as const,
@@ -1611,7 +1867,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       ["Future Network", { current: 1 }],
     ]);
     const adapted = adaptBridgeFixture(
-      meta("fusd-finchain", { bridgeRouteRisk: profile }),
+      meta(assetId, { bridgeRouteRisk: profile }),
       supplyReview,
       chainRows,
       v9TestClockSec(),
@@ -1619,25 +1875,22 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
 
     expect(adapted.review.status.applicability.state).toBe("required");
     expect(adapted.review.diagnostics).toMatchObject({
-      profileRouteCount: 5,
-      canonicalSupplyRowCount: 5,
+      profileRouteCount: 2,
+      canonicalSupplyRowCount: 2,
       unmatchedRowIdentities: ["Future Network"],
       reviewedNativeCoverage: {
-        reviewedRowCount: 5,
-        canonicalSupplyRowCount: 5,
+        reviewedRowCount: 2,
+        canonicalSupplyRowCount: 2,
         supplyShare: 0.8,
         complete: false,
       },
       applicabilityBranch: "applicable",
     });
-    // The four EVM rows still join CCIP controls. Solana's reviewed native
-    // authority is not a bridge control; the unmatched row remains unproven.
+    // Known native-control joins stay proven. Only the unmatched liability
+    // keeps the aggregate review applicable and remains in the unproven census.
     expect(
       adapted.review.diagnostics?.unprovenRouteJoins.map((row) => row.deploymentRouteKey),
-    ).toEqual([
-      ...routes.filter((candidate) => candidate.destinationChain !== "solana").map((candidate) => candidate.id).sort(),
-      "unmatched-chain:fusd-finchain:future-network",
-    ].sort());
+    ).toEqual([`unmatched-chain:${assetId}:future-network`]);
   });
 
   it("records no unproven bridge row when every selected row is a tolerated dust remainder", () => {

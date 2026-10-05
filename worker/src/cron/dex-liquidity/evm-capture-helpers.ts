@@ -38,6 +38,10 @@ export async function runPinnedBlockCapture<TResult, TFailure = never>(input: {
   onResults: (results: TResult) => void | Promise<void>;
   onFailure: (reason?: TFailure) => void | Promise<void>;
 }): Promise<void> {
+  if (input.chain === "tron" || input.rpcOptions.chainRpcs?.get(input.chain)?.type === "tron") {
+    await input.onFailure();
+    return;
+  }
   const fetchBlockNumber = input.fetchBlockNumber ?? fetchEvmBlockNumber;
   const fetchBlockHeader = input.fetchBlockHeader ?? fetchEvmBlockHeader;
   const blockNumber = await fetchBlockNumber(input.chain, input.rpcOptions);

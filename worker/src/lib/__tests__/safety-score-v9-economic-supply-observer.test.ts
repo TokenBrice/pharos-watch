@@ -3,11 +3,11 @@ import { encodeAbiParameters, keccak256, parseAbiParameters, toFunctionSelector,
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { sha256Hex } from "@shared/lib/sha256";
 import type { StablecoinMeta } from "@shared/types/core";
-import type { CurveLzPendingRead, ReviewedEconomicSupplyPlan } from "@shared/types/safety-score-v9-supply-attribution";
+import { ReviewedEconomicSupplyPlanSchema, type CcipPendingRead, type CurveLzPendingRead, type LayerZeroOftPendingRead, type ReviewedEconomicSupplyPlan } from "@shared/types/safety-score-v9-supply-attribution";
 import * as evmRpc from "../evm-rpc";
 import type { ChainRpcConfig } from "../chain-registry";
 import { observeCurveLzPending, observeEconomicSolanaMint, observeReviewedEconomicDeploymentPartitionAttempt } from "../safety-score-v9/economic-supply-observer";
-import { REVIEWED_ECONOMIC_SUPPLY_PLANS } from "../safety-score-v9/supply-attribution-contract";
+import { REVIEWED_ECONOMIC_SUPPLY_PLANS, reviewedEconomicDeploymentAttributionValidationError } from "../safety-score-v9/supply-attribution-contract";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 
 const CLOCK = 1790850000;
@@ -60,6 +60,45 @@ describe("reviewed economic supply observation", () => {
     expect(result.attribution.observations).toEqual([expect.objectContaining({ deploymentKey: f.plan.deployments[0]!.deploymentKey, amount: "100000000", anchor: "100", anchorHash: HASH, observedAtSec: CLOCK - 60 })]);
     expect(result.attribution.deployments[0]!.currentSupplyUsd).toBe(100);
     expect(result.attribution.unattributedSupplyUsd).toBe(0);
+  });
+
+  it("batches same-chain supplies and balance exclusions at one pin without mixing amounts", async () => {
+    const f = fixture();
+    const first = f.plan.deployments[0]!;
+    const second = { ...first, deploymentKey: `ethereum:0x${"2".repeat(40)}`, address: `0x${"2".repeat(40)}` };
+    f.plan.deployments.push(second);
+    f.plan.exclusions = [{ id: "treasury", deploymentKey: second.deploymentKey, account: `0x${"3".repeat(40)}` }];
+    vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mockImplementation(async (_chain, calls) =>
+      calls.map(call => ({ label: call.label, success: true, returnData: word(
+        call.label.endsWith(":decimals") ? 6n : call.label === first.deploymentKey ? 100000000n :
+          call.label === "treasury" ? 100000000n : 1000000000n,
+      ) })),
+    );
+    const result = await f.run();
+    expect(result.status).toBe("accepted");
+    if (result.status !== "accepted") throw new Error("Expected accepted batch partition");
+    expect(result.attribution.deployments.map(row => row.currentSupplyUsd)).toEqual([10, 90]);
+    expect(result.attribution.observations.map(row => row.amount)).toEqual(["100000000", "1000000000", "100000000"]);
+    expect(new Set(result.attribution.observations.map(row => row.anchorHash))).toEqual(new Set([HASH]));
+    expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mock.calls[0][1]).toHaveLength(6);
+    expect(vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mock.calls[0][3])
+      .toMatchObject({ stateBlockHash: HASH, multicallFallbackBlockHash: HASH });
+  });
+
+  it("rejects the exact failed batch leaf, never treating its unavailable amount as zero", async () => {
+    const f = fixture();
+    const first = f.plan.deployments[0]!;
+    const second = { ...first, deploymentKey: `ethereum:0x${"2".repeat(40)}`, address: `0x${"2".repeat(40)}` };
+    f.plan.deployments.push(second);
+    vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mockImplementation(async (_chain, calls) =>
+      calls.map(call => ({ label: call.label, success: call.label !== second.deploymentKey,
+        returnData: word(call.label.endsWith(":decimals") ? 6n : 100000000n) })),
+    );
+    expect(await f.run()).toEqual({
+      status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: second.deploymentKey,
+    });
+    expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).toHaveBeenCalledTimes(1);
   });
 
   it("admits pre-capture state newer than the previous source clock without redating its source", async () => {
@@ -214,6 +253,153 @@ describe("reviewed economic supply observation", () => {
     expect(await pendingFixture(0n).run()).toMatchObject({ status: "rejected", rejectionCode: "packet-reconciliation-failed" });
   });
 
+  it("uses reviewed receipt subsets and API pending amounts to conserve the escrow rather than its gross receipt supply", async () => {
+    const f = pendingFixture(), escrow = f.plan.escrows[0]!;
+    escrow.receiptClaimSources = [{ deploymentKey: escrow.receiptDeploymentKeys[0]!, source: apiSource("receipt") }];
+    escrow.inFlightSource = apiSource("pending");
+    vi.mocked(fetch).mockImplementation(async url => new Response(JSON.stringify(apiBody(
+      String(url).endsWith("/receipt") ? "19000000" : "1000000",
+    ))));
+    const result = await f.run();
+    expect(result).toMatchObject({ status: "accepted", attribution: {
+      deployments: [expect.objectContaining({ currentSupplyUsd: 80 }), expect.objectContaining({ currentSupplyUsd: 19 })],
+      unattributedSupplyUsd: 1,
+      observations: expect.arrayContaining([expect.objectContaining({
+        id: `receipt:bridge:${escrow.receiptDeploymentKeys[0]}`, amount: "19000000", anchor: "issuer-snapshot",
+      })]),
+      inFlight: [expect.objectContaining({ amount: "1000000", anchor: "issuer-snapshot" })],
+    } });
+  });
+
+  it.each(["receipt", "pending"])("rejects unavailable API %s accounting instead of replacing it with a residual", async failure => {
+    const f = pendingFixture(), escrow = f.plan.escrows[0]!;
+    escrow.receiptClaimSources = [{ deploymentKey: escrow.receiptDeploymentKeys[0]!, source: apiSource("receipt") }];
+    escrow.inFlightSource = apiSource("pending");
+    vi.mocked(fetch).mockImplementation(async url => String(url).endsWith(`/${failure}`)
+      ? new Response("{}", { status: 503 })
+      : new Response(JSON.stringify(apiBody("19000000"))));
+    expect(await f.run()).toEqual({
+      status: "rejected", rejectionCode: "deployment-state-unavailable",
+      failedRouteId: failure === "receipt" ? escrow.receiptDeploymentKeys[0] : escrow.id,
+    });
+  });
+
+  function oftFixture(liability = false) {
+    const f = pendingFixture(0n, 19000000n), [canonical, receipt] = f.plan.deployments;
+    const side = (row: typeof canonical, eid: number, endpoint: string) => ({
+      chainId: row!.chainId, tokenAddress: row!.address!, oappAddress: row!.address!,
+      oappRuntimeCodeSha256: sha256Hex("0x6000"), endpointAddress: endpoint,
+      endpointRuntimeCodeSha256: sha256Hex("0x6000"), eid, localDecimals: 6, deploymentBlock: 100,
+    });
+    const source: LayerZeroOftPendingRead = {
+      kind: "evm-layerzero-oft-pending", sourceId: "oft", chainId: "ethereum", finality: "finalized",
+      localDecimals: 6, sharedDecimals: 6,
+      sides: [side(canonical, 30101, `0x${"4".repeat(40)}`), side(receipt, 30184, `0x${"5".repeat(40)}`)],
+      pathways: [{ sourceIndex: 0, destinationIndex: 1 }],
+    };
+    if (liability) {
+      f.plan.accountingFamily = "independent-liability";
+      f.plan.escrows = [];
+      f.plan.liabilityInFlightSource = source;
+    } else {
+      f.plan.escrows[0]!.account = source.sides[0]!.oappAddress;
+      f.plan.escrows[0]!.inFlightSource = source;
+    }
+    vi.mocked(fetch).mockImplementation(async () => new Response(JSON.stringify({ data: [] })));
+    vi.mocked(evmRpc.fetchEvmRpcBatch).mockImplementation(async (chain, calls) => calls.map(call => {
+      if (call.method === "eth_getCode") return "0x6000";
+      const query = call.params[0];
+      if (!query || typeof query !== "object" || !("data" in query) || typeof query.data !== "string") {
+        throw new Error("Expected OFT eth_call query");
+      }
+      const data = query.data.slice(0, 10);
+      const index = chain === "ethereum" ? 0 : 1, local = source.sides[index]!, remote = source.sides[1 - index]!;
+      const addressWord = (value: string) => `0x${value.slice(2).padStart(64, "0")}`;
+      if (data === toFunctionSelector("endpoint()")) return addressWord(local.endpointAddress);
+      if (data === toFunctionSelector("eid()")) return word(BigInt(local.eid));
+      if (data === toFunctionSelector("token()")) return addressWord(local.tokenAddress);
+      if (data === toFunctionSelector("decimals()") || data === toFunctionSelector("sharedDecimals()")) return word(6n);
+      if (data === toFunctionSelector("decimalConversionRate()")) return word(1n);
+      if (data === toFunctionSelector("peers(uint32)")) return addressWord(remote.oappAddress);
+      if (["outboundNonce(address,uint32,bytes32)", "inboundNonce(address,uint32,bytes32)", "lazyInboundNonce(address,uint32,bytes32)"]
+        .some(signature => data === toFunctionSelector(signature))) return word(0n);
+      throw new Error(`Unexpected OFT state read ${data}`);
+    }));
+    return { ...f, source };
+  }
+
+  it.each([false, true])("retains authenticated zero OFT pending proof for liability=%s without inventing free float", async liability => {
+    const f = oftFixture(liability);
+    const result = await f.run();
+    expect(result).toMatchObject({ status: "accepted", attribution: {
+      unattributedSupplyUsd: 0,
+      inFlight: [expect.objectContaining({
+        id: liability ? "in-flight:liability" : "in-flight:bridge",
+        amount: "0", anchor: "100", anchorHash: HASH,
+        layerZeroOftPendingProof: expect.objectContaining({
+          pathways: [expect.objectContaining({ sentNonce: "0", pendingCount: 0 })],
+        }),
+      })],
+    } });
+  });
+
+  it.each([false, true])("fails closed on unauthenticated OFT runtime for liability=%s", async liability => {
+    const f = oftFixture(liability);
+    vi.mocked(evmRpc.fetchEvmRpcBatch).mockResolvedValue(["0x6001"]);
+    expect(await f.run()).toEqual({
+      status: "rejected", rejectionCode: "deployment-state-unavailable",
+      failedRouteId: liability ? "in-flight:liability:runtime-mismatch" : "bridge",
+    });
+  });
+
+  it.each([false, true])("surfaces CCIP finality rejection for liability=%s without assuming no pending messages", async liability => {
+    const f = pendingFixture(), [canonical, receipt] = f.plan.deployments;
+    const pool = f.plan.escrows[0]!.account;
+    const side = (row: typeof canonical, chainSelector: string, tokenPoolAddress: string) => ({
+      chainId: row!.chainId, chainSelector, tokenAddress: row!.address!, tokenPoolAddress,
+      tokenPoolRuntimeCodeSha256: sha256Hex("0x6000"), decimals: 6,
+    });
+    const source: CcipPendingRead = {
+      kind: "evm-ccip-pending", sourceId: "ccip", chainId: "ethereum", finality: "finalized", amountDecimals: 6,
+      lanes: [{ id: "eth-base", version: "1.6", source: side(canonical, "1", pool),
+        destination: side(receipt, "2", `0x${"4".repeat(40)}`), onRampAddress: `0x${"5".repeat(40)}`,
+        offRampAddress: `0x${"6".repeat(40)}`, onRampRuntimeCodeSha256: sha256Hex("0x6000"),
+        offRampRuntimeCodeSha256: sha256Hex("0x6000"), sourceStartBlock: 100 }],
+    };
+    if (liability) {
+      f.plan.accountingFamily = "independent-liability"; f.plan.escrows = []; f.plan.liabilityInFlightSource = source;
+    } else f.plan.escrows[0]!.inFlightSource = source;
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) => ({
+      number: number === "finalized" ? 99 : number, timestamp: CLOCK - 60, hash: HASH,
+    }));
+    expect(await f.run()).toEqual({ status: "rejected", rejectionCode: "deployment-state-unavailable",
+      failedRouteId: `${liability ? "in-flight:liability" : "bridge"}:pin-not-finalized` });
+  });
+
+  it("surfaces an unfinalized canonical messenger census without substituting escrow surplus", async () => {
+    const f = pendingFixture(), [canonical, receipt] = f.plan.deployments;
+    const address = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;
+    f.plan.escrows[0]!.inFlightSource = {
+      kind: "evm-l2-messenger-pending", protocol: "op-stack", bridgeFlavor: "sky",
+      sourceId: "messenger", chainId: "ethereum", l2ChainId: "base", finality: "finalized",
+      l1Token: canonical!.address!, l2Token: receipt!.address!, escrowAddress: f.plan.escrows[0]!.account,
+      l1Bridge: address(10), l2Bridge: address(11), l1Messenger: address(12), l2Messenger: address(13),
+      messagePasser: address(14), portal: address(15), l1StartBlock: 100, l2StartBlock: 100,
+      scanPageBlocks: [100, 100],
+      contracts: [
+        ...[10, 12, 15].map(n => ({ chainId: "ethereum", address: address(n), runtimeCodeSha256: sha256Hex("0x6000") })),
+        ...[11, 13, 14].map(n => ({ chainId: "base", address: address(n), runtimeCodeSha256: sha256Hex("0x6000") })),
+      ],
+      identityReads: [{ chainId: "ethereum", address: address(10), method: "eth_call", data: "0x12345678", expected: word(1n) }],
+    };
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) => ({
+      number: number === "finalized" ? 99 : number, timestamp: CLOCK - 60, hash: HASH,
+    }));
+    expect(await f.run()).toEqual({
+      status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: "bridge:pin-not-finalized",
+    });
+  });
+
   it.each(["number", "hash"])("rejects pending generations whose escrow block %s changed", async failure => {
     const f = pendingFixture();
     vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) => ({
@@ -329,6 +515,79 @@ describe("validated XRPL issued-currency observations", () => {
   });
   it.each(["malformed", "negative", "unvalidated", "hash mismatch", "missing time", "stale time"])("rejects XRPL %s", async failure => {
     expect(await xrplFixture(failure).run()).toMatchObject({ status: "rejected", rejectionCode: failure === "stale time" ? "packet-reconciliation-failed" : "deployment-state-unavailable" });
+  });
+});
+
+describe("identity-bound non-EVM economic supply", () => {
+  const metadataAddress = `0x${"b".repeat(64)}`;
+  const master = "EQDQ5UUyPHrLcQJlPAczd_fjxn8SLrlNQwolBznxCdSlfQwr";
+  const pin = { workchain: -1, shard: "-9223372036854775808", seqno: 97048839,
+    root_hash: "G++xuEKh8vIc5zIdqmuZXGKyAKbwCiAqzTKEsTSI3OM=", file_hash: "VsEwupusnpifJYRlFR4f9cZ1vJqpnxb9Huywp8jBA90=" };
+  function nonEvmFixture(chainId: "aptos" | "movement" | "ton", failure?: string) {
+    const f = fixture(), row = f.plan.deployments[0]!;
+    const address = chainId === "ton" ? master : metadataAddress;
+    Object.assign(row, { deploymentKey: `${chainId}:${address}`, chainId, address, read: chainId === "ton"
+      ? { kind: "ton-jetton-supply", apiUrl: "https://ton.example/api/v2" }
+      : { kind: "move-fa-supply", identityKind: "metadata-address", metadataAddress, ledgerChainId: chainId === "aptos" ? 1 : 126 } });
+    vi.mocked(fetch).mockImplementation(async (url, init) => {
+      const path = String(url);
+      let result: unknown;
+      if (chainId !== "ton") {
+        if (path.includes("ConcurrentSupply")) result = { type: "0x1::fungible_asset::ConcurrentSupply", data: { current: { value: "100000000" } } };
+        else if (path.includes("Metadata")) result = { type: "0x1::fungible_asset::Metadata", data: { decimals: failure === "decimals" ? 18 : 6 } };
+        else if (path.includes("ObjectCore")) result = { type: "0x1::object::ObjectCore", data: { transfer_events: { guid: { id: { addr: failure === "identity" ? "0x123" : metadataAddress } } } } };
+        else result = { chain_id: chainId === "aptos" ? 1 : 126, ledger_version: failure === "pin" ? undefined : "100",
+          ledger_timestamp: failure === "timestamp" ? undefined : String((CLOCK - 60) * 1_000_000) };
+      } else {
+        if (path.includes("getMasterchainInfo")) result = { ok: true, result: { last: pin } };
+        else if (path.includes("lookupBlock")) result = { ok: true, result: pin };
+        else if (path.includes("getBlockHeader")) result = { ok: true, result: { id: pin, global_id: -239, gen_utime: failure === "timestamp" ? undefined : CLOCK - 60 } };
+        else if (init?.method === "POST" && path.endsWith("runGetMethod")) result = { ok: true, result: { exit_code: 0, block_id: failure === "pin" ? undefined : pin, stack: [["num", "0x5f5e100"]] } };
+        else result = { ok: true, result: { address: failure === "identity" ? "other-master" : master, contract_type: "jetton_master", total_supply: "100000000",
+          jetton_content: { type: "onchain", data: { decimals: failure === "decimals" ? "18" : "6" } } } };
+      }
+      return new Response(JSON.stringify(result));
+    });
+    return f;
+  }
+  it.each(["aptos", "movement", "ton"] as const)("admits %s supply to the conserved census without rewriting the provider aggregate", async chainId => {
+    const f = nonEvmFixture(chainId);
+    expect(ReviewedEconomicSupplyPlanSchema.safeParse(f.plan).success).toBe(true);
+    expect(await f.run()).toMatchObject({ status: "accepted", attribution: {
+      aggregate: { supplyUsd: 100, observedAtSec: CLOCK - 60 }, quantitativeCompleteness: true,
+      observations: [expect.objectContaining({ amount: "100000000", anchor: chainId === "ton" ? String(pin.seqno) : "100", observedAtSec: CLOCK - 60 })],
+      deployments: [expect.objectContaining({ currentSupplyUsd: 100 })],
+    } });
+  });
+  it.each(["aptos", "movement", "ton"] as const)("rejects %s wrong metadata, missing chronology and decimals", async chainId => {
+    for (const failure of ["identity", "pin", "timestamp", "decimals"]) {
+      expect(await nonEvmFixture(chainId, failure).run()).toMatchObject({ status: "rejected", rejectionCode: "deployment-state-unavailable" });
+    }
+  });
+  it("rejects Move plan metadata and ledger-chain mismatches before observation", () => {
+    const f = nonEvmFixture("aptos"), row = f.plan.deployments[0]!;
+    if (row.read.kind !== "move-fa-supply") throw new Error("Expected Move read");
+    row.read.metadataAddress = "0x123";
+    expect(ReviewedEconomicSupplyPlanSchema.safeParse(f.plan).success).toBe(false);
+    row.read.metadataAddress = metadataAddress;
+    row.read.ledgerChainId = 126;
+    expect(ReviewedEconomicSupplyPlanSchema.safeParse(f.plan).success).toBe(false);
+  });
+  it.each(["aptos", "ton"] as const)("rejects missing persisted %s anchor identity rather than trusting conserved rows", async chainId => {
+    const f = nonEvmFixture(chainId), result = await f.run();
+    if (result.status !== "accepted") throw new Error("Expected accepted partition");
+    const validate = () => reviewedEconomicDeploymentAttributionValidationError({
+      assetId: "alpha", attribution: result.attribution, aggregateSupplyUsd: 100,
+      registryFingerprint: f.fixedInput.registryFingerprint, clockSec: CLOCK,
+    });
+    expect(validate()).toBeNull();
+    const observation = result.attribution.observations[0]!;
+    const anchor = observation.anchor;
+    observation.anchor = "latest";
+    expect(validate()).toBe("Economic supply attribution accounting/census invalid");
+    observation.anchor = anchor;
+    observation.anchorHash = "unpinned";
+    expect(validate()).toBe("Economic supply attribution accounting/census invalid");
   });
 });
 

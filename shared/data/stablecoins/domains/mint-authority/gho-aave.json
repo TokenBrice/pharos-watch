@@ -264,38 +264,50 @@
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0xb639d208bcf0589d54fac24e655c79ec529762b8",
-          "reviewedAt": "2026-10-03",
-          "observedAt": "2026-10-03",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-05",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
-          "confidence": "partial",
+          "reviewer": "Wave-4 R11 immutable flash-accounting review",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Verified deployed source",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb639d208bcf0589d54fac24e655c79ec529762b8"
+            },
+            {
+              "label": "Byte-matched immutable GHO token and mandatory mint/burn accounting",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+            },
+            {
+              "label": "Byte-matched ACLManager; full role census from creation 16291117",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2aacf6553d20d1e9d78e365aaba8032af9c85b0"
+            },
+            {
+              "label": "Ethereum flash certificate observation pin",
+              "url": "https://etherscan.io/block/26124931"
             }
           ],
           "pin": {
-            "position": "26112822",
-            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "position": "26124931",
+            "hash": "0x9a5ce221b717370d3b6291d13d2dde6a72ddf63b7eb57fc1d84e9f27a4813a6c",
             "runtimeIdentity": "sha256:f82aa2521daceb45649f1a7248bcaa230167b9f72890cfff0f15dfe16a7751a0",
-            "signerIdentity": "flashLoan public; principal transferFrom and burn mandatory in same transaction; ACL pool-admin fee/treasury permission closure not certified"
+            "signerIdentity": "Public flashLoan and fee distribution; ACLManager POOL_ADMIN and DEFAULT_ADMIN are 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a. Complete ACL role history and membership pinned; arbitrary role replacement changes fee/treasury authorization, never mandatory principal repayment/burn."
           },
           "observedState": {
-            "position": "26112822",
-            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "position": "26124931",
+            "hash": "0x9a5ce221b717370d3b6291d13d2dde6a72ddf63b7eb57fc1d84e9f27a4813a6c",
             "runtimeIdentity": "sha256:f82aa2521daceb45649f1a7248bcaa230167b9f72890cfff0f15dfe16a7751a0",
-            "signerIdentity": "flashLoan public; principal transferFrom and burn mandatory in same transaction; ACL pool-admin fee/treasury permission closure not certified"
+            "signerIdentity": "Public flashLoan and fee distribution; ACLManager POOL_ADMIN and DEFAULT_ADMIN are 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a. Complete ACL role history and membership pinned; arbitrary role replacement changes fee/treasury authorization, never mandatory principal repayment/burn."
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
@@ -333,10 +345,75 @@
               "permissionChangeRefs": [],
               "upgradeRefs": [],
               "bypassRefs": []
+            },
+            {
+              "id": "acl-fee-treasury-parameters",
+              "targetDeployment": "ethereum:0xb639d208bcf0589d54fac24e655c79ec529762b8",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x9012c4a8",
+                "0x1fde40bb"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "none",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "gho-aave"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "existing-fee-stock-distribution",
+              "targetDeployment": "ethereum:0xb639d208bcf0589d54fac24e655c79ec529762b8",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xdc49a07b"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "custody-transfer"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "none",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "gho-aave"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
             }
           ]
         },
-        "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 2,000,000 GHO capacity and zero GHO level."
+        "evidence": "Complete local execution certificate at Ethereum 26124931, hash 0x9a5ce221b717370d3b6291d13d2dde6a72ddf63b7eb57fc1d84e9f27a4813a6c (2026-10-05T08:19:59Z). FlashMinter, immutable GHO token and immutable ACLManager runtimes exactly match verified Blockscout source; FlashMinter and token have zero implementation/admin slots and no upgrade, delegatecall, fallback or pause entrypoint. Enumerated state-changing functions are flashLoan, distributeFeesToTreasury, updateFee and updateGhoTreasury. Every successful flashLoan, including each nested/reentrant invocation, mints principal only to its receiver then requires a successful callback, transferFrom(amount+fee), and burn(amount); failure reverts the invocation. Fee exemptions cannot skip principal transfer/burn; treasury distribution transfers already existing stock and creates no liability. Fee is bounded by MAX_FEE=10000; treasury and ACL role replacements cannot alter this immutable accounting. Full ACL RoleGranted/RoleRevoked/RoleAdminChanged census from creation 16291117 through the pin yielded 86 events, with current members and role admins confirmed; POOL_ADMIN and DEFAULT_ADMIN each contain only the executor. Token role census from creation 17698470 yielded 14 events; only executor and Bucket Steward can change token authorization/capacity, neither can modify the atomic repayment code. Capacity is 2000000 GHO, level zero, fee zero, treasury 0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c. Raw reads/source matches: R11/gho-execution-reach.json; full authorization histories: R11/gho-authority-census.json. The immutable single-token liability invariant closes this control, not upstream governance, other facilitators, D29 or D32; the independent Council's unbounded path and aggregate adverse posture remain."
       },
       {
         "chain": "ethereum",
@@ -433,7 +510,7 @@
             }
           ]
         },
-        "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 50,000,000 GHO capacity and 50,000,000 GHO level. O0 ordinary-route timing correction at Ethereum block 26118754 (hash 0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10, 2026-10-04T11:41:11Z): reviewed Level-1 payload-visible lower bound 345603 seconds = 1 + 259201 + 86401, excluding pre-payload proposal cooldown. Governance.getVotingConfig(1) 0x1c84e321 / COOLDOWN_PERIOD() 0x6e99d52f at 0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7 and PayloadsController.getExecutorSettingsByAccessControl(1) 0xf80281fb at 0xdabad81af85554e9ae636395611c58f7ec1aaec5, with byte-matched implementations and strict source inequalities, are recorded in executionCertificates proof gho-ordinary-route; 04-gho-paths.md section 4 / 07-gho-factcheck.md section 5 historically corroborate at 26118181. This is not complete upstream/bypass certification and does not alter independent zero-delay Council paths."
+        "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 50,000,000 GHO capacity and level. W3R30 handoff independently reverified on 2026-10-05 at Ethereum 26122446, hash 0xd4900f79a4ee92af908ade86a2ce432725b772d3ec0a26f190aebf8f0c626ccf: creation boundary 24312661 and complete RoleGranted/RoleRevoked history through the pin in disjoint <=50000-block windows yielded 3 events. DEFAULT_ADMIN, MINTER and BURNER each contain only 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a, confirmed by hasRole; getRoleAdmin for all three is DEFAULT_ADMIN_ROLE. Immutable GHO_TOKEN is 0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f; runtime exactly matches verified Blockscout source. Raw calls and logs: wave-4 staging R11/gho-reverified-wave3-pin.json. The existing O0 ordinary Level-1 payload-visible lower bound remains 345603 seconds (1 + 259201 + 86401), excluding pre-payload proposal cooldown, supported by executionCertificates proof gho-ordinary-route at 26118754. Local role completeness is not complete upstream executor/reconfiguration/bypass or other-liability certification; independent zero-delay Council paths remain."
       },
       {
         "chain": "ethereum",
@@ -534,7 +611,7 @@
             }
           ]
         },
-        "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 310,000,000 GHO capacity and 310,000,000 GHO level. Campaign adverse-path refresh at Ethereum block 26118754 (hash 0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10, 2026-10-04T11:41:11Z): 0xe9ac5231faecb633da0fe85fcb2785b8363427d2 hasRole(MINTER_ROLE,Council) 0x91d14854 and verified mint(account,amount) 0x40c10f19 retain a chosen-recipient, deposit-free path independent of ordinary governance. 0x46aa1063e5265b43663e81329333b47c517a5409 updateFacilitatorBucketCapacity(address,uint128) 0x5e107b9c remains Council-only, maximum 2x capacity per already-eligible update with per-facilitator elapsed time strictly >86400 seconds. This limits repeat growth, not prospective notice or lifetime stock; Council route delay remains zero. See executionCertificates proofs gho-council-gsm-mint / gho-council-bucket-growth and their pinned raw reads/source locations."
+        "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 310,000,000 GHO capacity and level. W3R30 handoff independently reverified on 2026-10-05 at Ethereum 26122446, hash 0xd4900f79a4ee92af908ade86a2ce432725b772d3ec0a26f190aebf8f0c626ccf: creation boundary 24305527 and complete RoleGranted/RoleRevoked history through the pin in disjoint <=50000-block windows yielded 4 events. DEFAULT_ADMIN and BURNER each contain only 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; MINTER contains that executor and Council 0x8513e6f37dbc52de87b166980fa3f50639694b60, confirmed by hasRole; getRoleAdmin for all three is DEFAULT_ADMIN_ROLE. Immutable GHO_TOKEN is 0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f; runtime exactly matches verified Blockscout source. Raw calls and logs: wave-4 staging R11/gho-reverified-wave3-pin.json. Verified mint(account,amount) retains the chosen-recipient, deposit-free Council path. Bucket Steward increases remain Council-only, maximum 2x per update after strictly >86400 seconds; repeat cooldown is neither public notice nor a finite lifetime stock. Council route delay remains zero. Existing executionCertificates proofs gho-council-gsm-mint and gho-council-bucket-growth remain in force; complete upstream reconfiguration/bypass and other-liability closure is not established."
       },
       {
         "chain": "ethereum",
@@ -833,7 +910,7 @@
             }
           ]
         },
-        "evidence": "At Ethereum block 26095800, getFacilitatorsList() included this Ethereum address, getFacilitator() returned the label GhoDirectFacilitator GSM Arbitrum, and getFacilitatorBucket() returned 50,000,000 GHO capacity and 50,000,000 GHO level. This control records native Ethereum bucket issuance, not the remote bridge capabilities. O0 ordinary-route timing correction at Ethereum block 26118754 (hash 0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10, 2026-10-04T11:41:11Z): reviewed Level-1 payload-visible lower bound 345603 seconds = 1 + 259201 + 86401, excluding pre-payload proposal cooldown. Governance.getVotingConfig(1) 0x1c84e321 / COOLDOWN_PERIOD() 0x6e99d52f at 0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7 and PayloadsController.getExecutorSettingsByAccessControl(1) 0xf80281fb at 0xdabad81af85554e9ae636395611c58f7ec1aaec5, with byte-matched implementations and strict source inequalities, are recorded in executionCertificates proof gho-ordinary-route; 04-gho-paths.md section 4 / 07-gho-factcheck.md section 5 historically corroborate at 26118181. This is not complete upstream/bypass certification and does not alter independent zero-delay Council paths."
+        "evidence": "At Ethereum block 26095800, getFacilitatorsList() and getFacilitator() identify this native Ethereum GhoDirectFacilitator GSM Arbitrum; bucket capacity and level are 50,000,000 GHO. This is native bucket issuance, not remote bridge capability. W3R30 handoff independently reverified on 2026-10-05 at Ethereum 26122446, hash 0xd4900f79a4ee92af908ade86a2ce432725b772d3ec0a26f190aebf8f0c626ccf: creation boundary 25282903 and complete RoleGranted/RoleRevoked history through the pin in disjoint <=50000-block windows yielded 3 events. DEFAULT_ADMIN, MINTER and BURNER each contain only 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a, confirmed by hasRole; getRoleAdmin for all three is DEFAULT_ADMIN_ROLE. Immutable GHO_TOKEN is 0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f; runtime exactly matches verified Blockscout source. Raw calls and logs: wave-4 staging R11/gho-reverified-wave3-pin.json. The O0 ordinary Level-1 payload-visible lower bound remains 345603 seconds (1 + 259201 + 86401), excluding pre-payload proposal cooldown, supported by executionCertificates proof gho-ordinary-route at 26118754. Local role completeness does not certify upstream executor/bypasses or other liabilities and does not alter independent zero-delay Council paths."
       },
       {
         "chain": "ethereum",
@@ -930,7 +1007,7 @@
             }
           ]
         },
-        "evidence": "At Ethereum block 26095800, getFacilitatorsList() included this Ethereum address, getFacilitator() returned the label GhoDirectFacilitator GSM Monad, and getFacilitatorBucket() returned 50,000,000 GHO capacity and 50,000,000 GHO level. This control records native Ethereum bucket issuance, not the remote bridge capabilities. O0 ordinary-route timing correction at Ethereum block 26118754 (hash 0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10, 2026-10-04T11:41:11Z): reviewed Level-1 payload-visible lower bound 345603 seconds = 1 + 259201 + 86401, excluding pre-payload proposal cooldown. Governance.getVotingConfig(1) 0x1c84e321 / COOLDOWN_PERIOD() 0x6e99d52f at 0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7 and PayloadsController.getExecutorSettingsByAccessControl(1) 0xf80281fb at 0xdabad81af85554e9ae636395611c58f7ec1aaec5, with byte-matched implementations and strict source inequalities, are recorded in executionCertificates proof gho-ordinary-route; 04-gho-paths.md section 4 / 07-gho-factcheck.md section 5 historically corroborate at 26118181. This is not complete upstream/bypass certification and does not alter independent zero-delay Council paths."
+        "evidence": "At Ethereum block 26095800, getFacilitatorsList() and getFacilitator() identify this native Ethereum GhoDirectFacilitator GSM Monad; bucket capacity and level are 50,000,000 GHO. This is native bucket issuance, not remote bridge capability. W3R30 handoff independently reverified on 2026-10-05 at Ethereum 26122446, hash 0xd4900f79a4ee92af908ade86a2ce432725b772d3ec0a26f190aebf8f0c626ccf: creation boundary 25489682 and complete RoleGranted/RoleRevoked history through the pin in disjoint <=50000-block windows yielded 3 events. DEFAULT_ADMIN, MINTER and BURNER each contain only 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a, confirmed by hasRole; getRoleAdmin for all three is DEFAULT_ADMIN_ROLE. Immutable GHO_TOKEN is 0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f; runtime exactly matches verified Blockscout source. Raw calls and logs: wave-4 staging R11/gho-reverified-wave3-pin.json. The O0 ordinary Level-1 payload-visible lower bound remains 345603 seconds (1 + 259201 + 86401), excluding pre-payload proposal cooldown, supported by executionCertificates proof gho-ordinary-route at 26118754. Local role completeness does not certify upstream executor/bypasses or other liabilities and does not alter independent zero-delay Council paths."
       },
       {
         "chain": "ethereum",
@@ -2727,7 +2804,7 @@
         {
           "id": "gho-execution-certificates-open",
           "conclusion": "open",
-          "statement": "All eleven existing individual execution scopes remain partial. No class/member execution certificate is granted: full native liability, runtime/permission, pool configuration, proxy upgrade and cross-chain transport closure is not established at the campaign pin.",
+          "statement": "Ten individual execution scopes remain partial. Wave-4 R11 separately certifies the immutable FlashMinter's exhaustive local accounting scope at Ethereum 26124931, including fee/treasury parameters, public fee distribution and full ACL/token authorization censuses. That local principal-conservation invariant does not close this process-level proof: native liability reach, pool configuration, proxy upgrade, Council reconfiguration and cross-chain authority alternatives remain open. No class/member certificate, global governor rooting or D32 qualification is granted.",
           "evidenceRefIds": [
             "gho-source-40d16fc0",
             "gho-source-58bcb647",

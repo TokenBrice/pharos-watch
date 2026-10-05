@@ -3,11 +3,13 @@ export type DexExecutionTargetFactorySlotId =
   | "uniswap-v4"
   | "orca-whirlpool"
   | "raydium-clmm"
+  | "sui-clmm"
+  | "meteora-dlmm"
   | "evm-v2";
 
 export interface DexExecutionTargetFactoryRegistration {
   slotId: DexExecutionTargetFactorySlotId;
-  platform: "evm" | "solana";
+  platform: "evm" | "solana" | "sui";
   lifecycle: "active" | "shadow" | "disabled";
   profileIds: readonly string[];
   implementationModule: string;
@@ -66,6 +68,22 @@ export const DEX_EXECUTION_TARGET_FACTORY_REGISTRY: readonly DexExecutionTargetF
     build: buildRaydiumClmmRegisteredExecutionTarget,
   },
   {
+    slotId: "sui-clmm",
+    platform: "sui",
+    lifecycle: "shadow",
+    profileIds: ["cetus-clmm-exact-v1", "bluefin-spot-clmm-exact-v1"],
+    implementationModule: "./execution-targets/sui-clmm",
+    build: buildSuiClmmRegisteredExecutionTarget,
+  },
+  {
+    slotId: "meteora-dlmm",
+    platform: "solana",
+    lifecycle: "shadow",
+    profileIds: ["meteora-dlmm-exact-v1"],
+    implementationModule: "./execution-targets/meteora-dlmm",
+    build: buildMeteoraDlmmRegisteredExecutionTarget,
+  },
+  {
     slotId: "evm-v2",
     platform: "evm",
     lifecycle: "active",
@@ -105,3 +123,5 @@ import { buildUniswapV4RegisteredExecutionTarget } from "./execution-targets/uni
 import { buildEvmV2RegisteredExecutionTarget } from "./execution-targets/evm-v2";
 import { buildOrcaWhirlpoolRegisteredExecutionTarget } from "./execution-targets/orca-whirlpool";
 import { buildRaydiumClmmRegisteredExecutionTarget } from "./execution-targets/raydium-clmm";
+import { buildSuiClmmRegisteredExecutionTarget } from "./execution-targets/sui-clmm";
+import { buildMeteoraDlmmRegisteredExecutionTarget } from "./execution-targets/meteora-dlmm";

@@ -1,0 +1,534 @@
+[
+  {
+    "poolId": "base:0x27a8afa3bd49406e48a074350fb7b2020c43b2bd",
+    "chain": "base",
+    "blockNumber": 52199671,
+    "blockHash": "0x47b1c12185380c25883d9ff8992bb8cdc70257a12a363a369502a8f13a413325",
+    "factory": "0x420dd381b31aef6683db6b902084cb0ffece40da",
+    "token0": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "token1": "0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA",
+    "state": {
+      "reserve0": "6287309678",
+      "reserve1": "7069120448",
+      "decimals0": 6,
+      "decimals1": 6,
+      "stable": true,
+      "fee": "5",
+      "variant": "aerodrome"
+    },
+    "points": [
+      {
+        "tokenInIndex": 0,
+        "amountIn": "100000000000",
+        "amountOut": "7065802761",
+        "localAmountOut": "7065802761",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 0,
+        "amountIn": "1000000000000",
+        "amountOut": "7069116538",
+        "localAmountOut": "7069116538",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 0,
+        "amountIn": "10000000000000",
+        "amountOut": "7069120444",
+        "localAmountOut": "7069120444",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 0,
+        "amountIn": "25000000000000",
+        "amountOut": "7069120447",
+        "localAmountOut": "7069120447",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "100000000000",
+        "amountOut": "6284064172",
+        "localAmountOut": "6284064172",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "1000000000000",
+        "amountOut": "6287305777",
+        "localAmountOut": "6287305777",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "10000000000000",
+        "amountOut": "6287309674",
+        "localAmountOut": "6287309674",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "25000000000000",
+        "amountOut": "6287309677",
+        "localAmountOut": "6287309677",
+        "equal": true
+      }
+    ]
+  },
+  {
+    "poolId": "base:0xb3dfc382ff41a76a0db72e1d87c2a831caeace5e",
+    "chain": "base",
+    "blockNumber": 52199671,
+    "blockHash": "0x47b1c12185380c25883d9ff8992bb8cdc70257a12a363a369502a8f13a413325",
+    "factory": "0x420dd381b31aef6683db6b902084cb0ffece40da",
+    "token0": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "token1": "0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA",
+    "state": {
+      "reserve0": "3466078",
+      "reserve1": "3472294",
+      "decimals0": 6,
+      "decimals1": 6,
+      "stable": false,
+      "fee": "30",
+      "variant": "aerodrome"
+    },
+    "points": [
+      {
+        "tokenInIndex": 0,
+        "amountIn": "100000000000",
+        "amountOut": "3472173",
+        "localAmountOut": "3472173",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 0,
+        "amountIn": "1000000000000",
+        "amountOut": "3472281",
+        "localAmountOut": "3472281",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 0,
+        "amountIn": "10000000000000",
+        "amountOut": "3472292",
+        "localAmountOut": "3472292",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 0,
+        "amountIn": "25000000000000",
+        "amountOut": "3472293",
+        "localAmountOut": "3472293",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "100000000000",
+        "amountOut": "3465957",
+        "localAmountOut": "3465957",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "1000000000000",
+        "amountOut": "3466065",
+        "localAmountOut": "3466065",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "10000000000000",
+        "amountOut": "3466076",
+        "localAmountOut": "3466076",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "25000000000000",
+        "amountOut": "3466077",
+        "localAmountOut": "3466077",
+        "equal": true
+      }
+    ]
+  },
+  {
+    "poolId": "optimism:0x1f80b1e3c538aa5e83bbd60e04386d4e2b4fa8fc",
+    "chain": "optimism",
+    "blockNumber": 157794956,
+    "blockHash": "0x8088bd76c08d45361cf8fe178f597647f39eb532f72df3b7a0327f8365fbaa26",
+    "factory": "0xf1046053aa5682b4f9a81b5481394da16be5ff5a",
+    "token0": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+    "token1": "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58",
+    "state": {
+      "reserve0": "1385218",
+      "reserve1": "1559446",
+      "decimals0": 6,
+      "decimals1": 6,
+      "stable": true,
+      "fee": "5",
+      "variant": "velodrome"
+    },
+    "points": [
+      {
+        "tokenInIndex": 0,
+        "amountIn": "100000000000",
+        "amountOut": "1559445",
+        "localAmountOut": "1559445",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 0,
+        "amountIn": "1000000000000",
+        "amountOut": "1559445",
+        "localAmountOut": "1559445",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 0,
+        "amountIn": "10000000000000",
+        "amountOut": "1559445",
+        "localAmountOut": "1559445",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 0,
+        "amountIn": "25000000000000",
+        "amountOut": "1559445",
+        "localAmountOut": "1559445",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "100000000000",
+        "amountOut": "1385217",
+        "localAmountOut": "1385217",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "1000000000000",
+        "amountOut": "1385217",
+        "localAmountOut": "1385217",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "10000000000000",
+        "amountOut": "1385217",
+        "localAmountOut": "1385217",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "25000000000000",
+        "amountOut": "1385217",
+        "localAmountOut": "1385217",
+        "equal": true
+      }
+    ]
+  },
+  {
+    "poolId": "optimism:0xa03f54e2f8bc963816205de51b428d705635d46c",
+    "chain": "optimism",
+    "blockNumber": 157794956,
+    "blockHash": "0x8088bd76c08d45361cf8fe178f597647f39eb532f72df3b7a0327f8365fbaa26",
+    "factory": "0xf1046053aa5682b4f9a81b5481394da16be5ff5a",
+    "token0": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+    "token1": "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58",
+    "state": {
+      "reserve0": "1500",
+      "reserve1": "1502",
+      "decimals0": 6,
+      "decimals1": 6,
+      "stable": false,
+      "fee": "30",
+      "variant": "velodrome"
+    },
+    "points": [
+      {
+        "tokenInIndex": 0,
+        "amountIn": "100000000000",
+        "amountOut": "1501",
+        "localAmountOut": "1501",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 0,
+        "amountIn": "1000000000000",
+        "amountOut": "1501",
+        "localAmountOut": "1501",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 0,
+        "amountIn": "10000000000000",
+        "amountOut": "1501",
+        "localAmountOut": "1501",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 0,
+        "amountIn": "25000000000000",
+        "amountOut": "1501",
+        "localAmountOut": "1501",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "100000000000",
+        "amountOut": "1499",
+        "localAmountOut": "1499",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "1000000000000",
+        "amountOut": "1499",
+        "localAmountOut": "1499",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "10000000000000",
+        "amountOut": "1499",
+        "localAmountOut": "1499",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "25000000000000",
+        "amountOut": "1499",
+        "localAmountOut": "1499",
+        "equal": true
+      }
+    ]
+  },
+  {
+    "poolId": "sonic:0x283b1e7290e07db18ab5ade833340dddc8cf83b9",
+    "chain": "sonic",
+    "blockNumber": 80376896,
+    "blockHash": "0x2bbf7ac542816504ec2d5bbc203760b5c3b4b09714c2bc587faf06e9f448d6ca",
+    "factory": "0x2da25e7446a70d7be65fd4c053948becaa6374c8",
+    "token0": "0x29219dd400f2Bf60E5a23d13Be72B486D4038894",
+    "token1": "0xd3DCe716f3eF535C5Ff8d041c1A41C3bd89b97aE",
+    "state": {
+      "reserve0": "965",
+      "reserve1": "1042",
+      "decimals0": 6,
+      "decimals1": 6,
+      "stable": false,
+      "fee": "10000",
+      "variant": "shadow"
+    },
+    "points": [
+      {
+        "tokenInIndex": 0,
+        "amountIn": "100000000000",
+        "amountOut": "1040",
+        "localAmountOut": "1040",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 0,
+        "amountIn": "1000000000000",
+        "amountOut": "1040",
+        "localAmountOut": "1040",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 0,
+        "amountIn": "10000000000000",
+        "amountOut": "1040",
+        "localAmountOut": "1040",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 0,
+        "amountIn": "25000000000000",
+        "amountOut": "1040",
+        "localAmountOut": "1040",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "100000000000",
+        "amountOut": "963",
+        "localAmountOut": "963",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "1000000000000",
+        "amountOut": "963",
+        "localAmountOut": "963",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "10000000000000",
+        "amountOut": "963",
+        "localAmountOut": "963",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "25000000000000",
+        "amountOut": "963",
+        "localAmountOut": "963",
+        "equal": true
+      }
+    ]
+  },
+  {
+    "poolId": "sonic:0x2db8e07fdae8be891b9cdb11996adb3850cf57d0",
+    "chain": "sonic",
+    "blockNumber": 80376896,
+    "blockHash": "0x2bbf7ac542816504ec2d5bbc203760b5c3b4b09714c2bc587faf06e9f448d6ca",
+    "factory": "0x2da25e7446a70d7be65fd4c053948becaa6374c8",
+    "token0": "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38",
+    "token1": "0x29219dd400f2Bf60E5a23d13Be72B486D4038894",
+    "state": {
+      "reserve0": "1914331688753458984",
+      "reserve1": "24773",
+      "decimals0": 18,
+      "decimals1": 6,
+      "stable": true,
+      "fee": "3000",
+      "variant": "shadow"
+    },
+    "points": [
+      {
+        "tokenInIndex": 0,
+        "amountIn": "100000000000000000000000",
+        "amountOut": "24771",
+        "localAmountOut": "24771",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 0,
+        "amountIn": "1000000000000000000000000",
+        "amountOut": "24771",
+        "localAmountOut": "24771",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 0,
+        "amountIn": "10000000000000000000000000",
+        "amountOut": "24771",
+        "localAmountOut": "24771",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 0,
+        "amountIn": "25000000000000000000000000",
+        "amountOut": "24771",
+        "localAmountOut": "24771",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "100000000000",
+        "amountOut": "1914331688753458807",
+        "localAmountOut": "1914331688753458807",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "1000000000000",
+        "amountOut": "1914331688753458982",
+        "localAmountOut": "1914331688753458982",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "10000000000000",
+        "amountOut": "1914331688753458982",
+        "localAmountOut": "1914331688753458982",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "25000000000000",
+        "amountOut": "1914331688753458982",
+        "localAmountOut": "1914331688753458982",
+        "equal": true
+      }
+    ]
+  },
+  {
+    "poolId": "sonic:0x23efa8092dab315fa519bd9880597af56c5a9b12",
+    "chain": "sonic",
+    "blockNumber": 80376896,
+    "blockHash": "0x2bbf7ac542816504ec2d5bbc203760b5c3b4b09714c2bc587faf06e9f448d6ca",
+    "factory": "0x2da25e7446a70d7be65fd4c053948becaa6374c8",
+    "token0": "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38",
+    "token1": "0x29219dd400f2Bf60E5a23d13Be72B486D4038894",
+    "state": {
+      "reserve0": "1132477068887480221410",
+      "reserve1": "47208235",
+      "decimals0": 18,
+      "decimals1": 6,
+      "stable": false,
+      "fee": "4250",
+      "variant": "shadow"
+    },
+    "points": [
+      {
+        "tokenInIndex": 0,
+        "amountIn": "100000000000000000000000",
+        "amountOut": "46677367",
+        "localAmountOut": "46677367",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 0,
+        "amountIn": "1000000000000000000000000",
+        "amountOut": "47154604",
+        "localAmountOut": "47154604",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 0,
+        "amountIn": "10000000000000000000000000",
+        "amountOut": "47202865",
+        "localAmountOut": "47202865",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 0,
+        "amountIn": "25000000000000000000000000",
+        "amountOut": "47206086",
+        "localAmountOut": "47206086",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "100000000000",
+        "amountOut": "1131940419032519782879",
+        "localAmountOut": "1131940419032519782879",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "1000000000000",
+        "amountOut": "1132423381004889236375",
+        "localAmountOut": "1132423381004889236375",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "10000000000000",
+        "amountOut": "1132471699870142705047",
+        "localAmountOut": "1132471699870142705047",
+        "equal": true
+      },
+      {
+        "tokenInIndex": 1,
+        "amountIn": "25000000000000",
+        "amountOut": "1132474921274436179025",
+        "localAmountOut": "1132474921274436179025",
+        "equal": true
+      }
+    ]
+  }
+]

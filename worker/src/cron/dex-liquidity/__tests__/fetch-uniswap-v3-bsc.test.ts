@@ -51,24 +51,24 @@ function makeDb(): D1Database {
 
 function stateResults() {
   return [
-    { label: "univ3-bsc-0-factory", success: true, returnData: encoded("factory", FACTORY) },
-    { label: "univ3-bsc-0-token0", success: true, returnData: encoded("token0", USDT) },
-    { label: "univ3-bsc-0-token1", success: true, returnData: encoded("token1", USD1) },
-    { label: "univ3-bsc-0-fee", success: true, returnData: encoded("fee", 100) },
+    { label: "cl-0-factory", success: true, returnData: encoded("factory", FACTORY) },
+    { label: "cl-0-token0", success: true, returnData: encoded("token0", USDT) },
+    { label: "cl-0-token1", success: true, returnData: encoded("token1", USD1) },
+    { label: "cl-0-fee", success: true, returnData: encoded("fee", 100) },
     {
-      label: "univ3-bsc-0-slot0",
+      label: "cl-0-slot0",
       success: true,
       returnData: encoded("slot0", [1n << 96n, 0, 0, 0, 0, 0, true]),
     },
-    { label: "univ3-bsc-0-token-0-decimals", success: true, returnData: encoded("decimals", 18) },
+    { label: "cl-0-token-0-decimals", success: true, returnData: encoded("decimals", 18) },
     {
-      label: "univ3-bsc-0-token-0-balance",
+      label: "cl-0-token-0-balance",
       success: true,
       returnData: encoded("balanceOf", 1_000_000n * 10n ** 18n),
     },
-    { label: "univ3-bsc-0-token-1-decimals", success: true, returnData: encoded("decimals", 18) },
+    { label: "cl-0-token-1-decimals", success: true, returnData: encoded("decimals", 18) },
     {
-      label: "univ3-bsc-0-token-1-balance",
+      label: "cl-0-token-1-balance",
       success: true,
       returnData: encoded("balanceOf", 1_000_000n * 10n ** 18n),
     },
@@ -93,7 +93,8 @@ describe("Uniswap V3 BSC shadow staging recovery", () => {
     rpcMocks.fetchEvmMulticall3Aggregate3AtBlock
       .mockResolvedValueOnce(stateResults())
       .mockResolvedValueOnce([
-        { label: "univ3-bsc-binding-0", success: true, returnData: encoded("getPool", POOL) },
+        ...stateResults(),
+        { label: "cl-0-membership", success: true, returnData: encoded("getPool", POOL) },
       ]);
     const chainAddressToId = new Map([
       [`bsc:${USDT}`, "usdt-tether"],
@@ -157,8 +158,9 @@ describe("Uniswap V3 BSC shadow staging recovery", () => {
     rpcMocks.fetchEvmMulticall3Aggregate3AtBlock
       .mockResolvedValueOnce(stateResults())
       .mockResolvedValueOnce([
+        ...stateResults(),
         {
-          label: "univ3-bsc-binding-0",
+          label: "cl-0-membership",
           success: true,
           returnData: encoded("getPool", "0x0000000000000000000000000000000000000001"),
         },
@@ -181,7 +183,8 @@ describe("Uniswap V3 BSC shadow staging recovery", () => {
     rpcMocks.fetchEvmMulticall3Aggregate3AtBlock
       .mockResolvedValueOnce(stateResultsWithBalances(rawBalance))
       .mockResolvedValueOnce([
-        { label: "univ3-bsc-binding-0", success: true, returnData: encoded("getPool", POOL) },
+        ...stateResultsWithBalances(rawBalance),
+        { label: "cl-0-membership", success: true, returnData: encoded("getPool", POOL) },
       ]);
 
     const result = await fetchUniswapV3BscShadowPools({

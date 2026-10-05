@@ -50,7 +50,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "srUSD has a native Ethereum Savingcoin route and a separate Reservoir LayerZero V2 bridge route to the Berachain SrusdOft representation. The Ethereum MyOFTAdapter holds canonical srUSD and the Berachain OFT burns/mints under LayerZero message validation; the Reservoir EOA controls adapter/OFT administration and peer configuration. Current peer reads are asymmetric, so the route is not claimed as fully bidirectional or supply-conserving.",
+    "summary": "srUSD has a native Ethereum Savingcoin route and a separate Reservoir LayerZero V2 route to the Berachain SrusdOft representation. Rechecked 2026-10-05: the Ethereum adapter and Berachain OFT have reciprocal peers at the correct Berachain EID 30362; the old zero-peer observation queried unrelated EID 30181. Both legs retain the Reservoir owner EOA and an independent EndpointV2 configuration delegate EOA. Exact runtime/source correspondence establishes lock/unlock and remote burn/mint semantics, not a complete validator-controller, in-flight-liability or generation-bound materiality proof.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Pharos bridge-route boundary migration",
     "confidence": "manual-review",
@@ -89,7 +89,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native srUSD savings vault on Ethereum (4,585-byte token, no LayerZero endpoint). totalSupply $630M read 2026-07-20. At Ethereum block 25771151, the separate canonical-side MyOFTAdapter 0x316cd39632cac4f4cdfc21757c4500fe12f64514 returned this srUSD token from token(), is owned by Reservoir EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602, and had peers(30181) = 0; that adapter is bridge machinery attached to this native route, not an independent native issuer.",
+        "reviewNote": "Canonical Ethereum Savingcoin is native srUSD issuance. At Ethereum block 26124871, separate bridge adapter 0x316cd39632cac4f4cdfc21757c4500fe12f64514 returned this token from token(), and peers(30362) returned Berachain srUSD 0x5475611dffb8ef4d697ae39df9395513b6e947d7. The prior peers(30181)=0 observation queried the wrong destination EID and is not evidence of an inactive Berachain lane.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-16",
         "observedBlock": 25771151,
@@ -136,7 +136,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "NativeOFT srUSD: the token contract itself is the LayerZero OFT. At Berachain block 24955512, endpoint() returned the chain's LayerZero V2 endpoint, owner() returned Reservoir EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602, and peers(30101) returned Ethereum adapter 0x316cd39632cac4f4cdfc21757c4500fe12f64514. At Ethereum block 25771151, the adapter's peers(30181) returned zero, so the observed route is asymmetric and is not claimed as fully bidirectional or supply-conserving. The OFT burns/mints under LayerZero verification.",
+        "reviewNote": "At Berachain block 27086481, srUSD OFT peers(30101) returned Ethereum adapter 0x316cd39632cac4f4cdfc21757c4500fe12f64514; the adapter reciprocates at Ethereum block 26124871 using Berachain EID 30362. Verified OFT source-equivalent runtime establishes remote burn/mint with EndpointV2 and peer authentication. Independent block pins do not establish common-clock conservation or in-flight liabilities; no complete bridge execution certificate is claimed.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-16",
         "observedBlock": 24955512,
@@ -201,12 +201,12 @@
         "authorityType": "eoa",
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
-          "lockboxOrEscrow": "At Ethereum block 25771151, MyOFTAdapter token() returned canonical srUSD 0x738d1115b90efa71ae468f1287fc864775e23a31. It holds/releases canonical srUSD for the LayerZero route, while the Berachain SrusdOft representation burns/mints; this is bridge accounting, not an independent native srUSD issuance path.",
-          "trustedPeerOrRemote": "At Berachain block 24955512, SrusdOft peers(30101) returned Ethereum adapter 0x316cd39632cac4f4cdfc21757c4500fe12f64514. At Ethereum block 25771151, the adapter peers(30181) returned zero. The peer state is asymmetric, so a currently bidirectional or supply-conserving route is not proven; the owner can alter peer and LayerZero delegate/configuration state.",
+          "lockboxOrEscrow": "At Ethereum block 26124871, source/runtime-exact SrusdOftAdapter token() returned canonical srUSD 0x738d1115b90efa71ae468f1287fc864775e23a31. Its srUSD balance was raw 6446493124000000000000, equal to Berachain srUSD totalSupply at independent block 27086481. Escrow is a canonical supply subset. Equality at independent clocks is not a conservation or zero-in-flight proof.",
+          "trustedPeerOrRemote": "Rechecked 2026-10-05: at Ethereum block 26124871, adapter peers(30362) returned 0x5475611dffb8ef4d697ae39df9395513b6e947d7; at Berachain block 27086481, srUSD peers(30101) returned Ethereum adapter 0x316cd39632cac4f4cdfc21757c4500fe12f64514. The old zero-peer assertion queried EID 30181 rather than Berachain EID 30362. Current peer identity is reciprocal; complete endpoint verification and in-flight accounting remain separate questions.",
           "caps": "At Ethereum block 25881779 and Berachain block 25621562 on 2026-09-01, neither leg exposed a mint ceiling: cap(), maxSupply(), mintCap(), supplyCap(), mintingLimit(), bridgeLimit(), dailyLimit(), and mintLimit() all reverted on MyOFTAdapter 0x316cd39632cac4f4cdfc21757c4500fe12f64514 and on Berachain SrusdOft 0x5475611dffb8ef4d697ae39df9395513b6e947d7, whose EIP-1967 implementation slots were both zero, so neither contract is upgradeable and neither carries cap state. No cap bounds the route's burn/mint, and the owner's peer, delegate, and enforced-option authority is not cap-limited.",
           "pausersAdminsUpgraders": "At Ethereum block 25771151, the non-proxy adapter owner() returned Reservoir EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602, endpoint() returned LayerZero V2 0x1a44076050125825900e736c501f859c50fe728c, and msgInspector()/preCrime() returned zero. At Berachain block 24955512, the non-proxy OFT owner() returned the same EOA and its msgInspector()/preCrime() returned zero. The owner controls peer, enforced-options, message-inspector, pre-crime, delegate, and ownership setters; no adapter upgrade authority was separately evidenced."
         },
-        "capDescription": "The Reservoir EOA administers the Ethereum MyOFTAdapter and Berachain SrusdOft LayerZero route, including bridge burn/mint and peer configuration. The route's external LayerZero message-validation domain is material, and the asymmetric peer reads prevent claiming a fully bidirectional or supply-conserving route.",
+        "capDescription": "The Reservoir EOA administers the canonical adapter and Berachain srUSD OFT through peer, delegate, inspector, pre-crime, options and ownership setters. Current peer identity is reciprocal at independently pinned blocks; LayerZero verification, independent delegate powers and unmeasured in-flight liabilities still prevent a complete bridge-execution or conservation certificate.",
         "canRaiseCap": true,
         "bypassSurfaces": [
           "LayerZero Endpoint V2 and its DVN/executor message-validation domain are external to the Reservoir EOA; endpoint-level configuration was not independently enumerated."
@@ -237,9 +237,13 @@
           {
             "label": "LayerZero OFT technical reference",
             "url": "https://docs.layerzero.network/v2/developers/evm/technical-reference/oft-reference"
+          },
+          {
+            "label": "Fully verified srUSD adapter source/runtime rechecked 2026-10-05",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x316cd39632cac4f4cdfc21757c4500fe12f64514"
           }
         ],
-        "evidence": "At Ethereum block 25771151 (2026-08-16), the non-proxy MyOFTAdapter 0x316cd39632cac4f4cdfc21757c4500fe12f64514 was owned by code-empty EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602, returned canonical srUSD 0x738d1115b90efa71ae468f1287fc864775e23a31 and LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c, and peers(30181) returned zero. At Berachain block 24955512 (2026-08-16), non-proxy SrusdOft 0x5475611dffb8ef4d697ae39df9395513b6e947d7 was owned by the same EOA and peers(30101) returned the Ethereum adapter. The owner-controlled adapter/OFT bridge capabilities remain scoreable under Bridge Risk, while the asymmetric peer state leaves current route direction and operational status unresolved."
+        "evidence": "Rechecked 2026-10-05 at Ethereum block 26124871 and Berachain block 27086481. The canonical adapter runtime exactly matches Blockscout's fully verified SrusdOftAdapter (SHA256 c2c704a42552c88afef02bef5894b090ca23b06faec39789c87123407cec2da3); remote OFT runtime remains source-equivalent to the verified direct WsrusdOft after compiler-identified immutable normalization. Both owner() reads return 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 and both EndpointV2 delegates(app) reads return code-empty 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0. peers(30362) on Ethereum and peers(30101) on Berachain reciprocate. This corrects the prior wrong-EID asymmetry without inferring current validator-controller closure, protective custody or supply conservation."
       }
     ]
   }

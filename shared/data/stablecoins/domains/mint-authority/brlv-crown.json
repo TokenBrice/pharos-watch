@@ -66,70 +66,81 @@
         "address": "0x239d4a24efa36a8987b86184c080ace26b3a8968",
         "executionScope": {
           "controllerDeployment": "base:0x239d4a24efa36a8987b86184c080ace26b3a8968",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-10-31",
-          "reviewer": "DataMisc02",
-          "confidence": "partial",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-05",
+          "expiresAt": "2026-11-04",
+          "reviewer": "R13 source and creation-to-pin role census",
+          "confidence": "verified",
           "sources": [
-            {
-              "label": "Pinned native role reads and verified implementation source",
-              "url": "https://base.blockscout.com/address/0x1750731729b27cfd00ea55bc61e9dcfade2273f3"
-            }
+            { "label": "Exact BRLV implementation and inherited access/UUPS source", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x1750731729b27cfd00ea55bc61e9dcfade2273f3" },
+            { "label": "Underlying BRLY implementation; native token holds mint and burn roles", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5" },
+            { "label": "Base RPC role census and state at block 52199500", "url": "https://mainnet.base.org" }
           ],
-          "pin": {
-            "position": "0x31a345c",
-            "hash": null,
-            "runtimeIdentity": "0x",
-            "signerIdentity": "0x239d4a24efa36a8987b86184c080ace26b3a8968"
-          },
-          "observedState": {
-            "position": "0x31a345c",
-            "hash": null,
-            "runtimeIdentity": "0x",
-            "signerIdentity": "0x239d4a24efa36a8987b86184c080ace26b3a8968"
-          },
-          "inventory": "partial",
-          "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
-          },
+          "pin": { "position": "0x31c804c", "hash": "0x7f20bc54788ebd038c690e34e78405673180c5042c482148002307b825899a67", "runtimeIdentity": "0x", "signerIdentity": "0x239d4a24efa36a8987b86184c080ace26b3a8968" },
+          "observedState": { "position": "0x31c804c", "hash": "0x7f20bc54788ebd038c690e34e78405673180c5042c482148002307b825899a67", "runtimeIdentity": "0x", "signerIdentity": "0x239d4a24efa36a8987b86184c080ace26b3a8968" },
+          "inventory": "complete",
+          "closure": { "entrypoints": true, "mutableTargets": true, "delegateAndFallback": true, "permissions": true, "upgrades": true, "bypasses": true, "liabilityInventory": true },
           "paths": [
             {
               "id": "role-management",
               "targetDeployment": "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36",
               "entrypointKind": "evm-selector",
-              "entrypoints": [
-                "0x2f2ff15d",
-                "0xd547741f"
-              ],
+              "entrypoints": ["0x2f2ff15d", "0xd547741f", "0x36568abe"],
               "callMode": "call",
-              "capabilities": [
-                "parameter-change"
-              ],
-              "capSemantics": {
-                "kind": "unknown",
-                "bound": null
-              },
-              "claimImpairment": "unknown",
+              "capabilities": ["parameter-change"],
+              "capSemantics": { "kind": "unbounded", "bound": null },
+              "claimImpairment": "unbounded",
               "economicLossScope": "global-claim",
               "unavoidableDelaySec": 0,
               "activation": "active",
-              "affectedLiabilityIds": [
-                "brlv-crown"
-              ],
-              "affectedDeployments": [
-                "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
-              ],
+              "affectedLiabilityIds": ["brlv-crown"],
+              "affectedDeployments": ["base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36", "base:0x57323db6d883811c17877d075e05ad9e2ed41519"],
               "reach": "root",
-              "controlRefs": [],
+              "controlRefs": ["authorized-native-actions", "implementation-upgrade"],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "authorized-native-actions",
+              "targetDeployment": "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36",
+              "entrypointKind": "evm-selector",
+              "entrypoints": ["0x40c10f19", "0xf1310724", "0x528c198a", "0x9dc29fac", "0x085ce8d5", "0xee7a7c04", "0x8456cb59", "0x3f4ba83a"],
+              "callMode": "call",
+              "capabilities": ["mint", "burn", "freeze"],
+              "capSemantics": { "kind": "unbounded", "bound": null },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "disabled-reactivatable",
+              "affectedLiabilityIds": ["brlv-crown"],
+              "affectedDeployments": ["base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36", "base:0x57323db6d883811c17877d075e05ad9e2ed41519"],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": ["role-management"],
+              "permissionChangeRefs": ["role-management"],
+              "upgradeRefs": ["implementation-upgrade"],
+              "bypassRefs": []
+            },
+            {
+              "id": "implementation-upgrade",
+              "targetDeployment": "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36",
+              "entrypointKind": "evm-selector",
+              "entrypoints": ["0x3659cfe6", "0x4f1ef286"],
+              "callMode": "call",
+              "capabilities": ["upgrade", "mint", "burn", "freeze", "parameter-change"],
+              "capSemantics": { "kind": "unbounded", "bound": null },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "disabled-reactivatable",
+              "affectedLiabilityIds": ["brlv-crown"],
+              "affectedDeployments": ["base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36", "base:0x57323db6d883811c17877d075e05ad9e2ed41519"],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": ["role-management"],
+              "permissionChangeRefs": ["role-management"],
               "upgradeRefs": [],
               "bypassRefs": []
             }
@@ -164,71 +175,63 @@
         "address": "0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea",
         "executionScope": {
           "controllerDeployment": "base:0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-10-31",
-          "reviewer": "DataMisc02",
-          "confidence": "partial",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-05",
+          "expiresAt": "2026-11-04",
+          "reviewer": "R13 source and creation-to-pin role census",
+          "confidence": "verified",
           "sources": [
-            {
-              "label": "Pinned native role reads and verified implementation source",
-              "url": "https://base.blockscout.com/address/0x1750731729b27cfd00ea55bc61e9dcfade2273f3"
-            }
+            { "label": "BRLV exact native mint and inherited source", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x1750731729b27cfd00ea55bc61e9dcfade2273f3" },
+            { "label": "UniversalGaslessDelegate runtime-corresponding source; EOA signature and self-call authorization", "url": "https://sourcify.dev/server/v2/contract/8453/0x0000fb7702036ff9f76044a501ac1aa74cbab16b?fields=all" },
+            { "label": "Underlying BRLY mint authorization", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5" },
+            { "label": "Base RPC state and complete role histories at block 52199500", "url": "https://mainnet.base.org" }
           ],
-          "pin": {
-            "position": "0x31a345c",
-            "hash": null,
-            "runtimeIdentity": "0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b",
-            "signerIdentity": "0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea"
-          },
-          "observedState": {
-            "position": "0x31a345c",
-            "hash": null,
-            "runtimeIdentity": "0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b",
-            "signerIdentity": "0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea"
-          },
-          "inventory": "partial",
-          "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
-          },
+          "pin": { "position": "0x31c804c", "hash": "0x7f20bc54788ebd038c690e34e78405673180c5042c482148002307b825899a67", "runtimeIdentity": "0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b", "signerIdentity": "0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea" },
+          "observedState": { "position": "0x31c804c", "hash": "0x7f20bc54788ebd038c690e34e78405673180c5042c482148002307b825899a67", "runtimeIdentity": "0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b", "signerIdentity": "0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea" },
+          "inventory": "complete",
+          "closure": { "entrypoints": true, "mutableTargets": true, "delegateAndFallback": true, "permissions": true, "upgrades": true, "bypasses": true, "liabilityInventory": true },
           "paths": [
             {
               "id": "native-mint",
               "targetDeployment": "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36",
               "entrypointKind": "evm-selector",
-              "entrypoints": [
-                "0x40c10f19"
-              ],
+              "entrypoints": ["0x40c10f19", "0xf1310724", "0x528c198a"],
               "callMode": "call",
-              "capabilities": [
-                "mint"
-              ],
-              "capSemantics": {
-                "kind": "unknown",
-                "bound": null
-              },
-              "claimImpairment": "unknown",
+              "capabilities": ["mint"],
+              "capSemantics": { "kind": "unbounded", "bound": null },
+              "claimImpairment": "unbounded",
               "economicLossScope": "global-claim",
               "unavoidableDelaySec": 0,
               "activation": "active",
-              "affectedLiabilityIds": [
-                "brlv-crown"
-              ],
-              "affectedDeployments": [
-                "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
-              ],
+              "affectedLiabilityIds": ["brlv-crown"],
+              "affectedDeployments": ["base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36", "base:0x57323db6d883811c17877d075e05ad9e2ed41519"],
               "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
               "bypassRefs": []
+            },
+            {
+              "id": "signed-or-self-gasless-execution",
+              "targetDeployment": "base:0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea",
+              "entrypointKind": "evm-selector",
+              "entrypoints": ["0xe9ae5c53"],
+              "callMode": "call",
+              "capabilities": ["mint"],
+              "capSemantics": { "kind": "unbounded", "bound": null },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": ["brlv-crown"],
+              "affectedDeployments": ["base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36", "base:0x57323db6d883811c17877d075e05ad9e2ed41519"],
+              "reach": "root",
+              "controlRefs": ["native-mint"],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": ["native-mint"]
             }
           ]
         },
@@ -281,66 +284,35 @@
         "address": "0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a",
         "executionScope": {
           "controllerDeployment": "base:0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-10-31",
-          "reviewer": "DataMisc02",
-          "confidence": "partial",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-05",
+          "expiresAt": "2026-11-04",
+          "reviewer": "R13 source and creation-to-pin role census",
+          "confidence": "verified",
           "sources": [
-            {
-              "label": "Pinned native role reads and verified implementation source",
-              "url": "https://base.blockscout.com/address/0x1750731729b27cfd00ea55bc61e9dcfade2273f3"
-            }
+            { "label": "Exact BRLV and UUPS upgrade authorization source", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x1750731729b27cfd00ea55bc61e9dcfade2273f3" },
+            { "label": "Underlying BRLY source and token-authorized collateral mint/burn", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5" },
+            { "label": "Base RPC role census, EOA code and proxy slots at block 52199500", "url": "https://mainnet.base.org" }
           ],
-          "pin": {
-            "position": "0x31a345c",
-            "hash": null,
-            "runtimeIdentity": "0x",
-            "signerIdentity": "0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a"
-          },
-          "observedState": {
-            "position": "0x31a345c",
-            "hash": null,
-            "runtimeIdentity": "0x",
-            "signerIdentity": "0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a"
-          },
-          "inventory": "partial",
-          "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
-          },
+          "pin": { "position": "0x31c804c", "hash": "0x7f20bc54788ebd038c690e34e78405673180c5042c482148002307b825899a67", "runtimeIdentity": "0x", "signerIdentity": "0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a" },
+          "observedState": { "position": "0x31c804c", "hash": "0x7f20bc54788ebd038c690e34e78405673180c5042c482148002307b825899a67", "runtimeIdentity": "0x", "signerIdentity": "0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a" },
+          "inventory": "complete",
+          "closure": { "entrypoints": true, "mutableTargets": true, "delegateAndFallback": true, "permissions": true, "upgrades": true, "bypasses": true, "liabilityInventory": true },
           "paths": [
             {
               "id": "implementation-upgrade",
               "targetDeployment": "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36",
               "entrypointKind": "evm-selector",
-              "entrypoints": [
-                "0x3659cfe6",
-                "0x4f1ef286"
-              ],
+              "entrypoints": ["0x3659cfe6", "0x4f1ef286"],
               "callMode": "call",
-              "capabilities": [
-                "upgrade"
-              ],
-              "capSemantics": {
-                "kind": "unknown",
-                "bound": null
-              },
-              "claimImpairment": "unknown",
+              "capabilities": ["upgrade", "mint", "burn", "freeze", "parameter-change"],
+              "capSemantics": { "kind": "unbounded", "bound": null },
+              "claimImpairment": "unbounded",
               "economicLossScope": "global-claim",
               "unavoidableDelaySec": 0,
               "activation": "active",
-              "affectedLiabilityIds": [
-                "brlv-crown"
-              ],
-              "affectedDeployments": [
-                "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
-              ],
+              "affectedLiabilityIds": ["brlv-crown"],
+              "affectedDeployments": ["base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36", "base:0x57323db6d883811c17877d075e05ad9e2ed41519"],
               "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
@@ -378,66 +350,35 @@
         "address": "0x548634f237eae194f5e20982c9819d917fe17f04",
         "executionScope": {
           "controllerDeployment": "base:0x548634f237eae194f5e20982c9819d917fe17f04",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-10-31",
-          "reviewer": "DataMisc02",
-          "confidence": "partial",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-05",
+          "expiresAt": "2026-11-04",
+          "reviewer": "R13 source and creation-to-pin role census",
+          "confidence": "verified",
           "sources": [
-            {
-              "label": "Pinned native role reads and verified implementation source",
-              "url": "https://base.blockscout.com/address/0x6818b4b2c3cc572726aed81a836b5e069519ad0a"
-            }
+            { "label": "Exact BRLVRewards and UUPS upgrade authorization source", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x6818b4b2c3cc572726aed81a836b5e069519ad0a" },
+            { "label": "Exact BRLV source; rewards holds both MINTER_ROLE and BURNER_ROLE", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x1750731729b27cfd00ea55bc61e9dcfade2273f3" },
+            { "label": "Base RPC role census, EOA code and proxy slots at block 52199500", "url": "https://mainnet.base.org" }
           ],
-          "pin": {
-            "position": "0x31a345c",
-            "hash": null,
-            "runtimeIdentity": "0x",
-            "signerIdentity": "0x548634f237eae194f5e20982c9819d917fe17f04"
-          },
-          "observedState": {
-            "position": "0x31a345c",
-            "hash": null,
-            "runtimeIdentity": "0x",
-            "signerIdentity": "0x548634f237eae194f5e20982c9819d917fe17f04"
-          },
-          "inventory": "partial",
-          "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
-          },
+          "pin": { "position": "0x31c804c", "hash": "0x7f20bc54788ebd038c690e34e78405673180c5042c482148002307b825899a67", "runtimeIdentity": "0x", "signerIdentity": "0x548634f237eae194f5e20982c9819d917fe17f04" },
+          "observedState": { "position": "0x31c804c", "hash": "0x7f20bc54788ebd038c690e34e78405673180c5042c482148002307b825899a67", "runtimeIdentity": "0x", "signerIdentity": "0x548634f237eae194f5e20982c9819d917fe17f04" },
+          "inventory": "complete",
+          "closure": { "entrypoints": true, "mutableTargets": true, "delegateAndFallback": true, "permissions": true, "upgrades": true, "bypasses": true, "liabilityInventory": true },
           "paths": [
             {
               "id": "implementation-upgrade",
               "targetDeployment": "base:0x5315c03f8cf027d1b67dac72ef9eec8988d80f88",
               "entrypointKind": "evm-selector",
-              "entrypoints": [
-                "0x3659cfe6",
-                "0x4f1ef286"
-              ],
+              "entrypoints": ["0x3659cfe6", "0x4f1ef286"],
               "callMode": "call",
-              "capabilities": [
-                "upgrade"
-              ],
-              "capSemantics": {
-                "kind": "unknown",
-                "bound": null
-              },
-              "claimImpairment": "unknown",
+              "capabilities": ["upgrade", "mint", "burn", "parameter-change"],
+              "capSemantics": { "kind": "unbounded", "bound": null },
+              "claimImpairment": "unbounded",
               "economicLossScope": "global-claim",
               "unavoidableDelaySec": 0,
               "activation": "active",
-              "affectedLiabilityIds": [
-                "brlv-crown"
-              ],
-              "affectedDeployments": [
-                "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
-              ],
+              "affectedLiabilityIds": ["brlv-crown"],
+              "affectedDeployments": ["base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36", "base:0x57323db6d883811c17877d075e05ad9e2ed41519"],
               "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
@@ -472,73 +413,190 @@
       },
       {
         "chain": "base",
+        "address": "0x09dd8946662a9d60dbba9538d211cf45f819faba",
+        "deploymentRefs": [
+          "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+        ],
+        "label": "BRLV Base BURNER_ROLE — gasless relay EOA 0x09dd89",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-05",
+        "observedBlock": 52199500,
+        "sources": [
+          { "label": "Exact BRLV arbitrary-from burn, collateral burn and share burn implementation", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x1750731729b27cfd00ea55bc61e9dcfade2273f3" },
+          { "label": "Underlying BRLY source; native BRLV proxy holds BURNER_ROLE", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5" },
+          { "label": "UniversalGaslessDelegate runtime-corresponding execution authorization", "url": "https://sourcify.dev/server/v2/contract/8453/0x0000fb7702036ff9f76044a501ac1aa74cbab16b?fields=all" },
+          { "label": "Base pin 52199500 role, code and creation-to-pin grant census", "url": "https://mainnet.base.org" }
+        ],
+        "evidence": "At Base block 52199500/hash 0x7f20bc54788ebd038c690e34e78405673180c5042c482148002307b825899a67, hasRole(BURNER_ROLE) is true for this EOA and MINTER_ROLE/UPGRADE_ROLE/PAUSE_ROLE are false. The complete native token RoleGranted/RoleRevoked census records its grant by DEFAULT_ADMIN 0x239d4a in transaction 0x6743b5e85bd2e65ade33cc19ee86139c87422710daeb0e7836914885e9ddc749; the role admin is DEFAULT_ADMIN. Its runtime is the EIP-7702 designation to UniversalGaslessDelegate. Verified BRLV burn(address,uint256) and burnShares(address,uint256) destroy arbitrary holders' shares without their approval; burnAssets(uint256) destroys the root vault's BRLY collateral without retiring BRLV shares. The native BRLV proxy's parent BURNER_ROLE makes that collateral call executable. Amounts are balance-limited, not bounded to the operator's holdings or to a fixed loss ceiling: all holder claims and root collateral are reachable. The delegate requires this EOA's signature or a self-call; direct signer transactions bypass delegate-only KillSwitch restrictions. This is unbounded native claim impairment and zero-delay destructive authority, not mint ability or a bridge-only burn exemption.",
+        "executionScope": {
+          "controllerDeployment": "base:0x09dd8946662a9d60dbba9538d211cf45f819faba",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-05",
+          "expiresAt": "2026-11-04",
+          "reviewer": "R13 verifier correction; source and creation-to-pin role census",
+          "confidence": "verified",
+          "sources": [
+            { "label": "Exact BRLV arbitrary-from and underlying collateral burn source", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x1750731729b27cfd00ea55bc61e9dcfade2273f3" },
+            { "label": "Underlying BRLY burn authorization and root liability reach", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5" },
+            { "label": "Verified UniversalGaslessDelegate source and pinned designation", "url": "https://sourcify.dev/server/v2/contract/8453/0x0000fb7702036ff9f76044a501ac1aa74cbab16b?fields=all" },
+            { "label": "Pinned Base role and controller-runtime reads", "url": "https://mainnet.base.org" }
+          ],
+          "pin": { "position": "0x31c804c", "hash": "0x7f20bc54788ebd038c690e34e78405673180c5042c482148002307b825899a67", "runtimeIdentity": "0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b", "signerIdentity": "0x09dd8946662a9d60dbba9538d211cf45f819faba" },
+          "observedState": { "position": "0x31c804c", "hash": "0x7f20bc54788ebd038c690e34e78405673180c5042c482148002307b825899a67", "runtimeIdentity": "0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b", "signerIdentity": "0x09dd8946662a9d60dbba9538d211cf45f819faba" },
+          "inventory": "complete",
+          "closure": { "entrypoints": true, "mutableTargets": true, "delegateAndFallback": true, "permissions": true, "upgrades": true, "bypasses": true, "liabilityInventory": true },
+          "paths": [
+            {
+              "id": "canonical-burn",
+              "targetDeployment": "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36",
+              "entrypointKind": "evm-selector",
+              "entrypoints": ["0x9dc29fac", "0x085ce8d5", "0xee7a7c04"],
+              "callMode": "call",
+              "capabilities": ["burn", "seize"],
+              "capSemantics": { "kind": "not-applicable", "bound": null },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": ["brlv-crown"],
+              "affectedDeployments": ["base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36", "base:0x57323db6d883811c17877d075e05ad9e2ed41519"],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "signed-or-self-gasless-execution",
+              "targetDeployment": "base:0x09dd8946662a9d60dbba9538d211cf45f819faba",
+              "entrypointKind": "evm-selector",
+              "entrypoints": ["0xe9ae5c53"],
+              "callMode": "call",
+              "capabilities": ["burn", "seize"],
+              "capSemantics": { "kind": "not-applicable", "bound": null },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": ["brlv-crown"],
+              "affectedDeployments": ["base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36", "base:0x57323db6d883811c17877d075e05ad9e2ed41519"],
+              "reach": "root",
+              "controlRefs": ["canonical-burn"],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": ["canonical-burn"]
+            }
+          ]
+        }
+      },
+      {
+        "chain": "base",
         "address": "0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f",
         "executionScope": {
           "controllerDeployment": "base:0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-10-31",
-          "reviewer": "DataMisc02",
-          "confidence": "partial",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-05",
+          "expiresAt": "2026-11-04",
+          "reviewer": "R13 source and creation-to-pin role census",
+          "confidence": "verified",
           "sources": [
-            {
-              "label": "Pinned native role reads and verified implementation source",
-              "url": "https://base.blockscout.com/address/0x6818b4b2c3cc572726aed81a836b5e069519ad0a"
-            }
+            { "label": "Exact rewards role administration and arbitrary implementation replacement", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x6818b4b2c3cc572726aed81a836b5e069519ad0a" },
+            { "label": "Exact BRLV mint/burn calls available to a replacement rewards implementation", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x1750731729b27cfd00ea55bc61e9dcfade2273f3" },
+            { "label": "Base RPC creation-to-pin role histories and EOA code at block 52199500", "url": "https://mainnet.base.org" }
           ],
-          "pin": {
-            "position": "0x31a345c",
-            "hash": null,
-            "runtimeIdentity": "0x",
-            "signerIdentity": "0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f"
-          },
-          "observedState": {
-            "position": "0x31a345c",
-            "hash": null,
-            "runtimeIdentity": "0x",
-            "signerIdentity": "0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f"
-          },
-          "inventory": "partial",
-          "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
-          },
+          "pin": { "position": "0x31c804c", "hash": "0x7f20bc54788ebd038c690e34e78405673180c5042c482148002307b825899a67", "runtimeIdentity": "0x", "signerIdentity": "0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f" },
+          "observedState": { "position": "0x31c804c", "hash": "0x7f20bc54788ebd038c690e34e78405673180c5042c482148002307b825899a67", "runtimeIdentity": "0x", "signerIdentity": "0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f" },
+          "inventory": "complete",
+          "closure": { "entrypoints": true, "mutableTargets": true, "delegateAndFallback": true, "permissions": true, "upgrades": true, "bypasses": true, "liabilityInventory": true },
           "paths": [
             {
               "id": "role-management",
               "targetDeployment": "base:0x5315c03f8cf027d1b67dac72ef9eec8988d80f88",
               "entrypointKind": "evm-selector",
-              "entrypoints": [
-                "0x2f2ff15d",
-                "0xd547741f"
-              ],
+              "entrypoints": ["0x2f2ff15d", "0xd547741f", "0x36568abe"],
               "callMode": "call",
-              "capabilities": [
-                "parameter-change"
-              ],
-              "capSemantics": {
-                "kind": "unknown",
-                "bound": null
-              },
-              "claimImpairment": "unknown",
+              "capabilities": ["parameter-change"],
+              "capSemantics": { "kind": "unbounded", "bound": null },
+              "claimImpairment": "unbounded",
               "economicLossScope": "global-claim",
               "unavoidableDelaySec": 0,
               "activation": "active",
-              "affectedLiabilityIds": [
-                "brlv-crown"
-              ],
-              "affectedDeployments": [
-                "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
-              ],
+              "affectedLiabilityIds": ["brlv-crown"],
+              "affectedDeployments": ["base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36", "base:0x57323db6d883811c17877d075e05ad9e2ed41519"],
               "reach": "root",
-              "controlRefs": [],
+              "controlRefs": ["implementation-upgrade", "authorized-canonical-rewards", "authorized-rewards-pause"],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "authorized-canonical-rewards",
+              "targetDeployment": "base:0x5315c03f8cf027d1b67dac72ef9eec8988d80f88",
+              "entrypointKind": "evm-selector",
+              "entrypoints": ["0x74e7a84d", "0x0b515b53"],
+              "callMode": "call",
+              "capabilities": ["mint", "burn"],
+              "capSemantics": { "kind": "collateral-gated", "bound": null },
+              "claimImpairment": "bounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "disabled-reactivatable",
+              "affectedLiabilityIds": ["brlv-crown"],
+              "affectedDeployments": ["base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36", "base:0x57323db6d883811c17877d075e05ad9e2ed41519"],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": ["role-management"],
+              "permissionChangeRefs": ["role-management"],
+              "upgradeRefs": ["implementation-upgrade"],
+              "bypassRefs": ["implementation-upgrade"]
+            },
+            {
+              "id": "authorized-rewards-pause",
+              "targetDeployment": "base:0x5315c03f8cf027d1b67dac72ef9eec8988d80f88",
+              "entrypointKind": "evm-selector",
+              "entrypoints": ["0x8456cb59", "0x3f4ba83a"],
+              "callMode": "call",
+              "capabilities": ["freeze"],
+              "capSemantics": { "kind": "not-applicable", "bound": null },
+              "claimImpairment": "none",
+              "economicLossScope": "access-only",
+              "unavoidableDelaySec": 0,
+              "activation": "disabled-reactivatable",
+              "affectedLiabilityIds": ["brlv-crown"],
+              "affectedDeployments": ["base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": ["role-management"],
+              "permissionChangeRefs": ["role-management"],
+              "upgradeRefs": ["implementation-upgrade"],
+              "bypassRefs": ["implementation-upgrade"]
+            },
+            {
+              "id": "implementation-upgrade",
+              "targetDeployment": "base:0x5315c03f8cf027d1b67dac72ef9eec8988d80f88",
+              "entrypointKind": "evm-selector",
+              "entrypoints": ["0x3659cfe6", "0x4f1ef286"],
+              "callMode": "call",
+              "capabilities": ["upgrade", "mint", "burn", "parameter-change"],
+              "capSemantics": { "kind": "unbounded", "bound": null },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "disabled-reactivatable",
+              "affectedLiabilityIds": ["brlv-crown"],
+              "affectedDeployments": ["base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36", "base:0x57323db6d883811c17877d075e05ad9e2ed41519"],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": ["role-management"],
+              "permissionChangeRefs": ["role-management"],
               "upgradeRefs": [],
               "bypassRefs": []
             }
@@ -598,13 +656,14 @@
           "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_5_2026_79d38795ea.pdf"
         }
       ],
-        "evidence": "At Base block 50068610, the canonical BRLV proxy resolves through a zero EIP-1967 admin slot to verified implementation 0x1750731729b27cfd00ea55bc61e9dcfade2273f3; the shared DEFAULT_ADMIN EOA 0x239d4a can manage Base minters and grant UPGRADE_ROLE, while active Base UPGRADE_ROLE EOA 0xcdfc72 provides an immediate token upgrade path. Base's issuer relay directly mints, and BRLVRewards retains its canonical-domain surplus-bounded reward branch; the rewards proxy has active and role-admin upgrade EOAs with zero delay. Ethereum bridgedBRLV, the Base canonical gateway's remote mint/burn machinery, and their bridge administrators are retained as structured Bridge Risk controls rather than compiled into canonical Mint Authority. Crown backs BRLV with segregated Brazilian federal Treasury bonds and Tesouro Selic ETFs; Fact Finance performs daily independent reserve verification with full liability reconciliation published on Crown's transparency page, so supply is continuously reconciled. Reserve custody sits at BCB-regulated banks, but that is custodial regulation, not issuer supervision: no BCB or CVM registry names Crown/BRLV as a licensed stablecoin issuer, so supervision is attestation-only and BRLV remains in the high tier.",
+        "evidence": "At Base block 50068610, the canonical BRLV proxy resolves through a zero EIP-1967 admin slot to verified implementation 0x1750731729b27cfd00ea55bc61e9dcfade2273f3; the shared DEFAULT_ADMIN EOA 0x239d4a can manage Base minters and grant UPGRADE_ROLE, while active Base UPGRADE_ROLE EOA 0xcdfc72 provides an immediate token upgrade path. Base's issuer relay directly mints, and BRLVRewards retains its canonical-domain surplus-bounded reward branch; the rewards proxy has active and role-admin upgrade EOAs with zero delay. Ethereum bridgedBRLV, the Base canonical gateway's remote mint/burn machinery, and their bridge administrators are retained as structured Bridge Risk controls rather than compiled into canonical Mint Authority. Crown backs BRLV with segregated Brazilian federal Treasury bonds and Tesouro Selic ETFs; Fact Finance performs daily independent reserve verification with full liability reconciliation published on Crown's transparency page, so supply is continuously reconciled. Reserve custody sits at BCB-regulated banks, but that is custodial regulation, not issuer supervision: no BCB or CVM registry names Crown/BRLV as a licensed stablecoin issuer, so supervision is attestation-only and BRLV remains in the high tier. R13's 2026-10-05 inventory correction at Base block 52199500 additionally authors BURNER_ROLE EOA 0x09dd8946662a9d60dbba9538d211cf45f819faba: arbitrary-from share burn and root collateral burn retain unbounded claim impairment in a complete 7702/direct-signer scope. The complete token census also identifies CLAIM_ROLE holder 0x38e47312ad5745c06fe097f997057dee31453737. This holder is explicitly excluded from executable native authority at this pin, not overlooked: verified inherited YieldStripping claimRewards, claimRewardsV2 and claimTax unconditionally revert, and BRLV's corresponding internal overrides also unconditionally revert. A CLAIM_ROLE grant alone cannot reactivate those entrypoints; native UUPS administrators can replace the implementation and are already inventoried with unrestricted root reach. No independent mint/burn/admin/upgrade authority is attributed to this dormant claim role.",
         "reviewer": "Codex mint/bridge boundary migration; verified finding 2026-08-16",
         "reviewedAt": "2026-08-16",
       "scopedQuestions": [
         {
           "controlRef": "base:0x239d4a24efa36a8987b86184c080ace26b3a8968",
           "question": "Does Crown’s disclosed Fireblocks virtual-asset custody infrastructure protect this specific native issuance or mint-logic upgrade key, and under which MPC/HSM and approval policy? The September 18 terms name the provider but do not bind it to this address.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2VMisc02)",
           "sources": [
@@ -617,6 +676,7 @@
         {
           "controlRef": "base:0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea",
           "question": "Does Crown’s disclosed Fireblocks virtual-asset custody infrastructure protect this specific native issuance or mint-logic upgrade key, and under which MPC/HSM and approval policy? The September 18 terms name the provider but do not bind it to this address.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2VMisc02)",
           "sources": [
@@ -629,6 +689,7 @@
         {
           "controlRef": "base:0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a",
           "question": "Does Crown’s disclosed Fireblocks virtual-asset custody infrastructure protect this specific native issuance or mint-logic upgrade key, and under which MPC/HSM and approval policy? The September 18 terms name the provider but do not bind it to this address.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2VMisc02)",
           "sources": [
@@ -641,6 +702,7 @@
         {
           "controlRef": "base:0x548634f237eae194f5e20982c9819d917fe17f04",
           "question": "Does Crown’s disclosed Fireblocks virtual-asset custody infrastructure protect this specific native issuance or mint-logic upgrade key, and under which MPC/HSM and approval policy? The September 18 terms name the provider but do not bind it to this address.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2VMisc02)",
           "sources": [
@@ -653,6 +715,7 @@
         {
           "controlRef": "base:0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f",
           "question": "Does Crown’s disclosed Fireblocks virtual-asset custody infrastructure protect this specific native issuance or mint-logic upgrade key, and under which MPC/HSM and approval policy? The September 18 terms name the provider but do not bind it to this address.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2VMisc02)",
           "sources": [

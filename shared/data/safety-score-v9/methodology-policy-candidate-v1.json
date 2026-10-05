@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "10.07",
+  "releaseVersion": "10.08",
   "semantic": {
     "accessLookthrough": {
       "edgeKinds": ["reserve-position", "receipt", "bridge-representation"],
@@ -357,6 +357,8 @@
       "serialRequiredPathsAlwaysBind": true,
       "basketExposureTreatment": "proportional",
       "deploymentMaterialSharePct": 10,
+      "haltedChainMinStallSec": 1209600,
+      "nativeInventoryUnmatchedDustShareMax": 0.00001,
       "unresolvedDeploymentBlendStartSharePct": 5,
       "unresolvedDeploymentFullCeilingSharePct": 15,
       "commonModeOracleMinBranches": 2,
@@ -402,7 +404,7 @@
       "reserve": {
         "maxUnclassifiedCuratedResidualPct": 100,
         "boundedFacts": {
-          "factKinds": ["contractual-maturity-maximum", "observed-portfolio-maturity", "eligibility-envelope", "currently-liquid-fraction", "maturity-applicability", "stressed-realization-bound"],
+          "factKinds": ["contractual-maturity-maximum", "observed-portfolio-maturity", "eligibility-envelope", "currently-liquid-fraction", "maturity-applicability", "stressed-realization-bound", "business-calendar-liquidity"],
           "scopeKinds": ["reserve-envelope", "exposure", "sub-instrument"],
           "termUnits": ["days", "calendar-months"],
           "observedMaturityQualityLevel": "limited",
@@ -843,6 +845,16 @@
           "futureSkewSec": 60,
           "permittedBases": ["transaction-simulation"],
           "maximumCertification": "exact-lower-bound"
+        },
+        "erc4626-instant": {
+          "admission": "enabled",
+          "requiredGates": ["implementation", "holder-eligibility", "state-override", "liquidity", "fees", "execution", "settlement"],
+          "exactRequestRequired": true,
+          "sourceMaxAgeSec": 18000,
+          "priceMaxAgeSec": 18000,
+          "futureSkewSec": 60,
+          "permittedBases": ["transaction-simulation"],
+          "maximumCertification": "exact-complete"
         },
         "mento-broker": { "admission": "research-only", "requiredGates": ["execution", "trading-limits", "oracle", "breaker", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation"], "maximumCertification": "diagnostic" },
         "cdp-holder-redemption": { "admission": "research-only", "requiredGates": ["execution", "holder-right", "debt", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation"], "maximumCertification": "diagnostic" },

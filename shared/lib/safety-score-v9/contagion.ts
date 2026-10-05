@@ -24,9 +24,10 @@ export function evaluateV9ContagionScenario(input: V9ContagionInput, definition:
   for (const shock of scenario.shocks) {
     if (!input.rawCompileInput.activeAssetIds.includes(shock.assetId)) throw new Error(`Unknown scenario root: ${shock.assetId}`);
   }
-  // Release full baseline traces/facts before constructing the hypothetical set.
+  const baselineFacts = compileV9FactSetV3(input.rawCompileInput);
+  // Release full baseline traces before constructing the hypothetical set.
   const baseline = (() => {
-    const result = evaluateValidatedV9FactSet(compileV9FactSetV3(input.rawCompileInput), input.policy);
+    const result = evaluateValidatedV9FactSet(baselineFacts, input.policy);
     return {
       policyDigest: result.policyDigest, evaluationBuildDigest: result.evaluationBuildDigest,
       factSetDigest: result.factSetDigest,
@@ -38,13 +39,14 @@ export function evaluateV9ContagionScenario(input: V9ContagionInput, definition:
       })),
     };
   })();
-  // Break interned aliases within and across assets before mutations. Clone one
-  // JSON DTO at a time so the full registry's serialized text never overlaps
-  // the decoded hypothetical graph (structuredClone would preserve aliases).
-  const { assets, ...envelope } = input.rawCompileInput;
+  // Only fact-changing roots need mutable DTOs. The other compiler-admitted
+  // rows are immutable and can retain their admission proof. JSON cloning each
+  // changed root also breaks interned aliases between its fields before writes.
+  const changedRoots = new Set(scenario.shocks.filter((shock) => shock.kind !== "score-limit").map((shock) => shock.assetId));
+  const { v9FactSetDigest: _digest, assets, ...envelope } = baselineFacts;
   const raw: V9FactSetCoreV3 = {
-    ...JSON.parse(JSON.stringify(envelope)),
-    assets: assets.map((asset) => JSON.parse(JSON.stringify(asset))),
+    ...envelope,
+    assets: changedRoots.size === 0 ? assets : assets.map((asset) => changedRoots.has(asset.assetId) ? JSON.parse(JSON.stringify(asset)) : asset),
   };
   for (const shock of scenario.shocks) {
     const asset = raw.assets.find((row) => row.assetId === shock.assetId)!;
@@ -103,7 +105,9 @@ export function evaluateV9ContagionScenario(input: V9ContagionInput, definition:
     asset.gaps = gaps.filter((gap) => references.has(gap.gapId));
   }
   const failures = new Map<string, string>();
-  const evaluated = evaluateValidatedV9FactSet(compileV9FactSetV3(raw), input.policy, {
+  // Projection-only shocks do not change any fact or its digest.
+  const hypotheticalFacts = changedRoots.size === 0 ? baselineFacts : compileV9FactSetV3(raw);
+  const evaluated = evaluateValidatedV9FactSet(hypotheticalFacts, input.policy, {
     projectUpstream(result) {
       let projected = result;
       for (const shock of scenario.shocks) {

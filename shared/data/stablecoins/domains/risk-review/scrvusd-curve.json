@@ -57,9 +57,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "Ethereum and nine issuer-documented satellites remain inventoried. Independent 2026-10-02 hash-pinned reads confirm zero BSC receipts at finalized block 125273587, zero Avalanche receipts at finalized block 96594468, zero Fantom receipts at latest block 123522611, and nonzero Fraxtal receipts at finalized block 42061750. Fantom's finalized tag remains unsupported; the public Fraxtal RPC succeeds despite the authored observer run lacking a configured endpoint. Zero receipts do not prove zero pending liabilities. Curve documents Delayed/Issued transfers and retry; the verified Avalanche bridge ABI exposes delayed(nonce) as a bytes32 commitment, not an enumerable pending-amount queue. Complete authenticated pending coverage for every satellite is unresolved, so no economic attribution plan, immateriality or local-loss exclusion is asserted.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol curation pass 2026-10-02 (BuildPendingObserver)",
+    "summary": "Canonical Ethereum and nine documented satellites remain inventoried. The 2026-10-05 asset-specific incident review closes Optimism, Base, Fraxtal, Fantom, BSC, Sonic, Avalanche and XDC using complete pinned issuance histories and direct canonical counterpart evidence, alongside issuer disclosures, audits and incident reporting. Base retains one directly confirmed unfinalized withdrawal; Avalanche and XDC retain authenticated delayed claims whose exact retry calls succeed in read-only pinned simulations, not actual redemptions. Existing adverse upgrade-mediated and owner-grantable uncapped representation mint powers remain. Etherlink remains unresolved; no complete execution-scope, signer independence, aggregate pending-liability conservation, materiality exclusion or circulating-supply partition is certified.",
+    "reviewedAt": "2026-10-05",
+    "reviewer": "Wave 4 R03 asset-specific bridge control and incident review",
     "confidence": "unknown",
     "sources": [
       {
@@ -81,6 +81,18 @@
       {
         "label": "Verified Ethereum Avalanche escrow bridge ABI; delayed nonce commitment and issuance events",
         "url": "https://sourcify.dev/server/v2/contract/1/0x26E91B1f142b9bF0bB37e82959bA79D2Aa6b99b8?fields=sources,abi"
+      },
+      {
+        "label": "Complete Curve issuer publication archive reviewed for scrvUSD bridge incidents",
+        "url": "https://news.curve.finance/llms-full.txt"
+      },
+      {
+        "label": "LayerZero primary forensic disclosure: KelpDAO-only compromise; no other OApps, channels or transactions compromised",
+        "url": "https://layerzero.network/blog/layerzero-labs-kelpdao-incident-report"
+      },
+      {
+        "label": "Curve primary DNS incident disclosure: protocol contracts remained secure and operational",
+        "url": "https://news.curve.finance/curve-domain-incident/"
       }
     ],
     "routes": [
@@ -117,17 +129,17 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0x289f635106d5b822a505b39ac237a0ae9189335b",
         "protocol": "OP Stack StandardBridge scrvUSD representation",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Ethereum block 26101013 and Optimism block 157650822: remoteToken is the canonical vault; bridge is 0x4200000000000000000000000000000000000010, implementation 0xae9ed42f43a3ee45c3a9def8ae6b48cbb58ed1a1, messenger 0x4200000000000000000000000000000000000007, and Ethereum escrow/otherBridge 0x99c9fc46f92e8a1c0dec1b1747d010903e884be1. Receipt totalSupply and escrow balance both equal 5752706754741328520209 raw 18-decimal shares. Exact-match token/bridge source gates mint to the bridge and finalization to the authenticated remote messenger. ProxyAdmin 0x4200000000000000000000000000000000000018 owner is 0x6b1bae59d09fccbddb6c6cceb07b7279367c4e3b; absence of local owner code does not prove single-key custody or close remote-governance reach. Oracle V0 price replication is separate from mint authorization. Pending transfers, provider circulation exclusions and full upgrade/control closure remain unresolved after source, storage, messenger and escrow review; raw equality is not a reviewed circulating partition.",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Optimism block 157794318 (0xebaee36320744b48b922a3c9ea5e39e3440b0f3216ffc87820c9768279beb08f): creation-boundary reads locate the token at block 127732712. The complete RPC Transfer census contains 2193 events, nine mints and eleven burns; all twenty successful issuance receipts use StandardBridge/messenger flows. Direct Ethereum receipts at or before block 26124898 contain nine matching deposits and eleven matching withdrawals for the exact canonical-vault/satellite pair; recipient or sender and amount multisets match every mint and burn. Net issuance is 5752706754741328520209 raw shares, matching the pinned token supply. The asset-specific review searched the complete Curve publication archive, issuer X/blog, audit indexes and rekt reporting; disclosed DNS, KelpDAO and vsdCRV incidents do not compromise this route. Token BRIDGE is 0x4200000000000000000000000000000000000010; ProxyAdmin owner remains 0x6b1bae59d09fccbddb6c6cceb07b7279367c4e3b. Official OP documentation positively binds that alias to the L1 2-of-2 Safe. Uncapped bridge mint, arbitrary-holder burn, administrator upgrades and the independent depositor upgrade path remain adverse reachable powers. This incident and route classification review grants no complete execution certificate, signer independence, pending-liability or material-supply proof.",
         "controllerChain": "optimism",
         "controllerAddress": "0x4200000000000000000000000000000000000010",
-        "observedAt": "2026-10-02",
-        "observedBlock": 157650822,
+        "observedAt": "2026-10-05",
+        "observedBlock": 157794318,
         "sources": [
           {
             "label": "Curve satellite inventory",
@@ -136,6 +148,18 @@
           {
             "label": "Exact-match Optimism satellite source",
             "url": "https://sourcify.dev/server/v2/contract/10/0x289f635106d5b822a505b39ac237a0ae9189335b?fields=sources,abi"
+          },
+          {
+            "label": "Optimism RPC: creation-boundary and complete pinned token issuance census",
+            "url": "https://mainnet.optimism.io"
+          },
+          {
+            "label": "Canonical Ethereum StandardBridge exact asset-pair deposit and withdrawal index; receipts independently read",
+            "url": "https://eth.blockscout.com/address/0x99c9fc46f92e8a1c0dec1b1747d010903e884be1"
+          },
+          {
+            "label": "OP primary ProxyAdmin alias and reachable bridge impairment powers",
+            "url": "https://docs.optimism.io/op-stack/protocol/privileged-roles.md"
           }
         ]
       },
@@ -146,17 +170,17 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0x646a737b9b6024e49f5908762b3ff73e65b5160c",
         "protocol": "OP Stack StandardBridge scrvUSD representation",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Ethereum block 26101013 and Base block 52055537: remoteToken is the canonical vault; bridge is 0x4200000000000000000000000000000000000010, implementation 0xc0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d30010, messenger 0x4200000000000000000000000000000000000007, and Ethereum escrow/OTHER_BRIDGE 0x3154cf16ccdb4c6d922629664174b904d80f2c35. Receipt totalSupply and escrow balance both equal 112497581705657599246351 raw 18-decimal shares. Exact-match token/bridge source gates mint and authenticated finalization. ProxyAdmin 0x4200000000000000000000000000000000000018 owner is 0x8cc51c3008b3f03fe483b28b8db90e19cf076a6d; local code absence does not prove signer custody or close remote-governance reach. Oracle V0 price replication is separate from mint authorization. Pending transfers, provider circulation exclusions and full upgrade/control closure remain unresolved after source, storage, messenger and escrow review; raw equality is not a reviewed circulating partition.",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Base block 52199033 (0x4321fbd3962134f163074c2d901b5d6db7d55d125c10f40240c4b151a40ae894): complete primary RPC mint/burn histories from block zero through the pin contain 66 mints and 110 burns. All 66 mints match canonical Ethereum deposits by recipient and amount, and all 109 finalized Ethereum withdrawals match destination burns; successful receipts verify every leg. Net issuance is 103469881705657599246351 raw shares, exactly matching pinned totalSupply. Two older burns omitted by the public index are recovered in primary RPC logs and receipts, resolving the index discrepancy without attributing a contract incident. The remaining burn, transaction 0x4b344a7ec9dd7751d4f41526a6945be3176c6dafe3b9b16593298e576e003484 at block 52057825, initiated an authenticated 9027700000000000000000-share withdrawal. Its MessagePassed hash is present in pinned sentMessages and is not finalized at the canonical Ethereum portal; claim completion and proof status are not certified. Primary Base documentation describes initiation, proof and finalization, with five-day single-proof or one-day dual-proof windows. The incident review searched the complete Curve archive, issuer X/blog, audit indexes and rekt reporting, distinguishing the scoped DNS, vsdCRV and KelpDAO events from this representation. Exact-match token and bridge sources retain BRIDGE-only uncapped mint, arbitrary-account burn and owner-mediated code upgrades as adverse powers. No complete remote-governance execution, signer-independence, aggregate pending-claim or supply-materiality certificate is asserted.",
         "controllerChain": "base",
         "controllerAddress": "0x4200000000000000000000000000000000000010",
-        "observedAt": "2026-10-02",
-        "observedBlock": 52055537,
+        "observedAt": "2026-10-05",
+        "observedBlock": 52199033,
         "sources": [
           {
             "label": "Curve satellite inventory",
@@ -165,6 +189,22 @@
           {
             "label": "Exact-match Base satellite source",
             "url": "https://sourcify.dev/server/v2/contract/8453/0x646a737b9b6024e49f5908762b3ff73e65b5160c?fields=sources,abi"
+          },
+          {
+            "label": "Base primary RPC: complete pinned mint/burn histories and all successful receipts",
+            "url": "https://base-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Canonical Ethereum Base escrow and exact scrvUSD token-pair events",
+            "url": "https://eth.blockscout.com/address/0x3154cf16ccdb4c6d922629664174b904d80f2c35"
+          },
+          {
+            "label": "Primary Base canonical withdrawal flow and current finalization windows",
+            "url": "https://docs.base.org/specifications/base-protocol/bridging/withdrawals"
+          },
+          {
+            "label": "Directly confirmed Base withdrawal initiation; completion not certified",
+            "url": "https://basescan.org/tx/0x4b344a7ec9dd7751d4f41526a6945be3176c6dafe3b9b16593298e576e003484"
           }
         ]
       },
@@ -175,17 +215,17 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0xaB94C721040b33aA8b0b4D159Da9878e2a836Ed0",
         "protocol": "Fraxtal StandardBridge scrvUSD representation",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Ethereum block 26101013 and Fraxtal block 42044855: remoteToken is the canonical vault; bridge is 0x4200000000000000000000000000000000000010, implementation 0xf2c542d2f6bb8203bf0f1dc52b09f66a7a1a749c, messenger 0x4200000000000000000000000000000000000007, and Ethereum escrow/otherBridge 0x34c0bd5877a5ee7099d0f5688d65f4bb9158bde2. Receipt totalSupply and escrow balance both equal 22518452271404689842695 raw 18-decimal shares. ProxyAdmin owner 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6 returns a 3-of-5 Safe quorum, which alone does not prove exhaustive module/guard or remote-governance reach. Token and implementation source recovery remains incomplete after Sourcify and explorer attempts. Oracle V0 price replication is separate from mint authorization. Pending transfers, provider circulation exclusions and full control closure remain unresolved; raw equality is not a reviewed circulating partition.",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Fraxtal block 42189333 (0xfad5fb8814919ca38446501a713a386a2819bf2de0ff34cdca3583bb216db76b): complete primary RPC mint/burn histories from block zero through the pin contain 82 mints and 63 burns. Every mint matches a canonical Ethereum escrow deposit by recipient and amount, and every burn matches an Ethereum escrow release by sender and amount. All destination and canonical counterpart transaction receipts are successful. Net issuance and pinned totalSupply both equal 22518452271404689842695 raw 18-decimal shares; no unexplained issuance is found. The token's pinned BRIDGE() binds 0x4200000000000000000000000000000000000010 and ProxyAdmin owner remains 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6. The verified OptimismMintablePermitERC20 source, exact-match bridge proxy and ProxyAdmin implementation retain uncapped bridge mint, arbitrary-account burn and owner-authorized upgrades as adverse powers. The incident review searched the complete Curve publication archive, issuer X/blog, audit indexes and rekt reporting, distinguishing the primary DNS, vsdCRV and KelpDAO disclosures from this satellite. A Safe quorum or matched escrow events do not certify signer independence, exhaustive module/guard or remote-governance reach, complete execution scope, aggregate pending claims or a circulating-supply partition.",
         "controllerChain": "fraxtal",
         "controllerAddress": "0x4200000000000000000000000000000000000010",
-        "observedAt": "2026-10-02",
-        "observedBlock": 42044855,
+        "observedAt": "2026-10-05",
+        "observedBlock": 42189333,
         "sources": [
           {
             "label": "Curve satellite inventory",
@@ -194,6 +234,18 @@
           {
             "label": "Fraxtal satellite explorer",
             "url": "https://fraxscan.com/address/0xaB94C721040b33aA8b0b4D159Da9878e2a836Ed0#code"
+          },
+          {
+            "label": "Primary Fraxtal RPC: complete pinned mint/burn histories and all successful receipts",
+            "url": "https://rpc.frax.com"
+          },
+          {
+            "label": "Primary Fraxtal canonical bridge and escrow documentation",
+            "url": "https://docs.frax.finance/cross-chain/fraxtal-bridge.md"
+          },
+          {
+            "label": "Canonical Ethereum Fraxtal escrow and exact scrvUSD token-pair events",
+            "url": "https://eth.blockscout.com/address/0x34c0bd5877a5ee7099d0f5688d65f4bb9158bde2"
           }
         ]
       },
@@ -203,21 +255,37 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0x5191946500e75f0A74476F146dF7d386e52961d9",
         "protocol": "Curve LayerZero scrvUSD bridge and MinterProxy",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Fantom block 123514690 successfully returns totalSupply=0, decimals=18 and minter 0xf830b9e88f994bbb069ac884d40fa2e09d050bb8. Documented LayerZero bridge 0x08132ea9b02750e118cf5f5c640b7c46a8e638e8 points to that minter and this token; is_minter(bridge)=true, is_killed=false, limit=2000000000000000000000000 and delay=86400. Bridge and minter owner is 0xd62ade30f740de7ef766008258b4b2f574a084f7; endpoint is 0xb6319cc6c8c27a8f5daf0dd3df91ea35c4720dd7, remote LayerZero chain ID 101. Ethereum block 26101013 observes zero escrow balance at the mirrored bridge. Successful zero supply is not revoked authority, a disabled lane or proof of absent historical/pending liabilities. Verified source recovery, nonenumerable minter permission changes, endpoint attestor/governance reach, pending reconciliation and circulating exclusions remain unresolved after manifest, explorer, source and pinned control/configuration research.",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Fantom block 123559341 (0x000570ee000016999a6274dd4dbc5209b21326398bebee83da0b06a68e29f80d): creation-boundary reads locate the token at block 96738642. The complete token, bridge and minter RPC log census through the pin contains one mint and one burn, each 1000000000000000000 raw shares. Successful Fantom receipts and their canonical Ethereum counterparts bind the mint to a matching escrow deposit and the burn to a matching escrow release, with the same receiver and amount; no unexplained issuance is found. The incident review also searched the complete Curve publication archive, issuer X/blog, audit indexes and rekt reporting. LayerZero's primary KelpDAO report confines that compromise to rsETH; Curve's DNS and vsdCRV disclosures exclude protocol-contract compromise. The documented bridge remains an approved minter and is not killed; the owner-grantable uncapped MinterProxy powers remain adverse. The current inherited receive library is 0xa374a435f3068fdf51dbd03b931d03aa6f878da0 and getUlnConfig(bridge,101) requires 15 confirmations and all three required DVNs, with no optional DVNs. Zero current token supply is not final lane disablement, absent pending liabilities, or a materiality exclusion. No complete execution-scope or signer-custody certificate is asserted.",
         "controllerChain": "fantom",
         "controllerAddress": "0xf830b9e88f994bbb069ac884d40fa2e09d050bb8",
-        "observedAt": "2026-10-02",
-        "observedBlock": 123514690,
+        "observedAt": "2026-10-05",
+        "observedBlock": 123559341,
         "sources": [
           {
             "label": "Curve satellite inventory",
             "url": "https://docs.curve.finance/developer/scrvusd/overview/"
+          },
+          {
+            "label": "Curve exact scrvUSD token, MinterProxy and mirrored bridge manifest",
+            "url": "https://github.com/curvefi/curve-xdao/blob/14a4d1ba8e7b011e4a2dcf6060e39cfee9786da2/README.md"
+          },
+          {
+            "label": "Fantom RPC: creation-boundary, complete pinned issuance log census and receipts",
+            "url": "https://rpcapi.fantom.network"
+          },
+          {
+            "label": "Canonical deposit matching the sole Fantom mint",
+            "url": "https://etherscan.io/tx/0xdbcc159f323f9d334b968dbb5c6f58672aeb852f7b9978a4dbdfe73a4c093f30"
+          },
+          {
+            "label": "Canonical escrow release matching the sole Fantom burn",
+            "url": "https://etherscan.io/tx/0x61c368f0192cef80c955dfd93c4aa28dc2c5b9deaf1b1165a1241abd69914f62"
           }
         ]
       },
@@ -227,17 +295,17 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0x0094Ad026643994c8fB2136ec912D508B15fe0E5",
         "protocol": "Curve LayerZero scrvUSD bridge and MinterProxy",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "BSC block 125195406 successfully returns totalSupply=0, decimals=18 and minter 0x4c62ac3f6088e882c9b2a315056bc298d22128bd; a separate public-RPC pin at block 125196230 confirms totalSupply=0. Documented bridge 0xae0666c978500f2c05784242b79b08c478dd999c is admitted by is_minter(bridge)=true, returns this token and minter, and is not killed. Bridge and minter owner is 0xc97e2328c5701572c0dfb199b9f860d6ccd74199; endpoint is 0x3c2269811836af69497e5f486a85d7316753cf62, remote LayerZero chain ID 101. Ethereum block 26101013 observes zero escrow at the mirrored bridge. Exact-match Token.vy, MinterProxy.vy and bridge source prove owner-controlled arbitrary minter grants and mutable rate/delay/pause limits; grants are not enumerated or logged by SetMinter. Successful zero supply is not authority revocation or economic exclusion. Full caller/signing/message reach, historical/pending claims and circulating attribution remain unresolved; historical-state failures were retried on a public RPC rather than interpreted as zero.",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "BSC block 125832832 (0x1647ddaf2c9fbd0779f3ab29b0764c58aa88a68736637547de11abfbd7035cec): the exact-match token's creation transaction is at block 43776541. A complete authenticated RPC Transfer census from block 43776500 through the pin contains one mint and one burn, each 1000000000000000000 raw shares. Successful destination receipts and both canonical Ethereum counterpart receipts match the bridge issuance/release, receiver and amount exactly; the net issuance is zero and no unexplained mint is found. Zero current supply alone is not the incident evidence. The review searched the complete Curve publication archive, issuer X/blog, audit indexes and rekt reporting, and distinguished the primary KelpDAO rsETH, Curve DNS and vsdCRV disclosures from this token/bridge. Current reads bind the documented token, minter and admitted, non-killed bridge. The inherited receive-library configuration requires 15 confirmations and four required DVNs, with no optional DVNs; its default configuration remains mutable. Owner-authorized arbitrary minter grants and uncapped mint capability remain measured adverse. No exhaustive permission census, signer independence, complete execution scope, pending-claim conservation or supply-materiality certificate is claimed.",
         "controllerChain": "bsc",
         "controllerAddress": "0x4c62ac3f6088e882c9b2a315056bc298d22128bd",
-        "observedAt": "2026-10-02",
-        "observedBlock": 125195406,
+        "observedAt": "2026-10-05",
+        "observedBlock": 125832832,
         "sources": [
           {
             "label": "Curve satellite inventory",
@@ -246,6 +314,18 @@
           {
             "label": "Exact-match BSC satellite source",
             "url": "https://sourcify.dev/server/v2/contract/56/0x0094Ad026643994c8fB2136ec912D508B15fe0E5?fields=sources,abi"
+          },
+          {
+            "label": "BSC authenticated RPC: complete pinned token issuance census and successful receipts",
+            "url": "https://bnb-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Canonical escrow deposit matching the sole BSC mint",
+            "url": "https://etherscan.io/tx/0xb29f82e2611df271a0aeaa7cd165a02000ba4727bf0846352dd23c03579d8ee6"
+          },
+          {
+            "label": "Canonical escrow release matching the sole BSC burn",
+            "url": "https://etherscan.io/tx/0x7b403948d04c6772c31bfe1bbee952deef68eb9ecf353fee16f1b70e2454a4e3"
           }
         ]
       },
@@ -255,17 +335,17 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0xA3ea433509F7941df3e33857D9c9f212Ad4A4e64",
         "protocol": "Curve LayerZero scrvUSD bridge and MinterProxy",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Avalanche block 96564936 successfully returns totalSupply=0, decimals=18 and minter 0x47ca04ee05f167583122833abfb0f14ac5677ee4. Documented bridge 0x26e91b1f142b9bf0bb37e82959ba79d2aa6b99b8 is admitted by is_minter(bridge)=true, identifies this token/minter, and is not killed. Bridge and minter owner is 0xed953c2849785a8aed7bc2ee8cf5fde776e1dc07; endpoint is 0x3c2269811836af69497e5f486a85d7316753cf62, remote LayerZero chain ID 101. Ethereum block 26101013 holds 1100000000000000000 raw canonical shares in the mirrored escrow while receipts are zero. This is a positive collateral surplus, not an observed unbacked claim; its attribution to pending transfers, historic claims or excess collateral remains unproven. Source and normalized minter-runtime recovery establish mutable permission middleware, not complete signer/module/message closure. Zero receipts do not prove absent bridge liabilities; pending reconciliation and circulating exclusions remain unresolved.",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Avalanche block 96792037 (0xd2a08eb54b57a26ac5109c3aeb044512cad477c4ed71333c5c386827778c8661): creation-boundary reads locate the token at block 52769314. Complete primary RPC token and bridge histories through the pin contain no mint or burn and exactly one authenticated Delayed issuance, nonce 1, for 1100000000000000000 raw shares to 0x71f718d3e4d1449d1502a6a7595eb84ebccb1683. This matches the successful canonical Ethereum deposit in transaction 0x5509de89dad5b89bb0bc358ea15c809d849e542a67f70a8a93127eeded69de13. The stored delayed commitment cryptographically matches its original timestamp, receiver and amount; its exact permissionless retry succeeds in a read-only eth_call at the pin. The bridge runtime exactly matches the explorer-verified Vyper source, and pinned CRVUSD, MINTER, token.minter, is_minter(bridge) and is_killed reads bind the documented live claim path. The 1.1-share escrow is therefore an authenticated unclaimed delayed issuance, not an unexplained balance or an erased liability; no transaction was sent and completion or future availability is not certified. The incident review searched the complete Curve archive, issuer X/blog, audit indexes and rekt reporting, distinguishing the primary DNS, vsdCRV and KelpDAO disclosures from this lane. Mutable owner-granted uncapped mint, delay/limit/pause and four-required-DVN default configuration powers remain adverse. Zero receipt supply does not imply final disablement or immateriality. No complete execution scope, signer-independence or supply-partition certificate is asserted.",
         "controllerChain": "avalanche",
         "controllerAddress": "0x47ca04ee05f167583122833abfb0f14ac5677ee4",
-        "observedAt": "2026-10-02",
-        "observedBlock": 96564936,
+        "observedAt": "2026-10-05",
+        "observedBlock": 96792037,
         "sources": [
           {
             "label": "Curve satellite inventory",
@@ -274,6 +354,18 @@
           {
             "label": "Avalanche satellite explorer",
             "url": "https://snowscan.xyz/address/0xA3ea433509F7941df3e33857D9c9f212Ad4A4e64#code"
+          },
+          {
+            "label": "Primary Avalanche RPC: complete pinned token and bridge histories, commitment and read-only retry",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
+          },
+          {
+            "label": "Exact-match Avalanche bridge source and deployed runtime",
+            "url": "https://snowscan.xyz/address/0x26e91b1f142b9bf0bb37e82959ba79d2aa6b99b8#code"
+          },
+          {
+            "label": "Canonical deposit matching the authenticated Avalanche delayed claim",
+            "url": "https://etherscan.io/tx/0x5509de89dad5b89bb0bc358ea15c809d849e542a67f70a8a93127eeded69de13"
           }
         ]
       },
@@ -284,17 +376,17 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0x3d8eadb739d1ef95dd53d718e4810721837c69c1",
         "protocol": "Curve LayerZero scrvUSD bridge and MinterProxy",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "XDC block 107897057 identifies Savings crvUSD/scrvUSD, decimals=18, totalSupply=53115961158583487888186 and minter 0x6a2691068c7cbda03292ba0f9c77a25f658baef5. Documented mirrored LayerZero bridge 0x1ae4ab5274a96b75d6f55a696c9d550d218261b0 identifies this token/minter and is admitted by is_minter(bridge)=true. Bridge owner is 0xce51574dfbb895d35f67a1a1b5412f2cfc86462c; minter owner is 0x71f718d3e4d1449d1502a6a7595eb84ebccb1683, with pending future owner 0xabc336d4c71ad275695744d32ddb1d8266db1cbf. Endpoint is 0xb6319cc6c8c27a8f5daf0dd3df91ea35c4720dd7, remote LayerZero chain ID 101. Ethereum block 26101013 holds 53126961158583487888186 raw shares at the mirrored escrow, exceeding receipts by 11000000000000000000. The surplus collateral creates no observed unbacked claim; pending/historical/excess-collateral attribution is unresolved. Source/runtime, owner, endpoint, escrow and API research does not close complete signer/control reach or a generation-bound circulating partition.",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "XDC block 108021289 (0x4be0f8b30f567efab64228232adeaa7c47f5a1711d2c0e4367f6fe5663471e9a): complete primary RPC issuance histories from creation block 90846156 through the pin contain 140 mints and 85 burns. All 140 mints match canonical Ethereum bridge deposits by receiver and amount. All 83 finalized canonical releases match destination bridge return commitments; 470 successful receipts verify the destination and source legs. Net issuance equals pinned totalSupply, 53115961158583487888186 raw shares. The remaining 1-share and 10-share burns are positively attributed to authenticated Ethereum Delayed claims, nonces 23 and 40, not unexplained collateral. At Ethereum block 26124898, both stored commitments match the original timestamps, receivers and amounts, both failed entries are zero, the bridge is not killed and the delay is 86400 seconds. Its runtime exactly matches the verified scrvUSD-specific Ethereum source; each exact permissionless retry succeeds in a read-only pinned eth_call. The 11000000000000000000-share escrow surplus is retained as these unclaimed delayed returns, not certified redemption or aggregate pending-claim closure. Current token/minter/bridge reads retain owner-authorized arbitrary minter grants, uncapped mint, mutable delay/limit/pause and four-required-DVN default authority as adverse powers; the minter future-owner commitment is not inferred to have executed. The incident review searched the complete Curve archive, issuer X/blog, audit indexes and rekt reporting, distinguishing the scoped DNS, vsdCRV and KelpDAO events from this lane. No complete execution scope, signer independence or circulating-supply partition is asserted.",
         "controllerChain": "xdc",
         "controllerAddress": "0x6a2691068c7cbda03292ba0f9c77a25f658baef5",
-        "observedAt": "2026-10-02",
-        "observedBlock": 107897057,
+        "observedAt": "2026-10-05",
+        "observedBlock": 108021289,
         "sources": [
           {
             "label": "Curve scrvUSD token, minter and bridge manifest",
@@ -303,6 +395,22 @@
           {
             "label": "Curve LayerZero scrvUSD bridging guide",
             "url": "https://docs.curve.finance/user/cross-chain/bridging-tokens.md"
+          },
+          {
+            "label": "Official XDC RPC: complete pinned issuance histories and all successful destination receipts",
+            "url": "https://erpc.xinfin.network"
+          },
+          {
+            "label": "Verified scrvUSD-specific canonical XDC bridge source; exact pinned runtime and delayed retry path",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x1ae4ab5274a96b75d6f55a696c9d550d218261b0?fields=all"
+          },
+          {
+            "label": "Authenticated 1-share XDC delayed return commitment, nonce 23",
+            "url": "https://etherscan.io/tx/0xd25b42428ac8f47df7090c0fe59901bccd41bff197839ca625ed48f24557ac99"
+          },
+          {
+            "label": "Authenticated 10-share XDC delayed return commitment, nonce 40",
+            "url": "https://etherscan.io/tx/0x6561f325d749ce1d14dbb0015674158fadf66ba7f56d76e074cfa203e253df11"
           }
         ]
       },
@@ -313,21 +421,33 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0x8fb3ec8f2d1dc089e70cd61f1e49496d443b2124",
         "protocol": "Curve LayerZero scrvUSD bridge and MinterProxy",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Sonic block 80215783 identifies Savings crvUSD/scrvUSD, decimals=18, totalSupply=100000000000000000 and minter 0xc0b338da0fdd43dc48539837594cf6363795feea. Documented mirrored LayerZero bridge 0x6f8012b70ba1fb7f40873cd7f1b03c6fb5bf666c identifies this token/minter, is admitted by is_minter(bridge)=true and is not killed; bridge and minter owner is 0x6c9578402a3ace046a12839f45f84aa5448e9c30. Endpoint is 0xb6319cc6c8c27a8f5daf0dd3df91ea35c4720dd7, remote LayerZero chain ID 101. Ethereum block 26101013 observes matching 100000000000000000 raw-share escrow. Equality is observed backing, not proof of absent pending claims or a circulating denominator. Source/runtime, ownership, endpoint configuration and API research leave complete control reach, permission-change history and pending/exclusion reconciliation unresolved.",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Sonic block 80375794 (0x60565cceff5db09bdbb07635c488692f6bf3d49bd412bd4e58be5e57a4e1bdbc): creation-boundary reads locate the token at block 1582987. A complete primary Sonic RPC Transfer census through the pin contains one mint of 1000000000000000000 and one burn of 900000000000000000 raw shares. Successful destination receipts and canonical Ethereum counterpart receipts match the escrow deposit/release, receiver and amount exactly. Net issuance is 100000000000000000, matching the pinned receipt supply; no unexplained mint is found. The review searched the complete Curve publication archive, issuer X/blog, audit indexes and rekt reporting, distinguishing the primary KelpDAO rsETH, Curve DNS and vsdCRV disclosures from this token/bridge. Current reads bind the documented token, minter and admitted, non-killed bridge. Its inherited receive-library configuration requires 15 confirmations and four required DVNs, with no optional DVNs; default-library and default-configuration authority remain mutable. Owner-grantable uncapped minting remains measured adverse. No complete permission census, signer independence, complete execution scope, pending-claim conservation or supply-materiality certificate is claimed.",
         "controllerChain": "sonic",
         "controllerAddress": "0xc0b338da0fdd43dc48539837594cf6363795feea",
-        "observedAt": "2026-10-02",
-        "observedBlock": 80215783,
+        "observedAt": "2026-10-05",
+        "observedBlock": 80375794,
         "sources": [
           {
             "label": "Curve scrvUSD token, minter and bridge manifest",
             "url": "https://github.com/curvefi/curve-xdao/blob/14a4d1ba8e7b011e4a2dcf6060e39cfee9786da2/README.md"
+          },
+          {
+            "label": "Primary Sonic RPC: creation-boundary, complete pinned issuance census and receipts",
+            "url": "https://rpc.soniclabs.com"
+          },
+          {
+            "label": "Canonical escrow deposit matching the sole Sonic mint",
+            "url": "https://etherscan.io/tx/0x27b1825877fd5fb6aee7be927b33c1c774c30a1849a79380ab6cda89baa4180b"
+          },
+          {
+            "label": "Canonical escrow release matching the sole Sonic burn",
+            "url": "https://etherscan.io/tx/0x4b2fec06207734ba36826e96c1db3957099de52c5e941323f63bd9f1fa79f697"
           }
         ]
       },
@@ -344,11 +464,11 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "At Etherlink block 54923602 (0xb60b2137fb96d809be2707dd10f330b4b6e0a707ce51729ccd7c70a567eb6fc7), the satellite still has 1100000000000000000 raw shares and the documented MinterProxy. Blockscout's terminating transaction and internal-transaction pages locate one successful set_minter grant, to the documented bridge at block 22192751; this is indexed permission evidence, not an independently verified full trace census. Its terminating bridge-log page contains two Issued events totaling 1100000000000000000 and no Delayed events. Endpoint uaConfigLookup is all zero, so the application inherits mutable default libraries: receive version 3 resolves to 0x282b3386571f7f794450d5789911a9804fa346b4. getUlnConfig(bridge,101) requires 15 confirmations and all four required DVNs, with no optional DVNs. Endpoint owner 0xb73cc4df2dcc2f7009f5b309af8f2ee82e37db28 and library-owner/default-configuration history remain part of the authority reach. Historical DVN/controller incident coverage and cross-chain in-flight reconciliation remain unresolved; indexed absence of Delayed events does not certify an incident-free route or zero undelivered messages.",
+        "reviewNote": "Etherlink block 54935229 still identifies 1100000000000000000 raw shares and the documented MinterProxy/bridge. Terminating indexed token and bridge pages contain two mints/Issued events totaling that amount and no burns or Delayed events, but the independent creation-to-pin RPC census remains incomplete. Native RPC rejects broad history ranges, Ankr caps requests at 500 blocks, the alternate Thirdweb endpoint caps at 112 blocks, and the RouteMe endpoint returns 429; the indexed history is not promoted to definitive incident absence. A complete indexed endpoint history locates default receive version 1 at block 1076508 and its change to version 3 at block 50248990. The complete current-library indexed history contains 75 events, but the earlier receive-library configuration and controller incident coverage are not independently closed. Current uaConfigLookup is zero, so the bridge inherits mutable defaults; receive version 3 resolves to 0x282b3386571f7f794450d5789911a9804fa346b4, whose configuration requires 15 confirmations and four required DVNs, without optional DVNs. The complete Curve archive, issuer X/blog, audit indexes and rekt reporting were searched, including direct scoped KelpDAO, DNS and vsdCRV disclosures; these do not fill the asset-specific historical gap. The single indexed set_minter grant is not an exhaustive trace/permission or signer-custody certificate. Owner-grantable uncapped mint and mutable default authority remain adverse. No incident-free route, zero undelivered messages, complete execution scope or supply-partition claim is made.",
         "controllerChain": "etherlink",
         "controllerAddress": "0x5bca7ddf1bcccb2ee8e46c56bfc9d3cdc77262bc",
-        "observedAt": "2026-10-04",
-        "observedBlock": 54923602,
+        "observedAt": "2026-10-05",
+        "observedBlock": 54935229,
         "sources": [
           {
             "label": "Curve scrvUSD token, minter and bridge manifest",
@@ -381,6 +501,10 @@
           {
             "label": "Etherlink RPC: hash-pinned bridge, endpoint and four-DVN configuration",
             "url": "https://node.mainnet.etherlink.com"
+          },
+          {
+            "label": "Etherlink indexed endpoint history; default receive version 1 to 3 migration",
+            "url": "https://explorer.etherlink.com/api/v2/addresses/0x2d61dcdd36f10b22176e0433b86f74567d529aaa/logs"
           }
         ]
       }

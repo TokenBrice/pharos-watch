@@ -262,13 +262,30 @@ export type DexAmmExecutionToken = z.infer<typeof DexAmmExecutionTokenSchema>;
 
 export const DexAmmExecutionModelSchema = z
   .object({
-    source: z.enum(["raydium", "uniswap-v2", "pancakeswap-v2", "aerodrome-volatile", "balancer", "curve"]),
-    invariant: z.enum(["constant-product", "weighted-constant-mean", "stableswap"]),
+    source: z.enum(["raydium", "uniswap-v2", "pancakeswap-v2", "solidly-v2", "balancer", "curve"]),
+    invariant: z.enum(["constant-product", "weighted-constant-mean", "stableswap", "solidly-stable"]),
     trackedTokenIndex: z.number().int().nonnegative(),
     feeRate: z.number().finite().min(0).lt(1),
     /** StableSwap amplification coefficient A (plain paper convention, not A*n^n). */
     amplification: z.number().finite().positive().optional(),
     tokens: z.array(DexAmmExecutionTokenSchema).min(2).max(8),
+    solidlyState: z.object({
+      variant: z.enum(["aerodrome", "velodrome", "shadow"]),
+      stable: z.boolean(),
+      reserve0: z.string().max(78).regex(/^[1-9][0-9]*$/),
+      reserve1: z.string().max(78).regex(/^[1-9][0-9]*$/),
+      fee: z.number().int().nonnegative().lt(1_000_000),
+      blockNumber: z.number().int().positive(),
+      blockHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+      factoryAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+      poolAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+      verifiedQuoteCount: z.number().int().positive(),
+      quoteChecks: z.array(z.object({
+        tokenInIndex: z.number().int().min(0).max(1),
+        amountIn: z.string().max(78).regex(/^[1-9][0-9]*$/),
+        amountOut: z.string().max(78).regex(/^[0-9]+$/),
+      })).min(1).max(32),
+    }).optional(),
   })
   .superRefine((model, ctx) => {
     if (model.trackedTokenIndex >= model.tokens.length) {
@@ -277,9 +294,17 @@ export const DexAmmExecutionModelSchema = z
     if (model.invariant !== "stableswap" && model.amplification !== undefined) {
       ctx.addIssue({ code: "custom", path: ["amplification"], message: "amplification is a stableswap parameter" });
     }
+    if (model.source === "solidly-v2" || model.invariant === "solidly-stable" || model.solidlyState) {
+      if (model.source !== "solidly-v2" || !model.solidlyState || model.tokens.length !== 2 ||
+        model.invariant !== (model.solidlyState.stable ? "solidly-stable" : "constant-product") ||
+        model.feeRate !== model.solidlyState.fee / (model.solidlyState.variant === "shadow" ? 1_000_000 : 10_000)) {
+        ctx.addIssue({ code: "custom", path: ["solidlyState"], message: "invalid exact Solidly state" });
+      }
+      return;
+    }
     if (model.invariant === "constant-product") {
       if (
-        !["raydium", "uniswap-v2", "pancakeswap-v2", "aerodrome-volatile"].includes(model.source) ||
+        !["raydium", "uniswap-v2", "pancakeswap-v2"].includes(model.source) ||
         model.tokens.length !== 2
       ) {
         ctx.addIssue({ code: "custom", path: ["invariant"], message: "invalid constant-product model" });
@@ -327,6 +352,7 @@ export const DexExecutionCapabilityGateSchema = z.object({
     "balancer-amm",
     "raydium-amm",
     "constant-product-v2",
+    "solidly-v2",
     "measured-execution",
   ]),
   reason: z.enum([

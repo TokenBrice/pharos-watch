@@ -82,10 +82,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "wCOP has six independent native issuance deployments, plus a separate issuer-operated burn/mint bridge route. Ripio's LimitedMinterBridge and BridgeDeposit machinery burns source WCOP and fulfills destination minting through a daily-limited adapter, with issuer EOA/Safe administration, pause, and arbitrary-recipient mint surfaces; this route is assessed here and excluded from native Mint Authority. Across remains a separate liquidity/intent route.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena); Codex mint-bridge-boundary migration 2026-08-16",
-    "confidence": "probable",
+    "summary": "wCOP has seven independent native issuance deployments, including Celo, and separate issuer-operated burn/mint transfer machinery. Celo's complete issuance census distinguishes native LimitedMinter issuance from two receipt-authenticated BridgeDeposit transfers; it is not a conserved bridge-only claim. Native Safe and facility powers are recorded in Mint Authority, while bridge-adapter, operator, administration, pause and raiseable-cap powers remain here. Across is a separate liquidity/intent rail.",
+    "reviewedAt": "2026-10-05",
+    "reviewer": "Prior six-chain bridge reviews retained; R17 Celo native/transfer scope and incident review",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "l2beat",
@@ -319,17 +319,19 @@
         "id": "celo:0x8a1d45e102e886510e891d2ec656a708991e2d76",
         "destinationChain": "celo",
         "contractAddress": "0x8a1d45e102e886510e891d2ec656a708991e2d76",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Wave-2 census: the complete Celo token log response ends at proxy creation (2026-06-01) with next_page_params=null and identifies four mints. June 5 (100 WCOP) and September 9 (30,000,000 WCOP) call the native LimitedMinter 0xd168cfbbe260d48cd119497a9a2ee8482080c5e7; July 31 (999,943 WCOP) and September 11 (2,999,943 WCOP) call BridgeDeposit.fulfillBridgeMint. Both bridge mints match published source burns on Worldchain and Ethereum after the 57 WCOP fee. This proves a mixed native-issuance/burn-mint deployment, not a conserved bridge-only representation. June reserve evidence cannot reconcile the September 9 native issuance, and the current six-chain native mint review omits the Celo LimitedMinter/Safe reach; aggregate incident-free and liability-scope conclusions remain unestablished. The issuer also announces Arc deployment, outside the reviewed route census. Preserve unresolved admission pending complete scope and native issuance reconciliation; no known supply share is asserted.",
+        "protocol": "Ripio native issuance with issuer-operated burn/mint transfer rail",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Celo block 79288027, verified LatamStable native mint is held by the local 4-of-7 Safe and native LimitedMinter, independently of LimitedMinterBridge. The complete 41-event token history from creation records four mints; all four are authenticated against RPC receipts. Native LimitedMinter issued 100 WCOP on June 5 and 30000000 on September 9 without a source burn. BridgeDeposit fulfilled 999943 and 2999943 WCOP from exact Worldchain/Ethereum burns; pinned totalMintedFrom counters match those transfers, and no Celo WCOP burns are recorded. Net issuance equals current 33999986 WCOP supply. This establishes independent native liabilities plus a transfer rail, not a conserved bridge-only representation. Current native role/upgrade powers are added to Mint Authority and Celo bridge authorities are separately enumerated here. Issuer launch/release disclosures, repository audit material, independent incident-index searches and complete token/facility histories were reviewed; no unexplained Celo issuance, upgrade or fulfillment was identified. Fiat backing is not independently reconciled and signer independence is not inferred.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-03",
-        "observedBlock": 79168012,
+        "controllerChain": "celo",
+        "controllerAddress": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "observedAt": "2026-10-05",
+        "observedBlock": 79288027,
         "sources": [
           {
             "label": "Ripio wFIAT Celo launch announcement",
@@ -376,8 +378,7 @@
           "worldchain:0x8a1d45e102e886510e891d2ec656a708991e2d76",
           "bsc:0x8a1d45e102e886510e891d2ec656a708991e2d76",
           "polygon:0x8a1d45e102e886510e891d2ec656a708991e2d76",
-          "gnosis:0x8a1d45e102e886510e891d2ec656a708991e2d76",
-          "celo:0x8a1d45e102e886510e891d2ec656a708991e2d76"
+          "gnosis:0x8a1d45e102e886510e891d2ec656a708991e2d76"
         ],
         "capabilities": [
           "bridge-mint",
@@ -395,15 +396,13 @@
           "contract:bsc:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
           "contract:polygon:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
           "contract:gnosis:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
-          "contract:celo:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
           "contract:ethereum:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
           "eoa:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
-          "safe:ethereum:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
-          "safe:celo:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+          "safe:ethereum:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
         ],
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "LimitedMinterBridge tokenConfigs(wCOP) returned exists = true and dailyMaxMint = 1,580,416,570,821,698,384 raw units (1.580416570821698384 WCOP) on Ethereum, Base, Worldchain, BSC, Polygon, Gnosis, and Celo at the 2026-08-16 reads. The source permits an administrator to register tokens, change daily limits, pause, and mint to an arbitrary recipient.",
+        "capDescription": "Historical 2026-08-16 reads of the six referenced deployments returned exists=true and dailyMaxMint=1580416570821698384 raw units (1.580416570821698384 WCOP). These observations are not re-dated. The separately reviewed Celo facility now has its own current control record. Administrators can change token registration and daily limits; minters can choose arbitrary recipients.",
         "canRaiseCap": true,
         "bypassSurfaces": [
           "The issuer EOA held MINTER_ROLE on the Ethereum adapter and can call its arbitrary-recipient mintTo() path without BridgeDeposit burn proof; the token-level issuer MINTER_ROLE remains a separate native issuance surface."
@@ -412,8 +411,7 @@
           "caps": "The adapter's wCOP dailyMaxMint was 1.580416570821698384 WCOP at the reviewed reads, and the source permits an administrator to change token registration and daily limits.",
           "trustedPeerOrRemote": "BridgeDeposit.depositForBridge() burns source WCOP and an authorized operator fulfills destination minting through LimitedMinterBridge; Ethereum route configurations to Base, Worldchain, BSC, Polygon, Gnosis, and Celo were enabled with a fixed 57 WCOP fee.",
           "pausersAdminsUpgraders": "LimitedMinterBridge is source-verified and non-upgradeable. Its admin surface controls token registration, daily limits, and pause; Ethereum DEFAULT_ADMIN_ROLE was held by the issuer EOA and Ripio Safe, with no timelock evidenced.",
-          "onchainAmountBounds": "BridgeDeposit exposes totalBurnedTo/totalMintedFrom accounting and the Worldchain counters were nonzero at the observed Ethereum block, but paired source/destination reconciliation was not completed. The issuer EOA's adapter MINTER_ROLE creates a capped arbitrary-recipient bypass of burn proof.",
-          "unsupportedReason": "Ripio's July 31, 2026 Celo announcement publishes this wCOP adapter address; at Celo block 75019312, the Ripio Safe held DEFAULT_ADMIN_ROLE and MINTER_ROLE while the issuer EOA did not. The Safe-controlled direct mint leaves Celo's canonical-versus-conserved provenance unresolved; the Celo token deployment is represented by an unresolved route row."
+          "onchainAmountBounds": "BridgeDeposit exposes totalBurnedTo/totalMintedFrom accounting and the Worldchain counters were nonzero at the observed Ethereum block, but paired source/destination reconciliation for these six routes was not completed. The issuer EOA's adapter MINTER_ROLE creates a capped arbitrary-recipient bypass of burn proof."
         },
         "timelockDelaySec": 0,
         "observedAt": "2026-08-16",
@@ -444,7 +442,7 @@
             "url": "https://forno.celo.org"
           }
         ],
-        "evidence": "At the fixed 2026-08-16 reads, LimitedMinterBridge 0x46167cB034FeC6ceC46CaeD4f61281f5Aa0Eb0e6 held WCOP MINTER_ROLE on the six authored native deployments and Celo, and its wCOP configuration returned the daily cap above. The verified source defines issuer-operated bridge minting, per-token daily limits, admin-controlled registration and limits, pause, and arbitrary-recipient minting. Ethereum role enumeration found the issuer EOA and BridgeDeposit as MINTER_ROLE holders and the issuer EOA and Safe as DEFAULT_ADMIN_ROLE holders. Celo's Safe-controlled direct MINTER_ROLE remains an unresolved canonicality and conservation question; it is represented by the unresolved Celo token route row. The adapter is therefore route-scoped Bridge Risk and is not global native Mint Authority."
+        "evidence": "The historical 2026-08-16 observations of the six referenced deployments are retained. Verified LimitedMinterBridge source defines issuer-operated bridge minting, daily limits, admin-controlled registration, pause and arbitrary recipients. Ethereum role enumeration found the issuer EOA and BridgeDeposit as MINTER holders and EOA/Safe as administrators. Celo is removed from this shared historical observation and receives exact Celo controller records after the R17 pinned native/transfer review; its native mint capabilities remain in Mint Authority."
       },
       {
         "id": "wcop-bridge-admin-safe",
@@ -701,6 +699,120 @@
           }
         ],
         "evidence": "Ethereum role enumeration at the current 2026-08-16 read found EOA 0xbc924f707ca021f9b220088afe56c85b9cb43085 as a BRIDGE_OPERATOR_ROLE holder on BridgeDeposit; eth_getCode returned no bytecode. This operator can execute the documented BridgeDeposit fulfillment path, while route-level conservation remains an evidence gap."
+      },
+      {
+        "id": "wcop-celo-limited-minter-bridge",
+        "label": "Celo WCOP issuer-operated bridge mint adapter",
+        "routeRefs": ["celo:0x8a1d45e102e886510e891d2ec656a708991e2d76"],
+        "capabilities": ["bridge-mint", "rate-limit", "admin", "pause"],
+        "controllerChain": "celo",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "failureDomainKeys": ["protocol:ripio-latam-stables-bridge", "contract:celo:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6", "safe:celo:0x2b839174fe62466067c22e2a4c8054071f9d8d68", "eoa:0x5ca3f8eeba12d83408fc097c2dad79212456f20f"],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "capDescription": "Pinned tokenConfigs(wCOP) gives dailyMaxMint=21000000 WCOP and exists=true. Safe and 0x5ca3f8 administer the facility; 0x5ca3f8 and BridgeDeposit hold its MINTER_ROLE.",
+        "bypassSurfaces": ["Administrator/minter EOA 0x5ca3f8 can call mintTo with an arbitrary recipient without BridgeDeposit source-burn proof; administrator can raise or re-register the daily limit."],
+        "observedAt": "2026-10-05",
+        "observedBlock": 79288027,
+        "sources": [
+          {"label": "Verified Celo bridge adapter", "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"},
+          {"label": "Celo fixed-block configuration and role census", "url": "https://forno.celo.org"}
+        ],
+        "evidence": "Same-pin enumerated role members and token configuration identify the current Celo adapter, separate from the native LimitedMinter. Source is non-upgradeable but administrator can raise limits. No immutable economic cap or source-burn constraint is asserted for the EOA's direct adapter mint path."
+      },
+      {
+        "id": "wcop-celo-bridge-deposit",
+        "label": "Celo WCOP BridgeDeposit transfer fulfillment",
+        "routeRefs": ["celo:0x8a1d45e102e886510e891d2ec656a708991e2d76"],
+        "capabilities": ["bridge-burn", "bridge-mint"],
+        "controllerChain": "celo",
+        "controllerAddress": "0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+        "failureDomainKeys": ["protocol:ripio-latam-stables-bridge", "contract:celo:0x465e642387d3d73a57cdc1368ffa53a800ba5d47", "contract:celo:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "timelockDelaySec": 0,
+        "observedAt": "2026-10-05",
+        "observedBlock": 79288027,
+        "sources": [
+          {"label": "Verified Celo BridgeDeposit", "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x465e642387d3d73a57cdc1368ffa53a800ba5d47"},
+          {"label": "Celo complete bridge history and paired source hashes", "url": "https://celo.blockscout.com/api/v2/addresses/0x465e642387d3d73a57cdc1368ffa53a800ba5d47/logs"},
+          {"label": "Pinned Celo transfer counters and adapter wiring", "url": "https://forno.celo.org"}
+        ],
+        "evidence": "Pinned limitedMinter() binds 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6. Complete token history identifies only two Celo WCOP fulfillments; RPC receipts authenticate both and their exact source burns. getBridgeStats(wCOP,480) records 999943 WCOP minted from Worldchain and getBridgeStats(wCOP,1) records 2999943 from Ethereum, with zero WCOP burned to either chain. This transfer accounting does not conserve the separate 30000100 WCOP native issuance."
+      },
+      {
+        "id": "wcop-celo-bridge-admin-safe",
+        "label": "Celo WCOP bridge administrator Safe",
+        "routeRefs": ["celo:0x8a1d45e102e886510e891d2ec656a708991e2d76"],
+        "capabilities": ["admin", "rate-limit", "pause"],
+        "controllerChain": "celo",
+        "controllerAddress": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "failureDomainKeys": ["protocol:ripio-latam-stables-bridge", "safe:celo:0x2b839174fe62466067c22e2a4c8054071f9d8d68"],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xf7104ad39080c53e2c8c74a34c34e622d8abe2c5",
+            "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+            "0x5b72e13f78feb8f5b44392f2e32940d4f37fa313",
+            "0x23cec92f92bde95e401f0a2b50b072a6069dfbd5",
+            "0x9850b4f631f1cae37bb1c42c8004ffc2cd31dcbe",
+            "0x00a74411ddbc50c04353543d5d3f4296936da645",
+            "0xa40d7d22873001f0140d76afc0ff0779e4210ed0"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": null,
+          "observedAt": "2026-10-05",
+          "observedBlock": 79288027,
+          "source": "onchain"
+        },
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "observedAt": "2026-10-05",
+        "observedBlock": 79288027,
+        "sources": [{"label": "Celo pinned Safe topology and bridge-administrator census", "url": "https://forno.celo.org"}],
+        "evidence": "This Safe is DEFAULT_ADMIN_ROLE on both Celo bridge contracts. At the pin it is 4-of-7, owner roster begins f710, module pagination is empty at terminal sentinel and guard storage is zero. Administration can grant operators/minters, raise limits and pause without an enforced timelock. Human signer independence remains unverified; native issuance powers are recorded separately."
+      },
+      {
+        "id": "wcop-celo-bridge-admin-operator-5ca3f8",
+        "label": "Celo WCOP bridge administrator, minter and operator 0x5ca3f8",
+        "routeRefs": ["celo:0x8a1d45e102e886510e891d2ec656a708991e2d76"],
+        "capabilities": ["bridge-mint", "admin", "rate-limit", "pause"],
+        "controllerChain": "celo",
+        "controllerAddress": "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+        "failureDomainKeys": ["protocol:ripio-latam-stables-bridge", "eoa:0x5ca3f8eeba12d83408fc097c2dad79212456f20f"],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "observedAt": "2026-10-05",
+        "observedBlock": 79288027,
+        "sources": [
+          {"label": "Celo fixed-block bridge-role census and account code", "url": "https://forno.celo.org"},
+          {"label": "Verified arbitrary-recipient adapter mint path", "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"}
+        ],
+        "evidence": "Pinned role enumeration identifies this EOA as bridge-adapter admin/minter and BridgeDeposit admin/operator/fee manager. It can bypass source-burn evidence through direct arbitrary-recipient adapter mintTo and raise its current cap; therefore a complete transfer census does not imply immutable conservation."
+      },
+      {
+        "id": "wcop-celo-bridge-operator-bc924f",
+        "label": "Celo WCOP BridgeDeposit operator 0xbc924f",
+        "routeRefs": ["celo:0x8a1d45e102e886510e891d2ec656a708991e2d76"],
+        "capabilities": ["bridge-mint"],
+        "controllerChain": "celo",
+        "controllerAddress": "0xbc924f707ca021f9b220088afe56c85b9cb43085",
+        "failureDomainKeys": ["protocol:ripio-latam-stables-bridge", "eoa:0xbc924f707ca021f9b220088afe56c85b9cb43085"],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "timelockDelaySec": 0,
+        "observedAt": "2026-10-05",
+        "observedBlock": 79288027,
+        "sources": [{"label": "Celo pinned BridgeDeposit operator census and account code", "url": "https://forno.celo.org"}],
+        "evidence": "Pinned BRIDGE_OPERATOR_ROLE enumeration identifies this second EOA, without bridge-adapter minter/admin membership. It can fulfill transfers through BridgeDeposit; its existence and contract-enforced route accounting do not attest beneficial controller independence or offchain source validation."
       }
     ]
   }

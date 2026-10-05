@@ -170,6 +170,38 @@ describe("access claim graph compiler", () => {
     expect(posture.freezeLookthrough!.authorities.map((authority) => authority.authorityKey)).toEqual(["origin:freeze"]);
     expect(posture.freezeLookthrough!.knownAdverseReachShare).toBeNull();
   });
+  it("keeps the actual nUSD graph unpriced when only the Ethereum LP book is measured", () => {
+    const assetId = "nusd-nexus";
+    const clockSec = 1_791_189_059;
+    const rows = [
+      { name: "DAI", pct: 27.8, risk: "low" as const, coinId: "dai-makerdao", sourceKey: "evm-branch-balances:ethereum:0x6b175474e89094c44da98b954eedeac495271d0f" },
+      { name: "USDC", pct: 28.3, risk: "low" as const, coinId: "usdc-circle", sourceKey: "evm-branch-balances:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" },
+      { name: "USDT", pct: 43.9, risk: "low" as const, coinId: "usdt-tether", sourceKey: "evm-branch-balances:ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7" },
+    ];
+    const fixed = makeV9FixedInput({ assetId, clockSec, reserves: rows });
+    const extension = makeV9Extension({ assetId, clockSec, registryFingerprint: fixed.registryFingerprint });
+    const asset = extension.assets[0]!;
+    const evidence = new ReviewEvidenceBuilder(assetId, clockSec);
+    asset.accessReview!.freeze.claimGraph = buildSafetyScoreV9AccessClaimGraph({
+      assetId, clockSec, generationId: fixed.baseInputGenerationId, evidence,
+    });
+    const built = evidence.finish();
+    asset.researchEvidence.push(...built.researchEvidence);
+    asset.componentEvidence.push(...built.componentEvidence);
+    const result = buildSafetyScoreV9Candidate({ fixedInput: fixed, extension, publishedAtSec: clockSec });
+    expect(result.quarantines).toEqual([]);
+    const graph = result.compiledFacts.assets[0]!.accessReview.freeze.claimGraph!;
+    expect(graph.edges.every(edge => edge.weight === null)).toBe(true);
+    expect(graph.partitions.every(partition => !partition.denominatorEstablished)).toBe(true);
+    const summary = result.candidate.cards[0]!.accessPosture.freezeLookthrough!;
+    expect(summary).toMatchObject({
+      coverageState: "incomplete", knownAdverseReachShare: null, unresolvedCoverageShare: null,
+    });
+    expect(summary.unresolved).toEqual(expect.arrayContaining([
+      expect.objectContaining({ branchKey: "whole-claim-pricing-and-liability-census", reason: "scope-unreconciled" }),
+      expect.objectContaining({ branchKey: "satellite-bridge-claims", reason: "research-incomplete" }),
+    ]));
+  });
   it("isolates a malformed receiving graph without synthetic active upstream assets", () => {
     const fixed = makeV9TwoAssetFixedInput();
     const review = makeAccessReview("alpha", new Date((fixed.clockSec - 100) * 1000).toISOString());

@@ -115,6 +115,15 @@
         "authorityType": "eoa",
         "directMintAbility": "parameter-only",
         "modulesOrGuardsStatus": "not-applicable",
+        "keyCustodyAttestation": {
+          "kind": "mpc",
+          "sources": [
+            {
+              "label": "Issuer exact V2 operator/surplus/market-mode holder: Fireblocks MPC, approval quorum TBD",
+              "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/7688325b8e79bf7a9b38dff7fa2f7e406c1c7501/docs/v2-deployment/BuildV2UpgradeBatch.md"
+            }
+          ]
+        },
         "observedAt": "2026-10-03",
         "observedBlock": 26110187,
         "sources": [
@@ -125,9 +134,13 @@
           {
             "label": "Current V2 role/valuation powers",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b7074cf6681382b70e239063931ebe83c0f4e0a"
+          },
+          {
+            "label": "Issuer exact V2 operational key custody disclosure",
+            "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/7688325b8e79bf7a9b38dff7fa2f7e406c1c7501/docs/v2-deployment/BuildV2UpgradeBatch.md"
           }
         ],
-        "evidence": "Current role census and hasRole bind OPERATOR_ROLE, SURPLUS_MANAGER_ROLE and MARKET_MODE_MANAGER_ROLE to this code-empty address. It controls trade/batch processing, declared surplus and market-mode operations; this is not an independently verified Fireblocks wallet. No direct USDat mint or cryptographic quorum is inferred."
+        "evidence": "Current role census and hasRole bind OPERATOR_ROLE, SURPLUS_MANAGER_ROLE and MARKET_MODE_MANAGER_ROLE to this code-empty address. It controls trade/batch processing, declared surplus and market-mode operations. Issuer BuildV2UpgradeBatch configuration at commit 7688325b8e79bf7a9b38dff7fa2f7e406c1c7501 binds this exact address to each of those roles and states Fireblocks MPC wallet; approvers / approval quorum TBD. The custody model is disclosed, but independent human control and approval policy remain unresolved. No direct USDat mint or cryptographic quorum is inferred."
       }
     ],
     "upgradeability": {
@@ -170,33 +183,35 @@
       "scopedQuestions": [
         {
           "controlRef": "Saturn V2 operator/surplus/market-mode EOA",
-          "question": "What signed/MPC policy, operational independence and key custody bind the V2 operator/surplus/market-mode EOA 0xc35580434261f667d6abbda9e3dc1dc31e5a1b92? The older Fireblocks wallet roster does not bind this exact current role holder.",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol mint-authority calibration v2 (Refine12)",
+          "question": "What operational signer independence and signing/approval policy bind V2 operator/surplus/market-mode EOA 0xc35580434261f667d6abbda9e3dc1dc31e5a1b92? Issuer configuration now identifies its exact Fireblocks MPC custody, but approvers / approval quorum are explicitly TBD.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "K04 v10.08 controller custody research",
           "sources": [
             {
               "label": "Complete native and timelock role replay with current membership at Ethereum block 26110187",
               "url": "https://etherscan.io/block/26110187"
             },
             {
-              "label": "Saturn disclosed legacy Fireblocks MPC wallet roster",
-              "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md"
+              "label": "Exact Fireblocks MPC role binding; approvers / approval quorum TBD",
+              "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/7688325b8e79bf7a9b38dff7fa2f7e406c1c7501/docs/v2-deployment/BuildV2UpgradeBatch.md"
             }
           ]
         },
         {
           "controlRef": "Saturn sUSDat parameter-manager timelock",
-          "question": "What signed/MPC policy, operational independence and key custody bind the parameter-manager timelock's sole proposer/canceller EOA 0x7a5a4064005584bc727666ec82548a9139d5f21e? The genesis-to-pin role census and current getters identify that proposer, but the older Fireblocks wallet roster does not attest this exact address.",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol mint-authority calibration v2 (Refine12)",
+          "question": "What operational signer independence and signing/approval policy bind parameter-manager timelock sole proposer/canceller EOA 0x7a5a4064005584bc727666ec82548a9139d5f21e? Issuer migration configuration identifies this exact address as the configured Fireblocks proposer, but does not disclose approvers, approval quorum or independence.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "K04 v10.08 controller custody research",
           "sources": [
             {
               "label": "Complete native and timelock role replay with current membership at Ethereum block 26110187",
               "url": "https://etherscan.io/block/26110187"
             },
             {
-              "label": "Saturn disclosed legacy Fireblocks MPC wallet roster",
-              "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md"
+              "label": "Exact configured Fireblocks migration proposer",
+              "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/7688325b8e79bf7a9b38dff7fa2f7e406c1c7501/docs/v2-deployment/BuildV2Migration.md"
             }
           ]
         }

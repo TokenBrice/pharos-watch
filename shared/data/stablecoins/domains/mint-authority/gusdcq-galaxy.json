@@ -286,6 +286,7 @@
         {
           "controlRef": "ethereum:0x42d510edeb9257f8d920d5b9f5109d95cb22419d",
           "question": "Which human controller, key-custody scheme and signing-policy approval boundary apply to this exact identified EOA? Empty deployed code establishes an EOA, not independent human control or a custody attestation.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
           "sources": [
@@ -318,6 +319,7 @@
         {
           "controlRef": "ethereum:0xa13094eced689b7419baba12851374424c1486f1",
           "question": "Which human controller, key-custody scheme and signing-policy approval boundary apply to this exact identified EOA? Empty deployed code establishes an EOA, not independent human control or a custody attestation.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
           "sources": [
@@ -350,6 +352,7 @@
         {
           "controlRef": "ethereum:0xb4b1c558af077b34f071b1b6e4cca0fb8a34aee0",
           "question": "Which human controller, key-custody scheme and signing-policy approval boundary apply to this exact identified EOA? Empty deployed code establishes an EOA, not independent human control or a custody attestation.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
           "sources": [
@@ -370,6 +373,7 @@
         {
           "controlRef": "ethereum:0xd1fcd938008a582e5f356bfe0d92604ffb7d3171",
           "question": "Which human controller, key-custody scheme and signing-policy approval boundary apply to this exact identified EOA? Empty deployed code establishes an EOA, not independent human control or a custody attestation.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
           "sources": [

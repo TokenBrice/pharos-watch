@@ -329,17 +329,46 @@
         {
           "label": "Verified standard Safe CompatibilityFallbackHandler source, 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4"
+        },
+        {
+          "label": "W4 R14 current verifier root/allowlist observation, Ethereum block 26124926 (2026-10-05)",
+          "url": "https://etherscan.io/block/26124926"
+        },
+        {
+          "label": "Mellow Verifier modes, off-chain Merkle proofs and custom-verifier delegation",
+          "url": "https://docs.mellow.finance/core-vaults/architecture/permissions/verifier.md"
+        },
+        {
+          "label": "Mellow architecture-specific security audits",
+          "url": "https://docs.mellow.finance/security.md"
+        },
+        {
+          "label": "Pinned live verifier implementation: role gate, Merkle verification and delegated custom verifier",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x000000047fc878662006e78d5174fb4285637966"
+        },
+        {
+          "label": "Current-root-bound earnUSD subvault 0 complete 8-leaf manifest, immutable official repository commit",
+          "url": "https://raw.githubusercontent.com/mellow-finance/flexible-vaults/2af48a02506b2c4fc3c278dbd3f32c1b456153db/scripts/jsons/ethereum:earnUSD:subvault0.json"
+        },
+        {
+          "label": "Current-root-bound earnUSD subvault 1 complete 10-leaf manifest, immutable official repository commit",
+          "url": "https://raw.githubusercontent.com/mellow-finance/flexible-vaults/2af48a02506b2c4fc3c278dbd3f32c1b456153db/scripts/jsons/ethereum:earnUSD:subvault1.json"
+        },
+        {
+          "label": "Exact custom BitmaskVerifier source and current bytecode binding",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000263fb29c3d6b0c5837883519ef05ea20a"
         }
       ],
       "disposition": "unresolved",
       "unresolvedQuestions": [
         "Implementation/admin upgrade-chain and alternate-call reach of all current queues, vault and subvaults in the ShareManager issuance path are not execution-complete; the pinned share proxy, ProxyAdmin owner and vault role/queue rosters do not close those upstream mint-capable paths.",
-        "The current verifier/mutable-target call constraints across subvaults have not been closed; possible alternate execution reaching the authorized vault/queue share issuance path remains unresolved."
+        "W4 R14 at Ethereum block 26124926 (2026-10-05) resolved the previous missing Merkle-manifest blocker: official flexible-vaults commit 2af48a02506b2c4fc3c278dbd3f32c1b456153db publishes complete 8-leaf/10-leaf earnUSD subvault manifests. Independently reconstructed full trees and every individual proof match the live roots 0x55bf5e57ca0a5e0617a150f6b77434cbb034d8005325c2a733d35bb60082ca46 and 0x0102d740ae91f0c3444a6252ccd84bfd304e8939e2dcb842f58c8a43c01903bb. All 18 leaves use BitmaskVerifier 0x0000000263fb29c3d6b0c5837883519ef05ea20a; pinned bytecode matches verified source. Exact decoding confirms fixed curator caller, target, zero ETH value and selector, with restricted approve/deposit/redeem/claim calls to earnUSDc/earnUSDe queues and assets. Both on-chain compact allowlists remain empty. This closes present top-level leaf/custom-verifier enumeration, not every target's mutable implementation/admin, downstream strategy oracle/debt reach or historical issuance/upgrade incident attribution. Those execution and incident prerequisites remain unresolved; no incidentState none is asserted."
       ],
       "scopedQuestions": [
         {
           "controlRef": "ethereum:0x81698f87c6482bf1ce9bfcfc0f103c4a0adf0af0",
           "question": "Which human independence, key-custody scheme and signing-policy approval boundary apply to the exact identified Safe owners? The observed roster/quorum and empty modules/guard do not establish independent humans or custody assurances.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
           "sources": [
@@ -360,6 +389,7 @@
         {
           "controlRef": "ethereum:0xe5abcc40196174ae0d12153de286f0d8e401769d",
           "question": "Which human independence, key-custody scheme and signing-policy approval boundary apply to the exact identified Safe owners? The observed roster/quorum and empty modules/guard do not establish independent humans or custody assurances.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
           "sources": [
@@ -376,6 +406,7 @@
         {
           "controlRef": "ethereum:0x0dd73341d6158a72b4d224541f1094188f57076e",
           "question": "Which human independence, key-custody scheme and signing-policy approval boundary apply to the exact identified Safe owners? The observed roster/quorum and empty modules/guard do not establish independent humans or custody assurances.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
           "sources": [
@@ -396,6 +427,7 @@
         {
           "controlRef": "ethereum:0x982ab69785f5329bb59c36b19cbd4865353fef10",
           "question": "Which human independence, key-custody scheme and signing-policy approval boundary apply to the exact identified Safe owners? The observed roster/quorum and empty modules/guard do not establish independent humans or custody assurances.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
           "sources": [

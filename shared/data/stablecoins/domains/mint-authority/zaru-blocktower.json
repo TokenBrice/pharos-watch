@@ -19,15 +19,15 @@
         "canRaiseCap": false,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 452860530,
+        "observedAt": "2026-10-05",
+        "observedBlock": 453523097,
         "sources": [
           {
             "label": "Solana mint and authority observation",
             "url": "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
           }
         ],
-        "evidence": "Finalized mint at slot 452860530 retains the sole mintAuthority 8USLqNrJ6WfUcTk2XUBYGRiMA2Mp2qh9AhsJZBEg5W62. At slot 452861255 that authority is a nonexecutable zero-data System Program account, not an SPL multisig or PDA; no code-enforced quorum or delay is demonstrated. Token-2022 native minting has no issuer-authored quantitative supply-cap parameter to raise. Creation transaction 5ujgjg4P8ciRqDaQkMjM135KoWkMJUmRbxXj5nQUdxkEhkMFrx8rFDnaqCtU27Vv8RtkbbRP2Xmay41pMBJUJNW9 creates and initializes this exact mint at slot 373091718 on 2025-10-13; that is deployment age, not public distribution age."
+        "evidence": "A single finalized getMultipleAccounts response at slot 453523097 binds the Token-2022 mint to sole mintAuthority 8USLqNrJ6WfUcTk2XUBYGRiMA2Mp2qh9AhsJZBEg5W62 and this nonexecutable, zero-data System Program account. This is not an SPL multisig or PDA; jsonParsed instruction labels do not establish a quorum. Archival history reaches creation slot 373091718 (2025-10-13): all 854 transactions were retrieved, with 39 mintToChecked instructions using this sole signer and 24 burnChecked instructions. Mint less burn exactly equals pinned supply 60552996194140 base units. No native numeric issuance cap, independently verified HSM custody or human independence is established."
       },
       {
         "chain": "ethereum",
@@ -96,8 +96,8 @@
         "canRaiseCap": true,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 24011807,
+        "observedAt": "2026-10-05",
+        "observedBlock": 24360273,
         "sources": [
           {
             "label": "Verified ERC20F implementation",
@@ -108,7 +108,7 @@
             "url": "https://explorer.arc.io/address/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"
           }
         ],
-        "evidence": "At Arc block 24011807, additionally verified BURNER_ROLE, CONTRACT_ADMIN_ROLE and SALVAGE_ROLE are true for the previously observed DEFAULT_ADMIN/MINTER/UPGRADER/RECOVERY/PAUSER EOA. Verified ERC20F source gates mint only by MINTER_ROLE and UUPS upgrades only by UPGRADER_ROLE, with no numeric cap or mandatory delay. accessRegistry() is 0xfa51dd24f7348d5f0e6c5a5a00213d85ca401da9. Full Arc role-event enumeration did not complete: the RPC rejected both the full-history request and 100,000-block chunks, so additional role holders remain an explicit coverage gap."
+        "evidence": "Arc's topic-filtered explorer histories terminate with eight RoleGranted events to this sole EOA and no RoleRevoked events. The explorer indexing tail is closed by 27 successful 500-block Dwellir queries from block 24347185 through pinned block 24360273, with no role changes. At that pin all eight memberships are true and all role administrators are DEFAULT_ADMIN_ROLE; the EOA is codeless. EIP-1967 points to ERC20F 0x0f25045d15c163478bb67c56c5d9d602628f4f62. Its pinned executable matches the Sourcify-recompiled runtime byte-for-byte after substituting five exact __self immutables and removing trailing CBOR metadata. Source gates uncapped mint by MINTER_ROLE and immediate UUPS replacement by UPGRADER_ROLE. No human independence or HSM custody is inferred."
       }
     ],
     "upgradeability": {
@@ -186,38 +186,46 @@
         {"label": "Ethereum current verified-reference runtime JSON-RPC", "url": "https://ethereum-rpc.publicnode.com"},
         {"label": "Base pinned implementation runtime JSON-RPC", "url": "https://mainnet.base.org"},
         {"label": "Arc pinned implementation runtime JSON-RPC", "url": "https://rpc.mainnet.arc.io"},
-        {"label": "ERC20F compiler verification match status", "url": "https://sourcify.dev/server/v2/contract/1/0x0f25045d15c163478bb67c56c5d9d602628f4f62?fields=all"}
+        {"label": "ERC20F recompiled runtime, exact immutable offsets and source files", "url": "https://sourcify.dev/server/v2/contract/1/0x0f25045d15c163478bb67c56c5d9d602628f4f62?fields=all"},
+        {"label": "Arc terminal complete RoleGranted history", "url": "https://explorer.arc.io/api/v2/addresses/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5/logs?topic=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"},
+        {"label": "Arc terminal complete RoleRevoked history", "url": "https://explorer.arc.io/api/v2/addresses/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5/logs?topic=0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b"},
+        {"label": "Ethereum historical mint and burn event inventory", "url": "https://eth.blockscout.com/api/v2/addresses/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5/logs?topic=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"},
+        {"label": "Base historical mint and burn event inventory", "url": "https://base.blockscout.com/api/v2/addresses/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5/logs?topic=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"},
+        {"label": "Arc historical mint and burn event inventory", "url": "https://explorer.arc.io/api/v2/addresses/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5/logs?topic=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"},
+        {"label": "Solana atomic finalized mint and authority observation", "url": "https://solana-rpc.publicnode.com"},
+        {"label": "FSCA official register unavailable during ICT maintenance", "url": "https://fscasplashpage.z1.web.core.windows.net/"}
       ],
-      "evidence": "Solana mint authority and Ethereum/Base complete role event inventories were independently pinned on 2026-10-03; Arc additionally exposes BURNER, CONTRACT_ADMIN and SALVAGE membership for the known EOA, but the full Arc census remains incomplete after RPC range rejection. Verified native mint/admin/UUPS paths are economically unbounded and immediately executable; no HSM or independent human quorum is asserted. Canonical Solana mint creation was confirmed at slot 373091718 on 2025-10-13. The July snapshot reconciles historical circulation to reserves, but no recurring current financial reconciliation was retrieved. Whitepaper 4.04/4.08 discloses mint-after-validated-rand-deposit and burn on redemption; transaction-level deposit validation is not itself a disclosed recurring issuer-ledger reconciliation cadence, so reconciliation remains unknown. The report was signed August 28; current reserve weights are not established. ISRS 4400 AUP provides no assurance opinion; legal insolvency priority and MMF look-through/duration remain unproved. Independent operators and HSM/key-custody arrangements for the identified issuance keys remain unverified. Partner minimums, fees and capacity are unquantified; CEX volume is not DEX depth. Only about seven days of the requested 90-day price history were retrieved, so no FX-normalized depeg assertion is supported. Provider circulation provenance is retained: native deployment stocks are not independently reconciled legal total liabilities or a justified aggregate override. FSP55172 remains issuer-claimed, without independently pinned regulator authorization. These key-custody, Backing, exit, market-data and supervision qualifications do not replace the retained Arc census question. Additional runtime-identity proof on 2026-10-03: eth_getCode for implementation 0x0f25045d15c163478bb67c56c5d9d602628f4f62 at Base block 52110948 and Arc block 24011807 is byte-for-byte equal to the Ethereum current ERC20F reference. Ethereum Blockscout reports is_verified=true and its deployed_bytecode equals that same RPC runtime. All three are 15,673 bytes with SHA-256 67b5282aa52d48b0156e2feb617b49bd2b2c4cd7fd3b98017c70533bcbeaa64d. This closes cross-chain deployed-bytecode equality only: Blockscout reports is_fully_verified=false and is_partially_verified=true, while Sourcify runtimeMatch=match rather than exact_match. Full compiler source/runtime correspondence remains qualified alongside the separate missing Arc role-holder census.",
-      "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
-      "reviewedAt": "2026-10-03",
+      "evidence": "Reviewed native issuance on October 5, 2026. Arc's terminal eight-grant/zero-revoke explorer history plus a successful 27-window indexing-tail census establishes the sole eight-role EOA through block 24360273. All current Arc memberships and default-admin relationships are pinned. Ethereum/Base earlier complete role inventories remain sourced; current implementation slots and codeless authority are corroborated at Ethereum 26124902, Base 52199351 and Arc 24360273. Each chain's deployed ERC20F executable equals Sourcify's recompiled source runtime: substitute the observed 32-byte __self address at byte offsets 3167, 3231, 3585, 3649 and 3792, then remove only the final 53-byte CBOR section. All 15620 executable bytes agree; no other normalization is used. Unbounded immediate mint/admin/upgrade economics are retained. Incident review searched issuer home, whitepaper, legal and blog disclosures, published audit claims, indexed issuer X, rekt.news and exploit searches. Direct X access was blocked and the whitepaper promises rather than supplies a contract audit. All 854 archival Solana mint-address transactions through finalized slot 453523097 were fetched without errors, reaching creation slot 373091718. The 39 mints all use the identified sole issuer signer; 24 burns yield the exact pinned supply 60552996194140 base units. Terminal Ethereum/Base/Arc Transfer histories show one 100-token mint and corresponding burn on each chain; each mint/burn caller is the identified role EOA and all three pinned current supplies are zero. No active or resolved native unauthorized-mint incident was identified in this review. This is not financial backing assurance or a custody-independence claim. The latest public report signed August 28 covers only the July 31 snapshot and explicitly states ISRS 4400 AUP is not an assurance engagement, so recurring current reconciliation and attestation-only supervision are not established. FSCA's official site/register redirects to its ICT-maintenance notice; FSP55172 scope remains unverified. Reconciliation and supervision stay unknown, and all named key-custody questions remain open.",
+      "reviewer": "Unknown-resolver wave 4 (R09) primary-source and pinned-state review",
+      "reviewedAt": "2026-10-05",
       "disposition": "scoreable",
-      "unresolvedQuestions": [
-        "Full Arc role-holder enumeration remains incomplete after public RPC range rejection; the complete issuance and upgrade authority census on this native deployment is not established.",
-        "The shared ERC20F mint/UUPS implementation has partial compiler verification only (Blockscout is_fully_verified=false/is_partially_verified=true; Sourcify runtimeMatch=match). Exact cross-chain runtime equality is proven, but equality to a fully verified reference and complete compiler source/runtime correspondence have not been independently established."
-      ],
+      "unresolvedQuestions": [],
       "scopedQuestions": [
         {
           "controlRef": "Solana Token-2022 mint authority",
           "question": "Which independently verifiable human-independence, HSM/key-custody and signing-policy arrangements protect the identified ordinary Solana mint signer? Issuer HSM and multisig claims do not establish a native enforced quorum.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
           "sources": [{"label": "ZARU whitepaper custody claims", "url": "https://zaru.network/blog/zar-universal-white-paper"}, {"label": "Exact native mint authority", "url": "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"}]
         },
         {
           "controlRef": "ethereum MINTER_ROLE and role administrator",
           "question": "Which independently verifiable human-independence, HSM/key-custody and signing-policy arrangements protect the identified Ethereum issuer EOA's mint, role-administration and upgrade powers?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
           "sources": [{"label": "ZARU whitepaper custody claims", "url": "https://zaru.network/blog/zar-universal-white-paper"}, {"label": "Exact Ethereum role-controlled token", "url": "https://etherscan.io/address/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"}]
         },
         {
           "controlRef": "base MINTER_ROLE and role administrator",
           "question": "Which independently verifiable human-independence, HSM/key-custody and signing-policy arrangements protect the identified Base issuer EOA's mint, role-administration and upgrade powers?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
           "sources": [{"label": "ZARU whitepaper custody claims", "url": "https://zaru.network/blog/zar-universal-white-paper"}, {"label": "Exact Base role-controlled token", "url": "https://basescan.org/address/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"}]
         },
         {
           "controlRef": "arc MINTER_ROLE and role administrator",
-          "question": "Which independently verifiable human-independence, HSM/key-custody and signing-policy arrangements protect the identified Arc issuer EOA's mint, role-administration and upgrade powers? This custody qualification does not replace the umbrella Arc census gap.",
+          "question": "Which independently verifiable human-independence, HSM/key-custody and signing-policy arrangements protect the identified Arc issuer EOA's mint, role-administration and upgrade powers? The complete on-chain role census does not establish signing-policy independence.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
           "sources": [{"label": "ZARU whitepaper custody claims", "url": "https://zaru.network/blog/zar-universal-white-paper"}, {"label": "Exact Arc role-controlled token", "url": "https://explorer.arc.io/address/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"}]
         }

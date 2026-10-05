@@ -435,7 +435,7 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Historical July 2026 review identified CCIP pool 0x258feb106e6d9ba23d61a1ec0f59fade3aaba89e and this token mapping. At Tempo block 42130411, its getToken() still returns the legacy token, but mint(Safe,1) simulated from that pool reverts Unauthorized on both the legacy token and issuer-listed replacement 0x20c000000000000000000000383a23bacb546ab9. A complete RoleMembershipUpdated log scan from token creation block 12906370 through 42130411, in 293 successful public-RPC ranges of at most 100000 blocks, found five grants and no revocations. The actual ISSUER_ROLE holders are contracts 0x2ba8aa49603958b78eb23968039417cd1552ab86 and 0xbb631b504d3d30ee89948afb97b74c1c7eedfeb0; pinned hasRole calls confirm both, while the recorded CCIP pool and Safe lack ISSUER_ROLE. Mint calls impersonating either actual holder succeed, establishing token-level authorization but not a publicly callable contract mint path. The second holder has EIP-1967 implementation 0x6530660eb4834d8758e5c12946a8d0420af45fd7. Neither implementation was source-verified by the attempted Sourcify or explorer reads. The current native-versus-bridge issuance model and privileged caller reach therefore remain unresolved; no deployment is retired or alternative route invented.",
+        "reviewNote": "Historical July 2026 review identified CCIP pool 0x258feb106e6d9ba23d61a1ec0f59fade3aaba89e and this token mapping. At Tempo block 42130411, its getToken() still returns the legacy token, but mint(Safe,1) simulated from that pool reverts Unauthorized on both the legacy token and issuer-listed replacement 0x20c000000000000000000000383a23bacb546ab9. A complete RoleMembershipUpdated log scan from token creation block 12906370 through 42130411, in 293 successful public-RPC ranges of at most 100000 blocks, found five grants and no revocations. The actual ISSUER_ROLE holders are contracts 0x2ba8aa49603958b78eb23968039417cd1552ab86 and 0xbb631b504d3d30ee89948afb97b74c1c7eedfeb0; pinned hasRole calls confirm both, while the recorded CCIP pool and Safe lack ISSUER_ROLE. Mint calls impersonating either actual holder succeed, establishing token-level authorization but not a publicly callable contract mint path. The second holder has EIP-1967 implementation 0x6530660eb4834d8758e5c12946a8d0420af45fd7. Neither implementation was source-verified by the attempted Sourcify or explorer reads. At pinned Tempo block 42696278 (hash 0x6b54edd7272abaf2ac2bf8ca177933cebbe3b1a5b792058794e75839e2fdfb06), independent 2026-10-05 calls confirm legacy symbol reUSD, supplyCap 340282366920938463463374607431768211455 base units (uint128 maximum), and paused false. setSupplyCap(uint128 maximum) and grantRole(ISSUER_ROLE,Safe) simulations from governance Safe 0x8eec10616802ef639ca55c98ac856553fadefbad succeed. The TIP-20 specification makes the supply ceiling admin-configurable; the numerical type maximum is not collateral or reserve reconciliation. Mint simulations from both recorded holder contracts still succeed and the historical CCIP pool still reverts Unauthorized. New Sourcify exact-address queries and explorer smart-contract API requests for both holder contracts return 404; their upstream reachable callers and source-backed economic constraints remain unresolved. Failed unsupported hasRole selector probes are not treated as role revocations. The current native-versus-bridge issuance model and privileged caller reach therefore remain unresolved; no deployment is retired, no complete bridge review or incident-free conclusion is inferred, and no alternative route is invented.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "tempo",
         "controllerAddress": "0x258feb106e6d9ba23d61a1ec0f59fade3aaba89e",
@@ -457,6 +457,14 @@
           {
             "label": "reUSD on Tempo explorer (verified 2026-07-20)",
             "url": "https://explore.tempo.xyz/address/0x20c000000000000000000000e09a4cfec804f102"
+          },
+          {
+            "label": "Tempo pinned RPC at block 42696278: legacy token ceiling and governance admin simulations",
+            "url": "https://rpc.tempo.xyz"
+          },
+          {
+            "label": "TIP-20 supply cap, mint authorization and role administration specification",
+            "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
           }
         ]
       },

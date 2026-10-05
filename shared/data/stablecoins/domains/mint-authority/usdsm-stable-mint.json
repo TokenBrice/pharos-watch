@@ -183,6 +183,26 @@
         {
           "label": "Current four-chain OFT architecture and security disclosure",
           "url": "https://docs.stablemint.io/bridge/overview.md"
+        },
+        {
+          "label": "W4 R14 native authority, admin/implementation slots and middleware observations at Etherlink block 54935586 (2026-10-05)",
+          "url": "https://explorer.etherlink.com/block/54935586"
+        },
+        {
+          "label": "Native RoleGranted history through Etherlink block 54935586",
+          "url": "https://explorer.etherlink.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=54935586&address=0x6bde51212203ae5d592cc5180da2abbd41c922de&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        },
+        {
+          "label": "Verified native bridge-only middleware: immutable token and one-time adapter binding",
+          "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0x28da1dfaf5dca1af226a2e56b834e8ec3c495c5a"
+        },
+        {
+          "label": "Current issuance terms, sections 8.3-8.6; issuer statement of funds-before-mint process",
+          "url": "https://stablemint.io/legal/terms-conditions/"
+        },
+        {
+          "label": "Issuer announcement and disclosure history",
+          "url": "https://stablemint.io/blog/"
         }
       ],
       "evidence": "The earlier complete native RoleGranted/RoleRevoked census through Etherlink block 54814410 identifies DEFAULT_ADMIN 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd and three live MINTER_ROLE holders: that EOA, codeless EOA 0xab42b550b6d757f3d17eac8e045af095961d75bc, and bridge-only USDSMMinterBurner 0x28da1dfaf5dca1af226a2e56b834e8ec3c495c5a. Verified middleware restricts mint to its one-time-set adapter 0xe7f117f87fa650350c3e363ca2c644951d273d1f, owned in Bridge Risk. The earlier ProxyAdmin.owner pin returns the default-admin EOA with no mint-logic timelock; implementation activation was block 21653650 on July 22, 2025. New W3R21 observations pin Ethereum 26122339, Base 52184021, Arbitrum 511756429 and Etherlink 54923573. On all four adapters owner() and Endpoint.delegates(adapter) return 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd. All twelve directed peers match the official four-chain roster; each effective receive library is explicitly configured rather than default, and all twenty-four effective send/receive ULN configurations require two DVNs with no optional DVNs. Complete PeerSet topic queries return three events per adapter: Ethereum/Base/Arbitrum RPC over genesis through each pin, and Etherlink explorer over creation block 40962277 through its pin after the public RPC rejected large windows. Current peer/DVN/library/delegate configuration is therefore observed, not merely an issuer assertion. This does not complete historical mint/upgrade incident review or the endpoint/library permission and reconfiguration/bypass inventory; no incidentState none or execution-scope certificate is asserted. MPC quorum, signer independence and key recovery remain undisclosed for both native EOAs. Independent whole-liability reconciliation remains unavailable and reconciliation stays unknown. Prudential supervision remains supported by the existing ESMA exact Stable mint Ltd LEI/EMI/MFSA row, not issuer-reported reserve ratios. Verified confidence refers to the evidenced native controller and implementation facts, not financial, human-independence or complete executable assurance.",
@@ -190,12 +210,15 @@
       "reviewedAt": "2026-10-04",
       "disposition": "scoreable",
       "unresolvedQuestions": [
-        "The four adapters' effective peers, owner/delegate, explicit libraries, two-required-DVN configurations and complete PeerSet histories are now pinned. Finish the endpoint/library reconfiguration, grace-period/alternative receive path and runtime-source permission/bypass inventory, plus historical native issuance/upgrade incident review, before asserting aggregate reviewComplete or incidentState none."
+        "W4 R14 (2026-10-05) pinned Etherlink block 54935586: both native minters remain codeless EOAs with MINTER_ROLE, defaultAdmin and ProxyAdmin.owner remain 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd, and the bridge-only middleware remains bound to the documented adapter. Explorer history has 17 RoleGranted, 1 RoleRevoked and 2 Upgraded events; filtered zero-sender Transfer history has 423 mints totaling 43700256460391000000000000 base units, versus current native supply 7059516402343000000000000. This is gross mint history, not unexplained excess or financial reconciliation. The unfiltered Transfer query truncates at 1000 rows; burn/custom Mint/Burn queries were rate-limited and a v2 logs retry timed out. Without complete burn accounting and historical implementation/caller attribution, native issuance/upgrade incident review is incomplete and incidentState none is unsupported.",
+        "The separately owned bridge review still requires endpoint/library reconfiguration, grace-period/alternative receive-path and runtime permission/bypass coverage. This is not evidence of another native issuer minter; the exact immutable middleware and one-time adapter binding separate the bridge-only role from native EOA issuance.",
+        "Current issuer terms require funds before mint and the whitepaper claims regular audits and MPC administration, but no current independent report tying all-chain USDSM liabilities to reserves or exact native EOA quorum/independence/recovery evidence was established. Reconciliation remains unknown; a role census or a stated reserve percentage does not provide that financial assurance."
       ],
       "scopedQuestions": [
         {
           "controlRef": "etherlink:0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd",
           "question": "What independent MPC quorum, signer-independence and key-recovery evidence governs this EOA's native mint/admin and ProxyAdmin-owner powers? The issuer's MPC claim is not an independently established signing threshold.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
           "sources": [
@@ -206,6 +229,7 @@
         {
           "controlRef": "USDSM additional Etherlink native minter",
           "question": "What independently evidenced signing quorum, operator independence and key-recovery policy governs this additional codeless native minter? No such policy was established by the complete role census.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
           "sources": [

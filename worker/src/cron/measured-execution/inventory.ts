@@ -9,6 +9,7 @@ import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexApiPool } from "../../lib/dex-api-types";
 import { getTokenReferenceUsdPrice } from "../../lib/dex-api-token-pricing";
 import { logWorkerEvent } from "../../lib/structured-log";
+import { getDexMeasuredExecutionDeployment, isTickSpacingQuoterV2Profile, type DexMeasuredExecutionDeployment } from "./registry";
 import { normalizeEvmAddress } from "../../lib/evm-selectors";
 // Alias the canonical key builder locally instead of importing token-resolution's
 // wrapper: that import closed a module cycle (dex-liquidity/types -> inventory ->
@@ -319,8 +320,8 @@ function resolveClImpliedOutputPrice(input: {
 function buildClMeasuredExecutionTarget(
   input: ClMeasuredExecutionTargetInput,
   adapter: {
-    adapterProfileId: "uniswap-v3-quoter-v2" | "aerodrome-slipstream-quoter-v2";
-    protocol: "uniswap-v3" | "aerodrome-slipstream";
+    adapterProfileId: DexMeasuredExecutionDeployment["adapterProfileId"];
+    protocol: DexMeasuredExecutionDeployment["protocol"];
     source: "uniswap-v3-subgraph" | "aerodrome-slipstream-sugar";
     feePips?: number;
     tickSpacing?: number;
@@ -554,11 +555,13 @@ export function buildUniswapV4MeasuredExecutionTarget(input: {
 }
 
 export function buildUniV3MeasuredExecutionTarget(
-  input: Omit<ClMeasuredExecutionTargetInput, "candidate"> & { candidate: UniV3ExecutionCandidate },
+  input: Omit<ClMeasuredExecutionTargetInput, "candidate"> & { candidate: UniV3ExecutionCandidate; adapterProfileId?: DexMeasuredExecutionDeployment["adapterProfileId"] },
 ): DexMeasuredExecutionTarget | null {
+  const deployment = input.adapterProfileId ? getDexMeasuredExecutionDeployment(input.adapterProfileId, input.candidate.chain) : null;
+  if (input.adapterProfileId && (!deployment || isTickSpacingQuoterV2Profile(input.adapterProfileId))) return null;
   return buildClMeasuredExecutionTarget(input, {
-    adapterProfileId: "uniswap-v3-quoter-v2",
-    protocol: "uniswap-v3",
+    adapterProfileId: deployment?.adapterProfileId ?? "uniswap-v3-quoter-v2",
+    protocol: deployment?.protocol ?? "uniswap-v3",
     source: "uniswap-v3-subgraph",
     feePips: input.candidate.feePips,
   });
@@ -597,6 +600,7 @@ export function buildUniV3DirectMeasuredExecutionTargets(input: {
   validationReferences?: PriceValidationReferences;
   stablecoinPriceById?: Map<string, number>;
   capturedAt: number;
+  adapterProfileId?: DexMeasuredExecutionDeployment["adapterProfileId"];
 }): Map<string, DexMeasuredExecutionTarget> {
   return buildClStyleMeasuredExecutionTargets(input.pools, {
     source: "uniswap-v3-shadow",
@@ -653,6 +657,7 @@ export function buildUniV3DirectMeasuredExecutionTargets(input: {
     buildTarget: ({ stablecoinId, candidate, pool }) =>
       buildUniV3MeasuredExecutionTarget({
         stablecoinId,
+        adapterProfileId: input.adapterProfileId,
         candidate,
         stablecoinPriceById: input.stablecoinPriceById,
         chainAddressToId: input.chainAddressToId,
@@ -665,11 +670,13 @@ export function buildUniV3DirectMeasuredExecutionTargets(input: {
 }
 
 export function buildSlipstreamMeasuredExecutionTarget(
-  input: Omit<ClMeasuredExecutionTargetInput, "candidate"> & { candidate: SlipstreamExecutionCandidate },
+  input: Omit<ClMeasuredExecutionTargetInput, "candidate"> & { candidate: SlipstreamExecutionCandidate; adapterProfileId?: DexMeasuredExecutionDeployment["adapterProfileId"] },
 ): DexMeasuredExecutionTarget | null {
+  const deployment = input.adapterProfileId ? getDexMeasuredExecutionDeployment(input.adapterProfileId, input.candidate.chain) : null;
+  if (input.adapterProfileId && (!deployment || !isTickSpacingQuoterV2Profile(input.adapterProfileId))) return null;
   return buildClMeasuredExecutionTarget(input, {
-    adapterProfileId: "aerodrome-slipstream-quoter-v2",
-    protocol: "aerodrome-slipstream",
+    adapterProfileId: deployment?.adapterProfileId ?? "aerodrome-slipstream-quoter-v2",
+    protocol: deployment?.protocol ?? "aerodrome-slipstream",
     source: "aerodrome-slipstream-sugar",
     tickSpacing: input.candidate.tickSpacing,
   });
@@ -682,6 +689,7 @@ export function buildSlipstreamMeasuredExecutionTargets(input: {
   validationReferences?: PriceValidationReferences;
   stablecoinPriceById?: Map<string, number>;
   capturedAt: number;
+  adapterProfileId?: DexMeasuredExecutionDeployment["adapterProfileId"];
 }): Map<string, DexMeasuredExecutionTarget> {
   return buildClStyleMeasuredExecutionTargets(input.pools, {
     source: "aerodrome-slipstream",
@@ -746,6 +754,7 @@ export function buildSlipstreamMeasuredExecutionTargets(input: {
     buildTarget: ({ stablecoinId, candidate, pool }) =>
       buildSlipstreamMeasuredExecutionTarget({
         stablecoinId,
+        adapterProfileId: input.adapterProfileId,
         candidate,
         stablecoinPriceById: input.stablecoinPriceById,
         chainAddressToId: input.chainAddressToId,
