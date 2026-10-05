@@ -40200,6 +40200,59 @@
         "https://docs.apyx.fi/resources/smart-contract-addresses.md"
       ],
       "rationale": "The retained apyUSD queue route has no published final settlement maximum. Primary corpus, FAQ, legal terms and exact UnlockToken source disclose claim-after-cooldown mechanics, not a completion SLA. At Ethereum 26122339 the official legacy UnlockToken reports unlockingDelay=1728000 seconds and paused=false; these are current timing/state, not guaranteed future completion. New NFT text advertises claimability after three days while legacy resettable-cooldown text remains. Neither promise is an end-to-end maximum; no scalar SLA or zero-delay completion is inferred."
+    },
+    {
+      "id": "uw-buidl-blackrock-7bcdcd34da371c2f",
+      "assetId": "buidl-blackrock",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:redemption:buidl-blackrock:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:10:25Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R25)",
+      "sources": [
+        {
+          "url": "https://securitize.io/disclosure/terms-of-service-transfer-agent",
+          "observedAt": "2026-10-05T00:08:42Z",
+          "datumAsOf": null,
+          "location": "Section 5 investment-risk disclosure; recovered via r.jina.ai",
+          "excerpt": "Please refer to the respective issuer documentation for details about potential risks, conflicts, fees, and expenses.",
+          "assertion": "Transfer-agent terms defer fund fees to issuer documents; no BUIDL direct-redemption fee or all-in bound is stated."
+        },
+        {
+          "url": "https://securitize.io/disclosure/terms-of-service-markets",
+          "observedAt": "2026-10-05T00:08:41Z",
+          "datumAsOf": null,
+          "location": "Brokerage Services Only; recovered via r.jina.ai",
+          "excerpt": "Transfer agent recording keeping services are governed by separate Terms of Service.",
+          "assertion": "The ATS commission and Zero Hash cash/conversion charges cannot be transplanted onto direct BUIDL fund redemption."
+        },
+        {
+          "url": "https://securitize.io/blackrock/buidl",
+          "observedAt": "2026-10-04T23:40:10Z",
+          "datumAsOf": null,
+          "location": "Rendered product-page securities disclosure",
+          "excerpt": "Any offer or solicitation can be made only through official offering documents describing the risks, fees, and expenses of the applicable securities.",
+          "assertion": "Public offering surface identifies private offering documents, not an applicable numeric/formula redemption fee schedule."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://securitize.io/blackrock/buidl",
+        "https://securitize.io/learn/press/blackrock-launches-first-tokenized-fund-buidl-on-the-ethereum-network",
+        "https://securitize.io/disclosure-library",
+        "https://securitize.io/disclosure/terms-of-service-transfer-agent",
+        "https://securitize.io/disclosure/terms-of-service-markets",
+        "https://securitize.io/fee-schedule-table",
+        "https://files.securitize.io/securize-broker-dealer-fee-schedule-2023-2024.pdf",
+        "https://www.sec.gov/Archives/edgar/data/2013810/000201381026000002/xslFormDX01/primary_doc.xml"
+      ],
+      "rationale": "The exact missing datum is same-notional all-in cost for direct BUIDL offchain fund redemption. Rendered offering/launch, recovered transfer-agent and broker terms, 2026 fee table, linked PDF and SEC offering surfaces disclose no applicable amount/formula. ATS 1%, Zero Hash wire/conversion fees and placement-agent compensation are separate services. Neither annual management fees nor a secondary report of zero redemption fees proves this route cost."
     }
   ]
 }

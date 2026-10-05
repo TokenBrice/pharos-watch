@@ -233,6 +233,18 @@
           {
             "label": "Verified sUSDS share-deposit mechanics",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0"
+          },
+          {
+            "label": "Verified SPBEAM emergency halt authority source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf0c6e6ec8b367cc483a411e595d3ba0a816d37d0"
+          },
+          {
+            "label": "SPBEAM facilitator Safe proxy source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe1c6f81d0c3cd570a77813b81aa064c5fff80309"
+          },
+          {
+            "label": "Supplemental permission and Safe observation block 26122343",
+            "url": "https://etherscan.io/block/26122343"
           }
         ],
         "executionScope": {
@@ -305,7 +317,7 @@
             }
           ]
         },
-        "evidence": "The full-history sUSDS Rely/Deny census and pinned wards reads at block 26112822 identify SPBEAM and Pause Proxy as the only live wards. SPBEAM.susds() equals the sUSDS proxy; its deployed runtime exactly matches verified source. cfgs(SSR) returned min=200, max=3000 and step=400 basis points, with tau=57600 seconds. set requires a facilitator bud, enforces configured min/max/step and elapsed tau, and invokes sUSDS drip/file(SSR); it never calls share mint or upgrade. Governance controls SPBEAM's auth configuration, but a complete wards/buds caller and emergency certificate is not authored."
+        "evidence": "The full-history sUSDS Rely/Deny census and pinned wards reads at block 26112822 identify SPBEAM and Pause Proxy as the only live wards. SPBEAM.susds() equals the sUSDS proxy; its deployed runtime exactly matches verified source. cfgs(SSR) returned min=200, max=3000 and step=400 basis points, with tau=57600 seconds. set requires a facilitator bud, enforces configured min/max/step and elapsed tau, and invokes sUSDS drip/file(SSR); it never calls share mint or upgrade. Supplemental review completed 2026-10-05 of reads observed 2026-10-04 at block 26122343: binary-search creation block 22227542 and 78 log windows (77 complete 50000-block windows plus a final partial window to the pin) recover five Rely/Deny/Kiss/Diss events. Current wards are Pause Proxy and SPBEAMMom 0xf0c6e6ec8b367cc483a411e595d3ba0a816d37d0; sole bud is Safe 0xe1c6f81d0c3cd570a77813b81aa064c5fff80309, pinned 2-of-3 with terminal empty module pagination, zero guard and nonzero fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Mom owner is Pause Proxy and authority is SKY Chief; verified halt bypasses the Pause delay but can only file bad=1. Existing partial certificate and its older pin remain unchanged: cross-target Jug/Pot and mutable sUSDS implementation/bypass/liability closure are not certified."
       }
     ],
     "economicCapSemantics": "bounded",
