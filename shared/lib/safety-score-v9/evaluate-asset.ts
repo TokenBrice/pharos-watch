@@ -788,6 +788,30 @@ function exitPillar(
           capacityFloor !== undefined &&
           causalGaps.length === 0 &&
           profileFactKeys.length === 0;
+        if (code === "correlated-exit-routes" && primary !== null && causalGaps.length === 0) {
+          const includedRoutes = asset.exitRoutes.filter((route) =>
+            result.routes.some((trace) => trace.routeKey === route.routeKey && trace.included));
+          // Correlation is a known diagnostic only when every included
+          // alternative has a sourced, current shared domain or resource.
+          // Withholding diversification is unchanged; missing identity proof
+          // must still fall through to bounded U.
+          if (primary.status.observationState === "known" && primary.status.evidenceRefIds.length > 0 &&
+            includedRoutes.length > 1 && includedRoutes.every((route) =>
+              route.status.observationState === "known" && route.status.evidenceRefIds.length > 0 &&
+              (route === primary ||
+                primary.failureDomains.some((domain) =>
+                  route.failureDomains.some((other) => domainKey(domain) === domainKey(other))) ||
+                primary.physicalResourceKeys.some((key) => route.physicalResourceKeys.includes(key))))) {
+            return [{
+              ...pillarReason(envelope, code, path, undefined, "measured-adverse"),
+              causeProof: {
+                cause: "D",
+                adverseFactId: `${asset.assetId}:exit:correlated-route-inventory`,
+                evidenceRefIds: uniqueSorted(includedRoutes.flatMap((route) => route.status.evidenceRefIds)),
+              },
+            }];
+          }
+        }
         if (nativeMeasuredCompleteEmpty || nativeMeasuredCapacityFloor) {
           // These are admitted adverse facts, not missing-gap fallbacks. An
           // empty gap list otherwise defaults to U and loses the measured D.
