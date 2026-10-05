@@ -582,7 +582,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-supply-attribution.ts",
-      "sha256": "e481ba9f745ce8cff7f48052ae6746310ed28726961bdfefd2233a44804a4fb3"
+      "sha256": "5f06ee2613107f7c71105d76edccda50a20b15874a265ec05d1ef3d1aee7c7d2"
     },
     {
       "path": "shared/types/safety-score-v9-transfer-overlays.ts",
@@ -706,7 +706,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/economic-supply-observer.ts",
-      "sha256": "8a0fea7076adaf9989b1390263966bd825d2e39fb27451e18e863d08da9ca73c"
+      "sha256": "16f9554e7a210748f30935c649bed66e5e5ca18bd85a3bbb3d015384950f8290"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-access-lookthrough.ts",
@@ -814,7 +814,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution-contract.ts",
-      "sha256": "01f2b405f9a3d0991492132cb6198b48f1a12329e879a3180423405c5c2661cc"
+      "sha256": "d2b3d97573a4965f67f68ede4197e75e623f395c8ba642ed58e1d9a082e28a88"
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution-generation.ts",
@@ -838,7 +838,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/transfer-materiality.ts",
-      "sha256": "3cc10b05b79800676da374c96845bde4543b2b595e784ab680cf3381a6c85656"
+      "sha256": "b927580cb365e597b194901c7ecaca90ea29ec7586d42c633f7d0b8f440e9176"
     },
     {
       "path": "worker/src/lib/safety-score-v9/wm-supply-observer.ts",
@@ -867,7 +867,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-03-block-26110811-shock-coverage.json.gz"
     }
   ],
-  "digest": "dbf776d478139f90a7c4829e5b0c87aeff9c72d8101283ce8f96f81f5f955776"
+  "digest": "0589b3f12561fdf060bef39486120c0bacd14e706e3c14a8878bdfd549ccc91d"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
