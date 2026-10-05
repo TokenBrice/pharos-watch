@@ -218,15 +218,27 @@
         "controllerChain": "solana",
         "controllerAddress": "3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb",
         "reviewDisposition": "unresolved",
-        "reviewNote": "The historical account-state claim at W2R46 finalized slot 453087623 is unverifiable without archival proof; ordinary RPC cannot replay that account state. Separately, the independent verifier's fresh finalized getMultipleAccounts observation at slot 453101550 on 2026-10-04 confirms the exact Token-2022 mint, 6 decimals and active mint/freeze/permanent-delegate authority 3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb. System-owned, nonexecutable authority; signer derivation and token-specific bridge authorization are not established by this account read. The official deployment registry identifies this mint, while the share bridge guide expressly excludes Solana destinations. No token-specific public offchain authorization, burn/release conservation or bridge operator terms establish its transport model; preserve the unresolved liability, not the unsupported historical burn-mint assertion.",
+        "reviewNote": "Joint finalized getMultipleAccounts at Solana slot 453525222 on 2026-10-05 confirms this exact Token-2022 mint, six decimals, zero supply and active mint/freeze/permanent-delegate authority 3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb. The authority is the index-0, bump-255 Squads v4 vault PDA derived from multisig F8uKD1uQ4o2NVizM8VfNvBMNoL18WXXbhTjKqfzvBTSX under SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf, not a System-owned keypair. The jointly observed multisig has threshold 2, eight members, six Vote-enabled members, zero timelock and zero config authority. This identifies the signing topology, not bytecode-equivalent Squads execution/spending-limit reach or ACRDX-specific transport authorization. The official share bridge guide still expressly excludes Solana targets; neither direct Token-2022 powers nor unused supply establishes a burn/release or conservation path. Route semantics and incident review remain unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-04",
-        "observedBlock": 453101550,
+        "observedAt": "2026-10-05",
+        "observedBlock": 453525222,
         "failureDomainKeys": [
           "protocol:centrifuge-v3",
           "authority:solana:3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb"
         ],
         "sources": [
+          {
+            "label": "Joint finalized Solana mint, vault and Squads multisig observation, slot 453525222",
+            "url": "https://solana-rpc.publicnode.com"
+          },
+          {
+            "label": "Squads v4 Multisig account and member-permission schema at af94153",
+            "url": "https://github.com/Squads-Protocol/v4/blob/af94153ff77a28b6effe46b9c94baaa93742b48c/programs/squads_multisig_program/src/state/multisig.rs"
+          },
+          {
+            "label": "Squads v4 vault PDA seed derivation at af94153",
+            "url": "https://github.com/Squads-Protocol/v4/blob/af94153ff77a28b6effe46b9c94baaa93742b48c/sdk/multisig/src/pda.ts"
+          },
           {
             "label": "Independent verifier fresh finalized Solana getMultipleAccounts observation, slot 453101550; historical slot 453087623 account state not replayed",
             "url": "https://api.mainnet-beta.solana.com"
