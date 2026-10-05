@@ -134,7 +134,7 @@ function buildReserveSyncSlotGroups(
         {
           job: "sync-redemption-backstops",
           errorMessage: "[hourly-live-reserves] Redemption backstops sync failed:",
-          run: (signal) => syncRedemptionBackstops(runtime.db, signal),
+          run: (signal) => syncRedemptionBackstops(runtime.db, signal, { chainRpcs: runtime.chainRpcs }),
         },
       ],
     },

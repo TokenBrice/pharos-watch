@@ -6,6 +6,10 @@ import type { RedemptionBackstopEntry, RedemptionCapacityProfile } from "@shared
 import type { ReserveSnapshotMetadataRecord } from "../live-reserves/store";
 import type { RedemptionRouteAvailability } from "../redemption-backstop/availability";
 import type { RedemptionBackstopLiveMetadata } from "../redemption-backstop/live-metadata";
+import type { EvmRpcOptions } from "../evm-rpc";
+import type { StablecoinsCacheLoadResult } from "../stablecoins-cache";
+import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
+import type { ExitExecutionModelReview } from "@shared/types/exit-route";
 
 export interface CapacityResolution {
   immediateCapacityUsd: number | null;
@@ -45,6 +49,10 @@ export interface RedemptionBackstopBuildOptions {
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null;
   redemptionLiveMetadata?: RedemptionBackstopLiveMetadata;
   routeAvailability?: RedemptionRouteAvailability | null;
+  rpcOptions?: EvmRpcOptions;
+  stablecoinsCache?: StablecoinsCacheLoadResult;
+  exitExecutionEnvelope?: V9ValidatedPolicyEnvelope;
+  exitExecutionReviews?: readonly ExitExecutionModelReview[];
 }
 
 export interface CapacityResolverContext {

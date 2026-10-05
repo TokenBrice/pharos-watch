@@ -52,6 +52,12 @@ const RedemptionDocSourceSchema: z.ZodType<RedemptionDocSource> = z.strictObject
 
 const RedemptionCapacityModelSchema = z.discriminatedUnion("kind", [
   z.strictObject({
+    // Reviewed route terms without any quantified immediate or eventual capacity.
+    kind: z.literal("unquantified"),
+    confidence: z.literal("heuristic").optional(),
+    basis: RedemptionCapacityBasisSchema.optional(),
+  }),
+  z.strictObject({
     kind: z.literal("supply-full"),
     confidence: StaticCapacityConfidenceSchema.optional(),
     basis: RedemptionCapacityBasisSchema.optional(),

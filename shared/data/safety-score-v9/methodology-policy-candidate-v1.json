@@ -844,6 +844,16 @@
           "permittedBases": ["transaction-simulation"],
           "maximumCertification": "exact-lower-bound"
         },
+        "erc4626-instant": {
+          "admission": "enabled",
+          "requiredGates": ["implementation", "holder-eligibility", "state-override", "liquidity", "fees", "execution", "settlement"],
+          "exactRequestRequired": true,
+          "sourceMaxAgeSec": 18000,
+          "priceMaxAgeSec": 18000,
+          "futureSkewSec": 60,
+          "permittedBases": ["transaction-simulation"],
+          "maximumCertification": "exact-complete"
+        },
         "mento-broker": { "admission": "research-only", "requiredGates": ["execution", "trading-limits", "oracle", "breaker", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation"], "maximumCertification": "diagnostic" },
         "cdp-holder-redemption": { "admission": "research-only", "requiredGates": ["execution", "holder-right", "debt", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation"], "maximumCertification": "diagnostic" },
         "erc4626-realizable": { "admission": "research-only", "requiredGates": ["execution", "liquidity", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation"], "maximumCertification": "diagnostic" },
