@@ -165,9 +165,19 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
     const reviewedControllerCount = meta.bridgeRouteRisk!.routes!.filter(
       (route) => route.issuanceModel === "bridge-representation" && route.controllerAddress,
     ).length;
-    // Each identified controller and the aggregate bridge need the same exact supply packet.
-    expect(beforeReasons.filter((reason) => reason.code === "runtime-bridge-materiality-unavailable"))
-      .toHaveLength(reviewedControllerCount + 1);
+    // Controller-local and aggregate projections reuse the exact existing
+    // materiality factors; the aggregate no longer adds a broad source alias.
+    const materialityGapIds = before.controls
+      .filter((control) => control.controlKind === "bridge" && control.scope === "deployment")
+      .flatMap((control) => control.factorStatuses?.materialSupplyShare?.gapIds ?? []);
+    expect(materialityGapIds).toHaveLength(reviewedControllerCount);
+    const materialityReasons = beforeReasons.filter(
+      (reason) => reason.code === "runtime-bridge-materiality-unavailable",
+    );
+    expect(new Set(materialityReasons.map((reason) => reason.sourceGapId))).toEqual(new Set(materialityGapIds));
+    for (const gapId of materialityGapIds) {
+      expect(materialityReasons.filter((reason) => reason.sourceGapId === gapId)).toHaveLength(2);
+    }
     expect(afterReasons.filter((reason) => reason.code === "runtime-bridge-materiality-unavailable")).toHaveLength(0);
     expect(before.economicControlReview.bridge.status.gapIds).toContain(`${assetId}:gap:economic-control:bridge`);
     expect(after.economicControlReview.bridge.status.gapIds).toEqual([]);
@@ -293,7 +303,7 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
     expect(review("wsrusd-reservoir", generation("wsrusd-reservoir", rows))).toBeNull();
   });
 
-  it("leaves all twenty-one wsrUSD public materiality reasons and its bridge gap unresolved", () => {
+  it("retains wsrUSD controller materiality witnesses and its bridge gap without a complete supply packet", () => {
     const assetId = "wsrusd-reservoir";
     const meta = ACTIVE_META_BY_ID.get(assetId)!;
     const replayInput = makeV9FixedInput({
@@ -326,9 +336,20 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
       .assets[0]!.scoreInput.pillars.control.reasons;
 
     expect(extension.assets[0]!.supplyReview).toBeNull();
-    // The reviewed Tempo adapter adds a twentieth route controller; the
-    // aggregate bridge adds one more reason without a complete supply packet.
-    expect(reasons.filter((reason) => reason.code === "runtime-bridge-materiality-unavailable")).toHaveLength(21);
+    // Each controller and the aggregate remain unresolved, but their public
+    // projections bind the existing factor facts rather than a broad alias.
+    const materialityGapIds = compiled.controls
+      .filter((control) => control.controlKind === "bridge" && control.scope === "deployment")
+      .flatMap((control) => control.factorStatuses?.materialSupplyShare?.gapIds ?? []);
+    expect(materialityGapIds).toHaveLength(20);
+    const materialityReasons = reasons.filter(
+      (reason) => reason.code === "runtime-bridge-materiality-unavailable",
+    );
+    expect(new Set(materialityReasons.map((reason) => reason.sourceGapId))).toEqual(new Set(materialityGapIds));
+    for (const gapId of materialityGapIds) {
+      expect(materialityReasons.filter((reason) => reason.sourceGapId === gapId)).toHaveLength(2);
+    }
+    expect(compiled.economicControlReview.bridge.status.gapIds).toContain(`${assetId}:gap:economic-control:bridge`);
     expect(compiled.gaps.filter((gap) => gap.reasonCode === "missing-bridge-routes")).toHaveLength(1);
     expect(compiled.supply.selectedBridgeRoutes).toEqual([]);
   });

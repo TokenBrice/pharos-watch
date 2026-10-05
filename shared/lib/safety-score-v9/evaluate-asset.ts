@@ -763,7 +763,14 @@ function exitPillar(
           const routeKey = gap.causeScope?.routeKey;
           return routeKey != null && asset.exitRoutes.some((route) => route.routeKey === routeKey);
         });
-        const causalGaps = matchingGaps.length > 0 ? matchingGaps : equivalentSurfaceGaps;
+        const settlementGaps = sourceCode === "unproven-settlement-bound"
+          ? gapsForV9Ids(gapIndex, asset.exitRoutes
+              .filter((route) => route.settlementBoundUnproven)
+              .flatMap((route) => route.factorStatuses?.settlement?.gapIds ?? []))
+          : [];
+        const causalGaps = settlementGaps.length > 0
+          ? settlementGaps
+          : matchingGaps.length > 0 ? matchingGaps : equivalentSurfaceGaps;
         const path =
           profileFactKeys.length > 0
             ? `exit:mechanism-profile:${profileFactKeys.join("+")}`
@@ -908,6 +915,19 @@ function controlPillar(
   const causalGapsForReason = (
     reason: V9EconomicControlResult["reasons"][number],
   ): V9AssetFactsV3["gaps"] => {
+    if (reason.code === "runtime-bridge-materiality-unavailable") {
+      const materialityGaps = gapsForV9Ids(gapIndex, asset.controls
+        .filter((control) => control.controlKind === "bridge" &&
+          control.scope === "deployment" &&
+          (reason.controlKey === null || control.controlKey === reason.controlKey))
+        .flatMap((control) => control.factorStatuses?.materialSupplyShare?.gapIds ?? []));
+      if (materialityGaps.length > 0) return materialityGaps;
+    }
+    if (reason.code === "unresolved-oracle-branch-applicability") {
+      const status = asset.economicControlReview.oracle.status;
+      return gapsForV9Ids(gapIndex, status.applicability.gapId === null
+        ? status.gapIds : [status.applicability.gapId]);
+    }
     if (reason.controlKey !== null) {
       const control = asset.controls.find(
         (candidate) => candidate.controlKey === reason.controlKey,
