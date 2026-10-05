@@ -24954,40 +24954,6 @@
       ]
     },
     {
-      "id": "uw-cusd-cap-ba486ceab724e116",
-      "assetId": "cusd-cap",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:05b4dbd0d8f8ac6ece9620b2",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:04:35Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R21)",
-      "sources": [
-        {
-          "url": "https://tsr-db-bucket-1.s3.us-west-2.amazonaws.com/multiple_uploaded/1786984979_5IaeGU7K6R.pdf",
-          "observedAt": "2026-10-03T23:04:35Z",
-          "datumAsOf": "2026-08-14",
-          "location": "WTGXX prospectus, printed pages 108 and 112",
-          "excerpt": "The investment policies of the other investment companies may not be the same as those of the Fund",
-          "assertion": "The fund permits other government MMF shares; its 93-day limit on directly held Treasury securities is not an exhaustive maximum for the whole fund-share claim."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.cap.app/concepts/vault/fractional-reserves.md",
-        "https://www.wisdomtree.com/investments/resource-library",
-        "https://prospectusconnect.com/digital_funds",
-        "https://dataspanapi.wisdomtree.com/pdr/documents/WEBSITE_FUND_DETAILS/WDT/US/EN-US/WTGXX_3/",
-        "https://tsr-db-bucket-1.s3.us-west-2.amazonaws.com/multiple_uploaded/1786984979_5IaeGU7K6R.pdf"
-      ],
-      "rationale": "Exact WTGXX slice maturityDaysMax is not disclosed as a maximum of the whole held claim. The current prospectus limits direct Treasury holdings to 93 days but also permits cash, overnight repos and other government MMF shares, expressly noting different underlying policies. The FAQ's WAM and redemption schedules are not maximum maturity. No fixed maturity of the open-end fund share is stated; no 60/93-day scalar is inferred."
-    },
-    {
       "id": "uw-cusd-cap-49ba8d7df1a8f9bb",
       "assetId": "cusd-cap",
       "scope": {
