@@ -41547,6 +41547,308 @@
         "https://eth.blockscout.com/api/v2/smart-contracts/0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11"
       ],
       "rationale": "Exact Ethereum USDT Savings parameter-control Safe 0x3f32bc09d41ee699844f8296e806417d6bf61bba has no disclosed offchain signer custody, human independence or signing approval assurance. Sky.money names curation/exposure-limit responsibilities and describes non-custodial supplied assets; neither establishes custody of privileged Safe owner keys. Sky protocol governance is not substituted for this local controller. Typed custody question retained."
+    },
+    {
+      "id": "uw-bbqusdc-steakhouse-v2-2014782a5593ce03",
+      "assetId": "bbqusdc-steakhouse-v2",
+      "scope": {
+        "componentKey": "control:mint-meta:bbqusdc-steakhouse-v2:c348c199677256761a39",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:04Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K01)",
+      "sources": [
+        {
+          "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
+          "observedAt": "2026-10-05T12:25:04Z",
+          "datumAsOf": null,
+          "location": "Architecture",
+          "excerpt": "A single Supervisor Owner (Steakhouse) controls the Supervisor v2 contract with a high-security multisig.",
+          "assertion": "Identifies the supervisory owner as a multisig, but gives no exact signer-key custody arrangement or independently evidenced separation for the bbqUSDC owner and curator."
+        },
+        {
+          "url": "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+          "observedAt": "2026-10-05T12:25:04Z",
+          "datumAsOf": null,
+          "location": "Owner Multisig; configuration caveat",
+          "excerpt": "Some of our vault configurations can have different owner multisigs, such as vaults that are integrated in fintech apps or wallets.",
+          "assertion": "Generic five-person quorum and internal review are disclosed; the document cautions against applying the canonical setup indiscriminately. It does not name custody technology for these two exact Safes."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/Steakhouse-Financial/vault-v2-supervisor/main/audits/2026-02-23-cantina.pdf",
+          "observedAt": "2026-10-05T12:25:04Z",
+          "datumAsOf": "2026-02-23",
+          "location": "Section 2.2 Trust assumptions",
+          "excerpt": "This system relies on several strong trust assumptions around privileged roles and vault configuration.",
+          "assertion": "Code audit assesses privileged-role behavior, not operating-key custody, recovery or signer independence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.steakhouse.financial/",
+        "https://kitchen.steakhouse.financial/",
+        "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+        "https://www.steakhouse.financial/docs/documents/disclaimers/vaults.md",
+        "https://raw.githubusercontent.com/Steakhouse-Financial/vault-v2-supervisor/main/audits/2026-02-23-cantina.pdf",
+        "https://supervalores.gob.pa/",
+        "https://smv.gob.pa/",
+        "https://www.sec.gov/",
+        "https://app.morpho.org/ethereum/vault/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757",
+        "https://etherscan.io/address/0x827e86072b06674a077f592a531dce4590adecdb",
+        "https://etherscan.io/address/0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd"
+      ],
+      "rationale": "The exact bbqUSDC curator Safe and supervisor-owner Safe are already identified on-chain. Public owner-quorum/internal-review and high-security-multisig language does not disclose their signer-key custody technology, recovery arrangement or independently evidenced human separation. No named exact-controller MPC/HSM or other custody model was found across issuer, legal, audit, regulator and contract surfaces. C concerns these off-chain custody/independence data only; known topology and control reach are unchanged and typed questions remain."
+    },
+    {
+      "id": "uw-bbqusdc-steakhouse-v2-b0ecd22f3ac29a13",
+      "assetId": "bbqusdc-steakhouse-v2",
+      "scope": {
+        "componentKey": "control:mint-meta:bbqusdc-steakhouse-v2:f7b87c86c58cec1709c3",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:04Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K01)",
+      "sources": [
+        {
+          "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
+          "observedAt": "2026-10-05T12:25:04Z",
+          "datumAsOf": null,
+          "location": "Architecture",
+          "excerpt": "A single Supervisor Owner (Steakhouse) controls the Supervisor v2 contract with a high-security multisig.",
+          "assertion": "Identifies the supervisory owner as a multisig, but gives no exact signer-key custody arrangement or independently evidenced separation for the bbqUSDC owner and curator."
+        },
+        {
+          "url": "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+          "observedAt": "2026-10-05T12:25:04Z",
+          "datumAsOf": null,
+          "location": "Owner Multisig; configuration caveat",
+          "excerpt": "Some of our vault configurations can have different owner multisigs, such as vaults that are integrated in fintech apps or wallets.",
+          "assertion": "Generic five-person quorum and internal review are disclosed; the document cautions against applying the canonical setup indiscriminately. It does not name custody technology for these two exact Safes."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/Steakhouse-Financial/vault-v2-supervisor/main/audits/2026-02-23-cantina.pdf",
+          "observedAt": "2026-10-05T12:25:04Z",
+          "datumAsOf": "2026-02-23",
+          "location": "Section 2.2 Trust assumptions",
+          "excerpt": "This system relies on several strong trust assumptions around privileged roles and vault configuration.",
+          "assertion": "Code audit assesses privileged-role behavior, not operating-key custody, recovery or signer independence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.steakhouse.financial/",
+        "https://kitchen.steakhouse.financial/",
+        "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls",
+        "https://www.steakhouse.financial/docs/documents/disclaimers/vaults.md",
+        "https://raw.githubusercontent.com/Steakhouse-Financial/vault-v2-supervisor/main/audits/2026-02-23-cantina.pdf",
+        "https://supervalores.gob.pa/",
+        "https://smv.gob.pa/",
+        "https://www.sec.gov/",
+        "https://app.morpho.org/ethereum/vault/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757",
+        "https://etherscan.io/address/0x827e86072b06674a077f592a531dce4590adecdb",
+        "https://etherscan.io/address/0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd"
+      ],
+      "rationale": "The exact bbqUSDC curator Safe and supervisor-owner Safe are already identified on-chain. Public owner-quorum/internal-review and high-security-multisig language does not disclose their signer-key custody technology, recovery arrangement or independently evidenced human separation. No named exact-controller MPC/HSM or other custody model was found across issuer, legal, audit, regulator and contract surfaces. C concerns these off-chain custody/independence data only; known topology and control reach are unchanged and typed questions remain."
+    },
+    {
+      "id": "uw-uktbl-spiko-e37a047e9bac8de7",
+      "assetId": "uktbl-spiko",
+      "scope": {
+        "componentKey": "control:mint-meta:uktbl-spiko:6d47c9067377db997ea5",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:04Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K01)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+          "observedAt": "2026-10-05T12:25:04Z",
+          "datumAsOf": "2025-10-24",
+          "location": "Transaction Execution and Relaying",
+          "excerpt": "Transaction Signing: Secures transaction signing using a managed wallet from Dfns",
+          "assertion": "Names relayer signing infrastructure but not the exact Stellar owner/admin key or Ethereum group-10 initiator custody scheme and approval boundaries."
+        },
+        {
+          "url": "https://dfns.co/key-management",
+          "observedAt": "2026-10-05T12:25:04Z",
+          "datumAsOf": null,
+          "location": "Choose your security model",
+          "excerpt": "MPC or HSM. Mix them by wallet, entity, or mandate. Our key layer adapts to your risk model.",
+          "assertion": "Provider offers different key-security models. Selecting MPC/HSM for these keys from the provider name alone would infer an undisclosed configuration."
+        },
+        {
+          "url": "https://tech.spiko.io/posts/minter/",
+          "observedAt": "2026-10-05T12:25:04Z",
+          "datumAsOf": "2026-03-13",
+          "location": "Security Considerations",
+          "excerpt": "Role segregation: The mint-initiator (our relayer) and the mint-approver (a human supervisor) are distinct roles.",
+          "assertion": "Discloses role separation, not the cryptographic custody scheme or administrator/recovery-policy boundaries for the exact initiator keys."
+        },
+        {
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+          "observedAt": "2026-10-05T12:25:04Z",
+          "datumAsOf": "2026-09-01",
+          "location": "Section 2 Stakeholders, page 8",
+          "excerpt": "Spiko Finance maintains control over the management of the shareholder register. For this purpose, Spiko Finance relies on public Distributed Ledger Technologies (DLT).",
+          "assertion": "Identifies register administration, bank asset custody and statutory auditor, not exact controller-key custody or signing-policy administration."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.spiko.io/",
+        "https://docs.spiko.io/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://tech.spiko.io/posts/minter/",
+        "https://tech.spiko.io/posts/stellar-integration/",
+        "https://dfns.co/article/announcing-spiko",
+        "https://dfns.co/key-management",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://www.spiko.io/spiko-treasury-bills-pound",
+        "https://geco.amf-france.org/back-office/document/download/429960",
+        "https://eth.blockscout.com/address/0x344278aff344d6fb960705dc18a4912221608472"
+      ],
+      "rationale": "Required: custody scheme and approval/recovery boundaries for Stellar owner/admin GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H and Ethereum initiators 0x7a493c05479f6132cb895c72c49439139b595eb4, 0xe582cddcb3d2374adbb34c9afe76683d019c8a2b. Spiko names managed Dfns relayer signing and distinct initiator/approver roles; Dfns supports multiple security models. No primary exact-controller custody configuration/policy mapping was found. C is this missing off-chain mapping, not role topology; typed questions stay open."
+    },
+    {
+      "id": "uw-uktbl-spiko-738fb6863a414482",
+      "assetId": "uktbl-spiko",
+      "scope": {
+        "componentKey": "control:mint-meta:uktbl-spiko:c457ab656a7f4acbaa31",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:04Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K01)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+          "observedAt": "2026-10-05T12:25:04Z",
+          "datumAsOf": "2025-10-24",
+          "location": "Transaction Execution and Relaying",
+          "excerpt": "Transaction Signing: Secures transaction signing using a managed wallet from Dfns",
+          "assertion": "Names relayer signing infrastructure but not the exact Stellar owner/admin key or Ethereum group-10 initiator custody scheme and approval boundaries."
+        },
+        {
+          "url": "https://dfns.co/key-management",
+          "observedAt": "2026-10-05T12:25:04Z",
+          "datumAsOf": null,
+          "location": "Choose your security model",
+          "excerpt": "MPC or HSM. Mix them by wallet, entity, or mandate. Our key layer adapts to your risk model.",
+          "assertion": "Provider offers different key-security models. Selecting MPC/HSM for these keys from the provider name alone would infer an undisclosed configuration."
+        },
+        {
+          "url": "https://tech.spiko.io/posts/minter/",
+          "observedAt": "2026-10-05T12:25:04Z",
+          "datumAsOf": "2026-03-13",
+          "location": "Security Considerations",
+          "excerpt": "Role segregation: The mint-initiator (our relayer) and the mint-approver (a human supervisor) are distinct roles.",
+          "assertion": "Discloses role separation, not the cryptographic custody scheme or administrator/recovery-policy boundaries for the exact initiator keys."
+        },
+        {
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+          "observedAt": "2026-10-05T12:25:04Z",
+          "datumAsOf": "2026-09-01",
+          "location": "Section 2 Stakeholders, page 8",
+          "excerpt": "Spiko Finance maintains control over the management of the shareholder register. For this purpose, Spiko Finance relies on public Distributed Ledger Technologies (DLT).",
+          "assertion": "Identifies register administration, bank asset custody and statutory auditor, not exact controller-key custody or signing-policy administration."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.spiko.io/",
+        "https://docs.spiko.io/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://tech.spiko.io/posts/minter/",
+        "https://tech.spiko.io/posts/stellar-integration/",
+        "https://dfns.co/article/announcing-spiko",
+        "https://dfns.co/key-management",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://www.spiko.io/spiko-treasury-bills-pound",
+        "https://geco.amf-france.org/back-office/document/download/429960",
+        "https://eth.blockscout.com/address/0x344278aff344d6fb960705dc18a4912221608472"
+      ],
+      "rationale": "Required: custody scheme and approval/recovery boundaries for Stellar owner/admin GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H and Ethereum initiators 0x7a493c05479f6132cb895c72c49439139b595eb4, 0xe582cddcb3d2374adbb34c9afe76683d019c8a2b. Spiko names managed Dfns relayer signing and distinct initiator/approver roles; Dfns supports multiple security models. No primary exact-controller custody configuration/policy mapping was found. C is this missing off-chain mapping, not role topology; typed questions stay open."
+    },
+    {
+      "id": "uw-susdc-spark-v1-8fdaf54d2cb84e16",
+      "assetId": "susdc-spark-v1",
+      "scope": {
+        "componentKey": "control:mint-meta:susdc-spark-v1:75da56f34f36a70e803b",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:25:04Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K01)",
+      "sources": [
+        {
+          "url": "https://docs.spark.finance/governance/",
+          "observedAt": "2026-10-05T12:25:04Z",
+          "datumAsOf": null,
+          "location": "Implementation Process",
+          "excerpt": "Execution: The Spark Spell is executed through the established Sky Spell process",
+          "assertion": "Describes the governance execution process but not operational signing-key custody or independent human-control assurance for the Legacy UsdcVault SPARK_PROXY ward."
+        },
+        {
+          "url": "https://developers.skyeco.com/protocol/governance/chief/",
+          "observedAt": "2026-10-05T12:25:04Z",
+          "datumAsOf": null,
+          "location": "Gotchas",
+          "excerpt": "In general, when we refer to the \u201chat\u201d, it can be any address \u2014 be it a single-use contract like ds-spell, a multi-use contract or an individual\u2019s wallet.",
+          "assertion": "Contract authorization and token-weighted voting do not certify real-world signing-policy independence or custody of the governance participants."
+        },
+        {
+          "url": "https://docs.spark.finance/mica/4",
+          "observedAt": "2026-10-05T12:25:04Z",
+          "datumAsOf": "2025-06-11",
+          "location": "I.3 Crypto-Assets-related Risks",
+          "excerpt": "Participants are solely responsible for securing their wallet access and recovery information.",
+          "assertion": "SPK-holder self-custody disclosure is not an exact operational-key attestation for the reviewed Legacy sUSDC Sky execution chain."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.spark.finance/governance/",
+        "https://docs.spark.finance/products/spark-savings",
+        "https://docs.spark.finance/mica/4",
+        "https://docs.spark.finance/dev/security/security-and-audits",
+        "https://www.skyeco.com/governance",
+        "https://developers.skyeco.com/protocol/governance/chief/",
+        "https://developers.skyeco.com/security/security-measures/security-mechanisms/",
+        "https://makerdao.com/en/governance",
+        "https://forum.sky.money/",
+        "https://www.esma.europa.eu/",
+        "https://www.sec.gov/",
+        "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Ethereum.sol",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x3300f198988e4c9c63f75df86de36421f06af8c4"
+      ],
+      "rationale": "Required: human-control independence, operational signing policy and key-custody assurance for the participants governing Legacy UsdcVault SPARK_PROXY 0x3300f198988e4c9c63f75df86de36421f06af8c4. Primary docs disclose token voting, spell review and delayed execution; investor self-custody and individual institutional SKY-holder custody do not bind the complete identified execution chain. No controller-specific custody/independence assurance was found. C applies only to off-chain custody safeguards, not known authority or delay. Typed question remains."
     }
   ]
 }
