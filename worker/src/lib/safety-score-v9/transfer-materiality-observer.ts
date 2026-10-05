@@ -90,6 +90,9 @@ function publicRegistryEndpoints(...urls: readonly (string | undefined)[]): RpcE
 }
 
 function rpcConfig(chainId: string, configured: Map<string, ChainRpcConfig>): Map<string, ChainRpcConfig> | null {
+  // TRON's block selector only checks existence; it executes latest state.
+  // A configured endpoint cannot upgrade that to this historical contract.
+  if (chainId === "tron" || configured.get(chainId)?.type === "tron") return null;
   // Archive supplemental-only configs are usable by the state-read lane.
   // Do not discard their credentials or upgrade near-head endpoints to archive.
   if (hasRegistryRpc(configured.get(chainId)) ||

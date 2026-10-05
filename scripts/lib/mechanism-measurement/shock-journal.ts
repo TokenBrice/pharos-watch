@@ -1,4 +1,5 @@
 import { keccak256, type Hex } from "viem";
+import { isTronRpcUrl } from "@shared/lib/tron-rpc";
 
 import { encodeWord, normalizeAddress } from "./core";
 import type { MeasurementCall } from "./schema";
@@ -244,6 +245,9 @@ export class JournaledShockCaller extends DecodedCallJournal implements ShockCal
     private readonly fetcher: typeof fetch = fetch,
   ) {
     super();
+    if (isTronRpcUrl(rpcUrl)) {
+      throw new Error("historical-state-unsupported: TRON constant calls execute latest state");
+    }
   }
 
   async call(spec: ShockEthCallSpec): Promise<string> {

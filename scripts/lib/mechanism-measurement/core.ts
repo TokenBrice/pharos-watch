@@ -1,4 +1,5 @@
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
+import { isTronRpcUrl, requiresHistoricalEvmState } from "@shared/lib/tron-rpc";
 import type { MeasurementCall, MeasurementLog, MeasurementLogQuery } from "./schema";
 
 export interface PinnedBlock {
@@ -15,6 +16,9 @@ interface JsonRpcResponse {
 }
 
 async function rpcRequest(rpcUrl: string, method: string, params: unknown[]): Promise<unknown> {
+  if (isTronRpcUrl(rpcUrl) && requiresHistoricalEvmState(method, params)) {
+    throw new Error("historical-state-unsupported: TRON constant calls execute latest state");
+  }
   const response = await fetch(rpcUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -134,6 +138,9 @@ export class JournaledEthCaller implements EthCallJournal {
   ) {}
 
   async call(spec: EthCallSpec): Promise<string> {
+    if (isTronRpcUrl(this.rpcUrl)) {
+      throw new Error("historical-state-unsupported: TRON constant calls execute latest state");
+    }
     const callData = `${spec.selector}${(spec.args ?? []).map(encodeWord).join("")}`;
     const returnData = (await rpcRequest(this.rpcUrl, "eth_call", [
       { to: spec.to, data: callData },

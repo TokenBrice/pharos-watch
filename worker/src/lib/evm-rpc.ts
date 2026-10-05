@@ -14,6 +14,7 @@ import { fetchJsonWithRetry } from "./fetch-retry";
 import { parseQuantityHex } from "./bigint";
 import { rethrowIfAborted } from "./abort";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { isTronRpcUrl, requiresHistoricalEvmState } from "@shared/lib/tron-rpc";
 
 interface JsonRpcEnvelope<T> {
   result?: T;
@@ -373,6 +374,7 @@ async function fetchJsonRpcResult<T>(
   const failures: string[] = [];
 
   for (const rpcUrl of urls) {
+    if (isTronRpcUrl(rpcUrl) && requiresHistoricalEvmState(method, params)) continue;
     const remainingMs = options?.deadlineMs == null
       ? configuredTimeoutMs
       : Math.floor(options.deadlineMs - Date.now());
@@ -482,6 +484,8 @@ async function runEvmRpcBatch<Value>(
   options: EvmRpcOptions | undefined,
   project: (rowsById: ReadonlyMap<number, JsonRpcEnvelope<unknown>>) => Value | null,
 ): Promise<Value | null> {
+  if ((chainId === "tron" || (chainId && options?.chainRpcs?.get(chainId)?.type === "tron")) &&
+      calls.some(call => requiresHistoricalEvmState(call.method, call.params))) return null;
   const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs, undefined, {
     // A batch may carry pinned block parameters, so a near-head-only endpoint
     // must never be allowed to answer one.
@@ -493,6 +497,7 @@ async function runEvmRpcBatch<Value>(
   const configuredTimeoutMs = options?.timeoutMs ?? 10_000;
   const maxRetries = options?.maxRetries ?? 1;
   for (const rpcUrl of urls) {
+    if (isTronRpcUrl(rpcUrl) && calls.some(call => requiresHistoricalEvmState(call.method, call.params))) continue;
     const remainingMs = options?.deadlineMs == null
       ? configuredTimeoutMs
       : Math.floor(options.deadlineMs - Date.now());
@@ -635,6 +640,8 @@ export async function fetchEvmCallHexAtBlock(
   blockNumberOrTag: number | "latest" = "latest",
   options?: EvmRpcOptions,
 ): Promise<`0x${string}` | null> {
+  if ((chainId === "tron" || (chainId && options?.chainRpcs?.get(chainId)?.type === "tron")) &&
+      (blockNumberOrTag !== "latest" || options?.stateBlockHash || options?.multicallFallbackBlockHash)) return null;
   const urls = requestRpcUrls(chainId, options, blockNumberOrTag);
   if (urls.length === 0) return null;
 
@@ -660,6 +667,8 @@ export async function fetchEvmCodeStatusAtBlock(
   blockNumberOrTag: number | "latest" = "latest",
   options?: EvmRpcOptions,
 ): Promise<EvmCodeAtBlockResult> {
+  if ((chainId === "tron" || (chainId && options?.chainRpcs?.get(chainId)?.type === "tron")) &&
+      (blockNumberOrTag !== "latest" || options?.stateBlockHash || options?.multicallFallbackBlockHash)) return { status: "unavailable" };
   const urls = requestRpcUrls(chainId, options, blockNumberOrTag);
   if (urls.length === 0) return { status: "unavailable" };
 
@@ -701,6 +710,8 @@ export async function fetchEvmStorageAtBlock(
   blockNumberOrTag: number | "latest" = "latest",
   options?: EvmRpcOptions,
 ): Promise<`0x${string}` | null> {
+  if ((chainId === "tron" || (chainId && options?.chainRpcs?.get(chainId)?.type === "tron")) &&
+      (blockNumberOrTag !== "latest" || options?.stateBlockHash || options?.multicallFallbackBlockHash)) return null;
   const urls = requestRpcUrls(chainId, options, blockNumberOrTag);
   if (urls.length === 0) return null;
 

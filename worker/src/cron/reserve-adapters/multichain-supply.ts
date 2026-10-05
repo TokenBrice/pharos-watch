@@ -274,8 +274,9 @@ async function readIncludedSupply(
       if (chainType !== "tron") return fail(`reader tron-trc20 does not match chain type ${chainType ?? "unknown"}`);
       const raw = await fetchTronErc20TotalSupply(contract.address, signal, tronCtx ?? ctx);
       if (raw == null) return fail("totalSupply() read failed");
-      // TronGrid reads are latest-state and carry catalog decimals.
-      return admit(raw, null, nowSec);
+      // The completion clock is the actual latest-state observation, not the
+      // caller's earlier reserve/run clock. Skew admission remains unchanged.
+      return admit(raw, null, Math.floor(Date.now() / 1000));
     }
     case "solana-spl-mint": {
       if (entry.chain !== "solana") return fail(`reader solana-spl-mint does not serve chain ${entry.chain}`);
