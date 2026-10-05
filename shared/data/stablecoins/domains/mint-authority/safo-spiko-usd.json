@@ -2065,6 +2065,7 @@
         {
           "controlRef": "ethereum:0x7a493c05479f6132cb895c72c49439139b595eb4",
           "question": "Which custody scheme (MPC, HSM or other) and signing-policy approval boundary secure this exact privileged key? Spiko identifies Dfns for multi-chain relayer signing but does not map this address to a key-security model. No protective custody attestation is inferred.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
           "sources": [
@@ -2085,6 +2086,7 @@
         {
           "controlRef": "ethereum:0xe582cddcb3d2374adbb34c9afe76683d019c8a2b",
           "question": "Which custody scheme (MPC, HSM or other) and signing-policy approval boundary secure this exact privileged key? Spiko identifies Dfns for multi-chain relayer signing but does not map this address to a key-security model. No protective custody attestation is inferred.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
           "sources": [
@@ -2105,6 +2107,7 @@
         {
           "controlRef": "ethereum:0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949",
           "question": "Which custody scheme (MPC, HSM or other) and signing-policy approval boundary secure this exact privileged key? Spiko identifies Dfns for multi-chain relayer signing but does not map this address to a key-security model. No protective custody attestation is inferred.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
           "sources": [
@@ -2125,6 +2128,7 @@
         {
           "controlRef": "ethereum:0x4d1d9c5b5d9ca448194313d799de374f362bd460",
           "question": "Which custody scheme (MPC, HSM or other) and signing-policy approval boundary secure this exact privileged key? Spiko identifies Dfns for multi-chain relayer signing but does not map this address to a key-security model. No protective custody attestation is inferred.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
           "sources": [
@@ -2145,6 +2149,7 @@
         {
           "controlRef": "ethereum:0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a",
           "question": "Which custody scheme (MPC, HSM or other) and signing-policy approval boundary secure this exact privileged key? Spiko identifies Dfns for multi-chain relayer signing but does not map this address to a key-security model. No protective custody attestation is inferred.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
           "sources": [
@@ -2165,6 +2170,7 @@
         {
           "controlRef": "ethereum:0xda47bd72438f11bef7cc54f18cd02426dd86a5a2",
           "question": "Which custody scheme (MPC, HSM or other) and signing-policy approval boundary secure this exact privileged key? Spiko identifies Dfns for multi-chain relayer signing but does not map this address to a key-security model. No protective custody attestation is inferred.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
           "sources": [
@@ -2185,6 +2191,7 @@
         {
           "controlRef": "ethereum:0xe67d2cbeae3090be017c66e7a6943961619a5d35",
           "question": "Which custody scheme (MPC, HSM or other) and signing-policy approval boundary secure this exact privileged key? Spiko identifies Dfns for multi-chain relayer signing but does not map this address to a key-security model. No protective custody attestation is inferred.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
           "sources": [
@@ -2205,6 +2212,7 @@
         {
           "controlRef": "ethereum:0xf949ca7be175a5fcbd3febb9a0235de608ca7898",
           "question": "Which custody scheme (MPC, HSM or other) and signing-policy approval boundary secure this exact privileged key? Spiko identifies Dfns for multi-chain relayer signing but does not map this address to a key-security model. No protective custody attestation is inferred.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
           "sources": [
@@ -2225,6 +2233,7 @@
         {
           "controlRef": "solana:5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd",
           "question": "Which custody scheme (MPC, HSM or other) and signing-policy approval boundary secure this exact privileged key? Spiko identifies Dfns for multi-chain relayer signing but does not map this address to a key-security model. No protective custody attestation is inferred.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
           "sources": [
@@ -2245,6 +2254,7 @@
         {
           "controlRef": "solana:GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h",
           "question": "Which custody scheme (MPC, HSM or other) and signing-policy approval boundary secure this exact privileged key? Spiko identifies Dfns for multi-chain relayer signing but does not map this address to a key-security model. No protective custody attestation is inferred.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
           "sources": [

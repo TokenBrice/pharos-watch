@@ -630,6 +630,7 @@
       {
         "controlRef": "pyusdx-ethereum-portal-admin",
         "question": "Quorum, bridge ProxyAdmin owners, absent modules/guard, exact peer mappings and reviewed DVN sets are resolved; beneficial signer independence, fallback-handler execution safeguards, enforced upgrade delay and numeric route limits remain unresolved.",
+        "subject": "execution-scope",
         "reviewedAt": "2026-10-03",
         "reviewer": "Sol refinement Refine03",
         "sources": [
@@ -642,6 +643,7 @@
       {
         "controlRef": "pyusdx-arbitrum-portal-admin",
         "question": "Quorum, bridge ProxyAdmin owners, absent modules/guard, exact peer mappings and reviewed DVN sets are resolved; beneficial signer independence, fallback-handler execution safeguards, enforced upgrade delay and numeric route limits remain unresolved.",
+        "subject": "execution-scope",
         "reviewedAt": "2026-10-03",
         "reviewer": "Sol refinement Refine03",
         "sources": [
@@ -654,6 +656,7 @@
       {
         "controlRef": "pyusdx-monad-portal-admin",
         "question": "Quorum, bridge ProxyAdmin owners, absent modules/guard, exact peer mappings and reviewed DVN sets are resolved; beneficial signer independence, fallback-handler execution safeguards, enforced upgrade delay and numeric route limits remain unresolved.",
+        "subject": "execution-scope",
         "reviewedAt": "2026-10-03",
         "reviewer": "Sol refinement Refine03",
         "sources": [

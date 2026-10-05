@@ -717,6 +717,7 @@
         {
           "controlRef": "tempo:0x79c6631fa15cda38777fb9dd7a6348baee794a4e",
           "question": "The administrator uses EIP-7702 delegation. Off-chain signer composition and custody attestation are not public, and handler source is not Sourcify-verified. No Safe quorum or key-custody uplift is claimed; on-chain upgrade and role authorization are resolved.",
+          "subject": "execution-scope",
           "reviewedAt": "2026-09-30",
           "reviewer": "Claude OUSD promotion review",
           "sources": [
@@ -741,6 +742,7 @@
         {
           "controlRef": "solana:EBArgZpd8iv7QRgUFhCasaHxck5oujhHNCkonoa1kEKA",
           "question": "Native Mint execution, controlling program and its upgrader are resolved. The unpublished Bridge configuration layout leaves allowance, recipient-role and transaction-limit checks unverified. Zero-delay program replacement already makes the economic bound unbounded.",
+          "subject": "execution-scope",
           "reviewedAt": "2026-09-30",
           "reviewer": "Claude OUSD promotion review",
           "sources": [

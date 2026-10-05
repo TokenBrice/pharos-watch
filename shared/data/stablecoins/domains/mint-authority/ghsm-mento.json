@@ -115,6 +115,7 @@
         {
           "controlRef": "celo:0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58",
           "question": "What governance and authorization path can replace the Validators implementation or retarget its registry-selected stable token from the currently observed USDm to GHSm?",
+          "subject": "execution-scope",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (CurB01USDU)",
           "sources": [

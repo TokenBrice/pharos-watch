@@ -127,6 +127,7 @@
         {
           "controlRef": "Newrails EURW ADMIN_ROLE EOA",
           "question": "Which independently verifiable human-independence, key-custody, MPC/HSM and signing-policy arrangements protect the identified administrator EOA and its immediate role-grant and upgrade-reactivation powers?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
           "sources": [
@@ -137,6 +138,7 @@
         {
           "controlRef": "Newrails EURW MINTER_ROLE EOA",
           "question": "Which independently verifiable human-independence, key-custody, MPC/HSM and signing-policy arrangements protect the identified direct-minter EOA?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
           "sources": [{"label": "Monad mainnet exact role and authority-account reads", "url": "https://rpc.monad.xyz"}, {"label": "Newrails EURW whitepaper", "url": "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml"}]
@@ -144,6 +146,7 @@
         {
           "controlRef": "Newrails EURW MINTER_APPROVER_ROLE EOA",
           "question": "Which independently verifiable human-independence, key-custody, MPC/HSM and signing-policy arrangements protect the identified allowance-approver EOA?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
           "sources": [{"label": "Monad mainnet exact role and authority-account reads", "url": "https://rpc.monad.xyz"}, {"label": "Newrails EURW whitepaper", "url": "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml"}]

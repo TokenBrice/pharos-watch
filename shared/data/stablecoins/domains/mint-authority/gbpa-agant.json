@@ -282,6 +282,7 @@
         {
           "controlRef": "GBPA EVM fiat minter",
           "question": "What independently evidenced signing policy, key custody, operator independence and recovery/replacement process governs this identified EVM fiat-minter EOA?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
           "sources": [
@@ -292,6 +293,7 @@
         {
           "controlRef": "GBPA EVM ProxyAdmin owner",
           "question": "What independently evidenced signing policy, key custody, operator independence and recovery/replacement process governs this identified EVM mint-logic owner EOA?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
           "sources": [
@@ -302,6 +304,7 @@
         {
           "controlRef": "GBPA Tempo native issuance role inventory",
           "question": "What independently evidenced signing policy, key custody, operator independence and recovery/replacement process governs this identified Tempo issuer EOA? Its complete role census does not establish human or key-custody independence.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
           "sources": [
@@ -312,6 +315,7 @@
         {
           "controlRef": "GBPA Tempo native role and supply-cap administrator",
           "question": "What independently evidenced signing policy, key custody, operator independence and recovery/replacement process governs this identified Tempo role/cap-admin EOA?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
           "sources": [
