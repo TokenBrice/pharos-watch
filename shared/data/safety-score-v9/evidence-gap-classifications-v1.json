@@ -35969,46 +35969,6 @@
       "rationale": "No published whole-slice liquidityHorizon for ZZ was found in the exact Frax position inventory, AMO/withdrawal documents, issuer terms or deployment sources. The API identifies the position and values it but does not publish a complete withdrawal/unwind-to-cash bound. Exact token and held position are identified in the primary API; transferability or LP reserves alone are not a guaranteed cash realization horizon."
     },
     {
-      "id": "uw-frax-frax-6a1e894191a324fd",
-      "assetId": "frax-frax",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:2641ff3ab7b972607cc51b82",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:50:11Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R28)",
-      "sources": [
-        {
-          "url": "https://tsr-db-bucket-1.s3.us-west-2.amazonaws.com/multiple_uploaded/1786984979_5IaeGU7K6R.pdf",
-          "observedAt": "2026-10-03T23:50:11Z",
-          "datumAsOf": "2026-08-14",
-          "location": "WTGXX principal investment strategies, prospectus p108",
-          "excerpt": "overnight repurchase agreements fully collateralized by U.S. Treasury securities, and registered government money market funds.",
-          "assertion": "The 93-day direct-Treasury restriction does not state a complete look-through maximum across permitted fund holdings."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.frax.finance/llms.txt",
-        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview.md",
-        "https://api.frax.finance/v2/frax/balance-sheet/latest",
-        "https://facts.frax.finance/frax/balance-sheet",
-        "https://docs.frax.finance/other/audits.md",
-        "https://docs.frax.finance/smart-contracts/all-contract-addresses.md",
-        "https://tsr-db-bucket-1.s3.us-west-2.amazonaws.com/multiple_uploaded/1786984979_5IaeGU7K6R.pdf",
-        "https://www.wisdomtreeprime.com/digital-funds/wtgxx/",
-        "https://www.wisdomtreeprime.com/prospectus-and-regulatory-information/",
-        "https://prospectusconnect.com/digital_funds",
-        "https://tsr-db-bucket-1.s3.us-west-2.amazonaws.com/multiple_uploaded/1786985110_CQh9WNPM2f.pdf"
-      ],
-      "rationale": "No finite maturityDaysMax covering the whole WTGXX claim/look-through basket is publicly specified. The prospectus limits direct Treasury instruments to 93 days but separately admits registered government MMFs without a whole-basket maximum. Product, regulatory archive, prospectus and SAI do not convert WAM, liquidity or the direct-bill cap into a maximum for every permissible holding; no subset bound is extrapolated."
-    },
-    {
       "id": "uw-frax-frax-be81f7a592a3af8f",
       "assetId": "frax-frax",
       "scope": {
