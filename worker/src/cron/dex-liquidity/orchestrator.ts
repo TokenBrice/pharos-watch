@@ -88,6 +88,7 @@ import {
 import { enrichEvmV2ExecutionModels } from "./constant-product-v2";
 import { enrichCurveStableswapFactoryExecutionModels } from "./curve-stableswap-factory";
 import { enrichCurveStableswapRateInputExecutionModels } from "./curve-stableswap-rates";
+import { enrichUniswapV4ExecutionTargets } from "./uniswap-v4-identity";
 import { attachPinnedShadowExecutionTargets } from "./execution-targets/pinned-shadow";
 import {
   MissingDexLiquidityScoringStageError,
@@ -1163,6 +1164,14 @@ async function buildDexLiquidityPoolState(
       rows: stagedWriteback.pools.length,
     }));
   }
+  await enrichUniswapV4ExecutionTargets({
+    metrics,
+    chainAddressToId: sourceState.lookups.chainAddressToId,
+    stablecoinPriceById: sourceState.stablecoinPriceById,
+    chainRpcs: ctx.chainRpcs,
+    signal: ctx.signal,
+    slotStartedAtSec: ctx.sourceSlotStartedAt,
+  });
   await enrichEvmV2ExecutionModels({
     metrics,
     chainAddressToId: sourceState.lookups.chainAddressToId,

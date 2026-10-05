@@ -62,7 +62,7 @@ const uniswapV4QuoteMulticallExecutor = createEvmQuotePlanMulticallExecutor({
 export interface UniswapV4Deployment {
   adapterProfileId: typeof UNISWAP_V4_ADAPTER_PROFILE_ID;
   protocol: "uniswap-v4";
-  chain: "ethereum" | "bsc" | "base" | "arbitrum" | "polygon";
+  chain: "ethereum" | "bsc" | "base" | "arbitrum" | "polygon" | "unichain" | "tempo";
   mode: "active" | "shadow";
   scoreEligible: boolean;
   poolManagerAddress: `0x${string}`;
