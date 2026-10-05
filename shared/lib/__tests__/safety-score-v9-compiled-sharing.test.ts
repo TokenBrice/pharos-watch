@@ -67,6 +67,25 @@ describe("immutable compiled fact sharing", () => {
     expect(v9FactSetDigest).toBe(expectedDigest);
   });
 
+  it("reuses admitted immutable rows but revalidates cloned rows and cohort references", () => {
+    const compiled = compileV9FactSetV3(currentCore());
+    const { v9FactSetDigest: _digest, ...core } = compiled;
+    const repeated = compileV9FactSetV3(core);
+    expect(repeated.v9FactSetDigest).toBe(compiled.v9FactSetDigest);
+    for (let index = 0; index < compiled.assets.length; index++) {
+      expect(repeated.assets[index]).toBe(compiled.assets[index]);
+    }
+    const cloned = structuredClone(compiled.assets[0]!);
+    const replaced = compileV9FactSetV3({ ...core, assets: [cloned, ...compiled.assets.slice(1)] });
+    expect(replaced.assets[0]).not.toBe(cloned);
+    expect(replaced.assets[0]).not.toBe(compiled.assets[0]);
+    expect(replaced.assets[1]).toBe(compiled.assets[1]);
+    expect(replaced.v9FactSetDigest).toBe(compiled.v9FactSetDigest);
+    cloned.peg.currentDeviationBps = Number.NaN;
+    expect(() => compileV9FactSetV3({ ...core, assets: [cloned, ...compiled.assets.slice(1)] })).toThrow();
+    expect(() => compileV9FactSetV3({ ...core, activeAssetIds: core.activeAssetIds.slice(1) })).toThrow();
+  });
+
   it("shares one historical source and U proof while keeping publisher and gap identities distinct", () => {
     const core = currentCore();
     const asset = core.assets[0]!;

@@ -116,7 +116,9 @@ export function compileV9FactSetV3(input: unknown): Readonly<CompiledV9FactSetV3
     ...core,
     v9FactSetDigest: computeValidatedV9FactSetDigest(core),
   };
-  return sealValidatedFactSet(compiled);
+  const sealed = sealValidatedFactSet(compiled);
+  for (const asset of sealed.assets) validatedAssetFacts.add(asset);
+  return sealed;
 }
 
 export function assertExactV9ActiveAssetSet(
