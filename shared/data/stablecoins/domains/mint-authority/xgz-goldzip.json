@@ -123,6 +123,7 @@
         {
           "controlRef": "GoldZip owner mint and UUPS administration",
           "question": "Human independence and key-custody safeguards for the three identified custom-wallet accounts are not publicly established. The verified one-administrator authorization path is unchanged; this question concerns signer custody and independence rather than unknown executable authorization.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine06 mint-authority calibration v2",
           "sources": [{

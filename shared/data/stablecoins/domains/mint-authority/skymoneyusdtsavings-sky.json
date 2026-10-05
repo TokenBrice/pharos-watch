@@ -165,6 +165,7 @@
         {
           "controlRef": "ethereum:0x3f32bc09d41ee699844f8296e806417d6bf61bba",
           "question": "For sky.money USDT Savings parameter-control Safe (ethereum:0x3f32bc09d41ee699844f8296e806417d6bf61bba): Offchain key custody and independence of Safe signers remain unestablished.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement Refine11",
           "sources": [

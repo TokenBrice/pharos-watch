@@ -175,6 +175,7 @@
         {
           "controlRef": "USDfr MintRedeemController",
           "question": "Establish key-custody and signing-policy evidence for the two observed oracle attester keys whose marks authorize backing/yield accounting used by this mint controller; the current key roster and per-kind thresholds do not attest human independence.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine05 mint-authority calibration v2",
           "sources": [{"label": "Canonical oracle proxy role history", "url": "https://eth.blockscout.com/api/v2/addresses/0xb53977a70d755a56d3ce26926acb4c33f7861c61/logs"}, {"label": "Verified oracle implementation threshold ABI", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x870deb459512099e70e9a640cf3140a0d969fc18"}, {"label": "Mint controller, authenticated marks and yield path", "url": "https://forestroadvault.com/docs/overview"}]

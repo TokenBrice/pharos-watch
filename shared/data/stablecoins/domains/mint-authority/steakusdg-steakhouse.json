@@ -229,6 +229,7 @@
         {
           "controlRef": "steakUSDG supervisor owner EOA",
           "question": "The supervisor-owner EOA 0x337fefe49514fb901eb455a501b8be76cdef7660 is identified by the pinned owner() and code-empty reads. What publicly verified signing/MPC policy, operational independence and independent key-custody attestation bind this exact EOA?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 (Refine12)",
           "sources": [
@@ -245,6 +246,7 @@
         {
           "controlRef": "steakUSDG vault owner",
           "question": "What verified implementation and complete internal authorization census bind the parameter-only supervisor 0xca50d23f1c18c1dfaff5d3cae3aa4b9dc5c8db73? At Robinhood block 78953544 its deployed runtime is not identical to the verified Ethereum VaultV2Supervisor reference. The exact immutable share core has no upgrade entrypoint, and this supervisor cannot expand native minting; this is a parameter-controller identity gap, not an unidentified native mint or upgrade path.",
+          "subject": "execution-scope",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 (Refine12)",
           "sources": [

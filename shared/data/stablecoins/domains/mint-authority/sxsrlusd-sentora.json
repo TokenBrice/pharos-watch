@@ -262,6 +262,7 @@
         {
           "controlRef": "Sentora x Spark RLUSD owner",
           "question": "What human-control independence, operational signing policy and key-custody assurance support the identified Sky governance execution participants? Verified Spark owner/ward/governance contracts and current scheduling do not establish those custody facts.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine13)",
           "sources": [
@@ -272,6 +273,7 @@
         {
           "controlRef": "Sentora x Spark RLUSD curator",
           "question": "What human independence, signing policy and key-custody assurance support the identified outer 2-of-2 curator Safe and its nested 1-of-1 and 1-of-2 signer branches? Distinct verified addresses and thresholds do not establish independent human custody.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine13)",
           "sources": [

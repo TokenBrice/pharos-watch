@@ -1020,6 +1020,7 @@
       {
         "controlRef": "starknet-usn-owner",
         "question": "What named Starknet account product (Argent 0.2.x / OpenZeppelin / other) is class 0x3957f9f5a1cbfe918cedc2015c85200ca51a5f7506ecb6de98a5207b759bf8a? Live calls prove 1-of-1 with no guardian, but the class is not self-named (no get_name) and public class registries were not independently matched on 2026-08-18.",
+        "subject": "execution-scope",
         "reviewedAt": "2026-08-18",
         "reviewer": "aug18-v927-control-wave W01",
         "sources": [
@@ -1032,6 +1033,7 @@
       {
         "controlRef": "ethereum-usn-hyperlane-mailbox-owner",
         "question": "Who operates Sophon-origin Hyperlane validator 0xb84c5d02120ed0b39d0f78bbc0e298d89ebcd10b? It is in the live Ethereum default-ISM 2-of-3 set for origin 50104, but Sophon is omitted from the published default-ISM validator table and the Hyperlane registry marks sophon deprecated/disabled.",
+        "subject": "key-custody-independence",
         "reviewedAt": "2026-08-18",
         "reviewer": "aug18-v927-control-wave W01",
         "sources": [

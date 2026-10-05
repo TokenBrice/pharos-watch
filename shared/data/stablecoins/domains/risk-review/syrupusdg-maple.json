@@ -536,6 +536,7 @@
       {
         "controlRef": "ethereum-ccip-escrow",
         "question": "Which remaining Ethereum owner execution routes, non-bypass MCM configurations, router/RMN-validator and live rate-limit/pause/upgrade controls cover all CCIP lanes? Remote EVM owners are now verified RBACTimelock contracts with live role census and active immediate bypass; ordinary delays do not resolve remaining controls.",
+        "subject": "execution-scope",
         "reviewedAt": "2026-10-03",
         "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
         "sources": [
@@ -552,6 +553,7 @@
       {
         "controlRef": "solana-syrupusdg-mint-authority",
         "question": "Which PDA/program and upgrade/admin execution paths control the live SPL mint and freeze authorities and directory pool account H1w3zL4yJKqHXut3dHvFQVCbjmYt5DZ3ioZcZrYZZD11?",
+        "subject": "execution-scope",
         "reviewedAt": "2026-10-02",
         "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
         "sources": [

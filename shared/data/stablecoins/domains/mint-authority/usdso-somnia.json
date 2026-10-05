@@ -289,6 +289,7 @@
         {
           "controlRef": "USDso token ProxyAdmin owner",
           "question": "Independent human control, operational key custody and signing policy of the identified USDso token ProxyAdmin owner at somnia:0x9527e19f55d1afce9f1e9edcea79552bf41983f9 are not publicly established; enumerated owners/threshold or a codeless EOA do not certify these safeguards.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine07 calibration v2 2026-10-03",
           "sources": [

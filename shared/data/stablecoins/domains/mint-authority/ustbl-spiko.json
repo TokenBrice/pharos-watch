@@ -574,6 +574,7 @@
         {
           "controlRef": "stellar:GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H",
           "question": "Does the exact Soroban token-owner/PermissionManager-admin account use Dfns, and is its signing key secured by MPC, HSM, hardware wallet or another model? Published relayer-provider statements do not identify this admin key. Provide the wallet/address mapping and effective signing-policy approval boundary; no protective custody model is inferred.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-01",
           "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
           "sources": [

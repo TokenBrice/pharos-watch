@@ -75,6 +75,7 @@
         {
           "controlRef": "Solana Token-2022 mint authority",
           "question": "Which independently verifiable human-independence, Fireblocks key-custody/MPC and signing-policy arrangements protect the identified ordinary Solana mint signer? Its onchain account enforces neither a multisig quorum nor a timelock.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
           "sources": [{"label": "Supercoin Fireblocks and custody terms", "url": "https://www.supercoin.co.za/terms-of-service"}, {"label": "Exact Solana mint and signer", "url": "https://solscan.io/token/5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ"}]
         }

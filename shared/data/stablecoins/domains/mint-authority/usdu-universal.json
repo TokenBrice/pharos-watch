@@ -213,24 +213,28 @@
         {
           "controlRef": "USDU token and ProxyAdmin owner",
           "question": "Which independently verifiable human-independence, MPC/key-custody and signing-policy arrangements protect the identified token/MasterMinter/ProxyAdmin owner EOA? Issuer MPC and hold-period claims do not establish an enforced onchain quorum or delay.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
           "sources": [{"label": "USDU issuer custody and execution whitepaper", "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"}, {"label": "Verified current MasterMinter ownership", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe4972d660340cd915ae10b19064ca4854f7ca32f"}]
         },
         {
           "controlRef": "USDU MasterMinter controller administrator",
           "question": "Which independently verifiable human-independence, MPC/key-custody and signing-policy arrangements protect the identified controller-administrator EOA and its ability to activate minter controllers?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
           "sources": [{"label": "USDU issuer custody and execution whitepaper", "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"}, {"label": "Verified controller administration", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe4972d660340cd915ae10b19064ca4854f7ca32f"}]
         },
         {
           "controlRef": "USDU controller and first standing minter",
           "question": "Which independently verifiable human-independence, MPC/key-custody and signing-policy arrangements protect the identified first minter/controller EOA, including its authority to replace both minter allowances?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
           "sources": [{"label": "USDU issuer custody and execution whitepaper", "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"}, {"label": "Verified current minter controller", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe4972d660340cd915ae10b19064ca4854f7ca32f"}]
         },
         {
           "controlRef": "USDU second standing minter",
           "question": "Which independently verifiable human-independence, MPC/key-custody and signing-policy arrangements protect the identified second direct-minter EOA consuming its controller-authorized allowance?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
           "sources": [{"label": "USDU issuer custody and execution whitepaper", "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"}, {"label": "Verified current token minter mechanics", "url": "https://sourcify.dev/server/v2/contract/1/0x7df0b1f63e0a467b6aa95b4ed6d299dab9f73750?fields=all"}]
         }

@@ -111,6 +111,7 @@
         {
           "controlRef": "STBT issuer and owner controller",
           "question": "Organizational identity, independence and MPC/HSM/key custody of this controller's identified proposer, executor and canceller EOAs remain undisclosed. The proposer Minter is owned by the identified executor EOA. The role census and selector-specific timelock execution are established; this question concerns human/signing custody, not an unidentified mint path.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Refine04 calibration v2",
           "sources": [
