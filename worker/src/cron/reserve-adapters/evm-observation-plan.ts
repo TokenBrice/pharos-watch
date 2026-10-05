@@ -18,6 +18,9 @@ export async function pinnedBlockPlan(options: {
   fallbackRpcUrl?: string;
   timeoutMs?: number;
 }): Promise<{ observedBlock: NonNullable<AdapterContext["observedBlock"]>; ctx: AdapterContext }> {
+  if (options.chain === "tron" || options.ctx?.chainRpcs?.get(options.chain)?.type === "tron") {
+    throw new Error("historical-state-unsupported: TRON constant calls execute latest state");
+  }
   const existing = options.ctx?.observedBlock;
   if (existing) {
     if (existing.chain !== options.chain) throw new Error("Pinned block plan chain mismatch");
