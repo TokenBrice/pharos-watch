@@ -1,3 +1,4 @@
+import { DWELLIR_NATIVE_ENDPOINTS } from "@shared/lib/dwellir-native-endpoints";
 import { throwIfAborted } from "../../lib/abort";
 import type { AdapterContext } from "./types";
 import { fetchJsonPostWithRetry } from "./request";
@@ -52,17 +53,18 @@ export async function fetchStarknetTotalSupply(options: {
     throw new Error(`starknet total_supply probe requires a felt contract address (${options.contract})`);
   }
 
-  const rpcUrls = [options.rpcUrl, options.fallbackRpcUrl, ...STARKNET_RPC_URLS].filter(
-    (url): url is string => typeof url === "string" && url.length > 0,
-  );
+  const dwellirUrl = DWELLIR_NATIVE_ENDPOINTS.find((entry) => entry.network === "starknet")!.baseUrl;
+  const rpcUrls = [...new Set([
+    options.rpcUrl, options.fallbackRpcUrl, ...STARKNET_RPC_URLS,
+  ].filter((url): url is string => typeof url === "string" && url.length > 0 &&
+    (!options.ctx?.dwellirNative || url !== dwellirUrl)))];
+  if (options.ctx?.dwellirNative) rpcUrls.push(dwellirUrl);
   let lastError: unknown = null;
 
   for (const rpcUrl of rpcUrls) {
     throwIfAborted(options.signal);
     try {
-      const body = await fetchJsonPostWithRetry<StarknetCallResponse>(
-        rpcUrl,
-        {
+      const request = {
           jsonrpc: "2.0",
           id: 1,
           method: "starknet_call",
@@ -74,11 +76,14 @@ export async function fetchStarknetTotalSupply(options: {
             },
             block_id: "latest",
           },
-        },
-        options.signal,
-        options.timeoutMs ?? 10_000,
-        options.ctx,
-      );
+        };
+      const body = rpcUrl === dwellirUrl && options.ctx?.dwellirNative
+        ? await options.ctx!.dwellirNative!.readJson<StarknetCallResponse>(
+          "starknet", "", options.signal, options.ctx, request, options.timeoutMs,
+        )
+        : await fetchJsonPostWithRetry<StarknetCallResponse>(
+          rpcUrl, request, options.signal, options.timeoutMs ?? 10_000, options.ctx,
+        );
 
       if (body.error) {
         lastError = new Error(`starknet_call failed on ${rpcUrl}: ${body.error.message ?? "unknown error"}`);

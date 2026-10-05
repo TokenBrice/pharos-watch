@@ -1,5 +1,6 @@
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
+import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import type { CoinGeckoMcapData } from "./supplemental-assets";
@@ -87,6 +88,7 @@ export async function syncViaCoingeckoFallback(
   reportProgress?: CronProgressReporter,
   jupiterApiKey?: string | null,
   chainRpcs?: Map<string, ChainRpcConfig>,
+  dwellirNative?: DwellirNativeCapability,
 ): Promise<CronResult> {
   const aborted = returnIfAborted(signal, "fallback-start");
   if (aborted) return aborted;
@@ -104,7 +106,7 @@ export async function syncViaCoingeckoFallback(
   // Curated NAV wrappers (llamaId null) get a fresh per-chain on-chain supply
   // overlay here so the fallback lane no longer nulls their V9 chain breakdown;
   // a failed probe leaves the restore's previous-row carry intact.
-  await overlayFallbackCuratedAggregateSupply(assets, signal);
+  await overlayFallbackCuratedAggregateSupply(assets, signal, dwellirNative);
   const { fxFallbackRates, validationReferences } = await loadFreshFxRates(
     db,
     "[sync-stablecoins:fallback]",

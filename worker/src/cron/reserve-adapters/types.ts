@@ -7,6 +7,7 @@ import type {
   LiveReservesConfig,
 } from "@shared/types/live-reserves";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import type { AdapterIoLimiter } from "./concurrency";
 
 /** Context passed from the cron to adapters that need worker infrastructure. */
@@ -17,6 +18,7 @@ export interface AdapterContext {
   trongridApiKey?: string;
   m0ApiKey?: string;
   chainRpcs?: Map<string, ChainRpcConfig>;
+  dwellirNative?: DwellirNativeCapability;
   nowSec?: number;
   observedBlock?: { chain: string; number: number; timestamp: number };
   requestCache?: Map<string, Promise<unknown>>;

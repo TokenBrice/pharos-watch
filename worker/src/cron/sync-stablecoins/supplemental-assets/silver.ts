@@ -8,6 +8,7 @@ import { validatePricingSourceFreshness } from "../../../lib/pricing-source-fres
 import { resolveMarketCap } from "../../../lib/resolve-market-cap";
 import { throwIfAborted } from "../../../lib/abort";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
+import type { DwellirNativeCapability } from "../../../lib/dwellir-native";
 import type { PeggedAsset } from "../enrich-prices";
 import {
   fetchCommodityTokens,
@@ -77,6 +78,7 @@ export async function fetchSilverTokens(
   coingeckoApiKey?: string | null,
   db?: D1Database,
   chainRpcs?: Map<string, ChainRpcConfig>,
+  dwellirNative?: DwellirNativeCapability,
 ): Promise<PeggedAsset[]> {
   if (SILVER_METAS.length === 0) return [];
   throwIfAborted(signal);
@@ -116,7 +118,7 @@ export async function fetchSilverTokens(
       priceData,
       cgData,
       resolveSupply: async (meta) => {
-        const aggregate = await resolveCuratedAggregateSupplementalSupply(meta, priceData, cgData, chainRpcs, signal);
+        const aggregate = await resolveCuratedAggregateSupplementalSupply(meta, priceData, cgData, chainRpcs, signal, dwellirNative);
         return {
           mcap: aggregate?.mcap ?? mcapMap[meta.id] ?? 0,
           supplySource: aggregate?.supplySource ?? "coingecko-fallback",

@@ -3,6 +3,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { buildChainRpcs, type ChainRpcConfig } from "../../../../lib/chain-registry";
+import { createDwellirNativeCapability } from "../../../../lib/dwellir-native";
 
 const fetchEearnSuiSupplyMock = vi.hoisted(() => vi.fn());
 vi.mock("../sui-vault-supply", () => ({ fetchEearnSuiSupply: fetchEearnSuiSupplyMock }));
@@ -261,6 +262,20 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
       supplySource: "onchain-total-supply",
       chainCirculating: { Movement: { current: 1_739_632.096715, chainId: "movement" } },
     });
+  });
+
+  it("threads admitted native transport into Movement without changing xReserve reconciliation", async () => {
+    const dwellirNative = createDwellirNativeCapability("native-test-key-placeholder");
+    fetchMoveFungibleAssetSupplyMock.mockResolvedValue({
+      rawSupply: 100_000_000n, decimals: 6, ledgerVersion: "199722477",
+    });
+    fetchOnchainUint256Mock.mockResolvedValue(100_000_000n);
+    const result = await fetchCuratedAggregateOnChainMcap(
+      makeMovementMeta(), 1, movementChainRpcs(), undefined, dwellirNative,
+    );
+    expect(result?.mcap).toBe(100);
+    expect(fetchMoveFungibleAssetSupplyMock.mock.calls[0]?.[3]).toEqual({ dwellirNative });
+    expect(fetchOnchainUint256Mock).toHaveBeenCalled();
   });
 
   it("fails Movement USDCx closed when xReserve differs by more than one basis point", async () => {

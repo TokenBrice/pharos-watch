@@ -2,6 +2,7 @@ import { logWorkerEvent, logWorkerEventArgs } from "../../../lib/structured-log"
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { throwIfAborted } from "../../../lib/abort";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
+import type { DwellirNativeCapability } from "../../../lib/dwellir-native";
 import { mapWithConcurrency } from "../../../lib/concurrency";
 import type { PeggedAsset } from "../enrich-prices";
 import { buildZephyrProtocolPeggedAsset, fetchZephyrProtocolStats, isZephyrScannerAssetId } from "../zephyr-zsd";
@@ -30,6 +31,7 @@ export async function fetchFiatCoinGeckoTokens(
   fxFallbackRates?: Record<string, number>,
   db?: D1Database,
   previousAssetsById?: ReadonlyMap<string, PeggedAsset>,
+  dwellirNative?: DwellirNativeCapability,
 ): Promise<PeggedAsset[]> {
   if (FIAT_CG_METAS.length === 0) return [];
   throwIfAborted(signal);
@@ -116,7 +118,7 @@ export async function fetchFiatCoinGeckoTokens(
         // Fallback: on-chain totalSupply × market/peg-reference price when CG has no market cap.
         // This keeps preview-only plain-par fiat assets in supply coverage without inventing a live market quote.
         if ((preferOnChainMcap || !mcap) && priceForSupply != null) {
-          const aggregateOnChainMcap = await fetchCuratedAggregateOnChainMcap(meta, priceForSupply, chainRpcs, signal);
+          const aggregateOnChainMcap = await fetchCuratedAggregateOnChainMcap(meta, priceForSupply, chainRpcs, signal, dwellirNative);
           if (aggregateOnChainMcap) {
             mcap = aggregateOnChainMcap.mcap;
             supplySource = aggregateOnChainMcap.supplySource;
@@ -126,7 +128,7 @@ export async function fetchFiatCoinGeckoTokens(
         }
 
         if (!mcap && priceForSupply != null) {
-          const onChainMcap = await fetchOnChainMcap(meta, priceForSupply, chainRpcs, signal);
+          const onChainMcap = await fetchOnChainMcap(meta, priceForSupply, chainRpcs, signal, dwellirNative);
           if (onChainMcap) {
             mcap = onChainMcap.mcap;
             supplySource = onChainMcap.supplySource;

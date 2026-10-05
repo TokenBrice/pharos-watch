@@ -6,6 +6,7 @@ import { CIRCUIT_SOURCE, DEFILLAMA_API, USER_AGENT } from "../../../lib/constant
 import { throwIfAborted } from "../../../lib/abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
+import type { DwellirNativeCapability } from "../../../lib/dwellir-native";
 import type { PeggedAsset } from "../enrich-prices";
 import {
   fetchCommodityTokens,
@@ -25,6 +26,7 @@ export async function fetchGoldTokens(
   signal?: AbortSignal,
   db?: D1Database,
   chainRpcs?: Map<string, ChainRpcConfig>,
+  dwellirNative?: DwellirNativeCapability,
 ): Promise<PeggedAsset[]> {
   throwIfAborted(signal);
   try {
@@ -101,7 +103,7 @@ export async function fetchGoldTokens(
       priceData,
       cgData,
       resolveSupply: async (meta) => {
-        const aggregate = await resolveCuratedAggregateSupplementalSupply(meta, priceData, cgData, chainRpcs, signal);
+        const aggregate = await resolveCuratedAggregateSupplementalSupply(meta, priceData, cgData, chainRpcs, signal, dwellirNative);
         return {
           mcap: aggregate?.mcap ?? mcapMap[meta.id] ?? 0,
           supplySource: aggregate?.supplySource ?? mcapSourceById[meta.id] ?? "coingecko-fallback",

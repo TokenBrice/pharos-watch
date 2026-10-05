@@ -15,6 +15,7 @@ import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { flushDwellirCredits, loadDwellirBudgetState } from "../../lib/rpc-provider-budget";
+import { createDwellirNativeCapability, type DwellirNativeCapability } from "../../lib/dwellir-native";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { normalizeCronMetadataWithLease } from "../../lib/cron-metadata";
 import { parseCsvEnv, type Env } from "../../lib/env";
@@ -67,6 +68,8 @@ const PER_JOB_LEASE_OPTIONS: Record<string, Pick<CronLeaseOptions, "heartbeatSec
 const dwellirEnablementByChainRpcs = new WeakMap<Map<string, ChainRpcConfig>, Promise<void>>();
 
 async function applyDwellirEndpoints(runtime: ScheduledRuntimeContext): Promise<void> {
+  const apiKey = runtime.env.DWELLIR_API_KEY;
+  if (!apiKey?.trim()) return;
   const budget = await loadDwellirBudgetState(runtime.db, runtime.env, Math.floor(Date.now() / 1000));
   if (!budget.usable) return;
   if (!(await shouldAttemptFetch(runtime.db, CIRCUIT_SOURCE.DWELLIR_EVM))) return;
@@ -80,6 +83,8 @@ async function applyDwellirEndpoints(runtime: ScheduledRuntimeContext): Promise<
   for (const [chainId, config] of keyedChainRpcs) {
     runtime.chainRpcs.set(chainId, config);
   }
+  // Native readers share this exact admission decision; no second authority.
+  runtime.dwellirNative = createDwellirNativeCapability(apiKey);
 }
 
 function ensureDwellirEndpointsEnabled(runtime: ScheduledRuntimeContext): Promise<void> {
@@ -122,6 +127,7 @@ export interface ScheduledRuntimeContext {
   mintBurnFreshnessConfig: MintBurnFreshnessConfig;
   coingeckoApiKey: string | null;
   chainRpcs: Map<string, ChainRpcConfig>;
+  dwellirNative?: DwellirNativeCapability;
   runLeasedCron: (
     job: string,
     fn: (signal: AbortSignal, reportProgress: CronProgressReporter) => Promise<CronResult | void>,

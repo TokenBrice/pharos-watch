@@ -32,6 +32,7 @@ vi.mock("../../../cron/reserve-recovery-config", () => ({
 }));
 
 import { runFiveMinuteReserveRecoverySlot } from "../reserve-recovery";
+import { createDwellirNativeCapability } from "../../../lib/dwellir-native";
 
 const EMPTY_INSPECTION = {
   observedAt: 1_000,
@@ -75,6 +76,14 @@ describe("reserve recovery mode", () => {
     mocks.retire.mockResolvedValue(0);
     mocks.claim.mockResolvedValue(null);
     mocks.runReserveSlot.mockResolvedValue({ jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 });
+  });
+
+  it.each([true, false])("forwards native capability into targeted recovery only when admitted: %s", async admitted => {
+    const value = runtime("recover");
+    const capability = admitted ? createDwellirNativeCapability("native-test-key-placeholder") : undefined;
+    value.dwellirNative = capability;
+    await runFiveMinuteReserveRecoverySlot(value);
+    expect(mocks.configRecovery.mock.calls[0]?.[2]?.dwellirNative).toBe(capability);
   });
 
   it("runs only the global stale-slot sweep when off", async () => {
