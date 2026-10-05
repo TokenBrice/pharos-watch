@@ -14,7 +14,7 @@ export interface SuiClmmIndependentQuote {
 }
 
 /** Narrow BCS encoder for read-only pool quote calls. No SDK/dependency graph in the Worker. */
-export function buildSuiClmmInspectTransaction(snapshot: SuiClmmSnapshot, requests: readonly SuiClmmInspectRequest[]): string {
+function buildSuiClmmInspectTransaction(snapshot: SuiClmmSnapshot, requests: readonly SuiClmmInspectRequest[]): string {
   if (requests.length < 1 || requests.length > 10) throw new Error("sui-inspect-request-grid-overflow");
   const bytes: number[] = [];
   const textEncoder = new TextEncoder();

@@ -7,7 +7,7 @@ import { SUI_CLMM_DEPLOYMENTS, suiCoinType, suiObjectId, type SuiClmmFamily } fr
 import type { SuiTransactionCheckpointResolver } from "./archival-checkpoints";
 
 export type SuiRpc = (method: string, params: readonly unknown[]) => Promise<unknown>;
-export const SUI_CLMM_MAX_TICKS = 256;
+const SUI_CLMM_MAX_TICKS = 256;
 const OBJECT_OPTIONS = { showContent: true, showOwner: true, showPreviousTransaction: true };
 
 /** One request and fully consumed, capped body at a time; errors never expose the endpoint/auth. */
@@ -45,7 +45,7 @@ export function createSuiClmmRpc(input: {
   };
 }
 
-export function moveFields(value: unknown): Record<string, unknown> {
+function moveFields(value: unknown): Record<string, unknown> {
   if (!isRecord(value) || !isRecord(value.fields)) throw new Error("sui-invalid-move-fields");
   return value.fields;
 }
@@ -90,7 +90,7 @@ export interface SuiClmmSnapshot {
   references: readonly { objectId: string; version: string; digest: string; transaction: string; transactionCheckpoint: string }[];
 }
 
-export function decodeSuiClmmPool(data: Record<string, unknown>, family: SuiClmmFamily, config?: Record<string, unknown>): SuiClmmPool {
+function decodeSuiClmmPool(data: Record<string, unknown>, family: SuiClmmFamily, config?: Record<string, unknown>): SuiClmmPool {
   const deployment = SUI_CLMM_DEPLOYMENTS[family];
   if (!isRecord(data.content) || typeof data.content.type !== "string" || !isRecord(data.owner) || !isRecord(data.owner.Shared)) throw new Error("sui-pool-identity-mismatch");
   const match = /^(0x[a-f0-9]{64})::pool::Pool<([^,<>]+),\s*([^,<>]+)>$/.exec(data.content.type);

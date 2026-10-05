@@ -6,7 +6,6 @@ import { V9ControlCapabilitySchema, V9ControlCapSemanticsSchema, V9ClaimImpairme
 
 const Text = z.string().trim().min(1);
 export const V9ControlQuestionSubjectSchema = z.enum(["authority-semantics", "execution-scope", "key-custody-independence"]);
-export type V9ControlQuestionSubject = z.output<typeof V9ControlQuestionSubjectSchema>;
 
 const Deployment = Text.refine((value) => normalizeDeploymentId(value) !== "", "Expected chain-qualified deployment").transform(normalizeDeploymentId);
 

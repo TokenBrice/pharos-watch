@@ -56,4 +56,3 @@ export const SuiClmmShadowHistorySchema = z.object({
   schemaVersion: z.literal("sui-clmm-shadow-v1"),
   samples: z.array(SuiClmmShadowSampleSchema).max(SUI_CLMM_SHADOW_HISTORY_LIMIT),
 });
-export type SuiClmmShadowHistory = z.infer<typeof SuiClmmShadowHistorySchema>;
