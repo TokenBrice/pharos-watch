@@ -122,6 +122,15 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "keyCustodyAttestation": {
+          "kind": "mpc",
+          "sources": [
+            {
+              "label": "Midas exact Access Control Admin address and Fordefi 4-of-7 signing-policy disclosure, August 27, 2026",
+              "url": "https://governance.aave.com/t/arfc-onboard-mwin-midas-wellington-management-to-aave-horizon/25536"
+            }
+          ]
+        },
         "capDescription": "Can grant HB_USDT_MINT_OPERATOR_ROLE to any address with no cap or delay; cannot set the Depositor's deposit cap.",
         "observedAt": "2026-07-14",
         "observedBlock": 40439370,
@@ -133,9 +142,13 @@
           {
             "label": "HyperEVM public RPC",
             "url": "https://rpc.hyperliquid.xyz/evm"
+          },
+          {
+            "label": "Midas exact Access Control Admin address and Fordefi 4-of-7 signing-policy disclosure, August 27, 2026",
+            "url": "https://governance.aave.com/t/arfc-onboard-mwin-midas-wellington-management-to-aave-horizon/25536"
           }
         ],
-        "evidence": "At HyperEVM block 40439370: MidasAccessControl.hasRole(DEFAULT_ADMIN_ROLE, 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227) = true (negative control 0x...dEaD returns false), and eth_getCode returns empty, so it is an EOA. getRoleAdmin(HB_USDT_MINT_OPERATOR_ROLE) = 0x00..00 (DEFAULT_ADMIN_ROLE), so this EOA can grant or revoke the mint role immediately. Hyperscan RoleGranted history shows it as the sender of every HB_USDT role grant. Deployer 0xa0819ae43115420beb161193b8d8ba64c9f9facc no longer holds DEFAULT_ADMIN_ROLE (hasRole = false)."
+        "evidence": "At HyperEVM block 40439370: MidasAccessControl.hasRole(DEFAULT_ADMIN_ROLE, 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227) = true (negative control 0x...dEaD returns false), and eth_getCode returns empty, so it is an EOA. getRoleAdmin(HB_USDT_MINT_OPERATOR_ROLE) = 0x00..00 (DEFAULT_ADMIN_ROLE), so this EOA can grant or revoke the mint role immediately. Hyperscan RoleGranted history shows it as the sender of every HB_USDT role grant. Deployer 0xa0819ae43115420beb161193b8d8ba64c9f9facc no longer holds DEFAULT_ADMIN_ROLE (hasRole = false). Custody reviewed 2026-10-05: Midas Software GmbH's August 27, 2026 issuer proposal names this exact address as Access Control Admin, secured by a Fordefi MPC policy requiring a 4-of-7 signer quorum. The disclosure identifies the key, not merely a strategy wallet or generic Midas MPC service. This is off-chain policy assurance, not an on-chain 4-of-7 multisig, independent human identities, an immutable policy, or a change to the role's immediate unbounded authority."
       },
       {
         "chain": "hyperevm",
@@ -195,25 +208,6 @@
     "supervision": "attestation-only",
     "review": {
       "disposition": "scoreable",
-      "scopedQuestions": [
-        {
-          "controlRef": "hyperevm:0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227",
-          "question": "At HyperEVM block 47393693, this address has no deployed code and retains DEFAULT_ADMIN_ROLE on MidasAccessControl. Midas's archived wallet-security disclosure states that all collateral assets and smart contracts use Fordefi and Fireblocks MPC key management, but does not identify this address or attest its current policy quorum. Does that MPC disclosure cover this exact native-mint role administrator today?",
-          "subject": "key-custody-independence",
-          "reviewedAt": "2026-10-01",
-          "reviewer": "Sol curation pass 2026-10-01 (R2WMisc06)",
-          "sources": [
-            {
-              "label": "Midas primary wallet-security disclosure archived April 15, 2026",
-              "url": "https://web.archive.org/web/20260415063915id_/https://docs.midas.app/security/wallet-and-transaction-security"
-            },
-            {
-              "label": "Pinned HyperEVM authority observation",
-              "url": "https://rpc.hyperliquid.xyz/evm"
-            }
-          ]
-        }
-      ],
       "sources": [
         {
           "label": "Hyperbeat hbUSDT vault docs",
