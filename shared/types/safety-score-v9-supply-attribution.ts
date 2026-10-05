@@ -190,6 +190,28 @@ export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
   if (new Set(plan.conversionSources.map(row => row.sourceId)).size !== plan.conversionSources.length || plan.deployments.some(row => row.conversionSourceId !== null && !plan.conversionSources.some(source => source.sourceId === row.conversionSourceId))) ctx.addIssue({ code: "custom", message: "Conversion source must bind an exact reviewed API read" });
   if (plan.escrows.some(row => !keys.includes(row.canonicalDeploymentKey) || row.receiptDeploymentKeys.some(key => !keys.includes(key) || key === row.canonicalDeploymentKey)) || plan.exclusions.some(row => !keys.includes(row.deploymentKey))) ctx.addIssue({ code: "custom", message: "Accounting rule references an unknown holding" });
 });
+/** A local attribution census; never certifies the rest of the asset's liabilities. */
+export const ReviewedProviderChainPartitionSchema = z.strictObject({
+  assetId: CanonicalTextSchema, chainId: CanonicalChainIdSchema,
+  reviewer: CanonicalTextSchema, reviewedAtSec: UnixSecondsSchema, expiresAtSec: UnixSecondsSchema,
+  evidenceUrls: z.array(z.string().url().refine(url => url.startsWith("https://"))).min(1),
+  adapterSourceUrls: z.array(z.string().url().regex(/^https:\/\/raw\.githubusercontent\.com\/DefiLlama\/peggedassets-server\/[0-9a-f]{40}\/src\/adapters\/peggedAssets\/[^?#]+$/)).min(1).max(4),
+  accounting: z.literal("disjoint-same-unit-total-supplies"), exhaustiveChainScope: z.literal(true),
+  rationale: CanonicalTextSchema,
+  deployments: z.array(z.strictObject({
+    address: z.string().regex(/^0x[0-9a-f]{40}$/), decimals: z.number().int().min(0).max(36),
+    routeId: CanonicalTextSchema,
+  })).min(2).max(8),
+}).superRefine((review, ctx) => {
+  if (new Set(review.deployments.map(row => row.address)).size !== review.deployments.length ||
+    review.deployments.some(row => row.routeId !== `${review.chainId}:${row.address}`)) {
+    ctx.addIssue({ code: "custom", message: "Chain partition requires unique exact deployment routes" });
+  }
+  if (review.expiresAtSec <= review.reviewedAtSec || review.expiresAtSec - review.reviewedAtSec > vocabulary.reviewMaxAgeDays * 86400) {
+    ctx.addIssue({ code: "custom", message: "Chain partition expiry exceeds review budget" });
+  }
+});
+export type ReviewedProviderChainPartition = z.infer<typeof ReviewedProviderChainPartitionSchema>;
 /** Attribution only: this proof never changes a provider observation or liability census. */
 export const ReviewedProviderRowExclusionSchema = z.strictObject({
   assetId: CanonicalTextSchema, providerChainLabel: CanonicalTextSchema,
@@ -229,6 +251,7 @@ export const ReviewedEconomicSupplyPlanFileSchema = uniqueKeyedCollectionSchema(
     const keys = rows.map(row => `${row.assetId}:${String(row.providerChainLabel)}`);
     if (new Set(keys).size !== keys.length) ctx.addIssue({ code: "custom", message: "Duplicate provider-row exclusion review" });
   }).optional(),
+  providerChainPartitionReviews: z.array(z.object({ assetId: CanonicalTextSchema }).passthrough()).optional(),
 });
 /** Only envelope structure and attribution are global; plan evidence and provider-row collisions are asset-local (R8). */
 export const ReviewedEconomicSupplyPlanEnvelopeSchema = ReviewedEconomicSupplyPlanFileSchema.omit({ reviews: true, providerRowExclusionReviews: true }).extend({

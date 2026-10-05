@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { sha256Hex } from "@shared/lib/sha256";
+import reviewRegistry from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
 import {
   resolveSafetyScoreV9ReviewedTransferFact,
   getSafetyScoreV9ReviewedTransferFact,
@@ -153,8 +154,12 @@ describe("Safety Score V9 transfer deployment materiality", () => {
     ]);
     expect(() => parseSafetyScoreV9TransferMaterialityGeneration("{")).toThrow(SyntaxError);
   });
-  it("pins the approved cohort to exactly 41 assets", () => {
-    expect(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS).toHaveLength(41);
+  it("collects every reviewed census asset exactly once", () => {
+    expect(new Set(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS).size).toBe(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS.length);
+    for (const assetId of [...reviewRegistry.independentLiabilityAssetIds,
+      ...reviewRegistry.providerChainPartitionReviews.map(row => row.assetId)]) {
+      expect(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS.filter(id => id === assetId)).toHaveLength(1);
+    }
     expect(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS).toContain("sfrxusd-frax");
     // bd-basedollar admitted 2026-09-01: it has a complete deployment-scoped
     // transfer review but no llamaId/geckoId, so without cohort membership the
@@ -267,7 +272,9 @@ describe("Safety Score V9 transfer deployment materiality", () => {
     expect(observed.observationsByAssetId[ASSET_ID]).toEqual([
       expect.objectContaining({ deploymentKey: DEPLOYMENT_KEY, status: "rejected", rawTokenUnits: null }),
     ]);
-    expect(observed.observationsByAssetId).not.toHaveProperty("usdc-circle");
+    // This capture predates the XLayer accounting review, so no chain-local
+    // reads are admitted; an empty roster cannot complete transfer scope.
+    expect(observed.observationsByAssetId["usdc-circle"]).toEqual([]);
   });
 
   it("keeps the materiality type and generation out of circulating/market-cap supply", () => {
@@ -283,7 +290,7 @@ describe("Safety Score V9 transfer deployment materiality", () => {
     expect(safetyScoreV9ChainSupplySourcePayload(withMateriality)).toEqual(before);
   });
 
-  it("returns a non-cohort asset scope byte-identically", () => {
+  it("returns an incomplete census asset scope byte-identically", () => {
     const meta = ACTIVE_META_BY_ID.get("usdc-circle")!;
     const before = JSON.stringify(BASE_SCOPE);
     const after = transferMaterialScopeFromOnchainGeneration({

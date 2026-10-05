@@ -14,6 +14,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { REVIEWED_ECONOMIC_SUPPLY_PLANS, reviewedEconomicDeploymentAttributionValidationError } from "./supply-attribution-contract";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
+import { REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE } from "./supply-attribution-contract";
 
 export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY =
   "safety-score-v9:transfer-materiality-generation:v1";
@@ -30,6 +31,7 @@ export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS = Object.freeze([
   "vcred-vcred", "vusd-virtue", "wsrusd-reservoir", "xdai-gnosis", "ybold-yearn",
   "yusd-yieldfi", "zsd-zephyr-protocol", "zys-zephyr-protocol",
   ...REVIEWED_ECONOMIC_SUPPLY_PLANS.keys(),
+  ...(REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE.providerChainPartitionReviews ?? []).map(row => row.assetId),
 ].sort(compareText));
 
 const TRANSFER_MATERIALITY_ASSET_ID_SET = new Set(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS);
@@ -38,6 +40,7 @@ const DeploymentObservationSchema = z.object({
   rawTokenUnits: z.string().regex(/^(0|[1-9][0-9]*)$/).nullable(),
   decimals: z.number().int().min(0).max(255).nullable(),
   blockNumber: z.string().regex(/^(0|[1-9][0-9]*)$/).nullable(),
+  blockHash: z.string().regex(/^0x[0-9a-f]{64}$/).optional(),
   observedAtSec: UnixSecondsSchema.nullable(),
   status: z.enum(["accepted", "rejected"]),
 }).strict().superRefine((row, ctx) => {

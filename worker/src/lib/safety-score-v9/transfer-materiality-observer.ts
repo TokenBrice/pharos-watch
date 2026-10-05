@@ -12,6 +12,8 @@ import { SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS, createSafetyScoreV9Tran
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { observeEconomicSolanaMint } from "./economic-supply-observer";
 import { fetchMoveFungibleAssetSupply } from "../../cron/reserve-adapters/token-supply";
+import { REVIEWED_PROVIDER_CHAIN_PARTITIONS, REVIEWED_ECONOMIC_SUPPLY_PLANS, REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE } from "./supply-attribution-contract";
+import { ReviewedRegistryEntryError } from "./extension-reviewed-registry";
 
 interface ObserverDependencies {
   fetchEvmBlockHeader: typeof fetchEvmBlockHeader;
@@ -231,6 +233,7 @@ async function observeChainDeployments(
         decimals: Number(decimals),
         blockNumber: blockNumber.toString(),
         observedAtSec: header.timestamp,
+        blockHash: header.hash,
         status: "accepted",
       });
     }
@@ -258,8 +261,35 @@ export async function observeSafetyScoreV9TransferMaterialityGeneration(input: {
     throwIfAborted(input.signal);
     const meta = ACTIVE_META_BY_ID.get(assetId);
     const rows: SafetyScoreV9TransferMaterialityObservation[] = [];
+    // Chain-local censuses must not trigger an 88-contract whole-asset probe
+    // or be mistaken for complete transfer-materiality coverage.
+    let chainScope: string[] | null = null;
+    if (!REVIEWED_ECONOMIC_SUPPLY_PLANS.has(assetId) &&
+      !REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE.independentLiabilityAssetIds.includes(assetId)) {
+      try {
+        const reviews = REVIEWED_PROVIDER_CHAIN_PARTITIONS.getAll(assetId);
+        if (reviews.length > 0) {
+          const currentReviews = reviews.filter(review =>
+            review.reviewedAtSec <= input.scoringClockSec && input.scoringClockSec < review.expiresAtSec);
+          chainScope = currentReviews.map(review => review.chainId);
+          const reviewedKeys = currentReviews.flatMap(review => review.deployments.map(row => row.routeId));
+          const catalogKeys = (meta?.contracts ?? []).filter(deployment => chainScope!.includes(resolveChainId(deployment.chain) ?? "")).map(deployment =>
+            `${resolveChainId(deployment.chain)}:${normalizeReviewedDeploymentAddress(resolveChainId(deployment.chain)!, deployment.address)}`);
+          if (catalogKeys.length !== reviewedKeys.length || new Set(catalogKeys).size !== catalogKeys.length ||
+            reviewedKeys.some(key => !catalogKeys.includes(key))) {
+            observationsByAssetId[assetId] = reviewedKeys.map(rejected);
+            continue;
+          }
+        }
+      } catch (error) {
+        if (!(error instanceof ReviewedRegistryEntryError)) throw error;
+        observationsByAssetId[assetId] = rows;
+        continue;
+      }
+    }
     for (const deployment of meta?.contracts ?? []) {
       const chainId = resolveChainId(deployment.chain);
+      if (chainScope !== null && (chainId === null || !chainScope.includes(chainId))) continue;
       if (chainId === null || !isFixedDecimalDeployment(deployment) ||
         (CHAIN_META[chainId]?.type !== "evm" && chainId !== "solana" && chainId !== "aptos" && chainId !== "movement")) {
         rows.push(rejected(`${deployment.chain}:${normalizeReviewedDeploymentAddress(chainId ?? deployment.chain, deployment.address)}`));
