@@ -344,11 +344,11 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Etherlink block 54707602 identifies Savings crvUSD/scrvUSD, decimals=18, totalSupply=1100000000000000000 and minter 0x5bca7ddf1bcccb2ee8e46c56bfc9d3cdc77262bc. Documented mirrored LayerZero bridge 0x2e16150df237f938cc70730895de33eb45594419 identifies this token/minter, is admitted by is_minter(bridge)=true and is not killed. Bridge owner is 0x711fd1b7eaac506c25a969732b6fab90ecd21099; minter owner is 0x71f718d3e4d1449d1502a6a7595eb84ebccb1683, with pending future owner 0xabc336d4c71ad275695744d32ddb1d8266db1cbf. Endpoint is 0x2d61dcdd36f10b22176e0433b86f74567d529aaa, remote LayerZero chain ID 101. Ethereum block 26101013 observes matching 1100000000000000000 raw-share escrow. Blockscout verified token/minter/bridge source recovers owner-controlled nonenumerable minter grants and mutable bridge limits. Complete signer/message/control reach, pending reconciliation and circulating exclusions remain unresolved; no small-supply exclusion is asserted.",
+        "reviewNote": "At Etherlink block 54923602 (0xb60b2137fb96d809be2707dd10f330b4b6e0a707ce51729ccd7c70a567eb6fc7), the satellite still has 1100000000000000000 raw shares and the documented MinterProxy. Blockscout's terminating transaction and internal-transaction pages locate one successful set_minter grant, to the documented bridge at block 22192751; this is indexed permission evidence, not an independently verified full trace census. Its terminating bridge-log page contains two Issued events totaling 1100000000000000000 and no Delayed events. Endpoint uaConfigLookup is all zero, so the application inherits mutable default libraries: receive version 3 resolves to 0x282b3386571f7f794450d5789911a9804fa346b4. getUlnConfig(bridge,101) requires 15 confirmations and all four required DVNs, with no optional DVNs. Endpoint owner 0xb73cc4df2dcc2f7009f5b309af8f2ee82e37db28 and library-owner/default-configuration history remain part of the authority reach. Historical DVN/controller incident coverage and cross-chain in-flight reconciliation remain unresolved; indexed absence of Delayed events does not certify an incident-free route or zero undelivered messages.",
         "controllerChain": "etherlink",
         "controllerAddress": "0x5bca7ddf1bcccb2ee8e46c56bfc9d3cdc77262bc",
-        "observedAt": "2026-10-02",
-        "observedBlock": 54707602,
+        "observedAt": "2026-10-04",
+        "observedBlock": 54923602,
         "sources": [
           {
             "label": "Curve scrvUSD token, minter and bridge manifest",
@@ -361,6 +361,26 @@
           {
             "label": "Verified Etherlink scrvUSD LayerZero bridge source",
             "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0x2e16150df237f938cc70730895de33eb45594419"
+          },
+          {
+            "label": "Etherlink MinterProxy transaction census; terminating pagination and set_minter input",
+            "url": "https://explorer.etherlink.com/api/v2/addresses/0x5bca7ddf1bcccb2ee8e46c56bfc9d3cdc77262bc/transactions"
+          },
+          {
+            "label": "Etherlink MinterProxy internal-transaction census",
+            "url": "https://explorer.etherlink.com/api/v2/addresses/0x5bca7ddf1bcccb2ee8e46c56bfc9d3cdc77262bc/internal-transactions"
+          },
+          {
+            "label": "Etherlink scrvUSD bridge complete indexed log page",
+            "url": "https://explorer.etherlink.com/api/v2/addresses/0x2e16150df237f938cc70730895de33eb45594419/logs"
+          },
+          {
+            "label": "Verified Etherlink current receive library and mutable default ULN configuration",
+            "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0x282b3386571f7f794450d5789911a9804fa346b4"
+          },
+          {
+            "label": "Etherlink RPC: hash-pinned bridge, endpoint and four-DVN configuration",
+            "url": "https://node.mainnet.etherlink.com"
           }
         ]
       }
@@ -508,19 +528,19 @@
         "authorityType": "contract",
         "controllerChain": "etherlink",
         "controllerAddress": "0x5bca7ddf1bcccb2ee8e46c56bfc9d3cdc77262bc",
-        "observedAt": "2026-10-03",
-        "observedBlock": 54856625,
+        "observedAt": "2026-10-04",
+        "observedBlock": 54923602,
         "sources": [
           {
             "label": "Verified Etherlink MinterProxy source",
             "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0x5bca7ddf1bcccb2ee8e46c56bfc9d3cdc77262bc"
           },
           {
-            "label": "Etherlink pinned token-to-minter and owner observation",
-            "url": "https://explorer.etherlink.com/block/54856625"
+            "label": "Etherlink block 54923602 token-to-minter, owner and future-owner observation",
+            "url": "https://explorer.etherlink.com/block/54923602"
           }
         ],
-        "evidence": "At block 54856625 token.minter() is this contract and owner() is 0x71f718d3e4d1449d1502a6a7595eb84ebccb1683. Verified explorer source fixes TOKEN to the satellite and forwards arbitrary mint values after checking is_minter; owner can grant arbitrary minters via set_minter. There is no cap in this contract. This records adverse uncapped issuance only. Permission census, owner signing reach, endpoint configuration, incident history and pending liabilities remain unresolved; no conservation or favorable bounds are claimed."
+        "evidence": "At block 54923602, token.minter() still identifies this contract; owner() is 0x71f718d3e4d1449d1502a6a7595eb84ebccb1683 and future_owner() is 0xabc336d4c71ad275695744d32ddb1d8266db1cbf. Verified source fixes TOKEN to the satellite and forwards arbitrary values for approved minters, while the owner can grant arbitrary minters without a cap. New terminating Blockscout transaction/internal-transaction pages identify one successful set_minter grant to bridge 0x2e16150df237f938cc70730895de33eb45594419 at block 22192751. This improves the indexed permission census but is not full trace/runtime certification. The route's current receive library requires four DVNs and inherits mutable defaults. Owner and validation-library historical reach, incident review and cross-chain pending/in-flight conservation remain unresolved; no favorable bound or absence is asserted."
       },
       {
         "id": "avalanche-scrvusd-minter-proxy",
