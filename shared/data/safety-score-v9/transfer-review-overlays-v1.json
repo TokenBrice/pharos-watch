@@ -10036,15 +10036,15 @@
     },
     {
       "assetId": "zarsc-supercoin",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
+      "reviewedAt": "2026-10-05",
+      "reviewer": "Pharos unknown-resolver W3R39",
       "deployments": [
         {
           "chainId": "solana",
           "contractOrTokenId": "5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "Finalized Solana slot 452860529: freezeAuthority 78gLf8nzh9KpfgHJ3dXN61frauTzdAw5yeBXQbFsVnZi, permanentDelegate 3DkHJVMsC7zLLdBa7SamKpr4r6jC9C8AWQdzzvcYjVdc and pausable authority retained. Default account state initialized, pause=false, current transfer hook programId=null and transfer fees zero. The retained hook authority can change future transfer execution. ToS 9.2 and 12.3 authorize freezes/burns. These are holder-transfer restrictions, separate from the future-only direct app redemption route.",
+          "evidence": "Finalized Solana slot 453413494: freeze authority 78gLf8nzh9KpfgHJ3dXN61frauTzdAw5yeBXQbFsVnZi; permanent delegate 3DkHJVMsC7zLLdBa7SamKpr4r6jC9C8AWQdzzvcYjVdc; pausable authority retained, pause=false. Default state initialized; hook program null but mutable; fees zero. Issuer ToS 5.3 names Solana issuance and current assurance archive publishes this sole mint; permission to deploy later is not a current second liability.",
           "sources": [
             {
               "label": "Finalized Solana mint configuration",
@@ -10056,7 +10056,26 @@
             }
           ]
         }
-      ]
+      ],
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-10-05",
+        "expiresAt": "2026-11-04",
+        "reviewer": "Pharos unknown-resolver W3R39",
+        "deploymentKey": "solana:5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Issuer current sole Solana Token-2022 mint disclosure",
+            "url": "https://www.supercoin.co.za/assurance-reports"
+          },
+          {
+            "label": "ToS 5.3: Solana issuance; other chains prospective",
+            "url": "https://www.supercoin.co.za/terms-of-service"
+          }
+        ]
+      }
     },
     {
       "assetId": "zaru-blocktower",

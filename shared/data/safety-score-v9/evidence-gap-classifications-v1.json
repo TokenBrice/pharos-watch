@@ -40307,6 +40307,178 @@
         "https://proton.eosusa.io/v2/state/get_tokens?account=xmd.treasury"
       ],
       "rationale": "Freshly reached treasury and bridge interfaces disclose XPYUSD as the Paxos/PayPal reserve representation, and updated official reserve, operating and legal pages describe conditional availability and discretionary withdrawal suspension. They do not publish a maximum whole-position realization bound through Metal bridge withdrawal and final USD settlement. This C concerns that offchain operating/contractual liquidity bound, not unread onchain balances or controller roles; no parent PYUSD redemption deadline is exported to XPYUSD."
+    },
+    {
+      "id": "uw-jpysc-sbi-startale-4905dfbea99c2c7a",
+      "assetId": "jpysc-sbi-startale",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:19:30Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R39)",
+      "sources": [
+        {
+          "url": "https://www.shinseitrust.com/stablecoin/jpysc.html",
+          "observedAt": "2026-10-05T00:19:30Z",
+          "datumAsOf": "2026-06-30",
+          "location": "\u767a\u884c\u6b8b\u9ad8 table",
+          "excerpt": "2026\u5e746\u670830\u65e5 19\u6642\u6642\u70b9",
+          "assertion": "Latest product balance table is historical June 30, not a current exact whole-book composition."
+        },
+        {
+          "url": "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260630.pdf",
+          "observedAt": "2026-10-05T00:19:30Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Article 14, p.23",
+          "excerpt": "\u4fe1\u8a17\u8ca1\u7523\u72b6\u6cc1\u5831 \u544a\u66f8\u300d \u3068\u3044\u3046\u3002 \uff09\u306e\u4ea4\u4ed8\u53c8\u306f\u4fe1\u8a17\u8ca1\u7523\u72b6\u6cc1\u5831\u544a\u66f8\u306b\u8a18\u8f09\u3059\u3079\u304d\u4e8b\u9805\u306e\u96fb\u78c1\u7684\u65b9\u6cd5\u306b\u3088\u308b\u63d0\u4f9b\u3092\u884c \u308f\u306a\u3044\u3082\u306e\u3068\u3059\u308b\u3002",
+          "assertion": "The terms do not routinely deliver the trust property report; beneficiary requests are provided separately. This does not disclose a supply/backing reconciliation cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.shinseitrust.com/stablecoin/jpysc.html",
+        "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260630.pdf",
+        "https://www.shinseitrust.com/corporate/ir.html",
+        "https://www.shinseitrust.com/news.html",
+        "https://www.sbigroup.co.jp/news/2026/0907_16567.html",
+        "https://etherscan.io/address/0x6781d5631bfe47432b089e64e3eab3b6edd26177#code"
+      ],
+      "rationale": "The exact current whole-JPYSC reserve composition and denominator are not public. The recovered operative PDF ends the prior access blocker: Article 14 provides reports on beneficiary request, not a published current book. Product page remains June 30; September issuer news gives JPY1bn JGBs and approximate JPY20.1bn issuance, not an exact same-clock full holdings denominator. Trustee IR contains corporate rather than current JPYSC trust reporting. Do not extrapolate remaining deposits."
+    },
+    {
+      "id": "uw-jpysc-sbi-startale-f90a70ae8ae39785",
+      "assetId": "jpysc-sbi-startale",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:19:30Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R39)",
+      "sources": [
+        {
+          "url": "https://www.shinseitrust.com/stablecoin/jpysc.html",
+          "observedAt": "2026-10-05T00:19:30Z",
+          "datumAsOf": "2026-06-30",
+          "location": "\u767a\u884c\u6b8b\u9ad8 table",
+          "excerpt": "2026\u5e746\u670830\u65e5 19\u6642\u6642\u70b9",
+          "assertion": "Latest product balance table is historical June 30, not a current exact whole-book composition."
+        },
+        {
+          "url": "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260630.pdf",
+          "observedAt": "2026-10-05T00:19:30Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Article 14, p.23",
+          "excerpt": "\u4fe1\u8a17\u8ca1\u7523\u72b6\u6cc1\u5831 \u544a\u66f8\u300d \u3068\u3044\u3046\u3002 \uff09\u306e\u4ea4\u4ed8\u53c8\u306f\u4fe1\u8a17\u8ca1\u7523\u72b6\u6cc1\u5831\u544a\u66f8\u306b\u8a18\u8f09\u3059\u3079\u304d\u4e8b\u9805\u306e\u96fb\u78c1\u7684\u65b9\u6cd5\u306b\u3088\u308b\u63d0\u4f9b\u3092\u884c \u308f\u306a\u3044\u3082\u306e\u3068\u3059\u308b\u3002",
+          "assertion": "The terms do not routinely deliver the trust property report; beneficiary requests are provided separately. This does not disclose a supply/backing reconciliation cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.shinseitrust.com/stablecoin/jpysc.html",
+        "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260630.pdf",
+        "https://www.shinseitrust.com/corporate/ir.html",
+        "https://www.shinseitrust.com/news.html",
+        "https://www.sbigroup.co.jp/news/2026/0907_16567.html",
+        "https://etherscan.io/address/0x6781d5631bfe47432b089e64e3eab3b6edd26177#code"
+      ],
+      "rationale": "No published exact whole-supply on/off-chain liability-to-reserve reconciliation procedure and recurring cadence was located. Recovered Article 14 concerns trust-accounting reports/on-request information, not common-clock mint/burn and total liability reconciliation. Product purchase/issuance flow and historical balance equality establish ordinary ledger mechanics, not periodic/continuous financial assurance. Corporate trustee accounts and the September JGB announcement do not fill this atomic datum."
+    },
+    {
+      "id": "uw-jpysc-sbi-startale-93e9fb31f619d304",
+      "assetId": "jpysc-sbi-startale",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:redemption:jpysc-sbi-startale:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-05T00:19:30Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R39)",
+      "sources": [
+        {
+          "url": "https://www.shinseitrust.com/stablecoin/jpysc.html",
+          "observedAt": "2026-10-05T00:19:30Z",
+          "datumAsOf": null,
+          "location": "\u5f53\u793e\u306b\u5bfe\u3059\u308b\u76f4\u63a5\u511f\u9084\u624b\u7d9a, item 4",
+          "excerpt": "JPYSC\u306e\u511f\u9084\u624b\u6570\u6599\u306f\u3001\u304a\u7533\u3057\u8fbc\u307f1\u4ef6\u306b\u3064\u304d3,000\u5186\uff08\u6d88\u8cbb\u7a0e\u7b49\u5225\uff09\u3068\u3057\u307e\u3059\u3002\u9280\u884c\u632f\u8fbc\u306b\u4fc2\u308b\u9001\u91d1\u624b\u6570\u6599\u306fJPYSC\u4fdd\u6709\u8005\u306b\u3054\u8ca0\u62c5\u3044\u305f\u3060\u304d\u307e\u3059\u3002",
+          "assertion": "Exact direct issuer fee formula is public but the producer leaves documented-variable unevaluated: JPY FX/tax, bank and gas charges require same-notional quote. W15 B, not a fabricated all-in scalar."
+        }
+      ]
+    },
+    {
+      "id": "uw-qcad-stablecorp-37c67ff1bc8f9f91",
+      "assetId": "qcad-stablecorp",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:redemption:qcad-stablecorp:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:19:30Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R39)",
+      "sources": [
+        {
+          "url": "https://www.sedarplus.ca/csa-party/records/document.html?id=194b25dd3a2d2a8d59e108b3cf223b2fc41d68e33507899cbb350a659a9fea0a",
+          "observedAt": "2026-10-05T00:19:30Z",
+          "datumAsOf": null,
+          "location": "Article 7, section 7.2, p.11",
+          "excerpt": "QCDT and the Servicer will not pass on their own banking fees except as explicitly outlined in any Purchase and Redemption Agreement.",
+          "assertion": "Zero issuer fee in 7.1 does not establish all-in same-notional cost: customer bank and participant-agreement charges remain unspecified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://stablecorp.ca/",
+        "https://stablecorp.ca/transparency",
+        "https://www.sedarplus.ca/csa-party/records/document.html?id=194b25dd3a2d2a8d59e108b3cf223b2fc41d68e33507899cbb350a659a9fea0a",
+        "https://stablecorp.ca/contact",
+        "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json"
+      ],
+      "rationale": "Exact all-in same-notional redemption cost for the configured qualified-holder QCDT rail is not published. Operative terms 7.1 disclose zero current issuer/servicer fees, but 7.2 reserves participant-agreement bank charges and each redeemer bears its own bank costs; 6.3 assigns applicable taxes. The public schedule is therefore only a partial issuer-fee disclosure, not total executable USD cost. No public client/Purchase and Redemption Agreement fee ceiling or bank-size schedule was located."
+    },
+    {
+      "id": "uw-cngn-compliant-naira-b06c845d2394a17c",
+      "assetId": "cngn-compliant-naira",
+      "scope": {
+        "componentKey": "mechanism-review:assuranceAndReconciliation",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "mechanism-review:assuranceAndReconciliation",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-05T00:22:39Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R39)",
+      "sources": [
+        {
+          "url": "https://drive.google.com/file/d/1Hw3aKTD29QxEqawYQjpRmGtVuK1_lV92/view?usp=drive_link",
+          "observedAt": "2026-10-05T00:22:39Z",
+          "datumAsOf": "2026-08-31",
+          "location": "pp.3-5 ISAE3000 examination; p.6 Table 1; pp.5/7 undated signatures",
+          "excerpt": "Comparison of the reserve assets with cNGN tokens in circulation.",
+          "assertion": "Exact August 31 assets/liabilities examination is public; current fallback requires established publishedAt, absent from undated signatures. Remove obsolete no-2026-report C; no invented chronology."
+        }
+      ]
     }
   ]
 }
