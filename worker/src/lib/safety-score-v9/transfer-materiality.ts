@@ -11,7 +11,7 @@ import type { V9ExtensionRegistryMeta } from "./extension-shared";
 import type { SafetyScoreV9TransferMaterialScope } from "./extension-transfer";
 import { reviewedDeploymentObservationTimingIssue } from "./supply-attribution-contract";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { REVIEWED_ECONOMIC_SUPPLY_PLANS, reviewedEconomicDeploymentAttributionValidationError } from "./supply-attribution-contract";
+import { REVIEWED_ECONOMIC_SUPPLY_PLANS, REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE, reviewedEconomicDeploymentAttributionValidationError } from "./supply-attribution-contract";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 
@@ -19,7 +19,7 @@ export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY =
   "safety-score-v9:transfer-materiality-generation:v1";
 const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_MAX_AGE_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec;
 
-export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS = Object.freeze([
+export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS = Object.freeze([...new Set([
   "aa-falconx-mev-capital", "asusdf-astherus", "bbqusdc-steakhouse", "bd-basedollar", "dusd-dialectic",
   "eearn-ember", "fusd-freedom-dollar", "fxsave-f-x-protocol", "gldt-gold-dao",
   "gtusdc-gauntlet", "gtusdcp-gauntlet", "jpyt-dephaser", "jusd-juicedollar",
@@ -30,7 +30,8 @@ export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS = Object.freeze([
   "vcred-vcred", "vusd-virtue", "wsrusd-reservoir", "xdai-gnosis", "ybold-yearn",
   "yusd-yieldfi", "zsd-zephyr-protocol", "zys-zephyr-protocol",
   ...REVIEWED_ECONOMIC_SUPPLY_PLANS.keys(),
-].sort(compareText));
+  ...REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE.independentLiabilityAssetIds,
+])].sort(compareText));
 
 const TRANSFER_MATERIALITY_ASSET_ID_SET = new Set(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS);
 const DeploymentObservationSchema = z.object({

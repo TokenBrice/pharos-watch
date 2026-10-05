@@ -134,7 +134,8 @@ export function diagnoseSafetyScoreV9NullSupplyReviewOutcome(input: {
   }
   const expectsRuntimeAttribution =
     safetyScoreV9SupplyAttributionExpectedAssetIds(input.fixedInput).includes(input.assetId) ||
-    (SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS.includes(input.assetId) && chainLabels.length === 0);
+    (INDEPENDENT_LIABILITY_SUPPLY_ASSET_ID_SET.has(input.assetId) &&
+      !hasCompleteEligibleProviderSupply(input.fixedInput, input.assetId));
   if (attributionRejectionCode !== null) {
     return {
       state: "attribution-rpc-rejection",
@@ -407,7 +408,7 @@ function buildIndependentLiabilitySupplyReview(
     !INDEPENDENT_LIABILITY_SUPPLY_ASSET_ID_SET.has(assetId) ||
     !profile ||
     !options.meta ||
-    Object.keys(safetyScoreV9ChainRows(fixedInput, assetId)).length > 0
+    hasCompleteEligibleProviderSupply(fixedInput, assetId, { contracts: options.meta.contracts, bridgeRouteRisk: profile })
   ) return null;
 
   const packet = exactInputBoundTransferMaterialityPacket({
@@ -660,13 +661,14 @@ export function buildSafetyScoreV9SupplyReview(
   const chainRows = safetyScoreV9ChainRows(fixedInput, assetId);
   const chains = Object.keys(chainRows).sort(compareText);
   const hasEconomicSupplyPlan = REVIEWED_ECONOMIC_SUPPLY_PLANS.has(assetId);
-  // The full census contract belongs to the reviewed economic-supply lane.
-  // Existing captured chain partitions retain their original reconciliation.
-  const totalUsd = hasEconomicSupplyPlan
+  const requiresExhaustiveProviderSupply = hasEconomicSupplyPlan || INDEPENDENT_LIABILITY_SUPPLY_ASSET_ID_SET.has(assetId);
+  // Reviewed economic and independent-liability inventories require a complete
+  // provider partition; other captured rows retain their original reconciliation.
+  const totalUsd = requiresExhaustiveProviderSupply
     ? getCirculatingRawOrNull(fixedInput.aggregateCirculatingById[assetId] ?? {})
     : chains.reduce((sum, chain) => sum + chainRows[chain]!.current, 0);
   if (chains.length === 0 || totalUsd === null || totalUsd <= 0 ||
-    (hasEconomicSupplyPlan && !hasCompleteEligibleProviderSupply(fixedInput, assetId, options.meta ?
+    (requiresExhaustiveProviderSupply && !hasCompleteEligibleProviderSupply(fixedInput, assetId, options.meta ?
       { contracts: options.meta.contracts, bridgeRouteRisk: profile } : undefined))) return null;
 
   const routes = profile?.routes ?? [];

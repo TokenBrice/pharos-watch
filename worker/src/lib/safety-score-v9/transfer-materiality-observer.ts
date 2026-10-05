@@ -61,6 +61,7 @@ const TRANSFER_MATERIALITY_EXTRA_RPCS: Record<string, { rpcUrl: string; fallback
   unichain: SUPPLY_RPC_DEFAULTS.unichain,
   worldchain: SUPPLY_RPC_DEFAULTS.worldchain,
   megaeth: SUPPLY_RPC_DEFAULTS.megaeth,
+  nibiru: { rpcUrl: "https://evm-rpc.nibiru.fi" },
 };
 
 export function transferMaterialityObserverResolvesRpc(
