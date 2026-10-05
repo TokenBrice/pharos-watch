@@ -40110,6 +40110,94 @@
         "https://eth.blockscout.com/api/v2/smart-contracts/0x350b6b5cf2bda130a9bee0a3cda86ec88e71dcca"
       ],
       "rationale": "Recovered the exact blocked Chainlink page: reserve AUM/NAV and v9 report schema do not disclose whole-issued-KRWQ supply-to-backing reconciliation. Live custodian API publishes minted counters, a reserve ratio and timestamp, but no liability denominator/exclusion, escrow/in-flight coverage, common observation clock or performed reconciliation scope/cadence. Whitepaper plans reports; IQ wiki claims monthly attestations began but links no performed report. Issuer transparency/legal/repository surfaces publish no qualifying procedure/report. This is non-disclosure of exact reconciliation, not unavailable feed access."
+    },
+    {
+      "id": "uw-susdat-saturn-c0b34cc6c3e50fbe",
+      "assetId": "susdat-saturn",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "supervision",
+        "pillar": "control",
+        "requiredDatum": "supervision",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T23:49:04Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R20)",
+      "sources": [
+        {
+          "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/custody-of-digital-credit.md",
+          "observedAt": "2026-10-04T23:40:14Z",
+          "datumAsOf": null,
+          "location": "Custody of Digital Credit",
+          "excerpt": "The fund is incorporated in the British Virgin Islands as a professional fund.",
+          "assertion": "Publishes a fund-structure claim, not the exact Saturn token issuer licence or activity/supervision scope."
+        },
+        {
+          "url": "https://www.bvifsc.vg/regulated-entities?combine=Saturn",
+          "observedAt": "2026-10-04T23:46:44Z",
+          "datumAsOf": null,
+          "location": "Exact keyword-filtered regulator result, retrieved through r.jina.ai",
+          "excerpt": "Sorry, but your search returned no results.",
+          "assertion": "Successful correct combine filter covers Saturn; no published entity/activity match. Not a finding that no supervision exists."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://saturn.credit/legal/terms-conditions",
+        "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/custody-of-digital-credit.md",
+        "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits.md",
+        "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md",
+        "https://www.bvifsc.vg/regulated-entities?combine=Saturn",
+        "https://www.bvifsc.vg/regulated-entities?combine=Saturn%20Global%20Capital",
+        "https://r.jina.ai/https://www.bvifsc.vg/regulated-entities?combine=Saturn"
+      ],
+      "rationale": "Token-specific Saturn issuer supervision remains undisclosed. Correct regulator combine filters (Saturn and exact Saturn Global Capital) now succeed and return no entity match, overcoming prior title-filter/403 blocker. SGCI interface terms and legacy BVI professional-fund custody claim supply no licence number or supervised token-issuance activity; Securitize/Ondo/Paxos oversight is not Saturn supervision. Preserve unknown enum, not none."
+    },
+    {
+      "id": "uw-usdat-saturn-7912c37cf6181316",
+      "assetId": "usdat-saturn",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "supervision",
+        "pillar": "control",
+        "requiredDatum": "supervision",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T23:49:04Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R20)",
+      "sources": [
+        {
+          "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/custody-of-digital-credit.md",
+          "observedAt": "2026-10-04T23:40:14Z",
+          "datumAsOf": null,
+          "location": "Custody of Digital Credit",
+          "excerpt": "The fund is incorporated in the British Virgin Islands as a professional fund.",
+          "assertion": "Publishes a fund-structure claim, not the exact Saturn token issuer licence or activity/supervision scope."
+        },
+        {
+          "url": "https://www.bvifsc.vg/regulated-entities?combine=Saturn",
+          "observedAt": "2026-10-04T23:46:44Z",
+          "datumAsOf": null,
+          "location": "Exact keyword-filtered regulator result, retrieved through r.jina.ai",
+          "excerpt": "Sorry, but your search returned no results.",
+          "assertion": "Successful correct combine filter covers Saturn; no published entity/activity match. Not a finding that no supervision exists."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://saturn.credit/legal/terms-conditions",
+        "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/custody-of-digital-credit.md",
+        "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits.md",
+        "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md",
+        "https://www.bvifsc.vg/regulated-entities?combine=Saturn",
+        "https://www.bvifsc.vg/regulated-entities?combine=Saturn%20Global%20Capital",
+        "https://r.jina.ai/https://www.bvifsc.vg/regulated-entities?combine=Saturn"
+      ],
+      "rationale": "Token-specific Saturn issuer supervision remains undisclosed. Correct regulator combine filters (Saturn and exact Saturn Global Capital) now succeed and return no entity match, overcoming prior title-filter/403 blocker. SGCI interface terms and legacy BVI professional-fund custody claim supply no licence number or supervised token-issuance activity; Securitize/Ondo/Paxos oversight is not Saturn supervision. Preserve unknown enum, not none."
     }
   ]
 }
