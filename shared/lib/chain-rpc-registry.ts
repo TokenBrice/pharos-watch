@@ -28,6 +28,8 @@ export const PUBLIC_RPC_URLS: Readonly<Record<string, string>> = {
   fluent: "https://rpc.fluent.xyz",
   // Required for reviewed CHFAU native supply aggregation.
   tempo: "https://rpc.tempo.xyz",
+  // Reviewed synchronous ERC-4626 simulation; exact hash-bound override supported.
+  robinhood: "https://rpc.mainnet.chain.robinhood.com",
   movement: "https://mainnet.movementnetwork.xyz/v1",
   aptos: APTOS_PUBLIC_REST_URL,
   // Required for usd1-bundle-oracle multichain totalSupply() supply aggregation.
@@ -117,7 +119,7 @@ export const SUPPLY_RPC_DEFAULTS = {
   "klaytn": { rpcUrl: "https://public-en.node.kaia.io" },
   "stable": { rpcUrl: "https://rpc.stable.xyz", fallbackRpcUrl: "https://stable.drpc.org" },
   "codex": { rpcUrl: "https://rpc.codex.xyz", fallbackRpcUrl: "https://81224.rpc.thirdweb.com" },
-  "robinhood": { rpcUrl: "https://rpc.mainnet.chain.robinhood.com" },
+  "robinhood": { rpcUrl: PUBLIC_RPC_URLS["robinhood"] },
   "tempo": { rpcUrl: PUBLIC_RPC_URLS["tempo"] },
   // Official keyless endpoints, eth_chainId/totalSupply/decimals verified
   // 2026-10-03. Keep these latest-state supply profiles out of PUBLIC_RPC_URLS:

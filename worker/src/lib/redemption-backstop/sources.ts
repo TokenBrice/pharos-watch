@@ -505,12 +505,13 @@ export async function buildRedemptionBackstopEntry(
     }
   }
   const executionRoutes = await observeReviewedExitExecutionRoutes({
-    assetId: stablecoinId, circulatingUsd: supplyUsd, clockSec: now, lane: "redemption", db, signal: options.signal,
+    assetId: stablecoinId, circulatingUsd: supplyUsd, clockSec: now, lane: "redemption", db, signal: options.signal, rpcOptions: options.rpcOptions,
+    stablecoinsCache: options.stablecoinsCache, envelope: options.exitExecutionEnvelope, reviews: options.exitExecutionReviews,
   });
-  if (executionRoutes.observations.length > 0 && finalizedEntry.capacityProfile) {
+  if (executionRoutes.observations.length > 0) {
     finalizedEntry = { ...finalizedEntry, capacityProfile: {
-      ...finalizedEntry.capacityProfile,
-      exitRouteObservations: [...(finalizedEntry.capacityProfile.exitRouteObservations ?? []), ...executionRoutes.observations],
+      ...(finalizedEntry.capacityProfile ?? { scoringHorizon: "unknown", capacityProfileConfidence: "heuristic" }),
+      exitRouteObservations: [...(finalizedEntry.capacityProfile?.exitRouteObservations ?? []), ...executionRoutes.observations],
     } };
   }
   registerOutputDependencyResolution(finalizedEntry, config, now);
