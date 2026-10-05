@@ -5,7 +5,7 @@ import { recordJsonParseFailure } from "./api-cache-read";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
-import type { PegSummaryCoin } from "@shared/types/market";
+import type { PegSummaryCoin } from "@shared/types/peg";
 import type { PegAnalyticsSnapshot } from "./peg-analytics";
 import { toErrorMessage } from "@shared/lib/error-utils";
 

@@ -11,7 +11,8 @@ import { derivePegRates, getPegReference, normalizePegType } from "@shared/lib/p
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
-import type { DepegEvent, PegSummaryCoin, StablecoinData } from "@shared/types/market";
+import type { DepegEvent, StablecoinData } from "@shared/types/market";
+import type { PegSummaryCoin } from "@shared/types/peg";
 
 import { isAuthoritativeDepegPegReference } from "@shared/lib/peg-reference-trust";
 import { type DepegRow } from "./depeg-helpers";

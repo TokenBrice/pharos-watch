@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { DepegEvent, DepegPriceCoverage } from "../../types/market";
+import type { DepegEvent } from "../../types/market";
+import type { DepegPriceCoverage } from "../../types/peg";
 import { advanceDepegPriceCoverage } from "../depeg-price-coverage";
 import { computePegScore } from "../peg-score";
 import { hasCurrentTrustedDepegObservation, mergeDepegSeconds, mergeUnknownDepegSeconds } from "../peg-utils";

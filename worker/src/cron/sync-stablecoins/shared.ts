@@ -4,7 +4,12 @@ import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { CURATED_AGGREGATE_ESCROW_RESIDUALS, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
-import { getCirculatingRaw, getCirculatingRawOrNull } from "@shared/lib/supply";
+import {
+  getCirculatingRaw,
+  getCirculatingRawOrNull,
+  SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
+  SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC,
+} from "@shared/lib/supply";
 import { setCacheIfNewer, getCache, getPriceCache, type PriceCacheEntry } from "../../lib/db-cache";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { CronResult } from "../../lib/cron-logger";
@@ -351,16 +356,6 @@ export async function loadReplayPriceCacheForTrustedContinuity(db: D1Database): 
     return new Map<string, PriceCacheEntry>();
   }
 }
-
-/**
- * Carry-forward ceiling for last-known-good supplemental supply. Restores
- * preserve the original supplyObservedAt, so age compounds run-over-run;
- * without a ceiling a weeks-stale XAUT/PAXG supply would keep publishing into
- * homepage totals indistinguishable from fresh. Past the ceiling the asset
- * publishes with its real (empty) supply and the expiry is reported.
- */
-export const SUPPLEMENTAL_RESTORE_MAX_AGE_SEC = 7 * 86400;
-export const SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC = 60;
 
 /**
  * Fill a primary coverage gap from a supplemental row. Only an absent or

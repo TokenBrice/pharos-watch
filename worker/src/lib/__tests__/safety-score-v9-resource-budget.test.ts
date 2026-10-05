@@ -35,6 +35,7 @@ const FROZEN_BASE = {
 const CONTAGION_HEAP_LIMIT_MIB = 256;
 let temporaryDirectory = "";
 let bundledProbe = "";
+let bundledInputs: string[] = [];
 
 describe("Safety Score V9 canonical publication resource budget", {
   timeout: 120_000,
@@ -42,7 +43,7 @@ describe("Safety Score V9 canonical publication resource budget", {
   beforeAll(() => {
     temporaryDirectory = mkdtempSync(join(tmpdir(), "pharos-v9-resource-"));
     bundledProbe = join(temporaryDirectory, "probe.mjs");
-    buildSync({
+    const compilation = buildSync({
       stdin: {
         contents: `
           import { readFileSync } from "node:fs";
@@ -194,6 +195,7 @@ describe("Safety Score V9 canonical publication resource budget", {
       },
       outfile: bundledProbe,
       bundle: true,
+      metafile: true,
       platform: "node",
       format: "esm",
       target: "node24",
@@ -206,11 +208,22 @@ describe("Safety Score V9 canonical publication resource budget", {
       // module loads (src/v4/core/core.ts:212-227) disables the same JIT here.
       banner: { js: "globalThis.__zod_globalConfig = { jitless: true };" },
     });
+    bundledInputs = Object.keys(compilation.metafile!.inputs);
   });
 
   afterAll(() => {
     if (temporaryDirectory) {
       rmSync(temporaryDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("excludes broad schema barrels and sync-cron helpers from publication", () => {
+    for (const path of [
+      "shared/types/index.ts",
+      "shared/types/market.ts",
+      "worker/src/cron/sync-stablecoins/shared.ts",
+    ]) {
+      expect(bundledInputs.some((input) => input === path || input.endsWith(`/${path}`)), path).toBe(false);
     }
   });
 

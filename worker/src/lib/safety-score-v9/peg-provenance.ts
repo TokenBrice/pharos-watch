@@ -9,9 +9,9 @@ import {
   DEPEG_EVENT_CLOSE_REASON_VALUES,
   DepegPriceCoverageSchema,
   refineDepegEventChronology,
-  type DepegEvent,
   type PegSummaryCoin,
-} from "@shared/types/market";
+} from "@shared/types/peg";
+import type { DepegEvent } from "@shared/types/market";
 import {
   SafetyScoreV9InputIdentitySchema,
   type SafetyScoreV9InputIdentity,

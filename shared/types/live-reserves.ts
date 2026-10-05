@@ -25,6 +25,9 @@ import {
 export { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey };
 export * from "./live-reserve-core";
 
+// Pure scopes let bundlers omit unused schema graphs, including nested Zod
+// constructor arguments; annotating only the outer call leaves those allocated.
+
 export const LIVE_RESERVE_REDEMPTION_CAPACITY_KIND_VALUES = [...RedemptionLiveCapacityKindValues] as const;
 
 export const LIVE_RESERVE_REDEMPTION_FRESHNESS_KIND_VALUES = [...RedemptionLiveFreshnessKindValues] as const;
@@ -46,7 +49,7 @@ export interface LiveReserveWarning {
   effect: LiveReserveWarningEffect;
 }
 
-export const LiveReserveRedemptionOutputValuationSchema = z
+export const LiveReserveRedemptionOutputValuationSchema = /* @__PURE__ */ (() => z
   .object({
     sourceId: z.string().trim().min(1),
     observedAt: z.number().int().nonnegative(),
@@ -74,7 +77,7 @@ export const LiveReserveRedemptionOutputValuationSchema = z
         }
       }),
   })
-  .strict();
+  .strict())();
 export type LiveReserveRedemptionOutputValuation = z.output<typeof LiveReserveRedemptionOutputValuationSchema>;
 
 export interface LiveReserveScoringPolicy {
@@ -115,9 +118,9 @@ export interface LiveReservesConfig {
   params?: Record<string, unknown>;
 }
 
-const UnknownRecordSchema: z.ZodType<Record<string, unknown>> = z.record(z.string(), z.unknown());
+const UnknownRecordSchema: z.ZodType<Record<string, unknown>> = /* @__PURE__ */ (() => z.record(z.string(), z.unknown()))();
 
-export const ReserveSyncAdapterReliabilitySchema = z.object({
+export const ReserveSyncAdapterReliabilitySchema = /* @__PURE__ */ (() => z.object({
   adapterKey: z.string(),
   attempts: z.number().int().nonnegative(),
   ok: z.number().int().nonnegative(),
@@ -125,10 +128,10 @@ export const ReserveSyncAdapterReliabilitySchema = z.object({
   error: z.number().int().nonnegative(),
   skipped: z.number().int().nonnegative(),
   successRate: z.number().finite().nonnegative().max(1).nullable(),
-});
+}))();
 export type ReserveSyncAdapterReliability = z.infer<typeof ReserveSyncAdapterReliabilitySchema>;
 
-export const ReserveCompositionOverviewSchema = z.object({
+export const ReserveCompositionOverviewSchema = /* @__PURE__ */ (() => z.object({
   configuredCoins: z.number(),
   freshCoins: z.number(),
   staleCoins: z.number(),
@@ -160,7 +163,7 @@ export const ReserveCompositionOverviewSchema = z.object({
   lastSuccessAt: z.number().nullable(),
   oldestFreshAgeSec: z.number().nullable(),
   adapterReliability: z.array(ReserveSyncAdapterReliabilitySchema),
-});
+}))();
 export type ReserveCompositionOverview = z.infer<typeof ReserveCompositionOverviewSchema>;
 
 export function emptyReserveCompositionOverview(configuredCoins = 0): ReserveCompositionOverview {
@@ -189,10 +192,10 @@ export function emptyReserveCompositionOverview(configuredCoins = 0): ReserveCom
   };
 }
 
-const NonNegativeFiniteUsdSchema = z.number().finite().nonnegative();
-const UnitRatioSchema = z.number().finite().min(0).max(1);
-const BoundedFeeBpsSchema = z.number().finite().min(0).max(10_000);
-const NonNegativeFiniteSecondsSchema = z.number().finite().nonnegative();
+const NonNegativeFiniteUsdSchema = /* @__PURE__ */ (() => z.number().finite().nonnegative())();
+const UnitRatioSchema = /* @__PURE__ */ (() => z.number().finite().min(0).max(1))();
+const BoundedFeeBpsSchema = /* @__PURE__ */ (() => z.number().finite().min(0).max(10_000))();
+const NonNegativeFiniteSecondsSchema = /* @__PURE__ */ (() => z.number().finite().nonnegative())();
 
 /**
  * Numeric policy for redemption telemetry. One home: the response schema and
@@ -229,7 +232,7 @@ export const LIVE_RESERVE_REDEMPTION_TELEMETRY_NUMBER_FIELD_KEYS = Object.keys(
   LIVE_RESERVE_REDEMPTION_TELEMETRY_NUMBER_FIELDS,
 ) as LiveReserveRedemptionTelemetryNumberField[];
 
-export const LiveReserveRedemptionTelemetrySchema = z
+export const LiveReserveRedemptionTelemetrySchema = /* @__PURE__ */ (() => z
   .object({
     capacityUsd: NonNegativeFiniteUsdSchema.optional(),
     capacityRatioOfSupply: UnitRatioSchema.optional(),
@@ -256,7 +259,7 @@ export const LiveReserveRedemptionTelemetrySchema = z
     ).optional(),
     outputValuation: LiveReserveRedemptionOutputValuationSchema.optional(),
   })
-  .passthrough();
+  .passthrough())();
 export type LiveReserveRedemptionTelemetry = z.output<typeof LiveReserveRedemptionTelemetrySchema>;
 
 /** Why a supply-comparing adapter withheld its reserve/liability ratio. */
@@ -269,7 +272,7 @@ const LIABILITY_RATIO_UNAVAILABLE_REASON_VALUES = [
 export type LiabilityRatioUnavailableReason = (typeof LIABILITY_RATIO_UNAVAILABLE_REASON_VALUES)[number];
 
 /** Published projection of a reviewed liability perimeter (config `liabilityScope`). */
-const LiveReserveLiabilityScopeMetadataSchema = z.discriminatedUnion("basis", [
+const LiveReserveLiabilityScopeMetadataSchema = /* @__PURE__ */ (() => z.discriminatedUnion("basis", [
   z.object({
     basis: z.literal("issuer-native-supply"),
     reviewedAt: z.string(),
@@ -292,10 +295,10 @@ const LiveReserveLiabilityScopeMetadataSchema = z.discriminatedUnion("basis", [
     canonicalChain: z.string(),
     reason: z.string(),
   }).passthrough(),
-]);
+]))();
 export type LiveReserveLiabilityScopeMetadata = z.output<typeof LiveReserveLiabilityScopeMetadataSchema>;
 
-export const LiveReserveSnapshotMetadataSchema = z
+export const LiveReserveSnapshotMetadataSchema = /* @__PURE__ */ (() => z
   .object({
     reserveObservation: ReserveObservationEnvelopeSchema.optional(),
     boundedFactsGeneration: ReserveBoundedFactsGenerationSchema.optional(),
@@ -353,7 +356,7 @@ export const LiveReserveSnapshotMetadataSchema = z
     details: UnknownRecordSchema.optional(),
     diag: UnknownRecordSchema.optional(),
   })
-  .passthrough();
+  .passthrough())();
 export type LiveReserveSnapshotMetadata = z.output<typeof LiveReserveSnapshotMetadataSchema>;
 
 /** Snapshot admission rejection codes, published as `provenance.scoringRejectionReasons`. */
@@ -376,7 +379,7 @@ const LIVE_RESERVE_STALE_REASON_VALUES = ["fetch-age", "source-age"] as const;
  * (non-`verified` freshness, no finite source timestamp, or no stored
  * snapshot); `attemptId` is `null` for legacy rows written before attempt IDs.
  */
-export const ReserveFreshnessViewSchema = z
+export const ReserveFreshnessViewSchema = /* @__PURE__ */ (() => z
   .object({
     stale: z.boolean(),
     staleReasons: z.array(z.enum(LIVE_RESERVE_STALE_REASON_VALUES)),
@@ -392,10 +395,10 @@ export const ReserveFreshnessViewSchema = z
     sourceAgeBudgetSec: NonNegativeFiniteSecondsSchema.nullable(),
     sourceAgeBudgetCap: z.enum(LIVE_RESERVE_SOURCE_AGE_BUDGET_CAP_VALUES).nullable(),
   })
-  .strict();
+  .strict())();
 export type ReserveFreshnessView = z.output<typeof ReserveFreshnessViewSchema>;
 
-export const ReserveProvenanceViewSchema = z
+export const ReserveProvenanceViewSchema = /* @__PURE__ */ (() => z
   .object({
     evidenceClass: z.enum(LIVE_RESERVE_EVIDENCE_CLASS_VALUES),
     sourceModel: z.enum(LIVE_RESERVE_SOURCE_MODEL_VALUES),
@@ -404,18 +407,18 @@ export const ReserveProvenanceViewSchema = z
     /** Admission reasons behind `scoringEligible` (empty when eligible); `stale` is explained by `sync.freshness`. */
     scoringRejectionReasons: z.array(z.enum(LIVE_RESERVE_ADMISSION_REJECTION_CODE_VALUES)).optional(),
   })
-  .strict();
+  .strict())();
 export type ReserveProvenanceView = z.output<typeof ReserveProvenanceViewSchema>;
 
-export const ReserveDisplayBadgeViewSchema = z
+export const ReserveDisplayBadgeViewSchema = /* @__PURE__ */ (() => z
   .object({
     kind: z.enum(RESERVE_DISPLAY_BADGE_KIND_VALUES),
     label: z.string(),
   })
-  .strict();
+  .strict())();
 export type ReserveDisplayBadgeView = z.output<typeof ReserveDisplayBadgeViewSchema>;
 
-export const ReserveSyncStateViewSchema = z
+export const ReserveSyncStateViewSchema = /* @__PURE__ */ (() => z
   .object({
     enabled: z.boolean(),
     status: z.enum(["ok", "degraded", "error", "skipped"]),
@@ -430,10 +433,10 @@ export const ReserveSyncStateViewSchema = z
     /** Budgets, clock, and generation behind `stale`; absent only from producers predating ADR-30 publication. */
     freshness: ReserveFreshnessViewSchema.optional(),
   })
-  .strict();
+  .strict())();
 export type ReserveSyncStateView = z.output<typeof ReserveSyncStateViewSchema>;
 
-export const StablecoinReservesResponseSchema = z
+export const StablecoinReservesResponseSchema = /* @__PURE__ */ (() => z
   .object({
     stablecoinId: z.string(),
     mode: z.enum(["live", "live-stale", "curated-fallback", "template-fallback", "unavailable"]),
@@ -448,6 +451,6 @@ export const StablecoinReservesResponseSchema = z
     displayBadge: ReserveDisplayBadgeViewSchema.optional(),
     sync: ReserveSyncStateViewSchema.optional(),
   })
-  .strict();
+  .strict())();
 export type StablecoinReservesResponse = z.output<typeof StablecoinReservesResponseSchema>;
 export type ReservePresentationMode = StablecoinReservesResponse["mode"];

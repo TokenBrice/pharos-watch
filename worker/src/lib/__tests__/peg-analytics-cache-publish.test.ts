@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import type { PegSummaryCoin } from "@shared/types/market";
+import type { PegSummaryCoin } from "@shared/types/peg";
 import {
   getCacheJsonParseFailureCountersForTests,
   resetCacheJsonParseFailureCountersForTests,

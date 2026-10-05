@@ -1,4 +1,5 @@
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import type { CoinGeckoMcapData } from "./supplemental-assets";
@@ -6,7 +7,6 @@ import {
   loadFreshFxRates,
   loadPreviousStablecoinsById,
   loadReplayPriceCacheForTrustedContinuity,
-  SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
   type CronResult,
 } from "./shared";
 import {

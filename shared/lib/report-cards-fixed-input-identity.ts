@@ -3,7 +3,7 @@ import {
   DexExitRouteObservationsSchema,
   ExitRouteObservationCoverageSchema,
   type ExitRouteObservation,
-} from "../types/market";
+} from "../types/exit-route";
 import type { RedemptionBackstopMap } from "../types/redemption";
 import { REPORT_CARDS_REGISTRY_FINGERPRINT } from "../data/stablecoins/report-card-registry-fingerprint.generated";
 import { compareCodeUnits, sortedRecord } from "./compare";

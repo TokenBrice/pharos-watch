@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { StablecoinListResponseSchema } from "@shared/types/market";
+import { SUPPLEMENTAL_RESTORE_MAX_AGE_SEC, SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC } from "@shared/lib/supply";
 import type { PeggedAsset } from "../enrich-prices-shared";
 import {
   loadPreviousStablecoinsById,
@@ -8,8 +9,6 @@ import {
   normalizeStablecoinsPayload,
   replaceZeroSupplyPrimaryAssets,
   restoreMissingTrackedAssets,
-  SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC,
-  SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
 } from "../shared";
 
 const NOW_SEC = 1_780_000_000;

@@ -2,6 +2,9 @@ import { z } from "zod";
 
 import { ExitRouteCapacityPointSchema, ExitRouteObservationHistorySchema } from "./exit-route";
 
+// Pure scopes let bundlers omit unused schema graphs, including nested Zod
+// constructor arguments; annotating only the outer call leaves those allocated.
+
 export const DEX_MEASURED_EXECUTION_SCHEMA_VERSION = "dex-measured-execution-v1" as const;
 export const DEX_MEASURED_TARGET_SCHEMA_VERSION = "dex-measured-target-v1" as const;
 export const DEX_MEASURED_MAX_COST_BPS = 200;
@@ -17,8 +20,8 @@ export const DEX_MEASURED_CAPACITY_NOTIONALS_USD = [100_000, 1_000_000, 10_000_0
 export const DEX_MEASURED_FRESHNESS_MAX_SEC = 3 * 60 * 60;
 const DEX_MEASURED_MATURE_SUCCESSFUL_CYCLE_COUNT = 2;
 
-const CanonicalEvmAddressSchema = z.string().regex(/^0x[a-f0-9]{40}$/);
-const CanonicalBytes32Schema = z.string().regex(/^0x[a-f0-9]{64}$/);
+const CanonicalEvmAddressSchema = /* @__PURE__ */ (() => z.string().regex(/^0x[a-f0-9]{40}$/))();
+const CanonicalBytes32Schema = /* @__PURE__ */ (() => z.string().regex(/^0x[a-f0-9]{64}$/))();
 
 export const DEX_EXACT_QUOTE_ADAPTER_IDS = {
   quoterV2: "evm-quoter-v2",
@@ -55,7 +58,7 @@ export function getDexMeasuredExecutionFreshnessMaxSec(_adapterProfileId: string
   return DEX_MEASURED_FRESHNESS_MAX_SEC;
 }
 
-export const DexMeasuredExecutionObservationHistorySchema = ExitRouteObservationHistorySchema
+export const DexMeasuredExecutionObservationHistorySchema = /* @__PURE__ */ (() => ExitRouteObservationHistorySchema
   .superRefine((history, ctx) => {
     if (history.conservativeCapacityCurve.length !== DEX_MEASURED_CAPACITY_NOTIONALS_USD.length) {
       ctx.addIssue({
@@ -64,7 +67,7 @@ export const DexMeasuredExecutionObservationHistorySchema = ExitRouteObservation
         message: `Measured observation history requires ${DEX_MEASURED_CAPACITY_NOTIONALS_USD.length} capacity points`,
       });
     }
-  });
+  }))();
 export type DexMeasuredExecutionObservationHistory = z.infer<
   typeof DexMeasuredExecutionObservationHistorySchema
 >;
@@ -75,19 +78,19 @@ export function isDexMeasuredExecutionObservationHistoryMature(
   return (history?.successfulObservationCount ?? 0) >= DEX_MEASURED_MATURE_SUCCESSFUL_CYCLE_COUNT;
 }
 
-const DexMeasuredExecutionTokenSchema = z.object({
+const DexMeasuredExecutionTokenSchema = /* @__PURE__ */ (() => z.object({
   address: CanonicalEvmAddressSchema,
   symbol: z.string().min(1).max(64),
   decimals: z.number().int().min(0).max(255),
   referencePriceUsd: z.number().finite().positive(),
   trackedAssetId: z.string().min(1).optional(),
-});
+}))();
 
 /**
  * Adapter-neutral description of one retained-pool execution direction. The
  * adapter profile id selects protocol-specific calldata outside this schema.
  */
-export const DexMeasuredExecutionTargetSchema = z.object({
+export const DexMeasuredExecutionTargetSchema = /* @__PURE__ */ (() => z.object({
   schemaVersion: z.literal(DEX_MEASURED_TARGET_SCHEMA_VERSION),
   targetId: z.string().min(1).max(512),
   stablecoinId: z.string().min(1),
@@ -104,10 +107,10 @@ export const DexMeasuredExecutionTargetSchema = z.object({
   retainedTvlUsd: z.number().finite().positive(),
   retainedPoolPriceUsd: z.number().finite().positive(),
   capturedAt: z.number().int().nonnegative(),
-});
+}))();
 export type DexMeasuredExecutionTarget = z.infer<typeof DexMeasuredExecutionTargetSchema>;
 
-const DexMeasuredExecutionQuotePointProofSchema = z.object({
+const DexMeasuredExecutionQuotePointProofSchema = /* @__PURE__ */ (() => z.object({
   amountInRaw: z.string().regex(/^[1-9][0-9]*$/),
   amountOutRaw: z.string().regex(/^[0-9]+$/),
   callData: z.string().regex(/^0x[0-9a-f]+$/),
@@ -118,19 +121,19 @@ const DexMeasuredExecutionQuotePointProofSchema = z.object({
   passesCostBound: z.boolean(),
   /** A decoded Multicall inner failure at this exact input, not an RPC failure. */
   reverted: z.literal(true).optional(),
-});
+}))();
 export type DexMeasuredExecutionQuotePointProof = z.infer<typeof DexMeasuredExecutionQuotePointProofSchema>;
 
-const DexMeasuredExecutionPoolBindingProofSchema = z.object({
+const DexMeasuredExecutionPoolBindingProofSchema = /* @__PURE__ */ (() => z.object({
   factoryAddress: CanonicalEvmAddressSchema,
   factoryCodeHash: z.string().regex(/^0x[a-f0-9]{64}$/),
   resolvedPoolAddress: CanonicalEvmAddressSchema,
   callData: z.string().regex(/^0x[0-9a-f]+$/),
   returnData: z.string().regex(/^0x[0-9a-f]+$/),
-});
+}))();
 export type DexMeasuredExecutionPoolBindingProof = z.infer<typeof DexMeasuredExecutionPoolBindingProofSchema>;
 
-const DexMeasuredExecutionRegistryBindingProofSchema = z.object({
+const DexMeasuredExecutionRegistryBindingProofSchema = /* @__PURE__ */ (() => z.object({
   registryAddress: CanonicalEvmAddressSchema,
   registryCodeHash: z.string().regex(/^0x[a-f0-9]{64}$/),
   registeredPoolAddress: CanonicalEvmAddressSchema,
@@ -151,12 +154,12 @@ const DexMeasuredExecutionRegistryBindingProofSchema = z.object({
     callData: z.string().regex(/^0x[0-9a-f]+$/),
     returnData: z.string().regex(/^0x[0-9a-f]+$/),
   })).min(2).max(8),
-});
+}))();
 export type DexMeasuredExecutionRegistryBindingProof = z.infer<
   typeof DexMeasuredExecutionRegistryBindingProofSchema
 >;
 
-const DexMeasuredExecutionStableSwapNgFactoryBindingProofSchema = z.object({
+const DexMeasuredExecutionStableSwapNgFactoryBindingProofSchema = /* @__PURE__ */ (() => z.object({
   blockNumber: z.number().int().nonnegative(),
   blockHash: z.string().regex(/^0x[a-f0-9]{64}$/),
   blockCommitment: z.literal("finalized"),
@@ -180,12 +183,12 @@ const DexMeasuredExecutionStableSwapNgFactoryBindingProofSchema = z.object({
     callData: z.string().regex(/^0x[0-9a-f]+$/),
     returnData: z.string().regex(/^0x[0-9a-f]+$/),
   })).length(2),
-});
+}))();
 export type DexMeasuredExecutionStableSwapNgFactoryBindingProof = z.infer<
   typeof DexMeasuredExecutionStableSwapNgFactoryBindingProofSchema
 >;
 
-const DexMeasuredExecutionCurveCompositeProofSchema = z.object({
+const DexMeasuredExecutionCurveCompositeProofSchema = /* @__PURE__ */ (() => z.object({
   blockNumber: z.number().int().nonnegative(),
   blockHash: CanonicalBytes32Schema,
   blockCommitment: z.literal("finalized"),
@@ -218,12 +221,12 @@ const DexMeasuredExecutionCurveCompositeProofSchema = z.object({
     basePoolCodeHash: CanonicalBytes32Schema,
     basePoolTokenAddresses: z.array(CanonicalEvmAddressSchema).min(2).max(8),
   }).optional(),
-});
+}))();
 export type DexMeasuredExecutionCurveCompositeProof = z.infer<
   typeof DexMeasuredExecutionCurveCompositeProofSchema
 >;
 
-const DexMeasuredExecutionUniswapV4PoolProofSchema = z.object({
+const DexMeasuredExecutionUniswapV4PoolProofSchema = /* @__PURE__ */ (() => z.object({
   blockNumber: z.number().int().nonnegative(),
   poolId: CanonicalBytes32Schema,
   poolManagerAddress: CanonicalEvmAddressSchema,
@@ -243,12 +246,12 @@ const DexMeasuredExecutionUniswapV4PoolProofSchema = z.object({
   protocolFee: z.number().int().min(0).max(0xffffff),
   lpFee: z.number().int().min(0).max(0xffffff),
   liquidity: z.string().regex(/^[1-9][0-9]*$/),
-});
+}))();
 export type DexMeasuredExecutionUniswapV4PoolProof = z.infer<
   typeof DexMeasuredExecutionUniswapV4PoolProofSchema
 >;
 
-export const DexMeasuredExecutionProfileSchema = z.object({
+export const DexMeasuredExecutionProfileSchema = /* @__PURE__ */ (() => z.object({
   schemaVersion: z.literal(DEX_MEASURED_EXECUTION_SCHEMA_VERSION),
   kind: z.literal("measured-executable-depth"),
   targetId: z.string().min(1).max(512),
@@ -281,11 +284,11 @@ export const DexMeasuredExecutionProfileSchema = z.object({
   marginalOutputRatio: z.number().finite().nonnegative(),
   capacityCurve: z.array(ExitRouteCapacityPointSchema).length(DEX_MEASURED_CAPACITY_NOTIONALS_USD.length),
   quoteProof: z.array(DexMeasuredExecutionQuotePointProofSchema).min(1).max(16),
-});
+}))();
 export type DexMeasuredExecutionProfile = z.infer<typeof DexMeasuredExecutionProfileSchema>;
 
 /** Public, proof-free projection retained on DEX pool rows. */
-export const DexMeasuredExecutionPublicProfileSchema = DexMeasuredExecutionProfileSchema.omit({
+export const DexMeasuredExecutionPublicProfileSchema = /* @__PURE__ */ (() => DexMeasuredExecutionProfileSchema.omit({
   quoteProof: true,
   poolBindingProof: true,
   registryBindingProof: true,
@@ -343,7 +346,7 @@ export const DexMeasuredExecutionPublicProfileSchema = DexMeasuredExecutionProfi
     lpFee: z.number().int().min(0).max(0xffffff),
     liquidity: z.string().regex(/^[1-9][0-9]*$/),
   }).optional(),
-});
+}))();
 export type DexMeasuredExecutionPublicProfile = z.infer<typeof DexMeasuredExecutionPublicProfileSchema>;
 
 export function toDexMeasuredExecutionPublicProfile(

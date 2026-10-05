@@ -1,7 +1,7 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, it, expect, vi } from "vitest";
 import { PEG_CURRENCY_VALUES, type PegCurrency } from "@shared/types/core";
-import type { PegSummaryCoin } from "@shared/types/market";
+import type { PegSummaryCoin } from "@shared/types/peg";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { __pegSummaryTestHooks, handlePegSummary } from "../peg-summary";
