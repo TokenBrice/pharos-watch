@@ -614,7 +614,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/cron/reserve-adapters/evm-observation-plan.ts",
-      "sha256": "2b2abf2425278949ceba5f79473168ee785f038f28639fce5f6c227897bf4f82"
+      "sha256": "385a49ab23811f21ded60eb3bdd47f254feecd397947f575f20cb30b39e943c8"
     },
     {
       "path": "worker/src/cron/reserve-adapters/freshness.ts",
@@ -626,7 +626,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/cron/reserve-adapters/onchain.ts",
-      "sha256": "893149d64d02cb640ad346221b05d49a86b1a8615fcccfd7bced84faf25bb69a"
+      "sha256": "11bf0dfd53bd28c5dac04c6e8ad98977c1d4d8feee4d6d12e1b47b46b25045c1"
     },
     {
       "path": "worker/src/cron/reserve-adapters/origin-vault-balances.ts",
@@ -654,7 +654,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/evm-rpc.ts",
-      "sha256": "30c7cd835823f93f123b540b524faba24e4b2525e4114cead348cf5a97c9028a"
+      "sha256": "64b4b258c946db21794a94d6ec6acd68c44faa12bd96e9993c7225776954c17d"
     },
     {
       "path": "worker/src/lib/evm-selectors.ts",
@@ -830,11 +830,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-observation-primitives.ts",
-      "sha256": "78050fb8eb0e991fd3f1e72755b4a1927226fc2e4cc9890028b7d4cdbd48be94"
+      "sha256": "6ae1849290f95a14f2788709675992fc3d8f38b26aa4cab5c869d8dd7207ee93"
     },
     {
       "path": "worker/src/lib/safety-score-v9/transfer-materiality-observer.ts",
-      "sha256": "fa0e50ce927a02103c5c38b31e655f949ecd5630ebcb51c3c3efe54760bb16f6"
+      "sha256": "4449939d33a23cc2f5f6baffcd8e2c96d14683035114b40308f6d92054aa7ebd"
     },
     {
       "path": "worker/src/lib/safety-score-v9/transfer-materiality.ts",
@@ -867,7 +867,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-03-block-26110811-shock-coverage.json.gz"
     }
   ],
-  "digest": "ffc7c8d9d835d9f9b8afa5cd482e26a49757e589e45cdc77710be8f8e85a45da"
+  "digest": "21fe7fc8b7605e6004142e32bf187771a9ac1b396e1d8a22c406d83105278799"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
