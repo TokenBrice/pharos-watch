@@ -165,7 +165,7 @@ export async function observeCurveLzPending(input: {
         for (const raw of logs as Array<Record<string, unknown>>) {
           const { address, topics, data, blockNumber, blockHash, transactionHash, logIndex, removed } = raw;
           if (typeof address !== "string" || !Array.isArray(topics) || topics.some(topic => typeof topic !== "string") ||
-            typeof data !== "string" || !/^0x([0-9a-f]{2})*$/i.test(data) || data.length > 8194 ||
+            typeof data !== "string" || !/^0x[0-9a-f]*$/i.test(data) || data.length % 2 !== 0 || data.length > 8194 ||
             typeof blockNumber !== "string" || !/^0x[0-9a-f]+$/i.test(blockNumber) ||
             typeof logIndex !== "string" || !/^0x[0-9a-f]+$/i.test(logIndex) ||
             typeof blockHash !== "string" || !CURVE_WORD.test(blockHash) ||

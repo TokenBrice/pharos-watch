@@ -9,8 +9,11 @@ import { buildRegisteredTargetInput, toRegisteredTargetOutput } from "./shared";
 
 function retainedPoolId(poolId: string, chain: string): string | null {
   const normalized = poolId.trim().toLowerCase();
-  const match = /^(?:([a-z0-9-]+):)?(0x[a-f0-9]{64})$/.exec(normalized);
-  return match && (!match[1] || match[1] === chain) ? match[2]! : null;
+  const colon = normalized.lastIndexOf(":");
+  const prefix = colon === -1 ? null : normalized.slice(0, colon);
+  const id = normalized.slice(colon + 1);
+  if (!/^0x[a-f0-9]{64}$/.test(id) || (prefix !== null && !/^[a-z0-9-]+$/.test(prefix))) return null;
+  return prefix === null || prefix === chain ? id : null;
 }
 
 export function buildUniswapV4RegisteredExecutionTarget(
