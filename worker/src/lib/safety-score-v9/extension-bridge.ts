@@ -943,21 +943,17 @@ export function adaptBridgeReview(
   // inherits the marker only when every unresolved contributor on the route is
   // named; one unnamed unresolved sibling keeps the hard treatment, mirroring
   // the mint-authority whole-inventory rule at route granularity.
-  const freshScopedQuestionRefs = new Set(
-    (profile.scopedQuestions ?? [])
-      .filter(
-        (question) =>
-          clockSec - isoDateStartSec(question.reviewedAt, clockSec, `${meta.id}:bridge-scoped-question`) <=
-          V9_SCOPED_QUESTION_MAX_AGE_SEC,
-      )
-      .map((question) => question.controlRef.toLowerCase()),
-  );
-  const controlHasFreshScopedQuestion = (control: BridgeRouteControl): boolean =>
-    freshScopedQuestionRefs.has(control.id.toLowerCase()) ||
-    freshScopedQuestionRefs.has(control.label.toLowerCase()) ||
+  const freshScopedQuestions = (profile.scopedQuestions ?? []).filter((question) =>
+    clockSec - isoDateStartSec(question.reviewedAt, clockSec, `${meta.id}:bridge-scoped-question`) <= V9_SCOPED_QUESTION_MAX_AGE_SEC);
+  const freshScopedQuestionRefs = new Set(freshScopedQuestions.map((question) => question.controlRef.toLowerCase()));
+  const semanticQuestionRefs = new Set(freshScopedQuestions.filter((question) =>
+    question.subject !== "key-custody-independence").map((question) => question.controlRef.toLowerCase()));
+  const controlHasFreshScopedQuestion = (control: BridgeRouteControl, refs = freshScopedQuestionRefs): boolean =>
+    refs.has(control.id.toLowerCase()) ||
+    refs.has(control.label.toLowerCase()) ||
     (control.controllerChain != null &&
       control.controllerAddress != null &&
-      freshScopedQuestionRefs.has(`${control.controllerChain}:${control.controllerAddress.toLowerCase()}`));
+      refs.has(`${control.controllerChain}:${control.controllerAddress.toLowerCase()}`));
   const overlayFullyResolved = (overlay: ControlOverlay): boolean =>
     overlay.authority !== null &&
     overlay.authority.model !== "unknown" &&
@@ -969,13 +965,21 @@ export function adaptBridgeReview(
   if (freshScopedQuestionRefs.size > 0) {
     for (const [routeId, entries] of structuredOverlaysByDeployment) {
       const merged = structuredRouteControlsByDeployment.get(routeId);
-      if (!merged || overlayFullyResolved(merged)) continue;
+      if (!merged) continue;
       const anyNamed = entries.some((entry) => controlHasFreshScopedQuestion(entry.sourceControl));
+      const custodyOnly = anyNamed && !entries.some((entry) => controlHasFreshScopedQuestion(entry.sourceControl, semanticQuestionRefs));
+      if (custodyOnly && overlayFullyResolved(merged)) {
+        structuredRouteControlsByDeployment.set(routeId, { ...merged, scopedQuestionFresh: true,
+          scopedQuestionSubject: "key-custody-independence", keyCustody: "unknown" });
+        continue;
+      }
+      if (overlayFullyResolved(merged)) continue;
       const allUnresolvedNamed = entries.every(
         (entry) => controlHasFreshScopedQuestion(entry.sourceControl) || overlayFullyResolved(entry.overlay),
       );
       if (anyNamed && allUnresolvedNamed) {
-        structuredRouteControlsByDeployment.set(routeId, { ...merged, scopedQuestionFresh: true });
+        structuredRouteControlsByDeployment.set(routeId, { ...merged, scopedQuestionFresh: true,
+          ...(custodyOnly ? { scopedQuestionSubject: "key-custody-independence" as const, keyCustody: "unknown" as const } : {}) });
       }
     }
   }
