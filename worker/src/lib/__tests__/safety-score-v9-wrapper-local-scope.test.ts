@@ -98,6 +98,130 @@ function directAllocationFixture() {
   return fixture;
 }
 
+function immutableRootFixture() {
+  const fixture = wrapperFixture("strategy-vault");
+  const asset = structuredClone(compileSafetyScoreV9FactSetFromFixedInput(fixture.fixed, fixture.extension).assets
+    .find((candidate) => candidate.assetId === "alpha")!);
+  const address = "0x1111111111111111111111111111111111111111";
+  fixture.wrapper.allocationScopeIdentityReview = {
+    assetId: "alpha",
+    registeredDeploymentKeys: [`ethereum:${address}`],
+    deployments: [{
+      chain: "ethereum", address, codeKind: "immutable", block: 123,
+      observedAtSec: fixture.fixed.clockSec - 100,
+      sourceUrl: "https://example.com/exact-immutable-root",
+    }],
+  };
+  asset.economicControlReview.mint.status = v9Status("missing", "v9.control.mint-review");
+  asset.economicControlReview.mint.upgrade = { state: "immutable", controlKey: null };
+  const build = () => {
+    const context = createAssetBuildContext(
+      normalizeSafetyScoreV9CompilerInput(fixture.fixed), fixture.extension, fixture.wrapper, "a".repeat(64),
+    );
+    const facts = buildWrapperLocalFacts(context, asset);
+    if (facts.applicability !== "wrapper") throw new Error("Expected wrapper facts");
+    return { context, facts };
+  };
+  return { ...fixture, asset, build };
+}
+
+describe("independent immutable wrapper roots", () => {
+  it("admits current exhaustive root identity without changing aggregate mint or any other local dimension", () => {
+    const fixture = immutableRootFixture();
+    const review = fixture.wrapper.allocationScopeIdentityReview!;
+    delete fixture.wrapper.allocationScopeIdentityReview;
+    const before = fixture.build();
+    fixture.wrapper.allocationScopeIdentityReview = review;
+    const mintBefore = structuredClone(fixture.asset.economicControlReview.mint);
+    const { context, facts } = fixture.build();
+    expect(facts.facts.contractMutability).toMatchObject({
+      disposition: "reviewed", assessment: "none",
+    });
+    expect(context.gaps.has("alpha:gap:wrapper-local:contractMutability")).toBe(false);
+    const { contractMutability: _before, ...otherBefore } = before.facts.facts;
+    const { contractMutability: _after, ...otherAfter } = facts.facts;
+    expect(otherAfter).toEqual(otherBefore);
+    expect(fixture.asset.economicControlReview.mint).toEqual(mintBefore);
+    const evidence = context.evidence.get(facts.facts.contractMutability.evidenceRefIds[0]!)!;
+    expect(evidence).toMatchObject({
+      sourceId: "safety-score-v9.wrapper-immutable-root-identity",
+      sourceGenerationId: fixture.extension.sources.researchOverlays.generationId,
+      observedAtSec: review.deployments[0]!.observedAtSec,
+      url: review.deployments[0]!.sourceUrl,
+      freshness: {
+        state: "current",
+        maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec,
+      },
+    });
+    expect(evidence.contentSha256).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it.each([
+    "missing", "empty", "stale", "future", "partial", "proxy", "changed-implementation",
+    "unmatched-roster", "duplicate-roster", "duplicate-deployment", "wrong-asset", "missing-source",
+  ] as const)("does not admit %s identity despite an immutable aggregate enum", (rejection) => {
+    const fixture = immutableRootFixture();
+    const review = fixture.wrapper.allocationScopeIdentityReview!;
+    const deployment = review.deployments[0]!;
+    const maxAgeSec = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec;
+    switch (rejection) {
+      case "missing": delete fixture.wrapper.allocationScopeIdentityReview; break;
+      case "empty": review.registeredDeploymentKeys = []; review.deployments = []; break;
+      case "stale": deployment.observedAtSec = fixture.fixed.clockSec - maxAgeSec - 1; break;
+      case "future": deployment.observedAtSec = fixture.fixed.clockSec + 1; break;
+      case "partial": review.registeredDeploymentKeys.push(`base:${deployment.address}`); break;
+      case "proxy":
+      case "changed-implementation":
+        review.deployments[0] = {
+          ...deployment, codeKind: "proxy",
+          implementation: rejection === "proxy" ? deployment.address : "0x2222222222222222222222222222222222222222",
+        };
+        break;
+      case "unmatched-roster": review.registeredDeploymentKeys[0] = `base:${deployment.address}`; break;
+      case "duplicate-roster": review.registeredDeploymentKeys.push(review.registeredDeploymentKeys[0]!); break;
+      case "duplicate-deployment": review.deployments.push({ ...deployment }); break;
+      case "wrong-asset": review.assetId = "beta"; break;
+      case "missing-source": deployment.sourceUrl = ""; break;
+    }
+    const { context, facts } = fixture.build();
+    expect(facts.facts.contractMutability).toMatchObject({ disposition: "unresearched", assessment: null });
+    expect(context.gaps.has("alpha:gap:wrapper-local:contractMutability")).toBe(true);
+    expect([...context.evidence.values()].some((evidence) =>
+      evidence.sourceId === "safety-score-v9.wrapper-immutable-root-identity")).toBe(false);
+  });
+
+  it("uses the policy freshness budget inclusively and admits every exact immutable deployment", () => {
+    const fixture = immutableRootFixture();
+    const review = fixture.wrapper.allocationScopeIdentityReview!;
+    const deployment = review.deployments[0]!;
+    deployment.observedAtSec = fixture.fixed.clockSec -
+      V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec;
+    review.registeredDeploymentKeys.push(`base:${deployment.address}`);
+    review.deployments.push({ ...deployment, chain: "base", block: 456 });
+    const { facts } = fixture.build();
+    expect(facts.facts.contractMutability).toMatchObject({ disposition: "reviewed", assessment: "none" });
+    expect(facts.facts.contractMutability.evidenceRefIds).toHaveLength(2);
+  });
+
+  it("does not override a changed aggregate upgrade implementation with retained immutable identity", () => {
+    const fixture = immutableRootFixture();
+    fixture.asset.economicControlReview.mint.upgrade = { state: "reviewed", controlKey: "changed:upgrade" };
+    expect(fixture.build().facts.facts.contractMutability.assessment).toBeNull();
+  });
+
+  it("leaves the existing known-aggregate upgrade path unchanged", () => {
+    const fixture = immutableRootFixture();
+    delete fixture.wrapper.allocationScopeIdentityReview;
+    fixture.asset.economicControlReview.mint.status = v9Status();
+    const { context, facts } = fixture.build();
+    expect(facts.facts.contractMutability).toMatchObject({
+      disposition: "reviewed", assessment: "none", signals: ["wrapper-upgrade-state:immutable"],
+    });
+    expect([...context.evidence.values()].some((evidence) =>
+      evidence.sourceId === "safety-score-v9.wrapper-immutable-root-identity")).toBe(false);
+  });
+});
+
 const slashingControl = () => localControl({
   controlKey: "umbrella:slashing",
   controlKind: "governance",
