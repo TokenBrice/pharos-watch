@@ -38661,6 +38661,108 @@
         "https://eth.blockscout.com/tx/0xed24a874126443f07e7976ea89d84499999346ef574b78d4b2dd3daf9bb84128"
       ],
       "rationale": "No finite maximum maturityDaysMax of the fund-share claim is disclosed. This is a fund-share reserve, not individual bills: the 0\u20136 month index mandate is not share maturity. The fund has a 99-year organizational life expressly subject to extension, so neither 180 days nor a conversion of 99 years is a hard share-claim maximum."
+    },
+    {
+      "id": "uw-trusd-tori-6702049863d1feb0",
+      "assetId": "trusd-tori",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:329e9c7ec50476834d5c0407",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T23:45:55Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R22)",
+      "sources": [
+        {
+          "url": "https://app.tori.finance/api/solvency",
+          "observedAt": "2026-10-04T23:40:18Z",
+          "datumAsOf": null,
+          "location": "assetBreakdown / On-chain Liquidity / Ethereum AUSD and Base USDC - Morpho leaves",
+          "excerpt": "\"name\":\"AUSD\",\"value\":0.99975201246",
+          "assertion": "Discloses reserve-leaf value but no holding wallet, token/vault identity or exact leaf realization bound; a symbol is not a withdrawal guarantee."
+        },
+        {
+          "url": "https://docs.tori.finance/resources/contracts.md",
+          "observedAt": "2026-10-04T23:42:27Z",
+          "datumAsOf": null,
+          "location": "Ethereum core and CCIP deployment tables",
+          "excerpt": "the pools' balances are the backing of every trUSD and strUSD minted on Monad and Pharos.",
+          "assertion": "Canonical/bridge addresses are disclosed; these tables do not identify the Ethereum AUSD or Base Morpho reserve holdings."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.tori.finance/llms.txt",
+        "https://tori.finance",
+        "https://docs.tori.finance/solution/backing.md",
+        "https://docs.tori.finance/resources/contracts.md",
+        "https://docs.tori.finance/resources/institutional.md",
+        "https://docs.tori.finance/resources/institutional-custody.md",
+        "https://docs.tori.finance/security/audits.md",
+        "https://docs.tori.finance/legal/trusd-terms.md",
+        "https://docs.tori.finance/legal/trusd-protocol.md",
+        "https://app.tori.finance/api/solvency",
+        "https://cache.accountable.capital/dashboard/tori",
+        "https://tori.accountable.capital",
+        "https://eth.blockscout.com/api/v2/addresses/0xe16b821B9F6B0a6f06a2C4a61D5d1f71cFa53F1E/token-balances",
+        "https://base.blockscout.com/api/v2/addresses/0x39C9106E9bE3622104A1aB97F3fCC88B65874213/token-balances"
+      ],
+      "rationale": "No exact liquidityHorizon for either the Ethereum AUSD dust holding or Base USDC-Morpho dust holding is published. Issuer docs, legal agreements, reserve/proof APIs and published core/custodian addresses disclose symbols, values and aggregate On-chain Liquidity Same day, not exact wallet/token/vault bindings or realization guarantees for those leaves. Newly found Agora/SharpByte AUSD integration is on Monad, not the Ethereum reserve leaf. Public addresses checked do not resolve this offchain reserve-to-wallet designation. Do not infer leaf withdrawability from class turnover."
+    },
+    {
+      "id": "uw-trusd-tori-0c3ecd7cd0c2d9db",
+      "assetId": "trusd-tori",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:22e169046ab13d9ef0c7bec8",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T23:45:55Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R22)",
+      "sources": [
+        {
+          "url": "https://app.tori.finance/api/solvency",
+          "observedAt": "2026-10-04T23:40:18Z",
+          "datumAsOf": null,
+          "location": "assetBreakdown / On-chain Liquidity / Ethereum AUSD and Base USDC - Morpho leaves",
+          "excerpt": "\"name\":\"AUSD\",\"value\":0.99975201246",
+          "assertion": "Discloses reserve-leaf value but no holding wallet, token/vault identity or exact leaf realization bound; a symbol is not a withdrawal guarantee."
+        },
+        {
+          "url": "https://docs.tori.finance/resources/contracts.md",
+          "observedAt": "2026-10-04T23:42:27Z",
+          "datumAsOf": null,
+          "location": "Ethereum core and CCIP deployment tables",
+          "excerpt": "the pools' balances are the backing of every trUSD and strUSD minted on Monad and Pharos.",
+          "assertion": "Canonical/bridge addresses are disclosed; these tables do not identify the Ethereum AUSD or Base Morpho reserve holdings."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.tori.finance/llms.txt",
+        "https://tori.finance",
+        "https://docs.tori.finance/solution/backing.md",
+        "https://docs.tori.finance/resources/contracts.md",
+        "https://docs.tori.finance/resources/institutional.md",
+        "https://docs.tori.finance/resources/institutional-custody.md",
+        "https://docs.tori.finance/security/audits.md",
+        "https://docs.tori.finance/legal/trusd-terms.md",
+        "https://docs.tori.finance/legal/trusd-protocol.md",
+        "https://app.tori.finance/api/solvency",
+        "https://cache.accountable.capital/dashboard/tori",
+        "https://tori.accountable.capital",
+        "https://eth.blockscout.com/api/v2/addresses/0xe16b821B9F6B0a6f06a2C4a61D5d1f71cFa53F1E/token-balances",
+        "https://base.blockscout.com/api/v2/addresses/0x39C9106E9bE3622104A1aB97F3fCC88B65874213/token-balances"
+      ],
+      "rationale": "No exact liquidityHorizon for either the Ethereum AUSD dust holding or Base USDC-Morpho dust holding is published. Issuer docs, legal agreements, reserve/proof APIs and published core/custodian addresses disclose symbols, values and aggregate On-chain Liquidity Same day, not exact wallet/token/vault bindings or realization guarantees for those leaves. Newly found Agora/SharpByte AUSD integration is on Monad, not the Ethereum reserve leaf. Public addresses checked do not resolve this offchain reserve-to-wallet designation. Do not infer leaf withdrawability from class turnover."
     }
   ]
 }
