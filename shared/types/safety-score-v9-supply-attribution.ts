@@ -129,7 +129,66 @@ const CurvePendingProofSchema = z.strictObject({
     sentNonce: NonceSchema, receivedNonce: NonceSchema,
   })).length(2),
 });
-const PendingAmountReadSchema = z.union([ApiAmountReadSchema, EvmPendingStateReadSchema, CurveLzPendingReadSchema]);
+const CcipSideSchema = z.strictObject({
+  chainId: CanonicalChainIdSchema, chainSelector: NonceSchema,
+  tokenAddress: EvmAddressSchema, tokenPoolAddress: EvmAddressSchema,
+  tokenPoolRuntimeCodeSha256: Sha256Schema, decimals: z.number().int().min(0).max(36),
+  // Retired pools may remove peers. This reviewed historical identity pin
+  // authenticates that peer binding; quantities still use current finalized pins.
+  peerBindingPin: z.strictObject({ number: z.number().int().positive(), hash: EvmWordSchema }).optional(),
+});
+export const CcipPendingReadSchema = z.strictObject({
+  kind: z.literal("evm-ccip-pending"), sourceId: CanonicalTextSchema,
+  chainId: CanonicalChainIdSchema, finality: z.literal("finalized"),
+  amountDecimals: z.number().int().min(0).max(36),
+  lanes: z.array(z.strictObject({
+    id: CanonicalTextSchema, version: z.enum(["1.5", "1.6", "2.0.0"]),
+    source: CcipSideSchema, destination: CcipSideSchema,
+    onRampAddress: EvmAddressSchema, onRampRuntimeCodeSha256: Sha256Schema,
+    offRampAddress: EvmAddressSchema, offRampRuntimeCodeSha256: Sha256Schema,
+    // Start at deployment of this OnRamp OR this source pool. The producer
+    // proves predecessor code absence and reads the initial lane sequence.
+    sourceStartBlock: z.number().int().positive(),
+  })).min(1).max(128),
+}).superRefine((source, ctx) => {
+  const identities = source.lanes.map(lane => `${lane.source.chainId}:${lane.onRampAddress}:${lane.destination.chainSelector}:${lane.source.tokenPoolAddress}`);
+  if (new Set(source.lanes.map(lane => lane.id)).size !== source.lanes.length ||
+    new Set(identities).size !== identities.length ||
+    source.lanes.some(lane => lane.source.chainId === lane.destination.chainId ||
+      lane.source.chainSelector === "0" || lane.destination.chainSelector === "0") ||
+    !source.lanes.some(lane => lane.source.chainId === source.chainId || lane.destination.chainId === source.chainId)) {
+    ctx.addIssue({ code: "custom", message: "CCIP requires unique directed pool/lane identities and an exact canonical amount anchor" });
+  }
+});
+export type CcipPendingRead = z.infer<typeof CcipPendingReadSchema>;
+export const CcipPendingCheckpointSchema = z.strictObject({
+  schemaVersion: z.literal(1), sourceDigest: Sha256Schema,
+  lanes: z.array(z.strictObject({
+    id: CanonicalTextSchema, sent: CurveHistoryCursorSchema, executed: CurveHistoryCursorSchema,
+    initialSequence: NonceSchema, lastSequence: NonceSchema,
+    messages: z.array(z.strictObject({
+      sequence: NonceSchema, messageId: EvmWordSchema, amount: z.string().regex(/^[1-9][0-9]*$/).max(78),
+      transactionHash: EvmWordSchema, sourceBlock: z.number().int().nonnegative(),
+      sourceBlockHash: EvmWordSchema, executionState: z.union([z.literal(0), z.literal(3)]),
+    })).max(512),
+  })).min(1).max(128),
+});
+export type CcipPendingCheckpoint = z.infer<typeof CcipPendingCheckpointSchema>;
+const CcipPendingProofSchema = z.strictObject({
+  sourceDigest: Sha256Schema, checkpointDigest: Sha256Schema, discoveryDigest: Sha256Schema,
+  pins: z.array(z.strictObject({
+    chainId: CanonicalChainIdSchema, anchor: z.number().int().nonnegative(),
+    anchorHash: EvmWordSchema, observedAtSec: UnixSecondsSchema,
+  })).min(2).max(32),
+  lanes: z.array(z.strictObject({
+    id: CanonicalTextSchema, sourcePoolAddress: EvmAddressSchema, destinationPoolAddress: EvmAddressSchema,
+    sourceChainSelector: NonceSchema, destinationChainSelector: NonceSchema,
+    initialSequence: NonceSchema, lastSequence: NonceSchema,
+    pendingCount: z.number().int().nonnegative().max(512), failedCount: z.number().int().nonnegative().max(512),
+    amount: z.string().regex(/^(0|[1-9][0-9]*)$/).max(78),
+  })).min(1).max(128),
+});
+const PendingAmountReadSchema = z.union([ApiAmountReadSchema, EvmPendingStateReadSchema, CurveLzPendingReadSchema, CcipPendingReadSchema]);
 export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
   assetId: CanonicalTextSchema, reviewer: CanonicalTextSchema, reviewedAtSec: UnixSecondsSchema, expiresAtSec: UnixSecondsSchema,
   evidenceUrls: z.array(z.string().url()).min(1), economicScope: CanonicalTextSchema, sourceId: CanonicalTextSchema,
@@ -138,7 +197,7 @@ export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
   deployments: z.array(CensusRowSchema).min(1).max(64),
   conversionSources: z.array(ApiAmountReadSchema).max(64),
   referencePriceSource: ApiAmountReadSchema.nullable(),
-  liabilityInFlightSource: ApiAmountReadSchema.nullable(),
+  liabilityInFlightSource: PendingAmountReadSchema.nullable(),
   excludedRegistryDeploymentKeys: z.array(CanonicalTextSchema), exclusions: z.array(BalanceRuleSchema).max(64),
   escrows: z.array(z.strictObject({
     id: CanonicalTextSchema, canonicalDeploymentKey: CanonicalTextSchema, account: CanonicalTextSchema,
@@ -167,6 +226,16 @@ export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
         (canonical.read.kind !== "evm-total-supply" && canonical.read.kind !== "evm-balance")) {
         ctx.addIssue({ code: "custom", message: "On-chain pending state must share the canonical escrow's pinned EVM token-unit generation" });
       }
+      if (escrow.inFlightSource.kind === "evm-ccip-pending") {
+        const source = escrow.inFlightSource;
+        if (source.amountDecimals !== canonical?.decimals ||
+          !source.lanes.some(lane => lane.source.tokenPoolAddress === escrow.account || lane.destination.tokenPoolAddress === escrow.account) ||
+          source.lanes.some(lane => [lane.source, lane.destination].some(side =>
+            !plan.deployments.some(row => row.chainId === side.chainId && row.address === side.tokenAddress &&
+              row.decimals === side.decimals && row.claimUnit === canonical?.claimUnit)))) {
+          ctx.addIssue({ code: "custom", message: "CCIP escrow lanes must bind the exact pool and same-claim holding census" });
+        }
+      }
       if (escrow.inFlightSource.kind === "evm-curve-lz-pending") {
         const source = escrow.inFlightSource;
         if (escrow.account !== source.sides[0].bridgeAddress ||
@@ -178,6 +247,16 @@ export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
               (row.read.kind !== "evm-total-supply" && row.read.kind !== "evm-balance");
           })) ctx.addIssue({ code: "custom", message: "Curve pending directions must bind the exact escrow and same-unit pinned satellite receipts" });
       }
+    }
+  }
+  if (plan.liabilityInFlightSource !== null && "kind" in plan.liabilityInFlightSource) {
+    const source = plan.liabilityInFlightSource, canonical = plan.deployments[0];
+    if (source.kind !== "evm-ccip-pending" || source.chainId !== canonical?.chainId ||
+      source.amountDecimals !== canonical?.decimals ||
+      source.lanes.some(lane => [lane.source, lane.destination].some(side =>
+        !plan.deployments.some(row => row.chainId === side.chainId && row.address === side.tokenAddress &&
+          row.decimals === side.decimals && row.claimUnit === canonical?.claimUnit)))) {
+      ctx.addIssue({ code: "custom", message: "Typed CCIP liability requires exact common-claim holding identities" });
     }
   }
   if (plan.inFlightTreatment === "atomic-native-wrapper" &&
@@ -240,6 +319,7 @@ const EconomicSupplyObservationSchema = z.strictObject({
   id: CanonicalTextSchema, deploymentKey: CanonicalTextSchema, amount: DecimalSchema,
   observedAtSec: UnixSecondsSchema, anchor: CanonicalTextSchema, anchorHash: CanonicalTextSchema, responseSha256: Sha256Schema,
   curvePendingProof: CurvePendingProofSchema.optional(),
+  ccipPendingProof: CcipPendingProofSchema.optional(),
 });
 // eslint-disable-next-line security/detect-unsafe-regex -- anchored linear unsigned-decimal shape; groups cannot overlap.
 const EconomicSupplyReferenceSchema = z.strictObject({ sourceId: CanonicalTextSchema, sourceGeneration: CanonicalTextSchema, observedAtSec: UnixSecondsSchema, value: z.string().regex(/^[0-9]+(\.[0-9]+)?$/).refine(value => Number(value) > 0 && Number.isFinite(Number(value))), responseSha256: Sha256Schema });
