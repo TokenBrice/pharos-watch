@@ -50,6 +50,17 @@ describe("Safety Score v9 methodology policy", () => {
     }
   });
 
+  it("validates and digests the halted-chain stall budget", () => {
+    const changed = candidateClone();
+    changed.semantic.materiality.haltedChainMinStallSec += 1;
+    expect(loadV9MethodologyPolicy(changed).semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+    for (const invalid of [0, -1, 0.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const policy = candidateClone();
+      policy.semantic.materiality.haltedChainMinStallSec = invalid;
+      expect(() => loadV9MethodologyPolicy(policy)).toThrow();
+    }
+  });
+
   it("walks every registered reason/cause with no hidden removed ceiling or missing-data NR", () => {
     for (const reason of V9_CANDIDATE_POLICY_V1.policy.reasonRegistry) {
       for (const cause of ["A", "B", "C", "U"] satisfies V9EvidenceCause[]) {

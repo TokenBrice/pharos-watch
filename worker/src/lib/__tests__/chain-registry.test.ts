@@ -137,10 +137,25 @@ describe("buildChainRpcs", () => {
         expect(config.endpoints.some((endpoint) => endpoint.operator === "dwellir")).toBe(false);
         expect(config.endpoints.some((endpoint) => endpoint.url.includes(".n.dwellir.com"))).toBe(false);
         for (const endpoint of supplementalRpcEndpoints(config)) {
-          expect(endpoint).toMatchObject({ operator: "alchemy", stateHistory: "archive", logsHistory: "none" });
+          // Pharos deliberately has keyless state-only supplemental readers;
+          // non-Dwellir supplemental endpoints are no longer all Alchemy.
+          expect(endpoint).toMatchObject({
+            operator: config.chainId === "pharos" ? "public" : "alchemy",
+            stateHistory: "archive", logsHistory: "none",
+          });
         }
       }
     }
+  });
+
+  it("keeps Pharos public state readers available without credentials and outside log inventories", () => {
+    const pharos = buildChainRpcs().get("pharos")!;
+    expect(registryRpcUrls(pharos)).toEqual([]);
+    expect(logScanRpcEndpoints(pharos)).toEqual([]);
+    expect(supplementalRpcEndpoints(pharos, { historicalBlock: true })).toEqual([
+      { url: "https://rpc.pharos.xyz", operator: "public", keyed: false, position: "supplemental", stateHistory: "archive", logsHistory: "none", verifiedAt: "2026-10-05" },
+      { url: "https://api.zan.top/public/pharos-mainnet", operator: "public", keyed: false, position: "supplemental", stateHistory: "archive", logsHistory: "none", verifiedAt: "2026-10-05" },
+    ]);
   });
 
   it("maps registry operators to alchemy/drpc keyed and public unkeyed", () => {

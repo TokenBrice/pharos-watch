@@ -6,6 +6,9 @@ import { buildChainRpcs, logScanRpcEndpoints } from "../chain-registry";
 import { observeSafetyScoreV9TransferMaterialityGeneration, transferMaterialityObserverResolvesRpc } from "../safety-score-v9/transfer-materiality-observer";
 import { exactInputBoundTransferMaterialityPacket, type SafetyScoreV9TransferMaterialityGeneration } from "../safety-score-v9/transfer-materiality";
 import type { MoveFungibleAssetSupplyObservation } from "../../cron/reserve-adapters/token-supply";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { buildSafetyScoreV9SupplyReview } from "../safety-score-v9/extension-supply";
+import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 
 const ADDRESS = "USDai5XCUzNebYzUk6EuRiFCvnyoyEdj7VSyijYcz2A";
 const PROGRAM = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
@@ -48,6 +51,7 @@ const FINGERPRINT = "b".repeat(64);
 
 function censusDependencies(moveOverride: Partial<MoveFungibleAssetSupplyObservation> = {}) {
   return {
+    fetchEvmBlockNumber: async () => 100,
     resolveClosestBlockAtOrBeforeTimestamp: async () => 100,
     fetchEvmBlockHeader: async () => ({ number: 100, timestamp: CLOCK - 10, hash: `0x${"1".repeat(64)}` as `0x${string}` }),
     fetchEvmMulticall3Aggregate3AtBlock: async (_chain: string | undefined, calls: readonly { label: string }[]) =>
@@ -131,5 +135,75 @@ describe("complete independent-liability censuses", () => {
     });
     expect(packet("sfrxusd-frax", generation)).toBeNull();
     expect(packet("wsrusd-reservoir", generation)).not.toBeNull();
+  });
+
+  const stallSec = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.haltedChainMinStallSec;
+  async function stalledGeneration(options: { age?: number; secondUnavailable?: boolean; secondHash?: string; secondNumber?: number; secondLive?: boolean } = {}) {
+    const dependencies = censusDependencies();
+    return observeSafetyScoreV9TransferMaterialityGeneration(input(), {
+      ...dependencies,
+      fetchEvmBlockNumber: async (_chain, rpcOptions) => {
+        const url = rpcOptions?.chainRpcs?.get("polygon-zkevm")?.endpoints[0]?.url;
+        return url?.includes("drpc.org") && options.secondUnavailable ? null : 100;
+      },
+      fetchEvmBlockHeader: async (chain, _number, rpcOptions) => {
+        const second = rpcOptions?.chainRpcs?.get("polygon-zkevm")?.endpoints.length === 1 &&
+          rpcOptions.chainRpcs.get("polygon-zkevm")?.endpoints[0]?.url.includes("drpc.org");
+        return {
+          number: second ? options.secondNumber ?? 100 : 100,
+          timestamp: chain !== "polygon-zkevm" || second && options.secondLive ? CLOCK - 10 : CLOCK - (options.age ?? stallSec),
+          hash: `0x${(second ? options.secondHash ?? "1" : "1").repeat(64)}` as `0x${string}`,
+        };
+      },
+    });
+  }
+
+  it("admits agreeing independent final heads at the policy stall boundary as a frozen liability", async () => {
+    const generation = await stalledGeneration();
+    const admitted = packet("sfrxusd-frax", generation)!;
+    expect(admitted.observations).toHaveLength(30);
+    expect(admitted.observations.find(row => row.deploymentKey.startsWith("polygon-zkevm:")))
+      .toMatchObject({
+        rawTokenUnits: "100", observedAtSec: CLOCK - stallSec, status: "accepted",
+        provenance: { kind: "halted-chain", checkedAtSec: CLOCK, heads: [
+          { endpointOrigin: "https://zkevm-rpc.com", blockNumber: "100", blockHash: `0x${"1".repeat(64)}`, timestampSec: CLOCK - stallSec },
+          { endpointOrigin: "https://polygon-zkevm.drpc.org", blockNumber: "100", blockHash: `0x${"1".repeat(64)}`, timestampSec: CLOCK - stallSec },
+        ] },
+      });
+    const meta = ACTIVE_META_BY_ID.get("sfrxusd-frax")!;
+    const review = buildSafetyScoreV9SupplyReview({
+      clockSec: CLOCK, baseInputGenerationId: BASE_ID, registryFingerprint: FINGERPRINT,
+      chainCirculatingById: {}, aggregateCirculatingById: { "sfrxusd-frax": { circulating: { peggedUSD: 1000 } } },
+    } as unknown as ReportCardsFixedInput, "sfrxusd-frax", meta.bridgeRouteRisk, { meta, transferMaterialityGeneration: generation })!;
+    const frozenRoute = review.selectedBridgeRoutes.find(row => row.deploymentRouteKey.startsWith("polygon-zkevm:"))!;
+    expect(frozenRoute.supplyShare).toBeGreaterThan(0);
+    expect(frozenRoute.reviewedRouteKind).toBe("controlled");
+    expect(review.failureDomains).toContainEqual({ kind: "bridge-route", key: "contract:polygon-zkevm:0x5bff88ca1442c2496f7e475e9e7786383bc070c0" });
+    expect(packet("wsrusd-reservoir", generation)).not.toBeNull();
+  });
+
+  it.each([
+    { secondUnavailable: true }, { age: stallSec - 1 }, { secondHash: "2" }, { secondNumber: 101 },
+  ])("rejects an incomplete or disagreeing halt proof %j", async options => {
+    const generation = await stalledGeneration(options);
+    expect(packet("sfrxusd-frax", generation)).toBeNull();
+    expect(generation.observationsByAssetId["sfrxusd-frax"].find(row => row.deploymentKey.startsWith("polygon-zkevm:"))?.status).toBe("rejected");
+  });
+
+  it("uses a live independent endpoint instead of labelling its liability halted", async () => {
+    const generation = await stalledGeneration({ secondLive: true });
+    const row = packet("sfrxusd-frax", generation)!.observations.find(row => row.deploymentKey.startsWith("polygon-zkevm:"))!;
+    expect(row.observedAtSec).toBe(CLOCK - 10);
+    expect(row.provenance).toBeUndefined();
+  });
+
+  it("does not refresh a stale head-check or admit forged agreeing-head provenance", async () => {
+    const generation = await stalledGeneration();
+    const row = generation.observationsByAssetId["sfrxusd-frax"].find(row => row.provenance)!;
+    row.provenance!.checkedAtSec = CLOCK - 1801;
+    expect(packet("sfrxusd-frax", generation)).toBeNull();
+    row.provenance!.checkedAtSec = CLOCK;
+    row.provenance!.heads[1].endpointOrigin = row.provenance!.heads[0].endpointOrigin;
+    expect(packet("sfrxusd-frax", generation)).toBeNull();
   });
 });
