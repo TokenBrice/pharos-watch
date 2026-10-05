@@ -62,6 +62,45 @@ describe("reviewed economic supply observation", () => {
     expect(result.attribution.unattributedSupplyUsd).toBe(0);
   });
 
+  it("batches same-chain supplies and balance exclusions at one pin without mixing amounts", async () => {
+    const f = fixture();
+    const first = f.plan.deployments[0]!;
+    const second = { ...first, deploymentKey: `ethereum:0x${"2".repeat(40)}`, address: `0x${"2".repeat(40)}` };
+    f.plan.deployments.push(second);
+    f.plan.exclusions = [{ id: "treasury", deploymentKey: second.deploymentKey, account: `0x${"3".repeat(40)}` }];
+    vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mockImplementation(async (_chain, calls) =>
+      calls.map(call => ({ label: call.label, success: true, returnData: word(
+        call.label.endsWith(":decimals") ? 6n : call.label === first.deploymentKey ? 100000000n :
+          call.label === "treasury" ? 100000000n : 1000000000n,
+      ) })),
+    );
+    const result = await f.run();
+    expect(result.status).toBe("accepted");
+    if (result.status !== "accepted") throw new Error("Expected accepted batch partition");
+    expect(result.attribution.deployments.map(row => row.currentSupplyUsd)).toEqual([10, 90]);
+    expect(result.attribution.observations.map(row => row.amount)).toEqual(["100000000", "1000000000", "100000000"]);
+    expect(new Set(result.attribution.observations.map(row => row.anchorHash))).toEqual(new Set([HASH]));
+    expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mock.calls[0][1]).toHaveLength(6);
+    expect(vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mock.calls[0][3])
+      .toMatchObject({ stateBlockHash: HASH, multicallFallbackBlockHash: HASH });
+  });
+
+  it("rejects the exact failed batch leaf, never treating its unavailable amount as zero", async () => {
+    const f = fixture();
+    const first = f.plan.deployments[0]!;
+    const second = { ...first, deploymentKey: `ethereum:0x${"2".repeat(40)}`, address: `0x${"2".repeat(40)}` };
+    f.plan.deployments.push(second);
+    vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mockImplementation(async (_chain, calls) =>
+      calls.map(call => ({ label: call.label, success: call.label !== second.deploymentKey,
+        returnData: word(call.label.endsWith(":decimals") ? 6n : 100000000n) })),
+    );
+    expect(await f.run()).toEqual({
+      status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: second.deploymentKey,
+    });
+    expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).toHaveBeenCalledTimes(1);
+  });
+
   it("admits pre-capture state newer than the previous source clock without redating its source", async () => {
     const f = fixture();
     vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>

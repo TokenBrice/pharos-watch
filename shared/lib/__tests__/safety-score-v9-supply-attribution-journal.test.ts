@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS,
+  SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_BYTES,
+  SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ENTRIES_PER_ASSET,
   SupplyAttributionJournalByIdV1Schema,
   SupplyAttributionJournalV1Schema,
   computeSupplyAttributionJournalIdV1,
@@ -7,6 +10,7 @@ import {
   WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC,
   type SupplyAttributionJournalV1Payload,
 } from "../safety-score-v9-supply-attribution-journal";
+import { stableJsonStringifyV1 } from "../stable-json";
 
 const DIGEST = "a".repeat(64);
 
@@ -311,6 +315,52 @@ describe("Safety Score V9 supply attribution journal runtime", () => {
         }),
       ),
     ).toThrow(/exceeds 1152 bytes/);
+  });
+
+  it("retains both maximum-sized attempts for every asset in the expanded cohort", () => {
+    const journal = Object.fromEntries(
+      Array.from({ length: SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS }, (_, index) => {
+        const assetId = `asset-${String(index).padStart(3, "0")}-`.padEnd(128, "a");
+        const records = Array.from(
+          { length: SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ENTRIES_PER_ASSET },
+          (_, attempt) => {
+            const value = payload({ assetId, attemptId: `attempt-${attempt}`, sourceGeneration: "s" });
+            // The record-size check includes the content-addressed journal ID.
+            // Fill it exactly; maximum map keys count additionally in the map.
+            const recordBytes = stableJsonStringifyV1(createSupplyAttributionJournalV1(value)).length;
+            value.sourceGeneration = "s".repeat(1_152 - recordBytes + 1);
+            return createSupplyAttributionJournalV1(value);
+          },
+        );
+        return [assetId, records];
+      }),
+    );
+    expect(new TextEncoder().encode(stableJsonStringifyV1(journal)).byteLength)
+      .toBeLessThanOrEqual(SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_BYTES);
+    const parsed = SupplyAttributionJournalByIdV1Schema.parse(journal);
+    expect(Object.keys(parsed)).toHaveLength(SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS);
+    expect(Object.values(parsed).every(records =>
+      records.length === SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ENTRIES_PER_ASSET)).toBe(true);
+  });
+
+  it("rejects an over-cap cohort instead of truncating any asset", () => {
+    const journal = Object.fromEntries(
+      Array.from({ length: SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS + 1 }, (_, index) => {
+        const assetId = `asset-${index}`;
+        return [assetId, [createSupplyAttributionJournalV1(payload({ assetId }))]];
+      }),
+    );
+    expect(() => SupplyAttributionJournalByIdV1Schema.parse(journal))
+      .toThrow(`covers more than ${SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS} assets`);
+  });
+
+  it("rejects a third attempt without silently pruning evidence", () => {
+    const records = Array.from(
+      { length: SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ENTRIES_PER_ASSET + 1 },
+      (_, index) => createSupplyAttributionJournalV1(payload({ attemptId: `attempt-${index}` })),
+    );
+    expect(() => SupplyAttributionJournalByIdV1Schema.parse({ "wm-m0": records }))
+      .toThrow(`at most ${SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ENTRIES_PER_ASSET} entries`);
   });
 
   it("rejects duplicate attempts in the fixed-input projection", () => {

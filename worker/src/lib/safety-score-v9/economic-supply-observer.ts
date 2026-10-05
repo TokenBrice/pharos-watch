@@ -10,7 +10,7 @@ import type { SupplyAttributionRejectionCode } from "@shared/lib/safety-score-v9
 import { rethrowIfAborted, throwIfAborted } from "../abort";
 import { getRpcAuthHeaders, type ChainRpcConfig } from "../chain-registry";
 import { getCache, setCache } from "../db-cache";
-import { fetchEvmBlockHeader, fetchEvmBlockNumber, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmRpcBatch, type EvmBlockHeader } from "../evm-rpc";
+import { fetchEvmBlockHeader, fetchEvmBlockNumber, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmRpcBatch, type EvmBlockHeader, type EvmMulticall3Call, type EvmMulticall3Result } from "../evm-rpc";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../evm-selectors";
 import { getPublicRpcUrl } from "../public-rpc-registry";
 import { decodeEvmUint256, fetchSafetyScoreV9SolanaRpc, rewindEvmBlockHeaderToScoringClock, type SafetyScoreV9SolanaRpcFetcher } from "./supply-observation-primitives";
@@ -353,6 +353,34 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
       : economicSupplyInputReferencePrice(input.fixedInput, input.assetId);
     if (!referencePrice || Number(referencePrice.value) <= 0) return { status: "rejected", rejectionCode: "packet-reconciliation-failed", failedRouteId: plan.sourceId };
     const headers = new Map<string, EvmBlockHeader>();
+    const evmCallsByChain = new Map<string, EvmMulticall3Call[]>();
+    const evmCallsById = new Map<string, readonly EvmMulticall3Call[]>();
+    const evmResultsById = new Map<string, readonly EvmMulticall3Result[] | null>();
+    const batchedChains = new Set<string>();
+    const addEvmRead = (row: ReviewedEconomicSupplyPlan["deployments"][number], id: string, account?: string) => {
+      if (CHAIN_META[row.chainId]?.type !== "evm" || row.address === null ||
+        row.decimals === null || (row.holdingKind === "native-gas" && account !== undefined) ||
+        (account !== undefined && !/^0x[0-9a-f]{40}$/.test(account))) return;
+      const calls = evmCallsByChain.get(row.chainId) ?? [];
+      const pair = [
+        { label: id, target: row.address, callData: account === undefined ? TOTAL_SUPPLY_SELECTOR : `0x70a08231${account.slice(2).padStart(64, "0")}`, allowFailure: true },
+        { label: `${id}:decimals`, target: row.address, callData: DECIMALS_SELECTOR, allowFailure: true },
+      ];
+      calls.push(...pair);
+      evmCallsById.set(id, pair);
+      evmCallsByChain.set(row.chainId, calls);
+    };
+    for (const row of plan.deployments) {
+      if (row.read.kind === "evm-total-supply" || row.read.kind === "evm-balance") {
+        addEvmRead(row, row.deploymentKey, row.read.kind === "evm-balance" ? row.read.account : undefined);
+      }
+    }
+    for (const rule of [...plan.exclusions, ...plan.escrows.map(escrow => ({
+      id: escrow.id, deploymentKey: escrow.canonicalDeploymentKey, account: escrow.account,
+    }))]) {
+      const row = plan.deployments.find(row => row.deploymentKey === rule.deploymentKey);
+      if (row) addEvmRead(row, rule.id, rule.account);
+    }
     const readEvm = async (row: ReviewedEconomicSupplyPlan["deployments"][number], id: string, account?: string): Promise<EconomicSupplyObservation | null> => {
       if (CHAIN_META[row.chainId]?.type !== "evm" || row.address === null) return null;
       let header = headers.get(row.chainId);
@@ -379,11 +407,21 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
         return { id, deploymentKey: row.deploymentKey, amount, observedAtSec: header.timestamp, anchor: String(header.number), anchorHash: header.hash, responseSha256: sha256Hex(stableJsonStringifyV1({ result, header, account })) };
       }
       if (row.decimals === null) return null;
-      const calls = [
-        { label: id, target: row.address, callData: account === undefined ? TOTAL_SUPPLY_SELECTOR : `0x70a08231${account.slice(2).padStart(64, "0")}`, allowFailure: true },
-        { label: `${id}:decimals`, target: row.address, callData: DECIMALS_SELECTOR, allowFailure: true },
-      ];
-      const results = await fetchEvmMulticall3Aggregate3AtBlock(row.chainId, calls, header.number, { chainRpcs: input.chainRpcs, signal: input.signal, stateBlockHash: header.hash, multicallFallbackBlockHash: header.hash });
+      if (!batchedChains.has(row.chainId)) {
+        batchedChains.add(row.chainId);
+        const calls = evmCallsByChain.get(row.chainId) ?? [];
+        // The existing multicall helper chunks large censuses and consumes
+        // each response before opening the next. All rows share this exact pin.
+        const batch = await fetchEvmMulticall3Aggregate3AtBlock(row.chainId, calls, header.number, {
+          chainRpcs: input.chainRpcs, signal: input.signal,
+          stateBlockHash: header.hash, multicallFallbackBlockHash: header.hash,
+        });
+        for (let index = 0; index < calls.length; index += 2) {
+          evmResultsById.set(calls[index].label, batch ? [batch[index], batch[index + 1]] : null);
+        }
+      }
+      const calls = evmCallsById.get(id) ?? [];
+      const results = evmResultsById.get(id);
       const value = results && decodeEvmUint256(results[0]), decimals = results && decodeEvmUint256(results[1]);
       if (value == null || decimals == null || decimals !== BigInt(row.decimals)) return null;
       return { id, deploymentKey: row.deploymentKey, amount: value.toString(), observedAtSec: header.timestamp, anchor: String(header.number), anchorHash: header.hash, responseSha256: sha256Hex(stableJsonStringifyV1({ calls, results, header })) };
