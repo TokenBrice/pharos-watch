@@ -5,6 +5,7 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ReviewedEconomicSupplyPlanSchema, type LayerZeroOftPendingRead, type ReviewedEconomicSupplyPlan, type EconomicSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { ChainRpcConfig } from "../chain-registry";
+import { USER_AGENT } from "../constants";
 import * as evmRpc from "../evm-rpc";
 import { observeLayerZeroOftPending } from "../safety-score-v9/layerzero-oft-pending-observer";
 import { deriveReviewedEconomicDeploymentPartition } from "../safety-score-v9/supply-attribution-contract";
@@ -88,7 +89,7 @@ function fixture(sends: Send[] = [{ nonce: 1n, amountSD: 1234567n, state: "unver
     throw new Error("Unexpected state read");
   }));
   const headers = vi.spyOn(evmRpc, "fetchEvmBlockHeader").mockImplementation(async (_chain, number) => header(number === "finalized" ? finalized : number));
-  const fetcher = vi.fn(async (raw: string | URL | Request) => {
+  const fetcher = vi.fn<typeof fetch>(async (raw) => {
     const url = new URL(String(raw));
     return new Response(JSON.stringify({ data: url.pathname.includes("/guid/") ? discoveries.filter(row => url.pathname.endsWith(row.guid)) : discoveries }));
   });
@@ -187,6 +188,31 @@ describe("authenticated LayerZero V2 OFT pending census", () => {
     f.setNonces({ inbound: 1n, lazy: 1n });
     expect(await f.run(first.checkpoint)).toMatchObject({ status: "accepted", amount: "0" });
     expect(f.fetcher.mock.calls.filter(([url]) => String(url).includes("/pathway/"))).toHaveLength(1);
+  });
+  it("identifies both pathway and GUID discovery requests to Scan's Worker-egress filter", async () => {
+    const f = fixture(), original = f.fetcher.getMockImplementation()!;
+    // Pinned remote-preview behavior: the same Scan URL returns 403 without
+    // a User-Agent (even with Accept alone), and 200 with the Pharos agent.
+    f.fetcher.mockImplementation(async (raw, init) => {
+      if (new Headers(init?.headers).get("User-Agent") !== USER_AGENT) return new Response("Forbidden", { status: 403 });
+      return original(raw, init);
+    });
+    const first = await f.run();
+    expect(first).toMatchObject({ status: "accepted", amount: "1234567000000000000" });
+    if (first.status !== "accepted") throw new Error("Expected authenticated source census");
+    f.discoveries[0]!.destination = { tx: { txHash: f.messages[0]!.destinationTxHash } };
+    f.setNonces({ inbound: 1n, lazy: 1n });
+    expect(await f.run(first.checkpoint)).toMatchObject({ status: "accepted", amount: "0" });
+    expect(f.fetcher.mock.calls.map(([raw]) => new URL(String(raw)).pathname)).toEqual([
+      expect.stringContaining("/messages/pathway/"), `/v1/messages/guid/${f.messages[0]!.guid}`,
+    ]);
+    for (const [, init] of f.fetcher.mock.calls) expect(new Headers(init?.headers).get("User-Agent")).toBe(USER_AGENT);
+  });
+  it.each([403, 429])("rejects Scan HTTP %s instead of publishing zero or advancing history", async status => {
+    const f = fixture();
+    f.fetcher.mockResolvedValue(new Response("Discovery unavailable", { status }));
+    expect(await f.run()).toEqual({ status: "rejected", reason: "discovery-unavailable" });
+    expect(f.fetcher).toHaveBeenCalledTimes(1);
   });
   it("rejects a receipt on a changed canonical block", async () => {
     const f = fixture(); f.receipts.get(f.messages[0]!.txHash)!.blockHash = word(999n);

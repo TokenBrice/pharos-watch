@@ -6,6 +6,7 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { LayerZeroOftPendingCheckpointSchema, LayerZeroOftPendingReadSchema, type LayerZeroOftPendingCheckpoint, type LayerZeroOftPendingRead, type EconomicSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
 import type { ChainRpcConfig } from "../chain-registry";
+import { USER_AGENT } from "../constants";
 import { getCache, setCache } from "../db-cache";
 import { fetchEvmBlockHeader, fetchEvmRpcBatch, type EvmBlockHeader } from "../evm-rpc";
 import { fetchJsonWithRetry } from "../fetch-retry";
@@ -80,7 +81,8 @@ export async function observeLayerZeroOftPending(input: {
     };
     const state = async (index: number, to: string, data: string) => rpc(source.sides[index]!.chainId, "eth_call", [{ to, data }, { blockHash: input.headers[index]!.hash, requireCanonical: true }]);
     const scan = async (url: string): Promise<{ data: ScanMessage[]; nextToken?: string }> => {
-      const result = await fetchJsonWithRetry<unknown>(url, { signal: input.signal }, 0, { timeoutMs: 10_000, maxResponseBytes: 2 * 1024 * 1024 });
+      // Scan rejects Worker-egress requests without an explicit User-Agent.
+      const result = await fetchJsonWithRetry<unknown>(url, { headers: { "User-Agent": USER_AGENT }, signal: input.signal }, 0, { timeoutMs: 10_000, maxResponseBytes: 2 * 1024 * 1024 });
       const parsed = z.object({ data: z.array(ScanMessageSchema).max(100), nextToken: z.string().max(8192).optional() }).safeParse(result?.body);
       if (!result?.response.ok || !parsed.success) fail("discovery-unavailable");
       return parsed.data;
