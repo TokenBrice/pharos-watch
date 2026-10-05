@@ -269,6 +269,7 @@ export function runGitleaksConfigSelfTest(
       ["19d915b4-356f-4abd", "-a4b2-d331515adc22"].join(""),
       ["79d5fd49-deae-41b4", "-a809-9e1afaa02f32"].join(""),
       ["7a7a500e-1321-4e9d", "-8046-46ae8199e244"].join(""),
+      ["9bfe7105-c648-406b", "-b51c-b9c4431bc335"].join(""),
     ];
     const researchGldtMatches = [
       ["gldt-gold-dao", "df16e419ba0"].join("-"),
@@ -281,6 +282,7 @@ export function runGitleaksConfigSelfTest(
       ["0x06723dcb428eddb160c5adfc2d0a5e5", "adc184bf6a7298780c3cbf3fa764f709b"].join(""),
       ["CAJD2IBSP7VO2VYJQUYJSOGP", "JINTUYV7MQITINXVPTIH3CCLCUENNMW4"].join(""),
       ["TN3cfcFhLrdNZhMdHZ", "VZ4z2XFWb7uB9CXg"].join(""),
+      ["7bxM8cRFZpzonzZtzmrcW", "HNX1dijrEVU4VkjjtVyBmqE"].join(""),
     ];
     const uniXautPair = [
       "UNI0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",

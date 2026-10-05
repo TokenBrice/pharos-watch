@@ -141,14 +141,15 @@ paths = ['''(?:^|/)shared/lib/redemption-backstop-configs/offchain-issuer/commod
 # Cap: https://docs.cap.app/resources/whitepaper
 # Matrixdock: https://matrixdock.gitbook.io/matrixdock-docs/english/legal/token-terms-and-conditions/stbt-terms-and-conditions
 # Gold DAO: https://docs.gold-dao.org/other/audit-reports
+# Midas: https://docs.midas.app/resources/legal-product-documentation/mre7yield (2025 prospectus update)
 # Only the evidence-gap registry cites these reviewed capabilities. The mTBILL
 # Final Terms UUID is deliberately absent: its issuer-page href remains unverified.
 [[allowlists]]
-description = "Publicly linked USD.AI attestation, Cap whitepaper, Matrixdock STBT terms and Gold DAO vault audit download tokens"
+description = "Publicly linked USD.AI attestation, Cap whitepaper, Matrixdock STBT terms, Gold DAO vault audit and Midas 2025 prospectus download tokens"
 targetRules = ["generic-api-key"]
 condition = "AND"
 regexTarget = "secret"
-regexes = ['''^(?:34ae6ee1-5f94-4ce9-87e8-c98bcec11762|19d915b4-356f-4abd-a4b2-d331515adc22|79d5fd49-deae-41b4-a809-9e1afaa02f32|7a7a500e-1321-4e9d-8046-46ae8199e244)$''']
+regexes = ['''^(?:34ae6ee1-5f94-4ce9-87e8-c98bcec11762|19d915b4-356f-4abd-a4b2-d331515adc22|79d5fd49-deae-41b4-a809-9e1afaa02f32|7a7a500e-1321-4e9d-8046-46ae8199e244|9bfe7105-c648-406b-b51c-b9c4431bc335)$''']
 paths = ['''(?:^|/)shared/data/safety-score-v9/evidence-gap-classifications-v1\.json$''']
 
 # Gold DAO's GLDT symbol in reviewed wave ids and the issuer's public article slug
@@ -250,9 +251,10 @@ paths = ['''(?:^|/)shared/data/safety-score-v9/transfer-review-overlays-v1\.json
 
 # Reviewed 2026-10-04: Spiko's CHF share-class API publishes its native Starknet
 # and Stellar/Soroban registers; TronScan publishes the KGST TRON proxy identity.
+# Reviewed 2026-10-05: wsrUSD's Solana SPL mint (finalized getAccountInfo, wave-3 W3R16).
 # Pin values to the transfer review rather than exempting hex/base32/base58 shapes.
 [[allowlists]]
-description = "Reviewed Spiko CHF Starknet and Stellar registers and KGST TRON proxy are public identifiers"
+description = "Reviewed Spiko CHF Starknet and Stellar registers, KGST TRON proxy and wsrUSD Solana mint are public identifiers"
 targetRules = ["generic-api-key"]
 condition = "AND"
 regexTarget = "secret"
@@ -260,6 +262,7 @@ regexes = [
   '''^0x06723dcb428eddb160c5adfc2d0a5e5adc184bf6a7298780c3cbf3fa764f709b$''',
   '''^CAJD2IBSP7VO2VYJQUYJSOGPJINTUYV7MQITINXVPTIH3CCLCUENNMW4$''',
   '''^TN3cfcFhLrdNZhMdHZVZ4z2XFWb7uB9CXg$''',
+  '''^7bxM8cRFZpzonzZtzmrcWHNX1dijrEVU4VkjjtVyBmqE$''',
 ]
 paths = ['''(?:^|/)shared/data/safety-score-v9/transfer-review-overlays-v1\.json$''']
 
