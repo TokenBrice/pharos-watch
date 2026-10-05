@@ -24354,48 +24354,6 @@
       "rationale": "No maximum end-to-end eMXN final spendable-fiat settlement SLA is disclosed. Standard 1-3 business-day processing is not final settlement; large transactions allow 3-5 business days or longer and extraordinary/compliance delays. Do not convert this target to calendar seconds."
     },
     {
-      "id": "uw-acrdx-anemoy-apollo-4f19f49dcda5ca62",
-      "assetId": "acrdx-anemoy-apollo",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:b2523b7dcb7224300edacdf7",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:09:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R73)",
-      "sources": [
-        {
-          "url": "https://www.apollo.com/content/dam/apolloaem/documents/fund-documents/adcf-prospectus.pdf",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": "2025-04-29",
-          "location": "Investment Strategy, page 7",
-          "excerpt": "there is no limit on the maturity or duration of any individual security in which the Fund may invest.",
-          "assertion": "Underlying credit holdings have no maximum maturity mandate; this is not a scalar maximum for feeder fund-share claim."
-        },
-        {
-          "url": "https://www.anemoy.io/news/acrdx-launched",
-          "observedAt": "2026-10-03T23:09:45Z",
-          "datumAsOf": "2025-09-16",
-          "location": "Feeder fund paragraph",
-          "excerpt": "ACRDX will serve as a feeder fund that provides tokenized access to Apollo Diversified Credit Fund",
-          "assertion": "The admitted slice is a fund-share claim, not any individual bond."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.anemoy.io/news/acrdx-launched",
-        "https://www.anemoy.io/",
-        "https://www.apollo.com/content/dam/apolloaem/documents/fund-documents/adcf-prospectus.pdf",
-        "https://centrifuge.io/blog/fission-centrifuge",
-        "https://docs.centrifuge.io/developer/protocol/deployments/"
-      ],
-      "rationale": "No finite contractual maximum maturity for the Apollo fund-share NAV claim is disclosed. The continuously offered interval fund discloses quarterly repurchases, not a fund-share final maturity, and expressly has no maximum maturity for individual underlying securities. Do not substitute average duration, quarterly liquidity or underlying security terms for the claim maximum."
-    },
-    {
       "id": "uw-acrdx-anemoy-apollo-3a8998c5c16956b6",
       "assetId": "acrdx-anemoy-apollo",
       "scope": {
