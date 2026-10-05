@@ -34,7 +34,7 @@
     "lint:typed": "eslint --config eslint.typed.config.mjs \"worker/src/**/*.ts\" \"worker/src/**/*.tsx\" \"shared/lib/**/*.ts\" \"functions/**/*.ts\" \"functions/**/*.tsx\" \"src/lib/**/*.ts\" \"src/lib/**/*.tsx\" \"src/hooks/**/*.ts\" \"src/hooks/**/*.tsx\" --max-warnings=0",
     "typecheck": "next typegen && tsc --noEmit -p tsconfig.typecheck.json",
     "typecheck:tests": "tsc --noEmit -p tsconfig.test-typecheck.json",
-    "typecheck:worker": "cd worker && npx tsc --noEmit",
+    "typecheck:worker": "cd worker && NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit",
     "audit:deps": "npm audit --audit-level=high --omit=dev",
     "audit:mint-authority-review": "tsx scripts/maintenance/generate-mint-authority-review-audit.ts",
     "audit:mint-bridge-ownership": "tsx scripts/maintenance/generate-mint-bridge-ownership-audit.ts",
