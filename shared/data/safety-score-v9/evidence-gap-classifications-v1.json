@@ -40036,6 +40036,80 @@
         "https://www1.hkexnews.hk/listedco/listconews/sehk/2026/0914/2026091400087.pdf"
       ],
       "rationale": "The exact missing facts are whole-position liquidity horizons for the August Other Money Market Instrument, Time Deposit and Cash and Cash Equivalent buckets. Reviewed August factsheet, September prospectus/KFS, June accounts, issuer document archive and recovered complete October 2 XLSX. These disclose daily share dealing, investment objectives, WAM and holdings, but not per-August-slice realizability, deposit break terms or final USD availability. October bank balances and share redemption promises cannot establish August category liquidity."
+    },
+    {
+      "id": "uw-krwq-iq-25902a1580b97f37",
+      "assetId": "krwq-iq",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:19:35Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R45)",
+      "sources": [
+        {
+          "url": "https://data.chain.link/streams/krwq-krw-smartdata-datalink",
+          "observedAt": "2026-10-05T00:11:48Z",
+          "datumAsOf": "2026-10-05",
+          "location": "Recovered through r.jina.ai; Product information / Feed IDs",
+          "excerpt": "KRWQ/POR-SmartData-PoR-NetAssetValue-DS-Premium-Global-009",
+          "assertion": "The previously inaccessible exact feed is now readable: it publishes reserve AUM/NAV, not a documented whole-issued-liability reconciliation procedure."
+        },
+        {
+          "url": "https://docs.chain.link/data-streams/reference/report-schema-v9",
+          "observedAt": "2026-10-05T00:11:48Z",
+          "datumAsOf": null,
+          "location": "SmartData v9 schema, aum field",
+          "excerpt": "DON consensus total USD value of Assets Under Management",
+          "assertion": "The located SmartData schema reports NAV/AUM; it has no issued-supply, escrow, in-flight-liability or reserve-to-liability reconciliation field."
+        },
+        {
+          "url": "https://www.krwq.cash/transparency",
+          "observedAt": "2026-10-05T00:11:48Z",
+          "datumAsOf": null,
+          "location": "Reserve dashboard footer",
+          "excerpt": "Data updates every 30 seconds",
+          "assertion": "Dashboard refresh cadence is public, but a display-refresh interval is not a disclosed whole-supply supply/backing reconciliation cadence or liability-coverage definition."
+        },
+        {
+          "url": "https://www.krwq.cash/",
+          "observedAt": "2026-10-05T00:15:05Z",
+          "datumAsOf": null,
+          "location": "Compliance disclaimer / report-publication surface",
+          "excerpt": "Formal legal documents, licensing certificates, and attestation reports will be accessible in the Transparency section once published.",
+          "assertion": "Issuer identifies its report publication surface; no performed whole-supply report or scope/cadence procedure is linked there."
+        },
+        {
+          "url": "https://www.krwq.cash/api/custodian-assets",
+          "observedAt": "2026-10-05T00:18:53Z",
+          "datumAsOf": "2026-10-05",
+          "location": "JSON root: minted counters, reserveRatio and timestamp",
+          "excerpt": "\"reserveRatio\":116.7",
+          "assertion": "Public ratio/counters are disclosed; the response does not document its full liability denominator, escrow/in-flight exclusions or common reserve/liability observation clock."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.krwq.cash/",
+        "https://www.krwq.cash/transparency",
+        "https://www.krwq.cash/api/custodian-assets",
+        "https://www.krwq.cash/mint",
+        "https://www.krwq.cash/whitepaper.pdf",
+        "https://www.krwq.cash/terms",
+        "https://www.krwq.cash/disclaimer",
+        "https://www.iq.wiki/wiki/krwq",
+        "https://api.github.com/orgs/KRWQcash/repos?per_page=100",
+        "https://github.com/KRWQcash/.github/blob/7bf83efba994a555ca1f63b352ed28e91ff3fd44/profile/README.md",
+        "https://data.chain.link/streams/krwq-krw-smartdata-datalink",
+        "https://docs.chain.link/data-streams/reference/report-schema-v9",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x350b6b5cf2bda130a9bee0a3cda86ec88e71dcca"
+      ],
+      "rationale": "Recovered the exact blocked Chainlink page: reserve AUM/NAV and v9 report schema do not disclose whole-issued-KRWQ supply-to-backing reconciliation. Live custodian API publishes minted counters, a reserve ratio and timestamp, but no liability denominator/exclusion, escrow/in-flight coverage, common observation clock or performed reconciliation scope/cadence. Whitepaper plans reports; IQ wiki claims monthly attestations began but links no performed report. Issuer transparency/legal/repository surfaces publish no qualifying procedure/report. This is non-disclosure of exact reconciliation, not unavailable feed access."
     }
   ]
 }
