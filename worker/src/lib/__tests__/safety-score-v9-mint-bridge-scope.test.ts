@@ -1034,6 +1034,45 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       });
     });
 
+    it("pools the shortest reviewed delay without granting a sibling's execution certificate to the group", () => {
+      const scoped = safe("scoped", BASE_ROUTE, 3, 5);
+      scoped.executionScope = reviewedScope({
+        controllerDeployment: BASE_ROUTE, reviewedAt: "1970-01-01", observedAt: "1970-01-01",
+      });
+      scoped.executionScope.paths[0]!.capabilities = ["bridge-mint"];
+      scoped.executionScope.paths[0]!.unavoidableDelaySec = 172800;
+      const sibling = safe("unscoped", ARBITRUM_ROUTE, 2, 3);
+      sibling.timelockDelaySec = 3600;
+      sibling.modulesOrGuardsStatus = "present";
+      const { result } = groupFixture([scoped, sibling]);
+      expect(result.controls[0]).toMatchObject({
+        authority: { authorityKey: ARBITRUM_ROUTE },
+        delaySec: 3600, modulesOrGuards: "present", executionScopeComplete: false,
+        moduleImpact: "unresolved",
+        executionScopeContributors: [
+          { authorityKey: BASE_ROUTE, scope: scoped.executionScope },
+          { authorityKey: ARBITRUM_ROUTE },
+        ],
+      });
+      expect(result.controls[0]!.executionScopeContributors![1]).not.toHaveProperty("scope");
+      expect(result.controls[0]!.scopeDiagnostics).toContain("execution-scope-unreviewed");
+    });
+
+    it.each([
+      { riskTier: "canonical-rollup-bridge" as const },
+      { routeClass: "native" as const },
+      { issuanceModel: "bridge-representation" as const },
+      { semantics: "burn-mint" as const },
+    ])("does not pool an incompatible representation member %j", (overrides) => {
+      const { result } = groupFixture(
+        [safe("first", BASE_ROUTE, 3, 5), safe("second", ARBITRUM_ROUTE, 3, 5)],
+        [{}, overrides],
+      );
+      expect(result.controls.some((control) => control.controlKey.startsWith("bridge-group:"))).toBe(false);
+      expect(result.controls.map((control) => control.deploymentKey).sort()).toEqual([ARBITRUM_ROUTE, BASE_ROUTE]);
+      expect(result.controls.every((control) => control.authority?.model === "multisig")).toBe(true);
+    });
+
     it.each(["missing", "unknown", "threshold-unreviewed", "stale", "unreviewed", "upgrade-unknown"] as const)(
       "keeps the group unknown for a %s member instead of substituting the common adapter",
       (condition) => {

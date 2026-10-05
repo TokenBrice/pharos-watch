@@ -3,7 +3,7 @@ import { encodeAbiParameters, keccak256, parseAbiParameters, toFunctionSelector,
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { sha256Hex } from "@shared/lib/sha256";
 import type { StablecoinMeta } from "@shared/types/core";
-import { ReviewedEconomicSupplyPlanSchema, type CurveLzPendingRead, type ReviewedEconomicSupplyPlan } from "@shared/types/safety-score-v9-supply-attribution";
+import { ReviewedEconomicSupplyPlanSchema, type CcipPendingRead, type CurveLzPendingRead, type LayerZeroOftPendingRead, type ReviewedEconomicSupplyPlan } from "@shared/types/safety-score-v9-supply-attribution";
 import * as evmRpc from "../evm-rpc";
 import type { ChainRpcConfig } from "../chain-registry";
 import { observeCurveLzPending, observeEconomicSolanaMint, observeReviewedEconomicDeploymentPartitionAttempt } from "../safety-score-v9/economic-supply-observer";
@@ -251,6 +251,153 @@ describe("reviewed economic supply observation", () => {
 
   it("does not turn escrow surplus into pending supply", async () => {
     expect(await pendingFixture(0n).run()).toMatchObject({ status: "rejected", rejectionCode: "packet-reconciliation-failed" });
+  });
+
+  it("uses reviewed receipt subsets and API pending amounts to conserve the escrow rather than its gross receipt supply", async () => {
+    const f = pendingFixture(), escrow = f.plan.escrows[0]!;
+    escrow.receiptClaimSources = [{ deploymentKey: escrow.receiptDeploymentKeys[0]!, source: apiSource("receipt") }];
+    escrow.inFlightSource = apiSource("pending");
+    vi.mocked(fetch).mockImplementation(async url => new Response(JSON.stringify(apiBody(
+      String(url).endsWith("/receipt") ? "19000000" : "1000000",
+    ))));
+    const result = await f.run();
+    expect(result).toMatchObject({ status: "accepted", attribution: {
+      deployments: [expect.objectContaining({ currentSupplyUsd: 80 }), expect.objectContaining({ currentSupplyUsd: 19 })],
+      unattributedSupplyUsd: 1,
+      observations: expect.arrayContaining([expect.objectContaining({
+        id: `receipt:bridge:${escrow.receiptDeploymentKeys[0]}`, amount: "19000000", anchor: "issuer-snapshot",
+      })]),
+      inFlight: [expect.objectContaining({ amount: "1000000", anchor: "issuer-snapshot" })],
+    } });
+  });
+
+  it.each(["receipt", "pending"])("rejects unavailable API %s accounting instead of replacing it with a residual", async failure => {
+    const f = pendingFixture(), escrow = f.plan.escrows[0]!;
+    escrow.receiptClaimSources = [{ deploymentKey: escrow.receiptDeploymentKeys[0]!, source: apiSource("receipt") }];
+    escrow.inFlightSource = apiSource("pending");
+    vi.mocked(fetch).mockImplementation(async url => String(url).endsWith(`/${failure}`)
+      ? new Response("{}", { status: 503 })
+      : new Response(JSON.stringify(apiBody("19000000"))));
+    expect(await f.run()).toEqual({
+      status: "rejected", rejectionCode: "deployment-state-unavailable",
+      failedRouteId: failure === "receipt" ? escrow.receiptDeploymentKeys[0] : escrow.id,
+    });
+  });
+
+  function oftFixture(liability = false) {
+    const f = pendingFixture(0n, 19000000n), [canonical, receipt] = f.plan.deployments;
+    const side = (row: typeof canonical, eid: number, endpoint: string) => ({
+      chainId: row!.chainId, tokenAddress: row!.address!, oappAddress: row!.address!,
+      oappRuntimeCodeSha256: sha256Hex("0x6000"), endpointAddress: endpoint,
+      endpointRuntimeCodeSha256: sha256Hex("0x6000"), eid, localDecimals: 6, deploymentBlock: 100,
+    });
+    const source: LayerZeroOftPendingRead = {
+      kind: "evm-layerzero-oft-pending", sourceId: "oft", chainId: "ethereum", finality: "finalized",
+      localDecimals: 6, sharedDecimals: 6,
+      sides: [side(canonical, 30101, `0x${"4".repeat(40)}`), side(receipt, 30184, `0x${"5".repeat(40)}`)],
+      pathways: [{ sourceIndex: 0, destinationIndex: 1 }],
+    };
+    if (liability) {
+      f.plan.accountingFamily = "independent-liability";
+      f.plan.escrows = [];
+      f.plan.liabilityInFlightSource = source;
+    } else {
+      f.plan.escrows[0]!.account = source.sides[0]!.oappAddress;
+      f.plan.escrows[0]!.inFlightSource = source;
+    }
+    vi.mocked(fetch).mockImplementation(async () => new Response(JSON.stringify({ data: [] })));
+    vi.mocked(evmRpc.fetchEvmRpcBatch).mockImplementation(async (chain, calls) => calls.map(call => {
+      if (call.method === "eth_getCode") return "0x6000";
+      const query = call.params[0];
+      if (!query || typeof query !== "object" || !("data" in query) || typeof query.data !== "string") {
+        throw new Error("Expected OFT eth_call query");
+      }
+      const data = query.data.slice(0, 10);
+      const index = chain === "ethereum" ? 0 : 1, local = source.sides[index]!, remote = source.sides[1 - index]!;
+      const addressWord = (value: string) => `0x${value.slice(2).padStart(64, "0")}`;
+      if (data === toFunctionSelector("endpoint()")) return addressWord(local.endpointAddress);
+      if (data === toFunctionSelector("eid()")) return word(BigInt(local.eid));
+      if (data === toFunctionSelector("token()")) return addressWord(local.tokenAddress);
+      if (data === toFunctionSelector("decimals()") || data === toFunctionSelector("sharedDecimals()")) return word(6n);
+      if (data === toFunctionSelector("decimalConversionRate()")) return word(1n);
+      if (data === toFunctionSelector("peers(uint32)")) return addressWord(remote.oappAddress);
+      if (["outboundNonce(address,uint32,bytes32)", "inboundNonce(address,uint32,bytes32)", "lazyInboundNonce(address,uint32,bytes32)"]
+        .some(signature => data === toFunctionSelector(signature))) return word(0n);
+      throw new Error(`Unexpected OFT state read ${data}`);
+    }));
+    return { ...f, source };
+  }
+
+  it.each([false, true])("retains authenticated zero OFT pending proof for liability=%s without inventing free float", async liability => {
+    const f = oftFixture(liability);
+    const result = await f.run();
+    expect(result).toMatchObject({ status: "accepted", attribution: {
+      unattributedSupplyUsd: 0,
+      inFlight: [expect.objectContaining({
+        id: liability ? "in-flight:liability" : "in-flight:bridge",
+        amount: "0", anchor: "100", anchorHash: HASH,
+        layerZeroOftPendingProof: expect.objectContaining({
+          pathways: [expect.objectContaining({ sentNonce: "0", pendingCount: 0 })],
+        }),
+      })],
+    } });
+  });
+
+  it.each([false, true])("fails closed on unauthenticated OFT runtime for liability=%s", async liability => {
+    const f = oftFixture(liability);
+    vi.mocked(evmRpc.fetchEvmRpcBatch).mockResolvedValue(["0x6001"]);
+    expect(await f.run()).toEqual({
+      status: "rejected", rejectionCode: "deployment-state-unavailable",
+      failedRouteId: liability ? "in-flight:liability:runtime-mismatch" : "bridge",
+    });
+  });
+
+  it.each([false, true])("surfaces CCIP finality rejection for liability=%s without assuming no pending messages", async liability => {
+    const f = pendingFixture(), [canonical, receipt] = f.plan.deployments;
+    const pool = f.plan.escrows[0]!.account;
+    const side = (row: typeof canonical, chainSelector: string, tokenPoolAddress: string) => ({
+      chainId: row!.chainId, chainSelector, tokenAddress: row!.address!, tokenPoolAddress,
+      tokenPoolRuntimeCodeSha256: sha256Hex("0x6000"), decimals: 6,
+    });
+    const source: CcipPendingRead = {
+      kind: "evm-ccip-pending", sourceId: "ccip", chainId: "ethereum", finality: "finalized", amountDecimals: 6,
+      lanes: [{ id: "eth-base", version: "1.6", source: side(canonical, "1", pool),
+        destination: side(receipt, "2", `0x${"4".repeat(40)}`), onRampAddress: `0x${"5".repeat(40)}`,
+        offRampAddress: `0x${"6".repeat(40)}`, onRampRuntimeCodeSha256: sha256Hex("0x6000"),
+        offRampRuntimeCodeSha256: sha256Hex("0x6000"), sourceStartBlock: 100 }],
+    };
+    if (liability) {
+      f.plan.accountingFamily = "independent-liability"; f.plan.escrows = []; f.plan.liabilityInFlightSource = source;
+    } else f.plan.escrows[0]!.inFlightSource = source;
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) => ({
+      number: number === "finalized" ? 99 : number, timestamp: CLOCK - 60, hash: HASH,
+    }));
+    expect(await f.run()).toEqual({ status: "rejected", rejectionCode: "deployment-state-unavailable",
+      failedRouteId: `${liability ? "in-flight:liability" : "bridge"}:pin-not-finalized` });
+  });
+
+  it("surfaces an unfinalized canonical messenger census without substituting escrow surplus", async () => {
+    const f = pendingFixture(), [canonical, receipt] = f.plan.deployments;
+    const address = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;
+    f.plan.escrows[0]!.inFlightSource = {
+      kind: "evm-l2-messenger-pending", protocol: "op-stack", bridgeFlavor: "sky",
+      sourceId: "messenger", chainId: "ethereum", l2ChainId: "base", finality: "finalized",
+      l1Token: canonical!.address!, l2Token: receipt!.address!, escrowAddress: f.plan.escrows[0]!.account,
+      l1Bridge: address(10), l2Bridge: address(11), l1Messenger: address(12), l2Messenger: address(13),
+      messagePasser: address(14), portal: address(15), l1StartBlock: 100, l2StartBlock: 100,
+      scanPageBlocks: [100, 100],
+      contracts: [
+        ...[10, 12, 15].map(n => ({ chainId: "ethereum", address: address(n), runtimeCodeSha256: sha256Hex("0x6000") })),
+        ...[11, 13, 14].map(n => ({ chainId: "base", address: address(n), runtimeCodeSha256: sha256Hex("0x6000") })),
+      ],
+      identityReads: [{ chainId: "ethereum", address: address(10), method: "eth_call", data: "0x12345678", expected: word(1n) }],
+    };
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) => ({
+      number: number === "finalized" ? 99 : number, timestamp: CLOCK - 60, hash: HASH,
+    }));
+    expect(await f.run()).toEqual({
+      status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: "bridge:pin-not-finalized",
+    });
   });
 
   it.each(["number", "hash"])("rejects pending generations whose escrow block %s changed", async failure => {

@@ -6,6 +6,8 @@ import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-fa
 import { reviewedScope, weightedQuorum, SCOPE_CLOCK, SCOPE_CONTROLLER } from "@shared/lib/__tests__/safety-score-v9-control-scope.test-support";
 import { effectiveAuthoritySignatureRequirement } from "@shared/lib/safety-score-v9/control-scope";
 import type { V9WeightedQuorum } from "@shared/types/safety-score-v9-control-scope";
+import { makeAccessGraph } from "@shared/lib/__tests__/safety-score-v9-access-lookthrough.test-support";
+import { evaluateV9AccessLookthrough } from "@shared/lib/safety-score-v9/access-lookthrough";
 import { controlCanCarryKnownStatus } from "../safety-score-v9/fact-set-control";
 import type { ControlOverlay } from "../safety-score-v9/extension-shared";
 import { MintAuthorityProfileSchema, BridgeRouteRiskProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
@@ -360,6 +362,27 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
     expect(material.state).toBe("bounded-unknown");
     expect(material.reasons).toContain("runtime-bridge-materiality-unavailable");
     expect(ambiguousOutcome(0.0002, false).state).toBe("bounded-unknown");
+  });
+
+  it("denies freeze lookthrough through an unestablished serial dependency instead of trusting a reviewed graph edge", () => {
+    const fixed = exactFixedInput();
+    const extension = makeV9Extension({ clockSec: fixed.clockSec });
+    const graph = makeAccessGraph();
+    graph.clockSec = fixed.clockSec;
+    graph.generationId = fixed.baseInputGenerationId;
+    const serial = graph.edges.find((edge) => edge.edgeKey === "receipt-bridge")!;
+    if (serial.basis.kind !== "serial-claim") throw new Error("Expected serial claim");
+    serial.basis.dependencyEdgeKey = "missing-parent-dependency";
+    extension.assets[0]!.accessReview!.freeze.claimGraph = graph;
+    const factSet = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+    const asset = factSet.assets[0]!;
+    const compiled = asset.accessReview.freeze.claimGraph!;
+    expect(compiled.edges.find((edge) => edge.edgeKey === serial.edgeKey)).toMatchObject({
+      weight: null, reachesHeldClaim: false,
+    });
+    expect(compiled.partitions.find((partition) => partition.partitionKey === "receipt")!.denominatorEstablished).toBe(false);
+    expect(serial).toMatchObject({ weight: 1, reachesHeldClaim: true });
+    expect(evaluateV9AccessLookthrough(compiled)).toMatchObject({ coverageState: "incomplete", unresolvedCoverageShare: null });
   });
 
   it("keeps access-only controls known without an unresolved identity gap", () => {
