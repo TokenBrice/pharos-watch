@@ -39493,6 +39493,40 @@
           "assertion": "All ten retained markets use exact verified zero-collateral bad-debt writeoff reducing supplier assets, not guaranteed recovery. Existing schema stores this, but per-kind proof cannot admit independently of limited aggregate nested-feed confidence in extension-oracle.ts."
         }
       ]
+    },
+    {
+      "id": "uw-euri-banking-circle-32041649b7e1715d",
+      "assetId": "euri-banking-circle",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:redemption:euri-banking-circle:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-05T00:18:49Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R53)",
+      "sources": [
+        {
+          "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-white-paper.html",
+          "observedAt": "2026-10-05T00:18:49Z",
+          "datumAsOf": "2024-07-16",
+          "location": "Part D.5, Right to Timely Redemption",
+          "excerpt": "Subject to completing customer due diligence checks EURI repayments must be completed within five business days, ensuring purchasers have access to their funds promptly.",
+          "assertion": "Publishes a conditional five-business-day repayment maximum. Config accepts integer elapsed settlementDelaySec, not Luxembourg business days; converting to 432000 seconds would be false. Calendar-aware modeling is required."
+        },
+        {
+          "url": "https://www.eurite.com/wp-content/uploads/2024/07/EUR-TCs-Final-clean.pdf",
+          "observedAt": "2026-10-05T00:18:49Z",
+          "datumAsOf": null,
+          "location": "Condition 1.2, Business Day definition, p.2",
+          "excerpt": "Business Day means a day (other than a Saturday and a Sunday) on which credit institutions are open for general business in Luxembourg.",
+          "assertion": "The five-day rule uses the Luxembourg banking calendar; condition 7.1 also requires completed KYC and delivery into the burn wallet. Preserve those prerequisites rather than promise an unconditional request-to-cash bound."
+        }
+      ]
     }
   ]
 }
