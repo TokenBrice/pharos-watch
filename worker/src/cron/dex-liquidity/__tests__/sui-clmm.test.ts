@@ -2,10 +2,11 @@ import { describe, expect, it, vi, afterEach } from "vitest";
 import fixtures from "./fixtures/sui-clmm-checkpoints.json";
 import inspections from "./fixtures/sui-clmm-inspections.json";
 import shadowInspections from "./fixtures/sui-clmm-shadow-inspections.json";
-import { DEX_MEASURED_FRESHNESS_MAX_SEC } from "@shared/types/measured-execution";
+import { DEX_MEASURED_FRESHNESS_MAX_SEC, type DexRequestBudget } from "@shared/types/measured-execution";
 import { isDexExecutionProfileAdmittedForScoring, getDexExecutionCapabilityRegistration } from "@shared/lib/p4-exit-route-capability-policy";
 import { decodeSuiClmmSnapshot, createSuiClmmRpc, suiObject, type SuiClmmCapture, type SuiRpc } from "../sui/state-reader";
 import { quoteSuiClmmExactIn } from "../sui/clmm-quote";
+import { createSuiTransactionCheckpointResolver } from "../sui/archival-checkpoints";
 import { decodeSuiClmmInspectResults } from "../sui/independent-quote";
 import { buildPoolIdentity } from "../pool-identity";
 import { normalizeProtocol } from "../pool-normalization";
@@ -18,7 +19,7 @@ const pinned = fixtures.fixtures.map((fixture) => {
   const nowSec = Math.floor(Number(fixture.capture.checkpoint.timestampMs) / 1000);
   return { fixture, capture, nowSec, snapshot: decodeSuiClmmSnapshot(capture, nowSec, { poolId: fixture.poolId }) };
 });
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
 
 describe("Sui CLMM actual pinned state and independent exact-in outputs", () => {
   it.each(pinned)("reproduces the full two-direction request grid at $fixture.poolId", ({ fixture, snapshot }) => {
@@ -243,5 +244,91 @@ describe("Sui actual shadow producer packets", () => {
     const rpc: SuiRpc = vi.fn();
     await expect(observeSuiClmmShadowPool({ ...producerInput, rpc, inputPriceUsd: 0 })).rejects.toThrow("sui-trusted-input-reference-unavailable");
     expect(rpc).not.toHaveBeenCalled();
+  });
+});
+
+describe("Sui resilient bounded provider transport", () => {
+  function oneRequestBudget(timeoutMs = 1_000): DexRequestBudget {
+    let remaining = 1;
+    return {
+      maxRequests: 1, deadlineMs: Date.now() + timeoutMs,
+      get remainingRequests() { return remaining; },
+      tryConsume(count = 1) {
+        if (count > remaining) return false;
+        remaining -= count;
+        return true;
+      },
+    };
+  }
+
+  it("consumes an HTTP failure without retrying outside the request or credit budget", async () => {
+    const response = new Response(JSON.stringify({ id: 1, error: { code: -32000, message: "provider unavailable" } }), { status: 503 });
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(response);
+    const onResponse = vi.fn();
+    const budget = oneRequestBudget();
+    const rpc = createSuiClmmRpc({ url: "https://example.invalid", signal: new AbortController().signal, budget, onResponse });
+    await expect(rpc("sui_getObject", [])).rejects.toThrow("sui-rpc-response-failed:sui_getObject");
+    expect(response.bodyUsed).toBe(true);
+    expect(onResponse).toHaveBeenCalledTimes(1);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(budget.remainingRequests).toBe(0);
+  });
+
+  it("records a received RPC response even when its oversized body is rejected and cancelled", async () => {
+    let cancelled = false;
+    const response = new Response(new ReadableStream<Uint8Array>({ cancel() { cancelled = true; } }), {
+      headers: { "content-length": String(2 * 1024 * 1024 + 1) },
+    });
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(response);
+    const onResponse = vi.fn();
+    const budget = oneRequestBudget();
+    const rpc = createSuiClmmRpc({ url: "https://example.invalid", signal: new AbortController().signal, budget, onResponse });
+    await expect(rpc("sui_multiGetObjects", [])).rejects.toThrow("sui-rpc-transport-failed:sui_multiGetObjects");
+    expect(cancelled).toBe(true);
+    expect(onResponse).toHaveBeenCalledTimes(1);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(budget.remainingRequests).toBe(0);
+  });
+
+  it("keeps the deadline active through an unfinished body and rejects overlapping RPC reads", async () => {
+    vi.useFakeTimers();
+    let cancelled = false;
+    const response = new Response(new ReadableStream<Uint8Array>({ cancel() { cancelled = true; } }));
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(response);
+    const rpc = createSuiClmmRpc({ url: "https://example.invalid", signal: new AbortController().signal, budget: oneRequestBudget(20) });
+    const pending = rpc("sui_getObject", []).catch((error: unknown) => error);
+    await expect(rpc("sui_getCheckpoint", [])).rejects.toThrow("sui-rpc-concurrent-request");
+    await vi.advanceTimersByTimeAsync(21);
+    await expect(pending).resolves.toMatchObject({ message: "sui-rpc-transport-failed:sui_getObject" });
+    expect(cancelled).toBe(true);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("parses actual archival checkpoint provenance and refuses a second unbudgeted request", async () => {
+    const archived = pinned[0].fixture.capture.transactions.find((transaction) => "source" in transaction && transaction.source === "sui-graphql-archive");
+    if (!archived || !("checkpointDigest" in archived) || typeof archived.checkpointDigest !== "string") throw new Error("fixture-archival-proof-missing");
+    const response = new Response(JSON.stringify({ data: { t0: {
+      digest: archived.digest, effects: { checkpoint: { sequenceNumber: archived.checkpoint, digest: archived.checkpointDigest } },
+    } } }));
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(response);
+    const resolver = createSuiTransactionCheckpointResolver({ signal: new AbortController().signal, budget: oneRequestBudget() });
+    await expect(resolver([archived.digest])).resolves.toEqual([{
+      digest: archived.digest, checkpoint: String(archived.checkpoint), checkpointDigest: archived.checkpointDigest, source: "sui-graphql-archive",
+    }]);
+    expect(response.bodyUsed).toBe(true);
+    await expect(resolver([archived.digest])).rejects.toThrow("sui-archive-budget-exhausted");
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancels an over-cap archival response instead of parsing partial provenance or retrying", async () => {
+    let cancelled = false;
+    const response = new Response(new ReadableStream<Uint8Array>({ cancel() { cancelled = true; } }), {
+      headers: { "content-length": String(256 * 1024 + 1) },
+    });
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(response);
+    const resolver = createSuiTransactionCheckpointResolver({ signal: new AbortController().signal, budget: oneRequestBudget() });
+    await expect(resolver([pinned[0].fixture.capture.transactions[0].digest])).rejects.toThrow("sui-archive-transport-failed");
+    expect(cancelled).toBe(true);
+    expect(fetcher).toHaveBeenCalledTimes(1);
   });
 });

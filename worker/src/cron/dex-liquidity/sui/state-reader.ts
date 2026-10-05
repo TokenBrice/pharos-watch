@@ -1,6 +1,7 @@
 import { isRecord } from "@shared/lib/type-guards";
 import { DEX_MEASURED_FRESHNESS_MAX_SEC, type DexRequestBudget } from "@shared/types/measured-execution";
-import { readDexApiJson } from "../direct-api-json";
+import { fetchTextWithRetry } from "../../../lib/fetch-retry";
+import { parseJson } from "../../../lib/json-parse";
 import { tickSqrtPrice } from "../solana/whirlpool-quote";
 import { SUI_CLMM_DEPLOYMENTS, suiCoinType, suiObjectId, type SuiClmmFamily } from "./identity";
 import type { SuiTransactionCheckpointResolver } from "./archival-checkpoints";
@@ -23,14 +24,20 @@ export function createSuiClmmRpc(input: {
     try {
       const headers = new Headers(input.headers);
       headers.set("content-type", "application/json");
-      const response = await fetch(input.url, { method: "POST", headers, signal: input.signal,
-        body: JSON.stringify({ jsonrpc: "2.0", id: ++id, method, params }) });
-      const parsed = await readDexApiJson<Record<string, unknown>>(response, "sui-clmm", 2 * 1024 * 1024);
-      input.onResponse?.();
-      if (!response.ok || !parsed.ok || !isRecord(parsed.data) || parsed.data.id !== id || parsed.data.error != null || !("result" in parsed.data)) {
+      // One budgeted attempt: transport retries must not bypass the shared
+      // request/credit limit. The shared reader owns timeout and body cleanup.
+      const fetched = await fetchTextWithRetry(input.url, { method: "POST", headers, signal: input.signal,
+        body: JSON.stringify({ jsonrpc: "2.0", id: ++id, method, params }) }, 0, {
+        timeoutMs: Math.max(1, Math.min(15_000, input.budget.deadlineMs - Date.now())),
+        maxResponseBytes: 2 * 1024 * 1024, returnFinalResponse: true,
+        onResponse: input.onResponse,
+      });
+      if (!fetched) throw new Error(`sui-rpc-transport-failed:${method}`);
+      const parsed = parseJson(fetched.body);
+      if (!fetched.response.ok || !parsed.ok || !isRecord(parsed.value) || parsed.value.id !== id || parsed.value.error != null || !("result" in parsed.value)) {
         throw new Error(`sui-rpc-response-failed:${method}`);
       }
-      return parsed.data.result;
+      return parsed.value.result;
     } catch (error) {
       if (error instanceof Error && error.message.startsWith("sui-")) throw error;
       throw new Error(`sui-rpc-transport-failed:${method}`);

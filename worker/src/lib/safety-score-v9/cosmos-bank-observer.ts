@@ -4,15 +4,19 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { rethrowIfAborted } from "../abort";
+import { fetchTextWithRetry } from "../fetch-retry";
+
+const COSMOS_BANK_REQUEST_TIMEOUT_MS = 10_000;
+const COSMOS_BANK_MAX_RESPONSE_BYTES = 128 * 1024;
 
 export interface CosmosBankPin { height: string; blockHash: string; observedAtSec: number }
 
 async function readJson(source: CosmosBankSupplyRead, path: string, height?: string, signal?: AbortSignal) {
-  const response = await fetch(new URL(path, source.restUrl), {
+  const result = await fetchTextWithRetry(new URL(path, source.restUrl).href, {
     headers: height === undefined ? undefined : { "x-cosmos-block-height": height }, signal,
-  });
-  const text = await response.text();
-  if (!response.ok || text.length > 128 * 1024) return null;
+  }, 0, { timeoutMs: COSMOS_BANK_REQUEST_TIMEOUT_MS, maxResponseBytes: COSMOS_BANK_MAX_RESPONSE_BYTES });
+  if (!result?.response.ok) return null;
+  const { response, body: text } = result;
   if (height !== undefined) {
     // grpc-gateway commonly prefixes the metadata; require at least one echo,
     // and reject conflicting echoes instead of trusting the request header.

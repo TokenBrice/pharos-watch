@@ -23,7 +23,7 @@ function network() {
     return response(path.includes("/balances/") ? { balance: { denom: "usdx", amount: "20000000" } } : { amount: { denom: "usdx", amount: "100000000" } });
   }));
 }
-afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("height-pinned Cosmos bank reads", () => {
   it("reads native supply and channel escrow at one finalized block and true block time", async () => {
@@ -81,6 +81,45 @@ describe("height-pinned Cosmos bank reads", () => {
     expect(await pinEconomicCosmosBank({ source, chainId: "ethereum", clockSec: CLOCK })).toBeNull();
     expect(CosmosBankSupplyReadSchema.safeParse({ ...source, restUrl: "https://kava.example/hidden?latest=true" }).success).toBe(false);
     expect(await observeEconomicCosmosBank({ source, chainId: "kava", pin, clockSec: CLOCK, account: "osmo1wrong" })).toBeNull();
+  });
+  it("enforces the streamed byte cap and cancels an oversized body without retrying", async () => {
+    const cancel = vi.fn();
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) { controller.enqueue(new TextEncoder().encode("é".repeat(65537))); },
+      cancel,
+    }, { highWaterMark: 0 });
+    const fetchMock = vi.fn().mockResolvedValue(new Response(stream));
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await pinEconomicCosmosBank({ source, chainId: "kava", clockSec: CLOCK })).toBeNull();
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+  it.each(["headers", "body"])("bounds stalled %s to the local request deadline without retrying", async stage => {
+    vi.useFakeTimers();
+    const cancel = vi.fn();
+    const fetchMock = vi.fn((_url: string, options: RequestInit) => stage === "body"
+      ? Promise.resolve(new Response(new ReadableStream({ cancel })))
+      : new Promise<Response>((_resolve, reject) => options.signal!.addEventListener("abort", () => reject(options.signal!.reason), { once: true })));
+    vi.stubGlobal("fetch", fetchMock);
+    const expectation = expect(pinEconomicCosmosBank({ source, chainId: "kava", clockSec: CLOCK })).resolves.toBeNull();
+    await vi.advanceTimersByTimeAsync(10_000);
+    await expectation;
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    if (stage === "body") expect(cancel).toHaveBeenCalledTimes(1);
+  });
+  it("propagates producer cancellation while consuming a body without retrying", async () => {
+    vi.useFakeTimers();
+    const cancel = vi.fn();
+    const fetchMock = vi.fn().mockResolvedValue(new Response(new ReadableStream({ cancel })));
+    vi.stubGlobal("fetch", fetchMock);
+    const controller = new AbortController();
+    const reason = new Error("producer cancelled");
+    const expectation = expect(pinEconomicCosmosBank({ source, chainId: "kava", clockSec: CLOCK, signal: controller.signal })).rejects.toBe(reason);
+    await vi.advanceTimersByTimeAsync(0);
+    controller.abort(reason);
+    await expectation;
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 
