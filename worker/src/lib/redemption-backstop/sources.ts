@@ -164,8 +164,34 @@ export async function buildRedemptionBackstopEntry(
     options.reserveSnapshotMetadata !== undefined
       ? options.reserveSnapshotMetadata
       : await getLatestSuccessfulReserveSnapshotMetadata(db, stablecoinId);
-  const liveMetadata =
+  const observedLiveMetadata =
     options.redemptionLiveMetadata ?? readRedemptionBackstopLiveMetadata(stablecoinId, reserveSnapshotMetadata, now);
+  const requiredOutputKeys = config.capacityModel.kind === "reserve-sync-metadata"
+    ? config.capacityModel.requiredOutputAssetKeys
+    : undefined;
+  const observedOutputKeys = observedLiveMetadata.outputAssetKeys ?? [];
+  const outputBound = !requiredOutputKeys || (
+    observedOutputKeys.length === requiredOutputKeys.length &&
+    requiredOutputKeys.every((key) => observedOutputKeys.includes(key))
+  );
+  const liveMetadata = outputBound ? observedLiveMetadata : {
+    ...observedLiveMetadata,
+    canUseCapacity: false,
+    canUseFee: false,
+    capacityReason: "route-output-identity-unobserved",
+    feeReason: "route-output-identity-unobserved",
+    immediateRedeemableUsd: null,
+    immediateRedeemableRatio: null,
+    settlementDelaySec: null,
+    dailyLimitUsd: null,
+    queueDepthUsd: null,
+    routeStatus: null,
+    routeStatusSource: null,
+    routeStatusReason: null,
+    routeStatusReviewedAt: null,
+    liveHolderEligibility: null,
+    v9OutputValuation: null,
+  };
   const capacity = await resolveRedemptionCapacity(db, stablecoinId, config.capacityModel, supplyUsd, now, {
     ...options,
     reserveSnapshotMetadata,

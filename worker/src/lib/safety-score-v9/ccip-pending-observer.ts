@@ -1,0 +1,473 @@
+import { z } from "zod";
+import { decodeAbiParameters, encodeAbiParameters, keccak256, parseAbiParameters, toFunctionSelector, toHex } from "viem/utils";
+import { CcipPendingCheckpointSchema, CcipPendingReadSchema, type CcipPendingCheckpoint, type CcipPendingRead, type EconomicSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { sha256Hex } from "@shared/lib/sha256";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { rethrowIfAborted, throwIfAborted } from "../abort";
+import type { ChainRpcConfig } from "../chain-registry";
+import { getCache, setCache } from "../db-cache";
+import { fetchEvmBlockHeader, fetchEvmRpcBatch, type EvmBlockHeader } from "../evm-rpc";
+import { fetchJsonWithRetry } from "../fetch-retry";
+
+// ABI authorities: CCIP 1.5 commit 5e7b2096586bc32c6e975fc13f4c411eb687f833
+// and CCIP 1.6 commit 2114b90f39c82c052e05af7c33d42c1ae98f4180, Internal.sol.
+// CCIP 2.0 MessageV1Codec/OnRamp/OffRamp: d0e9ff9e116e3fb60b61d00d41aae7e98886ffe6.
+const MESSAGE_15 = "(uint64 sourceChainSelector,address sender,address receiver,uint64 sequenceNumber,uint256 gasLimit,bool strict,uint64 nonce,address feeToken,uint256 feeTokenAmount,bytes data,(address token,uint256 amount)[] tokenAmounts,bytes[] sourceTokenData,bytes32 messageId)";
+const MESSAGE_16 = "((bytes32 messageId,uint64 sourceChainSelector,uint64 destChainSelector,uint64 sequenceNumber,uint64 nonce) header,address sender,bytes data,bytes receiver,bytes extraArgs,address feeToken,uint256 feeTokenAmount,uint256 feeValueJuels,(address sourcePoolAddress,bytes destTokenAddress,bytes extraData,uint256 amount,bytes destExecData)[] tokenAmounts)";
+const SEND_15 = keccak256(toHex("CCIPSendRequested((uint64,address,address,uint64,uint256,bool,uint64,address,uint256,bytes,(address,uint256)[],bytes[],bytes32))"));
+const SEND_16 = keccak256(toHex("CCIPMessageSent(uint64,uint64,((bytes32,uint64,uint64,uint64,uint64),address,bytes,bytes,bytes,address,uint256,uint256,(address,bytes,bytes,uint256,bytes)[]))"));
+const EXECUTION_15 = keccak256(toHex("ExecutionStateChanged(uint64,bytes32,uint8,bytes)"));
+const EXECUTION_16 = keccak256(toHex("ExecutionStateChanged(uint64,uint64,bytes32,bytes32,uint8,bytes,uint256)"));
+const SEND_20 = keccak256(toHex("CCIPMessageSent(uint64,address,bytes32,address,uint256,bytes,(address,uint32,uint32,uint256,bytes)[],bytes[])"));
+const EXECUTION_20 = keccak256(toHex("ExecutionStateChanged(uint64,uint64,bytes32,uint8,bytes)"));
+const WORD = /^0x[0-9a-f]{64}$/;
+const HEX = /^0x[0-9a-f]*$/;
+const PAGE_BLOCKS = 2000;
+const PAGES_PER_ATTEMPT = 8;
+const MAX_CHECKPOINT_BYTES = 128 * 1024;
+const DISCOVERY_LIMIT = 1;
+const API_BASE = "https://api.ccip.chain.link/v2";
+type Lane = CcipPendingRead["lanes"][number];
+type Message = CcipPendingCheckpoint["lanes"][number]["messages"][number];
+type Proof = NonNullable<EconomicSupplyObservation["ccipPendingProof"]>;
+const LogSchema = z.object({
+  address: z.string().regex(/^0x[0-9a-f]{40}$/), topics: z.array(z.string().regex(WORD)).max(4),
+  data: z.string().regex(HEX).max(32770).refine(value => value.length % 2 === 0).transform(value => value as `0x${string}`),
+  blockNumber: z.string().regex(/^0x[0-9a-f]+$/).max(18),
+  blockHash: z.string().regex(WORD), transactionHash: z.string().regex(WORD),
+  logIndex: z.string().regex(/^0x[0-9a-f]+$/).max(18), removed: z.literal(false),
+});
+type Log = z.infer<typeof LogSchema>;
+const ReceiptSchema = z.object({
+  transactionHash: z.string().regex(WORD), blockHash: z.string().regex(WORD),
+  blockNumber: z.string().regex(/^0x[0-9a-f]+$/).max(18),
+  status: z.literal("0x1"), logs: z.array(z.unknown()).max(1024),
+});
+const DiscoverySchema = z.object({ data: z.array(z.object({ messageId: z.string().regex(WORD) })).max(DISCOVERY_LIMIT) });
+const DiscoveryDetailSchema = z.object({
+  onramp: z.string().regex(/^0x[0-9a-f]{40}$/i).transform(value => value.toLowerCase()),
+  sendTransactionHash: z.string().regex(WORD),
+});
+const LogHeaderSchema = z.object({ number: z.string().regex(/^0x[0-9a-f]+$/), hash: z.string().regex(WORD) });
+const word = (value: string) => `0x${BigInt(value).toString(16).padStart(64, "0")}`;
+const addressWord = (address: string) => `0x${address.slice(2).padStart(64, "0")}`;
+const call = (signature: string, args: `0x${string}` = "0x") => toFunctionSelector(signature) + args.slice(2);
+function fail(reason: string): never { throw new Error(`ccip-pending:${reason}`); }
+function asLog(raw: unknown): Log {
+  const parsed = LogSchema.safeParse(raw);
+  if (!parsed.success) fail("log-invalid");
+  const row = parsed.data;
+  return row;
+}
+function decodeSend(log: Log, lane: Lane): { sequence: bigint; messageId: string; amount: bigint } {
+  if (log.address !== lane.onRampAddress) fail("send-address-mismatch");
+  let sequence: bigint, messageId: string, amount = 0n;
+  if (lane.version === "2.0.0") {
+    if (log.topics.length !== 4 || log.topics[0] !== SEND_20 ||
+      BigInt(log.topics[1]!) !== BigInt(lane.destination.chainSelector)) fail("send-lane-mismatch");
+    const [, , encoded] = decodeAbiParameters(parseAbiParameters("address,uint256,bytes,(address,uint32,uint32,uint256,bytes)[],bytes[]"), log.data);
+    const body = encoded.slice(2);
+    let offset = 0;
+    const take = (bytes: number) => {
+      if (offset + bytes * 2 > body.length) fail("message-codec-invalid");
+      const value = body.slice(offset, offset + bytes * 2);
+      offset += bytes * 2;
+      return value;
+    };
+    const variable = (lengthBytes: number) => take(Number.parseInt(take(lengthBytes), 16));
+    if (take(1) !== "01") fail("message-codec-version");
+    const sourceSelector = BigInt(`0x${take(8)}`), destSelector = BigInt(`0x${take(8)}`);
+    sequence = BigInt(`0x${take(8)}`);
+    take(44); // execution gas, callback gas, finality, verifier/executor commitment.
+    const onRamp = `0x${variable(1)}`, offRamp = `0x${variable(1)}`, sender = `0x${variable(1)}`;
+    const receiver = variable(1);
+    variable(2); // destination blob
+    const tokenTransfer = variable(2);
+    variable(2); // application data
+    messageId = keccak256(encoded);
+    if (offset !== body.length || sourceSelector !== BigInt(lane.source.chainSelector) ||
+      destSelector !== BigInt(lane.destination.chainSelector) || onRamp !== addressWord(lane.onRampAddress) ||
+      offRamp !== lane.offRampAddress || sender !== log.topics[2] || receiver.length !== 40 ||
+      messageId !== log.topics[3]) fail("message-codec-identity");
+    if (tokenTransfer.length > 0) {
+      let tokenOffset = 0;
+      const tokenTake = (bytes: number) => {
+        if (tokenOffset + bytes * 2 > tokenTransfer.length) fail("token-codec-invalid");
+        const value = tokenTransfer.slice(tokenOffset, tokenOffset + bytes * 2);
+        tokenOffset += bytes * 2;
+        return value;
+      };
+      const tokenVariable = (lengthBytes: number) => tokenTake(Number.parseInt(tokenTake(lengthBytes), 16));
+      if (tokenTake(1) !== "01") fail("token-codec-version");
+      const tokenAmount = BigInt(`0x${tokenTake(32)}`);
+      const sourcePool = `0x${tokenVariable(1)}`, sourceToken = `0x${tokenVariable(1)}`;
+      const destToken = `0x${tokenVariable(1)}`, tokenReceiver = tokenVariable(1);
+      tokenVariable(2);
+      if (tokenOffset !== tokenTransfer.length || tokenReceiver.length !== 40) fail("token-codec-invalid");
+      if (sourcePool === addressWord(lane.source.tokenPoolAddress)) {
+        if (sourceToken !== addressWord(lane.source.tokenAddress) || destToken !== lane.destination.tokenAddress) fail("token-mapping-mismatch");
+        amount = tokenAmount; // Actual amount owed after any source-pool fee.
+      }
+    }
+  } else if (lane.version === "1.6") {
+    if (log.topics.length !== 3 || log.topics[0] !== SEND_16 || BigInt(log.topics[1]!) !== BigInt(lane.destination.chainSelector)) fail("send-lane-mismatch");
+    const [message] = decodeAbiParameters(parseAbiParameters(MESSAGE_16), log.data);
+    sequence = message.header.sequenceNumber; messageId = message.header.messageId;
+    if (message.header.sourceChainSelector !== BigInt(lane.source.chainSelector) ||
+      message.header.destChainSelector !== BigInt(lane.destination.chainSelector) || sequence !== BigInt(log.topics[2]!)) fail("send-lane-mismatch");
+    for (const token of message.tokenAmounts) {
+      if (token.sourcePoolAddress.toLowerCase() !== lane.source.tokenPoolAddress) continue;
+      if (token.destTokenAddress.toLowerCase() !== addressWord(lane.destination.tokenAddress)) fail("token-mapping-mismatch");
+      amount += token.amount;
+    }
+  } else {
+    if (log.topics.length !== 1 || log.topics[0] !== SEND_15) fail("send-lane-mismatch");
+    const [message] = decodeAbiParameters(parseAbiParameters(MESSAGE_15), log.data);
+    sequence = message.sequenceNumber; messageId = message.messageId;
+    if (message.sourceChainSelector !== BigInt(lane.source.chainSelector) || message.tokenAmounts.length !== message.sourceTokenData.length) fail("send-lane-mismatch");
+    for (let i = 0; i < message.tokenAmounts.length; i++) {
+      const token = message.tokenAmounts[i]!;
+      if (token.token.toLowerCase() !== lane.source.tokenAddress) continue;
+      const [data] = decodeAbiParameters(parseAbiParameters("(bytes sourcePoolAddress,bytes destTokenAddress,bytes extraData,uint32 destGasAmount)"), message.sourceTokenData[i]!);
+      if (data.sourcePoolAddress.toLowerCase() !== addressWord(lane.source.tokenPoolAddress)) continue;
+      if (data.destTokenAddress.toLowerCase() !== addressWord(lane.destination.tokenAddress)) fail("token-mapping-mismatch");
+      amount += token.amount;
+    }
+  }
+  if (sequence === 0n || !WORD.test(messageId) || messageId === word("0")) fail("send-invalid");
+  return { sequence, messageId, amount };
+}
+function decodeExecution(log: Log, lane: Lane): { sequence: string; messageId: string; state: number } {
+  if (log.address !== lane.offRampAddress) fail("execution-address-mismatch");
+  if (lane.version === "2.0.0") {
+    if (log.topics.length !== 4 || log.topics[0] !== EXECUTION_20 ||
+      BigInt(log.topics[1]!) !== BigInt(lane.source.chainSelector)) fail("execution-lane-mismatch");
+    const [state] = decodeAbiParameters(parseAbiParameters("uint8,bytes"), log.data);
+    if (state !== 2 && state !== 3) fail("execution-state-invalid");
+    return { sequence: BigInt(log.topics[2]!).toString(), messageId: log.topics[3]!, state };
+  }
+  if (lane.version === "1.6") {
+    if (log.topics.length !== 4 || log.topics[0] !== EXECUTION_16 || BigInt(log.topics[1]!) !== BigInt(lane.source.chainSelector)) fail("execution-lane-mismatch");
+    const [, state] = decodeAbiParameters(parseAbiParameters("bytes32,uint8,bytes,uint256"), log.data);
+    if (state !== 2 && state !== 3) fail("execution-state-invalid");
+    return { sequence: BigInt(log.topics[2]!).toString(), messageId: log.topics[3]!, state };
+  }
+  if (log.topics.length !== 3 || log.topics[0] !== EXECUTION_15) fail("execution-lane-mismatch");
+  const [state] = decodeAbiParameters(parseAbiParameters("uint8,bytes"), log.data);
+  if (state !== 2 && state !== 3) fail("execution-state-invalid");
+  return { sequence: BigInt(log.topics[1]!).toString(), messageId: log.topics[2]!, state };
+}
+
+/** Discovery is deliberately not a census. Consecutive OnRamp logs complete
+ * omissions; finalized OffRamp state proves absence of SUCCESS (including a
+ * historical attempt preceding the first checkpoint). SUCCESS is terminal in
+ * the reviewed runtimes. FAILURE is still owed, never discarded. */
+export async function observeCcipPending(input: {
+  source: CcipPendingRead; headers: ReadonlyMap<string, EvmBlockHeader>; clockSec: number;
+  chainRpcs: Map<string, ChainRpcConfig>; signal?: AbortSignal; db?: D1Database;
+  checkpoint?: CcipPendingCheckpoint;
+}): Promise<
+  | { status: "accepted"; amount: string; proof: Proof; responseSha256: string; checkpoint: CcipPendingCheckpoint }
+  | { status: "rejected"; reason: string; checkpoint?: CcipPendingCheckpoint }
+> {
+  const options = { chainRpcs: input.chainRpcs, signal: input.signal, excludeSupplementalRpc: true, maxRetries: 0 };
+  let checkpoint: CcipPendingCheckpoint | undefined;
+  try {
+    if (!CcipPendingReadSchema.safeParse(input.source).success) fail("source-invalid");
+    const sourceDigest = sha256Hex(stableJsonStringifyV1(input.source));
+    const cacheKey = `safety-score-v9:ccip-pending:v1:${sourceDigest}`;
+    const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
+    const chains = [...new Set(input.source.lanes.flatMap(lane => [lane.source.chainId, lane.destination.chainId]))];
+    for (const chain of chains) {
+      const pin = input.headers.get(chain);
+      if (!pin || !Number.isSafeInteger(input.clockSec) || pin.timestamp > input.clockSec || input.clockSec - pin.timestamp > policy.observationMaxAgeSec) fail("pin-stale-or-future");
+      const finalized = await fetchEvmBlockHeader(chain, "finalized", options);
+      const canonical = await fetchEvmBlockHeader(chain, pin.number, options);
+      if (!finalized || finalized.number < pin.number || !canonical || canonical.hash !== pin.hash || canonical.timestamp !== pin.timestamp) fail("pin-not-finalized");
+    }
+    if (Math.max(...chains.map(chain => input.headers.get(chain)!.timestamp)) - Math.min(...chains.map(chain => input.headers.get(chain)!.timestamp)) > policy.observationMaxSkewSec) fail("pin-skew");
+    const cached = input.db && !input.checkpoint ? await getCache(input.db, cacheKey, input.signal) : null;
+    if ((cached && cached.value.length > MAX_CHECKPOINT_BYTES) ||
+      (input.checkpoint && stableJsonStringifyV1(input.checkpoint).length > MAX_CHECKPOINT_BYTES)) fail("checkpoint-capacity");
+    const decoded: unknown = input.checkpoint ?? (cached ? JSON.parse(cached.value) : null);
+    if (decoded !== null) {
+      const parsed = CcipPendingCheckpointSchema.safeParse(decoded);
+      if (!parsed.success || parsed.data.sourceDigest !== sourceDigest || parsed.data.lanes.length > input.source.lanes.length || parsed.data.lanes.some((lane, i) => lane.id !== input.source.lanes[i]!.id)) fail("checkpoint-invalid");
+      checkpoint = parsed.data;
+    } else {
+      checkpoint = { schemaVersion: 1, sourceDigest, lanes: [] };
+    }
+    const rpc = async (chain: string, requests: Parameters<typeof fetchEvmRpcBatch>[1]) => {
+      const result = await fetchEvmRpcBatch(chain, requests, options);
+      if (!result || result.length !== requests.length || result.some(value => value === undefined || value === null)) fail("rpc-unavailable");
+      return result;
+    };
+    const state = async (lane: Lane, messages: readonly Pick<Message, "sequence" | "messageId">[]) => {
+      const pin = input.headers.get(lane.destination.chainId)!;
+      const values: number[] = [];
+      for (let from = 0; from < messages.length; from += 32) {
+        const rows = messages.slice(from, from + 32);
+        const result = await rpc(lane.destination.chainId, rows.map(message => ({ method: "eth_call", params: [{ to: lane.offRampAddress,
+          data: lane.version === "2.0.0" ? call("getExecutionState(bytes32)", encodeAbiParameters(parseAbiParameters("bytes32"), [message.messageId as `0x${string}`]))
+            : lane.version === "1.6" ? call("getExecutionState(uint64,uint64)", encodeAbiParameters(parseAbiParameters("uint64,uint64"), [BigInt(lane.source.chainSelector), BigInt(message.sequence)])) : call("getExecutionState(uint64)", encodeAbiParameters(parseAbiParameters("uint64"), [BigInt(message.sequence)])),
+        }, { blockHash: pin.hash, requireCanonical: true }] })));
+        for (const value of result) {
+          if (typeof value !== "string" || !WORD.test(value) || ![0n, 2n, 3n].includes(BigInt(value))) fail("execution-state-invalid");
+          values.push(Number(BigInt(value)));
+        }
+      }
+      return values;
+    };
+    let discoveryDigest = sha256Hex("ccip-indexer-discovery-v2"), pages = 0;
+    const proofs: Proof["lanes"] = [];
+    for (let i = 0; i < input.source.lanes.length; i++) {
+      const lane = input.source.lanes[i]!, sourcePin = input.headers.get(lane.source.chainId)!, destPin = input.headers.get(lane.destination.chainId)!;
+      if (sourcePin.number < lane.sourceStartBlock) fail("pin-before-deployment");
+      for (const [side, ramp, rampHash] of [[lane.source, lane.onRampAddress, lane.onRampRuntimeCodeSha256], [lane.destination, lane.offRampAddress, lane.offRampRuntimeCodeSha256]] as const) {
+        const pin = input.headers.get(side.chainId)!, block = { blockHash: pin.hash, requireCanonical: true };
+        const code = await rpc(side.chainId, [ramp, side.tokenPoolAddress].map(address => ({ method: "eth_getCode", params: [address, block] })));
+        if (code.some((value, index) => typeof value !== "string" || value === "0x" || !HEX.test(value) || sha256Hex(value) !== (index === 0 ? rampHash : side.tokenPoolRuntimeCodeSha256))) fail("runtime-mismatch");
+        const remote = side === lane.source ? lane.destination : lane.source;
+        const args = encodeAbiParameters(parseAbiParameters("uint64"), [BigInt(remote.chainSelector)]);
+        let peerBlock = block;
+        if (side.peerBindingPin) {
+          const binding = await fetchEvmBlockHeader(side.chainId, side.peerBindingPin.number, options);
+          if (!binding || binding.number > pin.number || binding.timestamp > pin.timestamp ||
+            binding.hash !== side.peerBindingPin.hash) fail("peer-binding-pin-invalid");
+          peerBlock = { blockHash: binding.hash, requireCanonical: true };
+          const [historicalCode] = await rpc(side.chainId, [{ method: "eth_getCode", params: [side.tokenPoolAddress, peerBlock] }]);
+          if (typeof historicalCode !== "string" || sha256Hex(historicalCode) !== side.tokenPoolRuntimeCodeSha256) fail("peer-binding-runtime-mismatch");
+        }
+        const token = await rpc(side.chainId, [
+          { method: "eth_call", params: [{ to: side.tokenPoolAddress, data: call("getToken()") }, block] },
+          { method: "eth_call", params: [{ to: side.tokenAddress, data: call("decimals()") }, block] },
+          { method: "eth_call", params: [{ to: side.tokenPoolAddress, data: call("getRemoteToken(uint64)", args) }, peerBlock] },
+          { method: "eth_call", params: [{ to: side.tokenPoolAddress, data: call("getRemotePools(uint64)", args) }, peerBlock] },
+        ]);
+        if (token[0] !== addressWord(side.tokenAddress) || token[1] !== word(String(side.decimals)) ||
+          typeof token[2] !== "string" || typeof token[3] !== "string") fail("pool-token-mismatch");
+        const [remoteToken] = decodeAbiParameters(parseAbiParameters("bytes"), token[2] as `0x${string}`);
+        const [remotePools] = decodeAbiParameters(parseAbiParameters("bytes[]"), token[3] as `0x${string}`);
+        if (remoteToken.toLowerCase() !== addressWord(remote.tokenAddress) || !remotePools.some(pool => pool.toLowerCase() === addressWord(remote.tokenPoolAddress))) fail("pool-peer-mismatch");
+      }
+      const sourceConfig = await rpc(lane.source.chainId, [{ method: "eth_call", params: [{ to: lane.onRampAddress, data: call("getStaticConfig()") }, { blockHash: sourcePin.hash, requireCanonical: true }] }]);
+      if (typeof sourceConfig[0] !== "string") fail("lane-identity-mismatch");
+      if (lane.version === "2.0.0") {
+        const [row] = decodeAbiParameters(parseAbiParameters("(uint64 chainSelector,address rmnRemote,uint32 maxUSDCentsPerMessage,address tokenAdminRegistry)"), sourceConfig[0] as `0x${string}`);
+        if (row.chainSelector !== BigInt(lane.source.chainSelector)) fail("lane-identity-mismatch");
+      } else if (lane.version === "1.6") {
+        const [row] = decodeAbiParameters(parseAbiParameters("(uint64 chainSelector,address rmnRemote,address nonceManager,address tokenAdminRegistry)"), sourceConfig[0] as `0x${string}`);
+        if (row.chainSelector !== BigInt(lane.source.chainSelector)) fail("lane-identity-mismatch");
+      } else {
+        const [row] = decodeAbiParameters(parseAbiParameters("(address linkToken,uint64 chainSelector,uint64 destChainSelector,uint64 defaultTxGasLimit,uint96 maxNopFeesJuels,address prevOnRamp,address rmnProxy,address tokenAdminRegistry)"), sourceConfig[0] as `0x${string}`);
+        if (row.chainSelector !== BigInt(lane.source.chainSelector) || row.destChainSelector !== BigInt(lane.destination.chainSelector)) fail("lane-identity-mismatch");
+      }
+      // OffRamp state is keyed by lane sequence, not token: authenticate the
+      // OnRamp binding before admitting even an untouched zero-state message.
+      const destinationBlock = { blockHash: destPin.hash, requireCanonical: true };
+      const config = await rpc(lane.destination.chainId, [{ method: "eth_call", params: [{ to: lane.offRampAddress, data: lane.version !== "1.5"
+        ? call("getSourceChainConfig(uint64)", encodeAbiParameters(parseAbiParameters("uint64"), [BigInt(lane.source.chainSelector)])) : call("getStaticConfig()") }, destinationBlock] }]);
+      if (typeof config[0] !== "string" || !HEX.test(config[0])) fail("lane-identity-mismatch");
+      if (lane.version === "2.0.0") {
+        const [row] = decodeAbiParameters(parseAbiParameters("(address router,bool isEnabled,bytes[] onRamps,address[] defaultCCVs,address[] laneMandatedCCVs)"), config[0] as `0x${string}`);
+        if (!row.onRamps.some(onRamp => onRamp.toLowerCase() === addressWord(lane.onRampAddress))) fail("lane-identity-mismatch");
+        const [staticConfig] = await rpc(lane.destination.chainId, [{ method: "eth_call", params: [{ to: lane.offRampAddress, data: call("getStaticConfig()") }, destinationBlock] }]);
+        if (typeof staticConfig !== "string") fail("lane-identity-mismatch");
+        const [identity] = decodeAbiParameters(parseAbiParameters("(uint64 localChainSelector,uint16 gasForCallExactCheck,address rmnRemote,address tokenAdminRegistry,uint32 maxGasBufferToUpdateState)"), staticConfig as `0x${string}`);
+        if (identity.localChainSelector !== BigInt(lane.destination.chainSelector)) fail("lane-identity-mismatch");
+      } else if (lane.version === "1.6") {
+        const [row] = decodeAbiParameters(parseAbiParameters("(address router,bool isEnabled,uint64 minSeqNr,bool isRMNVerificationDisabled,bytes onRamp)"), config[0] as `0x${string}`);
+        if (row.onRamp.toLowerCase() !== addressWord(lane.onRampAddress)) fail("lane-identity-mismatch");
+      } else {
+        const [row] = decodeAbiParameters(parseAbiParameters("(address commitStore,uint64 chainSelector,uint64 sourceChainSelector,address onRamp,address prevOffRamp,address rmnProxy,address tokenAdminRegistry)"), config[0] as `0x${string}`);
+        if (row.chainSelector !== BigInt(lane.destination.chainSelector) || row.sourceChainSelector !== BigInt(lane.source.chainSelector) || row.onRamp.toLowerCase() !== lane.onRampAddress) fail("lane-identity-mismatch");
+      }
+      const nextSequenceCall = lane.version === "2.0.0" ? call("getExpectedNextMessageNumber(uint64)", encodeAbiParameters(parseAbiParameters("uint64"), [BigInt(lane.destination.chainSelector)]))
+        : lane.version === "1.6" ? call("getExpectedNextSequenceNumber(uint64)", encodeAbiParameters(parseAbiParameters("uint64"), [BigInt(lane.destination.chainSelector)])) : call("getExpectedNextSequenceNumber()");
+      if (!checkpoint.lanes[i]) {
+        const previous = await fetchEvmBlockHeader(lane.source.chainId, lane.sourceStartBlock - 1, options);
+        if (!previous) fail("history-unavailable");
+        const block = { blockHash: previous.hash, requireCanonical: true };
+        const code = await rpc(lane.source.chainId, [lane.onRampAddress, lane.source.tokenPoolAddress].map(address => ({ method: "eth_getCode", params: [address, block] })));
+        if (code[0] !== "0x" && code[1] !== "0x") fail("history-start-unproved");
+        let initialSequence = "1";
+        if (code[0] !== "0x") {
+          const next = await rpc(lane.source.chainId, [{ method: "eth_call", params: [{ to: lane.onRampAddress, data: nextSequenceCall }, block] }]);
+          if (typeof next[0] !== "string" || !WORD.test(next[0]) || BigInt(next[0]) < 1n || BigInt(next[0]) >= 2n ** 64n) fail("send-census-mismatch");
+          initialSequence = BigInt(next[0]).toString();
+        }
+        checkpoint.lanes.push({ id: lane.id, initialSequence, lastSequence: (BigInt(initialSequence) - 1n).toString(), messages: [],
+          sent: { nextBlock: lane.sourceStartBlock, anchor: null, anchorHash: null, digest: sha256Hex("ccip-send-history-v1") },
+          // A pinned exhaustive state read, not a negative indexer/log claim,
+          // supplies the initial destination baseline. Later logs scan deltas.
+          executed: { nextBlock: destPin.number + 1, anchor: destPin.number, anchorHash: destPin.hash, digest: sha256Hex(stableJsonStringifyV1(destPin)) },
+        });
+      }
+      const cp = checkpoint.lanes[i]!;
+      if (BigInt(cp.initialSequence) < 1n || BigInt(cp.lastSequence) < BigInt(cp.initialSequence) - 1n ||
+        new Set(cp.messages.map(message => message.sequence)).size !== cp.messages.length ||
+        new Set(cp.messages.map(message => message.messageId)).size !== cp.messages.length ||
+        cp.messages.some(message => BigInt(message.sequence) < BigInt(cp.initialSequence) ||
+          BigInt(message.sequence) > BigInt(cp.lastSequence) || message.sourceBlock < lane.sourceStartBlock ||
+          message.sourceBlock >= cp.sent.nextBlock)) fail("checkpoint-invalid");
+      for (const [cursor, side, pin] of [[cp.sent, lane.source, sourcePin], [cp.executed, lane.destination, destPin]] as const) {
+        if (cursor.nextBlock > pin.number + 1 || (cursor.anchor === null) !== (cursor.anchorHash === null) ||
+          (cursor.anchor === null ? cursor !== cp.sent || cursor.nextBlock !== lane.sourceStartBlock : cursor.nextBlock !== cursor.anchor + 1) || cp.sent.nextBlock < lane.sourceStartBlock) fail("history-gap");
+        if (cursor.anchor !== null) {
+          const anchor = await fetchEvmBlockHeader(side.chainId, cursor.anchor, options);
+          if (!anchor || anchor.hash !== cursor.anchorHash) fail("checkpoint-reorg");
+        }
+      }
+      const api = await fetchJsonWithRetry<unknown>(`${API_BASE}/messages?sourceChainSelector=${lane.source.chainSelector}&destChainSelector=${lane.destination.chainSelector}&sourceTokenAddress=${lane.source.tokenAddress}&limit=${DISCOVERY_LIMIT}`, { signal: input.signal }, 0, { maxResponseBytes: 128 * 1024, timeoutMs: 10000 });
+      const discovery = DiscoverySchema.safeParse(api?.body);
+      if (!discovery.success) fail("indexer-unavailable");
+      discoveryDigest = sha256Hex(stableJsonStringifyV1({ previous: discoveryDigest, lane: lane.id, discovery: discovery.data }));
+      for (const discovered of discovery.data.data) {
+        const detail = await fetchJsonWithRetry<unknown>(`${API_BASE}/messages/${discovered.messageId}`, { signal: input.signal }, 0, { maxResponseBytes: 64 * 1024, timeoutMs: 10000 });
+        const identity = DiscoveryDetailSchema.safeParse(detail?.body);
+        if (!identity.success) fail("indexer-invalid");
+        if (identity.data.onramp !== lane.onRampAddress) continue; // Another history, never this lane's evidence.
+        const tx = identity.data.sendTransactionHash;
+        const [receipt] = await rpc(lane.source.chainId, [{ method: "eth_getTransactionReceipt", params: [tx] }]);
+        const parsed = ReceiptSchema.safeParse(receipt);
+        if (!parsed.success || parsed.data.transactionHash !== tx) fail("indexer-send-unproved");
+        const row = parsed.data, height = Number(BigInt(row.blockNumber));
+        const found = row.logs.some(raw => {
+          if (!raw || typeof raw !== "object" || !("address" in raw) || typeof raw.address !== "string" || raw.address.toLowerCase() !== lane.onRampAddress) return false;
+          const log = asLog(raw);
+          if (log.topics[0] !== (lane.version === "2.0.0" ? SEND_20 : lane.version === "1.6" ? SEND_16 : SEND_15)) return false;
+          const message = decodeSend(log, lane);
+          return log.transactionHash === tx && log.blockNumber === row.blockNumber && log.blockHash === row.blockHash && message.messageId === discovered.messageId && message.amount > 0n;
+        });
+        if (!found) fail("indexer-send-unproved");
+        if (height <= sourcePin.number) {
+          const header = await fetchEvmBlockHeader(lane.source.chainId, height, options);
+          if (!header || header.hash !== row.blockHash) fail("indexer-send-unproved");
+        }
+      }
+      const scan = async (sent: boolean) => {
+        const cursor = sent ? cp.sent : cp.executed, side = sent ? lane.source : lane.destination, pin = sent ? sourcePin : destPin;
+        while (cursor.nextBlock <= pin.number && pages < PAGES_PER_ATTEMPT) {
+          throwIfAborted(input.signal);
+          const from = cursor.nextBlock, end = Math.min(pin.number, from + PAGE_BLOCKS - 1);
+          const endHeader = await fetchEvmBlockHeader(side.chainId, end, options);
+          if (!endHeader) fail("history-unavailable");
+          const topics = sent ? lane.version !== "1.5" ? [lane.version === "2.0.0" ? SEND_20 : SEND_16, word(lane.destination.chainSelector)] : [SEND_15]
+            : lane.version !== "1.5" ? [lane.version === "2.0.0" ? EXECUTION_20 : EXECUTION_16, word(lane.source.chainSelector)] : [EXECUTION_15];
+          const [raw] = await rpc(side.chainId, [{ method: "eth_getLogs", params: [{ address: sent ? lane.onRampAddress : lane.offRampAddress, topics,
+            fromBlock: `0x${from.toString(16)}`, toBlock: `0x${end.toString(16)}` }] }]);
+          if (!Array.isArray(raw) || raw.length > 2048) fail("history-capacity");
+          const logs = raw.map(asLog);
+          const blockHashes = new Map<string, string>();
+          for (const log of logs) {
+            const previous = blockHashes.get(log.blockNumber);
+            if (previous !== undefined && previous !== log.blockHash) fail("event-anchor-mismatch");
+            blockHashes.set(log.blockNumber, log.blockHash);
+          }
+          const blocks = [...blockHashes];
+          for (let offset = 0; offset < blocks.length; offset += 32) {
+            const chunk = blocks.slice(offset, offset + 32);
+            const headers = await rpc(side.chainId, chunk.map(([number]) => ({ method: "eth_getBlockByNumber", params: [number, false] })));
+            if (headers.some((raw, j) => {
+              const parsed = LogHeaderSchema.safeParse(raw);
+              return !parsed.success || BigInt(parsed.data.number) !== BigInt(chunk[j]![0]) || parsed.data.hash !== chunk[j]![1];
+            })) fail("event-anchor-mismatch");
+          }
+          let previousPosition = -1;
+          const additions: Message[] = [];
+          for (const log of logs) {
+            const height = Number(BigInt(log.blockNumber)), index = Number(BigInt(log.logIndex)), position = height * 1000000 + index;
+            if (!Number.isSafeInteger(position) || height < from || height > end || index >= 1000000 || position <= previousPosition) fail("history-gap");
+            previousPosition = position;
+            if (sent) {
+              const message = decodeSend(log, lane);
+              if (message.sequence !== BigInt(cp.lastSequence) + 1n) fail("sequence-gap");
+              cp.lastSequence = message.sequence.toString();
+              if (message.amount > 0n) additions.push({ sequence: message.sequence.toString(), messageId: message.messageId, amount: message.amount.toString(), transactionHash: log.transactionHash,
+                sourceBlock: height, sourceBlockHash: log.blockHash, executionState: 0 });
+            } else {
+              const event = decodeExecution(log, lane), message = cp.messages.find(message => message.sequence === event.sequence);
+              if (message && message.messageId !== event.messageId) fail("execution-message-mismatch");
+              // Only finalized state, below, removes a liability; logs alone do not.
+            }
+          }
+          const states = await state(lane, additions);
+          additions.forEach((message, j) => { if (states[j] !== 2) cp.messages.push({ ...message, executionState: states[j] as 0 | 3 }); });
+          if (cp.messages.length > 512) fail("checkpoint-capacity");
+          const rechecked = await fetchEvmBlockHeader(side.chainId, end, options);
+          if (!rechecked || rechecked.hash !== endHeader.hash) fail("history-reorg");
+          cursor.digest = sha256Hex(stableJsonStringifyV1({ previous: cursor.digest, from, end, endHeader, logs: raw }));
+          cursor.nextBlock = end + 1; cursor.anchor = end; cursor.anchorHash = endHeader.hash; pages++;
+          if (input.db) {
+            const saved = stableJsonStringifyV1(checkpoint);
+            if (saved.length > MAX_CHECKPOINT_BYTES) fail("checkpoint-capacity");
+            await setCache(input.db, cacheKey, saved, input.signal);
+          }
+        }
+      };
+      await scan(true);
+      await scan(false);
+      const states = await state(lane, cp.messages);
+      cp.messages = cp.messages.filter((message, j) => {
+        if (message.executionState === 3 && states[j] === 0) fail("execution-state-regressed");
+        if (states[j] === 2) return false;
+        message.executionState = states[j] as 0 | 3;
+        return true;
+      });
+      if (cp.sent.nextBlock === sourcePin.number + 1) {
+        const [next] = await rpc(lane.source.chainId, [{ method: "eth_call", params: [{ to: lane.onRampAddress, data: nextSequenceCall }, { blockHash: sourcePin.hash, requireCanonical: true }] }]);
+        if (typeof next !== "string" || !WORD.test(next) || BigInt(next) !== BigInt(cp.lastSequence) + 1n) fail("send-census-mismatch");
+      }
+      let amount = cp.messages.reduce((sum, message) => sum + BigInt(message.amount), 0n);
+      const decimalDifference = input.source.amountDecimals - lane.source.decimals;
+      if (decimalDifference >= 0) amount *= 10n ** BigInt(decimalDifference);
+      else {
+        const divisor = 10n ** BigInt(-decimalDifference);
+        if (amount % divisor !== 0n) fail("amount-precision-loss");
+        amount /= divisor;
+      }
+      proofs.push({ id: lane.id, sourcePoolAddress: lane.source.tokenPoolAddress, destinationPoolAddress: lane.destination.tokenPoolAddress,
+        sourceChainSelector: lane.source.chainSelector, destinationChainSelector: lane.destination.chainSelector,
+        initialSequence: cp.initialSequence, lastSequence: cp.lastSequence, pendingCount: cp.messages.length,
+        failedCount: cp.messages.filter(message => message.executionState === 3).length, amount: amount.toString() });
+      if (pages === PAGES_PER_ATTEMPT && (cp.sent.nextBlock <= sourcePin.number || cp.executed.nextBlock <= destPin.number)) break;
+    }
+    const serialized = stableJsonStringifyV1(checkpoint);
+    if (serialized.length > MAX_CHECKPOINT_BYTES) fail("checkpoint-capacity");
+    // Pins are rechecked before even an incomplete checkpoint is persisted.
+    for (const chain of chains) {
+      const pin = input.headers.get(chain)!, rechecked = await fetchEvmBlockHeader(chain, pin.number, options);
+      if (!rechecked || rechecked.hash !== pin.hash || rechecked.timestamp !== pin.timestamp) fail("pin-reorg");
+    }
+    if (input.db) await setCache(input.db, cacheKey, serialized, input.signal);
+    if (checkpoint.lanes.length !== input.source.lanes.length || checkpoint.lanes.some((cp, i) => cp.sent.nextBlock !== input.headers.get(input.source.lanes[i]!.source.chainId)!.number + 1 || cp.executed.nextBlock !== input.headers.get(input.source.lanes[i]!.destination.chainId)!.number + 1)) return { status: "rejected", reason: "history-incomplete", checkpoint };
+    const amount = proofs.reduce((sum, lane) => sum + BigInt(lane.amount), 0n).toString();
+    const proof: Proof = { sourceDigest, checkpointDigest: sha256Hex(serialized), discoveryDigest, lanes: proofs,
+      pins: chains.map(chainId => { const pin = input.headers.get(chainId)!; return { chainId, anchor: pin.number, anchorHash: pin.hash, observedAtSec: pin.timestamp }; }) };
+    return { status: "accepted", amount, proof, responseSha256: sha256Hex(stableJsonStringifyV1({ proof, amount })), checkpoint };
+  } catch (error) {
+    rethrowIfAborted(error, input.signal);
+    return { status: "rejected", reason: error instanceof Error && error.message.startsWith("ccip-pending:") ? error.message.slice(13) : "rpc-unavailable" };
+  }
+}
+
+/** Compiler seam: bind every chain proof to this capture's exact holdings and
+ * amounts. It does not infer pending from escrow-minus-receipts. */
+export function authenticateCcipPendingObservation(source: CcipPendingRead, observation: EconomicSupplyObservation,
+  holdings: readonly EconomicSupplyObservation[], deployments: readonly { chainId: string; deploymentKey: string }[]): boolean {
+  const proof = observation.ccipPendingProof;
+  if (!proof || proof.sourceDigest !== sha256Hex(stableJsonStringifyV1(source)) || proof.lanes.length !== source.lanes.length ||
+    observation.responseSha256 !== sha256Hex(stableJsonStringifyV1({ proof, amount: observation.amount }))) return false;
+  const chains = [...new Set(source.lanes.flatMap(lane => [lane.source.chainId, lane.destination.chainId]))];
+  if (proof.pins.length !== chains.length || new Set(proof.pins.map(pin => pin.chainId)).size !== chains.length ||
+    proof.pins.some(pin => !chains.includes(pin.chainId) || deployments.filter(row => row.chainId === pin.chainId).length === 0 ||
+      deployments.filter(row => row.chainId === pin.chainId).some(row => { const holding = holdings.find(value => value.id === row.deploymentKey);
+        return !holding || holding.anchor !== String(pin.anchor) || holding.anchorHash !== pin.anchorHash || holding.observedAtSec !== pin.observedAtSec; }))) return false;
+  const anchor = proof.pins.find(pin => pin.chainId === source.chainId);
+  if (!anchor || observation.anchor !== String(anchor.anchor) || observation.anchorHash !== anchor.anchorHash || observation.observedAtSec !== anchor.observedAtSec) return false;
+  return proof.lanes.every((row, i) => { const lane = source.lanes[i]!; return row.id === lane.id && row.sourcePoolAddress === lane.source.tokenPoolAddress &&
+    row.destinationPoolAddress === lane.destination.tokenPoolAddress && row.sourceChainSelector === lane.source.chainSelector &&
+    row.destinationChainSelector === lane.destination.chainSelector && BigInt(row.lastSequence) >= BigInt(row.initialSequence) - 1n && row.failedCount <= row.pendingCount; }) &&
+    proof.lanes.reduce((sum, row) => sum + BigInt(row.amount), 0n).toString() === observation.amount;
+}

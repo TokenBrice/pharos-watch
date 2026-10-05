@@ -29,6 +29,7 @@ import {
   XAUT0_ADAPTER_FAILURE_DOMAIN,
   XAUT0_COMMON_FAILURE_DOMAIN,
 } from "./xaut-supply-attribution-contract";
+import { REVIEWED_PROVIDER_CHAIN_PARTITIONS, deriveReviewedProviderChainPartition } from "./supply-attribution-contract";
 
 type ExtensionAsset = SafetyScoreV9FactSetExtensionV2["assets"][number];
 type SupplyReview = NonNullable<ExtensionAsset["supplyReview"]>;
@@ -134,7 +135,8 @@ export function diagnoseSafetyScoreV9NullSupplyReviewOutcome(input: {
   }
   const expectsRuntimeAttribution =
     safetyScoreV9SupplyAttributionExpectedAssetIds(input.fixedInput).includes(input.assetId) ||
-    (SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS.includes(input.assetId) && chainLabels.length === 0);
+    (INDEPENDENT_LIABILITY_SUPPLY_ASSET_ID_SET.has(input.assetId) &&
+      !hasCompleteEligibleProviderSupply(input.fixedInput, input.assetId));
   if (attributionRejectionCode !== null) {
     return {
       state: "attribution-rpc-rejection",
@@ -407,7 +409,7 @@ function buildIndependentLiabilitySupplyReview(
     !INDEPENDENT_LIABILITY_SUPPLY_ASSET_ID_SET.has(assetId) ||
     !profile ||
     !options.meta ||
-    Object.keys(safetyScoreV9ChainRows(fixedInput, assetId)).length > 0
+    hasCompleteEligibleProviderSupply(fixedInput, assetId, { contracts: options.meta.contracts, bridgeRouteRisk: profile })
   ) return null;
 
   const packet = exactInputBoundTransferMaterialityPacket({
@@ -660,13 +662,14 @@ export function buildSafetyScoreV9SupplyReview(
   const chainRows = safetyScoreV9ChainRows(fixedInput, assetId);
   const chains = Object.keys(chainRows).sort(compareText);
   const hasEconomicSupplyPlan = REVIEWED_ECONOMIC_SUPPLY_PLANS.has(assetId);
-  // The full census contract belongs to the reviewed economic-supply lane.
-  // Existing captured chain partitions retain their original reconciliation.
-  const totalUsd = hasEconomicSupplyPlan
+  const requiresExhaustiveProviderSupply = hasEconomicSupplyPlan || INDEPENDENT_LIABILITY_SUPPLY_ASSET_ID_SET.has(assetId);
+  // Reviewed economic and independent-liability inventories require a complete
+  // provider partition; other captured rows retain their original reconciliation.
+  const totalUsd = requiresExhaustiveProviderSupply
     ? getCirculatingRawOrNull(fixedInput.aggregateCirculatingById[assetId] ?? {})
     : chains.reduce((sum, chain) => sum + chainRows[chain]!.current, 0);
   if (chains.length === 0 || totalUsd === null || totalUsd <= 0 ||
-    (hasEconomicSupplyPlan && !hasCompleteEligibleProviderSupply(fixedInput, assetId, options.meta ?
+    (requiresExhaustiveProviderSupply && !hasCompleteEligibleProviderSupply(fixedInput, assetId, options.meta ?
       { contracts: options.meta.contracts, bridgeRouteRisk: profile } : undefined))) return null;
 
   const routes = profile?.routes ?? [];
@@ -690,6 +693,14 @@ export function buildSafetyScoreV9SupplyReview(
   }
 
   const meta = options.meta ?? ACTIVE_META_BY_ID.get(assetId);
+  const chainPartitionReviews = REVIEWED_PROVIDER_CHAIN_PARTITIONS.getAll(assetId);
+  const generation = options.transferMaterialityGeneration;
+  const partitionPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
+  const chainCensusBound = generation !== undefined && generation !== null &&
+    generation.registryFingerprint === fixedInput.registryFingerprint &&
+    generation.sourceBaseInputGenerationId === fixedInput.baseInputGenerationId &&
+    generation.capturedAtSec <= fixedInput.clockSec &&
+    fixedInput.clockSec - generation.capturedAtSec <= partitionPolicy.observationMaxAgeSec;
   const nativeProfileChain =
     profile?.tier === "single-chain-or-native" &&
     routes.length === 0 &&
@@ -719,6 +730,26 @@ export function buildSafetyScoreV9SupplyReview(
     }
     const chainRoutes = routesByChain.get(chain) ?? [];
     if (chainRoutes.length !== 1) {
+      const chainReview = chainPartitionReviews.find(review => review.chainId === chain);
+      const partition = chainReview && chainCensusBound && meta ? deriveReviewedProviderChainPartition({
+        review: chainReview, meta: { contracts: meta.contracts, bridgeRouteRisk: profile },
+        clockSec: fixedInput.clockSec, supplyUsd,
+        observations: (generation!.observationsByAssetId[assetId] ?? []).filter(row => routeChain(row.deploymentKey) === chain),
+      }) : null;
+      if (partition !== null) {
+        for (const row of partition) {
+          const route = chainRoutes.find(route => route.id === row.routeId)!;
+          selectedBridgeRoutes.push({
+            deploymentRouteKey: row.routeId, supplyUsd: row.supplyUsd,
+            supplyShare: row.supplyUsd / totalUsd, reviewState: "selected-reviewed",
+            reviewedRouteKind: reviewedSupplyRouteKind(route, profile),
+          });
+          for (const key of route.failureDomainKeys?.length ? route.failureDomainKeys : [route.id]) {
+            failureDomains.push({ kind: "bridge-route", key });
+          }
+        }
+        continue;
+      }
       const reviewedNativeChain =
         (chainRoutes.length === 0 && chain === nativeProfileChain) ||
         (chainRoutes.length > 1 && chainRoutes.every((route) =>

@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
-    "summary": "WCOP has six reviewed independent native issuance deployments on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis. Ripio's issuer EOA directly holds MINTER_ROLE on each deployment, the 4-of-7 Safe holds DEFAULT_ADMIN_ROLE and can regrant native roles, and the separate LimitedMinter contract is an additional Ethereum native minter facility. The LimitedMinterBridge burn/mint adapter is bridge machinery reviewed only under Bridge Risk.",
+    "summary": "WCOP has seven reviewed independent native issuance deployments on Ethereum, Base, Worldchain, BSC, Polygon, Gnosis and Celo, with separate issuer-operated burn/mint transfer machinery. The first six retain the reviewed issuer EOA and Safe controls. On Celo the 4-of-7 Safe directly holds native MINTER, DEFAULT_ADMIN and UPGRADER roles, while the native LimitedMinter supplies a separately raiseable daily-limited facility. Celo native issuance is not a conserved bridge-only representation; LimitedMinterBridge and BridgeDeposit capabilities remain exclusively in Bridge Risk.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -125,6 +125,102 @@
         "observedAt": "2026-10-01",
         "observedBlock": 26095942,
         "evidence": "At Ethereum block 26095942 on 2026-10-01, hasRole(MINTER_ROLE, 0xd168cfbbe260d48cd119497a9a2ee8482080c5e7) returned true on WCOP and eth_getCode on the router returned nonempty bytecode. Historical review at block 25295015 additionally established AccessControl administration by issuer EOA 0x466c02e2 and Safe 0x2b839174, and no Base deployment; those historical details were not re-dated."
+      },
+      {
+        "chain": "celo",
+        "address": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "deploymentRefs": ["celo:0x8a1d45e102e886510e891d2ec656a708991e2d76"],
+        "label": "Ripio Celo WCOP Safe native minter and role administrator",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "threshold": 4,
+        "signerCount": 7,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xf7104ad39080c53e2c8c74a34c34e622d8abe2c5",
+            "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+            "0x5b72e13f78feb8f5b44392f2e32940d4f37fa313",
+            "0x23cec92f92bde95e401f0a2b50b072a6069dfbd5",
+            "0x9850b4f631f1cae37bb1c42c8004ffc2cd31dcbe",
+            "0x00a74411ddbc50c04353543d5d3f4296936da645",
+            "0xa40d7d22873001f0140d76afc0ff0779e4210ed0"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": null,
+          "observedAt": "2026-10-05",
+          "observedBlock": 79288027,
+          "source": "onchain"
+        },
+        "observedAt": "2026-10-05",
+        "observedBlock": 79288027,
+        "sources": [
+          {"label": "Celo fixed-block role and Safe reads", "url": "https://forno.celo.org"},
+          {"label": "Verified Celo LatamStable mint and upgrade gates", "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652"},
+          {"label": "Complete Celo WCOP role and issuance event history", "url": "https://celo.blockscout.com/api/v2/addresses/0x8a1d45e102e886510e891d2ec656a708991e2d76/logs"}
+        ],
+        "evidence": "Celo block 79288027 pins this Safe as token DEFAULT_ADMIN_ROLE and MINTER_ROLE holder and sole LimitedMinter administrator. The verified native mint primitive has no intrinsic cap; admin can regrant issuance roles or raise the facility limit. The current Safe is 4-of-7, with f710 as first owner, empty terminal module pagination and zero guard storage. No human signer independence is inferred. Its native powers are separate from its bridge-administrator record."
+      },
+      {
+        "chain": "celo",
+        "address": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "deploymentRefs": ["celo:0x8a1d45e102e886510e891d2ec656a708991e2d76"],
+        "label": "Ripio Celo WCOP Safe native UUPS upgrader",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "threshold": 4,
+        "signerCount": 7,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xf7104ad39080c53e2c8c74a34c34e622d8abe2c5",
+            "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+            "0x5b72e13f78feb8f5b44392f2e32940d4f37fa313",
+            "0x23cec92f92bde95e401f0a2b50b072a6069dfbd5",
+            "0x9850b4f631f1cae37bb1c42c8004ffc2cd31dcbe",
+            "0x00a74411ddbc50c04353543d5d3f4296936da645",
+            "0xa40d7d22873001f0140d76afc0ff0779e4210ed0"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": null,
+          "observedAt": "2026-10-05",
+          "observedBlock": 79288027,
+          "source": "onchain"
+        },
+        "observedAt": "2026-10-05",
+        "observedBlock": 79288027,
+        "sources": [
+          {"label": "Celo fixed-block UPGRADER_ROLE and Safe reads", "url": "https://forno.celo.org"},
+          {"label": "Verified Celo LatamStable UUPS authorization", "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652"}
+        ],
+        "evidence": "Pinned token UPGRADER_ROLE is held by this same 4-of-7 Celo Safe. EIP-1967 implementation is 0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652; verified _authorizeUpgrade is role-gated with no timelock. This separately records replacement of native issuance logic without copying the bridge adapter's powers."
+      },
+      {
+        "chain": "celo",
+        "address": "0xd168cfbbe260d48cd119497a9a2ee8482080c5e7",
+        "deploymentRefs": ["celo:0x8a1d45e102e886510e891d2ec656a708991e2d76"],
+        "label": "Ripio Celo WCOP native LimitedMinter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Pinned daily limit is 140000000 WCOP to fixed destination 0xb6c9e6451a4b4f65249f60de4fd12da1088a2807; the separate Safe administrator can change it.",
+        "observedAt": "2026-10-05",
+        "observedBlock": 79288027,
+        "sources": [
+          {"label": "Celo native LimitedMinter verified source", "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xd168cfbbe260d48cd119497a9a2ee8482080c5e7"},
+          {"label": "Celo native issuance on September 9", "url": "https://celo.blockscout.com/api/v2/transactions/0x360b9132599b878fbbe4e9d24b641297b0dc23f5d756ca148db23e6623e835ce"},
+          {"label": "Celo fixed-block facility census", "url": "https://forno.celo.org"}
+        ],
+        "evidence": "The token grants MINTER_ROLE to this native facility. Its current minters are the Safe and 0x9e6475c19da6c1e3eb8e9d408cefd1fb511e1d8b; the Safe alone administers it. Receipt-authenticated June 5 and September 9 mints issued 100 and 30000000 WCOP with no source burn. Those native liabilities establish a mixed native/transfer deployment, not conserved bridge-only supply. Aggregate economics remain unbounded because the Safe can mint directly and change facility limits."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -159,11 +255,19 @@
         {
           "label": "Ripio wFIAT current attestations and releases",
           "url": "https://www.ripio.com/en/wfiat"
+        },
+        {
+          "label": "Verified Celo native issuer control graph",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652"
+        },
+        {
+          "label": "Celo fixed-block native facility and Safe census",
+          "url": "https://forno.celo.org"
         }
       ],
-      "evidence": "The corrected Mint Authority scope is six independent native WCOP deployments: Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis each expose the verified LatamStable implementation and the issuer EOA's direct MINTER_ROLE; the 4-of-7 Safe holds DEFAULT_ADMIN_ROLE and can regrant native roles. The separate 0xd168cfbbe260d48cd119497a9a2ee8482080c5e7 LimitedMinter remains an Ethereum native minter facility with its own daily limit. The 0x46167cB034FeC6ceC46CaeD4f61281f5Aa0Eb0e6 LimitedMinterBridge is an issuer-operated cross-chain burn/mint adapter with rate-limit, pause, admin, and arbitrary-recipient mint surfaces; those facts are relocated to route-scoped Bridge Risk and are not counted as native Mint Authority. LatamStable.mint() has no intrinsic cap and its UUPS upgrade authorization has no timelock, so native issuance remains unbounded and immediately replaceable. Supervision remains attestation-only because the March 2026 CPA certification is ad hoc rather than a recurring prudential regime; reconciliation remains unknown.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Codex mint-bridge-boundary migration 2026-08-16",
-      "reviewedAt": "2026-08-16"
+      "evidence": "The prior six-chain native scope and October 1 EOA-role rechecks are retained without re-dating their observation points. R17 adds Celo using block 79288027, hash 0xafbc5ef1f610ed1960fa502b44cf5df85b80f230fe2ada290b153ca0bc556b8b: token implementation matches the verified LatamStable; the local Safe directly holds MINTER, DEFAULT_ADMIN and UPGRADER, while native LimitedMinter is an additional mint path. Current local Safe owners differ from the historical Ethereum snapshot and are recorded separately. Celo's complete 41-event explorer census from token creation identifies four mints, all authenticated against RPC receipts: 100 and 30000000 WCOP are native facility issuance, and 999943 and 2999943 WCOP are BridgeDeposit fulfillments paired with published source burns. All 33999986 WCOP of current supply is accounted for without treating native issuance as source-burn conservation. No unexplained Celo issuance or token upgrade was identified in this review; issuer launch/release disclosures, bridge sources, audit material and independent incident-index searches were checked. This does not independently reconcile September fiat backing: reconciliation remains unknown, native issuance remains unbounded and immediately replaceable, and ad-hoc CPA certification still supplies only attestation-only supervision. Celo LimitedMinterBridge and BridgeDeposit powers are separately retained under Bridge Risk. No execution-scope certificate, signer independence or prudential uplift is asserted.",
+      "reviewer": "Prior mint-boundary and economic reviews retained; R17 Celo native/transfer scope and issuance review",
+      "reviewedAt": "2026-10-05"
     }
   }
 }

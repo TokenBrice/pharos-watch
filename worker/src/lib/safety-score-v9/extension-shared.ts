@@ -16,7 +16,7 @@ import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evid
 import type { V9PublishedEvidenceAttribution } from "@shared/lib/safety-score-v9/evidence";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
-import type { V9WeightedQuorum } from "@shared/types/safety-score-v9-control-scope";
+import type { V9SameChainSystemTransport, V9WeightedQuorum } from "@shared/types/safety-score-v9-control-scope";
 import type { MintAuthorityControl, StablecoinLink, StablecoinMeta } from "@shared/types/core";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./fact-set-schema";
@@ -65,6 +65,7 @@ function authorityModelForType(
   if (authorityType === "dao-governor") return "governance";
   if (authorityType === "issuer-backend" || authorityType === "custodian") return "issuer-backend";
   if (authorityType === "validator-quorum") return "validator-quorum";
+  if (authorityType === "chain-consensus") return "chain-consensus";
   if (authorityType === "contract" || authorityType === "timelock" || authorityType === "bridge") return "contract";
   return authorityType === "none" ? "none" : "unknown";
 }
@@ -78,7 +79,13 @@ export function projectControlAuthority(args: {
   signerCount?: number;
   weightedQuorum?: V9WeightedQuorum;
   executionScope?: MintAuthorityControl["executionScope"];
+  sameChainSystemTransport?: V9SameChainSystemTransport;
 }): ControlOverlay["authority"] {
+  if (args.authorityType === "chain-consensus") {
+    return args.sameChainSystemTransport
+      ? { authorityKey: "consensus:hyperliquid", model: "chain-consensus", threshold: null, sameChainSystemTransport: args.sameChainSystemTransport }
+      : { authorityKey: args.fallbackKey ?? "consensus:unresolved", model: "unknown", threshold: null };
+  }
   const authorityKey = args.address
     ? args.executionScope || args.weightedQuorum
       ? normalizeDeploymentId(`${args.chain ?? "chain-unresolved"}:${args.address}`)

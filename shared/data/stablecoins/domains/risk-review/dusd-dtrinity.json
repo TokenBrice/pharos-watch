@@ -89,6 +89,29 @@
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
     "confidence": "verified",
+    "nativeInventoryReview": {
+      "kind": "exhaustive-material-native-census",
+      "exhaustive": true,
+      "reviewedAt": "2026-10-05",
+      "reviewer": "Pharos engineering W4-D5 primary native census review",
+      "routeIds": [
+        "ethereum:0x07fff99e1664d9b116fbc158c0e99785f81ca236",
+        "fraxtal:0x788d96f655735f52c676a133f4dfc53cec614d4a",
+        "katana:0xca52d08737e6af8763a2bf6034b3b03868f24dda",
+        "sonic:0x53a6abb52b2f968fa80df6a894e4f1b1020da975"
+      ],
+      "rationale": "The issuer explicitly describes technically and economically distinct chain-isolated liabilities, not cross-chain fungible dUSD representations. Its cross-chain examples redeem/swap into a different intermediary asset before bridging. The exact Ethereum, Fraxtal, Katana and historically reviewed Sonic native identities and local role observations are retained below; Sonic is retained even though the current-network prose no longer lists it. Any captured unmatched chain row remains supply-bearing and unclassified, and is allowed only while every such share independently meets the policy dust limit.",
+      "sources": [
+        {
+          "label": "dTRINITY issuer chain-isolated architecture and intermediary bridge flows, reviewed 2026-10-05",
+          "url": "https://docs.dtrinity.org/key-concepts/network-support"
+        },
+        {
+          "label": "dTRINITY exact deployment addresses",
+          "url": "https://docs.dtrinity.org/security/addresses"
+        }
+      ]
+    },
     "sources": [
       {
         "label": "dTRINITY dUSD docs",

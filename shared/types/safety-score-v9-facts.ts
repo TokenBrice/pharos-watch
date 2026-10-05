@@ -4,7 +4,7 @@ import { V9ReserveBoundedFactSchema } from "./reserve-bounded-facts";
 import { ReserveScopedAdmissionSchema } from "./safety-score-v9-reserve-scope";
 import { AdmittedProviderRowExclusionSchema } from "./safety-score-v9-supply-attribution";
 import { V9AccessClaimGraphSchema, v9AccessClaimGraphStatuses } from "./safety-score-v9-access-lookthrough";
-import { V9InProcessControlExecutionScopeSchema, V9ExactControlPolicySchema, V9WeightedQuorumSchema } from "./safety-score-v9-control-scope";
+import { V9InProcessControlExecutionScopeSchema, V9ExactControlPolicySchema, V9WeightedQuorumSchema, V9SameChainSystemTransportSchema, V9ControlQuestionSubjectSchema } from "./safety-score-v9-control-scope";
 import { createV9ValueInterner, deepFreeze } from "./safety-score-v9-immutable";
 import { DeploymentIdSchema } from "./stablecoin-meta-schemas";
 import { ReserveIntermediarySchema } from "./reserves";
@@ -742,6 +742,7 @@ const V9ControlAuthoritySchema = z
       "contract",
       "issuer-backend",
       "validator-quorum",
+      "chain-consensus",
       "unknown",
     ]),
     threshold: z
@@ -749,11 +750,18 @@ const V9ControlAuthoritySchema = z
       .strict()
       .nullable(),
     weightedQuorum: V9WeightedQuorumSchema.optional(),
+    sameChainSystemTransport: V9SameChainSystemTransportSchema.optional(),
   })
   .strict()
   .superRefine((authority, ctx) => {
     if (authority.weightedQuorum && (authority.model !== "multisig" || authority.threshold !== null || authority.authorityKey !== authority.weightedQuorum.deployment)) {
       ctx.addIssue({ code: "custom", message: "Weighted authority conflicts with uniform quorum or exact deployment" });
+    }
+    if ((authority.model === "chain-consensus") !== (authority.sameChainSystemTransport != null)) {
+      ctx.addIssue({ code: "custom", message: "Chain consensus requires its exact same-chain system transport identity" });
+    }
+    if (authority.sameChainSystemTransport && (authority.threshold !== null || authority.weightedQuorum != null || authority.authorityKey !== "consensus:hyperliquid")) {
+      ctx.addIssue({ code: "custom", message: "Same-chain transport cannot claim a signing quorum or independent authority" });
     }
   })
   .nullable();
@@ -988,6 +996,7 @@ export const V9DeploymentControlFactBaseSchema = z
     // review is fresh at compile time. Grants the bounded scoped-gap ceiling
     // instead of the control-unverified ceiling while the question stays open.
     scopedQuestionFresh: z.boolean().optional(),
+    scopedQuestionSubject: V9ControlQuestionSubjectSchema.optional(),
     keyCustody: V9KeyCustodySchema,
     modulesOrGuards: V9ModulesOrGuardsSchema,
     executionScope: V9InProcessControlExecutionScopeSchema.optional(),
@@ -1864,7 +1873,12 @@ export const V9AssetFactsV3Schema = V9AssetFactsV3ObjectSchema.superRefine((asse
       ["obligorConcentration", exposure.issuerOrObligorKey === null],
     ] as const) {
       const status = exposure.factorStatuses?.[key];
-      if (missing && (!status || (status.observationState === "known" && status.applicability.state !== "not-applicable"))) {
+      const openEndedMaturity = key === "maturity" && asset.reserveBoundFacts?.some((row) =>
+        row.fact.kind === "maturity-applicability" && row.fact.conclusion === "open-ended" && row.fact.allInScope &&
+        row.fact.scope.kind === "exposure" && row.fact.scope.exposureKey === exposure.exposureKey &&
+        row.status.observationState === "known" && row.rejectionReason === null &&
+        row.status.evidenceRefIds.some(id => status?.evidenceRefIds.includes(id)));
+      if (missing && !openEndedMaturity && (!status || (status.observationState === "known" && status.applicability.state !== "not-applicable"))) {
         ctx.addIssue({ code: "custom", path: ["reserveExposures", index, "factorStatuses", key], message: "Unknown reserve subfield requires its own cause-bearing status" });
       }
     }

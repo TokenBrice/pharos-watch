@@ -344,9 +344,9 @@
       "scopedQuestions": [
         {
           "controlRef": "solana:Ch1Z9TZK7hiX73HZnhGQygsZ3zr1Rjh8ifspDfAqVRgm",
-          "question": "Does Solana mint 51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q represent canonical FUSD liabilities or the distinct FUSDLP liquidity-provider claim? The current issuer FUSD and FUSDLP tables both list it, while finalized metadata names FinChain Dollar LP / FUSDLP. Native liability identity and economic reach remain unresolved; retain its 1-of-3 mint exposure pending an issuer-authoritative correction.",
-          "reviewedAt": "2026-10-02",
-          "reviewer": "Sol NR wave 2026-10-02 (NrFusd)",
+          "question": "At finalized slot 453519477 on 2026-10-05, one getMultipleAccounts read reconfirms the mint, initialized 1-of-3 multisig and FinChain Dollar LP / FUSDLP metadata. Fresh issuer FUSD and FUSDLP tables still assign this same mint to both products. Which issuer claim and loss perimeter does this SPL mint represent? The public LP conversion description does not bind its claim to canonical FUSD liabilities. D-24 preserves unknown identity; retain the existing exposure and partial execution scope.",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "Sol wave-4 control research (R06)",
           "sources": [
             {
               "label": "Issuer FUSD deployment table",
@@ -357,7 +357,7 @@
               "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusdlp-token"
             },
             {
-              "label": "Finalized mint, multisig and FUSDLP metadata at slot 452544757",
+              "label": "Single finalized mint, multisig and FUSDLP metadata read at slot 453519477 on 2026-10-05",
               "url": "https://api.mainnet-beta.solana.com"
             }
           ]

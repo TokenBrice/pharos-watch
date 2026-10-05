@@ -72,6 +72,11 @@ const CENSUS_STATE_ALCHEMY_CHAINS: Record<string, string> = {
   stable: "stable-mainnet",
 };
 
+/** Keyless, numbered-state supply readers; deliberately outside log inventories. */
+const CENSUS_STATE_PUBLIC_RPCS: Record<string, readonly string[]> = {
+  pharos: ["https://rpc.pharos.xyz", "https://api.zan.top/public/pharos-mainnet"],
+};
+
 export type RpcAuthProvider = "alchemy" | "dwellir";
 
 // Keep auth separate from the URL so request/log metadata never contains the API key.
@@ -399,6 +404,18 @@ export function buildChainRpcs(
   const map = new Map<string, ChainRpcConfig>();
   for (const config of configs) {
     map.set(config.chainId, config);
+  }
+  for (const [chainId, urls] of Object.entries(CENSUS_STATE_PUBLIC_RPCS)) {
+    const meta = CHAIN_META[chainId]!;
+    const endpoints: RpcEndpoint[] = urls.map(url => ({
+      url, operator: "public", keyed: false, position: "supplemental",
+      stateHistory: "archive", logsHistory: "none", verifiedAt: "2026-10-05",
+    }));
+    const existing = map.get(chainId);
+    map.set(chainId, {
+      chainId, chainName: meta.name, type: "evm", explorerUrl: meta.explorerUrl,
+      endpoints: [...(existing?.endpoints ?? []), ...endpoints],
+    });
   }
   if (alchemyApiKey) {
     for (const [chainId, slug] of Object.entries(CENSUS_STATE_ALCHEMY_CHAINS)) {

@@ -93,6 +93,19 @@ describe("issuer payout identity", () => {
       config: { ...config, outputAssetType: "stable-single", outputAssets: ["usdc-circle"] },
     })?.output).toEqual({ kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] });
   });
+
+  it.each([
+    ["witry-brix", ["asset:itry"]],
+    ["srusde-strata", ["usde-ethena", "susde-ethena"]],
+    ["dllr-sovryn", ["asset:zusd", "doc-money-on-chain"]],
+    ["gldy-streamex", ["fiat:USD", "stablecoin:identity-unspecified", "physical:XAU"]],
+  ] as const)("keeps %s explicit unresolved outputs instead of parent, fiat or basket inference", (id, keys) => {
+    const reviewed = getRedemptionBackstopConfig(id)!;
+    expect(build({ stablecoinId: id, config: reviewed })?.output).toEqual({
+      kind: "unresolved-asset",
+      assetKeys: [...keys],
+    });
+  });
 });
 
 describe("redemption same-notional route observations", () => {
@@ -656,7 +669,7 @@ describe("derived supply-model route observations", () => {
     });
 
     expect(buildConfigured("dllr-sovryn")?.output).toEqual({
-      kind: "unresolved-basket",
+      kind: "unresolved-asset",
       assetKeys: ["asset:zusd", "doc-money-on-chain"],
     });
     const deuroBasket = [

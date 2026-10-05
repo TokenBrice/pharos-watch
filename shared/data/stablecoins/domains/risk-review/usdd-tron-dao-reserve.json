@@ -153,6 +153,24 @@
     "reviewedAt": "2026-07-13",
     "reviewer": "Codex Safety Score V9 data research",
     "confidence": "verified",
+    "nativeInventoryReview": {
+      "kind": "exhaustive-material-native-census",
+      "exhaustive": true,
+      "reviewedAt": "2026-10-05",
+      "reviewer": "Pharos engineering W4-D5 primary native census review",
+      "routeIds": [
+        "tron:TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz",
+        "ethereum:0x4f8e5de400de08b164e7421b3ee387f461becd1a",
+        "bsc:0x45e51bc23d592eb2dba86da3985299f7895d66ba"
+      ],
+      "rationale": "The issuer deployment-address roster names the three native USDD and chain-local Join/Vat systems. This is an exhaustive material native census, not a claim of zero peripheral bridges: legacy BTTC predicate exposure stays unmatched, supply-bearing and source-bound. The compiler must test every unmatched row against the policy dust limit on each capture; any larger residue or documented representation route defeats admission.",
+      "sources": [
+        {
+          "label": "USDD issuer native USDD and Join deployment roster, reviewed 2026-10-05",
+          "url": "https://docs.usdd.io/developers/deployment-addresses"
+        }
+      ]
+    },
     "protocols": [
       {
         "source": "issuer",
