@@ -1,8 +1,11 @@
 import "../../test-helpers/reviewed-deployment-catalog.test-support";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
+  SUPPLY_ATTRIBUTION_CAPTURE_BUDGET,
+  SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES,
+  SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS,
   createSupplyAttributionJournalV1,
   type SupplyAttributionJournalV1Payload,
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
@@ -37,7 +40,11 @@ import {
   makeXautObservation,
   patchXautObservation,
 } from "../../test-helpers/v9-fixed-input";
-import { safetyScoreV9SupplyAttributionExpectedAssetIds } from "../safety-score-v9/supply-attribution";
+import { captureSafetyScoreV9SupplyAttribution, safetyScoreV9SupplyAttributionExpectedAssetIds } from "../safety-score-v9/supply-attribution";
+import { runBudgetedSupplyAttributionAssets } from "../safety-score-v9/supply-attribution-capture-budget";
+import { sleepWithSignal } from "../abort";
+import * as wmObserver from "../safety-score-v9/wm-supply-observer";
+import * as xautObserver from "../safety-score-v9/xaut-supply-observer";
 
 const SOURCE_CLOCK_SEC = v9TestClockSec();
 const SOURCE_AGGREGATE_USD = 2_480_000_000;
@@ -388,7 +395,135 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     expect(() =>
       parseSafetyScoreV9SupplyAttributionGeneration("{"),
     ).toThrow("Malformed supply attribution generation cache");
-    expect(() => parseSafetyScoreV9SupplyAttributionGeneration(" ".repeat(128 * 1_024 + 1))).toThrow("Supply attribution generation cache value is oversized");
+    expect(() => parseSafetyScoreV9SupplyAttributionGeneration(" ".repeat(SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES + 1))).toThrow("Supply attribution generation cache value is oversized");
+  });
+
+  function rejectedCohort(count: number) {
+    const ids = Array.from({ length: count }, (_, index) => `asset-${String(index).padStart(3, "0")}`);
+    const payload = {
+      ...fixtures.acceptedGeneration,
+      expectedAssetIds: ids, observedAssetIds: ids, acceptedAssetIds: [],
+      rejectedAssetIds: ids, attributionById: {},
+      outcomesById: Object.fromEntries(ids.map(id => [id, {
+        status: "rejected" as const,
+        rejectionCode: "deployment-state-unavailable" as const,
+        failedRouteId: null,
+        journalId: fixtures.acceptedGeneration.outcomesById["xaut-tether"].journalId,
+      }])),
+    };
+    const { generationId: _id, ...content } = payload;
+    return { ...content, generationId: computeSafetyScoreV9SupplyAttributionGenerationId(content) };
+  }
+
+  it("round-trips every asset at the shared cohort bound and rejects bound plus one", () => {
+    const generation = rejectedCohort(SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS);
+    const parsed = parseSafetyScoreV9SupplyAttributionGeneration(
+      serializeSafetyScoreV9SupplyAttributionGeneration(generation),
+    );
+    expect(parsed.observedAssetIds).toHaveLength(SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS);
+    expect(parsed.rejectedAssetIds).toEqual(parsed.expectedAssetIds);
+    expect(() => parseSafetyScoreV9SupplyAttributionGeneration(
+      rejectedCohort(SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS + 1),
+    )).toThrow();
+  });
+
+  it("admits an expanded payload but rejects object and wire byte overflow", () => {
+    const { generationId: _id, ...payload } = fixtures.acceptedGeneration;
+    const content = { ...payload, sourceGeneration: "s".repeat(200 * 1_024) };
+    const generation = { ...content, generationId: computeSafetyScoreV9SupplyAttributionGenerationId(content) };
+    expect(parseSafetyScoreV9SupplyAttributionGeneration(
+      serializeSafetyScoreV9SupplyAttributionGeneration(generation),
+    ).sourceGeneration).toBe(content.sourceGeneration);
+    const oversized = { ...content, sourceGeneration: "s".repeat(SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES) };
+    expect(() => parseSafetyScoreV9SupplyAttributionGeneration({
+      ...oversized, generationId: computeSafetyScoreV9SupplyAttributionGenerationId(oversized),
+    })).toThrow(`exceeds ${SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES} bytes`);
+  });
+
+  it("bounds concurrency and isolates a slow asset without dropping its peers", async () => {
+    vi.useFakeTimers();
+    try {
+      let active = 0, maximum = 0;
+      const assets = Array.from({ length: SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS }, (_, index) => index);
+      const pending = runBudgetedSupplyAttributionAssets(assets, async (index, signal) => {
+        active++; maximum = Math.max(maximum, active);
+        try {
+          await sleepWithSignal(index === 0 ? SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.assetTimeoutMs * 2 : 10, signal);
+          return index;
+        } finally { active--; }
+      });
+      await vi.runAllTimersAsync();
+      const results = await pending;
+      expect(maximum).toBe(SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.assetConcurrency);
+      expect(active).toBe(0);
+      expect(results).toHaveLength(assets.length);
+      expect(results[0]).toEqual({ status: "rejected", reason: "asset-timeout" });
+      expect(results.slice(1).every(result => result.status === "completed")).toBe(true);
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("names window exhaustion for every unattemptable asset", async () => {
+    vi.useFakeTimers();
+    try {
+      const pending = runBudgetedSupplyAttributionAssets([0, 1, 2, 3], async (_asset, signal) => {
+        await sleepWithSignal(SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.assetTimeoutMs, signal);
+        return 1;
+      }, { executionWindow: {
+        deadlineMs: Date.now() + SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.publicationReserveMs + 100,
+        minimumRemainingMs: 0,
+      } });
+      await vi.runAllTimersAsync();
+      expect(await pending).toEqual([
+        { status: "rejected", reason: "asset-timeout" },
+        { status: "rejected", reason: "asset-timeout" },
+        { status: "rejected", reason: "capture-window-exhausted" },
+        { status: "rejected", reason: "capture-window-exhausted" },
+      ]);
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("does not turn parent cancellation into a published per-asset rejection", async () => {
+    const controller = new AbortController();
+    const error = new Error("lease-lost");
+    await expect(runBudgetedSupplyAttributionAssets([0, 1], async () => {
+      controller.abort(error);
+      throw error;
+    }, { signal: controller.signal })).rejects.toBe(error);
+    await expect(runBudgetedSupplyAttributionAssets(
+      Array.from({ length: SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS + 1 }),
+      async () => 0,
+    )).rejects.toThrow("exceeds the bounded cohort");
+  });
+
+  it("publishes an accepted co-tenant with an exact rejection for the timed-out asset", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(SOURCE_CLOCK_SEC * 1_000);
+    try {
+      const input = withWmAggregate(fixtures.acceptedFixture.fixedInput, WM_SOURCE_AGGREGATE_USD);
+      const accepted = fixtures.acceptedGeneration.attributionById["xaut-tether"];
+      if (accepted.model !== "canonical-lock-mint-group-partition-v2") throw new Error("Expected XAUT fixture");
+      vi.spyOn(xautObserver, "observeXautRepresentationGroupSupplyAttributionAttempt")
+        .mockResolvedValue({ status: "accepted", attribution: accepted });
+      vi.spyOn(wmObserver, "observeWmReviewedDeploymentUnitPartitionAttempt")
+        .mockImplementation(async ({ signal }) => {
+          await sleepWithSignal(SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.assetTimeoutMs * 2, signal);
+          return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: null };
+        });
+      const pending = captureSafetyScoreV9SupplyAttribution(input, new Map([["ethereum", {
+        chainId: "ethereum", chainName: "Ethereum", type: "evm", endpoints: [], explorerUrl: "",
+      }]]));
+      await vi.runAllTimersAsync();
+      const capture = await pending;
+      const generation = createSafetyScoreV9SupplyAttributionGeneration({
+        fixedInput: input, capture, capturedAtSec: Math.floor(Date.now() / 1_000),
+      });
+      expect(generation.expectedAssetIds).toEqual(["wm-m0", "xaut-tether"]);
+      expect(generation.observedAssetIds).toEqual(generation.expectedAssetIds);
+      expect(generation.acceptedAssetIds).toEqual(["xaut-tether"]);
+      expect(generation.outcomesById["wm-m0"]).toMatchObject({
+        status: "rejected", rejectionCode: "deployment-observation-window-insufficient",
+      });
+    } finally { vi.restoreAllMocks(); vi.useRealTimers(); }
   });
 
   it("re-derives accepted raw observations against the current aggregate", () => {
