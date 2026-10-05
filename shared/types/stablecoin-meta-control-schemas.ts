@@ -587,6 +587,10 @@ function validateExactAuthority(control: z.output<z.ZodObject<typeof AuthorityCo
     ctx.addIssue({ code: "custom", message: "Safe and execution scope must share observation pin", path: ["executionScope"] });
   }
   for (const path of control.executionScope?.paths ?? []) {
+    if (path.downstreamCallDomain && control.timelockDelaySec != null &&
+        path.downstreamCallDomain.minimumDelaySec > control.timelockDelaySec) {
+      ctx.addIssue({ code: "custom", message: "Maximal execution cannot claim more delay than the controller's fastest enforced path", path: ["executionScope"] });
+    }
     if (path.activation === "counterfactual" && path.counterfactual &&
         (control.authorityType !== "safe" && control.authorityType !== "multisig" ||
           control.weightedQuorum != null || control.threshold !== path.counterfactual.threshold ||

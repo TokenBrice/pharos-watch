@@ -1,5 +1,5 @@
 import { normalizeDeploymentId } from "../../types/deployment-id";
-import { V9ControlExecutionScopeSchema, V1005ExecutionMemberSchema, type V9ControlExecutionScope, type V9WeightedQuorum, type V9ModuleImpact, type V1005AuthorityGraph, type V1005ExecutionCertificates, type V1005ExecutionMember } from "../../types/safety-score-v9-control-scope";
+import { V9ControlExecutionScopeSchema, isV9MaximalControlPathValid, V1005ExecutionMemberSchema, type V9ControlExecutionScope, type V9WeightedQuorum, type V9ModuleImpact, type V1005AuthorityGraph, type V1005ExecutionCertificates, type V1005ExecutionMember } from "../../types/safety-score-v9-control-scope";
 import type { V9DeploymentControlFactV2, V1005ProcessDiagnostic } from "../../types/safety-score-v9-facts";
 import type { MintAuthorityProfile, StablecoinMeta } from "../../types/core";
 import { sha256Hex } from "../sha256";
@@ -77,6 +77,7 @@ export function compileReviewedControlScope(scope: V9ControlExecutionScope | und
   if (scope.pin.runtimeIdentity !== scope.observedState.runtimeIdentity ||
       (!scope.authorityBinding && scope.pin.signerIdentity !== scope.observedState.signerIdentity)) diagnostics.push("execution-identity-changed");
   if (scope.inventory !== "complete" || scope.confidence !== "verified" || Object.values(scope.closure).some((closed) => !closed)) diagnostics.push("execution-inventory-incomplete");
+  if (scope.paths.some((path) => !isV9MaximalControlPathValid(scope, path))) diagnostics.push("execution-maximal-domain-unverified");
   const complete = diagnostics.length === 0;
   const paths = scope.paths.filter((path) => controlPathIsReachable(path, complete) && (!complete || controlPathAffectsLiability(path, scope, assetId)));
   const reviewedScope = diagnostics.every((code) => code === "execution-inventory-incomplete");
@@ -88,6 +89,8 @@ export function compileReviewedControlScope(scope: V9ControlExecutionScope | und
 function deriveReviewedModuleImpact(scope: V9ControlExecutionScope | undefined, assetId: string, complete: boolean): V9ModuleImpact {
   const inventory = scope?.extensions;
   if (!scope || !inventory) return "unresolved";
+  // An adverse upper envelope cannot certify benign extension targets or noninterference.
+  if (scope.paths.some((path) => path.downstreamCallDomain && controlPathIsReachable(path, complete))) return scope.confidence !== "unknown" && inventory.entries.length > 0 ? "relevant" : "unresolved";
   // A dated, runtime-bound path proves presence independently of inventory closure.
   if (scope.confidence !== "unknown") {
     for (const extension of inventory.entries) {
