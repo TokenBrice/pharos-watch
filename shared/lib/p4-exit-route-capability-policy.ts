@@ -217,6 +217,15 @@ export const DEX_EXECUTION_CAPABILITY_REGISTRY: readonly DexExecutionCapabilityR
     eligibleChains: ["solana"],
     proofKind: "solana-account-proof",
   }),
+  capabilityRegistration({
+    profileId: "meteora-dlmm-exact-v1",
+    capabilityId: "measured-adapter-shadow",
+    adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.solanaDlmm,
+    platform: "solana",
+    lifecycle: "shadow",
+    eligibleChains: ["solana"],
+    proofKind: "solana-account-proof",
+  }),
 ] as const;
 
 export function getDexExecutionCapabilityRegistration(
