@@ -37715,38 +37715,6 @@
       "rationale": "The complete bridge review lacks publicly disclosed Solana liability transport, cross-chain burn/release conservation and backend authorization/operator semantics. Current exact mint and its live authority were successfully read, and the latter is a System-owned nonprogram account, not an executable bridge address. Issuer announcement names Wormhole generically; official deployments name the Solana mint but bridge/API docs restrict executable share transport to EVM. This is exact missing offchain disclosure, not a failed lookup, zero-supply exemption or permission to delete Solana."
     },
     {
-      "id": "uw-fusd-finchain-bd46d07bf4c65af9",
-      "assetId": "fusd-finchain",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:70a7a641bec3d68477f9f8e4",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-04T00:00:07Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R49)",
-      "sources": [
-        {
-          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf",
-          "observedAt": "2026-10-04T00:00:07Z",
-          "datumAsOf": "2026-09-14",
-          "location": "Governing fund legal structure; tokenized-share appendix",
-          "excerpt": "The Company is a Hong Kong public open-ended fund company with variable capital and limited liability regulated under the SFO.",
-          "assertion": "Exact tokenized fund-share class is an open-ended fund interest; underlying instrument term mandates and WAM do not state this share claim\u2019s maturityDaysMax."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf",
-        "https://www.chinaamc.com.hk/detail?fundId=USDDMMF&fundName=ChinaAMC-USD-Digital-Money-Market-Fund-(Tokenized-Unlisted-Class)&lan=EN",
-        "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/reserve-assets.md"
-      ],
-      "rationale": "The exact tokenized fund-share maturityDaysMax is not disclosed in the recovered current manager prospectus, share terms, fund product/factsheet archive or FinChain token mapping. The instrument mandates of 397 days/two years and reported WAM concern portfolio instruments, not the reserve-held open-ended share claim. No finite share maturity is inferred."
-    },
-    {
       "id": "uw-fusd-finchain-adafc9459f668d43",
       "assetId": "fusd-finchain",
       "scope": {
@@ -38834,6 +38802,40 @@
         "https://docs.superstate.com/investors/smart-contracts"
       ],
       "rationale": "No maturityDaysMax, fixed expiry or governing perpetual/open-ended clause for the USCC fund-share claim is publicly supplied by the issuer fund page, latest linked factsheet, investor terms or public contract documentation. Offering materials are provided to qualified offerees, not linked publicly. Do not substitute underlying dated futures maturities or write zero."
+    },
+    {
+      "id": "uw-fusd-finchain-57834d6e51705a17",
+      "assetId": "fusd-finchain",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:redemption:fusd-finchain:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-04T23:45:20Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R27)",
+      "sources": [
+        {
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/redeem.md",
+          "observedAt": "2026-10-04T23:45:20Z",
+          "datumAsOf": null,
+          "location": "Universal Redemption, completion timing hint",
+          "excerpt": "Redemption is typically completed within 1 business day, but may take up to 3 business days (UTC+8). Redemption may incur fees.",
+          "assertion": "The public universal FUSD-to-USDT completion bound is three business days. Current scalar settlementDelaySec cannot encode Hong Kong business-day/cutoff/holiday semantics; 259200 calendar seconds would misstate the published bound."
+        },
+        {
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/cut-off-time.md",
+          "observedAt": "2026-10-04T23:45:20Z",
+          "datumAsOf": null,
+          "location": "Cut-Off Time, final paragraph",
+          "excerpt": "The daily deadline is 8:00 AM Hong Kong time (UTC+8).",
+          "assertion": "After-cutoff requests roll to the next business day. A business-calendar model is needed before this term can become an exact elapsed-second settlement SLA."
+        }
+      ]
     }
   ]
 }
