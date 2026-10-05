@@ -3,8 +3,9 @@ import {
   selectV9ExitCirculatingUsd,
   selectV9ExitStressRequest,
 } from "@shared/lib/safety-score-v9/exit";
+import { createV9EvidenceReference } from "@shared/lib/safety-score-v9/evidence";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { compareText } from "@shared/lib/safety-score-v9/primitives";
+import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import type {
   V9AssetFactsV2,
   V9DeploymentControlFactV2,
@@ -23,6 +24,7 @@ import {
   type V9WrapperRiskAssessment,
 } from "@shared/types/safety-score-v9-wrapper";
 import {
+  addEvidence,
   componentResearchEvidence,
   fallbackResearchEvidence,
   missingLocalFact,
@@ -269,6 +271,32 @@ interface WrapperLocalBuildState {
   routeEvidenceRefIds: string[];
 }
 
+function independentlyReviewedImmutableRootEvidence(context: AssetBuildContext): string[] | null {
+  const review = context.asset.allocationScopeIdentityReview;
+  if (!review || review.assetId !== context.asset.assetId || review.registeredDeploymentKeys.length === 0) return null;
+  const registered = new Set(review.registeredDeploymentKeys);
+  if (registered.size !== review.registeredDeploymentKeys.length || review.deployments.length !== registered.size) return null;
+  const clock = context.fixedInput.clockSec;
+  const maxAgeSec = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec;
+  const observed = new Set<string>();
+  for (const deployment of review.deployments) {
+    const key = `${deployment.chain}:${deployment.address}`;
+    if (deployment.codeKind !== "immutable" || !registered.has(key) || observed.has(key) || !deployment.sourceUrl ||
+      deployment.observedAtSec > clock || clock - deployment.observedAtSec > maxAgeSec) return null;
+    observed.add(key);
+  }
+  // Bind evidence to this identity packet's own observation and generation,
+  // never the aggregate mint review's freshness or a whole-allocation claim.
+  const sourceGenerationId = context.extension.sources.researchOverlays.generationId;
+  return review.deployments.map((deployment) => addEvidence(context, createV9EvidenceReference({
+    evidenceId: `${context.asset.assetId}:wrapper-immutable-root:${deployment.chain}:${deployment.address}`,
+    sourceId: "safety-score-v9.wrapper-immutable-root-identity", sourceGenerationId,
+    disposition: "observed", observedAtSec: deployment.observedAtSec, url: deployment.sourceUrl,
+    contentSha256: domainDigest("safety-score-v9.wrapper-immutable-root-identity.v1", deployment),
+    maxAgeSec,
+  }, clock)));
+}
+
 function buildWrapperStructuralDimensions(
   context: AssetBuildContext,
   input: WrapperLocalFactBuildInputs,
@@ -303,7 +331,20 @@ function buildWrapperStructuralDimensions(
       : null;
   let contractMutability: V9WrapperLocalDimensionFact;
   const upgrade = input.economicControlReview.mint.upgrade;
-  if (input.economicControlReview.mint.status.observationState !== "known") {
+  // This independent lane establishes only root-code mutability. Mutable
+  // roles, modules, fees and allocations remain in their existing dimensions.
+  const immutableRootEvidence =
+    input.economicControlReview.mint.status.observationState !== "known" && upgrade.state === "immutable"
+      ? independentlyReviewedImmutableRootEvidence(context)
+      : null;
+  if (immutableRootEvidence !== null) {
+    contractMutability = reviewedWrapperFact(
+      context,
+      "none",
+      ["wrapper-upgrade-state:immutable", "wrapper-immutable-root-identity:exhaustive"],
+      immutableRootEvidence,
+    );
+  } else if (input.economicControlReview.mint.status.observationState !== "known") {
     contractMutability = unavailableWrapperFact(
       wrapperFactDisposition(context, [input.economicControlReview.mint.status]),
       "wrapper-upgrade-review-unavailable",

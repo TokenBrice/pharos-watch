@@ -61,6 +61,7 @@ export interface SafetyScoreV9SupplyAttributionCaptureOptions {
   clockMode: "source" | "wall";
   notBeforeSec?: number;
   executionWindow?: V9ExecutionWindow;
+  db?: D1Database;
 }
 
 export function aggregateSupplyUsd(
@@ -169,6 +170,7 @@ interface SupplyAttributionAssetDescriptor {
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
     executionWindow?: V9ExecutionWindow;
+    db?: D1Database;
   }) => Promise<SupplyAttributionObservationAttempt>;
 }
 
@@ -225,7 +227,7 @@ function supplyAttributionAssetDescriptors():
       assetId, sourceId: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.journalSourceId,
       sourceOriginClass: "issuer-disclosure-plus-onchain",
       routeInventoryDigest: () => buildReviewedEconomicDeploymentInventory(assetId)?.digest ?? null,
-      observe: ({ fixedInput, scoringClockSec, chainRpcs, signal }) => observeReviewedEconomicDeploymentPartitionAttempt({ assetId, fixedInput, scoringClockSec, chainRpcs, signal }),
+      observe: ({ fixedInput, scoringClockSec, chainRpcs, signal, db }) => observeReviewedEconomicDeploymentPartitionAttempt({ assetId, fixedInput, scoringClockSec, chainRpcs, signal, db }),
     })),
     {
       assetId: "wm-m0",
@@ -298,6 +300,7 @@ async function runSupplyAttributionAssetCapture(input: {
   chainRpcs?: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   executionWindow?: V9ExecutionWindow;
+  db?: D1Database;
   observationClockSec: (attemptedAtSec: number) => number;
   attributionById: V9SupplyAttributionById;
   journalRecords: SupplyAttributionJournalV1[];
@@ -320,6 +323,7 @@ async function runSupplyAttributionAssetCapture(input: {
             chainRpcs: input.chainRpcs,
             signal: input.signal,
             executionWindow: input.executionWindow,
+            db: input.db,
           })
         : {
             status: "rejected",
@@ -424,6 +428,7 @@ export async function captureSafetyScoreV9SupplyAttribution(
       chainRpcs,
       signal,
       executionWindow: options.executionWindow,
+      db: options.db,
       observationClockSec,
       attributionById,
       journalRecords,

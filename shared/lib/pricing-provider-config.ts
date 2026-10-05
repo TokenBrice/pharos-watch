@@ -16,6 +16,9 @@ export const KRAKEN_MARKETS = [
   { symbol: "MXNB", requestPair: "MXNBUSD", responseKeys: ["MXNBUSD"] },
   { symbol: "PAXG", requestPair: "PAXGUSD", responseKeys: ["PAXGUSD"] },
   { symbol: "PYUSD", requestPair: "PYUSDUSD", responseKeys: ["PYUSDUSD"] },
+  // 2026-10-05: Kraken's online SOFID/USD market matches SoFiUSD's
+  // CoinGecko ticker identity and provides the existing hard-market voice.
+  { symbol: "SOFID", requestPair: "SOFIDUSD", responseKeys: ["SOFIDUSD"] },
   { symbol: "TGBP", requestPair: "TGBPUSD", responseKeys: ["TGBPUSD"] },
   { symbol: "USD1", requestPair: "USD1USD", responseKeys: ["USD1USD"] },
   { symbol: "USDC", requestPair: "USDCUSD", responseKeys: ["USDCUSD"] },

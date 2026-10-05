@@ -385,15 +385,23 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "periodic",
     "supervision": "prudential",
     "review": {
-      "evidence": "Pinned reads cover every current EUROP deployment. Ethereum, Polygon, Avalanche, and Plasma use UUPS token proxies with chain-local owner/admin and MASTER_MINTER_ROLE Safes; XRPL uses Schuman's issuer account. At finalized Solana slot 434569236, the Token-2022 mint authority is an initialized 1-of-3 multisig. All reviewed issuance surfaces are economically unbounded issuer controls. The ESMA interim MiCA register lists SALVUS (trading as Schuman Financial) with ACPR as competent authority, and Schuman identifies the issuer as an ACPR-licensed electronic money institution. Economic-posture fields reviewed 2026-08-15: issuer-controlled uncapped mint paths are unbounded, ACPR supervises SALVUS, and the quarterly KPMG report excludes the tracked XRPL and Solana supply paths.",
-      "reviewer": "GPT SOL-BIND wave6; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Historical pinned control reads cover the six published EUROP deployments: Ethereum, Polygon, Avalanche and Plasma use UUPS token proxies with chain-local owner/admin and MASTER_MINTER_ROLE Safes; XRPL uses Schuman's issuer account; at finalized Solana slot 434569236 the Token-2022 mint authority is an initialized 1-of-3 multisig. These issuance surfaces remain economically unbounded issuer controls. The prior ESMA SALVUS/ACPR supervision evidence is retained without claiming a new licence review. Reconciliation reviewed 2026-10-05: Schuman Platform T&Cs v1.1 section 7.4 states that Schuman performs daily reconciliation of all vIBANs, Reserve Accounts and Token balances. Sections 4.1 and 7.1 connect receipt of fiat, minting, token burns and fiat releases; section 7.5 identifies the internal treasury system as the process operator. Section 3 explicitly includes all six currently published networks, including XRPL and Solana. This establishes a daily issuer-operated supply/backing reconciliation cadence, not continuous or independent six-chain assurance. The June 30 KPMG examination covers only four EVM chains and is not used to extend independent assurance to XRPL/Solana.",
+      "reviewer": "GPT SOL-BIND wave6; Sol economic-posture batch 2026-08-15; Unknown-resolver wave 3 W3R43 reconciliation review",
+      "reviewedAt": "2026-10-05",
       "disposition": "scoreable",
       "unresolvedQuestions": [],
       "sources": [
+        {
+          "label": "Schuman Platform T&Cs v1.1 sections 3, 4.1 and 7.1-7.5 - daily all-vIBAN, reserve-account and token-balance reconciliation",
+          "url": "https://schuman.io/wp-content/uploads/2026.06.03%20B%20Platform%20T%26Cs%20v1.1.pdf"
+        },
+        {
+          "label": "Schuman legal center - current published Platform T&Cs and daily reconciliation clause 7.4",
+          "url": "https://schuman.io/legal-center/"
+        },
         {
           "label": "ESMA interim MiCA register - EMT issuers (EMTWP.csv), SALVUS entry, competent authority ACPR",
           "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"

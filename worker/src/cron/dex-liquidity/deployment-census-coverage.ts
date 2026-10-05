@@ -87,6 +87,7 @@ export interface DexPlaceholderCoverageClassification {
   state: DexPlaceholderCoverageState;
   coverage: ExitRouteObservationCoverage;
   census: {
+    censusReadCompletedAtSec: number;
     expectedDeploymentCount: number;
     reviewedDeploymentCount: number;
     verifiedNoPoolsCount: number;
@@ -199,6 +200,7 @@ export function buildDexKnownEmptyRouteCoverage(): ExitRouteObservationCoverage 
 export function classifyDexPlaceholderCoverage(params: {
   deployments: readonly ContractDeployment[];
   outcomeRows: readonly DexDeploymentCensusRow[];
+  /** The census snapshot's read-completed clock, not the quote stage clock. */
   nowSec: number;
   censusAvailable?: boolean;
 }): DexPlaceholderCoverageClassification {
@@ -397,6 +399,7 @@ export function classifyDexPlaceholderCoverage(params: {
       reasonCounts,
     ),
     census: {
+      censusReadCompletedAtSec: params.nowSec,
       expectedDeploymentCount: expectedKeys.size + unsupportedChainByKey.size,
       reviewedDeploymentCount,
       verifiedNoPoolsCount,
@@ -431,6 +434,7 @@ export function buildDexDeploymentCensusDetail(
     state: params.classification.state,
     generationId: params.generationId,
     publishedAtSec: params.publishedAtSec,
+    quoteSourceAtSec: params.publishedAtSec,
     ...params.classification.census,
   };
 }

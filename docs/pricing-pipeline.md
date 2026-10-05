@@ -72,6 +72,8 @@ The primary CEX, ticker, oracle, promoted-DEX, reserve-telemetry, and pool-chall
 
 Pyth Hermes was retired from live primary consensus on 2026-08-26 after Pyth's API-key mandate made the free tier unavailable for API access. New runs do not request the Pyth lane and stablecoin metadata no longer carries `pythFeedId`; the pricing registry retains the retired `pyth` key only so historical price provenance remains renderable.
 
+Kraken's curated `SOFIDUSD` market supplies SoFiUSD's hard-market quote through the existing batched ticker request. Its bid/ask midpoint can corroborate a fresh CoinGecko quote, but the ticker retains its local-fetch clock: that pair alone does not satisfy nominal-par precedence's unchanged depeg-authoritative trust gate. A second agreeing depeg-authoritative source or an admitted upstream-capable authoritative source is still required. Provider registration alone does not establish a published observed price; unavailable or non-agreeing observations retain their ordinary admission behavior.
+
 > **Historical note (v2.0→v2.1):** The DL coins API (`coins.llama.fi/prices/current/coingecko:{id}`) was removed from primary consensus because it returned CoinGecko-sourced data, creating illusory two-source agreement. It is still used in fallback enrichment via contract-address queries.
 
 ### Reused Solomon provider identity

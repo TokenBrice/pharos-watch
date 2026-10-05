@@ -3,7 +3,7 @@ import { buildFixedInputCacheEntry, FixedInputCacheEnvelopeFields, parseFixedInp
 import { normalizeSafetyScoreV9CompilerInput, type SafetyScoreV9CompilerInput } from "./native-input";
 import { parseSafetyScoreV9TransferMaterialityGeneration, type SafetyScoreV9TransferMaterialityGeneration } from "./transfer-materiality";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
-import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "./publication-codec";
+import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "./publication-codec";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { sha256Hex } from "@shared/lib/sha256";
 
@@ -25,6 +25,29 @@ const payloadSchema = z.object({
   ...payloadFields,
   pipelineGapDigest: z.string().regex(/^[a-f0-9]{64}$/u).nullable(),
 }).strict();
+
+/** Both retained rows must come from one D1 SELECT, never separate live reads. */
+export function parseSafetyScoreV9PublicationReplayCacheRows(value: unknown) {
+  const result = z.array(z.object({
+    success: z.literal(true),
+    results: z.array(z.object({
+      key: z.string(),
+      value: z.string().min(1),
+      updated_at: z.number().int().nonnegative(),
+    })),
+  })).length(1).parse(value)[0]!;
+  const baseRows = result.results.filter((row) => row.key === SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY);
+  const deltaRows = result.results.filter((row) => row.key === SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY);
+  if (baseRows.length !== 1 || deltaRows.length !== 1) {
+    throw new Error("accepted-publication-replay-requires-one-base-and-delta");
+  }
+  const base = baseRows[0]!;
+  const delta = deltaRows[0]!;
+  if (base.updated_at !== delta.updated_at) {
+    throw new Error("accepted-publication-replay-retention-clock-mismatch");
+  }
+  return { baseValue: base.value, deltaValue: delta.value, retainedAtSec: base.updated_at };
+}
 
 export class SafetyScoreV9ReplayCaptureIdentityError extends Error {
   constructor() {

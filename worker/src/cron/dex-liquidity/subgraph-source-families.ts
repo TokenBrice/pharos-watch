@@ -188,6 +188,19 @@ export async function fetchUniV3Data(
   signal?: AbortSignal,
   references?: PriceValidationReferences,
 ): Promise<SubgraphFamilyResult<UniV3Lookups>> {
+  // Restrict the existing bounded pages to the tracked deployment surface.
+  // Unrelated high-TVL markets must not evict a small tracked pool before its
+  // exact address/currencies/fee can reach the target resolver.
+  const trackedCurrenciesByChain = new Map<string, string[]>();
+  for (const chainAddress of chainAddressToId.keys()) {
+    const separator = chainAddress.indexOf(":");
+    const chain = chainAddress.slice(0, separator);
+    const address = canonicalEvmAddress(chainAddress.slice(separator + 1));
+    if (separator < 0 || !address || !UNIV3_SUBGRAPHS[chain]) continue;
+    const currencies = trackedCurrenciesByChain.get(chain) ?? [];
+    currencies.push(address);
+    trackedCurrenciesByChain.set(chain, currencies);
+  }
   return runSubgraphFamily<UniV3SubgraphPool | null, UniV3Lookups>({
     graphApiKey,
     signal,
@@ -202,11 +215,14 @@ export async function fetchUniV3Data(
     }),
     buildConfig: (chain, subgraphUrl, combinedSignal, lookups) => {
       const messariSchema = UNIV3_MESSARI_SCHEMA_CHAINS[chain] === true;
+      const trackedCurrencies = trackedCurrenciesByChain.get(chain);
       return {
         subgraphUrl,
         sourceLabel: "Uni V3 subgraph",
         chain,
-        buildQuery: (skip) => (messariSchema ? buildUniV3MessariPoolQuery(skip) : buildUniV3PoolQuery(skip)),
+        buildQuery: (skip) => (messariSchema
+          ? buildUniV3MessariPoolQuery(skip, trackedCurrencies)
+          : buildUniV3PoolQuery(skip, trackedCurrencies)),
         pageSize: UNIV3_POOL_PAGE_SIZE,
         maxPages: chain === "base" ? UNIV3_BASE_POOL_MAX_PAGES : UNIV3_POOL_MAX_PAGES,
         signal: combinedSignal,

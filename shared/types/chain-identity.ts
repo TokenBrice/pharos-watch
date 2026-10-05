@@ -159,11 +159,9 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   gatelayer:      { name: "Gate Layer",      explorerUrl: "https://www.gatescan.org/gatelayer",             evmChainId: 10088,    type: "evm",   logoPath: "/chains/gatelayer.png"      },
   // Arc is Circle's USDC-native L1 (chain ID 5042, mainnet live 2026-09-16).
   // The chain ID was read back live from the network's own RPC via eth_chainId
-  // and the explorer comes from the chain's registry entry. No `providers`
-  // block: no token-pool provider registration was sourced for Arc, so its
-  // deployments read "no registered token-pool provider supports this chain"
-  // rather than claiming a query that cannot run.
-  arc:            { name: "Arc",             explorerUrl: "https://arc.etherscan.io",                       evmChainId: 5042,     type: "evm",   logoPath: "/chains/arc.png"              },
+  // and the explorer comes from the chain's registry entry. GeckoTerminal's
+  // network catalogue and exact-token pool endpoint use the `arc` slug.
+  arc:            { name: "Arc",             explorerUrl: "https://arc.etherscan.io",                       evmChainId: 5042,     type: "evm",   logoPath: "/chains/arc.png", providers: { geckoTerminal: "arc" } },
   // Mainnet IDs read from each official RPC via eth_chainId (2026-10-03).
   // RISE has no verified token-pool provider registration, so its deployments
   // read "no registered token-pool provider supports this chain" rather than
@@ -175,6 +173,9 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   filecoin:       { name: "Filecoin",        explorerUrl: "https://filecoin.blockscout.com",               evmChainId: 314,      type: "evm",   logoPath: "/chains/filecoin.svg",        providers: { coingecko: "filecoin", geckoTerminal: "filecoin" } },
   // Scilla ZRC-2 scope, not Zilliqa's separate EVM interface. No pool provider.
   zilliqa:        { name: "Zilliqa",         explorerUrl: "https://viewblock.io/zilliqa",                   evmChainId: null,     type: "other", logoPath: "/chains/zilliqa.png"          },
+  // VeChainThor's official EVM proxy uses mainnet chain ID 100009. No pool
+  // provider is registered here; canonical identity alone proves no token route.
+  vechain:        { name: "VeChain",          explorerUrl: "https://explore.vechain.org",                   evmChainId: 100009,   type: "evm",   logoPath: "/chains/vechain.png"          },
 };
 
 /**

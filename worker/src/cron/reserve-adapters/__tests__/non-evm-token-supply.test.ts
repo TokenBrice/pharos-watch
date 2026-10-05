@@ -8,6 +8,7 @@ vi.mock("../request", () => ({
 import { fetchJsonPostWithRetry, fetchJsonWithRetry } from "../request";
 import { fetchStarknetTotalSupply } from "../starknet";
 import { fetchIcrcLedgerTotalSupply } from "../icp";
+import { fetchMoveFungibleAssetSupply } from "../token-supply";
 
 const STARKNET_CONTRACT = "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc";
 const ICP_CANISTER = "6c7su-kiaaa-aaaar-qaira-cai";
@@ -98,5 +99,80 @@ describe("fetchIcrcLedgerTotalSupply", () => {
     await expect(fetchIcrcLedgerTotalSupply({ canisterId: "../../etc/passwd", signal: signal() }))
       .rejects.toThrow("text-form canister id");
     expect(fetchJsonWithRetry).not.toHaveBeenCalled();
+  });
+});
+
+describe("pinned Move fungible-asset census reads", () => {
+  const base = "https://move.example/v1";
+  const packageAddress = `0x${"a".repeat(64)}`;
+  const metadataAddress = `0x${"b".repeat(64)}`;
+  const clock = 1791146773;
+  beforeEach(() => {
+    vi.mocked(fetchJsonWithRetry).mockReset();
+  });
+
+  it("finds a complete historical block from a near-head bracket and pins both resources", async () => {
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url) => {
+      if (url === base) return { chain_id: 1, ledger_version: "100", ledger_timestamp: String((clock + 1) * 1_000_000) };
+      if (url.includes("/blocks/by_version/100?")) return {
+        first_version: "99", last_version: "100", block_timestamp: String((clock + 1) * 1_000_000),
+      };
+      if (url.includes("/blocks/by_version/98?")) return {
+        first_version: "97", last_version: "98", block_timestamp: String(clock * 1_000_000),
+      };
+      if (url.includes("ConcurrentSupply")) return { type: "0x1::fungible_asset::ConcurrentSupply", data: { current: { value: "0" } } };
+      if (url.includes("Metadata")) return { type: "0x1::fungible_asset::Metadata", data: { decimals: 6 } };
+      throw new Error("unexpected request");
+    });
+    expect(await fetchMoveFungibleAssetSupply(metadataAddress, signal(), base, undefined, { clockSec: clock, expectedChainId: 1 }))
+      .toEqual({ rawSupply: 0n, decimals: 6, ledgerVersion: "98", ledgerTimestampSec: clock });
+    expect(vi.mocked(fetchJsonWithRetry).mock.calls.slice(-2).every(([url]) => url.endsWith("?ledger_version=98"))).toBe(true);
+  });
+
+  it("authenticates the deployed OFT package metadata and all mint/burn/transfer refs at the same ledger", async () => {
+    vi.mocked(fetchJsonWithRetry)
+      .mockResolvedValueOnce({ chain_id: 126, ledger_version: "100", ledger_timestamp: String(clock * 1_000_000) })
+      .mockResolvedValueOnce({ type: `${packageAddress}::oft_fa::OftImpl`, data: {
+        metadata: { inner: metadataAddress },
+        mint_ref: { metadata: { inner: metadataAddress } },
+        burn_ref: { metadata: { inner: metadataAddress } },
+        transfer_ref: { metadata: { inner: metadataAddress } },
+      } })
+      .mockResolvedValueOnce({ type: "0x1::fungible_asset::ConcurrentSupply", data: { current: { value: "123" } } })
+      .mockResolvedValueOnce({ type: "0x1::fungible_asset::Metadata", data: { decimals: 6 } });
+    expect(await fetchMoveFungibleAssetSupply(packageAddress, signal(), base, undefined, {
+      clockSec: clock, expectedChainId: 126, identityKind: "oft-package",
+    })).toEqual({ rawSupply: 123n, decimals: 6, ledgerVersion: "100", ledgerTimestampSec: clock });
+    expect(vi.mocked(fetchJsonWithRetry).mock.calls[1]?.[0])
+      .toBe(`${base}/accounts/${packageAddress}/resource/${packageAddress}::oft_fa::OftImpl?ledger_version=100`);
+    expect(vi.mocked(fetchJsonWithRetry).mock.calls[2]?.[0])
+      .toBe(`${base}/accounts/${metadataAddress}/resource/0x1::fungible_asset::ConcurrentSupply?ledger_version=100`);
+  });
+
+  it.each(["wrong-type", "wrong-ref", "missing-ref"])("rejects unauthenticated OFT metadata: %s", async failure => {
+    vi.mocked(fetchJsonWithRetry)
+      .mockResolvedValueOnce({ chain_id: 1, ledger_version: "100", ledger_timestamp: String(clock * 1_000_000) })
+      .mockResolvedValueOnce({ type: failure === "wrong-type" ? "foreign::oft_fa::OftImpl" : `${packageAddress}::oft_fa::OftImpl`, data: {
+        metadata: { inner: metadataAddress },
+        mint_ref: { metadata: { inner: metadataAddress } },
+        burn_ref: failure === "missing-ref" ? undefined : { metadata: { inner: failure === "wrong-ref" ? packageAddress : metadataAddress } },
+        transfer_ref: { metadata: { inner: metadataAddress } },
+      } });
+    expect(await fetchMoveFungibleAssetSupply(packageAddress, signal(), base, undefined, {
+      clockSec: clock, expectedChainId: 1, identityKind: "oft-package",
+    })).toBeNull();
+    expect(fetchJsonWithRetry).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    { chain_id: 126, ledger_version: "100", ledger_timestamp: String(clock * 1_000_000) },
+    { chain_id: 1, ledger_version: "100" },
+    { chain_id: 1, ledger_version: "1.5", ledger_timestamp: String(clock * 1_000_000) },
+  ])("rejects missing timestamp, invalid ledger or wrong chain %j", async ledger => {
+    vi.mocked(fetchJsonWithRetry).mockResolvedValueOnce(ledger);
+    expect(await fetchMoveFungibleAssetSupply(metadataAddress, signal(), base, undefined, {
+      clockSec: clock, expectedChainId: 1,
+    })).toBeNull();
+    expect(fetchJsonWithRetry).toHaveBeenCalledTimes(1);
   });
 });

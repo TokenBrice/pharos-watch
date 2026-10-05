@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { encodeAbiParameters, keccak256, parseAbiParameters, toFunctionSelector, toHex } from "viem/utils";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { sha256Hex } from "@shared/lib/sha256";
 import type { StablecoinMeta } from "@shared/types/core";
-import type { ReviewedEconomicSupplyPlan } from "@shared/types/safety-score-v9-supply-attribution";
+import type { CurveLzPendingRead, ReviewedEconomicSupplyPlan } from "@shared/types/safety-score-v9-supply-attribution";
 import * as evmRpc from "../evm-rpc";
 import type { ChainRpcConfig } from "../chain-registry";
-import { observeEconomicSolanaMint, observeReviewedEconomicDeploymentPartitionAttempt } from "../safety-score-v9/economic-supply-observer";
+import { observeCurveLzPending, observeEconomicSolanaMint, observeReviewedEconomicDeploymentPartitionAttempt } from "../safety-score-v9/economic-supply-observer";
 import { REVIEWED_ECONOMIC_SUPPLY_PLANS } from "../safety-score-v9/supply-attribution-contract";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 
@@ -197,7 +198,7 @@ describe("reviewed economic supply observation", () => {
   it("admits an empty pending queue only after a successful authenticated zero-count read", async () => {
     const f = pendingFixture(0n, 19000000n);
     const source = f.plan.escrows[0]!.inFlightSource!;
-    if (!("kind" in source)) throw new Error("Expected on-chain pending source");
+    if (!("kind" in source) || source.kind !== "evm-pending-state") throw new Error("Expected enumerable on-chain pending source");
     source.messageIds = [];
     vi.mocked(evmRpc.fetchEvmRpcBatch).mockResolvedValue(["0x6000", word(0n)]);
     const result = await f.run();
@@ -328,5 +329,134 @@ describe("validated XRPL issued-currency observations", () => {
   });
   it.each(["malformed", "negative", "unvalidated", "hash mismatch", "missing time", "stale time"])("rejects XRPL %s", async failure => {
     expect(await xrplFixture(failure).run()).toMatchObject({ status: "rejected", rejectionCode: failure === "stale time" ? "packet-reconciliation-failed" : "deployment-state-unavailable" });
+  });
+});
+
+describe("nonce-authenticated Curve LayerZero pending history", () => {
+  function curveFixture() {
+    const source: CurveLzPendingRead = {
+      kind: "evm-curve-lz-pending", sourceId: "curve-pending", chainId: "ethereum", finality: "finalized",
+      sides: [0, 1].map((index) => ({
+        chainId: index === 0 ? "ethereum" : "base",
+        bridgeAddress: `0x${String(index + 3).repeat(40)}`,
+        bridgeRuntimeCodeSha256: sha256Hex("0x6000"),
+        endpointAddress: `0x${String(index + 5).repeat(40)}`,
+        endpointRuntimeCodeSha256: sha256Hex("0x6000"),
+        lzChainId: index === 0 ? 101 : 184, deploymentBlock: 90,
+        sendLibraries: [{ address: `0x${String(index + 7).repeat(40)}`, runtimeCodeSha256: sha256Hex("0x6000"), encoding: "packet-v1" as const }],
+        outboundNonceRead: { address: `0x${String(index + 5).repeat(40)}`, runtimeCodeSha256: sha256Hex("0x6000"), callData: "0x11111111" },
+        supportsFailed: index === 0,
+      })) as CurveLzPendingRead["sides"],
+    };
+    const receiver = `0x${"9".repeat(40)}` as `0x${string}`;
+    const payload = encodeAbiParameters(parseAbiParameters("address,uint256"), [receiver, 1000000n]);
+    const topic = (name: string) => keccak256(toHex(name));
+    const sent: Array<Array<Record<string, unknown>>> = [[], []], received: Array<Array<Record<string, unknown>>> = [[], []];
+    const rawLog = (address: string, topics: string[], data: string, height = 95, index = 0) =>
+      ({ address, topics, data, blockNumber: `0x${height.toString(16)}`, blockHash: HASH, transactionHash: HASH, logIndex: `0x${index.toString(16)}`, removed: false });
+    const send = (i: number, nonce = 1n, index = 0) => {
+      const a = source.sides[i]!, b = source.sides[1 - i]!;
+      const packet = `0x${nonce.toString(16).padStart(16, "0")}${a.lzChainId.toString(16).padStart(4, "0")}${a.bridgeAddress.slice(2)}${b.lzChainId.toString(16).padStart(4, "0")}${b.bridgeAddress.slice(2)}${payload.slice(2)}` as `0x${string}`;
+      sent[i]!.push(rawLog(a.sendLibraries[0]!.address, [topic("Packet(bytes)")], encodeAbiParameters(parseAbiParameters("bytes"), [packet]), 95, index));
+    };
+    const receive = (direction: number, name = "Delayed", nonce = 1n, index = 0) => {
+      const side = 1 - direction;
+      received[side]!.push(rawLog(source.sides[side]!.bridgeAddress, [topic(`${name}(uint64,address,uint256)`), word(nonce), `0x${receiver.slice(2).padStart(64, "0")}`], word(1000000n), 96, index));
+    };
+    let badCommitment = false;
+    vi.mocked(evmRpc.fetchEvmRpcBatch).mockImplementation(async (chain, calls) => {
+      const i = chain === "ethereum" ? 0 : 1, side = source.sides[i]!;
+      if (calls[0]!.method === "eth_getCode") return calls.map(() => "0x6000");
+      if (calls[0]!.method === "eth_getLogs") {
+        const params = calls[0]!.params[0] as { address: string | string[]; fromBlock: string; toBlock: string };
+        const rows = Array.isArray(params.address) ? sent[i]! : received[i]!;
+        return [rows.filter(row => BigInt(row.blockNumber as string) >= BigInt(params.fromBlock) && BigInt(row.blockNumber as string) <= BigInt(params.toBlock))];
+      }
+      if (calls[0]!.method === "eth_getTransactionByHash") return [{ hash: HASH, to: side.bridgeAddress, input: toFunctionSelector("bridge(uint256)") + word(1000000n).slice(2) }];
+      const call = calls[0]!.params[0] as { data: string };
+      if (call.data === toFunctionSelector("LZ_ENDPOINT()")) return [`0x${side.endpointAddress.slice(2).padStart(64, "0")}`, word(BigInt(source.sides[1 - i]!.lzChainId))];
+      if (call.data === "0x11111111") return [word(BigInt(sent[i]!.length))];
+      if (call.data.startsWith(toFunctionSelector("getInboundNonce(uint16,bytes)"))) return [word(BigInt(received[i]!.filter(row => (row.topics as string[])[0] !== topic("Issued(uint64,address,uint256)")).length))];
+      if (call.data.startsWith(toFunctionSelector("delayed(uint64)"))) return [badCommitment ? word(0n) : keccak256(encodeAbiParameters(parseAbiParameters("uint256,bytes"), [BigInt(CLOCK - 60), payload]))];
+      if (call.data.startsWith(toFunctionSelector("failed(uint64)"))) return [keccak256(payload)];
+      throw new Error("Unexpected RPC method");
+    });
+    const input = { source, headers: [{ number: 100, timestamp: CLOCK - 60, hash: HASH }, { number: 100, timestamp: CLOCK - 60, hash: HASH }], chainRpcs: new Map<string, ChainRpcConfig>() };
+    return { input, send, receive, sent, received, rejectCommitment() { badCommitment = true; } };
+  }
+
+  it("authenticates delayed commitments in both directions without estimating an escrow residual", async () => {
+    const f = curveFixture(); f.send(0); f.receive(0); f.send(1); f.receive(1, "Failed");
+    const result = await observeCurveLzPending(f.input);
+    expect(result).toMatchObject({ status: "accepted", amount: "2000000", proof: { pins: [expect.objectContaining({ chainId: "ethereum" }), expect.objectContaining({ chainId: "base" })] } });
+  });
+
+  it("counts an authenticated source send not yet delivered to the destination", async () => {
+    const f = curveFixture(); f.send(0);
+    expect(await observeCurveLzPending(f.input)).toMatchObject({ status: "accepted", amount: "1000000" });
+  });
+
+  it("resumes contiguous bounded history and admits zero only after all four streams finish", async () => {
+    const f = curveFixture();
+    f.input.headers[0]!.number = 30000; f.input.headers[1]!.number = 30000;
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) => ({ number: number === "finalized" ? 30000 : number, timestamp: CLOCK - 60, hash: HASH }));
+    let result = await observeCurveLzPending(f.input);
+    for (let attempt = 0; attempt < 8 && result.status === "rejected"; attempt++) {
+      expect(result.reason).toBe("history-incomplete");
+      if (!result.checkpoint) throw new Error("Expected bounded progress");
+      result = await observeCurveLzPending({ ...f.input, checkpoint: result.checkpoint });
+    }
+    expect(result).toMatchObject({ status: "accepted", amount: "0" });
+  });
+
+  it("rejects a missing source nonce rather than treating a partial event book as complete", async () => {
+    const f = curveFixture(); f.send(0, 2n);
+    expect(await observeCurveLzPending(f.input)).toMatchObject({ status: "rejected", reason: "missing-nonce" });
+  });
+
+  it("rejects a replayed nonce in another valid log position", async () => {
+    const f = curveFixture(); f.send(0); f.send(0, 1n, 1);
+    expect(await observeCurveLzPending(f.input)).toMatchObject({ status: "rejected", reason: "replayed-nonce" });
+  });
+
+  it("rejects replayed consumption of an already issued nonce", async () => {
+    const f = curveFixture(); f.send(0); f.receive(0, "Issued"); f.receive(0, "Issued", 1n, 1);
+    expect(await observeCurveLzPending(f.input)).toMatchObject({ status: "rejected", reason: "replayed-or-missing-nonce" });
+  });
+
+  it("retains a bounded catch-up checkpoint without publishing a partial pending quantity", async () => {
+    const f = curveFixture();
+    f.input.headers[0]!.number = 30000; f.input.headers[1]!.number = 30000;
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) => ({ number: number === "finalized" ? 30000 : number, timestamp: CLOCK - 60, hash: HASH }));
+    const first = await observeCurveLzPending(f.input);
+    expect(first).toMatchObject({ status: "rejected", reason: "history-incomplete" });
+    if (first.status !== "rejected" || !first.checkpoint) throw new Error("Expected catch-up checkpoint");
+    expect(first.checkpoint.directions[0]!.sent.nextBlock).toBe(16090);
+    first.checkpoint.directions[0]!.sent.nextBlock++;
+    expect(await observeCurveLzPending({ ...f.input, checkpoint: first.checkpoint })).toMatchObject({ status: "rejected", reason: "history-gap" });
+  });
+
+  it("rejects a cleared delayed commitment without a matching Issued event", async () => {
+    const f = curveFixture(); f.send(0); f.receive(0); f.rejectCommitment();
+    expect(await observeCurveLzPending(f.input)).toMatchObject({ status: "rejected", reason: "commitment-mismatch" });
+  });
+
+  it("feeds a conserved canonical-free/receipt/pending partition into existing admission", async () => {
+    const f = fixture(), history = curveFixture(), canonical = f.plan.deployments[0]!;
+    history.send(0); history.receive(0);
+    const receipt = { ...canonical, deploymentKey: `base:0x${"2".repeat(40)}`, chainId: "base", address: `0x${"2".repeat(40)}` };
+    f.plan.deployments.push(receipt);
+    f.plan.accountingFamily = "lock-mint";
+    f.plan.escrows = [{ id: "bridge", canonicalDeploymentKey: canonical.deploymentKey, account: history.input.source.sides[0].bridgeAddress,
+      receiptDeploymentKeys: [receipt.deploymentKey], receiptClaimSources: [], independentReceiptLiability: false, inFlightSource: history.input.source }];
+    vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mockImplementation(async (_chain, calls) =>
+      calls.map(call => ({ label: call.label, success: true, returnData: word(call.label.endsWith(":decimals") ? 6n :
+        call.label === "bridge" ? 20000000n : call.label === receipt.deploymentKey ? 19000000n : 100000000n) })));
+    const result = await f.run();
+    expect(result.status).toBe("accepted");
+    if (result.status !== "accepted") throw new Error("Expected conserved partition");
+    expect(result.attribution.deployments.map(row => row.currentSupplyUsd)).toEqual([80, 19]);
+    expect(result.attribution.unattributedSupplyUsd).toBe(1);
+    expect(result.attribution.inFlight[0]!.curvePendingProof).toBeDefined();
   });
 });

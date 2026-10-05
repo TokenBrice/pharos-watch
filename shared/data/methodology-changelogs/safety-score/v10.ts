@@ -2,6 +2,24 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V10: readonly MethodologyChangelogEntry[] = [
   {
+    version: "10.07",
+    title: "Stable route research binding and source-specific evidence corrections",
+    date: "2026-10-05",
+    effectiveAt: 1791190320,
+    summary:
+      "Safety Score v10.07 preserves researched exit-route classifications across producer runs, admits independently proved immutable wrapper roots for contract mutability, and corrects source-specific reserve, DEX, redemption, supply and price evidence. On capture 20261004-2107, restored route research changes seven scores; wrapper mutability admission changes no score. Producer corrections require fresh admitted observations rather than rewriting the frozen capture.",
+    impact: [
+      "Route-scoped B/C classifications bind to the stable lane plus routeId instead of the producer run ID, so researched exit facts no longer revert to Not yet researched on each four-hourly redemption or DEX run. Captured pipeline verdicts and public route identities retain their exact generation. Replay rebinds 138 exit-route gaps: 117 U to C and 21 U to B. Scores move audd 67 to 68, doc 68 to 69, hchf 71 to 73, idrt 39/F to 44/D, usda 39/F to 42/D, usdm-moneta 31 to 33 and usdp-parallel 62 to 63.",
+      "Wrapper contractMutability can admit independently proved immutable roots before the aggregate mint gate, only with fresh, exhaustive, source-bound identity review of every registered deployment. Other wrapper dimensions and the known-aggregate path are unchanged. Replay changes two U and five B mutability facts to reviewed, with no score or grade change.",
+      "Tether composition uses a reviewed signed-report packet of eleven integer USD categories conserving exactly to the report denominator instead of rounded percentages. This removes the rounding-only reserve residual inherited by holders without changing the generic conservation tolerance. Production effect follows the next admitted reserve snapshot (owner decision D-19 A).",
+      "DEX deployment censuses are classified at their own read-completed clock, separate from the quote clock; Arc maps to its discovery network. Uniswap V4 targets require exact chain-scoped PoolIds. Uniswap V3 pages are currency-scoped and missing fees resolve only against a unique candidate across actual fees. Balancer Sonic sweeps use physical pool IDs, and V2 candidate joins require unique exact rows or unambiguous fingerprints. These corrections affect evidence after fresh producer runs, not the frozen capture.",
+      "Redemption observers refresh Noon's verified implementation and distinguish Mento FX-market-closed reverts from RPC failure. Reviewed redemption fee and queue terms update existing route configs without inventing same-notional capacity or settlement guarantees; captured execution costs retain precedence in frozen replay.",
+      "Independent transfer censuses gain archive-capable Alchemy state-only endpoints and pinned Aptos/Movement OFT fungible-asset supply reads, with no partial partition admission. Authenticated Curve LayerZero pending-message reads retain bounded checkpoints and reject incomplete history; scrvUSD still needs canonical message producers and a full supply census before plan registration. VeChain gains canonical chain identity without provider-coverage or bridge-applicability credit. Kraken SOFIDUSD enters the price roster, but a second hard market is still required to close its peg gap. No frozen-capture effect is claimed for these producer/evidence corrections.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "10.06",
     title: "Availability-invariant mint fallback",
     date: "2026-10-05",

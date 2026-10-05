@@ -44,7 +44,7 @@ const DUSD = "0x07fff99e1664d9b116fbc158c0e99785f81ca236";
 const DLEND_POOL = "0x6598dad18bda89a0e58a1f427c8cebc0de90f153";
 const DLEND_ATOKEN = "0x5cc741931d01cb1adde193222dfb1ad75930fd60";
 const NOON_SUSN_VAULT = "0xe24a3dc889621612422a64e6388927901608b91d";
-const NOON_SUSN_VAULT_IMPL = "0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d";
+const NOON_SUSN_VAULT_IMPL = "0xef2ea4250b7ce4d0aa9ca70607ecef278c6eab15";
 const NOON_WITHDRAWAL_HANDLER = "0x0dabc0d9b270c9b0c4c77aaceaa712b56d0f9178";
 // Derived, not transcribed: a hand-copied slot once dropped a nibble and the
 // fixture echoed it, so production read an empty slot while tests passed.
@@ -71,7 +71,7 @@ const CODE_HASH_BY_ADDRESS: Record<string, string> = {
   [DLEND_STRATEGY]: "0xe448349ec1a422118e4244e737f124d1f5e65ccf696a8eecfe48fc8008e082e2",
   [DLEND_ADAPTER]: "0x958bacf03625c8460aa5b3f30ba4fb4610b47a6c8580e257c2e108c53a1787c4",
   [NOON_SUSN_VAULT]: "0xb108840d91ea6f26d83fc692d0ac870fe1e895debcd9e67c1d7d4317296a88e6",
-  [NOON_SUSN_VAULT_IMPL]: "0x2fec4424636a25ee95ed7135af071433609bce018d51aca35d222ea4787876ef",
+  [NOON_SUSN_VAULT_IMPL]: "0x643389431d29e62e04a7bc4c324f7b1af4561453d3758f46f456b7f39cb63440",
   [NOON_WITHDRAWAL_HANDLER]: "0x48f64f2a52f543354cd46deeb67405df9544289012d18bd9b48920d44d0a4c13",
 };
 
@@ -570,6 +570,26 @@ describe("specialized executable redemption observers", () => {
       },
     });
     expect(observation).not.toHaveProperty("settlementBoundUnproven");
+  });
+
+  it("rejects the retired Noon implementation even if its runtime is still available", async () => {
+    const readClient = client("noon");
+    const readStorage = readClient.storage;
+    readClient.storage = async (address, slot, block, options) =>
+      address.toLowerCase() === NOON_SUSN_VAULT && slot === EIP1967_IMPLEMENTATION_SLOT
+        ? storageWord("0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d")
+        : readStorage(address, slot, block, options);
+    await expect(observeExecutableRedemptionRoute(
+      "susn-noon", NOON_SUSN_VAULT, new AbortController().signal, undefined,
+      { client: readClient, nowSec: NOW },
+    )).rejects.toThrow(/implementation identity drift/);
+  });
+
+  it("rejects code drift on the newly reviewed Noon implementation", async () => {
+    await expect(observeExecutableRedemptionRoute(
+      "susn-noon", NOON_SUSN_VAULT, new AbortController().signal, undefined,
+      { client: client("noon", { driftAddress: NOON_SUSN_VAULT_IMPL }), nowSec: NOW },
+    )).rejects.toThrow(/code identity drift/);
   });
 
   it("fails susn-noon closed on withdrawal-handler pointer drift", async () => {

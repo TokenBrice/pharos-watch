@@ -143,16 +143,16 @@ const DSTAKE = {
 // keccak256("StakingVault.storage.location")), so the pointer is read from
 // storage and pinned every run: setWithdrawalHandler must fail closed here,
 // not silently redirect the settlement-bound read to a retired contract.
-// Runtime code hashes captured 2026-09-23 (block 26,038,220); vault
-// implementation and handler verified byte-identical to Protocol-Core
-// commit 45ee4e19 via Sourcify exact matches.
+// Runtime identity reviewed 2026-10-05 at block 26,122,649. Blockscout's
+// verified StakingVaultOFTUpgradeableHyperlane bytecode matches the RPC code;
+// its holder request/claim path and namespaced handler slot are unchanged.
 const NOON_SUSN = {
   coinId: "susn-noon",
   vault: {
     address: "0xe24a3dc889621612422a64e6388927901608b91d",
     codeHash: "0xb108840d91ea6f26d83fc692d0ac870fe1e895debcd9e67c1d7d4317296a88e6",
-    implementationAddress: "0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d",
-    implementationCodeHash: "0x2fec4424636a25ee95ed7135af071433609bce018d51aca35d222ea4787876ef",
+    implementationAddress: "0xef2ea4250b7ce4d0aa9ca70607ecef278c6eab15",
+    implementationCodeHash: "0x643389431d29e62e04a7bc4c324f7b1af4561453d3758f46f456b7f39cb63440",
   } satisfies ProxyIdentity,
   withdrawalHandler: {
     address: "0x0dabc0d9b270c9b0c4c77aaceaa712b56d0f9178",
@@ -170,6 +170,7 @@ const NOON_SUSN = {
     "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/minting-and-redemption",
     "https://etherscan.io/address/0xe24a3dc889621612422a64e6388927901608b91d#readContract",
     "https://etherscan.io/address/0x0dabc0d9b270c9b0c4c77aaceaa712b56d0f9178#readContract",
+    "https://eth.blockscout.com/api/v2/smart-contracts/0xef2ea4250b7ce4d0aa9ca70607ecef278c6eab15",
     "https://etherscan.io/address/0x36857ef0b10a61a68d58c29ee256990fa9699722#readContract",
   ],
 } as const;

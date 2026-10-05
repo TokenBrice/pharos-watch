@@ -3913,15 +3913,15 @@
     },
     {
       "assetId": "srusd-reservoir",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACC-B TRANSFER-FACT",
+      "reviewedAt": "2026-10-04",
+      "reviewer": "Unknown-resolver wave 3 W3R16 pinned runtime review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x738d1115b90efa71ae468f1287fc864775e23a31",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "Sourcify exact-matches this direct deployment as Savingcoin, an AccessControl plus ERC20Burnable token whose only privileged entry point is mint(address,uint256) under the MINTER role. At Ethereum block 25575196 no EIP-1967 implementation, admin, or beacon slot was set. There is no transfer override, pause, blacklist, freeze, seizure, or unapproved holder burn: burn and burnFrom are the stock ERC20Burnable holder and allowance paths.",
+          "evidence": "Ethereum block 26122338 runtime equals Sourcify's exact-match direct Savingcoin deployment. AccessControl governs only mint; ERC20Burnable burns only caller balances or approved allowances. No transfer gate, freeze, pause or upgrade path exists in this source.",
           "sources": [
             {
               "label": "Sourcify verified Savingcoin source (chain 1)",
@@ -3930,6 +3930,27 @@
             {
               "label": "Ethereum public RPC used for the block 25575196 reads",
               "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "chainId": "berachain",
+          "contractOrTokenId": "0x5475611dffb8ef4d697ae39df9395513b6e947d7",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At Berachain block 27071251, name/symbol identify Savings rUSD/srUSD. Its entire executable runtime is byte-for-byte equal to the same-chain wsrUSD OFT after removing only the 53-byte compiler CBOR metadata. That runtime matches Sourcify exact-match WsrusdOft after normalization only at its compiler-labelled immutable offsets (endpoint and decimal conversion). Standard ERC20 transfer/transferFrom have no hooks, pause, freeze, allowlist or holder seizure; OFT owner configuration only governs cross-chain operations.",
+          "sources": [
+            {
+              "label": "Exact-match executable OFT reference with immutable offsets and full sources",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all"
+            },
+            {
+              "label": "Berachain pinned RPC reads",
+              "url": "https://api-berachain-mainnet.n.dwellir.com"
+            },
+            {
+              "label": "Issuer chain-qualified srUSD identity",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
             }
           ]
         }
@@ -4448,23 +4469,90 @@
     },
     {
       "assetId": "wsrusd-reservoir",
-      "reviewedAt": "2026-08-08",
-      "reviewer": "OpenAI Codex C04 access review",
+      "reviewedAt": "2026-10-04",
+      "reviewer": "Unknown-resolver wave 3 W3R16 pinned runtime review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "Sourcify exact-matches this direct deployment as Savingcoin, an AccessControl plus ERC4626 wrapper. At Ethereum block 25712251 on 2026-08-08, the implementation, admin, and beacon slots remained zero. Verified source has no transfer, transferFrom, or _update override and no pause, blacklist, freeze, seizure, or arbitrary holder burn; MANAGER authority reaches only the deposit cap and savings rate.",
+          "evidence": "At Ethereum block 26122338, the full runtime equals Sourcify's exact-match Savingcoin ERC4626 deployment. Source contains no transfer/transferFrom/_update override or pause, blacklist, seizure or arbitrary holder burn. Privileged savings-rate/cap management is not a holder transfer hook.",
           "sources": [
             {
-              "label": "Sourcify verified Savingcoin source (chain 1)",
-              "url": "https://sourcify.dev/server/v2/contract/1/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
+              "label": "Issuer exact deployment census",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
             },
             {
-              "label": "Ethereum public RPC used for block 25712251",
-              "url": "https://ethereum-rpc.publicnode.com"
+              "label": "Exact-match canonical source",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094?fields=all"
+            },
+            {
+              "label": "Pinned Ethereum RPC",
+              "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+            }
+          ]
+        },
+        {
+          "chainId": "base",
+          "contractOrTokenId": "0x62344be8ca1c339b46274a4017dd87af436900b1",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At base block 52183937, the entire executable runtime matches the Sourcify exact-match direct WsrusdOft reference after clearing ONLY compiler-labelled immutable bytes and omitting compiler CBOR metadata. These immutables are the LayerZero endpoint and decimal conversion rate, neither a transfer hook. Standard ERC20 transfer/transferFrom contain no owner-controlled transfer override, pause, blacklist, freeze, seizure or allowlist.",
+          "sources": [
+            {
+              "label": "Issuer exact deployment census",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
+            },
+            {
+              "label": "Verified executable reference and immutable offset proof",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all"
+            },
+            {
+              "label": "Pinned base runtime read",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            }
+          ]
+        },
+        {
+          "chainId": "berachain",
+          "contractOrTokenId": "0x316cd39632cac4f4cdfc21757c4500fe12f64514",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At berachain block 27071251, the entire executable runtime matches the Sourcify exact-match direct WsrusdOft reference after clearing ONLY compiler-labelled immutable bytes and omitting compiler CBOR metadata. These immutables are the LayerZero endpoint and decimal conversion rate, neither a transfer hook. Standard ERC20 transfer/transferFrom contain no owner-controlled transfer override, pause, blacklist, freeze, seizure or allowlist.",
+          "sources": [
+            {
+              "label": "Issuer exact deployment census",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
+            },
+            {
+              "label": "Verified executable reference and immutable offset proof",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all"
+            },
+            {
+              "label": "Pinned berachain runtime read",
+              "url": "https://api-berachain-mainnet.n.dwellir.com"
+            }
+          ]
+        },
+        {
+          "chainId": "sonic",
+          "contractOrTokenId": "0x4809010926aec940b550d34a46a52739f996d75d",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At sonic block 80359387, the entire executable runtime matches the Sourcify exact-match direct WsrusdOft reference after clearing ONLY compiler-labelled immutable bytes and omitting compiler CBOR metadata. These immutables are the LayerZero endpoint and decimal conversion rate, neither a transfer hook. Standard ERC20 transfer/transferFrom contain no owner-controlled transfer override, pause, blacklist, freeze, seizure or allowlist.",
+          "sources": [
+            {
+              "label": "Issuer exact deployment census",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
+            },
+            {
+              "label": "Verified executable reference and immutable offset proof",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all"
+            },
+            {
+              "label": "Pinned sonic runtime read",
+              "url": "https://api-sonic-mainnet-archive.n.dwellir.com"
             }
           ]
         },
@@ -4473,19 +4561,103 @@
           "contractOrTokenId": "0x4809010926aec940b550d34a46a52739f996d75d",
           "scope": "material-bridge",
           "posture": "permissionless",
-          "evidence": "At Arbitrum block 492488625 on 2026-08-08, this direct 12,275-byte deployment had zero EIP-1967 implementation, admin, and beacon slots. Blockscout verifies it as WsrusdOft, a constructor-deployed LayerZero OFT over standard ERC-20 transfer paths. The contract adds cross-chain send/receive and owner configuration but no pause, blacklist, freeze, seizure, transfer allowlist, or arbitrary holder burn.",
+          "evidence": "At arbitrum block 511755845, the entire executable runtime matches the Sourcify exact-match direct WsrusdOft reference after clearing ONLY compiler-labelled immutable bytes and omitting compiler CBOR metadata. These immutables are the LayerZero endpoint and decimal conversion rate, neither a transfer hook. Standard ERC20 transfer/transferFrom contain no owner-controlled transfer override, pause, blacklist, freeze, seizure or allowlist.",
           "sources": [
             {
-              "label": "Blockscout verified Arbitrum WsrusdOft source",
-              "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x4809010926aec940b550d34a46a52739f996d75d"
+              "label": "Issuer exact deployment census",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
             },
             {
-              "label": "Arbitrum public RPC used for block 492488625",
-              "url": "https://arb1.arbitrum.io/rpc"
+              "label": "Verified executable reference and immutable offset proof",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all"
             },
             {
-              "label": "Reservoir official contract inventory",
-              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+              "label": "Pinned arbitrum runtime read",
+              "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+            }
+          ]
+        },
+        {
+          "chainId": "bsc",
+          "contractOrTokenId": "0x4809010926aec940b550d34a46a52739f996d75d",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At bsc block 125765881, the entire executable runtime matches the Sourcify exact-match direct WsrusdOft reference after clearing ONLY compiler-labelled immutable bytes and omitting compiler CBOR metadata. These immutables are the LayerZero endpoint and decimal conversion rate, neither a transfer hook. Standard ERC20 transfer/transferFrom contain no owner-controlled transfer override, pause, blacklist, freeze, seizure or allowlist.",
+          "sources": [
+            {
+              "label": "Issuer exact deployment census",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
+            },
+            {
+              "label": "Verified executable reference and immutable offset proof",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all"
+            },
+            {
+              "label": "Pinned bsc runtime read",
+              "url": "https://api-bsc-mainnet-full.n.dwellir.com"
+            }
+          ]
+        },
+        {
+          "chainId": "avalanche",
+          "contractOrTokenId": "0x4809010926aec940b550d34a46a52739f996d75d",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At avalanche block 96768961, the entire executable runtime matches the Sourcify exact-match direct WsrusdOft reference after clearing ONLY compiler-labelled immutable bytes and omitting compiler CBOR metadata. These immutables are the LayerZero endpoint and decimal conversion rate, neither a transfer hook. Standard ERC20 transfer/transferFrom contain no owner-controlled transfer override, pause, blacklist, freeze, seizure or allowlist.",
+          "sources": [
+            {
+              "label": "Issuer exact deployment census",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
+            },
+            {
+              "label": "Verified executable reference and immutable offset proof",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all"
+            },
+            {
+              "label": "Pinned avalanche runtime read",
+              "url": "https://api-avalanche-mainnet-archive.n.dwellir.com/ext/bc/C/rpc"
+            }
+          ]
+        },
+        {
+          "chainId": "unichain",
+          "contractOrTokenId": "0x4809010926aec940b550d34a46a52739f996d75d",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At unichain block 60408862, the entire executable runtime matches the Sourcify exact-match direct WsrusdOft reference after clearing ONLY compiler-labelled immutable bytes and omitting compiler CBOR metadata. These immutables are the LayerZero endpoint and decimal conversion rate, neither a transfer hook. Standard ERC20 transfer/transferFrom contain no owner-controlled transfer override, pause, blacklist, freeze, seizure or allowlist.",
+          "sources": [
+            {
+              "label": "Issuer exact deployment census",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
+            },
+            {
+              "label": "Verified executable reference and immutable offset proof",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all"
+            },
+            {
+              "label": "Pinned unichain runtime read",
+              "url": "https://api-unichain-mainnet.n.dwellir.com"
+            }
+          ]
+        },
+        {
+          "chainId": "plume",
+          "contractOrTokenId": "0x0bbcc2c1991d0af8ec6a5ed922e6f5606923fe15",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At plume block 97398613, the entire executable runtime matches the Sourcify exact-match direct WsrusdOft reference after clearing ONLY compiler-labelled immutable bytes and omitting compiler CBOR metadata. These immutables are the LayerZero endpoint and decimal conversion rate, neither a transfer hook. Standard ERC20 transfer/transferFrom contain no owner-controlled transfer override, pause, blacklist, freeze, seizure or allowlist.",
+          "sources": [
+            {
+              "label": "Issuer exact deployment census",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
+            },
+            {
+              "label": "Verified executable reference and immutable offset proof",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all"
+            },
+            {
+              "label": "Pinned plume runtime read",
+              "url": "https://rpc.plume.org"
             }
           ]
         },
@@ -4494,19 +4666,103 @@
           "contractOrTokenId": "0x4809010926aec940b550d34a46a52739f996d75d",
           "scope": "material-bridge",
           "posture": "permissionless",
-          "evidence": "At Sei block 225091218 on 2026-08-08, this direct 12,275-byte deployment had zero EIP-1967 implementation, admin, and beacon slots and the exact same runtime hash as the verified Arbitrum WsrusdOft. That OFT implementation uses ordinary ERC-20 transfers and exposes no pause, blacklist, freeze, seizure, transfer allowlist, or arbitrary holder burn.",
+          "evidence": "At sei block 235776801, the entire executable runtime matches the Sourcify exact-match direct WsrusdOft reference after clearing ONLY compiler-labelled immutable bytes and omitting compiler CBOR metadata. These immutables are the LayerZero endpoint and decimal conversion rate, neither a transfer hook. Standard ERC20 transfer/transferFrom contain no owner-controlled transfer override, pause, blacklist, freeze, seizure or allowlist.",
           "sources": [
             {
-              "label": "Blockscout verified WsrusdOft source for the exact runtime family",
-              "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x4809010926aec940b550d34a46a52739f996d75d"
+              "label": "Issuer exact deployment census",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
             },
             {
-              "label": "Sei public RPC used for block 225091218",
+              "label": "Verified executable reference and immutable offset proof",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all"
+            },
+            {
+              "label": "Pinned sei runtime read",
               "url": "https://evm-rpc.sei-apis.com"
+            }
+          ]
+        },
+        {
+          "chainId": "worldchain",
+          "contractOrTokenId": "0x4809010926aec940b550d34a46a52739f996d75d",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At worldchain block 35910791, the entire executable runtime matches the Sourcify exact-match direct WsrusdOft reference after clearing ONLY compiler-labelled immutable bytes and omitting compiler CBOR metadata. These immutables are the LayerZero endpoint and decimal conversion rate, neither a transfer hook. Standard ERC20 transfer/transferFrom contain no owner-controlled transfer override, pause, blacklist, freeze, seizure or allowlist.",
+          "sources": [
+            {
+              "label": "Issuer exact deployment census",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
             },
             {
-              "label": "Reservoir official contract inventory",
-              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+              "label": "Verified executable reference and immutable offset proof",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all"
+            },
+            {
+              "label": "Pinned worldchain runtime read",
+              "url": "https://api-worldchain-mainnet.n.dwellir.com"
+            }
+          ]
+        },
+        {
+          "chainId": "katana",
+          "contractOrTokenId": "0x4809010926aec940b550d34a46a52739f996d75d",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At katana block 44414573, the entire executable runtime matches the Sourcify exact-match direct WsrusdOft reference after clearing ONLY compiler-labelled immutable bytes and omitting compiler CBOR metadata. These immutables are the LayerZero endpoint and decimal conversion rate, neither a transfer hook. Standard ERC20 transfer/transferFrom contain no owner-controlled transfer override, pause, blacklist, freeze, seizure or allowlist.",
+          "sources": [
+            {
+              "label": "Issuer exact deployment census",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
+            },
+            {
+              "label": "Verified executable reference and immutable offset proof",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all"
+            },
+            {
+              "label": "Pinned katana runtime read",
+              "url": "https://rpc.katanarpc.com"
+            }
+          ]
+        },
+        {
+          "chainId": "hyperevm",
+          "contractOrTokenId": "0x04716db62c085d9e08050fcf6f7d775a03d07720",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At hyperevm block 47682292, the entire executable runtime matches the Sourcify exact-match direct WsrusdOft reference after clearing ONLY compiler-labelled immutable bytes and omitting compiler CBOR metadata. These immutables are the LayerZero endpoint and decimal conversion rate, neither a transfer hook. Standard ERC20 transfer/transferFrom contain no owner-controlled transfer override, pause, blacklist, freeze, seizure or allowlist.",
+          "sources": [
+            {
+              "label": "Issuer exact deployment census",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
+            },
+            {
+              "label": "Verified executable reference and immutable offset proof",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all"
+            },
+            {
+              "label": "Pinned hyperevm runtime read",
+              "url": "https://api-hyperliquid-mainnet-evm.n.dwellir.com"
+            }
+          ]
+        },
+        {
+          "chainId": "linea",
+          "contractOrTokenId": "0x4809010926aec940b550d34a46a52739f996d75d",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At linea block 32232705, the entire executable runtime matches the Sourcify exact-match direct WsrusdOft reference after clearing ONLY compiler-labelled immutable bytes and omitting compiler CBOR metadata. These immutables are the LayerZero endpoint and decimal conversion rate, neither a transfer hook. Standard ERC20 transfer/transferFrom contain no owner-controlled transfer override, pause, blacklist, freeze, seizure or allowlist.",
+          "sources": [
+            {
+              "label": "Issuer exact deployment census",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
+            },
+            {
+              "label": "Verified executable reference and immutable offset proof",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all"
+            },
+            {
+              "label": "Pinned linea runtime read",
+              "url": "https://api-linea-mainnet-archive.n.dwellir.com"
             }
           ]
         },
@@ -4515,19 +4771,44 @@
           "contractOrTokenId": "0x4809010926aec940b550d34a46a52739f996d75d",
           "scope": "material-bridge",
           "posture": "permissionless",
-          "evidence": "At Monad block 94284946 on 2026-08-08, this direct 12,275-byte WsrusdOft deployment had zero EIP-1967 implementation, admin, and beacon slots. The verified constructor/ABI and the issuer's inventory identify the same LayerZero OFT family, whose standard ERC-20 transfer path has no pause, blacklist, freeze, seizure, transfer allowlist, or arbitrary holder burn.",
+          "evidence": "At monad block 110599874, the entire executable runtime matches the Sourcify exact-match direct WsrusdOft reference after clearing ONLY compiler-labelled immutable bytes and omitting compiler CBOR metadata. These immutables are the LayerZero endpoint and decimal conversion rate, neither a transfer hook. Standard ERC20 transfer/transferFrom contain no owner-controlled transfer override, pause, blacklist, freeze, seizure or allowlist.",
           "sources": [
             {
-              "label": "MonadScan verified wsrUSD contract",
-              "url": "https://monadscan.com/address/0x4809010926aec940b550d34a46a52739f996d75d#code"
+              "label": "Issuer exact deployment census",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
             },
             {
-              "label": "Monad public RPC used for block 94284946",
-              "url": "https://rpc.monad.xyz"
+              "label": "Verified executable reference and immutable offset proof",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all"
             },
             {
-              "label": "Reservoir official contract inventory",
-              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+              "label": "Pinned monad runtime read",
+              "url": "https://api-monad-mainnet-full.n.dwellir.com"
+            }
+          ]
+        },
+        {
+          "chainId": "solana",
+          "contractOrTokenId": "7bxM8cRFZpzonzZtzmrcWHNX1dijrEVU4VkjjtVyBmqE",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At finalized slot 453407700, getAccountInfo identifies the 82-byte legacy SPL Token mint owned by TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA, not Token-2022, with freezeAuthority null and no transfer-hook extension. Standard token-account owner/delegate authorization controls transfers; the OFT mint-authority PDA cannot replace the permanently removed freeze authority.",
+          "sources": [
+            {
+              "label": "Issuer exact deployment census",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
+            },
+            {
+              "label": "Solana token authority semantics",
+              "url": "https://solana.com/docs/tokens/basics/set-authority"
+            },
+            {
+              "label": "Pinned finalized mint read provider",
+              "url": "https://solana-mainnet.g.alchemy.com"
+            },
+            {
+              "label": "Legacy SPL token transfer and authority code",
+              "url": "https://github.com/solana-program/token/blob/program%40v9.0.0/program/src/processor.rs"
             }
           ]
         },
@@ -4536,36 +4817,103 @@
           "contractOrTokenId": "0x4809010926aec940b550d34a46a52739f996d75d",
           "scope": "material-bridge",
           "posture": "permissionless",
-          "evidence": "At Pharos block 14595397 on 2026-08-08, this direct 12,275-byte deployment had zero EIP-1967 implementation, admin, and beacon slots and the exact same runtime hash as the Monad WsrusdOft deployment. Its standard LayerZero OFT/ERC-20 surface has no pause, blacklist, freeze, seizure, transfer allowlist, or arbitrary holder burn.",
+          "evidence": "At pharos block 19396443, the entire executable runtime matches the Sourcify exact-match direct WsrusdOft reference after clearing ONLY compiler-labelled immutable bytes and omitting compiler CBOR metadata. These immutables are the LayerZero endpoint and decimal conversion rate, neither a transfer hook. Standard ERC20 transfer/transferFrom contain no owner-controlled transfer override, pause, blacklist, freeze, seizure or allowlist.",
           "sources": [
             {
-              "label": "Reservoir official contract inventory and OFT source repository",
-              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+              "label": "Issuer exact deployment census",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
             },
             {
-              "label": "Pharos public RPC used for block 14595397",
+              "label": "Verified executable reference and immutable offset proof",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all"
+            },
+            {
+              "label": "Pinned pharos runtime read",
               "url": "https://api.zan.top/public/pharos-mainnet"
+            }
+          ]
+        },
+        {
+          "chainId": "plasma",
+          "contractOrTokenId": "0x4809010926aec940b550d34a46a52739f996d75d",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At plasma block 34216261, the entire executable runtime matches the Sourcify exact-match direct WsrusdOft reference after clearing ONLY compiler-labelled immutable bytes and omitting compiler CBOR metadata. These immutables are the LayerZero endpoint and decimal conversion rate, neither a transfer hook. Standard ERC20 transfer/transferFrom contain no owner-controlled transfer override, pause, blacklist, freeze, seizure or allowlist.",
+          "sources": [
+            {
+              "label": "Issuer exact deployment census",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
             },
             {
-              "label": "Blockscout verified WsrusdOft source for the deployed OFT family",
-              "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x4809010926aec940b550d34a46a52739f996d75d"
+              "label": "Verified executable reference and immutable offset proof",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all"
+            },
+            {
+              "label": "Pinned plasma runtime read",
+              "url": "https://api-plasma-mainnet.n.dwellir.com"
+            }
+          ]
+        },
+        {
+          "chainId": "megaeth",
+          "contractOrTokenId": "0x4809010926aec940b550d34a46a52739f996d75d",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At megaeth block 28360459, the entire executable runtime matches the Sourcify exact-match direct WsrusdOft reference after clearing ONLY compiler-labelled immutable bytes and omitting compiler CBOR metadata. These immutables are the LayerZero endpoint and decimal conversion rate, neither a transfer hook. Standard ERC20 transfer/transferFrom contain no owner-controlled transfer override, pause, blacklist, freeze, seizure or allowlist.",
+          "sources": [
+            {
+              "label": "Issuer exact deployment census",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
+            },
+            {
+              "label": "Verified executable reference and immutable offset proof",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all"
+            },
+            {
+              "label": "Pinned megaeth runtime read",
+              "url": "https://api-megaeth-mainnet.n.dwellir.com"
             }
           ]
         },
         {
           "chainId": "tempo",
           "contractOrTokenId": "0x20c000000000000000000000aeed2ec36a54d0e5",
-          "scope": "additional",
+          "scope": "material-bridge",
           "posture": "restrictable",
-          "evidence": "At Tempo block 42130411, changeTransferPolicyId(0) simulated from 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 succeeds (0x), while the same simulation from savings manager Safe 0x4e8a4894275780f571aad53122e641d9f50ff04f reverts Unauthorized. TIP20 policy 0 rejects all transfers. This documents an admin-level transfer restriction independent of the immutable canonical Ethereum wrapper. No transaction was broadcast; other deployment reviews retain their historical observation dates.",
+          "evidence": "At Tempo block 42640849, transferPolicyId=1 and paused=false. Read-only changeTransferPolicyId(0) eth_call from Reservoir EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 succeeds; TIP20 policy 0 rejects transfers and admin can change policy. This is restrictable notwithstanding today's always-allow policy; no transaction was sent.",
           "sources": [
             {
-              "label": "Tempo TIP20 specification",
+              "label": "Issuer exact deployment census",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
+            },
+            {
+              "label": "TIP20 policy/pausing semantics",
               "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
             },
             {
-              "label": "wsrUSD Tempo deployment",
-              "url": "https://explore.tempo.xyz/token/0x20c000000000000000000000aeed2ec36a54d0e5"
+              "label": "Pinned Tempo token read",
+              "url": "https://api-tempo-mainnet.n.dwellir.com"
+            }
+          ]
+        },
+        {
+          "chainId": "xdc",
+          "contractOrTokenId": "0x4809010926aec940b550d34a46a52739f996d75d",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At xdc block 108008335, the entire executable runtime matches the Sourcify exact-match direct WsrusdOft reference after clearing ONLY compiler-labelled immutable bytes and omitting compiler CBOR metadata. These immutables are the LayerZero endpoint and decimal conversion rate, neither a transfer hook. Standard ERC20 transfer/transferFrom contain no owner-controlled transfer override, pause, blacklist, freeze, seizure or allowlist.",
+          "sources": [
+            {
+              "label": "Issuer exact deployment census",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
+            },
+            {
+              "label": "Verified executable reference and immutable offset proof",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all"
+            },
+            {
+              "label": "Pinned xdc runtime read",
+              "url": "https://api-xdc-mainnet.n.dwellir.com"
             }
           ]
         }
@@ -9688,15 +10036,15 @@
     },
     {
       "assetId": "zarsc-supercoin",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
+      "reviewedAt": "2026-10-05",
+      "reviewer": "Pharos unknown-resolver W3R39",
       "deployments": [
         {
           "chainId": "solana",
           "contractOrTokenId": "5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "Finalized Solana slot 452860529: freezeAuthority 78gLf8nzh9KpfgHJ3dXN61frauTzdAw5yeBXQbFsVnZi, permanentDelegate 3DkHJVMsC7zLLdBa7SamKpr4r6jC9C8AWQdzzvcYjVdc and pausable authority retained. Default account state initialized, pause=false, current transfer hook programId=null and transfer fees zero. The retained hook authority can change future transfer execution. ToS 9.2 and 12.3 authorize freezes/burns. These are holder-transfer restrictions, separate from the future-only direct app redemption route.",
+          "evidence": "Finalized Solana slot 453413494: freeze authority 78gLf8nzh9KpfgHJ3dXN61frauTzdAw5yeBXQbFsVnZi; permanent delegate 3DkHJVMsC7zLLdBa7SamKpr4r6jC9C8AWQdzzvcYjVdc; pausable authority retained, pause=false. Default state initialized; hook program null but mutable; fees zero. Issuer ToS 5.3 names Solana issuance and current assurance archive publishes this sole mint; permission to deploy later is not a current second liability.",
           "sources": [
             {
               "label": "Finalized Solana mint configuration",
@@ -9708,7 +10056,26 @@
             }
           ]
         }
-      ]
+      ],
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-10-05",
+        "expiresAt": "2026-11-04",
+        "reviewer": "Pharos unknown-resolver W3R39",
+        "deploymentKey": "solana:5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Issuer current sole Solana Token-2022 mint disclosure",
+            "url": "https://www.supercoin.co.za/assurance-reports"
+          },
+          {
+            "label": "ToS 5.3: Solana issuance; other chains prospective",
+            "url": "https://www.supercoin.co.za/terms-of-service"
+          }
+        ]
+      }
     },
     {
       "assetId": "zaru-blocktower",

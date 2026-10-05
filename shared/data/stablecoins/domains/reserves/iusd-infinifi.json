@@ -162,11 +162,57 @@
         "smart-contract"
       ],
       "liquidityHorizon": "seven-days"
+    },
+    {
+      "sourceKey": "infinifi:monad-aavev3",
+      "name": "Aave USDC",
+      "pct": 0,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave V3 (Monad)",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "smart-contract"
+      ]
+    },
+    {
+      "sourceKey": "infinifi:aave-v4-usdg",
+      "name": "Aave USDG",
+      "pct": 0,
+      "risk": "low",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave V4",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "smart-contract"
+      ]
+    },
+    {
+      "sourceKey": "infinifi:morpho-v2-sentora-pyusd",
+      "name": "Sentora PYUSD",
+      "pct": 0,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sentora / Morpho",
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "sourceKey": "infinifi:morpho-v2-sentora-prime",
+      "name": "Sentora PRIME Main",
+      "pct": 0,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sentora / Morpho",
+      "liquidityHorizon": "seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice8)",
+    "reviewedAt": "2026-10-04",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice8); W3R24 keyed metadata review",
     "confidence": "verified",
     "sources": [
       {
@@ -176,9 +222,21 @@
       {
         "label": "Morpho Steakhouse Prime USDC vault on Base",
         "url": "https://app.morpho.org/base/vault/0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2/steakhouse-prime-usdc"
+      },
+      {
+        "label": "infiniFi API exact farm identities and Sentora one-week redemption terms (observed 2026-10-04)",
+        "url": "https://eth-api.infinifi.xyz/api/protocol/data"
+      },
+      {
+        "label": "Verified Monad AaveV3Farm source",
+        "url": "https://sourcify.dev/server/v2/contract/143/0xA171c4a6e0d73DB80911A0C003508fB235F29b63?fields=abi,sources,compilation"
+      },
+      {
+        "label": "Verified Ethereum AaveV4Farm source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2CdF51ca20C2DD56480c35adEA667A6653Fb7657"
       }
     ],
-    "rationale": "The infiniFi live protocol capture on 2026-09-21 reports ten nonzero farm slices totaling 100.0% after adapter rounding. Morpho's vault page identifies the previously unmapped 0.1% Steakhouse Prime USDC position as a Base Morpho vault curated by Steakhouse Financial with USDC as its underlying asset. The row is classified consistently with the existing Steakhouse-curated Morpho position and linked to USDC collateral.",
+    "rationale": "The infiniFi live protocol capture on 2026-09-21 reports ten nonzero farm slices totaling 100.0% after adapter rounding. Morpho's vault page identifies the previously unmapped 0.1% Steakhouse Prime USDC position as a Base Morpho vault curated by Steakhouse Financial with USDC as its underlying asset. Metadata reviewed 2026-10-04: zero-percent keyed rows are classification-only join metadata, not new measured holdings or a refreshed composition. Exact Monad AaveV3Farm and Ethereum AaveV4Farm verified sources establish protocol-position classes and protocol counterparties for the separately keyed live rows. The issuer API identifies both exact Sentora farms and states redemptions are available within one week. Aave utilization, USDG keeper withdrawal/swap, and cross-chain final settlement remain unbounded; no immediate liquidity or zero maturity is inferred. Existing historical weights and compositionAsOf are unchanged.",
     "compositionBasis": "infiniFi protocol farm balances captured on 2026-09-21, with the Base Steakhouse Prime vault identity verified against Morpho",
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",

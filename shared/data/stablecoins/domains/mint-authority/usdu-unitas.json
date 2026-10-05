@@ -183,7 +183,7 @@
           ]
         },
         "capDescription": "Verified mint() requires MINTER_ROLE, a signed and deduplicated order, a valid route, a collateral-asset per-block limit, and a global per-block limit. These are rate limits, not a fixed outstanding-liability ceiling; the contract admin can alter them.",
-        "evidence": "At BSC block 125056986, USDu.minter() returned this address. At block 125057055, owner() returned 0x0a6db8e8f0b79ba5b9f5ac7f5728843b830bb1c8 and globalConfig() returned nonzero global mint/redeem limits. Sourcify's verified UnitasMintingV2 source directly records MINTER_ROLE, order-signature, route and per-block checks.",
+        "evidence": "At BSC block 125056986, USDu.minter() returned this address. At block 125057055, owner() returned 0x0a6db8e8f0b79ba5b9f5ac7f5728843b830bb1c8 and globalConfig() returned nonzero global mint/redeem limits. Sourcify's verified UnitasMintingV2 source directly records MINTER_ROLE, order-signature, route and per-block checks. On 2026-10-04 UTC, an authenticated archival census from creation block 69059068 through pin 125765880 covered 114 contiguous ranges of at most 500000 blocks with no failed ranges: 15 role grant/revocation/admin events, two CustodianAddressAdded events and one DelegatedSignerInitiated event. Current hasRole checks match every reconstructed membership, including the revoked deployer. Both custodians remain authorized; delegatedSigner(0x3538e8b68669a388a88bb09e5e263413e89bebcc,0x9224b0d8ba7abfe73fc4c7cf60023a4e0549c679) is PENDING, not ACCEPTED. This resolves the earlier historical permission-census access blocker, not the partial certificate's transitive Safe/custodian execution and liability closure.",
         "sources": [
           {
             "label": "Verified USDu token minter authorization",
@@ -192,6 +192,10 @@
           {
             "label": "Verified UnitasMintingV2 source and ABI",
             "url": "https://sourcify.dev/server/v2/contract/56/0xbb984ce670100aa855f6152f88b26ee57f4ea82a?fields=sources,abi"
+          },
+          {
+            "label": "Configuration and role census pin 125765880 (2026-10-04 UTC); creation block 69059068",
+            "url": "https://bscscan.com/block/125765880"
           }
         ]
       },

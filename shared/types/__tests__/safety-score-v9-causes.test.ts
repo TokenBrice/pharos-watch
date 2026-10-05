@@ -4,7 +4,8 @@ import {
   createV9EvidenceGapClassificationsV1Schema, v9EvidenceCauseScopeKey,
   type V9EvidenceCauseScope, type V9EvidenceGapClassification,
 } from "../safety-score-v9-causes";
-import { createV9EvidenceReference, resolveV9EvidenceCause } from "../../lib/safety-score-v9/evidence";
+import { createV9EvidenceReference, findV9CauseEvidenceBindingIssues, resolveV9EvidenceCause } from "../../lib/safety-score-v9/evidence";
+import { createV9FactGapV3 } from "../../lib/safety-score-v9/reasons";
 
 const clock = Date.parse("2026-10-03T00:01:00Z") / 1000;
 const scope: V9EvidenceCauseScope = {
@@ -21,7 +22,7 @@ const entry: V9EvidenceGapClassification = {
   }],
 };
 const registrySchema = createV9EvidenceGapClassificationsV1Schema({
-  assetIds: new Set([entry.assetId]), scopeKeys: new Set([v9EvidenceCauseScopeKey(entry.assetId, scope)]),
+  assetIds: new Set([entry.assetId]), scopeKeys: new Set([v9EvidenceCauseScopeKey(entry.assetId, scope, "research")]),
   asOfSec: clock, researchMaxAgeSec: 365 * 86400,
 });
 const resolverContext = {
@@ -98,6 +99,100 @@ describe("cause proofs and exact authored classification admission", () => {
       [{ ...entry, sources: [{ ...entry.sources[0], observedAt: "2026-10-03T00:01:01Z" }] }],
       [{ ...entry, reviewedAt: "2026-02-30T00:01:00Z" }],
     ]) expect(registrySchema.safeParse({ schemaVersion: 1, entries }).success).toBe(false);
+  });
+
+  it("binds route research across known producer generations without widening any other scope", () => {
+    const routeId = "redemption:usdt-tether:offchain-issuer";
+    const redemptionKeys = [
+      `redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:${routeId}`,
+      `redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:${routeId}`,
+      `redemption:redemption:1791146773000:abc123xy:${routeId}`,
+      `redemption:redemption:1791146774000::${routeId}`,
+      `redemption:redemption-backstops-unavailable:${routeId}`,
+    ];
+    const dexKeys = [
+      `dex:dex-liquidity-1791146773:${routeId}`,
+      `dex:dex-liquidity-1791161173:${routeId}`,
+    ];
+    for (const keys of [redemptionKeys, dexKeys]) {
+      const authored = { ...entry, scope: { ...scope, routeKey: keys[0]! } };
+      for (const routeKey of keys.slice(1)) {
+        const currentScope = { ...scope, routeKey };
+        expect(v9EvidenceCauseScopeKey(entry.assetId, authored.scope)).not.toBe(v9EvidenceCauseScopeKey(entry.assetId, currentScope));
+        expect(v9EvidenceCauseScopeKey(entry.assetId, authored.scope, "research")).toBe(v9EvidenceCauseScopeKey(entry.assetId, currentScope, "research"));
+        const admitted = resolveV9EvidenceCause({ ...resolverContext, scope: currentScope, classification: authored });
+        expect(admitted.causeProof.cause).toBe("B");
+        // Published provenance retains the authored scope; only research matching is stable.
+        expect(admitted.evidenceReferences[0]!.causeBinding!.scope.routeKey).toBe(keys[0]);
+        const compiledGap = createV9FactGapV3({
+          gapId: "fixture:route:cost", reasonCode: "missing-same-notional-route", ownerDomain: "exit",
+          policyRuleId: "v9.exit.route-factors", observationState: "missing",
+          responsibility: admitted.responsibility, causeProof: admitted.causeProof, causeScope: currentScope,
+          path: { kind: "optional-exit", routeKey }, message: "The route's cost datum is missing.",
+        });
+        const compiled = { assetId: entry.assetId, gaps: [compiledGap], evidence: [...admitted.evidenceReferences] };
+        expect(findV9CauseEvidenceBindingIssues(compiled)).toEqual([]);
+        expect(findV9CauseEvidenceBindingIssues({ ...compiled, evidence: compiled.evidence.map((reference) => ({
+          ...reference, causeBinding: { ...reference.causeBinding!, scope: currentScope },
+        })) })).toContainEqual(expect.objectContaining({
+          message: "Authored classification evidence must bind its normalized source/assertion/date bytes",
+        }));
+        const capturedSchema = createV9EvidenceGapClassificationsV1Schema({
+          assetIds: new Set([entry.assetId]),
+          scopeKeys: new Set([v9EvidenceCauseScopeKey(entry.assetId, currentScope, "research")]),
+          asOfSec: clock, researchMaxAgeSec: 365 * 86400,
+        });
+        expect(capturedSchema.safeParse({ schemaVersion: 1, entries: [authored] }).success).toBe(true);
+        const c = { ...authored, id: "generation-collision", scope: currentScope,
+          cause: "C" as const, assertion: "researched-nondisclosure" as const,
+          searchedSurfaces: [entry.sources[0]!.url], rationale: "The required field is absent.",
+        };
+        expect(resolveV9EvidenceCause({ ...resolverContext, scope: authored.scope, classification: c }).causeProof.cause).toBe("C");
+        expect(resolveV9EvidenceCause({ ...resolverContext, scope: currentScope, typedReview: {
+          ...c, scope: authored.scope, reviewedAt: "2026-10-02", sources: [entry.sources[0]!.url],
+        } }).causeProof.cause).toBe("C");
+        for (const duplicate of [{ ...authored, id: "generation-collision", scope: currentScope }, c]) {
+          const parsed = V9EvidenceGapClassificationsV1Schema.safeParse({ schemaVersion: 1, entries: [authored, duplicate] });
+          expect(parsed.success).toBe(false);
+          if (!parsed.success) expect(parsed.error.issues).toContainEqual(expect.objectContaining({
+            path: ["entries", 1, "scope"], message: "Duplicate or contradictory classification scope",
+          }));
+        }
+      }
+      for (const wrongScope of [
+        { ...authored.scope, routeKey: `${keys[1]}:different-route` },
+        { ...authored.scope, routeKey: keys === redemptionKeys ? dexKeys[1]! : redemptionKeys[1]! },
+        { ...authored.scope, pillar: "backing" as const },
+        { ...authored.scope, componentKey: "another-component" },
+        { ...authored.scope, factorKey: "settlement" },
+        { ...authored.scope, exposureId: "another-exposure" },
+        { ...authored.scope, requiredDatum: "another-datum" },
+      ]) expect(resolveV9EvidenceCause({ ...resolverContext, scope: wrongScope, classification: authored }).causeProof.cause).toBe("U");
+      expect(resolveV9EvidenceCause({ ...resolverContext, assetId: "usdc-circle", scope: authored.scope, classification: authored }).causeProof.cause).toBe("U");
+    }
+    for (const routeKey of [null, "bridge-meta:usdt-tether:abc123", "redemption:g1:main", "dex:dex-liquidity-scoring-stage:1791146773:main"]) {
+      const unchangedScope = { ...scope, routeKey };
+      expect(v9EvidenceCauseScopeKey(entry.assetId, unchangedScope, "research")).toBe(v9EvidenceCauseScopeKey(entry.assetId, unchangedScope));
+      expect(resolveV9EvidenceCause({ ...resolverContext, scope: unchangedScope,
+        classification: { ...entry, scope: unchangedScope },
+      }).causeProof.cause).toBe("B");
+      expect(resolveV9EvidenceCause({ ...resolverContext, scope: { ...unchangedScope, requiredDatum: "different" },
+        classification: { ...entry, scope: unchangedScope },
+      }).causeProof.cause).toBe("U");
+    }
+    const { reference, verdict } = pipeline();
+    const authoredScope = { ...scope, routeKey: redemptionKeys[0]! };
+    const currentScope = { ...scope, routeKey: redemptionKeys[1]! };
+    const exactReference = { ...reference, causeBinding: { ...reference.causeBinding!, scope: authoredScope } };
+    expect(() => resolveV9EvidenceCause({ ...resolverContext, scope: currentScope,
+      runtimeVerdict: { ...verdict, scope: authoredScope }, evidenceReferences: [exactReference],
+    })).toThrow(/wrong asset or required-datum scope/);
+    expect(() => resolveV9EvidenceCause({ ...resolverContext, scope: currentScope,
+      adverseProof: { cause: "D", adverseFactId: "incident", evidenceRefIds: [reference.evidenceId] },
+      evidenceReferences: [{ ...exactReference, disposition: "observed", rejection: null,
+        causeBinding: { ...exactReference.causeBinding!, adverseFactId: "incident" },
+      }],
+    })).toThrow(/wrong asset or required-datum scope/);
   });
 
   it("bounds research freshness independently of the numerical datum clock", () => {

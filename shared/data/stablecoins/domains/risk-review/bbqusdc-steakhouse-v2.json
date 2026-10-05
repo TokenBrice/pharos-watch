@@ -175,8 +175,8 @@
       {
         "id": "0xef2c308b5abecf5c8750a1aa82b47c558005feb7a03f4f8e1ad682d71ac8d0ba",
         "label": "mF-ONE collateral market 0xef2c308b",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact collateral/oracle identity and LLTV are established. Nested valuation inputs, operator controls, feed staleness enforcement and fallback behavior remain incompletely reviewed; no independence or redundancy credit is claimed.",
+        "tier": "privileged-internal-pricing",
+        "summary": "The nested mF-ONE feed is a Midas manually submitted NAV, not an independently established Chainlink market-price feed. At Ethereum block 26122340 its transparent proxy implementation and access-control deployment are pinned. Full feed-admin membership and stale-price/bypass review remain incomplete.",
         "collateralAssets": [
           "0x238a700ed6165261cf8b2e544ba797bc11e466ba"
         ],
@@ -185,16 +185,16 @@
         ],
         "feeds": [
           {
-            "provider": "ChainlinkOracleV2 adapter (Morpho API classification; feed operator/custody not independently established)",
+            "provider": "Midas manual NAV via CustomAggregatorV3CompatibleFeedDiscounted (7.7% discount)",
             "path": "baseFeedOne of 0x0cb1928eca8783f05a07d9ae2afb33f38bfbeb78 for market 0xef2c308b5abecf5c8750a1aa82b47c558005feb7a03f4f8e1ad682d71ac8d0ba",
             "address": "0x4386307a07c4de7ba11b4f4ec3e1f37bbe95dc99",
             "chain": "ethereum",
             "observedAt": "2026-10-03"
           }
         ],
-        "fallbackBehavior": "Market consumes its configured IOracle.price(); nested-feed stale-price handling and fallback/bypass paths are not yet verified for this exact oracle.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110193,
+        "fallbackBehavior": "Discounted feed 0x4386307a07c4de7ba11b4f4ec3e1f37bbe95dc99 reads Midas proxy 0x8d51dbc85ceef637c97d02bdaabb5e274850e68c. At block 26122340 its implementation is MFOneCustomAggregatorFeed 0x7cc057c382dea2d1d590386db13655f6ec8a65b4, whose feed admins submit prices manually. accessControl() returns 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b, another mutable proxy; feedAdminRole() is 0xdb5e9dab3324bd3260229fbc56a0f12fa0317c8cb14bee310acef564572cd504. ProxyAdmin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac is owned by MidasTimelockController 0xe3eee3e0d2398799c884a47fc40c029c8e241852, whose getMinDelay() is 172800 seconds. That upgrade delay does not establish delayed price submission, independent signers or a complete freshness/fallback certificate.",
+        "observedAt": "2026-10-04",
+        "observedBlock": 26122340,
         "collateralParameters": [
           {
             "asset": "0x238a700ed6165261cf8b2e544ba797bc11e466ba",
@@ -221,6 +221,18 @@
           {
             "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
             "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Verified discounted manual mF-ONE feed",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4386307a07c4de7ba11b4f4ec3e1f37bbe95dc99"
+          },
+          {
+            "label": "Verified MFOneCustomAggregatorFeed manual NAV implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7cc057c382dea2d1d590386db13655f6ec8a65b4"
+          },
+          {
+            "label": "Nested proxy, access-control and upgrade-delay observation pin",
+            "url": "https://etherscan.io/block/26122340"
           }
         ]
       },

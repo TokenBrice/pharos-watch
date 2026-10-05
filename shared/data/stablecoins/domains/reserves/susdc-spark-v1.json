@@ -14,7 +14,7 @@
         "liquidity",
         "counterparty"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "Idle USDC held by Legacy UsdcVault",
@@ -38,8 +38,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W2R05 pinned exact-vault gross inventory review",
+    "reviewedAt": "2026-10-05",
+    "reviewer": "W3R34 native sUSDS liquidity review; W2R05 gross inventory retained",
     "confidence": "verified",
     "sources": [
       {
@@ -59,11 +59,19 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba"
       },
       {
+        "label": "Exact sUSDS implementation: native full-share redemption to USDS",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0"
+      },
+      {
+        "label": "Ethereum liquidity observation block 26122496",
+        "url": "https://eth.blockscout.com/block/26122496"
+      },
+      {
         "label": "Credential-free RPC endpoint; pinned read in review notes",
         "url": "https://eth-mainnet.g.alchemy.com/v2/"
       }
     ],
-    "rationale": "Ethereum block 26115200 (2026-10-03T23:47:59Z; hash 0x0049cb9fd66ba90ddc0b3fb89f299cd7644f5b55ef95dc09949f426f624a6e6f) binds implementation 0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba and its immutable USDC, USDS, sUSDS and PSM accounting. Held sUSDS and vault totalSupply both equal 160851641385946608970541089 base units. sUSDS.convertToAssets(held) is 178803692286874041546569087 USDS base units. Idle USDC is 1004961 base units; USDS rounding dust is 2683592584333002 base units; the implementation-linked DAI balance is zero. Gross book NAV at token-accounting par is 178803693.294518634130902089, comprising all three nonzero holdings, not native totalAssets (178803692286874 USDC base units), which excludes idle tokens. Percentages preserve both dust positions. Par is a book valuation convention, not market price, final USD realization, independent assurance or insolvency priority; upstream sUSDS, USDS and USDC backing remains linked. Unsolicited unrelated token transfers are not reserve-accounting claims.",
+    "rationale": "Ethereum block 26115200 (2026-10-03T23:47:59Z; hash 0x0049cb9fd66ba90ddc0b3fb89f299cd7644f5b55ef95dc09949f426f624a6e6f) binds implementation 0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba and its immutable USDC, USDS, sUSDS and PSM accounting. Held sUSDS and vault totalSupply both equal 160851641385946608970541089 base units. sUSDS.convertToAssets(held) is 178803692286874041546569087 USDS base units. Idle USDC is 1004961 base units; USDS rounding dust is 2683592584333002 base units; the implementation-linked DAI balance is zero. Gross book NAV at token-accounting par is 178803693.294518634130902089, comprising all three nonzero holdings, not native totalAssets (178803692286874 USDC base units), which excludes idle tokens. Percentages preserve both dust positions. Par is a book valuation convention, not market price, final USD realization, independent assurance or insolvency priority; upstream sUSDS, USDS and USDC backing remains linked. Unsolicited unrelated token transfers are not reserve-accounting claims. Separate 2026-10-05 liquidity review at block 26122496, hash 0xdfc52d249b99b65701ad35d1e329202a89dd44e2fdd6896f176f89f111c720ab, confirmed the same Legacy implementation and sUSDS implementation 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0, both byte-for-byte matched to verified source. Native sUSDS maxRedeem(vault) equaled its entire held share balance; a pinned eth_call from the vault redeeming that whole balance succeeded and returned USDS. Legacy exit burns matching sUSDC shares and transfers sUSDS in kind without the PSM. Immediate liquidity describes this entire reserve leg's native USDS realization, not USDC pocket capacity, sale at par or final USD settlement. The October 3 composition and all weights are unchanged; idle USDC and USDS dust liquidity remains unknown.",
     "compositionBasis": "Complete implementation-defined local gross token inventory at one pinned Ethereum block; sUSDS valued by its native convertToAssets in USDS units, USDS and USDC at accounting par; no fee or stress deduction",
     "compositionAsOf": "2026-10-03",
     "scope": "full-composition",

@@ -164,12 +164,12 @@ describe("scheduled runtime Dwellir enablement", () => {
       stateHistory: "archive",
     });
 
-    // A chain that only has coin pins gains a supplemental-only config, which
-    // must not read as RPC-readable.
-    expect(registryOnly.has("megaeth")).toBe(false);
+    // State-only census endpoints and Dwellir can create supplemental-only
+    // configs; map membership does not establish registry RPC readability.
+    expect(hasRegistryRpc(registryOnly.get("megaeth"))).toBe(false);
     const megaeth = runtime.chainRpcs.get("megaeth");
     expect(hasRegistryRpc(megaeth)).toBe(false);
-    expect(supplementalRpcEndpoints(megaeth).map((endpoint) => endpoint.operator)).toEqual(["dwellir"]);
+    expect(supplementalRpcEndpoints(megaeth).map((endpoint) => endpoint.operator)).toEqual(["alchemy", "dwellir"]);
   });
 
   it("withholds Dwellir and never reads the ledger without a key", async () => {

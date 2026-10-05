@@ -10078,7 +10078,7 @@
     {
       "assetId": "cngn-compliant-naira",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-10-05",
       "sources": [
         {
           "label": "cNGN transparency and reserve page",
@@ -10107,9 +10107,13 @@
         {
           "label": "Public financial reserve attestation, December31 2025, discovered via hydrated2025 archive on2026-10-02",
           "url": "https://drive.google.com/file/d/1iyrdoJPs0EyBK-yZRNdjJDWiOKSB_GtD/view?usp=drive_link"
+        },
+        {
+          "label": "August 31 2026 cNGN ISAE3000 examination, pp.3-9; undated signatures",
+          "url": "https://drive.google.com/file/d/1Hw3aKTD29QxEqawYQjpRmGtVuK1_lV92/view?usp=drive_link"
         }
       ],
-      "notes": "2026-10-02 archive correction: the hydrated 2025 issuer archive links ten financial reserve reports (March–December 2025). The newest linked report is Bala Isah Garba and Company's ISAE3000 reasonable-assurance examination as of December 31 2025. The accountant opinion is signed but undated; the management assertion is e-signed January 13 2026 at 13:11 UTC. Neither signature establishes publication date. It reconciles six then-listed chain supplies and NGN1,338,760,385.79 reported reserves against NGN1,313,200,176.66 circulating cNGN. Table 2 reports rounded 43% CardinalStone MMF and 57% unnamed bank deposits; the MMF amount is recorded at cost, with a different current value disclosed in Table 4. Notes state segregated accounts on behalf of holders and refund liabilities. The hydrated 2026 archive has no financial-report links. This corrects the absolute no-reachable-report assertion without establishing current eight-chain reconciliation, current custody balances or final prudential authorization. Existing review date and unavailable states remain; historical assurance is not refreshed.",
+      "notes": "W3R39 2026-10-05 correction: the issuer-linked August 31, 2026 report is publicly reachable and covers eight named chain liabilities and a NGN3,550,845,048.39 reserve book against NGN3,329,961,223.91 circulating cNGN. Its practitioner signature and management stamp show no dated signing/publication event. The earlier assertion that no 2026 report is linked is retracted. No publication date is invented, and named-attestor composition/assurance admission remains blocked. The explicit unavailable assurance row is removed so ordinary report fallback stays bounded under its missing-publishedAt gate; staged exact B attribution explains public-but-unadmitted assurance. Existing limited claim/segregation grade is retained, not upgraded. Current bank names/allocations, insolvency safeguards and custody succession remain undisclosed.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -10117,13 +10121,8 @@
         },
         "custodyContinuity": {
           "applicability": "unavailable",
-          "rationale": "The December2025 financial report names CardinalStone Asset Management as MMF manager and says reserve assets are held in segregated accounts on behalf of holders. Bank names, current provider allocations, insolvency treatment, anti-rehypothecation covenant and successor mechanics remain undisclosed for the current reserve. Historical segregation is not current bank-continuity assurance.",
-          "sourceUrl": "https://drive.google.com/file/d/1iyrdoJPs0EyBK-yZRNdjJDWiOKSB_GtD/view?usp=drive_link"
-        },
-        "assuranceAndReconciliation": {
-          "applicability": "unavailable",
-          "rationale": "A dated ISAE3000 reasonable-assurance reserve report is publicly reachable: Bala Isah Garba and Company, as of December 31 2025 at 21:45 WAT. The accountant opinion is signed but undated; management e-signed January 13 2026 at 13:11 UTC, which does not establish publication date. The report covers six then-listed chains and concludes reserves exceed circulating cNGN only at that point in time. No 2026 financial report is linked in the hydrated 2026 archive; this 275-day-old inventory does not reconcile current eight-chain supply or current bank balances. The unavailable fact is current assurance/reconciliation, not the existence of a financial report.",
-          "sourceUrl": "https://drive.google.com/file/d/1iyrdoJPs0EyBK-yZRNdjJDWiOKSB_GtD/view?usp=drive_link"
+          "rationale": "August 31 report identifies CDS/FAAM fund holdings and segregated accounts on behalf of cNGN holders, but not current bank identities/allocation, enforceable insolvency priority, non-rehypothecation covenants or provider failure/succession mechanics. Generic third-party financial institutions are not continuity proof.",
+          "sourceUrl": "https://drive.google.com/file/d/1Hw3aKTD29QxEqawYQjpRmGtVuK1_lV92/view?usp=drive_link"
         }
       }
     },
@@ -20722,45 +20721,47 @@
     {
       "assetId": "oned-gennius",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-05",
       "sources": [
         {
-          "label": "Coinbase ONED custody and conversion",
+          "label": "Coinbase ONED custody and conversion, rechecked 2026-10-05",
           "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins"
         },
         {
-          "label": "Coinbase ONED itemized reserve dashboard",
+          "label": "Coinbase ONED itemized reserve dashboard, refreshed 2026-10-05 00:50, timezone unspecified",
           "url": "https://www.coinbase.com/en-in/oned/proof-of-reserves"
         },
         {
-          "label": "ONED native holder terms",
+          "label": "ONED native holder terms incorporating Coinbase terms, rechecked 2026-10-05",
           "url": "https://oned.global/#/end-user-terms-and-conditions"
         },
         {
-          "label": "Gennius ONED platform terms",
+          "label": "Gennius ONED platform terms, effective May 2026, rechecked 2026-10-05",
           "url": "https://tc.oned.global/#/oned"
         },
         {
-          "label": "Verified current ONED implementation",
+          "label": "Verified current ONED implementation (retained prior identity evidence)",
           "url": "https://basescan.org/address/0x57ab1e54fca80105a93a735b59f850f8420b5e2c#code"
         },
         {
-          "label": "Pinned Base reserve and liability RPC reads",
+          "label": "Pinned Base reserve and liability reads, block 52186383, observed 2026-10-05T01:01:54Z",
           "url": "https://base-mainnet.g.alchemy.com"
+        },
+        {
+          "label": "Coinbase Individual User Agreement, updated July 22 2026, Appendix 4 sections 13.1.1-13.1.3 and incorporated section 2.7",
+          "url": "https://www.coinbase.com/legal/user_agreement/united_states"
         }
       ],
-      "notes": "Coinbase dashboard displayed 11857520.08 USDC against 11857520.01 ONED, refreshed 10/2/2026 10:43 PM with timezone unspecified. At Base block 52095848, five listed USDC wallets summed to 11857520.082376 and exact ONED totalSupply was 11857520.01; this independently reproduced issuer-published itemized reconciliation supports limited assuranceAndReconciliation only. It is not independent financial assurance, evidence of absence of off-chain obligations, or legal segregation. Native holder/platform terms and Coinbase help establish eligible operational conversion but do not establish local beneficial reserve title, insolvency priority, continuity safeguards or encumbrance limits. Underlying Circle assurance is not ONED-specific.",
+      "notes": "All three components re-reviewed 2026-10-05. Native ONED holder terms expressly incorporate Coinbase's terms and give them precedence. Coinbase Individual User Agreement Appendix 4 sections 13.1.1-13.1.3 establish a transferable ownership interest in corresponding USDC reserves, custody for CCS holders and retained holder title; incorporated section 2.7.1 excludes Coinbase creditor claims and prohibits unauthorized lending/hypothecation, while 2.7.4 permits omnibus addresses. These binding issuer/service terms plus the exact ONED dashboard and chain anchor support limited claimAndSegregation, not independently verified statutory bankruptcy remoteness. Section 13.3.3 limits shortfall liability to the holder's pro-rata share. Coinbase dashboard displayed 11857520.08 USDC against 11857520.01 ONED, refreshed 10/5/2026 12:50 AM, timezone unspecified. At Base block 52186383, the five listed USDC wallets summed to 11857520.082376 and exact ONED totalSupply was 11857520.01; this reproduced itemized snapshot supports limited assuranceAndReconciliation, not independent financial assurance or whole-liability recurring mint reconciliation. Current platform/native/Coinbase terms do not publish a token-specific custodian failure/replacement and recovery-continuity arrangement; custodyContinuity remains unavailable despite disclosed custody identity and contractual reserve title safeguards. Redemption can be delayed or paused and liquidity is not backstopped. Underlying Circle assurance is not ONED-specific.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
-          "applicability": "unavailable",
-          "rationale": "Native ONED terms and platform terms do not establish token-specific legal reserve segregation, beneficial claim or insolvency priority.",
-          "sourceUrl": "https://oned.global/#/end-user-terms-and-conditions"
+          "quality": "limited"
         },
         "custodyContinuity": {
           "applicability": "unavailable",
-          "rationale": "Coinbase custody identity and itemized wallets are public, but token-specific operational continuity and legal reserve safeguards are not established.",
-          "sourceUrl": "https://www.coinbase.com/en-in/oned/proof-of-reserves"
+          "rationale": "Coinbase custody identity, itemized wallets and contractual reserve ownership/non-rehypothecation safeguards are disclosed. Current ONED, Gennius and Coinbase terms do not publish the token-specific custodian failure/replacement and reserve-recovery continuity arrangement.",
+          "sourceUrl": "https://www.coinbase.com/legal/user_agreement/united_states"
         },
         "assuranceAndReconciliation": {
           "quality": "limited"

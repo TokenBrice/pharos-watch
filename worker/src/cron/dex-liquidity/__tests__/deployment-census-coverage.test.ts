@@ -103,6 +103,7 @@ describe("DEX placeholder deployment-census coverage", () => {
         unsupportedReasons: {},
       },
       census: {
+        censusReadCompletedAtSec: NOW_SEC,
         expectedDeploymentCount: 2,
         reviewedDeploymentCount: 2,
         verifiedNoPoolsCount: 2,
@@ -141,6 +142,8 @@ describe("DEX placeholder deployment-census coverage", () => {
         state: "complete-empty",
         generationId: "dex-liquidity-test",
         publishedAtSec: NOW_SEC,
+        quoteSourceAtSec: NOW_SEC,
+        censusReadCompletedAtSec: NOW_SEC,
         expectedDeploymentCount: 2,
       },
     });

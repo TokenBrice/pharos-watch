@@ -1493,6 +1493,49 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(adapted.controls.length).toBeGreaterThan(0);
   });
 
+  it("keeps USDGLO's unmatched VeChain liability bridge-applicable after canonical registration", () => {
+    const metadata = ACTIVE_META_BY_ID.get("usdglo-glo")!;
+    const profile = metadata.bridgeRouteRisk!;
+    const routes = profile.routes!;
+    const unmatchedShare = 0.009971743002968847;
+    const supplyReview: NonNullable<Parameters<typeof adaptBridgeReview>[1]> = {
+      selectedBridgeRoutes: [
+        ...routes.map((candidate) => ({
+          deploymentRouteKey: candidate.id,
+          supplyUsd: 100 * (1 - unmatchedShare) / routes.length,
+          supplyShare: (1 - unmatchedShare) / routes.length,
+          reviewState: "selected-reviewed" as const,
+          reviewedRouteKind: "native" as const,
+        })),
+        {
+          deploymentRouteKey: "unmatched-chain:usdglo-glo:vechain",
+          supplyUsd: 100 * unmatchedShare,
+          supplyShare: unmatchedShare,
+          reviewState: "unmatched",
+        },
+      ],
+      selectedRouteSupplyShare: 1 - unmatchedShare,
+      unknownRouteSupplyShare: unmatchedShare,
+      unreviewedRouteSupplyShare: 0,
+      failureDomains: [{ kind: "chain", key: "vechain" }],
+    };
+    const before = structuredClone(supplyReview);
+    const chainRows = Object.fromEntries([
+      ...routes.map((candidate) => [candidate.destinationChain, { current: 100 / routes.length }]),
+      ["VeChain", { current: 100 * unmatchedShare }],
+    ]);
+    const adapted = adaptBridgeFixture(metadata, supplyReview, chainRows, v9TestClockSec());
+
+    expect(adapted.review.status.applicability.state).toBe("required");
+    expect(adapted.review.diagnostics).toMatchObject({
+      unmatchedRowIdentities: ["VeChain"],
+      reviewedNativeCoverage: { complete: false },
+      applicabilityBranch: "applicable",
+    });
+    expect(adapted.review.diagnostics?.reviewedNativeCoverage.supplyShare).toBeCloseTo(1 - unmatchedShare, 12);
+    expect(supplyReview).toEqual(before);
+  });
+
   it("records the native bridge join decision for all five reviewed FUSD deployments", () => {
     const profile = fusdRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile;
     const routes = profile.routes ?? [];

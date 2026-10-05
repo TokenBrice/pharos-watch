@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "unknown",
     "confidence": "manual-review",
-    "summary": "HOLLAR's documented collateralized borrowing path is Hydration's Aave-v3/GHO-derived money market, but current token reads identify five native facilitators rather than one exclusive mint path. Complete collateral and controller closure for the HSM, GIGAHDX and BIL facilitators, and the current runtime origin behind token administration, remain unverified. Economic cap semantics and four facilitator canRaiseCap values are unknown; the controls derive unknown, without certifying governed issuance.",
+    "summary": "HOLLAR has five native facilitators, not one exclusive Aave-v3 borrowing path. Pinned token runtime and all four previously unresolved facilitator addresses establish externally raiseable ceilings: the local facilitators lack token management roles, while separate runtime governance retains cap-changing and upgrade powers. HSM and FlashMinter executable correspondence and GIGAHDX/BIL implementation identities are bound to official source artifacts. Whole backing allocation, complete governance execution reach and collateral-gated issuance remain uncertified.",
     "upgradeability": {
       "model": "custom",
       "canChangeMintLogic": true,
@@ -108,11 +108,11 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "unknown",
-        "capDescription": "At Hydration block 15249643, getFacilitatorBucket returns an 18,000,000 HOLLAR capacity for this facilitator; its own capacity-management authority was not independently resolved.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 15362506,
+        "capDescription": "At Hydration block 15404466, the HSM bucket capacity is 18,000,000 HOLLAR. The bytecode-bound runtime pallet can mint, burn, flash-borrow and query capacity, but has no capacity-setting call. The separate token BUCKET_MANAGER_ROLE and runtime governance can raise the ceiling; this is not a fixed economic cap.",
+        "observedAt": "2026-10-05",
+        "observedBlock": 15404466,
         "failureDomainKeys": [
           "protocol:hydration:hollar-stability-module"
         ],
@@ -136,9 +136,17 @@
           {
             "label": "Official current Substrate-to-EVM account mapping",
             "url": "https://docs.hydration.net/devs/evm/"
+          },
+          {
+            "label": "Bytecode-bound v53 complete HSM pallet",
+            "url": "https://github.com/galacticcouncil/hydration-node/blob/8d87791c6942a549b63946bc37594f024f8b3af3/pallets/hsm/src/lib.rs"
+          },
+          {
+            "label": "Official HOLLAR deployed runtime artifact",
+            "url": "https://github.com/galacticcouncil/hollar/blob/7bbf3e1dc03313db72c1ad488aaa56c55b6e299c/deployments/hydration/GhoToken.json"
           }
         ],
-        "evidence": "At block 15362506, EVM hash 0x8917e2e9d06c5960d615346b43388a9a0e91de6514e641d89663bbdf2c614add, getFacilitatorsList includes this account and getFacilitatorBucket returns capacity 18000000e18 and level 540630164470200441773972. The matching Substrate block hash is 0x6e60b2c0ec639f80a65f706a3fc5b23f584181f0618ef256e617cd67631f4d1e. Its :code storage is 2446732 bytes with Blake2b-256 0x0b1bc5812823c7f307f7042b2efdea695dfe95f64197599315f3c4f423dc3123, exactly the official v53.0.0 hydradx/447 release's authorized code hash. The release source declares HsmPalletId as py/hsmod and HOLLAR asset 222; the modl-prefixed pallet AccountId's first 20 bytes derive exactly this EVM address under the official mapping. This is a runtime-pallet contract authority, not an EOA. Runtime AuthorityOrigin is Root, EconomicParameters or GeneralAdmin. Immediate authority identity is established; complete cap-changing/bypass reach, HSM strategy allocation and whole backing denominator remain unresolved."
+        "evidence": "2026-10-05 research, Hydration EVM block 15404466 (0x6bb2b046cba1f4a6d4b5f21c4fa35020acf062f3e68e4d2f117a88d8fd04fc28): the runtime :code Blake2b-256 remains 0x0b1bc5812823c7f307f7042b2efdea695dfe95f64197599315f3c4f423dc3123, matching official v53 hydradx/447. HsmPalletId py/hsmod maps to this address. Complete HSM source invokes only token mint, burn, flashLoan, maxFlashLoan and getFacilitatorBucket selectors; it cannot set its own bucket capacity or grant token roles. HOLLAR deployed runtime matches the official GhoToken artifact after exactly the constructor decimals=18, chainId=222222 and recomputed EIP-712 domain immutables. At the same pin, DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE and BUCKET_MANAGER_ROLE are held by runtime address 0xaa7e0000000000000000000000000000000aa7e0, not this HSM account. Capacity 18000000e18 and level 540630164470200441773972 are observed, not a fixed global ceiling. Root/EconomicParameters/GeneralAdmin can alter pallet configuration and separate governance can replace runtime; no noninterference, immutable allocation or collateral-gated verdict is claimed."
       },
       {
         "chain": "hydration",
@@ -147,11 +155,11 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "At Hydration block 15249643, this facilitator has a 100,000 HOLLAR bucket capacity and zero bucket level; flash-loan enforcement and its own capacity-management authority were not independently re-audited.",
-        "observedAt": "2026-10-01",
-        "observedBlock": 15249643,
+        "capDescription": "At Hydration block 15404466, the bucket has capacity 100,000 HOLLAR and level zero. Exact instantiated GhoFlashMinter runtime has no capacity-setting, role-granting, upgrade, delegatecall or arbitrary target-call entrypoint; the separate token bucket manager can raise this ceiling.",
+        "observedAt": "2026-10-05",
+        "observedBlock": 15404466,
         "failureDomainKeys": [
           "contract:hydration:0xb3282db2fb01a9305b753ecca09bf68c45428cf4"
         ],
@@ -163,9 +171,17 @@
           {
             "label": "Hydration public RPC",
             "url": "https://rpc.hydradx.cloud"
+          },
+          {
+            "label": "Official FlashMinter deployed runtime and literal-source artifact",
+            "url": "https://github.com/galacticcouncil/hollar/blob/7bbf3e1dc03313db72c1ad488aaa56c55b6e299c/deployments/hydration/GhoFlashMinter.json"
+          },
+          {
+            "label": "Official HOLLAR deployed runtime artifact",
+            "url": "https://github.com/galacticcouncil/hollar/blob/7bbf3e1dc03313db72c1ad488aaa56c55b6e299c/deployments/hydration/GhoToken.json"
           }
         ],
-        "evidence": "Pinned token reads on 2026-10-01 label this registered facilitator HOLLAR FlashMinter and return capacity 100000e18 and level zero. A zero observed level does not prove that it lacks native mint authority."
+        "evidence": "2026-10-05 research at Hydration block 15404466/hash 0x6bb2b046cba1f4a6d4b5f21c4fa35020acf062f3e68e4d2f117a88d8fd04fc28: published GhoFlashMinter deployedBytecode matches every runtime byte after substituting only its constructor immutable GHO_TOKEN=0x531a654d1696ed52e7275a8cede955e82620f99a, ADDRESSES_PROVIDER=0xf3ba4d1b50f78301bdd7eaea9b67822a15fca691 and ACL_MANAGER=0x8c5e657ca8879ada34555130f3be255ae47558b5; public getters and provider.getACLManager independently agree. Its mint path flashLoan mints to the receiver, requires the callback magic value, transfers principal plus fee back, then burns principal in the same transaction. Other entrypoints only expose quotes, distribute fees or update fee/treasury through ACL pool-admin authorization; none sets token capacity, grants token roles or replaces executable targets. Token hasRole reads deny all three management roles to this facilitator and grant them to the separate runtime admin. Thus canRaiseCap=false describes this immutable local contract, not the externally raiseable token ceiling. Fee=100 bps and current bucket level=0 are observations, not absence of latent mint authority."
       },
       {
         "chain": "hydration",
@@ -174,11 +190,11 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "At Hydration block 15249643, this registered facilitator has capacity and bucket level of 533,333 HOLLAR; its collateral-gating and administration were not independently resolved.",
-        "observedAt": "2026-10-01",
-        "observedBlock": 15249643,
+        "capDescription": "At Hydration block 15404466, capacity and level are 616,665.5 HOLLAR. The facilitator lacks token bucket/admin/facilitator-management roles; the separate runtime admin can raise its ceiling. Its proxy and pool control remain mutable, so no fixed economic bound is claimed.",
+        "observedAt": "2026-10-05",
+        "observedBlock": 15404466,
         "failureDomainKeys": [
           "contract:hydration:0x116d7bb8e4e2a4c932b4d36c115d4122dc360462"
         ],
@@ -190,9 +206,17 @@
           {
             "label": "Hydration public RPC",
             "url": "https://rpc.hydradx.cloud"
+          },
+          {
+            "label": "Official HOLLAR instantiated token runtime artifact",
+            "url": "https://github.com/galacticcouncil/hollar/blob/7bbf3e1dc03313db72c1ad488aaa56c55b6e299c/deployments/hydration/GhoToken.json"
+          },
+          {
+            "label": "Official GIGAHDX GhoAToken implementation artifact and literal sources",
+            "url": "https://github.com/galacticcouncil/hollar/blob/7bbf3e1dc03313db72c1ad488aaa56c55b6e299c/deployments/gigahdx/GhoAToken-GIGAHDX.json"
           }
         ],
-        "evidence": "Pinned token reads on 2026-10-01 label this registered facilitator GIGAHDX and return capacity and level 533333e18. The bucket observation identifies a native mint path, not the assets backing its liabilities."
+        "evidence": "2026-10-05 research at Hydration block 15404466/hash 0x6bb2b046cba1f4a6d4b5f21c4fa35020acf062f3e68e4d2f117a88d8fd04fc28: EIP-1967 implementation is 0x8abfc4ee32af8f4b49195114a881e1f9dae50c32. Its complete runtime matches the official GhoAToken artifact after constructor immutables chainId=222222, POOL=0x2ce2cfff743cdb6637f4b5d351937a541b8c8923 and addressesProvider=0x3c7d7b74bb625736b93d859e332f06df64635973, independently matched by POOL() and pool.ADDRESSES_PROVIDER(). UNDERLYING_ASSET_ADDRESS() is HOLLAR. Source transferUnderlyingTo mints via the token and onlyPool; it has no bucket setter or role-grant entrypoint. More decisively, bytecode-bound HOLLAR AccessControl denies DEFAULT_ADMIN_ROLE, BUCKET_MANAGER_ROLE and FACILITATOR_MANAGER_ROLE to this facilitator, while all three are held by separate runtime admin 0xaa7e0000000000000000000000000000000aa7e0. Local proxy code replacement cannot itself bypass those token checks; future token role grants/cap increases remain separate administration risks. The provider owner is that runtime admin. Thus local canRaiseCap=false does not establish a fixed ceiling, immutable proxy, governed-only issuance, collateral closure or execution-scope completeness."
       },
       {
         "chain": "hydration",
@@ -201,11 +225,11 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "At Hydration block 15249643, this registered facilitator has a 950,000 HOLLAR bucket capacity; its collateral-gating and administration were not independently resolved.",
-        "observedAt": "2026-10-01",
-        "observedBlock": 15249643,
+        "capDescription": "At Hydration block 15404466, capacity is 950,000 HOLLAR and level is 781,874.356523814973035248 HOLLAR. The facilitator lacks token bucket/admin/facilitator-management roles; separate runtime administration can raise its ceiling. Proxy/pool mutability is not certified absent.",
+        "observedAt": "2026-10-05",
+        "observedBlock": 15404466,
         "failureDomainKeys": [
           "contract:hydration:0xef313c2baf19ce58eeb6df9c82ae41c7387afe3e"
         ],
@@ -217,9 +241,17 @@
           {
             "label": "Hydration public RPC",
             "url": "https://rpc.hydradx.cloud"
+          },
+          {
+            "label": "Official HOLLAR instantiated token runtime artifact",
+            "url": "https://github.com/galacticcouncil/hollar/blob/7bbf3e1dc03313db72c1ad488aaa56c55b6e299c/deployments/hydration/GhoToken.json"
+          },
+          {
+            "label": "Bytecode-matched GhoAToken implementation artifact and literal sources",
+            "url": "https://github.com/galacticcouncil/hollar/blob/7bbf3e1dc03313db72c1ad488aaa56c55b6e299c/deployments/gigahdx/GhoAToken-GIGAHDX.json"
           }
         ],
-        "evidence": "Pinned token reads on 2026-10-01 label this registered facilitator BIL and return capacity 950000e18. The full collateral and administrative path remains unverified; no stronger protective-control claim is made."
+        "evidence": "2026-10-05 research at Hydration block 15404466/hash 0x6bb2b046cba1f4a6d4b5f21c4fa35020acf062f3e68e4d2f117a88d8fd04fc28: EIP-1967 implementation is 0x2d7d76b1b443464e5bc699303438cdbaee708bf2, not the GIGAHDX implementation address. Its runtime independently matches the official GhoAToken artifact after constructor immutables chainId=222222, POOL=0x69310fda58c819ad82df7d2cb61841c853337a53 and addressesProvider=0x653dfc382b74e7399dae06dc4d07202e28b5990b. POOL(), pool.ADDRESSES_PROVIDER() and HOLLAR UNDERLYING_ASSET_ADDRESS() agree at the pin. Source mint/burn forwarding has no capacity-setting or token-role-grant call. The bytecode-bound HOLLAR token denies this facilitator all three management roles, but grants them to separate runtime admin 0xaa7e0000000000000000000000000000000aa7e0, also the provider owner. Replacing local implementation alone cannot impersonate that token-role holder; separate future role grants, cap increases and governance upgrades are retained, not certified absent. Local canRaiseCap=false therefore compiles an externally raiseable ceiling, not a collateral gate or permanent economic bound. Full BIL collateral/backing and proxy-administration execution reach remain outside this atomic cap finding."
       }
     ],
     "economicCapSemantics": "unknown",

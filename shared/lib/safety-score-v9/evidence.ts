@@ -147,7 +147,7 @@ export function resolveV9EvidenceCause(args: {
       const typed = args.classification == null;
       const entry = typed ? V9TypedReviewGapClassificationSchema.parse(args.typedReview)
         : V9EvidenceGapClassificationSchema.parse(args.classification);
-      if (v9EvidenceCauseScopeKey(entry.assetId, entry.scope) !== v9EvidenceCauseScopeKey(args.assetId, args.scope)) {
+      if (v9EvidenceCauseScopeKey(entry.assetId, entry.scope, "research") !== v9EvidenceCauseScopeKey(args.assetId, args.scope, "research")) {
         throw new Error("Research proof has wrong asset or required-datum scope");
       }
       const reviewedSec = Date.parse(entry.reviewedAt) / 1000;
@@ -212,25 +212,31 @@ export function findV9CauseEvidenceBindingIssues(
     if (proof.cause !== "B" && proof.cause !== "C") continue;
     if (!gap.causeScope) continue;
     classificationDigests ??= new Map();
-    const digest = sha256Hex(stableJsonStringifyV1({
-      id: proof.classificationId, assetId: asset.assetId, scope: gap.causeScope,
-      cause: proof.cause, reviewedAt: proof.reviewedAt, ...(proof.reviewer === undefined ? {} : { reviewer: proof.reviewer }),
-      assertion: proof.assertion, sources: proof.sources,
-      ...(proof.cause === "C" ? { rationale: proof.rationale,
-        ...(proof.searchedSurfaces === undefined ? {} : { searchedSurfaces: proof.searchedSurfaces }) } : {}),
-    }));
     const identity = `${proof.proofOrigin ?? "registry"}:${proof.classificationId}`;
-    const previous = classificationDigests.get(identity);
-    if (previous !== undefined && previous !== digest) {
-      issues.push({ gapIndex, message: "One classification identity cannot certify contradictory authored bytes" });
-    }
-    classificationDigests.set(identity, digest);
     const reviewedSec = Date.parse(proof.reviewedAt) / 1000;
     const sourceId = proof.proofOrigin === "typed-review" ? "typed-review-gap-classifications-v1" : "evidence-gap-classifications-v1";
     const prefix = proof.proofOrigin === "typed-review" ? "typed-review-gap-classification" : "evidence-gap-classification";
     for (const id of proof.evidenceRefIds) {
       const reference = evidenceById.get(id);
-      if (!reference || reference.sourceId !== sourceId ||
+      // Hash the authored binding, not the current gap's rotating route generation.
+      // Scope admission above still requires the same stable research identity.
+      if (!reference?.causeBinding) {
+        issues.push({ gapIndex, message: "Authored classification evidence requires its authored scope" });
+        continue;
+      }
+      const digest = sha256Hex(stableJsonStringifyV1({
+        id: proof.classificationId, assetId: asset.assetId, scope: reference.causeBinding.scope,
+        cause: proof.cause, reviewedAt: proof.reviewedAt, ...(proof.reviewer === undefined ? {} : { reviewer: proof.reviewer }),
+        assertion: proof.assertion, sources: proof.sources,
+        ...(proof.cause === "C" ? { rationale: proof.rationale,
+          ...(proof.searchedSurfaces === undefined ? {} : { searchedSurfaces: proof.searchedSurfaces }) } : {}),
+      }));
+      const previous = classificationDigests.get(identity);
+      if (previous !== undefined && previous !== digest) {
+        issues.push({ gapIndex, message: "One classification identity cannot certify contradictory authored bytes" });
+      }
+      classificationDigests.set(identity, digest);
+      if (reference.sourceId !== sourceId ||
           reference.contentSha256 !== digest || reference.sourceGenerationId !== proof.classificationId ||
           id !== `${prefix}:${proof.classificationId}:${digest}` ||
           reference.observedAtSec !== reviewedSec || reference.publishedAtSec !== reviewedSec ||

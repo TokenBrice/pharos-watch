@@ -27,7 +27,7 @@ Two properties make the replay equal to production:
 - The producer compiles the publication with `publishedAtSec = fixedInput.clockSec` in `worker/src/lib/safety-score-v9/publication-runner.ts`, which `worker/src/cron/compute-safety-score-v9.ts` invokes. Replaying with `--published-at <capture clockSec>` therefore reproduces the exact publication clock, not an approximation; use the symbol rather than a brittle source line as the maintenance anchor.
 - `worker/scripts/replay-safety-score-v9.ts` compiles without network, D1, or wall-clock reads. Capture-time replay freezes the registry snapshot as well as the input and publication clock; current evaluator code, policy, and non-transfer V9 overlays still come from the checkout. Two replays with the same inputs are byte-identical; this alone does not prove equality with a historical production publication.
 
-The prepare-time `report-cards:fixed-input:exact` row excludes compute-time supply attribution, evidence journals, peg provenance, and transfer materiality. A deterministic replay of that base alone is therefore not accepted-publication equivalence. For a strict accepted-generation replay, use dependency-scenario `--mode plan` from [the offline scenario runbook](../runbooks/dependency-network.md#offline-scenario-workflow): it reassembles the atomically retained accepted base and enrichment delta and fails closed if either is absent or mismatched. The raw export below remains suitable for base-input/current-curation comparisons; do not treat it as a complete accepted-publication capture.
+The prepare-time `report-cards:fixed-input:exact` row excludes compute-time supply attribution, evidence journals, peg provenance, and transfer materiality. A deterministic replay of that base alone is therefore not accepted-publication equivalence. For accepted-generation replay, export the atomically retained accepted base and enrichment delta using `--accepted-cache-export` below, or use dependency-scenario `--mode plan` from [the offline scenario runbook](../runbooks/dependency-network.md#offline-scenario-workflow). Both paths fail closed if either retained row is absent or mismatched. The prepare-time export remains suitable for base-input/current-curation comparisons only.
 
 `worker/scripts/diff-safety-score-v9-replays.ts` drops two separately-owned key families at every depth — `VOLATILE_KEYS` (per-run publication identity and capture timing) and `VERSION_ACTIVATION_KEYS` (pinned-build and methodology-identity digests plus `policyVersion`, which move only on a deliberate version activation) — and matches per-asset cards by `id`, so a reordered or resized card array reports real drift instead of an index shift.
 
@@ -57,6 +57,40 @@ The prepare-time `report-cards:fixed-input:exact` row excludes compute-time supp
 - A working directory: `mkdir -p agents/v9-captures`. `agents/` is gitignored — see [Artifact hygiene](#artifact-hygiene).
 
 ## (a) Export a production capture
+
+### Accepted publication, including enrichment
+
+Read both retained rows in **one SELECT** from `worker/`. Publication storage writes them atomically, so a single query cannot pair the base from one publication with the delta from another:
+
+```sh
+date_stamp="$(date -u +%Y%m%d-%H%M)"
+cd worker
+npx --no-install wrangler d1 execute stablecoin-db --remote --json \
+  --command "SELECT key, value, updated_at FROM cache
+             WHERE key IN ('report-cards:v9:accepted-replay-base:v1',
+                           'report-cards:v9:accepted-replay:v1')" \
+  > "../agents/v9-captures/accepted-${date_stamp}.raw.json"
+cd ..
+npm run report-cards:capture-fixed-input -- \
+  --accepted-cache-export "agents/v9-captures/accepted-${date_stamp}.raw.json" \
+  --output "agents/v9-captures/accepted-${date_stamp}.json"
+```
+
+The capture CLI requires one successful query result, exactly one row per retained key, equal retention timestamps, the retained base's scoring clock, checksum-valid envelopes, matching base/publication generations and matching pipeline-gap identity. It exports `kind:"safety-score-v9-accepted-publication-capture"` with the restored fixed input, retained `publicationGenerationId`, raw transfer generation (including rejected observations), and a fingerprint-verified registry snapshot. Supply and journal projections are restored verbatim; partial transfer packets stay partial. This is restoration, not a new supply producer or a change to methodology.
+
+If the local registry no longer matches production, pass `--registry-ref <capture-time-git-sha>` to capture; do not substitute today's registry or combine a current delta with an older base. Replay consumes the embedded registry snapshot for accepted captures as it does for registry captures. Historical accepted captures without an embedded snapshot remain supported with the existing explicit registry-ref/current-curation replay modes. As with every replay, current evaluator/policy and non-transfer overlays still come from the checkout: accepted bytes do not alone prove equality to a historical production score.
+
+```sh
+clock_sec="$(jq -r '.fixedInput.clockSec' "agents/v9-captures/accepted-${date_stamp}.json")"
+npm run safety-score-v9:replay -- \
+  --input "agents/v9-captures/accepted-${date_stamp}.json" \
+  --published-at "$clock_sec" \
+  --output "agents/v9-captures/accepted-${date_stamp}.replay.json"
+```
+
+`--accepted-cache-export` is mutually exclusive with `--exact-cache-export` and `--normalized-only`; neither a single prepare-time envelope nor a base-only normalized export can claim accepted-publication enrichment.
+
+### Prepare-time base only
 
 Run from `worker/` so Wrangler resolves `wrangler.toml`. First confirm the row exists and note its age, so you know which producer cycle you are about to freeze:
 
@@ -138,8 +172,9 @@ Asset-local extension or fact failures do not abort a replay: the asset is quara
 
 ### Capture-time registry replay
 
-New `report-cards:capture-fixed-input` exports wrap the normalized input as
+Prepare-time `report-cards:capture-fixed-input --exact-cache-export` exports wrap the normalized input as
 `{kind:"safety-score-v9-registry-capture", fixedInput, registrySnapshot}`.
+Accepted exports use `{kind:"safety-score-v9-accepted-publication-capture", publicationGenerationId, fixedInput, transferMaterialityGeneration, registrySnapshot}`.
 The snapshot contains the full active/frozen/dead registry identity projection,
 its recomputed fingerprint, and separately digest-bound transfer reviews.
 Keeping full registry rows rather than a flag-only projection lets replay

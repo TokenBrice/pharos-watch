@@ -1300,6 +1300,22 @@
           {
             "label": "Pinned berachain RPC control observations",
             "url": "https://api-berachain-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Sourcify exact GovernanceProxy executable template; Berachain runtime matches outside declared immutables",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x1c064265e053d23d120c518fdbb542e6537f82d1?fields=all"
+          },
+          {
+            "label": "Berachain controller runtime and immutable binding at block 27071315",
+            "url": "https://rpc.berachain.com"
+          },
+          {
+            "label": "Verified Ethereum GovernanceSender caller authorization source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
+          },
+          {
+            "label": "Complete sender internal mutation traces, including mill 396 helper revocation",
+            "url": "https://eth.blockscout.com/api/v2/transactions/0xf1f3e33ea118c50aafa8ee74ece93e10590ae756cf75f1c1389f87b895180309/raw-trace"
           }
         ],
         "capDescription": "Former pool mint is revoked; owner can grant mint permission again. No complete cap, caller, upgrade or economic-loss exclusion certificate.",
@@ -1308,7 +1324,7 @@
           "protocol:chainlink-ccip",
           "contract:berachain:0x1992af61fbf8ee38741bcc57d636caa22a1a7702"
         ],
-        "evidence": "Pinned read confirms empty pool supported-chain list, rejected former-pool mint and successful owner setMinter simulation. Receipt totalSupply remains nonzero. Ordinary ERC20 transfers are not disabled. Governance proxy accepts the Ethereum GovernanceSender; complete upstream caller/minter/upgrade census remains unresolved.",
+        "evidence": "Historical observations retain empty pool supported-chain list, rejected former-pool mint, owner reactivation and nonzero receipt supply. W3R12 on 2026-10-04 recovered the Berachain governance proxy's executable correspondence: block 27071315 runtime SHA-256 6b8e29d969482f06a02135d0ae8fe2a0b25ff5634f1f3b6e71025e44a4bd9f88 exactly matches Sourcify's verified Base GovernanceProxy outside six compiler-declared immutable ranges, including identical metadata. Immutable words bind router 0x71a275704c283486fba26dad3dd0db78804426ef, Ethereum selector 5009297550715157269 and sender 0x4e521fe7a9084067096d45a312b8feee39d5f1f3; getter reads confirm router/sender. Its authenticated CCIP entrypoint performs arbitrary targetContract.call(callData). Ethereum block 26122351 binds that sender's owner to Timelock 0x926df14a23be491164dcf93f4c468a50ef659d5b. Complete explorer pages contain 49 external and 17 internal inbound transactions, with pagination end; mutation calldata and all three internal parent traces reconstruct the Timelock as enabled, deployer 0x11ec78492d53c9276dd7a184b1dbfb34e50b710d as disabled, and mill 396 helper 0x2a0fec62992d2c0f1b0c598551c1627f18286f84 as disabled. Pinned allowListedCallers reads validate all three. No complete downstream dormant permission, CCIP router/bypass or affected-liability inventory is claimed; execution certificate remains partial.",
         "executionScope": {
           "controllerDeployment": "berachain:0x1992af61fbf8ee38741bcc57d636caa22a1a7702",
           "reviewedAt": "2026-10-01",

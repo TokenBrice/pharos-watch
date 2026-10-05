@@ -457,13 +457,14 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     capacityModel: { kind: "reserve-sync-metadata", basis: "live-direct-telemetry" },
     settlementModel: "queued",
     executionModel: "rules-based-nav",
-    costModel: undisclosedReviewedFee(
-      "The observer captures the MintRedeemer fee and both LayerZero message quotes, but an all-in holder cost remains unknown until Ethereum transaction gas is measured.",
+    costModel: documentedVariableFee(
+      "Frax's Ethereum unstaking guide exposes RemoteHop.quote() nativeFee for the outbound and return LayerZero messages; the existing route also applies the Fraxtal MintRedeemer fee. These are public variable protocol/message fees, not an undisclosed issuer schedule. Exact-request quotes and Ethereum transaction gas must be measured at the producer's observation clock; all-in cost remains unbounded until then.",
+      "formula",
     ),
     reviewedAt: "2026-07-24",
     docs: [
       sourceRefFull(
-        "Frax sfrxUSD stake and unstake guide",
+        "Frax sfrxUSD stake and unstake guide (fees reviewed 2026-10-05)",
         "https://docs.frax.com/frxusd/stake-and-unstake-quickstart-ethereum",
       ),
       sourceRef(
@@ -766,13 +767,19 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "frxusd-frax": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
     outputAssets: ["usdc-circle"],
     capacityModel: { kind: "reserve-sync-metadata" },
-    costModel: undisclosedReviewedFee(
-      "Direct Ethereum mint and redeem contracts support 1:1 conversion between frxUSD and USDC; public docs do not publish a fixed redemption fee",
+    costModel: documentedVariableFee(
+      "The verified Ethereum USDC custodian implementation exposes redeemFee as an 18-decimal fraction. previewRedeem first floors the decimal conversion to USDC, then floors assets * (1e18 - redeemFee) / 1e18. The fee is mutable; the producer must read it and quote the actual request at the same block. Ethereum transaction gas is separate, so this formula does not assert a fixed or all-in zero redemption cost.",
+      "formula",
     ),
     docs: [
       sourceRefRouteCapacity("frxUSD mint and redeem overview", "https://docs.frax.com/frxusd/mint-and-redeem-overview"),
       sourceRef("frxUSD USDC quickstart", "https://docs.frax.com/frxusd/mint-and-redeem-quickstarts/usdc", ["route"]),
       sourceRefRouteCapacity("FraxNetDeposit contract", "https://docs.frax.com/fraxnet/contracts/fraxnetDeposit"),
+      sourceRef(
+        "frxUSD USDC custodian verified fee formula (reviewed 2026-10-05)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0a2d27a86a2ea07bcc34e457c65aeca7631c0f10",
+        ["route", "fees"],
+      ),
     ],
     notes: [
       "Cross-chain and fiat off-ramp flows exist too, but the modeled backstop focuses on the direct onchain USDC redemption rail",
@@ -905,8 +912,9 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     capacityModel: { kind: "reserve-sync-metadata" },
     reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     outputAssets: ["usdc-circle"],
-    costModel: undisclosedReviewedFee(
-      "Qualified Market Makers mint and redeem 1:1 USDz/USDC against SPCT collateral; public docs reviewed do not publish a fixed retail redemption fee",
+    costModel: documentedVariableFee(
+      "The verified USDz redeem() path deducts floor(amount * USDz.redeemFeeRate() / 1e8), then floor(the remainder * SPCT.redeemFeeRate() / 1e8), and floors the final USDC output by 1e12. Both public rates are mutable and must be read at the producer's common block with the existing reserve, identity and availability gates. Gas and rounding remain separate; the formula does not guarantee a zero fee or funded capacity.",
+      "formula",
     ),
     docs: [
       sourceRef("Anzen Finance", "https://www.anzen.finance/", ["route"]),
@@ -916,6 +924,11 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
         "USDz verified deployed source (Ethereum 0xa469b7ee...10067)",
         "https://etherscan.io/address/0xa469b7ee9ee773642b3e93e842e5d9b5baa10067#code",
         ["route", "access", "capacity", "fees"],
+      ),
+      sourceRef(
+        "USDz verified redemption fee composition (reviewed 2026-10-05)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xa469b7ee9ee773642b3e93e842e5d9b5baa10067",
+        ["route", "fees"],
       ),
     ],
     notes: [

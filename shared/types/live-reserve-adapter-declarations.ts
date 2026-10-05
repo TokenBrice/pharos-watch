@@ -1651,13 +1651,58 @@ const unitedPorParamsSchema = z
   })
   .strict();
 
-const tetherTransparencyParamsSchema = z
-  .object({
-    currencyIso: z.enum(["usdt", "xaut", "mxnt"]),
+// This admission is bound to the reviewed signed report, not the live totals
+// endpoint. A later report needs its own reviewed source/date/denominator binding.
+const tetherUsdtRowKeys = [
+  "tether:usdt:treasury-bills",
+  "tether:usdt:overnight-reverse-repo",
+  "tether:usdt:term-reverse-repo",
+  "tether:usdt:non-us-treasury-bills",
+  "tether:usdt:cash-bank-deposits",
+  "tether:usdt:corporate-bonds",
+  "tether:usdt:precious-metals",
+  "tether:usdt:bitcoin",
+  "tether:usdt:public-equities",
+  "tether:usdt:other-investments",
+  "tether:usdt:secured-loans",
+] as const;
+
+const tetherUsdtReviewedCompositionSchema = z.object({
+  sourceUrl: z.literal("https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"),
+  asOf: z.literal("2026-06-30"),
+  totalAssetsUsd: z.literal(187751426411),
+  rows: z.array(z.object({
+    sourceKey: z.enum(tetherUsdtRowKeys),
+    // Bounded integers and eleven rows keep the sum exactly representable.
+    dollars: z.number().int().nonnegative().max(187751426411),
+    name: ReserveSliceSchema.shape.name,
+    risk: ReserveSliceSchema.shape.risk,
+    assetClass: ReserveSliceSchema.shape.assetClass,
+    issuerOrObligor: ReserveSliceSchema.shape.issuerOrObligor,
+    riskFactors: ReserveSliceSchema.shape.riskFactors,
+    liquidityHorizon: ReserveSliceSchema.shape.liquidityHorizon,
+    maturityDaysMax: ReserveSliceSchema.shape.maturityDaysMax,
+  }).strict()).length(tetherUsdtRowKeys.length),
+}).strict().superRefine((packet, ctx) => {
+  if (new Set(packet.rows.map((row) => row.sourceKey)).size !== tetherUsdtRowKeys.length) {
+    ctx.addIssue({ code: "custom", path: ["rows"], message: "tether-reviewed-composition-row-identity-mismatch" });
+  }
+  if (packet.rows.reduce((sum, row) => sum + row.dollars, 0) !== packet.totalAssetsUsd) {
+    ctx.addIssue({ code: "custom", path: ["rows"], message: "tether-reviewed-composition-dollar-conservation-mismatch" });
+  }
+});
+
+const tetherTransparencyParamsSchema = z.discriminatedUnion("currencyIso", [
+  z.object({
+    currencyIso: z.literal("usdt"),
+    reviewedComposition: tetherUsdtReviewedCompositionSchema,
+  }).strict(),
+  z.object({
+    currencyIso: z.enum(["xaut", "mxnt"]),
     slices: z.array(ReserveSliceSchema).min(1),
     compositionAsOf: StrictIsoDateSchema.optional(),
-  })
-  .strict();
+  }).strict(),
+]);
 
 const singleAssetParamsSchema = z
   .object({

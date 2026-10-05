@@ -129,19 +129,27 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     accessModel: "whitelisted-onchain",
     outputAssets: ["usdg-paxos"],
     capacityModel: { kind: "reserve-sync-metadata" },
-    costModel: undisclosedReviewedFee("The exact syrupUSDG redemption-fee schedule is unavailable; sibling syrupUSDC/USDT zero-fee terms are not inherited."),
+    costModel: fixedFee(
+      0,
+      "The native syrupUSDG PoolManager / WithdrawalManager queue path, reviewed at Ethereum block 26122343 (2026-10-04), transfers calculated NAV assets without a separate redemption-fee deduction. This is the native protocol redemption fee only, not a promise of par value or all-in zero cost: loan impairments, gas, wallet and third-party charges remain separate, as the Interface Terms section 1.4 states.",
+    ),
     reviewedAt: "2026-10-03",
     v9RouteReviewTerms: {
       scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["capacity", "settlement", "cost"],
-      rationale: "FIFO withdrawals depend on funded liquidity and impairments; the reported average below 24 hours is not a guaranteed completion maximum. Exact executable queue throughput and the holder fee schedule are unavailable.",
-      reviewedAt: "2026-10-03",
-      docs: [sourceRefFull("Maple syrupUSDG withdrawal risk disclosures", "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md")],
+      missingScoringFields: ["capacity", "settlement"],
+      rationale: "FIFO withdrawals depend on funded liquidity and impairments; the reported average below 24 hours is not a guaranteed completion maximum. Exact executable queue throughput remains unavailable. The reviewed native protocol fee is zero, while gas, wallet and third-party costs remain separate.",
+      reviewedAt: "2026-10-05",
+      docs: [
+        sourceRefFull("Maple syrupUSDG withdrawal risk disclosures", "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"),
+        sourceRef("Exact syrupUSDG queue implementation (reviewed 2026-10-05)", "https://eth.blockscout.com/api/v2/smart-contracts/0xf95e5722226a1018d058cd757b75f1d10289e967", ["route", "fees"]),
+      ],
     },
     docs: [
       sourceRefFull("Maple syrupUSDG withdrawal risk disclosures", "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"),
       sourceRef("Maple defaults and impairments", "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-defaults-and-impairments.md", ["capacity", "settlement"]),
       sourceRef("Exact syrupUSDG deployed contract", "https://eth.blockscout.com/api/v2/smart-contracts/0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a", ["route", "access"]),
+      sourceRef("Exact syrupUSDG queue implementation (reviewed 2026-10-05)", "https://eth.blockscout.com/api/v2/smart-contracts/0xf95e5722226a1018d058cd757b75f1d10289e967", ["route", "fees"]),
+      sourceRef("Maple Interface Terms section 1.4 (reviewed 2026-10-05)", "https://docs.maple.finance/legal/interface-terms-of-use-syrupusdc-and-syrupusdt.md", ["fees"]),
     ],
     notes: ["Protocol permission checks and published jurisdiction restrictions apply, including exclusions for the United States and Australia. The configured erc4626-single-asset reader measures fresh idle USDG but does not infer FIFO allocation, funded processing throughput or queue completion from that balance. No holder minimum, 30-day sibling maximum, 10% queue buffer, DEX capacity or static fallback is inferred."],
   }),
@@ -629,7 +637,9 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
   "avusd-avant": defineReviewedQueueRedeemConfig(REVIEWED_QUEUE_REDEMPTION_AT, {
     outputAssets: ["usdc-circle"],
     settlementModel: "days",
-    costModel: documentedVariableFee("Avant docs say the redemption fee is shown in-app before confirmation"),
+    costModel: documentedVariableFee(
+      "Avant's avUSD redemption interface displayed a 0.05% (5 bps) redemption fee when reviewed 2026-10-05. The fee docs require checking the current frontend quote before confirmation. This is an observed issuer fee, not a perpetual ceiling or fixed all-in cost; request applicability, current fee and network gas still require producer observation.",
+    ),
     docs: [
       sourceRef(
         "Avant redeeming avAssets",
@@ -637,6 +647,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
         ["route", "settlement", "fees", "capacity"],
       ),
       sourceRefRouteCapacity("Avant core tokens", "https://docs.avantprotocol.com/overview/core-tokens"),
+      sourceRef("Avant avUSD redemption fee display (reviewed 2026-10-05)", "https://app.avantprotocol.com/products/avusd?product=avusd&action=redeem", ["fees"]),
+      sourceRef("Avant Protocol Revenue & Fees (reviewed 2026-10-05)", "https://docs.avantprotocol.com/yield-strategies-and-revenue/protocol-revenue-and-fees.md", ["fees"]),
     ],
     v9RouteReviewTerms: {
       settlementDelaySec: 604_800,

@@ -13421,6 +13421,39 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "zsd-zephyr-protocol",
+      "reviewedAt": "2026-10-05T00:13:45Z",
+      "expiresAt": "2027-10-05T00:13:45Z",
+      "reviewer": "Unknown-resolver wave 3 W3R49",
+      "notes": "The hydrated issuer postmortem proves at least two complete months of operation of the audited ZSD asset types between June 11 and August 27, 2025. Earlier September 2023 history is deliberately not counted across the supply migration. This eligibility-only lower bound asserts no redemption performance, independent financial assurance, reserve-report continuity or incident absence. The postmortem describes material historical consensus incidents and a transfer pause; incidentReview remains not-reviewed rather than asserting an incident-free record.",
+      "sources": [
+        {
+          "sourceId": "zephyr-2025-audit-postmortem",
+          "label": "Zephyr Audit – Postmortem",
+          "publisher": "Zephyr Protocol",
+          "publishedAt": "2025-08-27",
+          "url": "https://zephyrprotocol.com/blog/2025-08-27-Zephyr-Audit-Postmortem",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 2,
+          "observedAt": "2025-08-27",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "zephyr-2025-audit-postmortem"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

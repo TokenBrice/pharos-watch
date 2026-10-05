@@ -651,12 +651,12 @@
             "claimAddress": "0xd586e7f844cea2f87f50152665bcbc2c279d8d70"
           },
           "assetId": null,
-          "noCurrentReach": false,
+          "noCurrentReach": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-04T23:42:07Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xd586e7f844cea2f87f50152665bcbc2c279d8d70",
+              "https://api.avax.network/ext/bc/C/rpc"
             ],
             "responsibility": "integration-missing"
           }
@@ -798,15 +798,18 @@
           "positionKey": "0x51a8ff60fbaf277df02eeadc011f5c26dbae1991",
           "partitionKey": "selected:collateral:aavausdt",
           "basis": {
-            "kind": "selected-observation"
+            "kind": "serial-claim",
+            "dependencyEdgeKey": null,
+            "entireClaim": true,
+            "currentImplementation": "0xfa71747531bc4bc8d86f847a3585b5e89043a8be"
           },
           "reachesHeldClaim": true,
           "enabled": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-04T23:50:10Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xfa71747531bc4bc8d86f847a3585b5e89043a8be",
+              "https://api.avax.network/ext/bc/C/rpc"
             ],
             "responsibility": "integration-missing"
           }
@@ -819,15 +822,18 @@
           "positionKey": "0x51a8ff60fbaf277df02eeadc011f5c26dbae1991",
           "partitionKey": "selected:receipt-asset:aavausdt",
           "basis": {
-            "kind": "selected-observation"
+            "kind": "serial-claim",
+            "dependencyEdgeKey": null,
+            "entireClaim": true,
+            "currentImplementation": "0x88ee4632d8f7fac47ebbeb63c4c2875d0974b8b4"
           },
           "reachesHeldClaim": true,
           "enabled": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-04T23:44:25Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x88ee4632d8f7fac47ebbeb63c4c2875d0974b8b4",
+              "https://api.avax.network/ext/bc/C/rpc"
             ],
             "responsibility": "integration-missing"
           }
@@ -882,15 +888,18 @@
           "positionKey": "0x2ecbcb8757f43676b5d280e706b1a2c0d1975b6a",
           "partitionKey": "selected:collateral:aavausdc",
           "basis": {
-            "kind": "selected-observation"
+            "kind": "serial-claim",
+            "dependencyEdgeKey": null,
+            "entireClaim": true,
+            "currentImplementation": "0x333c21aba51f5e3bcd9b0a60073b572736bf9353"
           },
           "reachesHeldClaim": true,
           "enabled": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-04T23:50:10Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x333c21aba51f5e3bcd9b0a60073b572736bf9353",
+              "https://api.avax.network/ext/bc/C/rpc"
             ],
             "responsibility": "integration-missing"
           }
@@ -903,15 +912,18 @@
           "positionKey": "0x2ecbcb8757f43676b5d280e706b1a2c0d1975b6a",
           "partitionKey": "selected:receipt-asset:aavausdc",
           "basis": {
-            "kind": "selected-observation"
+            "kind": "serial-claim",
+            "dependencyEdgeKey": null,
+            "entireClaim": true,
+            "currentImplementation": "0x88ee4632d8f7fac47ebbeb63c4c2875d0974b8b4"
           },
           "reachesHeldClaim": true,
           "enabled": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-04T23:44:25Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x88ee4632d8f7fac47ebbeb63c4c2875d0974b8b4",
+              "https://api.avax.network/ext/bc/C/rpc"
             ],
             "responsibility": "integration-missing"
           }
@@ -966,15 +978,18 @@
           "positionKey": "0x2d2005feeabaf7dc54ebd9b33115a2fb6e2a80da",
           "partitionKey": "selected:collateral:aavadai",
           "basis": {
-            "kind": "selected-observation"
+            "kind": "serial-claim",
+            "dependencyEdgeKey": null,
+            "entireClaim": true,
+            "currentImplementation": "0x1b9d6b0fed627dfa572b821c677cd46caf30c76d"
           },
           "reachesHeldClaim": true,
           "enabled": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-04T23:50:10Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x1b9d6b0fed627dfa572b821c677cd46caf30c76d",
+              "https://api.avax.network/ext/bc/C/rpc"
             ],
             "responsibility": "integration-missing"
           }
@@ -987,15 +1002,18 @@
           "positionKey": "0x2d2005feeabaf7dc54ebd9b33115a2fb6e2a80da",
           "partitionKey": "selected:receipt-asset:aavadai",
           "basis": {
-            "kind": "selected-observation"
+            "kind": "serial-claim",
+            "dependencyEdgeKey": null,
+            "entireClaim": true,
+            "currentImplementation": "0x88ee4632d8f7fac47ebbeb63c4c2875d0974b8b4"
           },
           "reachesHeldClaim": true,
           "enabled": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-04T23:44:25Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x88ee4632d8f7fac47ebbeb63c4c2875d0974b8b4",
+              "https://api.avax.network/ext/bc/C/rpc"
             ],
             "responsibility": "integration-missing"
           }
@@ -1050,15 +1068,18 @@
           "positionKey": "0x9fb5a0bbee451643504524ddbfce8a1e09783d5b",
           "partitionKey": "selected:collateral:qiusdcn",
           "basis": {
-            "kind": "selected-observation"
+            "kind": "serial-claim",
+            "dependencyEdgeKey": null,
+            "entireClaim": true,
+            "currentImplementation": "0xf9ff7de84373b777ecda41e6dfcb3199d08f681d"
           },
           "reachesHeldClaim": true,
           "enabled": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-04T23:50:10Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xf9ff7de84373b777ecda41e6dfcb3199d08f681d",
+              "https://api.avax.network/ext/bc/C/rpc"
             ],
             "responsibility": "integration-missing"
           }
@@ -1071,15 +1092,18 @@
           "positionKey": "0x9fb5a0bbee451643504524ddbfce8a1e09783d5b",
           "partitionKey": "selected:receipt-asset:qiusdcn",
           "basis": {
-            "kind": "selected-observation"
+            "kind": "serial-claim",
+            "dependencyEdgeKey": null,
+            "entireClaim": true,
+            "currentImplementation": "0xf28043598a1824053097d5c4fedd7cd1cf731e76"
           },
           "reachesHeldClaim": true,
           "enabled": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-04T23:44:25Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xf28043598a1824053097d5c4fedd7cd1cf731e76",
+              "https://api.avax.network/ext/bc/C/rpc"
             ],
             "responsibility": "integration-missing"
           }
@@ -1231,6 +1255,262 @@
             ],
             "responsibility": "integration-missing"
           }
+        },
+        {
+          "authorityKey": "aave:aavadai:pool-admin:pause",
+          "nodeKey": "receipt-asset:aavadai",
+          "actingDeployment": {
+            "chainId": "avalanche",
+            "claimAddress": "0x82e64f49ed5ec1bc6e43dad4fc8af9bb3a2312ee"
+          },
+          "controllerKey": "avalanche:0x3c06dce358add17aaf230f2234bccc4afd50d090",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "reserve-issuer",
+              "key": "aave-v3-avalanche"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-04T23:42:07Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x82e64f49ed5ec1bc6e43dad4fc8af9bb3a2312ee",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xa72636cbcaa8f5ff95b2cc47f3cdee83f3294a0b",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xff42ce30054dce7dc7c1282a9a497aa58eabce99",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x88ee4632d8f7fac47ebbeb63c4c2875d0974b8b4",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x6cddff90124ba51afac5715314db7c9546b32204",
+              "https://api.avax.network/ext/bc/C/rpc"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "authorityKey": "aave:aavadai:emergency:pause",
+          "nodeKey": "receipt-asset:aavadai",
+          "actingDeployment": {
+            "chainId": "avalanche",
+            "claimAddress": "0x82e64f49ed5ec1bc6e43dad4fc8af9bb3a2312ee"
+          },
+          "controllerKey": "avalanche:0x56c1a4b54921dea9a344967a8693c7e661d72968",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "reserve-issuer",
+              "key": "aave-v3-avalanche"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-04T23:42:07Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x82e64f49ed5ec1bc6e43dad4fc8af9bb3a2312ee",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xa72636cbcaa8f5ff95b2cc47f3cdee83f3294a0b",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xff42ce30054dce7dc7c1282a9a497aa58eabce99",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x88ee4632d8f7fac47ebbeb63c4c2875d0974b8b4",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x6cddff90124ba51afac5715314db7c9546b32204",
+              "https://api.avax.network/ext/bc/C/rpc"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "authorityKey": "aave:aavausdt:pool-admin:pause",
+          "nodeKey": "receipt-asset:aavausdt",
+          "actingDeployment": {
+            "chainId": "avalanche",
+            "claimAddress": "0x6ab707aca953edaefbc4fd23ba73294241490620"
+          },
+          "controllerKey": "avalanche:0x3c06dce358add17aaf230f2234bccc4afd50d090",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "reserve-issuer",
+              "key": "aave-v3-avalanche"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-04T23:42:07Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x6ab707aca953edaefbc4fd23ba73294241490620",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xa72636cbcaa8f5ff95b2cc47f3cdee83f3294a0b",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xff42ce30054dce7dc7c1282a9a497aa58eabce99",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x88ee4632d8f7fac47ebbeb63c4c2875d0974b8b4",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x6cddff90124ba51afac5715314db7c9546b32204",
+              "https://api.avax.network/ext/bc/C/rpc"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "authorityKey": "aave:aavausdt:emergency:pause",
+          "nodeKey": "receipt-asset:aavausdt",
+          "actingDeployment": {
+            "chainId": "avalanche",
+            "claimAddress": "0x6ab707aca953edaefbc4fd23ba73294241490620"
+          },
+          "controllerKey": "avalanche:0x56c1a4b54921dea9a344967a8693c7e661d72968",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "reserve-issuer",
+              "key": "aave-v3-avalanche"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-04T23:42:07Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x6ab707aca953edaefbc4fd23ba73294241490620",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xa72636cbcaa8f5ff95b2cc47f3cdee83f3294a0b",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xff42ce30054dce7dc7c1282a9a497aa58eabce99",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x88ee4632d8f7fac47ebbeb63c4c2875d0974b8b4",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x6cddff90124ba51afac5715314db7c9546b32204",
+              "https://api.avax.network/ext/bc/C/rpc"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "authorityKey": "aave:aavausdc:pool-admin:pause",
+          "nodeKey": "receipt-asset:aavausdc",
+          "actingDeployment": {
+            "chainId": "avalanche",
+            "claimAddress": "0x625e7708f30ca75bfd92586e17077590c60eb4cd"
+          },
+          "controllerKey": "avalanche:0x3c06dce358add17aaf230f2234bccc4afd50d090",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "reserve-issuer",
+              "key": "aave-v3-avalanche"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-04T23:42:07Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x625e7708f30ca75bfd92586e17077590c60eb4cd",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xa72636cbcaa8f5ff95b2cc47f3cdee83f3294a0b",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xff42ce30054dce7dc7c1282a9a497aa58eabce99",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x88ee4632d8f7fac47ebbeb63c4c2875d0974b8b4",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x6cddff90124ba51afac5715314db7c9546b32204",
+              "https://api.avax.network/ext/bc/C/rpc"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "authorityKey": "aave:aavausdc:emergency:pause",
+          "nodeKey": "receipt-asset:aavausdc",
+          "actingDeployment": {
+            "chainId": "avalanche",
+            "claimAddress": "0x625e7708f30ca75bfd92586e17077590c60eb4cd"
+          },
+          "controllerKey": "avalanche:0x56c1a4b54921dea9a344967a8693c7e661d72968",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "reserve-issuer",
+              "key": "aave-v3-avalanche"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-04T23:42:07Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x625e7708f30ca75bfd92586e17077590c60eb4cd",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xa72636cbcaa8f5ff95b2cc47f3cdee83f3294a0b",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xff42ce30054dce7dc7c1282a9a497aa58eabce99",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x88ee4632d8f7fac47ebbeb63c4c2875d0974b8b4",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x6cddff90124ba51afac5715314db7c9546b32204",
+              "https://api.avax.network/ext/bc/C/rpc"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "authorityKey": "benqi:0x10f3dd258707a398964a286d9f2ef556c6ad82e6:pause",
+          "nodeKey": "receipt-asset:qiusdcn",
+          "actingDeployment": {
+            "chainId": "avalanche",
+            "claimAddress": "0xb715808a78f6041e46d61cb123c9b4a27056ae9c"
+          },
+          "controllerKey": "avalanche:0x10f3dd258707a398964a286d9f2ef556c6ad82e6",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "reserve-issuer",
+              "key": "benqi"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-04T23:42:07Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xb715808a78f6041e46d61cb123c9b4a27056ae9c",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x486af39519b4dc9a7fccd318217352830e8ad9b4",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xd8e426c61b0fbbda06e9f603263abea09d717dbd",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xf28043598a1824053097d5c4fedd7cd1cf731e76",
+              "https://api.avax.network/ext/bc/C/rpc"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "authorityKey": "benqi:0xb952c860f1296eae87494c7d8a4c96edd43adb3d:pause",
+          "nodeKey": "receipt-asset:qiusdcn",
+          "actingDeployment": {
+            "chainId": "avalanche",
+            "claimAddress": "0xb715808a78f6041e46d61cb123c9b4a27056ae9c"
+          },
+          "controllerKey": "avalanche:0xb952c860f1296eae87494c7d8a4c96edd43adb3d",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "reserve-issuer",
+              "key": "benqi"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-04T23:42:07Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xb715808a78f6041e46d61cb123c9b4a27056ae9c",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x486af39519b4dc9a7fccd318217352830e8ad9b4",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xd8e426c61b0fbbda06e9f603263abea09d717dbd",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xf28043598a1824053097d5c4fedd7cd1cf731e76",
+              "https://api.avax.network/ext/bc/C/rpc"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "authorityKey": "nrs-market:whitelist:freeze",
+          "nodeKey": "market:nrs",
+          "actingDeployment": {
+            "chainId": "avalanche",
+            "claimAddress": "0x6d0cc0e3e2c63f84b55d86b4a1312805c3b99a2c"
+          },
+          "controllerKey": "avalanche:0xdd3de3b819edd3a014fda93868d7dfc873341467",
+          "capability": "freeze",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "reserve-custodian",
+              "key": "nereus-nrs-market"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-04T23:42:07Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x6d0cc0e3e2c63f84b55d86b4a1312805c3b99a2c",
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x0cb36e491c8b694fa885433b7e5c22fc07d08f7c",
+              "https://api.avax.network/ext/bc/C/rpc"
+            ],
+            "responsibility": "integration-missing"
+          }
         }
       ],
       "partitions": [
@@ -1265,13 +1545,13 @@
         {
           "partitionKey": "selected:collateral:aavausdt",
           "nodeKey": "collateral:aavausdt",
-          "disjoint": false,
-          "complete": false,
+          "disjoint": true,
+          "complete": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-04T23:50:10Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xfa71747531bc4bc8d86f847a3585b5e89043a8be",
+              "https://api.avax.network/ext/bc/C/rpc"
             ],
             "responsibility": "integration-missing"
           }
@@ -1279,13 +1559,13 @@
         {
           "partitionKey": "selected:receipt-asset:aavausdt",
           "nodeKey": "receipt-asset:aavausdt",
-          "disjoint": false,
-          "complete": false,
+          "disjoint": true,
+          "complete": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-04T23:44:25Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x88ee4632d8f7fac47ebbeb63c4c2875d0974b8b4",
+              "https://api.avax.network/ext/bc/C/rpc"
             ],
             "responsibility": "integration-missing"
           }
@@ -1307,13 +1587,13 @@
         {
           "partitionKey": "selected:collateral:aavausdc",
           "nodeKey": "collateral:aavausdc",
-          "disjoint": false,
-          "complete": false,
+          "disjoint": true,
+          "complete": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-04T23:50:10Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x333c21aba51f5e3bcd9b0a60073b572736bf9353",
+              "https://api.avax.network/ext/bc/C/rpc"
             ],
             "responsibility": "integration-missing"
           }
@@ -1321,13 +1601,13 @@
         {
           "partitionKey": "selected:receipt-asset:aavausdc",
           "nodeKey": "receipt-asset:aavausdc",
-          "disjoint": false,
-          "complete": false,
+          "disjoint": true,
+          "complete": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-04T23:44:25Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x88ee4632d8f7fac47ebbeb63c4c2875d0974b8b4",
+              "https://api.avax.network/ext/bc/C/rpc"
             ],
             "responsibility": "integration-missing"
           }
@@ -1349,13 +1629,13 @@
         {
           "partitionKey": "selected:collateral:aavadai",
           "nodeKey": "collateral:aavadai",
-          "disjoint": false,
-          "complete": false,
+          "disjoint": true,
+          "complete": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-04T23:50:10Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x1b9d6b0fed627dfa572b821c677cd46caf30c76d",
+              "https://api.avax.network/ext/bc/C/rpc"
             ],
             "responsibility": "integration-missing"
           }
@@ -1363,13 +1643,13 @@
         {
           "partitionKey": "selected:receipt-asset:aavadai",
           "nodeKey": "receipt-asset:aavadai",
-          "disjoint": false,
-          "complete": false,
+          "disjoint": true,
+          "complete": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-04T23:44:25Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x88ee4632d8f7fac47ebbeb63c4c2875d0974b8b4",
+              "https://api.avax.network/ext/bc/C/rpc"
             ],
             "responsibility": "integration-missing"
           }
@@ -1391,13 +1671,13 @@
         {
           "partitionKey": "selected:collateral:qiusdcn",
           "nodeKey": "collateral:qiusdcn",
-          "disjoint": false,
-          "complete": false,
+          "disjoint": true,
+          "complete": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-04T23:50:10Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xf9ff7de84373b777ecda41e6dfcb3199d08f681d",
+              "https://api.avax.network/ext/bc/C/rpc"
             ],
             "responsibility": "integration-missing"
           }
@@ -1405,13 +1685,13 @@
         {
           "partitionKey": "selected:receipt-asset:qiusdcn",
           "nodeKey": "receipt-asset:qiusdcn",
-          "disjoint": false,
-          "complete": false,
+          "disjoint": true,
+          "complete": true,
           "review": {
-            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "reviewedAt": "2026-10-04T23:44:25Z",
             "sources": [
-              "https://nxusd.nereus.finance/js/app.60bde321.js",
-              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+              "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xf28043598a1824053097d5c4fedd7cd1cf731e76",
+              "https://api.avax.network/ext/bc/C/rpc"
             ],
             "responsibility": "integration-missing"
           }

@@ -490,7 +490,7 @@ describe("subgraph source families", () => {
     expect(result.failedChains).toEqual([]);
     const celoRequests = fetchMock.getHistory().filter(({ url }) => url.endsWith(UNIV3_SUBGRAPHS.celo));
     expect(celoRequests).toHaveLength(1);
-    expect(JSON.parse(celoRequests[0]!.body ?? "{}").query).toBe(buildUniV3MessariPoolQuery(0));
+    expect(JSON.parse(celoRequests[0]!.body ?? "{}").query).toBe(buildUniV3MessariPoolQuery(0, [usdt, cusd]));
 
     // FIXED_TRADING_FEE 0.01% -> 100 pips; the unordered and sub-floor rows are dropped.
     expect(result.uniV3PoolFees.get(`celo:${usdtUsdcPool}`)).toBe(100);

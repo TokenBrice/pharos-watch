@@ -1,5 +1,6 @@
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { buildUniswapV4RegisteredExecutionTarget } from "./execution-targets/uniswap-v4";
+import { buildQuoterV2RegisteredExecutionTarget } from "./execution-targets/quoter-v2";
 import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
@@ -14,13 +15,7 @@ import type {
 import { isCryptoSwap, normalizeProtocol } from "./pool-helpers";
 import type { DexAmmExecutionModel, DexExecutionCapabilityGate } from "@shared/types/market";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
-import {
-  buildMeasuredExecutionTargetValue,
-  buildUniV3ExecutionCandidateKey,
-  buildUniV3MeasuredExecutionTarget,
-  parseUniV3FeePips,
-  type UniV3ExecutionCandidate,
-} from "../measured-execution/inventory";
+import { buildMeasuredExecutionTargetValue } from "../measured-execution/inventory";
 import {
   CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
   getCurveCryptoSwapShadowPolicy,
@@ -184,22 +179,6 @@ export function applyRegisteredExecutionTargetOutput(
   }
 }
 
-function findExactUniV3Candidates(
-  candidatesByKey: ReadonlyMap<string, readonly UniV3ExecutionCandidate[]>,
-  chain: string,
-  poolId: string,
-): UniV3ExecutionCandidate[] {
-  const exactPoolKey = canonicalExitRouteAssetKey(chain, poolId);
-  const matches: UniV3ExecutionCandidate[] = [];
-  for (const candidates of candidatesByKey.values()) {
-    for (const candidate of candidates) {
-      if (canonicalExitRouteAssetKey(candidate.chain, candidate.poolAddress) === exactPoolKey) {
-        matches.push(candidate);
-      }
-    }
-  }
-  return matches;
-}
 
 /**
  * Builds the exact StableSwap execution model for an address-matched plain
@@ -798,42 +777,12 @@ export function buildPoolExecutionCapability(
         })
       : null;
 
-  const uniV3FeePips =
-    protocol === "uniswap-v3"
-      ? parseUniV3FeePips(pool.poolMeta) ??
-        enrichment.feeTierForExtra ??
-        null
-      : null;
-  const uniV3ExecutionKey =
-    protocol === "uniswap-v3"
-      ? buildUniV3ExecutionCandidateKey(
-          chainNorm,
-          pool.underlyingTokens,
-          uniV3FeePips,
-        )
-      : null;
-  const keyedUniV3Candidates = uniV3ExecutionKey
-    ? (context.uniV3ExecutionCandidates.get(uniV3ExecutionKey) ?? [])
-    : [];
-  const exactUniV3Candidates =
-    protocol === "uniswap-v3"
-      ? findExactUniV3Candidates(context.uniV3ExecutionCandidates, chainNorm, pool.pool)
-      : [];
-  const uniV3Candidates =
-    exactUniV3Candidates.length > 0 ? exactUniV3Candidates : keyedUniV3Candidates;
-  const uniV3MeasuredTarget =
-    protocol === "uniswap-v3" && uniV3Candidates.length === 1
-      ? buildUniV3MeasuredExecutionTarget({
-          stablecoinId,
-          candidate: uniV3Candidates[0]!,
-          stablecoinPriceById: context.stablecoinPriceById,
-          chainAddressToId: context.chainAddressToId,
-          symbolToChainScopedIds: context.symbolToChainScopedIds,
-          validationReferences: context.validationReferences,
-          retainedTvlUsd: rawContribTvl,
-          capturedAt: context.measuredTargetCapturedAt,
-        })
-      : null;
+  const uniV3MeasuredTarget = buildQuoterV2RegisteredExecutionTarget({
+    context,
+    identity,
+    enrichment,
+    stablecoinId,
+  })?.measuredExecutionTarget ?? null;
 
   const uniswapV4MeasuredTarget = buildUniswapV4RegisteredExecutionTarget({
     context,

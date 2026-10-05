@@ -4,6 +4,7 @@ import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import {
   buildAmmCapacityCurve,
   validateAmmExecutionModel,
+  trackedExactAmmOutputValuationFields,
 } from "@shared/lib/p4-exit-route-amm-simulation";
 import {
   type DexMeasuredExecutionTarget,
@@ -33,6 +34,7 @@ import {
   type EvmV2ReplayCase,
 } from "./fixtures/evm-v2-fixtures";
 import { captureRpcs, replayTokenLookups } from "./constant-product-v2.test-support";
+import type { EvmMulticall3Result } from "../../../lib/evm-rpc";
 
 const U = "0xce24439f2d9c6a2289f741120fe202248b666666" as const;
 const WBNB = "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c" as const;
@@ -211,7 +213,8 @@ async function runReplay(
   options: {
     blockNumber?: number;
     serveOnlyBlock?: number;
-    mutateResults?: (results: ReturnType<typeof replayMulticallResults>) => void;
+    mutateResults?: (results: EvmMulticall3Result[]) => void;
+    reorgOnConfirmation?: boolean;
   } = {},
 ) {
   const candidate = replayCandidate(replay);
@@ -229,7 +232,7 @@ async function runReplay(
       blockNumber: number,
     ) => {
       if (options.serveOnlyBlock != null && blockNumber !== options.serveOnlyBlock) return null;
-      const results = replayMulticallResults(replay, calls);
+      const results: EvmMulticall3Result[] = replayMulticallResults(replay, calls);
       options.mutateResults?.(results);
       return results;
     },
@@ -238,6 +241,7 @@ async function runReplay(
     (entry) => entry.source === "pancakeswap-v2",
   )!;
 
+  let headerReads = 0;
   await enrichEvmV2ExecutionModels({
     metrics: new Map([[metric.stablecoinId, metric]]),
     chainAddressToId,
@@ -249,8 +253,13 @@ async function runReplay(
     chainRpcs: captureRpcs("bsc", "BSC"),
     dependencies: {
       fetchBlockNumber,
-      fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") =>
-        blockHeader(blockNumber as number)),
+      fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") => {
+        const header = blockHeader(blockNumber as number);
+        if (options.reorgOnConfirmation && headerReads++ > 0) {
+          header.hash = `0x${"cd".repeat(32)}`;
+        }
+        return header;
+      }),
       fetchCodeAtBlock,
       fetchMulticall: fetchMulticall as never,
       hashCode: vi.fn(() => deployment.expectedFactoryCodeHash),
@@ -400,6 +409,46 @@ describe("constant-product V2 execution", () => {
       }),
     ).toBe(true);
     expect(metric.topPools[0]!.extra?.evmV2ExecutionCandidate).toEqual(candidate);
+  });
+
+  it("keeps conflicting fingerprint candidates unresolved in either arrival order", () => {
+    const first = makeCandidate();
+    const second = { ...first, poolAddress: "0x0000000000000000000000000000000000005bad" as const };
+    for (const candidates of [[first, second], [second, first]]) {
+      const metric = initMetrics("u-united-stables", "U");
+      metric.topPools.push({
+        poolId: buildPoolFingerprint("bsc", "pancakeswap", [U, WBNB])!,
+        project: "pancakeswap", chain: "BSC", tvlUsd: 2_000_000,
+        symbol: "U-WBNB", volumeUsd1d: 100_000, poolType: "generic", source: "dl", extra: {},
+      });
+      const metrics = new Map([[metric.stablecoinId, metric]]);
+      expect(attachEvmV2CandidateToRetainedPool({ metrics, stablecoinId: metric.stablecoinId, chain: "bsc", candidate: candidates[0]! })).toBe(true);
+      // A repeated source row for the same physical candidate is harmless.
+      expect(attachEvmV2CandidateToRetainedPool({ metrics, stablecoinId: metric.stablecoinId, chain: "bsc", candidate: candidates[0]! })).toBe(true);
+      expect(attachEvmV2CandidateToRetainedPool({ metrics, stablecoinId: metric.stablecoinId, chain: "bsc", candidate: candidates[1]! })).toBe(false);
+      expect(attachEvmV2CandidateToRetainedPool({ metrics, stablecoinId: metric.stablecoinId, chain: "bsc", candidate: candidates[0]! })).toBe(false);
+      expect(metric.topPools[0]!.extra?.evmV2ExecutionCandidate).toBeUndefined();
+      expect(metric.topPools[0]!.extra?.executionCapabilityGate).toEqual({
+        family: "constant-product-v2", reason: "exact-pool-join-unresolved",
+      });
+    }
+  });
+
+  it("prefers an exact physical row and refuses non-unique fingerprint joins", () => {
+    const candidate = makeCandidate();
+    const metric = initMetrics("u-united-stables", "U");
+    const fingerprintPool = {
+      poolId: buildPoolFingerprint("bsc", "pancakeswap", [U, WBNB])!,
+      project: "pancakeswap", chain: "BSC", tvlUsd: 2_000_000,
+      symbol: "U-WBNB", volumeUsd1d: 100_000, poolType: "generic", source: "dl" as const,
+    };
+    metric.topPools.push({ ...fingerprintPool }, { ...fingerprintPool });
+    const metrics = new Map([[metric.stablecoinId, metric]]);
+    expect(attachEvmV2CandidateToRetainedPool({ metrics, stablecoinId: metric.stablecoinId, chain: "bsc", candidate })).toBe(false);
+    metric.topPools.push({ ...fingerprintPool, poolId: canonicalExitRouteAssetKey("bsc", PAIR) });
+    expect(attachEvmV2CandidateToRetainedPool({ metrics, stablecoinId: metric.stablecoinId, chain: "bsc", candidate })).toBe(true);
+    expect(metric.topPools[2]!.extra?.evmV2ExecutionCandidate).toEqual(candidate);
+    expect(metric.topPools[0]!.extra?.evmV2ExecutionCandidate).toBeUndefined();
   });
 
   it("builds a same-block Pancake V2 model after factory and pair verification", async () => {
@@ -721,6 +770,28 @@ describe("constant-product V2 execution", () => {
       family: "constant-product-v2",
       reason: "incomplete-exact-capture",
     });
+  });
+
+  it("does not replace a missing tracked output reference with a reserve-implied value", async () => {
+    const metric = await runV2PriceLegScenario({
+      chainAddressToId: new Map([
+        [canonicalExitRouteAssetKey("ethereum", KAG), "kag-kinesis"],
+        [canonicalExitRouteAssetKey("ethereum", XAUT), "xaut-tether"],
+      ]),
+      stablecoinPriceById: new Map([["kag-kinesis", 75]]),
+    });
+    expect(metric.topPools[0]!.extra?.ammExecutionModel).toBeUndefined();
+    expect(metric.topPools[0]!.extra?.executionCapabilityGate?.reason).toBe("incomplete-exact-capture");
+  });
+
+  it("keeps an untracked pool-implied output distinct from an independent USD reference", async () => {
+    const metric = await runV2PriceLegScenario({
+      chainAddressToId: new Map([[canonicalExitRouteAssetKey("ethereum", KAG), "kag-kinesis"]]),
+      stablecoinPriceById: new Map([["kag-kinesis", 75]]),
+    });
+    const output = metric.topPools[0]!.extra?.ammExecutionModel?.tokens[1];
+    expect(output?.referencePriceSource).toBe("pool-implied");
+    expect(trackedExactAmmOutputValuationFields(output!, "test-reference", 1_700_000_000)).toEqual({});
   });
 
   it("bounds deployment probes so one oversized request cannot gate every V2 pool", async () => {
@@ -1127,6 +1198,42 @@ describe("constant-product V2 execution", () => {
     expect(result.pool.extra?.executionCapabilityGate).toEqual({
       family: "constant-product-v2",
       reason: "incomplete-exact-capture",
+    });
+  });
+
+  for (const suffix of ["decimals0", "decimals1", "reserves"]) {
+    it(`retains a missing ${suffix} read as unavailable, never zero`, async () => {
+      const result = await runReplay(EVM_V2_REPLAY_CASES[0]!, {
+        mutateResults: (results) => {
+          const entry = results.find((row) => row.label.endsWith(`-${suffix}`))!;
+          entry.success = false;
+          entry.returnData = "0x";
+        },
+      });
+      expect(result.pool.extra?.ammExecutionModel).toBeUndefined();
+      expect(result.pool.extra?.executionCapabilityGate).toEqual({
+        family: "constant-product-v2", reason: "incomplete-exact-capture",
+      });
+    });
+  }
+
+  it("distinguishes observed zero reserves from a failed reserve read", async () => {
+    const result = await runReplay(EVM_V2_REPLAY_CASES[0]!, {
+      mutateResults: (results) => {
+        results.find((row) => row.label.endsWith("-reserves"))!.returnData = reservesWord(0n, 1n);
+      },
+    });
+    expect(result.pool.extra?.ammExecutionModel).toBeUndefined();
+    expect(result.pool.extra?.executionCapabilityGate).toEqual({
+      family: "constant-product-v2", reason: "invalid-invariant-parameters",
+    });
+  });
+
+  it("discards a complete reserve batch when its pinned header reorganizes", async () => {
+    const result = await runReplay(EVM_V2_REPLAY_CASES[0]!, { reorgOnConfirmation: true });
+    expect(result.pool.extra?.ammExecutionModel).toBeUndefined();
+    expect(result.pool.extra?.executionCapabilityGate).toEqual({
+      family: "constant-product-v2", reason: "transport-unavailable",
     });
   });
 

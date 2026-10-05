@@ -474,7 +474,10 @@ describe("wave2 redemption exit-route embeds", () => {
     });
   });
 
-  it("publishes an observation for successful Anzen reserve-sync with near-zero scoring capacity", async () => {
+  it.each([
+    { feeCase: "a measured zero fee", feeBps: 0 },
+    { feeCase: "an unquantified formula fee", feeBps: undefined },
+  ])("publishes an observation for successful Anzen reserve-sync with near-zero scoring capacity and $feeCase", async ({ feeBps }) => {
     const config = getRedemptionBackstopConfig("usdz-anzen");
     expect(config).toBeDefined();
 
@@ -494,7 +497,7 @@ describe("wave2 redemption exit-route embeds", () => {
           settlementDelaySec: 0,
           routeStatus: "open",
           routeStatusSource: "onchain",
-          feeBps: 0,
+          ...(feeBps !== undefined ? { feeBps } : {}),
           sourceUrls: ["https://docs.anzen.finance/usdz-101/overview"],
         }),
       },
@@ -508,10 +511,15 @@ describe("wave2 redemption exit-route embeds", () => {
       routeFamily: "protocol-redemption",
       output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] },
       evidenceKind: "onchain-contract-state",
-      feeEvidence: "undisclosed-reviewed",
       executableUsd: 0.006695,
-      scoreEligible: false,
+      scoreEligible: feeBps !== undefined,
     });
+    const observation = entry.capacityProfile?.exitRouteObservations?.[0];
+    if (feeBps !== undefined) {
+      expect(observation).not.toHaveProperty("feeEvidence");
+    } else {
+      expect(observation).toMatchObject({ feeEvidence: "disclosed-unquantified" });
+    }
   });
 
   it("publishes an observation for successful River reserve-sync trove-debt telemetry", async () => {

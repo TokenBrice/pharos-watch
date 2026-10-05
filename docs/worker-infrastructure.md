@@ -207,6 +207,8 @@ These are pure functions. `Env` bindings are only available inside handler funct
 
 Public endpoint data and provider-quality exclusions live in `shared/lib/chain-rpc-registry.ts`, shared with curated supply probes and V9 supply attribution. `worker/src/lib/public-rpc-registry.ts` only performs lookups and ordered-list construction from that authority; it owns no endpoint table. The public, curated-supply, and attribution profiles intentionally preserve their distinct fallback lists rather than silently expanding runtime routes.
 
+Alchemy's additional archive state-only census endpoints use supplemental-only configs and `logsHistory: none`. A chain's presence in the RPC map does not establish registry RPC readability: consumers use `hasRegistryRpc()` or `registryRpcUrls()` for that capability. The transfer census can use archive supplemental endpoints without expanding registry or log-scan inventories; Dwellir remains appended after the existing census endpoints.
+
 ---
 
 ## HTTP Request Handling

@@ -460,6 +460,31 @@ describe("fetchKrakenPrices", () => {
     expect(outcome.value.has("BTC")).toBe(false);
   });
 
+  it("requests the exact SoFiUSD market and prefers its bid/ask midpoint", async () => {
+    const requestedUrls: string[] = [];
+    mockFetch([{
+      match: (request) => {
+        requestedUrls.push(request.url);
+        return true;
+      },
+      body: {
+        error: [],
+        result: {
+          // Live SOFIDUSD ticker shape observed 2026-10-05.
+          SOFIDUSD: { a: ["0.99979000"], b: ["0.99976000"], c: ["0.99976000"] },
+        },
+      },
+    }]);
+
+    const outcome = await fetchKrakenPrices(["SOFID"]);
+
+    expect(KRAKEN_KNOWN_SYMBOLS).toContain("SOFID");
+    expect(requestedUrls).toEqual(["https://api.kraken.com/0/public/Ticker?pair=SOFIDUSD"]);
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.get("SOFID")).toBeCloseTo(0.999775, 8);
+    expect(outcome.value.size).toBe(1);
+  });
+
   it("returns upstream-error outcome when Kraken returns an API error", async () => {
     mockFetch([{ match: () => true, body: { error: ["EGeneral:Temporary lockout"], result: {} } }]);
 

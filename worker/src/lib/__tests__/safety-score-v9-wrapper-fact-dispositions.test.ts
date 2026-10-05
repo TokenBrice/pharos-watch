@@ -11,6 +11,7 @@ import {
   makeV9RoleExtension,
   makeV9TwoAssetFixedInput,
   type V9ExtensionDependencyEdge,
+  v9Status,
 } from "../../test-helpers/v9-fixed-input";
 import { normalizeFixedInput } from "../report-cards-fixed-input";
 
@@ -59,6 +60,44 @@ function wrapperFacts(
 }
 
 describe("Safety Score V9 wrapper fact dispositions", () => {
+  it("removes only immutable-root local uncertainty while retaining aggregate issuance and other wrapper causes", () => {
+    const fixed = fixedInputWithTrackedParent();
+    const extension = wrapperExtension(fixed, "strategy-vault");
+    const wrapper = extension.assets.find((candidate) => candidate.assetId === "alpha")!;
+    wrapper.economicControlReview!.mint.status = v9Status("missing", "v9.control.mint-review");
+    wrapper.economicControlReview!.mint.reconciliation = "unknown";
+    wrapper.economicControlReview!.mint.upgrade = { state: "immutable", controlKey: null };
+    const before = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets
+      .find((candidate) => candidate.assetId === "alpha")!;
+    const address = "0x1111111111111111111111111111111111111111";
+    wrapper.allocationScopeIdentityReview = {
+      assetId: "alpha", registeredDeploymentKeys: [`ethereum:${address}`],
+      deployments: [{
+        chain: "ethereum", address, codeKind: "immutable", block: 123,
+        observedAtSec: fixed.clockSec - 100, sourceUrl: "https://example.com/immutable-root",
+      }],
+    };
+    const after = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets
+      .find((candidate) => candidate.assetId === "alpha")!;
+    const gapId = "alpha:gap:wrapper-local:contractMutability";
+    expect(before.gaps).toContainEqual(expect.objectContaining({ gapId, responsibility: "unresearched" }));
+    expect(after.gaps).toEqual(before.gaps.filter((gap) => gap.gapId !== gapId));
+    expect(after.economicControlReview).toEqual(before.economicControlReview);
+    expect(after.controls).toEqual(before.controls);
+    expect(after.reserveExposures).toEqual(before.reserveExposures);
+    expect(after.allocationScopeFacts).toEqual(before.allocationScopeFacts);
+    if (before.wrapperLocalFacts.applicability !== "wrapper" || after.wrapperLocalFacts.applicability !== "wrapper") {
+      throw new Error("Expected wrapper-local facts");
+    }
+    const { contractMutability: _before, ...otherBefore } = before.wrapperLocalFacts.facts;
+    const { contractMutability: _after, ...otherAfter } = after.wrapperLocalFacts.facts;
+    expect(otherAfter).toEqual(otherBefore);
+    expect(after.wrapperLocalFacts.facts.contractMutability).toMatchObject({
+      disposition: "reviewed", assessment: "none",
+    });
+    expect(after.economicControlReview.mint.status.observationState).not.toBe("known");
+  });
+
   it("withholds reviewed mixed-book backing for any asset ID while preserving other wrappers' inheritance, caps, peg and supply", () => {
     const fixed = makeV9CohortFixedInput(["susd1plus-lorenzo"]);
     const edge: V9ExtensionDependencyEdge = {

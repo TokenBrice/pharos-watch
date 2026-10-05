@@ -2,6 +2,7 @@
   "id": "uscc-superstate",
   "reserves": [
     {
+      "sourceKey": "chainlink-nav:token:0x14d60e7fdc0d71d8611742720e4c50e7a974020c",
       "name": "Bitwise Crypto Carry Fund share exposure",
       "pct": 100,
       "risk": "high",
@@ -18,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-05",
+    "reviewer": "Unknown-resolver wave 3 (W3R13)",
     "confidence": "manual-review",
     "sources": [
       {
@@ -35,8 +36,8 @@
         "url": "https://docs.superstate.com/investors/smart-contracts"
       }
     ],
-    "rationale": "The October 1 portfolio includes negative derivative marks and a negative USDC balance. Its signed NAV weights cannot be converted into a long-only reserve mix. This 100% row identifies the holder fund-share instrument, not 100% safe backing or verified custody; USTB look-through weights, venue margin, hedge notionals and net liabilities remain unpartitioned.",
-    "compositionBasis": "Whole holder-instrument claim; no fabricated normalization of underlying positions",
+    "rationale": "The exact Chainlink NAV source category is the USCC fund-share claim: issuer terms state that shares of Bitwise Crypto Carry Fund are issued as USCC tokens or held in book-entry. The key joins classification and fund issuer identity only; it does not normalize the October 1 signed portfolio weights, establish underlying hedge/margin exposures, or certify whole-book realization.",
+    "compositionBasis": "Whole holder-instrument claim; exact adapter sourceKey classification join, with no new portfolio weights or composition date",
     "scope": "full-composition",
     "knownUnknownExposure": "The October 1 portfolio includes negative derivative marks and a negative USDC balance. Its signed NAV weights cannot be converted into a long-only reserve mix. This 100% row identifies the holder fund-share instrument, not 100% safe backing or verified custody; USTB look-through weights, venue margin, hedge notionals and net liabilities remain unpartitioned.",
     "knownUnknownExposurePct": 100,

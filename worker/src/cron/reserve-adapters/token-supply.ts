@@ -33,8 +33,23 @@ const MOVE_METADATA_TYPE = "0x1::fungible_asset::Metadata";
 export { APTOS_PUBLIC_REST_URL };
 
 interface MoveLedgerResponse {
+  chain_id?: number;
   ledger_version?: string;
   ledger_timestamp?: string;
+}
+
+interface MoveBlockResponse {
+  first_version?: string;
+  last_version?: string;
+  block_timestamp?: string;
+}
+
+const MOVE_INTEGER_RE = /^(0|[1-9][0-9]*)$/;
+
+function moveTimestampSec(value: unknown): number | undefined {
+  if (typeof value !== "string" || !/^[1-9][0-9]{0,19}$/.test(value)) return undefined;
+  const seconds = Number(BigInt(value) / 1_000_000n);
+  return Number.isSafeInteger(seconds) && seconds > 0 ? seconds : undefined;
 }
 
 interface MoveResourceResponse {
@@ -50,6 +65,13 @@ export interface MoveFungibleAssetSupplyObservation {
   ledgerTimestampSec?: number;
 }
 
+export interface MoveFungibleAssetSupplyReadOptions {
+  clockSec: number;
+  expectedChainId?: number;
+  /** Exact deployed OFT package identity, resolved through its pinned mint/burn refs. */
+  identityKind?: "metadata-address" | "oft-package";
+}
+
 /**
  * Reads an Aptos-framework fungible asset's supply and decimals at one pinned
  * ledger version. Serves every Move chain on the Aptos framework REST API
@@ -60,13 +82,78 @@ export async function fetchMoveFungibleAssetSupply(
   signal: AbortSignal,
   rpcUrl: string,
   ctx?: AdapterContext,
+  options?: MoveFungibleAssetSupplyReadOptions,
 ): Promise<MoveFungibleAssetSupplyObservation | null> {
+  if (!/^0x[0-9a-fA-F]{1,64}$/.test(metadataAddress)) return null;
   const baseUrl = rpcUrl.replace(/\/$/, "");
   const ledger = await fetchJsonWithRetry<MoveLedgerResponse>(baseUrl, signal, 10_000, ctx);
-  if (!ledger.ledger_version || !/^(0|[1-9][0-9]*)$/.test(ledger.ledger_version)) return null;
+  if (!ledger.ledger_version || !MOVE_INTEGER_RE.test(ledger.ledger_version)) return null;
+  if (options?.expectedChainId !== undefined && ledger.chain_id !== options.expectedChainId) return null;
+  let ledgerVersion = ledger.ledger_version;
+  let ledgerTimestampSec = moveTimestampSec(ledger.ledger_timestamp);
+  if (options) {
+    if (!Number.isSafeInteger(options.clockSec) || options.clockSec <= 0 || ledgerTimestampSec === undefined) return null;
+    if (ledgerTimestampSec > options.clockSec) {
+      // Locate the newest complete block at/before the scoring clock. Never
+      // attach an old clock to the latest supply, or read partial block state.
+      let low = 0n;
+      let high = BigInt(ledgerVersion);
+      let historicalVersion: string | null = null;
+      let historicalTimestamp: number | undefined;
+      let bracketed = false;
+      let offset = 0n;
+      for (let probe = 0; low <= high && probe < 64; probe += 1) {
+        throwIfAborted(signal);
+        // Near-clock captures need near-head state, not a pruned half-chain
+        // probe. Walk back exponentially before bisecting the retained bracket.
+        const middle = bracketed ? (low + high) / 2n
+          : BigInt(ledgerVersion) > offset ? BigInt(ledgerVersion) - offset : 0n;
+        const block = await fetchJsonWithRetry<MoveBlockResponse>(
+          `${baseUrl}/blocks/by_version/${middle}?with_transactions=false`, signal, 10_000, ctx,
+        );
+        const timestamp = moveTimestampSec(block.block_timestamp);
+        if (!block.first_version || !block.last_version || !MOVE_INTEGER_RE.test(block.first_version) ||
+            !MOVE_INTEGER_RE.test(block.last_version) || timestamp === undefined) return null;
+        const first = BigInt(block.first_version);
+        const last = BigInt(block.last_version);
+        if (first > middle || last < middle || last > BigInt(ledger.ledger_version)) return null;
+        if (timestamp <= options.clockSec) {
+          historicalVersion = block.last_version;
+          historicalTimestamp = timestamp;
+          low = last + 1n;
+          bracketed = true;
+        } else {
+          high = first - 1n;
+          const nextOffset = offset === 0n ? 1n : offset * 2n;
+          offset = nextOffset > BigInt(ledgerVersion) - high ? nextOffset : BigInt(ledgerVersion) - high;
+        }
+      }
+      if (low <= high || historicalVersion === null || historicalTimestamp === undefined) return null;
+      ledgerVersion = historicalVersion;
+      ledgerTimestampSec = historicalTimestamp;
+    }
+  }
+  if (options?.identityKind === "oft-package") {
+    const packageType = `${metadataAddress}::oft_fa::OftImpl`;
+    const oft = await fetchJsonWithRetry<MoveResourceResponse>(
+      `${baseUrl}/accounts/${metadataAddress}/resource/${packageType}?ledger_version=${ledgerVersion}`,
+      signal, 10_000, ctx,
+    );
+    if (oft.type !== packageType) return null;
+    const inner = (value: unknown): unknown =>
+      value !== null && typeof value === "object" && "inner" in value ? value.inner : null;
+    const metadata = inner(oft.data?.metadata);
+    if (typeof metadata !== "string" || !/^0x[0-9a-f]{64}$/.test(metadata)) return null;
+    for (const name of ["mint_ref", "burn_ref", "transfer_ref"]) {
+      const ref = oft.data?.[name];
+      if (ref === null || typeof ref !== "object" || !("metadata" in ref) ||
+          inner(ref.metadata) !== metadata) return null;
+    }
+    metadataAddress = metadata;
+  }
 
   const resourceUrl = (type: string) =>
-    `${baseUrl}/accounts/${metadataAddress}/resource/${type}?ledger_version=${ledger.ledger_version}`;
+    `${baseUrl}/accounts/${metadataAddress}/resource/${type}?ledger_version=${ledgerVersion}`;
   const supply = await fetchJsonWithRetry<MoveResourceResponse>(
     resourceUrl(MOVE_CONCURRENT_SUPPLY_TYPE), signal, 10_000, ctx,
   );
@@ -81,17 +168,11 @@ export async function fetchMoveFungibleAssetSupply(
   if (typeof raw !== "string" || !/^(0|[1-9][0-9]*)$/.test(raw)) return null;
   if (!Number.isInteger(decimals) || (decimals as number) < 0 || (decimals as number) > 30) return null;
 
-  // Aptos-framework nodes report the ledger timestamp in microseconds.
-  const ledgerTimestampMicros = ledger.ledger_timestamp;
-  const ledgerTimestampSec = typeof ledgerTimestampMicros === "string" && /^[1-9][0-9]{0,19}$/.test(ledgerTimestampMicros)
-    ? Number(BigInt(ledgerTimestampMicros) / 1_000_000n)
-    : undefined;
-
   return {
     rawSupply: BigInt(raw),
     decimals: decimals as number,
-    ledgerVersion: ledger.ledger_version,
-    ...(ledgerTimestampSec != null && ledgerTimestampSec > 0 ? { ledgerTimestampSec } : {}),
+    ledgerVersion,
+    ...(ledgerTimestampSec !== undefined ? { ledgerTimestampSec } : {}),
   };
 }
 

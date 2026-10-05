@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import candidatePolicyAsset from "@shared/data/safety-score-v9/methodology-policy-candidate-v1.json";
 import {
   V9_REASON_CODES,
@@ -461,7 +462,7 @@ describe("v10.05 operational governance policy", () => {
   });
 
   it("pins H units and the single55-to60 credit ladder without duplicate exposure/delay/ceiling keys", () => {
-    expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBe("10.06");
+    expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
     for (const field of ["annualWindowSec", "keeperWindowSec", "requiresLifetimeBudget"] as const) {
       const changed = candidateClone();
       const flow = changed.semantic.control.governedIssuance.operationalFlow;
