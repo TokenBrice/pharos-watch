@@ -4,7 +4,7 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
     "confidence": "probable",
-    "summary": "Replacement USDv is minted by the Chancery program PDA through permissioned collateral settlement. Live governance and operational Squads quorums permit one signature, while economic widening remains subject to separate program delays. Program upgrades require three of seven vote-capable members (eight total members) and a two-day Squads delay. Whole-program economic mint bounds remain unresolved.",
+    "summary": "Replacement USDv is minted by the Chancery program PDA through permissioned collateral settlement with raiseable rates and flow limits, not an immutable supply ceiling. Live governance and operational Squads quorums permit one signature; program upgrades retain the separately reviewed three-of-seven voting quorum and two-day delay. The current principal, pathway, migration and reserve-destination inventory is enumerated.",
     "upgradeability": {
       "model": "custom",
       "proxyAddresses": [
@@ -52,11 +52,11 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "capDescription": "Direct-mint source validates principal permissions and collateral settlement and checks a pathway's configured limit policy when present. Such per-transaction and rolling-window limits are configurable, not an immutable total-supply ceiling; the complete live pathway and migration bounds remain unresolved.",
+        "capDescription": "At finalized slot 453577652, all 18 registered pathways are direct settlement with a nonzero pathway limit-policy reference. Live USDC single-settlement maximum is 5,000,000 USDC; USDG and PYUSD each have 500,000-token maxima, all with 1,000-token minima. Rates and flow limits are governance-raiseable; these are not immutable total-supply ceilings. Legacy migration is currently uninitialized but can be enabled directly by governance later.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-09-15",
-        "observedBlock": 447139220,
+        "observedAt": "2026-10-05",
+        "observedBlock": 453577652,
         "sources": [
           {
             "label": "Solana mainnet finalized Chancery config, ProgramData and Squads accounts (slot 447139220)",
@@ -77,9 +77,25 @@
           {
             "label": "Published Chancery authorities (2026-09-04; current role quorums superseded by chain read)",
             "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md"
+          },
+          {
+            "label": "Finalized complete Chancery program census and one-bank 100-account control snapshot, slots 453577001 and 453577652",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Published deployed binary, byte-for-byte matching ProgramData executable prefix with zero padding",
+            "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/7446b6130fb8319488ae9871252dbeca712f582d/builds/DEP-00002/payload/release/sbf-artifact.json"
+          },
+          {
+            "label": "Published deployment source provenance for the matching binary",
+            "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/7446b6130fb8319488ae9871252dbeca712f582d/builds/DEP-00002/payload/release/source-provenance.json"
+          },
+          {
+            "label": "Governance-approved widening of asset rates and settlement limits",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/core/instructions/update_asset_config_with_pending_change.rs"
           }
         ],
-        "evidence": "The Token-2022 mint authority BWB53KgBqDZ75rMnEKohR3arDBtPtonppTx2RmjkqQ2r is independently reproduced from [mint-authority] under ChnryP5RcZtMvP8vvVyPGUhwCg6uDJc53vCe3sxr11Sz and matches the program config. It is a signer-only PDA, not an externally held key. Published direct-mint source requires permissioned principals/pathways, credited collateral, rates, fees and settlement limits before CPI minting. Current USDC per-settlement bounds are 1,000 minimum and 500,000 maximum; USDG and PYUSD are 1,000 minimum and 25,000 maximum at par rates. These are transaction bounds, not an immutable total-supply ceiling. Full active permission/pathway and migration economic bounds remain unreviewed."
+        "evidence": "Finalized slot 453577652: config mint-authority PDA remains BWB53KgBqDZ75rMnEKohR3arDBtPtonppTx2RmjkqQ2r. The complete program census has 20 canonical PermissionRecords, 18 PathwayPolicies, 41 LimitPolicies and five ReserveDestinations, exactly matching config allocation/registration counters; all 89 permission/pathway/limit/destination/asset records reproduce canonical PDA and bump. Fourteen unexpired principal records permit direct mint/redeem; two principal records are expired, four destination-scoped records authorize reserve withdrawal, and no delegated/trilateral executor permission is present. Every pathway is direct and references an existing nonzero flow-limit policy; the three deposit-enabled assets have deposit/redemption rates of 1e9. The canonical legacy-migration PDA is absent, so migration cannot currently mint; source permits future direct governance enablement against a legacy-supply snapshot. Four operational reserve destinations are enabled with per-transaction/daily limits; the treasury destination is disabled. Governance and operations authorities also have built-in reserve-withdrawal access, subject to these destination limits. The deployed executable prefix equals all 1,036,752 published binary bytes (SHA-256 1460e69a8e0330a67d73556e6c7690a1b449d54e7e1c3f3f6ab638768c714830), followed only by zero padding; issuer provenance binds source commit 0dafa95d1aded954de098208f0f515d436aa496c. Current source requires principal collateral transfer before mint but permits governance-approved widening of rates/limits. Reserve withdrawal and program upgrade authority remain separate binding risks; no universally immutable collateral gate, independent financial reconciliation or complete execution-scope certificate is claimed."
       },
       {
         "chain": "solana",
@@ -410,43 +426,28 @@
         {
           "label": "Published Chancery authorities (2026-09-04; current role quorums superseded by chain read)",
           "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md"
+        },
+        {
+          "label": "Finalized complete Chancery control inventory, slot 453577652; all registered-family counters reconciled",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Deployed binary identity and source provenance, DEP-00002",
+          "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/7446b6130fb8319488ae9871252dbeca712f582d/builds/DEP-00002/payload/release/source-provenance.json"
+        },
+        {
+          "label": "Reserve withdrawal authority and mandatory destination-scoped flow limits",
+          "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/reserve/instructions/withdraw_reserve.rs"
+        },
+        {
+          "label": "Direct governance legacy-migration enablement and snapshot bound",
+          "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/migration/instructions/enable_legacy_migration.rs"
         }
       ],
-      "evidence": "Current finalized on-chain mint/config/ProgramData and seven Squads accounts establish the new mint PDA, separate control roles and upgrade path. All seven vault derivations reproduce the declared addresses. Live governance, operations, treasury, enforcement and insurance thresholds differ from the September 4 issuer disclosure, so live values replace those historical claims. Source-level direct settlement checks collateral received, configurable rates and per-transaction limits; one-signature role quorums do not bypass program risk-class pending-change delays. We have not enumerated every live permission, pathway, migration or reserve-outflow policy, so no immutable cap, universally collateral-gated mint posture, continuous financial reconciliation, prudential supervision or new-token insurance coverage is claimed. The old mint, old program, legacy 3-of-9 authority and Ceffu reserve model are excluded.",
+      "evidence": "The September 15 finalized config/ProgramData and seven Squads observations establish the mint PDA, separated control roles and upgrade path. Live role thresholds supersede the September 4 issuer disclosure. Supplemental K06 review on October 5 at finalized slot 453577652 resolves the former scoped inventory question: all 20 permission, 18 direct-pathway, 41 limit-policy and five reserve-destination records are enumerated, family counters match, and canonical PDA/bump derivations reproduce every record. Fourteen current principal permissions carry direct mint/redeem bits, two principal permissions have expired, and four current destination permissions carry reserve-withdrawal only; no executor or migration permission is registered. All live paths have nonzero limit policies; settlement rates and ceilings can be widened through governance-approved configuration. Legacy migration is uninitialized, not irreversibly disabled: governance retains direct one-shot future activation. Four enabled operational reserve destinations use withdrawal transaction/daily limits; the treasury destination is disabled. Governance and operations roles also retain built-in reserve-withdrawal access under destination limits. Published DEP-00002 executable bytes match pinned ProgramData and published provenance binds the reviewed source commit. Current mint flow limits are governance-raiseable, not immutable bounded or universally collateral-gated; the profile-wide economic-cap review remains unknown. Continuous financial reconciliation, prudential supervision, new-token insurance, complete execution-scope closure and a fresh aggregate incident review are not claimed; the original aggregate review date is intentionally unchanged. Old mint/program, legacy authority and Ceffu reserve evidence remain excluded.",
       "reviewer": "Codex replacement USDv control review",
       "reviewedAt": "2026-09-15",
-      "disposition": "scoreable",
-      "scopedQuestions": [
-        {
-          "controlRef": "Chancery issued-token mint-authority PDA",
-          "question": "What are the complete active principal/executor permissions, pathway limits and legacy-migration bounds, including current reserve-outflow settings?",
-          "subject": "authority-semantics",
-          "reviewedAt": "2026-09-15",
-          "reviewer": "Codex replacement USDv control review",
-          "sources": [
-            {
-              "label": "Solana mainnet finalized Chancery config, ProgramData and Squads accounts (slot 447139220)",
-              "url": "https://api.mainnet-beta.solana.com"
-            },
-            {
-              "label": "Chancery current roles and authority policy",
-              "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/docs/policy/01_ROLES_AND_AUTHORITY.md"
-            },
-            {
-              "label": "Chancery PDA register",
-              "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/spec/13_PDA_Register.md"
-            },
-            {
-              "label": "Chancery direct mint implementation",
-              "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/settlement/instructions/mint_direct.rs"
-            },
-            {
-              "label": "Published Chancery authorities (2026-09-04; current role quorums superseded by chain read)",
-              "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md"
-            }
-          ]
-        }
-      ]
+      "disposition": "scoreable"
     }
   }
 }
