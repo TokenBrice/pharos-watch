@@ -12,8 +12,21 @@ describe("getRedemptionBackstopConfig", () => {
     expect(usds?.capacityModel).toEqual(dai?.capacityModel);
   });
 
-  it.each(["frax-frax", "mai-qidao", "earnusd-lido"])("keeps the explicitly unmodeled %s route absent", (id) => {
+  it.each(["frax-frax", "mai-qidao"])("keeps the explicitly unmodeled %s route absent", (id) => {
     expect(getRedemptionBackstopConfig(id)).toBeNull();
+  });
+
+  it("keeps Lido earnUSD queue terms without invented capacity, settlement or fee bounds", () => {
+    const config = getRedemptionBackstopConfig("earnusd-lido");
+    expect(config?.outputAssets).toEqual(["usdc-circle"]);
+    expect(config?.capacityModel).toEqual({ kind: "unquantified" });
+    expect(resolveCapacitySemantics(config!.capacityModel)).toBe("eventual-only");
+    expect(config?.settlementModel).toBe("queued");
+    expect(config?.v9RouteReviewTerms?.missingScoringFields).toEqual(["capacity", "settlement", "cost"]);
+    expect(config?.v9RouteReviewTerms).not.toHaveProperty("settlementDelaySec");
+    expect(config?.costModel).toMatchObject({ confidence: "formula", feeModelKind: "formula" });
+    expect(config?.costModel).not.toHaveProperty("feeBps");
+    expect(config?.costModel).not.toHaveProperty("feeBpsMax");
   });
 
   it("does not expose a cash redemption route for non-refundable JPYC Prepaid v1", () => {

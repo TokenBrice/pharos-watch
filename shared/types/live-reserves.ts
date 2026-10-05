@@ -249,6 +249,11 @@ export const LiveReserveRedemptionTelemetrySchema = z
     minRedeemUsd: NonNegativeFiniteUsdSchema.optional(),
     feeBps: BoundedFeeBpsSchema.optional(),
     sourceUrls: z.array(HttpUrlSchema).optional(),
+    // Exact payout identities for this capacity observation, not reserve assets.
+    outputAssetKeys: z.array(z.string().trim().min(1)).min(1).max(16).refine(
+      (keys) => new Set(keys).size === keys.length,
+      "Output asset identities must be unique",
+    ).optional(),
     outputValuation: LiveReserveRedemptionOutputValuationSchema.optional(),
   })
   .passthrough();

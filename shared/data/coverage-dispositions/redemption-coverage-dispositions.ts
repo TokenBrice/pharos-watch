@@ -143,20 +143,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     allowedRouteFamilyIfProven: "queue-redeem",
   }),
   reviewedOn("2026-10-03", {
-    id: "earnusd-lido",
-    disposition: "defer",
-    reasonCode: "capacity-unpublished",
-    blocker: "No exact-route adapter measures funded USDC RedeemQueue settlement capacity.",
-    rationale: "The non-ERC-4626 ShareManager request-and-claim route returns USDC with configurable access, locks and pauses. A typical three-day wait is not a completion maximum. Research-pin zero FeeManager values are not enduring fee terms; ERC-4626 probes and historical balances cannot replace exact queue telemetry.",
-    evidenceNeeded: "Fresh USDC RedeemQueue funded claims, effective ShareManager gates, queue throughput, completion bounds and current all-in fees.",
-    evidenceUrls: [
-      "https://docs.lido.fi/earn/",
-      "https://docs.lido.fi/earn/deployment-contracts",
-      "https://docs.lido.fi/earn/architecture/managers/sharemanager/",
-    ],
-    allowedRouteFamilyIfProven: "queue-redeem",
-  }),
-  reviewedOn("2026-10-03", {
     id: "susdx-axis",
     disposition: "defer",
     reasonCode: "capacity-unpublished",
