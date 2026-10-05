@@ -348,9 +348,15 @@ export async function observeCcipPending(input: {
       }
       const scan = async (sent: boolean) => {
         const cursor = sent ? cp.sent : cp.executed, side = sent ? lane.source : lane.destination, pin = sent ? sourcePin : destPin;
+        let pageBlocks = PAGE_BLOCKS;
+        for (const endpoint of input.chainRpcs.get(side.chainId)?.endpoints ?? []) {
+          if (endpoint.position !== "registry" || endpoint.maxLogBlockSpan === undefined) continue;
+          if (!Number.isSafeInteger(endpoint.maxLogBlockSpan) || endpoint.maxLogBlockSpan < 1) fail("rpc-log-span-invalid");
+          pageBlocks = Math.min(pageBlocks, endpoint.maxLogBlockSpan);
+        }
         while (cursor.nextBlock <= pin.number && pages < PAGES_PER_ATTEMPT) {
           throwIfAborted(input.signal);
-          const from = cursor.nextBlock, end = Math.min(pin.number, from + PAGE_BLOCKS - 1);
+          const from = cursor.nextBlock, end = Math.min(pin.number, from + pageBlocks - 1);
           const endHeader = await fetchEvmBlockHeader(side.chainId, end, options);
           if (!endHeader) fail("history-unavailable");
           const topics = sent ? lane.version !== "1.5" ? [lane.version === "2.0.0" ? SEND_20 : SEND_16, word(lane.destination.chainSelector)] : [SEND_15]

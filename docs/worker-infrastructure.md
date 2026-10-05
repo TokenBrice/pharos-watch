@@ -209,6 +209,8 @@ Public endpoint data and provider-quality exclusions live in `shared/lib/chain-r
 
 Alchemy's additional archive state-only census endpoints use supplemental-only configs and `logsHistory: none`. A chain's presence in the RPC map does not establish registry RPC readability: consumers use `hasRegistryRpc()` or `registryRpcUrls()` for that capability. The transfer census can use archive supplemental endpoints without expanding registry or log-scan inventories; Dwellir remains appended after the existing census endpoints.
 
+Endpoint transport metadata in `worker/src/lib/chain-registry.ts` may declare an inclusive `maxLogBlockSpan` and `noBatch`. The shared RPC helpers skip endpoints that cannot accommodate an explicit log range and execute no-batch groups serially with exact response IDs, deadlines and request guards. These options do not change endpoint order, state/log history classifications or inventory eligibility; absent options preserve existing batch transport and caller-selected ranges.
+
 ---
 
 ## HTTP Request Handling

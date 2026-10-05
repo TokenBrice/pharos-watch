@@ -471,6 +471,34 @@ export function isHexResult(value: string | null | undefined): value is `0x${str
   return typeof value === "string" && value.startsWith("0x") && value.length > 2;
 }
 
+function fitsRpcLogSpan(calls: readonly EvmRpcBatchCall[], maxLogBlockSpan: number | undefined): boolean {
+  if (maxLogBlockSpan === undefined) return true;
+  if (!Number.isSafeInteger(maxLogBlockSpan) || maxLogBlockSpan < 1) return false;
+  for (const call of calls) {
+    if (call.method !== "eth_getLogs") continue;
+    const filter = call.params[0];
+    if (!filter || typeof filter !== "object") return false;
+    if ("blockHash" in filter) continue;
+    const from = "fromBlock" in filter ? parseQuantityHex(filter.fromBlock) : null;
+    const to = "toBlock" in filter ? parseQuantityHex(filter.toBlock) : null;
+    if (from === null || to === null || to < from || to - from + 1n > BigInt(maxLogBlockSpan)) return false;
+  }
+  return true;
+}
+
+function addRpcResponseRow(
+  row: unknown,
+  byId: Map<number, JsonRpcEnvelope<unknown>>,
+  callsLength: number,
+  expectedId?: number,
+): boolean {
+  const id: unknown = row && typeof row === "object" && "id" in row ? row.id : undefined;
+  if (typeof id !== "number" || !Number.isSafeInteger(id) || id < 1 || id > callsLength ||
+      byId.has(id) || (expectedId !== undefined && id !== expectedId)) return false;
+  byId.set(id, row as JsonRpcEnvelope<unknown>);
+  return true;
+}
+
 /**
  * One JSON-RPC batch against the reviewed chain endpoints, with the envelope
  * validation every caller needs: matching row count, safe-integer ids, no
@@ -496,56 +524,50 @@ async function runEvmRpcBatch<Value>(
 
   const configuredTimeoutMs = options?.timeoutMs ?? 10_000;
   const maxRetries = options?.maxRetries ?? 1;
-  for (const rpcUrl of urls) {
+  endpoints: for (const rpcUrl of urls) {
     if (isTronRpcUrl(rpcUrl) && calls.some(call => requiresHistoricalEvmState(call.method, call.params))) continue;
-    const remainingMs = options?.deadlineMs == null
-      ? configuredTimeoutMs
-      : Math.floor(options.deadlineMs - Date.now());
-    if (remainingMs <= 0) break;
-    if (options?.beforeRequest && !options.beforeRequest(rpcUrl)) break;
+    const endpoint = chainId ? options?.chainRpcs?.get(chainId)?.endpoints.find(row => row.url === rpcUrl) : undefined;
+    if (!fitsRpcLogSpan(calls, endpoint?.maxLogBlockSpan)) continue;
+    const noBatch = endpoint?.noBatch === true;
+    const requestCount = noBatch ? calls.length : 1;
+    const byId = new Map<number, JsonRpcEnvelope<unknown>>();
 
     try {
-      meterDwellirRpcRequest(rpcUrl, calls.length);
-      const result = await fetchJsonWithRetry<Array<JsonRpcEnvelope<unknown>>>(
-        rpcUrl,
-        {
-          method: "POST",
-          headers: buildJsonRpcHeaders(rpcUrl),
-          signal: options?.signal,
-          body: JSON.stringify(
-            calls.map((call, index) => ({
-              jsonrpc: "2.0",
-              id: index + 1,
-              method: call.method,
-              params: call.params,
-            })),
-          ),
-        },
-        maxRetries,
-        { timeoutMs: Math.min(configuredTimeoutMs, remainingMs), retryMode: "network-only" },
-      );
-      if (result == null) {
-        demoteFailedDwellirAttempt(options?.chainRpcs, rpcUrl);
-        continue;
-      }
-      if (!result.response.ok || !Array.isArray(result.body) || result.body.length !== calls.length) continue;
-
-      const byId = new Map<number, JsonRpcEnvelope<unknown>>();
-      let valid = true;
-      for (const row of result.body) {
-        const rawId: unknown = row && typeof row === "object" && "id" in row ? row.id : undefined;
-        if (typeof rawId !== "number" || !Number.isSafeInteger(rawId)) {
-          valid = false;
-          break;
+      for (let requestIndex = 0; requestIndex < requestCount; requestIndex += 1) {
+        const remainingMs = options?.deadlineMs == null
+          ? configuredTimeoutMs
+          : Math.floor(options.deadlineMs - Date.now());
+        if (remainingMs <= 0 || (options?.beforeRequest && !options.beforeRequest(rpcUrl))) return null;
+        const payload = noBatch
+          ? { jsonrpc: "2.0", id: requestIndex + 1, method: calls[requestIndex]!.method, params: calls[requestIndex]!.params }
+          : calls.map((call, index) => ({ jsonrpc: "2.0", id: index + 1, method: call.method, params: call.params }));
+        meterDwellirRpcRequest(rpcUrl, noBatch ? 1 : calls.length);
+        const result = await fetchJsonWithRetry<unknown>(
+          rpcUrl,
+          {
+            method: "POST",
+            headers: buildJsonRpcHeaders(rpcUrl),
+            signal: options?.signal,
+            body: JSON.stringify(payload),
+          },
+          maxRetries,
+          { timeoutMs: Math.min(configuredTimeoutMs, remainingMs), retryMode: "network-only" },
+        );
+        if (result == null) {
+          demoteFailedDwellirAttempt(options?.chainRpcs, rpcUrl);
+          continue endpoints;
         }
-        if (rawId < 1 || rawId > calls.length || byId.has(rawId)) {
-          valid = false;
-          break;
+        if (!result.response.ok) continue endpoints;
+        if (noBatch) {
+          if (!addRpcResponseRow(result.body, byId, calls.length, requestIndex + 1)) continue endpoints;
+        } else {
+          if (!Array.isArray(result.body) || result.body.length !== calls.length) continue endpoints;
+          for (const row of result.body) {
+            if (!addRpcResponseRow(row, byId, calls.length)) continue endpoints;
+          }
         }
-        byId.set(rawId, row);
       }
-      if (!valid || byId.size !== calls.length) continue;
-
+      if (byId.size !== calls.length) continue;
       const projected = project(byId);
       if (projected !== null) return projected;
     } catch (error) {
