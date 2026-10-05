@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { observeEconomicSolanaMint } from "../safety-score-v9/economic-supply-observer";
 import type { SafetyScoreV9SolanaRpcFetcher } from "../safety-score-v9/supply-observation-primitives";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { buildChainRpcs, logScanRpcEndpoints } from "../chain-registry";
 import { observeSafetyScoreV9TransferMaterialityGeneration, transferMaterialityObserverResolvesRpc } from "../safety-score-v9/transfer-materiality-observer";
 import { exactInputBoundTransferMaterialityPacket, type SafetyScoreV9TransferMaterialityGeneration } from "../safety-score-v9/transfer-materiality";
@@ -205,5 +206,45 @@ describe("complete independent-liability censuses", () => {
     row.provenance!.checkedAtSec = CLOCK;
     row.provenance!.heads[1].endpointOrigin = row.provenance!.heads[0].endpointOrigin;
     expect(packet("sfrxusd-frax", generation)).toBeNull();
+  it("reads Nibiru's exact mainnet liability at the historical pin and retains authentic zero supply", async () => {
+    const dependencies = censusDependencies();
+    let nibiruPin: number | "latest" | undefined;
+    const generation = await observeSafetyScoreV9TransferMaterialityGeneration({
+      ...input(), activeAssetIds: ["usbd-bima", "yusd-aegis"],
+    }, {
+      ...dependencies,
+      fetchEvmMulticall3Aggregate3AtBlock: async (chain, calls, blockNumber, options) => {
+        if (chain === "nibiru") {
+          nibiruPin = blockNumber;
+          expect(CHAIN_META.nibiru!.evmChainId).toBe(6900);
+          expect(options?.chainRpcs?.get("nibiru")?.endpoints[0]?.url).toBe("https://evm-rpc.nibiru.fi");
+          return calls.map(call => ({
+            label: call.label, success: true,
+            returnData: `0x${(call.label.endsWith(":decimals") ? 18n : 0n).toString(16).padStart(64, "0")}` as `0x${string}`,
+          }));
+        }
+        return dependencies.fetchEvmMulticall3Aggregate3AtBlock(chain, calls);
+      },
+    });
+    expect(nibiruPin).toBe(100);
+    expect(packet("usbd-bima", generation)?.observations).toHaveLength(6);
+    expect(packet("yusd-aegis", generation)?.observations).toHaveLength(4);
+    expect(generation.observationsByAssetId["usbd-bima"]?.find(row => row.deploymentKey.startsWith("nibiru:")))
+      .toMatchObject({ rawTokenUnits: "0", decimals: 18, blockNumber: "100", observedAtSec: CLOCK - 10, status: "accepted" });
+  });
+
+  it("rejects the entire omitted-chain census when Nibiru cannot read while unrelated YUSD remains complete", async () => {
+    const dependencies = censusDependencies();
+    const generation = await observeSafetyScoreV9TransferMaterialityGeneration({
+      ...input(), activeAssetIds: ["usbd-bima", "yusd-aegis"],
+    }, {
+      ...dependencies,
+      fetchEvmMulticall3Aggregate3AtBlock: async (chain, calls) =>
+        chain === "nibiru" ? null : dependencies.fetchEvmMulticall3Aggregate3AtBlock(chain, calls),
+    });
+    expect(packet("usbd-bima", generation)).toBeNull();
+    expect(packet("yusd-aegis", generation)?.observations).toHaveLength(4);
+    expect(generation.observationsByAssetId["usbd-bima"]?.find(row => row.deploymentKey.startsWith("nibiru:")))
+      .toMatchObject({ status: "rejected", rawTokenUnits: null });
   });
 });

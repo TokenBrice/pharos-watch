@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { BridgeRouteRiskProfile, StablecoinMeta } from "@shared/types/core";
+import { resolveChainId } from "@shared/types/chain-identity";
+import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { ReviewedEconomicSupplyPlanFileSchema, ReviewedEconomicSupplyPlanSchema, type ReviewedEconomicSupplyPlan, type ReviewedEconomicDeploymentPartition, type EconomicSupplyReference, type EconomicSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
 import type { SafetyScoreV9ReviewedTransferFact } from "@shared/types/safety-score-v9-transfer-overlays";
 import reviewRegistry from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
@@ -399,8 +401,17 @@ describe("economic materiality consumers", () => {
     for (const assetId of ReviewedEconomicSupplyPlanFileSchema.parse(reviewRegistry).independentLiabilityAssetIds) {
       const meta = ACTIVE_META_BY_ID.get(assetId)!;
       expect(meta).toBeDefined();
-      expect(meta.bridgeRouteRisk!.routes!.every(route => route.semantics === "burn-mint" ||
-        (route.semantics === "native-mint" && route.issuanceModel === "native-issuance"))).toBe(true);
+      const routes = meta.bridgeRouteRisk!.routes!;
+      expect(routes.every(route => route.reviewDisposition === "reviewed" && route.representationId === undefined &&
+        (route.semantics === "burn-mint" && route.issuanceModel === "bridge-representation" && route.routeClass !== "native" ||
+          route.semantics === "native-mint" && route.issuanceModel === "native-issuance" && route.routeClass === "native"))).toBe(true);
+      const deployments = meta.contracts!.map(contract => {
+        expect(isFixedDecimalDeployment(contract)).toBe(true);
+        const chain = resolveChainId(contract.chain)!;
+        return `${chain}:${chain === "solana" ? contract.address : contract.address.toLowerCase()}`;
+      }).sort();
+      expect(routes.map(route => route.id).sort()).toEqual(deployments);
+      expect(new Set(deployments).size).toBe(deployments.length);
     }
   });
   it("guards every registry-authored native single-route entry and preserves xDAI's compiled partition", () => {

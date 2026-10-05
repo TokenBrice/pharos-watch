@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { sha256Hex } from "@shared/lib/sha256";
+import reviewRegistry from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
 import {
   resolveSafetyScoreV9ReviewedTransferFact,
   getSafetyScoreV9ReviewedTransferFact,
@@ -153,9 +154,14 @@ describe("Safety Score V9 transfer deployment materiality", () => {
     ]);
     expect(() => parseSafetyScoreV9TransferMaterialityGeneration("{")).toThrow(SyntaxError);
   });
-  it("pins the approved cohort to exactly 41 assets", () => {
-    expect(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS).toHaveLength(41);
+  it("includes every reviewed independent-liability asset exactly once in the observer cohort", () => {
+    expect(new Set(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS).size).toBe(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS.length);
+    for (const assetId of reviewRegistry.independentLiabilityAssetIds) {
+      expect(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS.filter(id => id === assetId)).toHaveLength(1);
+    }
     expect(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS).toContain("sfrxusd-frax");
+    expect(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS).toContain("usdai-usd-ai");
+    expect(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS).toContain("usbd-bima");
     // bd-basedollar admitted 2026-09-01: it has a complete deployment-scoped
     // transfer review but no llamaId/geckoId, so without cohort membership the
     // review stays permanently bounded-unknown.

@@ -32,7 +32,17 @@
       }
     }
   ],
-  "independentLiabilityAssetIds": ["sfrxusd-frax", "wsrusd-reservoir"],
+  "independentLiabilityAssetIds": [
+    "sfrxusd-frax",
+    "usdai-usd-ai",
+    "usbd-bima",
+    "usdz-anzen",
+    "ussd-sonic-labs",
+    "wars-argentine-peso",
+    "wclp-ripio",
+    "wsrusd-reservoir",
+    "yusd-aegis"
+  ],
   "nativeSingleRouteReviews": [
     {
       "assetId": "xdai-gnosis",
