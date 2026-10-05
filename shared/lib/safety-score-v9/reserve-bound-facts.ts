@@ -2,6 +2,7 @@ import type { ReserveBoundedFact, V9ReserveBoundedFact } from "../../types/reser
 import type { V9ReserveExposureFactV2 } from "../../types/safety-score-v9-facts";
 import type { V9BackingSemanticPolicy } from "./backing-primitives";
 import { stableJsonStringifyV1 } from "../stable-json";
+import { maximumBusinessDaySettlement } from "../business-calendars";
 
 export function reserveBoundScopeKey(scope: ReserveBoundedFact["scope"]): string {
   return stableJsonStringifyV1(scope.kind === "reserve-envelope" ? [scope.kind] : scope.kind === "exposure" ? [scope.kind, scope.exposureKey] : [scope.kind, scope.exposureKey, scope.instrumentId]);
@@ -108,6 +109,13 @@ export function resolveV9ReserveFactorBounds(exposure: V9ReserveExposureFactV2, 
     if (fact.kind === "stressed-realization-bound" && fact.realizationStage === "final-cash-settlement" && fact.settlementAsset === "fiat:USD") {
       factor = "liquidity";
       quality = policy.reserve.liquidityQuality[fact.elapsedTimeSec <= 86400 ? "one-day" : fact.elapsedTimeSec <= 604800 ? "seven-days" : "over-seven-days"];
+    }
+    if (fact.kind === "business-calendar-liquidity" && fact.allInScope && fact.settlementAsset === "fiat:USD") {
+      factor = "liquidity";
+      const bound = maximumBusinessDaySettlement(fact.businessDayTerms, clockSec);
+      // A public business-hours target is known documentation, not a known
+      // whole-position liquidity horizon. It cannot clear or reclassify its U gap.
+      if (bound.state === "known") quality = policy.reserve.liquidityQuality[bound.maximumElapsedSec <= 86400 ? "one-day" : bound.maximumElapsedSec <= 604800 ? "seven-days" : "over-seven-days"];
     }
     if (quality === null) continue;
     // Known classification survives favorable incomplete snapshots. Adverse tenor is retained.

@@ -2,9 +2,10 @@ import { z } from "zod";
 import rawPolicy from "../data/safety-score-v9/methodology-policy-candidate-v1.json";
 import { StrictIsoDateSchema, Sha256Schema, FractionSchema, UnixSecondsSchema } from "./safety-schema-primitives";
 import { V9FactStatusV2Schema } from "./safety-score-v9-fact-primitives";
+import { RedemptionBusinessDayTermsSchema } from "./redemption";
 
 const vocabulary = rawPolicy.semantic.backing.reserve.boundedFacts;
-export const ReserveBoundedFactKindSchema = z.enum(vocabulary.factKinds as ["contractual-maturity-maximum", "observed-portfolio-maturity", "eligibility-envelope", "currently-liquid-fraction", "maturity-applicability", "stressed-realization-bound"]);
+export const ReserveBoundedFactKindSchema = z.enum(vocabulary.factKinds as ["contractual-maturity-maximum", "observed-portfolio-maturity", "eligibility-envelope", "currently-liquid-fraction", "maturity-applicability", "stressed-realization-bound", "business-calendar-liquidity"]);
 export const ReserveBoundedScopeKindSchema = z.enum(vocabulary.scopeKinds as ["reserve-envelope", "exposure", "sub-instrument"]);
 export const ReserveBoundedTermUnitSchema = z.enum(vocabulary.termUnits as ["days", "calendar-months"]);
 const text = z.string().trim().min(1);
@@ -34,6 +35,7 @@ export const ReserveBoundedFactSchema = z.discriminatedUnion("kind", [
   z.object({ ...base, kind: z.literal("currently-liquid-fraction"), assetId: text, unit: text, chain: text, currentlyWithdrawable: z.number().finite().nonnegative(), totalHeld: z.number().finite().positive(), snapshotAtSec: seconds, availabilityMeaning: z.literal("currently-withdrawable-native-asset") }).strict(),
   z.object({ ...base, kind: z.literal("maturity-applicability"), claimId: text, conclusion: z.literal("not-applicable"), governingInstrument: text, allInScope: z.boolean() }).strict(),
   z.object({ ...base, kind: z.literal("stressed-realization-bound"), ...grossCoverage, collateralId: text, scenario: text, haircutBudgetBps: z.number().finite().min(0).max(10000), settlementAsset: text, executionConditions: text, realizationStage: z.enum(["collateral-transfer", "final-cash-settlement"]), elapsedTimeSec: seconds }).strict(),
+  z.object({ ...base, kind: z.literal("business-calendar-liquidity"), settlementAsset: text, allInScope: z.boolean(), availableDuring: z.enum(["business-day", "banking-hours"]), businessDayTerms: RedemptionBusinessDayTermsSchema }).strict(),
 ]).superRefine((fact, ctx) => {
   const reject = (path: string, message: string) => ctx.addIssue({ code: "custom", path: [path], message });
   if (fact.scope.kind === "sub-instrument" && fact.scope.coverageAsOfSec !== fact.asOfSec) reject("scope", "Coverage must use the fact snapshot");

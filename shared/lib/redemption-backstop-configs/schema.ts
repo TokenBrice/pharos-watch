@@ -19,7 +19,7 @@ import type { RedemptionDocSource } from "../../types";
 import { isValidIsoDateOnly } from "../../types/date-primitives";
 import { formatUtcDateOnly } from "../format";
 import { isRedemptionSettlementFaster } from "./settlement";
-import { RedemptionRouteSuspensionSchema } from "../../types/redemption";
+import { RedemptionBusinessDayTermsSchema, RedemptionRouteSuspensionSchema } from "../../types/redemption";
 
 const MAX_REDEMPTION_OUTPUT_ASSETS = 16;
 const RatioSchema = z.number().finite().gt(0).lte(1);
@@ -111,6 +111,7 @@ const RedemptionV9RouteReviewTermsSchema = z.strictObject({
   minRedeemUsd: NonNegativeNumberSchema.optional(),
   settlementModel: RedemptionSettlementModelSchema.optional(),
   settlementDelaySec: z.number().int().nonnegative().optional(),
+  businessDayTerms: RedemptionBusinessDayTermsSchema.optional(),
   scoringDisposition: z.literal("bounded-terms-gap").optional(),
   missingScoringFields: z.array(RedemptionV9RouteScoringFieldSchema).min(1).optional(),
   rationale: z.string().min(1).optional(),
@@ -329,6 +330,14 @@ export const RedemptionBackstopConfigSchema = z
       });
     }
     const reviewedSettlement = config.v9RouteReviewTerms;
+    if (reviewedSettlement?.businessDayTerms !== undefined) {
+      if (reviewedSettlement.settlementDelaySec !== undefined) {
+        ctx.addIssue({ code: "custom", path: ["v9RouteReviewTerms", "settlementDelaySec"], message: "Business-day terms and an elapsed-second SLA are mutually exclusive" });
+      }
+      if (reviewedSettlement.reviewedAt === undefined || reviewedSettlement.docs === undefined) {
+        ctx.addIssue({ code: "custom", path: ["v9RouteReviewTerms", "businessDayTerms"], message: "Business-day terms require dated settlement sources" });
+      }
+    }
     if (reviewedSettlement?.scoringDisposition === "bounded-terms-gap") {
       if (reviewedSettlement.missingScoringFields === undefined) {
         ctx.addIssue({
@@ -375,7 +384,7 @@ export const RedemptionBackstopConfigSchema = z
       isRedemptionSettlementFaster(reviewedSettlement.settlementModel, config.settlementModel);
     if (
       fasterSettlementModel &&
-      (reviewedSettlement.settlementDelaySec === undefined ||
+      ((reviewedSettlement.settlementDelaySec === undefined && reviewedSettlement.businessDayTerms === undefined) ||
         reviewedSettlement.reviewedAt === undefined ||
         reviewedSettlement.docs === undefined)
     ) {
@@ -383,7 +392,7 @@ export const RedemptionBackstopConfigSchema = z
         code: "custom",
         path: ["v9RouteReviewTerms", "settlementModel"],
         message:
-          "Faster V9 reviewed settlement requires settlementDelaySec, reviewedAt, and at least one docs source",
+          "Faster V9 reviewed settlement requires exact or calendar terms, reviewedAt, and at least one docs source",
       });
     }
     if (

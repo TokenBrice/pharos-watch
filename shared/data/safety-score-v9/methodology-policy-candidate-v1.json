@@ -402,7 +402,7 @@
       "reserve": {
         "maxUnclassifiedCuratedResidualPct": 100,
         "boundedFacts": {
-          "factKinds": ["contractual-maturity-maximum", "observed-portfolio-maturity", "eligibility-envelope", "currently-liquid-fraction", "maturity-applicability", "stressed-realization-bound"],
+          "factKinds": ["contractual-maturity-maximum", "observed-portfolio-maturity", "eligibility-envelope", "currently-liquid-fraction", "maturity-applicability", "stressed-realization-bound", "business-calendar-liquidity"],
           "scopeKinds": ["reserve-envelope", "exposure", "sub-instrument"],
           "termUnits": ["days", "calendar-months"],
           "observedMaturityQualityLevel": "limited",
