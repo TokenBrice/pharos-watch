@@ -165,6 +165,7 @@ export async function syncSafetyScoreV9SupplyAttribution(
       clockMode: "wall",
       notBeforeSec: startedAtSec,
       executionWindow,
+      db,
     },
   );
   throwIfAborted(signal);

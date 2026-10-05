@@ -68,7 +68,68 @@ const EvmPendingStateReadSchema = z.strictObject({
 }).superRefine((source, ctx) => {
   if (new Set(source.messageIds).size !== source.messageIds.length) ctx.addIssue({ code: "custom", message: "Pending message identities must be unique" });
 });
-const PendingAmountReadSchema = z.union([ApiAmountReadSchema, EvmPendingStateReadSchema]);
+const EvmAddressSchema = z.string().regex(/^0x[0-9a-f]{40}$/);
+const EvmWordSchema = z.string().regex(/^0x[0-9a-f]{64}$/);
+const NonceSchema = z.string().regex(/^(0|[1-9][0-9]*)$/).max(20).refine(value => BigInt(value) < 2n ** 64n);
+const CurveBridgeSideSchema = z.strictObject({
+  chainId: CanonicalChainIdSchema, bridgeAddress: EvmAddressSchema,
+  bridgeRuntimeCodeSha256: Sha256Schema, endpointAddress: EvmAddressSchema,
+  endpointRuntimeCodeSha256: Sha256Schema, lzChainId: z.number().int().positive().max(65535),
+  deploymentBlock: z.number().int().nonnegative(),
+  // Exhaustive historical send-library census, not just today's default.
+  sendLibraries: z.array(z.strictObject({
+    address: EvmAddressSchema, runtimeCodeSha256: Sha256Schema,
+    encoding: z.enum(["packet-v1", "packet-sent-v1"]),
+  })).min(1).max(8),
+  outboundNonceRead: z.strictObject({
+    address: EvmAddressSchema, runtimeCodeSha256: Sha256Schema,
+    callData: z.string().regex(/^0x[0-9a-f]+$/).max(1026),
+  }),
+  supportsFailed: z.boolean(),
+});
+const CurveLzPendingReadSchema = z.strictObject({
+  kind: z.literal("evm-curve-lz-pending"), sourceId: CanonicalTextSchema,
+  chainId: CanonicalChainIdSchema, finality: z.literal("finalized"),
+  sides: z.tuple([CurveBridgeSideSchema, CurveBridgeSideSchema]),
+}).superRefine((source, ctx) => {
+  if (source.sides[0].chainId !== source.chainId || source.sides[0].chainId === source.sides[1].chainId ||
+    source.sides.some(side => new Set(side.sendLibraries.map(row => row.address)).size !== side.sendLibraries.length)) {
+    ctx.addIssue({ code: "custom", message: "Curve pending review requires two distinct chains and an exact unique historical transport census" });
+  }
+});
+const CurvePendingMessageSchema = z.strictObject({
+  nonce: NonceSchema, receiver: EvmAddressSchema, amount: z.string().regex(/^[1-9][0-9]*$/).max(78),
+  transactionHash: EvmWordSchema,
+  state: z.enum(["sent", "delayed", "failed"]),
+  timestamp: UnixSecondsSchema.nullable(),
+});
+const CurveHistoryCursorSchema = z.strictObject({
+  nextBlock: z.number().int().nonnegative(), anchor: z.number().int().nonnegative().nullable(),
+  anchorHash: EvmWordSchema.nullable(), digest: Sha256Schema,
+});
+export const CurveLzPendingCheckpointSchema = z.strictObject({
+  schemaVersion: z.literal(1), sourceDigest: Sha256Schema,
+  directions: z.array(z.strictObject({
+    sent: CurveHistoryCursorSchema, received: CurveHistoryCursorSchema,
+    sentNonce: NonceSchema, receivedNonce: NonceSchema,
+    messages: z.array(CurvePendingMessageSchema).max(512),
+    recoveries: z.array(z.strictObject({
+      nonce: NonceSchema, receiver: EvmAddressSchema, amount: z.string().regex(/^[1-9][0-9]*$/).max(78),
+      transactionHash: EvmWordSchema,
+    })).max(512),
+  })).length(2),
+});
+export type CurveLzPendingCheckpoint = z.infer<typeof CurveLzPendingCheckpointSchema>;
+export type CurveLzPendingRead = z.infer<typeof CurveLzPendingReadSchema>;
+const CurvePendingProofSchema = z.strictObject({
+  sourceDigest: Sha256Schema, checkpointDigest: Sha256Schema,
+  pins: z.array(z.strictObject({
+    chainId: CanonicalChainIdSchema, anchor: z.number().int().nonnegative(),
+    anchorHash: EvmWordSchema, observedAtSec: UnixSecondsSchema,
+    sentNonce: NonceSchema, receivedNonce: NonceSchema,
+  })).length(2),
+});
+const PendingAmountReadSchema = z.union([ApiAmountReadSchema, EvmPendingStateReadSchema, CurveLzPendingReadSchema]);
 export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
   assetId: CanonicalTextSchema, reviewer: CanonicalTextSchema, reviewedAtSec: UnixSecondsSchema, expiresAtSec: UnixSecondsSchema,
   evidenceUrls: z.array(z.string().url()).min(1), economicScope: CanonicalTextSchema, sourceId: CanonicalTextSchema,
@@ -105,6 +166,17 @@ export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
         canonical.amountBasis !== "fixed-token-units" ||
         (canonical.read.kind !== "evm-total-supply" && canonical.read.kind !== "evm-balance")) {
         ctx.addIssue({ code: "custom", message: "On-chain pending state must share the canonical escrow's pinned EVM token-unit generation" });
+      }
+      if (escrow.inFlightSource.kind === "evm-curve-lz-pending") {
+        const source = escrow.inFlightSource;
+        if (escrow.account !== source.sides[0].bridgeAddress ||
+          escrow.receiptDeploymentKeys.some(key => {
+            const row = plan.deployments.find(deployment => deployment.deploymentKey === key);
+            return !row || row.chainId !== source.sides[1].chainId ||
+              row.amountBasis !== "fixed-token-units" || row.decimals !== canonical?.decimals ||
+              row.claimUnit !== canonical?.claimUnit ||
+              (row.read.kind !== "evm-total-supply" && row.read.kind !== "evm-balance");
+          })) ctx.addIssue({ code: "custom", message: "Curve pending directions must bind the exact escrow and same-unit pinned satellite receipts" });
       }
     }
   }
@@ -167,6 +239,7 @@ export type ReviewedEconomicSupplyPlan = z.infer<typeof ReviewedEconomicSupplyPl
 const EconomicSupplyObservationSchema = z.strictObject({
   id: CanonicalTextSchema, deploymentKey: CanonicalTextSchema, amount: DecimalSchema,
   observedAtSec: UnixSecondsSchema, anchor: CanonicalTextSchema, anchorHash: CanonicalTextSchema, responseSha256: Sha256Schema,
+  curvePendingProof: CurvePendingProofSchema.optional(),
 });
 // eslint-disable-next-line security/detect-unsafe-regex -- anchored linear unsigned-decimal shape; groups cannot overlap.
 const EconomicSupplyReferenceSchema = z.strictObject({ sourceId: CanonicalTextSchema, sourceGeneration: CanonicalTextSchema, observedAtSec: UnixSecondsSchema, value: z.string().regex(/^[0-9]+(\.[0-9]+)?$/).refine(value => Number(value) > 0 && Number.isFinite(Number(value))), responseSha256: Sha256Schema });
