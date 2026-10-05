@@ -44841,6 +44841,1072 @@
         "https://geco.amf-france.org/produit-d-epargne/c79398"
       ],
       "rationale": "Dfns relayer, treasury and client-wallet disclosures do not bind the Stellar token owner/admin account GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H. Technical docs separate super-admin upgrade permissions from daily relayers. Exact admin key custody/signing policy and signer independence remain undisclosed. Do not transplant provider claims across roles."
+    },
+    {
+      "id": "uw-filqa-fidelity-international-b043910d68cfedab",
+      "assetId": "filqa-fidelity-international",
+      "scope": {
+        "componentKey": "control:mint-meta:filqa-fidelity-international:1795fef6793af1f5928b",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:36:57Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K04)",
+      "sources": [
+        {
+          "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-09-14",
+          "location": "Investing in the Funds / Wallets and Private Keys",
+          "excerpt": "Where a Token Distributor hosts the Wallet, it is responsible for safekeeping the private key.",
+          "assertion": "Investor-wallet key duties are disclosed, not custody or signing policy of the nine FILQ-A platform-admin, OPERATOR, SYSTEM and global role-manager controller EOAs."
+        },
+        {
+          "url": "https://www.sygnum.com/filq/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "FILQ FAQs: infrastructure and controls",
+          "excerpt": "Access and ownership records are maintained by a transfer agent, and transactions are supported by smart contract-based controls.",
+          "assertion": "Permissioned token workflow is disclosed, without controller-specific MPC/HSM, organizational key ownership, human independence or approval policy."
+        },
+        {
+          "url": "https://www.sygnum.com/blog/2026/06/01/why-transparency-in-cold-custody-matters/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-06-01",
+          "location": "Sygnum Cryo",
+          "excerpt": "Hardware-secured protection is implemented through HSM-based controls within multi-layered, access-controlled physical environments, while asset movement follows multi-person approval procedures and defined access controls.",
+          "assertion": "Generic cold-custody controls cannot be bound to these token-issuance/admin keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+        "https://www.sygnum.com/filq/",
+        "https://www.sygnum.com/help/",
+        "https://www.sygnum.com/blog/2026/06/01/why-transparency-in-cold-custody-matters/",
+        "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"
+      ],
+      "rationale": "keyCustody for all nine identified FILQ-A EOAs remains undisclosed: custody technology, beneficial human/key separation and signing/approval policy are not bound to the platform-admin, four OPERATORs, two SYSTEMs or two global role managers. Investor-wallet and generic Sygnum cold-custody disclosures do not identify those controllers. Their role/address census is already known; the missing datum is offchain, not onchain-observable. Keep all typed questions; no mpc/hsm attestation is inferred."
+    },
+    {
+      "id": "uw-filqa-fidelity-international-b66a84ad542bb420",
+      "assetId": "filqa-fidelity-international",
+      "scope": {
+        "componentKey": "control:mint-meta:filqa-fidelity-international:47ef244251a8dba1ce8b",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:36:57Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K04)",
+      "sources": [
+        {
+          "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-09-14",
+          "location": "Investing in the Funds / Wallets and Private Keys",
+          "excerpt": "Where a Token Distributor hosts the Wallet, it is responsible for safekeeping the private key.",
+          "assertion": "Investor-wallet key duties are disclosed, not custody or signing policy of the nine FILQ-A platform-admin, OPERATOR, SYSTEM and global role-manager controller EOAs."
+        },
+        {
+          "url": "https://www.sygnum.com/filq/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "FILQ FAQs: infrastructure and controls",
+          "excerpt": "Access and ownership records are maintained by a transfer agent, and transactions are supported by smart contract-based controls.",
+          "assertion": "Permissioned token workflow is disclosed, without controller-specific MPC/HSM, organizational key ownership, human independence or approval policy."
+        },
+        {
+          "url": "https://www.sygnum.com/blog/2026/06/01/why-transparency-in-cold-custody-matters/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-06-01",
+          "location": "Sygnum Cryo",
+          "excerpt": "Hardware-secured protection is implemented through HSM-based controls within multi-layered, access-controlled physical environments, while asset movement follows multi-person approval procedures and defined access controls.",
+          "assertion": "Generic cold-custody controls cannot be bound to these token-issuance/admin keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+        "https://www.sygnum.com/filq/",
+        "https://www.sygnum.com/help/",
+        "https://www.sygnum.com/blog/2026/06/01/why-transparency-in-cold-custody-matters/",
+        "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"
+      ],
+      "rationale": "keyCustody for all nine identified FILQ-A EOAs remains undisclosed: custody technology, beneficial human/key separation and signing/approval policy are not bound to the platform-admin, four OPERATORs, two SYSTEMs or two global role managers. Investor-wallet and generic Sygnum cold-custody disclosures do not identify those controllers. Their role/address census is already known; the missing datum is offchain, not onchain-observable. Keep all typed questions; no mpc/hsm attestation is inferred."
+    },
+    {
+      "id": "uw-filqa-fidelity-international-8cfad5cdc2cd8df1",
+      "assetId": "filqa-fidelity-international",
+      "scope": {
+        "componentKey": "control:mint-meta:filqa-fidelity-international:90eeb14e2ca9c20d3818",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:36:57Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K04)",
+      "sources": [
+        {
+          "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-09-14",
+          "location": "Investing in the Funds / Wallets and Private Keys",
+          "excerpt": "Where a Token Distributor hosts the Wallet, it is responsible for safekeeping the private key.",
+          "assertion": "Investor-wallet key duties are disclosed, not custody or signing policy of the nine FILQ-A platform-admin, OPERATOR, SYSTEM and global role-manager controller EOAs."
+        },
+        {
+          "url": "https://www.sygnum.com/filq/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "FILQ FAQs: infrastructure and controls",
+          "excerpt": "Access and ownership records are maintained by a transfer agent, and transactions are supported by smart contract-based controls.",
+          "assertion": "Permissioned token workflow is disclosed, without controller-specific MPC/HSM, organizational key ownership, human independence or approval policy."
+        },
+        {
+          "url": "https://www.sygnum.com/blog/2026/06/01/why-transparency-in-cold-custody-matters/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-06-01",
+          "location": "Sygnum Cryo",
+          "excerpt": "Hardware-secured protection is implemented through HSM-based controls within multi-layered, access-controlled physical environments, while asset movement follows multi-person approval procedures and defined access controls.",
+          "assertion": "Generic cold-custody controls cannot be bound to these token-issuance/admin keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+        "https://www.sygnum.com/filq/",
+        "https://www.sygnum.com/help/",
+        "https://www.sygnum.com/blog/2026/06/01/why-transparency-in-cold-custody-matters/",
+        "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"
+      ],
+      "rationale": "keyCustody for all nine identified FILQ-A EOAs remains undisclosed: custody technology, beneficial human/key separation and signing/approval policy are not bound to the platform-admin, four OPERATORs, two SYSTEMs or two global role managers. Investor-wallet and generic Sygnum cold-custody disclosures do not identify those controllers. Their role/address census is already known; the missing datum is offchain, not onchain-observable. Keep all typed questions; no mpc/hsm attestation is inferred."
+    },
+    {
+      "id": "uw-filqa-fidelity-international-d3fd653ca34339ff",
+      "assetId": "filqa-fidelity-international",
+      "scope": {
+        "componentKey": "control:mint-meta:filqa-fidelity-international:c698757322c38a0a74b8",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:36:57Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K04)",
+      "sources": [
+        {
+          "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-09-14",
+          "location": "Investing in the Funds / Wallets and Private Keys",
+          "excerpt": "Where a Token Distributor hosts the Wallet, it is responsible for safekeeping the private key.",
+          "assertion": "Investor-wallet key duties are disclosed, not custody or signing policy of the nine FILQ-A platform-admin, OPERATOR, SYSTEM and global role-manager controller EOAs."
+        },
+        {
+          "url": "https://www.sygnum.com/filq/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "FILQ FAQs: infrastructure and controls",
+          "excerpt": "Access and ownership records are maintained by a transfer agent, and transactions are supported by smart contract-based controls.",
+          "assertion": "Permissioned token workflow is disclosed, without controller-specific MPC/HSM, organizational key ownership, human independence or approval policy."
+        },
+        {
+          "url": "https://www.sygnum.com/blog/2026/06/01/why-transparency-in-cold-custody-matters/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-06-01",
+          "location": "Sygnum Cryo",
+          "excerpt": "Hardware-secured protection is implemented through HSM-based controls within multi-layered, access-controlled physical environments, while asset movement follows multi-person approval procedures and defined access controls.",
+          "assertion": "Generic cold-custody controls cannot be bound to these token-issuance/admin keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+        "https://www.sygnum.com/filq/",
+        "https://www.sygnum.com/help/",
+        "https://www.sygnum.com/blog/2026/06/01/why-transparency-in-cold-custody-matters/",
+        "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"
+      ],
+      "rationale": "keyCustody for all nine identified FILQ-A EOAs remains undisclosed: custody technology, beneficial human/key separation and signing/approval policy are not bound to the platform-admin, four OPERATORs, two SYSTEMs or two global role managers. Investor-wallet and generic Sygnum cold-custody disclosures do not identify those controllers. Their role/address census is already known; the missing datum is offchain, not onchain-observable. Keep all typed questions; no mpc/hsm attestation is inferred."
+    },
+    {
+      "id": "uw-filqa-fidelity-international-a08020869b3279a9",
+      "assetId": "filqa-fidelity-international",
+      "scope": {
+        "componentKey": "control:mint-meta:filqa-fidelity-international:c8edaa340508437f12e2",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:36:57Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K04)",
+      "sources": [
+        {
+          "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-09-14",
+          "location": "Investing in the Funds / Wallets and Private Keys",
+          "excerpt": "Where a Token Distributor hosts the Wallet, it is responsible for safekeeping the private key.",
+          "assertion": "Investor-wallet key duties are disclosed, not custody or signing policy of the nine FILQ-A platform-admin, OPERATOR, SYSTEM and global role-manager controller EOAs."
+        },
+        {
+          "url": "https://www.sygnum.com/filq/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "FILQ FAQs: infrastructure and controls",
+          "excerpt": "Access and ownership records are maintained by a transfer agent, and transactions are supported by smart contract-based controls.",
+          "assertion": "Permissioned token workflow is disclosed, without controller-specific MPC/HSM, organizational key ownership, human independence or approval policy."
+        },
+        {
+          "url": "https://www.sygnum.com/blog/2026/06/01/why-transparency-in-cold-custody-matters/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-06-01",
+          "location": "Sygnum Cryo",
+          "excerpt": "Hardware-secured protection is implemented through HSM-based controls within multi-layered, access-controlled physical environments, while asset movement follows multi-person approval procedures and defined access controls.",
+          "assertion": "Generic cold-custody controls cannot be bound to these token-issuance/admin keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+        "https://www.sygnum.com/filq/",
+        "https://www.sygnum.com/help/",
+        "https://www.sygnum.com/blog/2026/06/01/why-transparency-in-cold-custody-matters/",
+        "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"
+      ],
+      "rationale": "keyCustody for all nine identified FILQ-A EOAs remains undisclosed: custody technology, beneficial human/key separation and signing/approval policy are not bound to the platform-admin, four OPERATORs, two SYSTEMs or two global role managers. Investor-wallet and generic Sygnum cold-custody disclosures do not identify those controllers. Their role/address census is already known; the missing datum is offchain, not onchain-observable. Keep all typed questions; no mpc/hsm attestation is inferred."
+    },
+    {
+      "id": "uw-filqa-fidelity-international-9cb63ca300d4df94",
+      "assetId": "filqa-fidelity-international",
+      "scope": {
+        "componentKey": "control:mint-meta:filqa-fidelity-international:f0c05b5ad28583c3eaa4",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:36:57Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K04)",
+      "sources": [
+        {
+          "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-09-14",
+          "location": "Investing in the Funds / Wallets and Private Keys",
+          "excerpt": "Where a Token Distributor hosts the Wallet, it is responsible for safekeeping the private key.",
+          "assertion": "Investor-wallet key duties are disclosed, not custody or signing policy of the nine FILQ-A platform-admin, OPERATOR, SYSTEM and global role-manager controller EOAs."
+        },
+        {
+          "url": "https://www.sygnum.com/filq/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "FILQ FAQs: infrastructure and controls",
+          "excerpt": "Access and ownership records are maintained by a transfer agent, and transactions are supported by smart contract-based controls.",
+          "assertion": "Permissioned token workflow is disclosed, without controller-specific MPC/HSM, organizational key ownership, human independence or approval policy."
+        },
+        {
+          "url": "https://www.sygnum.com/blog/2026/06/01/why-transparency-in-cold-custody-matters/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-06-01",
+          "location": "Sygnum Cryo",
+          "excerpt": "Hardware-secured protection is implemented through HSM-based controls within multi-layered, access-controlled physical environments, while asset movement follows multi-person approval procedures and defined access controls.",
+          "assertion": "Generic cold-custody controls cannot be bound to these token-issuance/admin keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+        "https://www.sygnum.com/filq/",
+        "https://www.sygnum.com/help/",
+        "https://www.sygnum.com/blog/2026/06/01/why-transparency-in-cold-custody-matters/",
+        "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"
+      ],
+      "rationale": "keyCustody for all nine identified FILQ-A EOAs remains undisclosed: custody technology, beneficial human/key separation and signing/approval policy are not bound to the platform-admin, four OPERATORs, two SYSTEMs or two global role managers. Investor-wallet and generic Sygnum cold-custody disclosures do not identify those controllers. Their role/address census is already known; the missing datum is offchain, not onchain-observable. Keep all typed questions; no mpc/hsm attestation is inferred."
+    },
+    {
+      "id": "uw-filqa-fidelity-international-01c634271f720a03",
+      "assetId": "filqa-fidelity-international",
+      "scope": {
+        "componentKey": "control:mint-meta:filqa-fidelity-international:f54356dee87ea4b84492",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:36:57Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K04)",
+      "sources": [
+        {
+          "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-09-14",
+          "location": "Investing in the Funds / Wallets and Private Keys",
+          "excerpt": "Where a Token Distributor hosts the Wallet, it is responsible for safekeeping the private key.",
+          "assertion": "Investor-wallet key duties are disclosed, not custody or signing policy of the nine FILQ-A platform-admin, OPERATOR, SYSTEM and global role-manager controller EOAs."
+        },
+        {
+          "url": "https://www.sygnum.com/filq/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "FILQ FAQs: infrastructure and controls",
+          "excerpt": "Access and ownership records are maintained by a transfer agent, and transactions are supported by smart contract-based controls.",
+          "assertion": "Permissioned token workflow is disclosed, without controller-specific MPC/HSM, organizational key ownership, human independence or approval policy."
+        },
+        {
+          "url": "https://www.sygnum.com/blog/2026/06/01/why-transparency-in-cold-custody-matters/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-06-01",
+          "location": "Sygnum Cryo",
+          "excerpt": "Hardware-secured protection is implemented through HSM-based controls within multi-layered, access-controlled physical environments, while asset movement follows multi-person approval procedures and defined access controls.",
+          "assertion": "Generic cold-custody controls cannot be bound to these token-issuance/admin keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+        "https://www.sygnum.com/filq/",
+        "https://www.sygnum.com/help/",
+        "https://www.sygnum.com/blog/2026/06/01/why-transparency-in-cold-custody-matters/",
+        "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"
+      ],
+      "rationale": "keyCustody for all nine identified FILQ-A EOAs remains undisclosed: custody technology, beneficial human/key separation and signing/approval policy are not bound to the platform-admin, four OPERATORs, two SYSTEMs or two global role managers. Investor-wallet and generic Sygnum cold-custody disclosures do not identify those controllers. Their role/address census is already known; the missing datum is offchain, not onchain-observable. Keep all typed questions; no mpc/hsm attestation is inferred."
+    },
+    {
+      "id": "uw-filqa-fidelity-international-71067c419affeb52",
+      "assetId": "filqa-fidelity-international",
+      "scope": {
+        "componentKey": "control:mint-meta:filqa-fidelity-international:f893cb82b8c4fab9a9ed",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:36:57Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K04)",
+      "sources": [
+        {
+          "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-09-14",
+          "location": "Investing in the Funds / Wallets and Private Keys",
+          "excerpt": "Where a Token Distributor hosts the Wallet, it is responsible for safekeeping the private key.",
+          "assertion": "Investor-wallet key duties are disclosed, not custody or signing policy of the nine FILQ-A platform-admin, OPERATOR, SYSTEM and global role-manager controller EOAs."
+        },
+        {
+          "url": "https://www.sygnum.com/filq/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "FILQ FAQs: infrastructure and controls",
+          "excerpt": "Access and ownership records are maintained by a transfer agent, and transactions are supported by smart contract-based controls.",
+          "assertion": "Permissioned token workflow is disclosed, without controller-specific MPC/HSM, organizational key ownership, human independence or approval policy."
+        },
+        {
+          "url": "https://www.sygnum.com/blog/2026/06/01/why-transparency-in-cold-custody-matters/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-06-01",
+          "location": "Sygnum Cryo",
+          "excerpt": "Hardware-secured protection is implemented through HSM-based controls within multi-layered, access-controlled physical environments, while asset movement follows multi-person approval procedures and defined access controls.",
+          "assertion": "Generic cold-custody controls cannot be bound to these token-issuance/admin keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+        "https://www.sygnum.com/filq/",
+        "https://www.sygnum.com/help/",
+        "https://www.sygnum.com/blog/2026/06/01/why-transparency-in-cold-custody-matters/",
+        "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"
+      ],
+      "rationale": "keyCustody for all nine identified FILQ-A EOAs remains undisclosed: custody technology, beneficial human/key separation and signing/approval policy are not bound to the platform-admin, four OPERATORs, two SYSTEMs or two global role managers. Investor-wallet and generic Sygnum cold-custody disclosures do not identify those controllers. Their role/address census is already known; the missing datum is offchain, not onchain-observable. Keep all typed questions; no mpc/hsm attestation is inferred."
+    },
+    {
+      "id": "uw-filqa-fidelity-international-b33cbe187700912a",
+      "assetId": "filqa-fidelity-international",
+      "scope": {
+        "componentKey": "control:mint-meta:filqa-fidelity-international:ff341db2ffea772be3fa",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:36:57Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K04)",
+      "sources": [
+        {
+          "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-09-14",
+          "location": "Investing in the Funds / Wallets and Private Keys",
+          "excerpt": "Where a Token Distributor hosts the Wallet, it is responsible for safekeeping the private key.",
+          "assertion": "Investor-wallet key duties are disclosed, not custody or signing policy of the nine FILQ-A platform-admin, OPERATOR, SYSTEM and global role-manager controller EOAs."
+        },
+        {
+          "url": "https://www.sygnum.com/filq/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "FILQ FAQs: infrastructure and controls",
+          "excerpt": "Access and ownership records are maintained by a transfer agent, and transactions are supported by smart contract-based controls.",
+          "assertion": "Permissioned token workflow is disclosed, without controller-specific MPC/HSM, organizational key ownership, human independence or approval policy."
+        },
+        {
+          "url": "https://www.sygnum.com/blog/2026/06/01/why-transparency-in-cold-custody-matters/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-06-01",
+          "location": "Sygnum Cryo",
+          "excerpt": "Hardware-secured protection is implemented through HSM-based controls within multi-layered, access-controlled physical environments, while asset movement follows multi-person approval procedures and defined access controls.",
+          "assertion": "Generic cold-custody controls cannot be bound to these token-issuance/admin keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+        "https://www.sygnum.com/filq/",
+        "https://www.sygnum.com/help/",
+        "https://www.sygnum.com/blog/2026/06/01/why-transparency-in-cold-custody-matters/",
+        "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"
+      ],
+      "rationale": "keyCustody for all nine identified FILQ-A EOAs remains undisclosed: custody technology, beneficial human/key separation and signing/approval policy are not bound to the platform-admin, four OPERATORs, two SYSTEMs or two global role managers. Investor-wallet and generic Sygnum cold-custody disclosures do not identify those controllers. Their role/address census is already known; the missing datum is offchain, not onchain-observable. Keep all typed questions; no mpc/hsm attestation is inferred."
+    },
+    {
+      "id": "uw-oned-gennius-6009a375b48eec9d",
+      "assetId": "oned-gennius",
+      "scope": {
+        "componentKey": "control:mint-meta:oned-gennius:08660fee3d8703c09c0c",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:36:57Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K04)",
+      "sources": [
+        {
+          "url": "https://oned.global/#/end-user-terms-and-conditions",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "Upgrades and Freezes",
+          "excerpt": "The operator of the ONED smart contract reserves the right to \u201cblock\u201d certain blockchain addresses and freeze ONED",
+          "assertion": "Terms disclose operator powers without naming custody/signing safeguards of ONED minter, rate-limit admin, default admin or beacon owner."
+        },
+        {
+          "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "Coinbase Custom Stablecoins",
+          "excerpt": "Coinbase Custom Stablecoins are partner-branded tokens, backed 1:1 by USDC held in custody by Coinbase.",
+          "assertion": "Reserve custody is distinct from custody of the four identified ONED privileged signing keys."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/coinbase/custom-stablecoin/main/audits/cantina_coinbase_custom_stablecoin_mar2026.pdf",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-04-07",
+          "location": "Security Review Summary / scope",
+          "excerpt": "From Mar 30th to Apr 2nd the Cantina team conducted a review of custom-stablecoin on commit hash 8d1bee02.",
+          "assertion": "This is a Solidity code review, not an ONED controller-specific operational key-custody attestation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://oned.global/",
+        "https://oned.global/#/end-user-terms-and-conditions",
+        "https://tc.oned.global/#/oned",
+        "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins",
+        "https://docs.cdp.coinbase.com/custom-stablecoins/stablecoin-contract/reference.md",
+        "https://raw.githubusercontent.com/coinbase/custom-stablecoin/main/audits/cantina_coinbase_custom_stablecoin_mar2026.pdf"
+      ],
+      "rationale": "keyCustody, beneficial signer identity/independence and approval policy for the exact ONED MINT_ROLE, MINT_RATE_LIMIT_ROLE, default-admin and beacon-owner keys are not published. Coinbase reserve custody, institutional branding and a code audit do not attest those role holders. User/legal wallet restrictions do not bind operational controller keys. Preserve typed questions and existing adverse powers; offchain custody is not inferable from no-code EOAs."
+    },
+    {
+      "id": "uw-oned-gennius-5f9cff91f870279d",
+      "assetId": "oned-gennius",
+      "scope": {
+        "componentKey": "control:mint-meta:oned-gennius:84ef9af7826ba7d88787",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:36:57Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K04)",
+      "sources": [
+        {
+          "url": "https://oned.global/#/end-user-terms-and-conditions",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "Upgrades and Freezes",
+          "excerpt": "The operator of the ONED smart contract reserves the right to \u201cblock\u201d certain blockchain addresses and freeze ONED",
+          "assertion": "Terms disclose operator powers without naming custody/signing safeguards of ONED minter, rate-limit admin, default admin or beacon owner."
+        },
+        {
+          "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "Coinbase Custom Stablecoins",
+          "excerpt": "Coinbase Custom Stablecoins are partner-branded tokens, backed 1:1 by USDC held in custody by Coinbase.",
+          "assertion": "Reserve custody is distinct from custody of the four identified ONED privileged signing keys."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/coinbase/custom-stablecoin/main/audits/cantina_coinbase_custom_stablecoin_mar2026.pdf",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-04-07",
+          "location": "Security Review Summary / scope",
+          "excerpt": "From Mar 30th to Apr 2nd the Cantina team conducted a review of custom-stablecoin on commit hash 8d1bee02.",
+          "assertion": "This is a Solidity code review, not an ONED controller-specific operational key-custody attestation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://oned.global/",
+        "https://oned.global/#/end-user-terms-and-conditions",
+        "https://tc.oned.global/#/oned",
+        "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins",
+        "https://docs.cdp.coinbase.com/custom-stablecoins/stablecoin-contract/reference.md",
+        "https://raw.githubusercontent.com/coinbase/custom-stablecoin/main/audits/cantina_coinbase_custom_stablecoin_mar2026.pdf"
+      ],
+      "rationale": "keyCustody, beneficial signer identity/independence and approval policy for the exact ONED MINT_ROLE, MINT_RATE_LIMIT_ROLE, default-admin and beacon-owner keys are not published. Coinbase reserve custody, institutional branding and a code audit do not attest those role holders. User/legal wallet restrictions do not bind operational controller keys. Preserve typed questions and existing adverse powers; offchain custody is not inferable from no-code EOAs."
+    },
+    {
+      "id": "uw-oned-gennius-3650c3eaabd0ff2f",
+      "assetId": "oned-gennius",
+      "scope": {
+        "componentKey": "control:mint-meta:oned-gennius:a4ede033062e32f146f0",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:36:57Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K04)",
+      "sources": [
+        {
+          "url": "https://oned.global/#/end-user-terms-and-conditions",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "Upgrades and Freezes",
+          "excerpt": "The operator of the ONED smart contract reserves the right to \u201cblock\u201d certain blockchain addresses and freeze ONED",
+          "assertion": "Terms disclose operator powers without naming custody/signing safeguards of ONED minter, rate-limit admin, default admin or beacon owner."
+        },
+        {
+          "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "Coinbase Custom Stablecoins",
+          "excerpt": "Coinbase Custom Stablecoins are partner-branded tokens, backed 1:1 by USDC held in custody by Coinbase.",
+          "assertion": "Reserve custody is distinct from custody of the four identified ONED privileged signing keys."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/coinbase/custom-stablecoin/main/audits/cantina_coinbase_custom_stablecoin_mar2026.pdf",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-04-07",
+          "location": "Security Review Summary / scope",
+          "excerpt": "From Mar 30th to Apr 2nd the Cantina team conducted a review of custom-stablecoin on commit hash 8d1bee02.",
+          "assertion": "This is a Solidity code review, not an ONED controller-specific operational key-custody attestation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://oned.global/",
+        "https://oned.global/#/end-user-terms-and-conditions",
+        "https://tc.oned.global/#/oned",
+        "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins",
+        "https://docs.cdp.coinbase.com/custom-stablecoins/stablecoin-contract/reference.md",
+        "https://raw.githubusercontent.com/coinbase/custom-stablecoin/main/audits/cantina_coinbase_custom_stablecoin_mar2026.pdf"
+      ],
+      "rationale": "keyCustody, beneficial signer identity/independence and approval policy for the exact ONED MINT_ROLE, MINT_RATE_LIMIT_ROLE, default-admin and beacon-owner keys are not published. Coinbase reserve custody, institutional branding and a code audit do not attest those role holders. User/legal wallet restrictions do not bind operational controller keys. Preserve typed questions and existing adverse powers; offchain custody is not inferable from no-code EOAs."
+    },
+    {
+      "id": "uw-oned-gennius-92881206d8d55f9b",
+      "assetId": "oned-gennius",
+      "scope": {
+        "componentKey": "control:mint-meta:oned-gennius:dd3e94e3f6f140caa08f",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:36:57Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K04)",
+      "sources": [
+        {
+          "url": "https://oned.global/#/end-user-terms-and-conditions",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "Upgrades and Freezes",
+          "excerpt": "The operator of the ONED smart contract reserves the right to \u201cblock\u201d certain blockchain addresses and freeze ONED",
+          "assertion": "Terms disclose operator powers without naming custody/signing safeguards of ONED minter, rate-limit admin, default admin or beacon owner."
+        },
+        {
+          "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "Coinbase Custom Stablecoins",
+          "excerpt": "Coinbase Custom Stablecoins are partner-branded tokens, backed 1:1 by USDC held in custody by Coinbase.",
+          "assertion": "Reserve custody is distinct from custody of the four identified ONED privileged signing keys."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/coinbase/custom-stablecoin/main/audits/cantina_coinbase_custom_stablecoin_mar2026.pdf",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-04-07",
+          "location": "Security Review Summary / scope",
+          "excerpt": "From Mar 30th to Apr 2nd the Cantina team conducted a review of custom-stablecoin on commit hash 8d1bee02.",
+          "assertion": "This is a Solidity code review, not an ONED controller-specific operational key-custody attestation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://oned.global/",
+        "https://oned.global/#/end-user-terms-and-conditions",
+        "https://tc.oned.global/#/oned",
+        "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins",
+        "https://docs.cdp.coinbase.com/custom-stablecoins/stablecoin-contract/reference.md",
+        "https://raw.githubusercontent.com/coinbase/custom-stablecoin/main/audits/cantina_coinbase_custom_stablecoin_mar2026.pdf"
+      ],
+      "rationale": "keyCustody, beneficial signer identity/independence and approval policy for the exact ONED MINT_ROLE, MINT_RATE_LIMIT_ROLE, default-admin and beacon-owner keys are not published. Coinbase reserve custody, institutional branding and a code audit do not attest those role holders. User/legal wallet restrictions do not bind operational controller keys. Preserve typed questions and existing adverse powers; offchain custody is not inferable from no-code EOAs."
+    },
+    {
+      "id": "uw-krusdc-keyrock-3678c9168880036f",
+      "assetId": "krusdc-keyrock",
+      "scope": {
+        "componentKey": "control:mint-meta:krusdc-keyrock:bc03c96530b50307ef7a",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:36:57Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K04)",
+      "sources": [
+        {
+          "url": "https://app.morpho.org/arc/vault/0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "Core roles",
+          "excerpt": "| owner | 0x3ab74ECC34760C0A81F55e0001Be6068Dcf1Cc04 |",
+          "assertion": "Exact vault ownership/curation is published; no key-custody or approval policy accompanies its role addresses."
+        },
+        {
+          "url": "https://www.fordefi.com/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "Customer Stories",
+          "excerpt": "Keyrock Chooses Fordefi\u2019s DeFi Wallet & Security Platform",
+          "assertion": "Fordefi discloses a general Keyrock customer relationship, not custody binding for the Arc owner, curator/allocator or sentinel key."
+        },
+        {
+          "url": "https://keyrock.com/terms-and-conditions/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "Operational Risk",
+          "excerpt": "The security of assets deposited with Keyrock is crucial to Keyrock. Therefore Keyrock takes a range of measures to ensure security.",
+          "assertion": "General security terms do not disclose procedures for this exact vault controller trio."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://keyrock.com/",
+        "https://keyrock.com/terms-and-conditions/",
+        "https://app.morpho.org/arc/vault/0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://www.fordefi.com/",
+        "https://medium.com/fordefi/keyrock-chooses-fordefis-defi-wallet-security-platform-977a46e39c8a",
+        "https://www.amf-france.org/en/warnings/white-lists/casp/keyrock-fr-sas"
+      ],
+      "rationale": "keyCustody and independent-human/signing policy for Arc owner 0x3ab74ecc..., curator/allocator 0x26a17b96... and sentinel 0x4795276a... are not disclosed. Public roles and general Keyrock/Fordefi MPC association do not bind these exact controller keys. No independence or hardened custody is inferred from labels/EOAs. The missing offchain procedure is distinct from their established onchain role powers; retain typed questions."
+    },
+    {
+      "id": "uw-krusdc-keyrock-f702c9134c603b8c",
+      "assetId": "krusdc-keyrock",
+      "scope": {
+        "componentKey": "control:mint-meta:krusdc-keyrock:d54cc75c337c3c60e507",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:36:57Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K04)",
+      "sources": [
+        {
+          "url": "https://app.morpho.org/arc/vault/0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "Core roles",
+          "excerpt": "| owner | 0x3ab74ECC34760C0A81F55e0001Be6068Dcf1Cc04 |",
+          "assertion": "Exact vault ownership/curation is published; no key-custody or approval policy accompanies its role addresses."
+        },
+        {
+          "url": "https://www.fordefi.com/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "Customer Stories",
+          "excerpt": "Keyrock Chooses Fordefi\u2019s DeFi Wallet & Security Platform",
+          "assertion": "Fordefi discloses a general Keyrock customer relationship, not custody binding for the Arc owner, curator/allocator or sentinel key."
+        },
+        {
+          "url": "https://keyrock.com/terms-and-conditions/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "Operational Risk",
+          "excerpt": "The security of assets deposited with Keyrock is crucial to Keyrock. Therefore Keyrock takes a range of measures to ensure security.",
+          "assertion": "General security terms do not disclose procedures for this exact vault controller trio."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://keyrock.com/",
+        "https://keyrock.com/terms-and-conditions/",
+        "https://app.morpho.org/arc/vault/0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://www.fordefi.com/",
+        "https://medium.com/fordefi/keyrock-chooses-fordefis-defi-wallet-security-platform-977a46e39c8a",
+        "https://www.amf-france.org/en/warnings/white-lists/casp/keyrock-fr-sas"
+      ],
+      "rationale": "keyCustody and independent-human/signing policy for Arc owner 0x3ab74ecc..., curator/allocator 0x26a17b96... and sentinel 0x4795276a... are not disclosed. Public roles and general Keyrock/Fordefi MPC association do not bind these exact controller keys. No independence or hardened custody is inferred from labels/EOAs. The missing offchain procedure is distinct from their established onchain role powers; retain typed questions."
+    },
+    {
+      "id": "uw-krusdc-keyrock-41612c018b6b0a9a",
+      "assetId": "krusdc-keyrock",
+      "scope": {
+        "componentKey": "control:mint-meta:krusdc-keyrock:fe24dc683177afe51d19",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:36:57Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K04)",
+      "sources": [
+        {
+          "url": "https://app.morpho.org/arc/vault/0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "Core roles",
+          "excerpt": "| owner | 0x3ab74ECC34760C0A81F55e0001Be6068Dcf1Cc04 |",
+          "assertion": "Exact vault ownership/curation is published; no key-custody or approval policy accompanies its role addresses."
+        },
+        {
+          "url": "https://www.fordefi.com/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "Customer Stories",
+          "excerpt": "Keyrock Chooses Fordefi\u2019s DeFi Wallet & Security Platform",
+          "assertion": "Fordefi discloses a general Keyrock customer relationship, not custody binding for the Arc owner, curator/allocator or sentinel key."
+        },
+        {
+          "url": "https://keyrock.com/terms-and-conditions/",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "Operational Risk",
+          "excerpt": "The security of assets deposited with Keyrock is crucial to Keyrock. Therefore Keyrock takes a range of measures to ensure security.",
+          "assertion": "General security terms do not disclose procedures for this exact vault controller trio."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://keyrock.com/",
+        "https://keyrock.com/terms-and-conditions/",
+        "https://app.morpho.org/arc/vault/0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://www.fordefi.com/",
+        "https://medium.com/fordefi/keyrock-chooses-fordefis-defi-wallet-security-platform-977a46e39c8a",
+        "https://www.amf-france.org/en/warnings/white-lists/casp/keyrock-fr-sas"
+      ],
+      "rationale": "keyCustody and independent-human/signing policy for Arc owner 0x3ab74ecc..., curator/allocator 0x26a17b96... and sentinel 0x4795276a... are not disclosed. Public roles and general Keyrock/Fordefi MPC association do not bind these exact controller keys. No independence or hardened custody is inferred from labels/EOAs. The missing offchain procedure is distinct from their established onchain role powers; retain typed questions."
+    },
+    {
+      "id": "uw-susdat-saturn-d8f43ca38de725b6",
+      "assetId": "susdat-saturn",
+      "scope": {
+        "componentKey": "control:mint-meta:susdat-saturn:7186e1bf1aa87aa6e0a3",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:36:57Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K04)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/7688325b8e79bf7a9b38dff7fa2f7e406c1c7501/docs/v2-deployment/BuildV2UpgradeBatch.md",
+          "observedAt": "2026-10-05T12:35:27Z",
+          "datumAsOf": null,
+          "location": "4. Assign all twelve operational role addresses",
+          "excerpt": "| `VAULT_OPERATOR` | `0xC35580434261f667d6abBDa9E3dC1DC31e5A1b92` | `OPERATOR_ROLE`. | Fireblocks MPC wallet; approvers / approval quorum TBD. |",
+          "assertion": "Exact current operator custody is disclosed as Fireblocks MPC; approvers and approval quorum are explicitly unresolved. Attestation curated, residual signer-independence question retained."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/7688325b8e79bf7a9b38dff7fa2f7e406c1c7501/docs/v2-deployment/BuildV2Migration.md",
+          "observedAt": "2026-10-05T12:35:27Z",
+          "datumAsOf": null,
+          "location": "Configured values / MIGRATION_PROPOSER",
+          "excerpt": "| `MIGRATION_PROPOSER` | `0x7A5A4064005584bc727666ec82548A9139d5F21e` | Configured Fireblocks proposer. Make selects the sender from the environment variable of the same name. |",
+          "assertion": "Exact timelock proposer is identified as a Fireblocks signer, but operational approval/signing policy and independent human control remain undisclosed."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://saturncredit.gitbook.io/saturn-docs/llms.txt",
+        "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md",
+        "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits.md",
+        "https://saturn.credit/legal/terms-conditions",
+        "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md",
+        "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/7688325b8e79bf7a9b38dff7fa2f7e406c1c7501/docs/v2-deployment/BuildV2UpgradeBatch.md",
+        "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/7688325b8e79bf7a9b38dff7fa2f7e406c1c7501/docs/v2-deployment/BuildV2Migration.md",
+        "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/Makefile"
+      ],
+      "rationale": "Residual C covers independent human control and signing/approval policy, not absence of custody disclosures. New issuer configuration binds 0xc3558043... explicitly to Fireblocks MPC; approvers / approval quorum are TBD. Its MPC attestation is curated. The exact 0x7a5a4064... timelock proposer is also named as a configured Fireblocks proposer, without independent-human/approval policy. Legacy 2-of-3 does not bind either address. Both scoped questions are narrowed to remaining offchain policy gaps and retained; no independence or quorum is inferred."
+    },
+    {
+      "id": "uw-susdat-saturn-38e3536c91f270fd",
+      "assetId": "susdat-saturn",
+      "scope": {
+        "componentKey": "control:mint-meta:susdat-saturn:939a5c4ada5a05754cf7",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:36:57Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K04)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/7688325b8e79bf7a9b38dff7fa2f7e406c1c7501/docs/v2-deployment/BuildV2UpgradeBatch.md",
+          "observedAt": "2026-10-05T12:35:27Z",
+          "datumAsOf": null,
+          "location": "4. Assign all twelve operational role addresses",
+          "excerpt": "| `VAULT_OPERATOR` | `0xC35580434261f667d6abBDa9E3dC1DC31e5A1b92` | `OPERATOR_ROLE`. | Fireblocks MPC wallet; approvers / approval quorum TBD. |",
+          "assertion": "Exact current operator custody is disclosed as Fireblocks MPC; approvers and approval quorum are explicitly unresolved. Attestation curated, residual signer-independence question retained."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/7688325b8e79bf7a9b38dff7fa2f7e406c1c7501/docs/v2-deployment/BuildV2Migration.md",
+          "observedAt": "2026-10-05T12:35:27Z",
+          "datumAsOf": null,
+          "location": "Configured values / MIGRATION_PROPOSER",
+          "excerpt": "| `MIGRATION_PROPOSER` | `0x7A5A4064005584bc727666ec82548A9139d5F21e` | Configured Fireblocks proposer. Make selects the sender from the environment variable of the same name. |",
+          "assertion": "Exact timelock proposer is identified as a Fireblocks signer, but operational approval/signing policy and independent human control remain undisclosed."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://saturncredit.gitbook.io/saturn-docs/llms.txt",
+        "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md",
+        "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits.md",
+        "https://saturn.credit/legal/terms-conditions",
+        "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md",
+        "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/7688325b8e79bf7a9b38dff7fa2f7e406c1c7501/docs/v2-deployment/BuildV2UpgradeBatch.md",
+        "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/7688325b8e79bf7a9b38dff7fa2f7e406c1c7501/docs/v2-deployment/BuildV2Migration.md",
+        "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/Makefile"
+      ],
+      "rationale": "Residual C covers independent human control and signing/approval policy, not absence of custody disclosures. New issuer configuration binds 0xc3558043... explicitly to Fireblocks MPC; approvers / approval quorum are TBD. Its MPC attestation is curated. The exact 0x7a5a4064... timelock proposer is also named as a configured Fireblocks proposer, without independent-human/approval policy. Legacy 2-of-3 does not bind either address. Both scoped questions are narrowed to remaining offchain policy gaps and retained; no independence or quorum is inferred."
+    },
+    {
+      "id": "uw-armusdcs-wintermute-d07d53e76cb1b29f",
+      "assetId": "armusdcs-wintermute",
+      "scope": {
+        "componentKey": "control:mint-meta:armusdcs-wintermute:1354863b1407957d5793",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:36:57Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K04)",
+      "sources": [
+        {
+          "url": "https://armitage.wintermute.com/docs/vaults/select",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "Deployment details",
+          "excerpt": "Safe Multisig 4/6",
+          "assertion": "Exact owner and 4-of-6 topology are disclosed, not human separation, operational custody or approval policy."
+        },
+        {
+          "url": "https://armitage.wintermute.com/docs/vault-infrastructure",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "Role-based access control",
+          "excerpt": "which lets us split responsibilities across different wallet infrastructure providers",
+          "assertion": "General role separation does not name a custody arrangement for the Select owner Safe signers."
+        },
+        {
+          "url": "https://armitage.wintermute.com/terms-of-use",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-05-19",
+          "location": "4.4 No Custody",
+          "excerpt": "you are solely responsible for the custody and disposition of your vault shares.",
+          "assertion": "Depositor noncustody is not a custody attestation for the administrator signer keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://armitage.wintermute.com/vaults/ethereum/usdc-select",
+        "https://armitage.wintermute.com/docs/llms-full.txt",
+        "https://armitage.wintermute.com/docs/vaults/select",
+        "https://armitage.wintermute.com/docs/vault-infrastructure",
+        "https://armitage.wintermute.com/docs/risks-and-monitoring",
+        "https://armitage.wintermute.com/terms-of-use",
+        "https://docs.morpho.org/get-started/resources/audits/",
+        "https://www.fordefi.com/"
+      ],
+      "rationale": "keyCustody, independent beneficial human signers and signing policy of ethereum:0xb83a77677c51aaf6c45b0b64199eae6938559e5e (Select owner 4-of-6 Safe) remain unpublished. Exact issuer topology and provider-role separation disclose nearby controls but no custody model or approval/independence attestation for these signers. Fordefi branding and depositor noncustody cannot fill that binding. Keep typed question; signer addresses/threshold do not reveal offchain signing policy."
+    },
+    {
+      "id": "uw-skymoneyusdsflagship-sky-d5c96690c4a9d6b3",
+      "assetId": "skymoneyusdsflagship-sky",
+      "scope": {
+        "componentKey": "control:mint-meta:skymoneyusdsflagship-sky:74890849faf203f507ae",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:36:57Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K04)",
+      "sources": [
+        {
+          "url": "https://sky.money/vaults",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "Who curates the vaults?",
+          "excerpt": "Allocation operates within published parameters and is subject to a timelock.",
+          "assertion": "Curator parameter process is disclosed, not offchain custody/signing independence of the Flagship Safe."
+        },
+        {
+          "url": "https://docs.sky.money/legal/skybase-international/terms-of-use",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-09-01",
+          "location": "1.9 Sky Vaults",
+          "excerpt": "Skybase International is the curator of the Sky Vaults presented in the Interface.",
+          "assertion": "Legal responsibility and parameter authority are disclosed without Flagship Safe signer custody procedures."
+        },
+        {
+          "url": "https://sky.money/blog/what-are-sky-vaults",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": "2026-08-07",
+          "location": "What Sky Vaults are live now",
+          "excerpt": "Five vaults are live today: USDS Flagship, USDT Savings, and Risk Capital vaults for USDS, USDC, and USDT.",
+          "assertion": "Flagship identity/strategy disclosure supplies no administrative Safe key policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://sky.money/vaults",
+        "https://sky.money/blog/what-are-sky-vaults",
+        "https://docs.sky.money/legal/skybase-international/terms-of-use",
+        "https://docs.sky.money/legal/skybase-international/privacy-policy",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://docs.morpho.org/get-started/resources/audits/"
+      ],
+      "rationale": "keyCustody and beneficial human independence/signing policy of ethereum:0x3f32bc09d41ee699844f8296e806417d6bf61bba (USDS Flagship parameter-control Safe) remain undisclosed. Skybase curation terms, timelocks, depositor noncustody and Morpho contract audits do not bind custody safeguards to this Safe signer set. Neither Sky governance nor underlying USDS security is inherited by the vault. Preserve typed question; missing offchain signer procedures are not onchain-observable."
+    },
+    {
+      "id": "uw-uscc-superstate-7b0030be6af7e564",
+      "assetId": "uscc-superstate",
+      "scope": {
+        "componentKey": "control:mint-meta:uscc-superstate:3485da534d980b71b612",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:36:57Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K04)",
+      "sources": [
+        {
+          "url": "https://docs.superstate.com/investors/security.md",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "Private Key Management",
+          "excerpt": "Facilitated by Turnkey. See their documentation",
+          "assertion": "Generic Superstate key-management provider is disclosed; exact USCC Solana mint-authority key/role and independent approval policy are not named."
+        },
+        {
+          "url": "https://docs.superstate.com/investors/smart-contracts",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "SVM contracts / Solana Mainnet",
+          "excerpt": "USCC Token 2022",
+          "assertion": "Exact token identity, permissioning and allowlist program design are disclosed, not operational mint-key custody."
+        },
+        {
+          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc.md",
+          "observedAt": "2026-10-05T12:27:56Z",
+          "datumAsOf": null,
+          "location": "Fund documents",
+          "excerpt": "Fund documents and statements are available in the [Investor Portal]",
+          "assertion": "Investor documents are portal-gated; public USCC terms do not bind Turnkey or an approval policy to the identified Solana mint signer."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.superstate.com/llms.txt",
+        "https://docs.superstate.com/investors/security.md",
+        "https://docs.superstate.com/investors/smart-contracts",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc.md",
+        "https://superstate.com/assets/uscc"
+      ],
+      "rationale": "keyCustody, independent human control and signing/approval policy of USCC Solana mint authority LEZGws32A591zEyNrnqjdbTxTw9AYg6wbVCCRAvMoHX remain undisclosed. Superstate names Turnkey generically, but neither that page nor public role/audit/terms material binds it to this exact mint key/role. This is C for missing controller binding/policy, not B for Turnkey technology and not absence of all provider disclosures. Do not infer an mpc/hsm attestation or independence; retain typed question."
     }
   ]
 }
