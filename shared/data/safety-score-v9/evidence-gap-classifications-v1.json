@@ -39407,6 +39407,92 @@
           "assertion": "Exact runtime-matched Morpho liquidate writes off lender assets after zero collateral for every pinned market. Cannot admit this atomic fact while retaining honest limited confidence for unclosed nested pricing paths."
         }
       ]
+    },
+    {
+      "id": "uw-bbqusdc-steakhouse-v2-900cbe35b775dc95",
+      "assetId": "bbqusdc-steakhouse-v2",
+      "scope": {
+        "componentKey": "economic-control:oracle:collateral-parameter",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "economic-control:oracle:collateral-parameter",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-04T23:59:03Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R10)",
+      "sources": [
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb",
+          "observedAt": "2026-10-04T23:43:50Z",
+          "datumAsOf": null,
+          "location": "idToMarketParams(bytes32), pinned Ethereum 26122340; staged bb-market-observations.json",
+          "excerpt": "mapping(Id => MarketParams) public idToMarketParams;",
+          "assertion": "Ten retained branches have exact pinned LLTVs: five 91.5%, four 86%, TSLAon 62.5%. Existing fields store them, but extension-oracle.ts couples every branch-kind status to limited aggregate feed confidence; it cannot admit this independently verified kind."
+        },
+        {
+          "url": "https://etherscan.io/block/26122340",
+          "observedAt": "2026-10-04T23:46:29Z",
+          "datumAsOf": null,
+          "location": "Pinned eth_call idToMarketParams for all ten retained market IDs; bb-market-observations.json and rpc-evidence.json",
+          "excerpt": "0000000000000000000000000000000000000000000000000cb2bba6f17b8000",
+          "assertion": "The final ABI word is this mF-ONE market LLTV 915000000000000000 (91.5%); the complete ten-market tuple read is staged. Static exact LLTV remains independently public despite aggregate nested-feed confidence blocking per-kind admission."
+        }
+      ]
+    },
+    {
+      "id": "uw-bbqusdc-steakhouse-v2-c24842d1eba1b20f",
+      "assetId": "bbqusdc-steakhouse-v2",
+      "scope": {
+        "componentKey": "economic-control:oracle:liquidation",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "economic-control:oracle:liquidation",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-04T23:59:03Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R10)",
+      "sources": [
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb",
+          "observedAt": "2026-10-04T23:43:50Z",
+          "datumAsOf": null,
+          "location": "Verified deployed Morpho liquidate(); runtime exactly matches eth_getCode at 26122340",
+          "excerpt": "require(!_isHealthy(marketParams, id, borrower, collateralPrice), ErrorsLib.HEALTHY_POSITION);",
+          "assertion": "All ten retained markets use exact verified Morpho liquidate: unhealthy positions exchange seized collateral for loan-token repayment. Independent mechanism proof cannot admit while extension-oracle.ts derives all kind statuses from aggregate limited nested-feed confidence."
+        }
+      ]
+    },
+    {
+      "id": "uw-bbqusdc-steakhouse-v2-5ce8d8daf85467a0",
+      "assetId": "bbqusdc-steakhouse-v2",
+      "scope": {
+        "componentKey": "economic-control:oracle:shutdown-bad-debt",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "economic-control:oracle:shutdown-bad-debt",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-04T23:59:03Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R10)",
+      "sources": [
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb",
+          "observedAt": "2026-10-04T23:43:50Z",
+          "datumAsOf": null,
+          "location": "Verified deployed Morpho liquidate(), zero-collateral bad-debt block; runtime pin 26122340",
+          "excerpt": "market[id].totalSupplyAssets -= badDebtAssets.toUint128();",
+          "assertion": "All ten retained markets use exact verified zero-collateral bad-debt writeoff reducing supplier assets, not guaranteed recovery. Existing schema stores this, but per-kind proof cannot admit independently of limited aggregate nested-feed confidence in extension-oracle.ts."
+        }
+      ]
     }
   ]
 }
