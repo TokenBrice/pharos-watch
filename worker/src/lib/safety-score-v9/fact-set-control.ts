@@ -441,7 +441,9 @@ export function buildAccessReview(
       },
     };
   }
-  const normalized = structuredClone(review);
+  const normalized: V9AccessReviewV2 = {
+    ...review, transfer: { ...review.transfer }, freeze: { ...review.freeze },
+  };
   const freezeDisposition = normalized.freeze.structuralDisposition;
   normalized.transfer.status = normalizeAccessStatus(context, normalized.transfer.status, "transfer");
   normalized.freeze.status = normalizeAccessStatus(context, normalized.freeze.status, "freeze", freezeDisposition);
@@ -449,8 +451,23 @@ export function buildAccessReview(
     ...freezeReview,
     status: normalizeAccessStatus(context, freezeReview.status, `freeze:${freezeReview.reviewKey}`, freezeDisposition),
   }));
-  const graph = normalized.freeze.claimGraph;
-  if (graph) {
+  const sourceGraph = normalized.freeze.claimGraph;
+  if (sourceGraph) {
+    // Interned equal statuses and empty arrays may be shared across fields.
+    // Copy only the rows/statuses/lists this compiler mutates; structuredClone
+    // preserves aliases and would let an unresolved push corrupt failure domains.
+    const copyStatus = <T extends { status: V9FactStatusV2 }>(row: T): T => ({
+      ...row, status: { ...row.status },
+    });
+    const graph = {
+      ...sourceGraph,
+      nodes: sourceGraph.nodes.map(copyStatus),
+      edges: sourceGraph.edges.map(copyStatus),
+      authorities: sourceGraph.authorities.map(copyStatus),
+      partitions: sourceGraph.partitions.map(copyStatus),
+      unresolved: sourceGraph.unresolved.map(copyStatus),
+    };
+    normalized.freeze.claimGraph = graph;
     const pricedScopes = (context.asset.reserveScopeAdmissions ?? []).filter((scope) => scope.admitted && scope.wholeAssetComposition && (scope.kind === "portfolio-observation" || scope.kind === "onchain-observation"));
     // Receiving-book fractions may cross unit claims, never a second reserve denominator.
     const receivingBookNodes = new Set([graph.rootNodeKey]);

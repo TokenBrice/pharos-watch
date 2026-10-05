@@ -5,6 +5,7 @@ import { ReserveScopedAdmissionSchema } from "./safety-score-v9-reserve-scope";
 import { AdmittedProviderRowExclusionSchema } from "./safety-score-v9-supply-attribution";
 import { V9AccessClaimGraphSchema, v9AccessClaimGraphStatuses } from "./safety-score-v9-access-lookthrough";
 import { V9InProcessControlExecutionScopeSchema, V9ExactControlPolicySchema, V9WeightedQuorumSchema } from "./safety-score-v9-control-scope";
+import { createV9ValueInterner, deepFreeze } from "./safety-score-v9-immutable";
 import { DeploymentIdSchema } from "./stablecoin-meta-schemas";
 import { ReserveIntermediarySchema } from "./reserves";
 import {
@@ -929,7 +930,7 @@ const V9IssuanceGovernanceSchema = V9IssuanceGovernanceObjectSchema.superRefine(
   });
 
 /** Asset-wide proof data is serialized once; native control rows bind its exact identity. */
-export const V1005AssetIssuanceFactsSchema = z.object({
+const V1005AssetIssuanceFactsSchema = z.object({
   ref: CanonicalTextSchema,
   governance: V9IssuanceGovernanceSchema.optional(),
   process: V1005IssuanceProcessSchema.optional(),
@@ -941,6 +942,23 @@ export const V1005AssetIssuanceFactsSchema = z.object({
   }
 });
 export type V1005AssetIssuanceFacts = z.output<typeof V1005AssetIssuanceFactsSchema>;
+
+const admittedIssuanceFacts = new WeakSet<object>();
+
+function isAdmittedIssuanceFacts(value: unknown): value is V1005AssetIssuanceFacts {
+  return value !== null && typeof value === "object" && Object.isFrozen(value) && admittedIssuanceFacts.has(value);
+}
+
+/** Keep the asset-wide proof graph shared across strict extension and compiled-asset admission. */
+export const V1005InProcessAssetIssuanceFactsSchema = z.union([
+  z.custom<V1005AssetIssuanceFacts>(isAdmittedIssuanceFacts),
+  V1005AssetIssuanceFactsSchema.transform((facts) => {
+    const admitted = createV9ValueInterner()(facts);
+    deepFreeze(admitted);
+    admittedIssuanceFacts.add(admitted);
+    return admitted;
+  }),
+]);
 
 /**
  * Reviewed control posture shared by the compiled control fact
@@ -1654,7 +1672,7 @@ const V9AssetFactsBaseFields = {
   exitRoutes: canonicalArrayBy(V9ExitRouteFactV2Schema, (route) => route.routeKey),
   controlStatus: V9FactStatusV2Schema,
   controls: canonicalArrayBy(V9DeploymentControlFactV2Schema, (control) => control.controlKey),
-  issuanceFacts: V1005AssetIssuanceFactsSchema.optional(),
+  issuanceFacts: V1005InProcessAssetIssuanceFactsSchema.optional(),
   economicControlReview: V9EconomicControlReviewV2Schema,
   accessReview: V9AccessReviewV2Schema,
   peg: V9PegFactV2Schema,

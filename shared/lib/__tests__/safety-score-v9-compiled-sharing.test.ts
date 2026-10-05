@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { compileV9FactSetV3 } from "../safety-score-v9/compile";
 import { V9FactSetCoreV3Schema } from "../../types/safety-score-v9-facts";
+import { createV9ValueInterner } from "../../types/safety-score-v9-immutable";
 import {
   compileNativeV3FactSet,
   computeV9FactSetDigest,
@@ -16,6 +17,35 @@ function currentCore() {
 }
 
 describe("immutable compiled fact sharing", () => {
+  it("shares only structurally equal schema-owned values while leaving caller inputs isolated", () => {
+    const domain = { kind: "reserve-issuer", key: "origin" };
+    const supplied = {
+      first: domain, equal: { ...domain }, repeated: domain,
+      different: { kind: "mint-control", key: "origin" },
+      emptyArray: [], emptyObject: {}, shortSparse: new Array(1), longSparse: new Array(2),
+      negativeZero: [-0], zero: [0],
+    };
+    const original = structuredClone(supplied);
+    const admitted = createV9ValueInterner()(structuredClone(supplied));
+    expect(supplied).toEqual(original);
+    expect(supplied.first).toBe(domain);
+    expect(supplied.first).not.toBe(supplied.equal);
+    expect(Object.isFrozen(supplied)).toBe(false);
+    expect(Object.isFrozen(domain)).toBe(false);
+    expect(admitted.first).not.toBe(domain);
+    expect(admitted.first).toBe(admitted.equal);
+    expect(admitted.first).toBe(admitted.repeated);
+    expect(admitted.first).not.toBe(admitted.different);
+    expect(admitted.emptyArray).not.toBe(admitted.emptyObject);
+    expect(admitted.shortSparse).not.toBe(admitted.longSparse);
+    expect(admitted.shortSparse).toHaveLength(1);
+    expect(admitted.longSparse).toHaveLength(2);
+    expect(admitted.negativeZero).not.toBe(admitted.zero);
+    expect(Object.isFrozen(admitted.first)).toBe(true);
+    domain.key = "caller-update";
+    expect(admitted.first.key).toBe("origin");
+  });
+
   it("shares equal statuses without letting one consumer mutate another holding or the supplied input", () => {
     const core = currentCore();
     const supplied = core.assets[0]!;

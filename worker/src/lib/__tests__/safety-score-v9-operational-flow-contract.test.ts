@@ -202,11 +202,12 @@ function modeledSharedProfiles() {
 
 describe("v10.05 source-bound operational and voting compilation", () => {
   it("reuses only strictly admitted frozen asset identities and rejects an altered external clone", () => {
-    const { extension } = compile(), original = extension.assets[0]!;
+    const { extension, asset } = compile(), original = extension.assets[0]!;
     const admitted = admitSafetyScoreV9ExtensionAsset(original, CLOCK);
     expect(admitted).toBe(original);
     expect(Object.isFrozen(admitted)).toBe(true);
     expect(Object.isFrozen(admitted.issuanceFacts!.process!.votingControl)).toBe(true);
+    expect(asset.issuanceFacts).toBe(admitted.issuanceFacts);
     expect(Reflect.set(admitted.issuanceFacts!, "ref", "forged")).toBe(false);
     const retained = admitSafetyScoreV9FactSetExtension(extension, (asset) => asset);
     expect(retained.assets[0]).toBe(original);
@@ -250,13 +251,17 @@ describe("v10.05 source-bound operational and voting compilation", () => {
     const bundle = external.issuanceFacts!;
     bundle.process!.votingControl = structuredClone(bundle.governance!.votingControl!);
     expect(bundle.process!.votingControl).not.toBe(bundle.governance!.votingControl);
+    const supplied = structuredClone(external);
     const admitted = admitSafetyScoreV9ExtensionAsset(external, CLOCK);
     expect(admitted.issuanceFacts!.process!.votingControl).toBe(admitted.issuanceFacts!.governance!.votingControl);
     expect(Object.isFrozen(admitted.issuanceFacts!.process!.votingControl)).toBe(true);
     expect(Object.isFrozen(bundle)).toBe(false);
     expect(bundle.process!.votingControl).not.toBe(bundle.governance!.votingControl);
+    expect(external).toEqual(supplied);
+    expect(Object.isFrozen(bundle.process!.votingControl)).toBe(false);
     expect(admitSafetyScoreV9ExtensionAsset(admitted, CLOCK)).toBe(admitted);
     bundle.process!.matchedMemberCount = -1;
+    Object.freeze(bundle);
     const rejected = admitSafetyScoreV9ExtensionAsset(external, CLOCK);
     expect(rejected.admissionQuarantine).toMatchObject({ code: "fact-validation-failed" });
     expect(rejected.issuanceFacts).toBeUndefined();

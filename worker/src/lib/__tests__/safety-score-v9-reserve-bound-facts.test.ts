@@ -35,8 +35,11 @@ function research(overrides: Record<string, unknown> = {}): ReserveBoundedFact {
 }
 function compile(fact?: ReserveBoundedFact) {
   const fixed = makeV9TwoAssetFixedInput({ clockSec: clock, omitAlphaReserve: true });
-  const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById });
-  if (fact) extension.assets.find((row) => row.assetId === "alpha")!.reserveBoundFacts = [fact];
+  const baseline = buildSafetyScoreV9BaselineExtension(fixed, { metaById });
+  const extension = fact ? {
+    ...baseline,
+    assets: baseline.assets.map((row) => row.assetId === "alpha" ? { ...row, reserveBoundFacts: [fact] } : row),
+  } : baseline;
   return compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets.find((row) => row.assetId === "alpha")!;
 }
 describe("reserve bound compiler admission", () => {
@@ -131,9 +134,15 @@ describe("reserve bound compiler admission", () => {
   });
   it("isolates equal-generation contradictory bounds to the affected asset", () => {
     const fixed = makeV9TwoAssetFixedInput({ clockSec: clock });
-    const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById });
-    const baseline = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
-    extension.assets.find((row) => row.assetId === "alpha")!.reserveBoundFacts = [research(), research({ factKey: "conflicting", allocations: [{ assetClass: "bank-deposit", minShare: 0, maxShare: 1, maximumTerm: null }] })];
+    const baselineExtension = buildSafetyScoreV9BaselineExtension(fixed, { metaById });
+    const baseline = compileSafetyScoreV9FactSetFromFixedInput(fixed, baselineExtension);
+    const extension = {
+      ...baselineExtension,
+      assets: baselineExtension.assets.map((row) => row.assetId === "alpha" ? {
+        ...row,
+        reserveBoundFacts: [research(), research({ factKey: "conflicting", allocations: [{ assetClass: "bank-deposit", minShare: 0, maxShare: 1, maximumTerm: null }] })],
+      } : row),
+    };
     const facts = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
     const alpha = facts.assets.find((row) => row.assetId === "alpha")!;
     expect(alpha.reserveStatus.observationState).not.toBe("known");

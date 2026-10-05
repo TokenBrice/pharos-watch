@@ -17,12 +17,16 @@ export function deepFreeze<T>(value: T): Readonly<T> {
   return value;
 }
 
-/** Intern freshly schema-admitted values within one asset, never across generations. */
+/**
+ * Intern freshly schema-owned JSON values in place, never caller-owned inputs.
+ * Reference-preserving schema branches must already be strictly admitted and immutable.
+ */
 export function createV9ValueInterner(
   canonicalize?: (value: object, keys: readonly string[]) => object | undefined,
   isAlreadyAdmitted?: (value: object) => boolean,
 ): <T>(value: T) => T {
   const objects = new Map<string, object>();
+  // Equal strings may still retain distinct backing storage after schema transforms.
   const strings = new Map<string, string>();
   const identities = new Map<unknown, number>();
   let nextIdentity = 0;
@@ -46,11 +50,15 @@ export function createV9ValueInterner(
     if (isAlreadyAdmitted?.(value)) return value;
     const keys = Object.keys(value);
     const array = Array.isArray(value);
-    if (keys.length === 0) return (array ? V9_EMPTY_ARRAY : EMPTY_INTERNED_OBJECT) as T;
+    if (keys.length === 0 && (!array || value.length === 0)) {
+      return (array ? V9_EMPTY_ARRAY : EMPTY_INTERNED_OBJECT) as T;
+    }
     const replacement = canonicalize?.(value, keys);
     if (replacement !== undefined) return replacement as T;
+    if (Object.isFrozen(value)) return value;
     const record = value as Record<string, unknown>;
-    let key = array ? "a" : "o";
+    // Dense JSON arrays keep the compact key; sparse arrays must also pin their length.
+    let key = array ? (keys.length === value.length ? "a" : `a#${value.length}:`) : "o";
     for (const property of keys) {
       const child = intern(record[property]);
       record[property] = child;

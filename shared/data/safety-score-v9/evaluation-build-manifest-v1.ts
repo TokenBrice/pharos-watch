@@ -326,7 +326,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/evaluate-set.ts",
-      "sha256": "f7f94f59b2038afac7ba779001b0b58295d9ae2d94f46b25900982a847ba80af"
+      "sha256": "cd7c5b2203fd11c81bf9f59f754f5f6d385ab1bb5f608a3edf74f45744cff77b"
     },
     {
       "path": "shared/lib/safety-score-v9/evidence.ts",
@@ -410,7 +410,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/trace.ts",
-      "sha256": "9701d4daa70009d4d4c65b506b1189aa164ccee7a91ce7cda08951657523d1d6"
+      "sha256": "3fdde04076530a7d648e836bd8355f9fb6165aa494a598de91edeea3c8c577ce"
     },
     {
       "path": "shared/lib/safety-score-v9/unavailability-roots.ts",
@@ -426,7 +426,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/stable-json.ts",
-      "sha256": "3300311c950439f23e78687a259df7815c13d9da778076c4b64951a95b60bf31"
+      "sha256": "a37e1d5a14a4f19ac73babbe53b175f56709b24c342e3bac1ba9391bb471c383"
     },
     {
       "path": "shared/lib/supply.ts",
@@ -522,7 +522,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-control-scope.ts",
-      "sha256": "79367b488f8ed213008551dc034b8c0fb9dd35c4ef310afccc6f952f39630b20"
+      "sha256": "dc904a1043c21bd91d4f16095033349e10f691470992e0ddef875d8f9c0cb33d"
     },
     {
       "path": "shared/types/safety-score-v9-fact-primitives.ts",
@@ -530,11 +530,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-facts.ts",
-      "sha256": "322def50e9aa8eb8433f6e1d09258cca2fa05aa5fe56486e36ffa265e02e4db9"
+      "sha256": "53737dd1e7cc8199851f0bd1769a15db7410538b152b3bf613fefa4a977c358b"
     },
     {
       "path": "shared/types/safety-score-v9-immutable.ts",
-      "sha256": "d388caaa6584c98ec3327a72c9afd38cd9572ca4cc834e975b3a2016a36236e4"
+      "sha256": "4884a3a7ac0c403dcf8f10becf81b68ed729caec6f1a7b1b5162323fdeb7d020"
     },
     {
       "path": "shared/types/safety-score-v9-incidents.ts",
@@ -762,11 +762,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension.ts",
-      "sha256": "e28b352666ffb1464c1434a36d8dbe9020b47c6d21fc77153dfb9df04c08d9a1"
+      "sha256": "45ae3c5ca47907da6bf1402e53e1035d96f1dc16800d59451ac291d04547c85c"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-backing.ts",
-      "sha256": "7b287b28f48480443db338a2bbe0bb150cfa9b3aea2784b179cfb8c03c00eab8"
+      "sha256": "e6cae0f816ea15cd1329a0b1ba4cf21e686518afe8409e6ec9684f15e7e735e2"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-boundary.ts",
@@ -778,7 +778,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-control.ts",
-      "sha256": "ba89d231b3927eaa832eb68027d6efde4bad9735bedfdc55608b2f5a4a8fbe34"
+      "sha256": "edc4667b140f069405def3c59b4eb3bb5b15beb37ca7c5d8459535f6049b02ab"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-exit.ts",
@@ -794,7 +794,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-schema.ts",
-      "sha256": "13750470c096808d71c73e4901197915315937479052a8c2a52cdb0536ecb26a"
+      "sha256": "b4730bf93f945d6c35261897865f366ed563fc85fcca2b80d2c8fb1b94900f8d"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-wrapper.ts",
@@ -859,7 +859,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-03-block-26110811-shock-coverage.json.gz"
     }
   ],
-  "digest": "d5366964ec74361ed6aa79b1a30f96727894851b3a4ab1fee47de625ff551a6c"
+  "digest": "4c45ae0478b03b95667d1cd7d12ae7e916407431a0c254e0b463d9434120fde3"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

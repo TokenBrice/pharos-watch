@@ -34,7 +34,7 @@ import type {
   MintAuthorityProfile,
 } from "@shared/types/core";
 import type { V9FailureDomainRef, V1005ProcessDiagnostic, V1005CompiledVotingControl } from "@shared/types/safety-score-v9-facts";
-import { V1005VotingControllerSchema } from "@shared/types/safety-score-v9-control-scope";
+import { V1005VotingControllerSchema, createV9ControlExecutionScopeRootReuse } from "@shared/types/safety-score-v9-control-scope";
 import type { StablecoinMeta } from "@shared/types";
 import {
   type ReserveSlice,
@@ -2245,6 +2245,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
   options: BuildSafetyScoreV9BaselineExtensionOptions = {},
 ): SafetyScoreV9FactSetExtensionV2 {
   const metaById = options.metaById ?? ACTIVE_META_BY_ID;
+  const reuseScopeRoot = createV9ControlExecutionScopeRootReuse();
   const reviewedTransferFacts = options.reviewedTransferFacts && createReviewedAssetRegistry({
     rows: [...options.reviewedTransferFacts.values()],
     schema: SafetyScoreV9ReviewedTransferFactSchema,
@@ -2683,7 +2684,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
               }
             : null,
           ...reviewedEvidence,
-        }, clockSec);
+        }, clockSec, reuseScopeRoot);
       } catch (error) {
         return quarantinedSafetyScoreV9ExtensionAsset(admitted, assetId, {
           code: "fact-build-failed",

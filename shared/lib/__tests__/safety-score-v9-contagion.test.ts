@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { compileNativeV3FactSet, coreFixture, V9_CANDIDATE_POLICY_V1, AS_OF_SEC } from "./safety-score-v9-facts.fixture-support";
-import { evaluateValidatedV9FactSet, projectV9EffectiveBackingPillarScore } from "../safety-score-v9/evaluate-set";
+import { evaluateValidatedV9FactSet, evaluateValidatedV9FactSetForPublication, projectV9EffectiveBackingPillarScore } from "../safety-score-v9/evaluate-set";
 import { evaluateV9ContagionScenario } from "../safety-score-v9/contagion";
 import { ContagionResultSchema, type ContagionShock } from "../../types/contagion";
 import { V9FactSetCoreV3Schema } from "../../types/safety-score-v9-facts";
+import { stableJsonStringifyV1 } from "../stable-json";
 
 function fixture() {
   const compiled = compileNativeV3FactSet(coreFixture());
@@ -13,6 +14,20 @@ function fixture() {
 const evaluate = (shocks: ContagionShock[]) => evaluateV9ContagionScenario(fixture().input, { id: "fixture-scenario", shocks });
 
 describe("hypothetical V9 contagion reruns", () => {
+  it("projects the same dependency-sensitive rows and digests without retaining full asset graphs", () => {
+    const { compiled, input } = fixture();
+    const full = evaluateValidatedV9FactSet(compiled, input.policy);
+    const rows = new Map<string, string>();
+    const projected = evaluateValidatedV9FactSetForPublication(compiled, input.policy, (asset) => {
+      rows.set(asset.assetId, stableJsonStringifyV1(asset));
+    });
+    const { assets, ...identity } = full;
+    expect(projected).toEqual(identity);
+    expect([...rows.keys()].sort()).toEqual(assets.map((asset) => asset.assetId));
+    for (const asset of assets) expect(rows.get(asset.assetId)).toBe(stableJsonStringifyV1(asset));
+    expect(projected).not.toHaveProperty("assets");
+  });
+
   it("preserves full-set score, grade and pillar parity with zero shocks", () => {
     const { compiled, input } = fixture();
     const baseline = evaluateValidatedV9FactSet(compiled, input.policy);

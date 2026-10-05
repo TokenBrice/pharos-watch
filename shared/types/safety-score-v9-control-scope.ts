@@ -115,11 +115,15 @@ export const V9ControlExecutionScopeSchema = V9ControlExecutionScopeObjectSchema
 export type V9ControlExecutionScope = z.output<typeof V9ControlExecutionScopeSchema>;
 
 const admittedControlExecutionScopes = new WeakSet<object>();
-const ControlExecutionScopeBatchSchema = V9ControlExecutionScopeSchema.array();
 
 export function isV9AdmittedControlExecutionScope(value: unknown): value is V9ControlExecutionScope {
   return value !== null && typeof value === "object" && Object.isFrozen(value) && admittedControlExecutionScopes.has(value);
 }
+
+const ControlExecutionScopeBatchSchema = z.union([
+  z.custom<V9ControlExecutionScope>(isV9AdmittedControlExecutionScope),
+  V9ControlExecutionScopeSchema,
+]).array();
 
 function sealAdmittedControlExecutionScope(scope: V9ControlExecutionScope): V9ControlExecutionScope {
   deepFreeze(scope);
@@ -127,11 +131,11 @@ function sealAdmittedControlExecutionScope(scope: V9ControlExecutionScope): V9Co
   return scope;
 }
 
-/** Validate every root before sharing equal immutable subtrees within this batch only. */
+/** Strictly validate fresh roots; reuse admitted immutable roots and share fresh subtrees within this batch only. */
 export function admitV9ControlExecutionScopeBatch(values: unknown[]): V9ControlExecutionScope[] {
   const scopes = ControlExecutionScopeBatchSchema.parse(values);
   const intern = createV9ValueInterner();
-  return scopes.map((scope) => sealAdmittedControlExecutionScope(intern(scope)));
+  return scopes.map((scope) => isV9AdmittedControlExecutionScope(scope) ? scope : sealAdmittedControlExecutionScope(intern(scope)));
 }
 
 /** Same strict scope contract; only immutable, previously admitted in-process identities bypass cloning. */
@@ -139,6 +143,38 @@ export const V9InProcessControlExecutionScopeSchema = z.union([
   z.custom<V9ControlExecutionScope>(isV9AdmittedControlExecutionScope),
   V9ControlExecutionScopeSchema.transform(sealAdmittedControlExecutionScope),
 ]);
+
+export type V9ControlExecutionScopeRootReuse = (scope: V9ControlExecutionScope) => V9ControlExecutionScope;
+
+function sameScopeValue(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (left === null || right === null || typeof left !== "object" || typeof right !== "object") return false;
+  if (Array.isArray(left) !== Array.isArray(right)) return false;
+  if (Array.isArray(left) && left.length !== (right as unknown[]).length) return false;
+  const a = left as Record<string, unknown>, b = right as Record<string, unknown>;
+  const keys = Object.keys(a);
+  if (keys.length !== Object.keys(b).length) return false;
+  for (const key of keys) {
+    if (!Object.prototype.hasOwnProperty.call(b, key) || !sameScopeValue(a[key], b[key])) return false;
+  }
+  return true;
+}
+
+/** Call-local book reuse: immutable admission and exact structure, never a digest-only substitution. */
+export function createV9ControlExecutionScopeRootReuse(): V9ControlExecutionScopeRootReuse {
+  const roots = new Map<string, V9ControlExecutionScope[]>();
+  return (scope) => {
+    if (!isV9AdmittedControlExecutionScope(scope)) throw new Error("Scope root reuse requires immutable admission");
+    const matches = roots.get(scope.controllerDeployment);
+    if (matches) {
+      for (const root of matches) if (sameScopeValue(root, scope)) return root;
+      matches.push(scope);
+    } else {
+      roots.set(scope.controllerDeployment, [scope]);
+    }
+    return scope;
+  };
+}
 export type V9ModuleImpact = z.output<typeof V9ExactControlPolicySchema>["moduleImpactStates"][number];
 
 const V1005PinSchema = z.object({

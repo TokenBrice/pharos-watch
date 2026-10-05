@@ -98,7 +98,7 @@ function normalizeMechanismReview(
   review: V9MechanismRiskReview,
 ): V9MechanismRiskReviewFactV2 {
   const evidenceIds = componentResearchEvidence(context, "mechanism-risk-review");
-  const normalized = structuredClone(review) as V9MechanismRiskReview;
+  const normalized = { ...review } as V9MechanismRiskReview;
   const componentGapIds: string[] = [];
   const componentEvidenceIds = new Set<string>();
   let hasStale = false;
@@ -111,16 +111,26 @@ function normalizeMechanismReview(
           | undefined)
       : undefined;
   if (metricApplicability) {
-    for (const applicability of Object.values(metricApplicability)) {
+    const copiedApplicability = { ...metricApplicability };
+    (normalized as unknown as Record<string, unknown>).metricApplicability = copiedApplicability;
+    for (const [metricKey, applicability] of Object.entries(metricApplicability)) {
       if (applicability.state === "measured") continue;
-      applicability.evidenceRefIds = evidenceIds;
+      copiedApplicability[metricKey] = { ...applicability, evidenceRefIds: evidenceIds };
       for (const evidenceId of evidenceIds) componentEvidenceIds.add(evidenceId);
     }
   }
 
   for (const [componentKey, value] of Object.entries(normalized)) {
     if (value === null || typeof value !== "object" || !("status" in value)) continue;
-    const fact = value as V9MechanismFactV1;
+    // Components can be equal interned objects but acquire field-specific gaps.
+    const originalFact = value as V9MechanismFactV1;
+    const fact: V9MechanismFactV1 = {
+      ...originalFact,
+      ...(originalFact.scopedAssessments == null ? {} : {
+        scopedAssessments: originalFact.scopedAssessments.map((fragment) => ({ ...fragment })),
+      }),
+    };
+    (normalized as unknown as Record<string, unknown>)[componentKey] = fact;
     const specificEvidenceKey = `mechanism-risk-review:${componentKey}`;
     const factEvidenceIds = context.asset.componentEvidence.some(
       (binding) => binding.componentKey === specificEvidenceKey,

@@ -7,7 +7,7 @@ import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/acce
 import { makeAccessReview } from "@shared/lib/__tests__/safety-score-v9-access-lookthrough.test-support";
 import { makeV9Extension, makeV9FixedInput, makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
 import { alphaMeta, metaMap } from "./safety-score-v9-fact-set.test-support";
-import { computeSafetyScoreV9ReserveExposureKey } from "../safety-score-v9/fact-set-schema";
+import { admitSafetyScoreV9ExtensionAsset, computeSafetyScoreV9ReserveExposureKey } from "../safety-score-v9/fact-set-schema";
 import { buildV9EvidenceGapQueue } from "@shared/lib/safety-score-v9/evidence-gap-queue";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { resolveCauseGapId } from "@shared/types/safety-score-v9-public-cause-gaps";
@@ -79,10 +79,18 @@ describe("access claim graph compiler", () => {
     asset.accessReview!.freeze.claimGraph = buildSafetyScoreV9AccessClaimGraph({ assetId: "alpha", clockSec: fixed.clockSec, generationId: fixed.baseInputGenerationId, evidence, review });
     const built = evidence.finish();
     asset.researchEvidence.push(...built.researchEvidence); asset.componentEvidence.push(...built.componentEvidence);
+    const admittedAsset = admitSafetyScoreV9ExtensionAsset(asset, extension.compiledAtSec);
+    expect(admittedAsset.accessReview!.freeze.claimGraph!.unresolved)
+      .toBe(admittedAsset.accessReview!.freeze.reviews[0]!.failureDomains);
+    expect(Object.isFrozen(asset)).toBe(false);
+    const supplied = structuredClone(extension);
     const run = () => buildSafetyScoreV9Candidate({ fixedInput: fixed, extension, publishedAtSec: fixed.clockSec });
     const admitted = run();
     expect(admitted.quarantines).toEqual([]);
     expect(admitted.candidate.cards[0]!.accessPosture.freezeLookthrough!.knownAdverseReachShare).toBe(1);
+    expect(extension).toEqual(supplied);
+    expect(admitted.compiledFacts.assets[0]!.accessReview.freeze.reviews[0]!.failureDomains).toEqual([]);
+    expect(admittedAsset.accessReview!.freeze.claimGraph!.unresolved).toEqual([]);
     asset.reserveScopeAdmissions![0]!.kind = "standing-structure";
     expect(run().candidate.cards[0]!.accessPosture.freezeLookthrough!.knownAdverseReachShare).toBeNull();
     asset.reserveScopeAdmissions![0]!.kind = "portfolio-observation";

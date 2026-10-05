@@ -5,8 +5,11 @@ import type { V9ExtensionRegistryMeta } from "./extension";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import {
   evaluateValidatedV9FactSet,
+  evaluateValidatedV9FactSetForPublication,
   V9AssetEvaluationError,
   type V9EvaluatedSet,
+  type V9EvaluatedAsset,
+  type V9ProjectedEvaluatedSet,
 } from "@shared/lib/safety-score-v9/evaluate-set";
 import type { V9ExitHolderEligibility } from "@shared/lib/safety-score-v9/exit";
 import { DEX_ROUTE_SOURCE_CAPABILITIES } from "@shared/lib/p4-exit-route-capacity";
@@ -16,7 +19,7 @@ import {
 } from "@shared/lib/safety-score-v9/policy";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { deepFreeze } from "@shared/types/safety-score-v9-immutable";
-import { buildSafetyScoreV9Response, V9PublicCardProjectionError } from "@shared/lib/safety-score-v9/public";
+import { buildSafetyScoreV9Response, createSafetyScoreV9ResponseProjector, V9PublicCardProjectionError, type V9PublicCardProjectionInput, type V9PublicResponseProjector } from "@shared/lib/safety-score-v9/public";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type {
   CompiledV9FactSetV3,
@@ -707,8 +710,18 @@ function buildSafetyScoreV9CandidatePipeline(
   // quarantined and the cohort recompiled (R8), never the whole attempt.
   while (true) {
     try {
-      evaluatedSet = evaluateValidatedV9FactSet(takeEvaluationFacts(), policy);
-      publication = publishEvaluatedCandidate();
+      if (retainIntermediates) {
+        evaluatedSet = evaluateValidatedV9FactSet(takeEvaluationFacts(), policy);
+        publication = publishEvaluatedCandidate();
+      } else {
+        const projector = createSafetyScoreV9ResponseProjector();
+        const projected = evaluateValidatedV9FactSetForPublication(takeEvaluationFacts(), policy, (asset) => {
+          projector.project(publicProjectionInput(asset));
+          publicationFacts.displayByAssetId.delete(asset.assetId);
+          publicationFacts.dependencyMetadataByAssetId.delete(asset.assetId);
+        });
+        publication = publishEvaluatedCandidate(projected, projector);
+      }
       break;
     } catch (error) {
       const failed = error instanceof V9AssetEvaluationError
@@ -740,8 +753,28 @@ function buildSafetyScoreV9CandidatePipeline(
   extension = null;
   compiledFacts = null;
 
-  function publishEvaluatedCandidate() {
-    const { displayByAssetId, scoreGradeLiveReserveIds, dependencyMetadataByAssetId } = publicationFacts;
+  function publicProjectionInput(asset: V9EvaluatedAsset): V9PublicCardProjectionInput {
+    return {
+      trace: asset.trace,
+      ...(asset.providerRowExclusions?.length ? { providerRowExclusions: asset.providerRowExclusions } : {}),
+      backingFromLiveReserves: publicationFacts.scoreGradeLiveReserveIds.has(asset.assetId),
+      ...publicationFacts.dependencyMetadataByAssetId.get(asset.assetId),
+      scoreInput: asset.scoreInput,
+      access: asset.access,
+      dependencyInputs: asset.dependencyInputs,
+      policy,
+      backing: asset.backing,
+      exit: asset.exit,
+      control: asset.control,
+      display: publicationFacts.displayByAssetId.get(asset.assetId),
+      freshness: { exit: exitPillarFreshnessFromDexInput(fixedInput, asset.assetId, dexExitRouteMaxAgeSec) },
+    };
+  }
+
+  function publishEvaluatedCandidate(
+    projected?: Readonly<V9ProjectedEvaluatedSet>,
+    projector?: V9PublicResponseProjector,
+  ) {
     // The published response does not expose replay intermediates. Release each
     // large graph as soon as its compact projection has been captured; replay and
     // verification callers keep the same graphs through `retained`.
@@ -749,7 +782,7 @@ function buildSafetyScoreV9CandidatePipeline(
     // Read the evaluated set only inside closures: a property read in this frame
     // parks the graph in an interpreter register that outlives `evaluatedSet = null`.
     const evaluated = (() => {
-      const set = evaluatedSet!;
+      const set = projected ?? evaluatedSet!;
       return {
         evaluationBuildDigest: set.evaluationBuildDigest,
         baseInputGenerationId: set.baseInputGenerationId,
@@ -779,35 +812,17 @@ function buildSafetyScoreV9CandidatePipeline(
       resultDigest: evaluated.scoreResultDigest,
       publishedAtSec: input.publishedAtSec,
     })}`;
-    const takePublicResults = () => {
-      const results = evaluatedSet!.assets.map((asset) => ({
-        trace: asset.trace,
-        ...(asset.providerRowExclusions?.length ? { providerRowExclusions: asset.providerRowExclusions } : {}),
-        backingFromLiveReserves: scoreGradeLiveReserveIds.has(asset.assetId),
-        ...dependencyMetadataByAssetId.get(asset.assetId),
-        scoreInput: asset.scoreInput,
-        access: asset.access,
-        dependencyInputs: asset.dependencyInputs,
-        policy,
-        backing: asset.backing,
-        exit: asset.exit,
-        control: asset.control,
-        display: displayByAssetId.get(asset.assetId),
-        freshness: {
-          exit: exitPillarFreshnessFromDexInput(fixedInput, asset.assetId, dexExitRouteMaxAgeSec),
-        },
-      }));
-      if (!retainIntermediates) evaluatedSet = null;
-      return results;
-    };
-    const candidate = buildSafetyScoreV9Response({
+    const takePublicResults = () => evaluatedSet!.assets.map(publicProjectionInput);
+    const responseArgs = {
       candidateId,
       policyVersion,
       publicationGenerationId,
       publishedAtSec: input.publishedAtSec,
       commonModeGroups: evaluated.commonModeGroups,
-      results: takePublicResults,
-    });
+    };
+    const candidate = projector === undefined
+      ? buildSafetyScoreV9Response({ ...responseArgs, results: takePublicResults })
+      : projector.finalize({ ...responseArgs, resultDigest: evaluated.scoreResultDigest });
     return { candidate, candidateIdentity, retained };
   }
 

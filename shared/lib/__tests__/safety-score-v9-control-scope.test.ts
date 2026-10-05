@@ -3,7 +3,7 @@ import { compileReviewedControlScope, compileReviewedMintControlScopes, computeV
 import { applyMergedMintSignals } from "../safety-score-v9/control-mint-grade";
 import { evaluateV9EconomicControl } from "../safety-score-v9/control";
 import { deriveV9MintPosture } from "../safety-score-v9/control-primitives";
-import { V9ControlExecutionScopeSchema, V9InProcessControlExecutionScopeSchema, admitV9ControlExecutionScopeBatch, isV9AdmittedControlExecutionScope, V9WeightedQuorumSchema, type V9ControlExecutionScope } from "../../types/safety-score-v9-control-scope";
+import { V9ControlExecutionScopeSchema, V9InProcessControlExecutionScopeSchema, admitV9ControlExecutionScopeBatch, createV9ControlExecutionScopeRootReuse, isV9AdmittedControlExecutionScope, V9WeightedQuorumSchema, type V9ControlExecutionScope } from "../../types/safety-score-v9-control-scope";
 import type { MintAuthorityProfile } from "../../types/core";
 import type { V1005ExecutionCertificates } from "../../types/safety-score-v9-control-scope";
 import { V9_CANDIDATE_POLICY_V1, loadV9MethodologyPolicy } from "../safety-score-v9/policy";
@@ -15,6 +15,20 @@ const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.control;
 const compile = (scope = reviewedScope(), controller = SCOPE_CONTROLLER, clock = SCOPE_CLOCK) => compileReviewedControlScope(scope, controller, "alpha", clock, 90 * 86400);
 
 describe("V10 exact authority scope", () => {
+  it("reuses only structurally identical admitted book roots in one call-local cache", () => {
+    const reuse = createV9ControlExecutionScopeRootReuse();
+    const raw = reviewedScope();
+    expect(() => reuse(raw)).toThrow("immutable admission");
+    const first = V9InProcessControlExecutionScopeSchema.parse(raw);
+    const equal = V9InProcessControlExecutionScopeSchema.parse(structuredClone(raw));
+    expect(reuse(first)).toBe(first);
+    expect(reuse(equal)).toBe(first);
+    const changed = V9InProcessControlExecutionScopeSchema.parse(reviewedScope({ reviewer: "different-reviewer" }));
+    expect(reuse(changed)).toBe(changed);
+    expect(createV9ControlExecutionScopeRootReuse()(equal)).toBe(equal);
+    expect(Object.isFrozen(raw)).toBe(false);
+  });
+
   it("strictly admits a scope batch with shared equal subtrees and rejects any invalid unbranded root", () => {
     const first = reviewedScope(), second = reviewedScope({ controllerDeployment: "ethereum:0x2222222222222222222222222222222222222222" });
     const [a, b, duplicate] = admitV9ControlExecutionScopeBatch([first, second, structuredClone(first)]);
@@ -27,9 +41,13 @@ describe("V10 exact authority scope", () => {
     expect(isV9AdmittedControlExecutionScope(a)).toBe(true);
     expect(Object.isFrozen(a!.paths[0])).toBe(true);
     expect(Object.isFrozen(first)).toBe(false);
+    const [readmittedA, readmittedB] = admitV9ControlExecutionScopeBatch([a, b]);
+    expect(readmittedA).toBe(a);
+    expect(readmittedB).toBe(b);
     const invalid = structuredClone(b!);
     invalid.paths[0]!.permissionChangeRefs = ["missing-path"];
     expect(() => admitV9ControlExecutionScopeBatch([first, invalid])).toThrow();
+    expect(() => admitV9ControlExecutionScopeBatch([a, Object.freeze(invalid)])).toThrow();
     expect(isV9AdmittedControlExecutionScope(first)).toBe(false);
   });
 

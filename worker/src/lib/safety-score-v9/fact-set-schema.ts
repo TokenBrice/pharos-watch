@@ -2,7 +2,7 @@ import { z } from "zod";
 import { ReserveBoundedFactSchema } from "@shared/types/reserve-bounded-facts";
 import { ReserveScopedAdmissionSchema } from "@shared/types/safety-score-v9-reserve-scope";
 import { AdmittedProviderRowExclusionSchema } from "@shared/types/safety-score-v9-supply-attribution";
-import { admitV9ControlExecutionScopeBatch, isV9AdmittedControlExecutionScope } from "@shared/types/safety-score-v9-control-scope";
+import { admitV9ControlExecutionScopeBatch, isV9AdmittedControlExecutionScope, type V9ControlExecutionScope, type V9ControlExecutionScopeRootReuse } from "@shared/types/safety-score-v9-control-scope";
 import { compareCodeUnits } from "@shared/lib/compare";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { isRecord } from "@shared/lib/type-guards";
@@ -18,7 +18,7 @@ import {
   V9AccessReviewV2Schema,
   V9DependencyRejectionReasonsSchema,
   V9DeploymentControlFactBaseSchema,
-  V1005AssetIssuanceFactsSchema,
+  V1005InProcessAssetIssuanceFactsSchema,
   V9EconomicControlReviewV2Schema,
   V9ExitRouteFactBaseSchema,
   V9ReserveAssetClassSchema,
@@ -458,7 +458,7 @@ const AssetExtensionSchema = z
       (row) => `${row.lane}:${row.observation.routeId}:${stableJsonStringifyV1(row.observation)}`,
     ),
     controlReview: ControlReviewSchema.nullable(),
-    issuanceFacts: V1005AssetIssuanceFactsSchema.optional(),
+    issuanceFacts: V1005InProcessAssetIssuanceFactsSchema.optional(),
     economicControlReview: V9EconomicControlReviewV2Schema.nullable(),
     accessReview: V9AccessReviewV2Schema.nullable(),
     pegReference: PegReferenceSchema.nullable(),
@@ -619,13 +619,14 @@ function isAdmittedExtensionAsset(value: unknown): value is AssetExtension {
 
 function sealAdmittedExtensionAsset(asset: AssetExtension): AssetExtension {
   if (isAdmittedExtensionAsset(asset)) return asset;
+  // Strict parsing owns mutable subtrees; only branded immutable scopes and issuance bundles retain identity.
   const admitted = createV9ValueInterner(undefined, isV9AdmittedControlExecutionScope)(asset);
   deepFreeze(admitted);
   admittedExtensionAssets.add(admitted);
   return admitted;
 }
 
-function batchAdmitExtensionControlScopes(value: unknown): unknown {
+function batchAdmitExtensionControlScopes(value: unknown, reuseScopeRoot?: V9ControlExecutionScopeRootReuse): unknown {
   if (isAdmittedExtensionAsset(value) || !isRecord(value)) return value;
   const review = value.controlReview;
   if (!isRecord(review) || !Array.isArray(review.controls)) return value;
@@ -639,9 +640,12 @@ function batchAdmitExtensionControlScopes(value: unknown): unknown {
     }
   }
   if (scopes.length === 0) return value;
-  let admittedScopes: ReturnType<typeof admitV9ControlExecutionScopeBatch>;
+  let admittedScopes: V9ControlExecutionScope[];
   try {
     admittedScopes = admitV9ControlExecutionScopeBatch(scopes);
+    if (reuseScopeRoot) for (let index = 0; index < admittedScopes.length; index++) {
+      admittedScopes[index] = reuseScopeRoot(admittedScopes[index]!);
+    }
   } catch (error) {
     // Preserve the ordinary Asset parser's original field paths and R8 quarantine for invalid scopes.
     if (error instanceof z.ZodError) return value;
@@ -662,10 +666,10 @@ function batchAdmitExtensionControlScopes(value: unknown): unknown {
 }
 
 /** Strict admission once; immutable identity permits reuse without a second fact-graph clone. */
-export function admitSafetyScoreV9ExtensionAsset(value: unknown, compiledAtSec: number): AssetExtension {
+export function admitSafetyScoreV9ExtensionAsset(value: unknown, compiledAtSec: number, reuseScopeRoot?: V9ControlExecutionScopeRootReuse): AssetExtension {
   const assetId = salvage(CanonicalTextSchema, isRecord(value) ? value.assetId : undefined, null);
   if (assetId === null) throw new Error("Safety Score v9 extension asset has no canonical assetId");
-  return admitExtensionAsset(batchAdmitExtensionControlScopes(value), assetId, compiledAtSec, (asset) => asset);
+  return admitExtensionAsset(batchAdmitExtensionControlScopes(value, reuseScopeRoot), assetId, compiledAtSec, (asset) => asset);
 }
 
 /** Envelope-only view: registry identity, clocks, freshness, and a non-empty asset list stay cohort-global. */
