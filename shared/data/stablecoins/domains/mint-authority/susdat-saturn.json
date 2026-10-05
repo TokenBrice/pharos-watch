@@ -171,6 +171,7 @@
         {
           "controlRef": "Saturn V2 operator/surplus/market-mode EOA",
           "question": "What signed/MPC policy, operational independence and key custody bind the V2 operator/surplus/market-mode EOA 0xc35580434261f667d6abbda9e3dc1dc31e5a1b92? The older Fireblocks wallet roster does not bind this exact current role holder.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 (Refine12)",
           "sources": [
@@ -187,6 +188,7 @@
         {
           "controlRef": "Saturn sUSDat parameter-manager timelock",
           "question": "What signed/MPC policy, operational independence and key custody bind the parameter-manager timelock's sole proposer/canceller EOA 0x7a5a4064005584bc727666ec82548a9139d5f21e? The genesis-to-pin role census and current getters identify that proposer, but the older Fireblocks wallet roster does not attest this exact address.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol mint-authority calibration v2 (Refine12)",
           "sources": [

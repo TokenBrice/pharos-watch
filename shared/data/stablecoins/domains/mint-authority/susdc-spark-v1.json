@@ -150,6 +150,7 @@
         {
           "controlRef": "Legacy UsdcVault Spark SPARK_PROXY ward",
           "question": "What human-control independence, operational signing policy and key-custody assurance support the identified Sky governance execution participants? The verified contract/ward census and current delay do not establish these custody facts.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement 2026-10-03 (Refine13)",
           "sources": [

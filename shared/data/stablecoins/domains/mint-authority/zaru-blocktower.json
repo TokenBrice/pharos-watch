@@ -204,24 +204,28 @@
         {
           "controlRef": "Solana Token-2022 mint authority",
           "question": "Which independently verifiable human-independence, HSM/key-custody and signing-policy arrangements protect the identified ordinary Solana mint signer? Issuer HSM and multisig claims do not establish a native enforced quorum.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
           "sources": [{"label": "ZARU whitepaper custody claims", "url": "https://zaru.network/blog/zar-universal-white-paper"}, {"label": "Exact native mint authority", "url": "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"}]
         },
         {
           "controlRef": "ethereum MINTER_ROLE and role administrator",
           "question": "Which independently verifiable human-independence, HSM/key-custody and signing-policy arrangements protect the identified Ethereum issuer EOA's mint, role-administration and upgrade powers?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
           "sources": [{"label": "ZARU whitepaper custody claims", "url": "https://zaru.network/blog/zar-universal-white-paper"}, {"label": "Exact Ethereum role-controlled token", "url": "https://etherscan.io/address/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"}]
         },
         {
           "controlRef": "base MINTER_ROLE and role administrator",
           "question": "Which independently verifiable human-independence, HSM/key-custody and signing-policy arrangements protect the identified Base issuer EOA's mint, role-administration and upgrade powers?",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
           "sources": [{"label": "ZARU whitepaper custody claims", "url": "https://zaru.network/blog/zar-universal-white-paper"}, {"label": "Exact Base role-controlled token", "url": "https://basescan.org/address/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"}]
         },
         {
           "controlRef": "arc MINTER_ROLE and role administrator",
           "question": "Which independently verifiable human-independence, HSM/key-custody and signing-policy arrangements protect the identified Arc issuer EOA's mint, role-administration and upgrade powers? The complete on-chain role census does not establish signing-policy independence.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
           "sources": [{"label": "ZARU whitepaper custody claims", "url": "https://zaru.network/blog/zar-universal-white-paper"}, {"label": "Exact Arc role-controlled token", "url": "https://explorer.arc.io/address/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"}]
         }

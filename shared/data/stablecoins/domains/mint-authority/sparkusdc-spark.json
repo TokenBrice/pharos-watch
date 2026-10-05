@@ -189,6 +189,7 @@
         {
           "controlRef": "base:0x0f963a8a8c01042b69054e787e5763abbb0646a3",
           "question": "For Spark current curator Safe (base:0x0f963a8a8c01042b69054e787e5763abbb0646a3): Safe signer independence and offchain key custody are not publicly established.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement Refine11",
           "sources": [

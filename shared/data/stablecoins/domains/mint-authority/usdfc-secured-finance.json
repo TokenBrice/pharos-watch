@@ -204,6 +204,7 @@
         {
           "controlRef": "USDFC owner and ProxyAdmin-owner Safe",
           "question": "Safe signer independence remains unverified. What beneficial signer identities, key-custody safeguards and signing policy protect this identified 2-of-3 Safe's token ownership and ProxyAdmin-owner authority? Its on-chain owners and quorum do not establish independent human control.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement Refine03",
           "sources": [

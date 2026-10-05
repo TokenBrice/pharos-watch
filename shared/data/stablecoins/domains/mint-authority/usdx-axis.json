@@ -142,6 +142,7 @@
         {
           "controlRef": "Axis governance Safe native issuance administration",
           "question": "What independent signer, key-custody and recovery evidence establishes separation of the five observed owners of this 3-of-5 Safe? The onchain owner roster and threshold do not establish human independence or signing policy.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
           "sources": [
@@ -152,6 +153,7 @@
         {
           "controlRef": "Axis published mint operator",
           "question": "What independent HSM/KMS signing policy, operator independence and recovery evidence governs this identified mint operator? Issuer KMS disclosure does not establish a signing threshold or independent custody assurance.",
+          "subject": "key-custody-independence",
           "reviewedAt": "2026-10-03",
           "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
           "sources": [
