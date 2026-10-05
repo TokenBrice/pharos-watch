@@ -87,19 +87,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     allowedRouteFamilyIfProven: "offchain-issuer",
   }),
   reviewedOn("2026-10-03", {
-    id: "susdc-spark-v1",
-    disposition: "defer",
-    reasonCode: "capacity-unpublished",
-    blocker: "Legacy V1 USDC capacity requires the current PSM pocket; no exact-route capacity/fee adapter exists.",
-    rationale: "USDC and in-kind sUSDS shares are distinct holder choices, not an equal-weight portfolio or additive pocket. Governance-variable tin/tout and zero values at the research pin do not establish enduring fees. Share conversion alone does not establish available output liquidity.",
-    evidenceNeeded: "Fresh USDC PSM pocket capacity and fee/gate reads, separately scoped from any sUSDS in-kind redemption.",
-    evidenceUrls: [
-      "https://docs.spark.finance/products/spark-savings",
-      "https://eth.blockscout.com/api/v2/smart-contracts/0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba",
-    ],
-    allowedRouteFamilyIfProven: "stablecoin-redeem",
-  }),
-  reviewedOn("2026-10-03", {
     id: "mantrausd-mantra",
     disposition: "defer",
     reasonCode: "capacity-unpublished",
