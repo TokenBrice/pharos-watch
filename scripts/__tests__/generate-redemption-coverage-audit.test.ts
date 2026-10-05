@@ -10,6 +10,7 @@ import {
   renderRedemptionCoverageAuditMarkdown,
   runCli,
   validateReviewedRedemptionDispositions,
+  validateReviewedRedemptionDispositionRows,
 } from "../maintenance/generate-redemption-coverage-audit";
 import {
   REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS,
@@ -61,6 +62,12 @@ function review(
 }
 
 describe("generate-redemption-coverage-audit", () => {
+  it("keeps the published coverage register valid after reviewed holder-route admission", () => {
+    const result = validateReviewedRedemptionDispositionRows();
+    expect(result.rowErrors).toEqual([]);
+    expect(result.missingIds).toEqual([]);
+  });
+
   it("uses reviewed registry rows and preserves canonical market-cap order", () => {
     const activeCoins = [
       coin({ id: "usdc-circle" }),

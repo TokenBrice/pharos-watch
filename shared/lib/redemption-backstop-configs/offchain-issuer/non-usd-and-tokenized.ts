@@ -464,10 +464,19 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       id,
       {
         ...issuerBase,
-        ...documentedBoundSupplyFull("2026-05-24"),
-        settlementModel: "days",
+        reviewedAt: "2026-10-05",
+        capacityModel: { kind: "unquantified" },
+        settlementModel: "immediate",
         executionModel: "rules-based-nav",
-        outputAssetType: "nav",
+        outputAssetType: "stable-single",
+        outputAssets: ["usdon-ondo"],
+        v9RouteReviewTerms: {
+          settlementModel: "atomic",
+          settlementDelaySec: 0,
+          minRedeemUsd: 1,
+          reviewedAt: "2026-10-05",
+          docs: [sourceRef("Ondo Stocks investing and redeeming", "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md", ["route", "settlement"])],
+        },
         costModel: {
           ...documentedVariableFee(
             `${label} Final Terms (2025-11-11) set the maximum issuer redemption fee at up to 0.1% of the ${underlyingTicker} market price, at the issuer's discretion; the live quote and user gas are separate`,
@@ -475,6 +484,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
           feeBpsMax: 10,
         },
         docs: [
+          sourceRef("Ondo Stocks investing and redeeming", "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md", ["route", "access", "settlement"]),
           sourceRefRouteCapacity(`${label} asset page`, `https://app.ondo.finance/assets/${slug}`),
           sourceRef("Ondo Global Markets overview", "https://docs.ondo.finance/ondo-global-markets/overview", [
             "route",
@@ -495,6 +505,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
         ],
         notes: [
           `${label} is modeled as an eligible-investor NAV redemption route to Ondo GM value, not as direct holder ownership or delivery of underlying ${fundName} shares.`,
+          "The instant endpoint is USDon. USDC is a separate liquidity-conditioned, whitelist-gated swapper conversion, not an unconditional full-supply payout. Market hours, eligible-investor restrictions, live quotes and same-notional USDon valuation remain required; no static funded capacity is inferred.",
         ],
       } satisfies RedemptionBackstopConfig,
     ]),

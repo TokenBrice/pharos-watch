@@ -93,6 +93,23 @@ function redemptionPegFixture({
   return { fixedInput, row };
 }
 
+describe("reviewed settlement output binding", () => {
+  it.each([
+    { output: { kind: "fiat" as const, currency: "USD" }, sla: null },
+    { output: { kind: "tracked-stablecoin" as const, trackedAssetIds: ["usdc-circle"] }, sla: null },
+    { output: { kind: "tracked-stablecoin" as const, trackedAssetIds: ["usdon-ondo"] }, sla: 0 },
+  ])("does not lend the USDon instant SLA to a different captured endpoint ($output.kind)", ({ output, sla }) => {
+    const { fixedInput } = redemptionPegFixture({
+      rowOverrides: { stablecoinId: "slvon-ondo", settlementModel: "days", outputAssetType: "nav" },
+      output,
+      clockSec: Date.UTC(2026, 9, 5, 12) / 1_000,
+    });
+    const review = buildSafetyScoreV9RouteReviews(fixedInput, "slvon-ondo")[0]!;
+    expect(review.settlementSlaSec).toBe(sla);
+    expect(review.settlementModel).toBe(sla === 0 ? "atomic" : "bounded-delay");
+  });
+});
+
 function dexPegFixture({
   assetId,
   routeOverrides,
@@ -940,14 +957,14 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   it("leaves an unresolved basket unresolved when a leg has no reviewed conversion", () => {
     const { fixedInput, row } = redemptionPegFixture({
       rowOverrides: {
-        stablecoinId: "dllr-sovryn",
+        stablecoinId: "dusd-dtrinity",
         routeFamily: "stablecoin-redeem",
         accessModel: "permissionless-onchain",
         executionModel: "deterministic-basket",
         outputAssetType: "stable-basket",
       },
       pegDataById: {
-        "doc-money-on-chain": { currentDeviationBps: -5, priceObservedAt: NOW },
+        "usdc-circle": { currentDeviationBps: -5, priceObservedAt: NOW },
       },
       clockSec: Date.UTC(2026, 6, 28, 0, 0, 1) / 1_000,
     });

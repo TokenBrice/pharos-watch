@@ -702,7 +702,10 @@ function validateRedemptionBackstopPolicies(
     }
     if (entry.kind === "unused-live-redemption-telemetry") {
       const config = mergedConfigs[entry.stablecoinId];
-      if (config?.capacityModel.kind === "reserve-sync-metadata") {
+      // An exact payout binding may intentionally reject the adapter's other
+      // (e.g. native-M rather than wM) telemetry; it is not unconditional use.
+      if (config?.capacityModel.kind === "reserve-sync-metadata" &&
+          !config.capacityModel.requiredOutputAssetKeys) {
         addFinding(
           findings,
           "error",
