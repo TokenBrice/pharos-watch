@@ -14,6 +14,7 @@ import { findCollateralProseReserveDriftFindings } from "@shared/lib/stablecoins
 import { classifyPegClass, normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
 import { hasRuntimeOnchainSupplyPath } from "@shared/lib/onchain-supply-probe";
 import type { DeadStablecoin, StablecoinMeta } from "@shared/types";
+import { NativeBankDenomSchema } from "@shared/types/stablecoin-meta-schemas";
 import { MANIFEST_SOURCES } from "@shared/data/live-reserves/independent-assurance";
 import { REVIEWED_ORACLE_RISK_BRANCH_DISPOSITIONS } from "@shared/data/coverage-dispositions/oracle-risk-branch-dispositions";
 import listingDecisionsAsset from "@shared/data/stablecoins/listing-decisions.json";
@@ -449,14 +450,18 @@ function getReserveReviewDateOrderIssue(coin: StablecoinMeta): string | null {
   return `reserveReview.reviewedAt (${review.reviewedAt}) predates compositionAsOf (${review.compositionAsOf}); the curated reserve composition would be silently discarded`;
 }
 
-function contractDeploymentKey(contract: { chain: string; address: string }): string {
-  const address = CHAIN_META[contract.chain]?.type === "evm"
+function contractDeploymentKey(contract: { chain: string; address: string; kind?: "contract" | "native-denom" }): string {
+  const address = contract.kind !== "native-denom" && CHAIN_META[contract.chain]?.type === "evm"
     ? contract.address.toLowerCase()
     : contract.address;
   return `${contract.chain}:${address}`;
 }
 
-function getContractAddressIssue(chain: string, address: string): string | null {
+function getContractAddressIssue(chain: string, address: string, kind?: "contract" | "native-denom"): string | null {
+  if (kind === "native-denom") {
+    return CHAIN_META[chain]?.nativeDenomRail && NativeBankDenomSchema.safeParse(address).success
+      ? null : `has invalid native bank denom "${address}"`;
+  }
   if (CHAIN_META[chain]?.type === "evm") {
     return /^0x[0-9a-fA-F]{40}$/.test(address) ? null : `has invalid EVM address "${address}"`;
   }
@@ -494,7 +499,7 @@ function getContractDeploymentIssues(coin: StablecoinMeta): string[] {
       if (!chainMeta) {
         issues.push(`${path} uses unknown chain "${contract.chain}"`);
       }
-      const addressIssue = getContractAddressIssue(contract.chain, contract.address);
+      const addressIssue = getContractAddressIssue(contract.chain, contract.address, contract.kind);
       if (addressIssue) {
         issues.push(`${path} ${addressIssue}`);
       }

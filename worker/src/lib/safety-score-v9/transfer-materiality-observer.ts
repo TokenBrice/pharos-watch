@@ -342,7 +342,7 @@ export async function observeSafetyScoreV9TransferMaterialityGeneration(input: {
     for (const deployment of meta?.contracts ?? []) {
       const chainId = resolveChainId(deployment.chain);
       if (chainScope !== null && (chainId === null || !chainScope.includes(chainId))) continue;
-      if (chainId === null || !isFixedDecimalDeployment(deployment) ||
+      if (chainId === null || deployment.kind === "native-denom" || !isFixedDecimalDeployment(deployment) ||
         (CHAIN_META[chainId]?.type !== "evm" && chainId !== "solana" && chainId !== "aptos" && chainId !== "movement")) {
         rows.push(rejected(`${deployment.chain}:${normalizeReviewedDeploymentAddress(chainId ?? deployment.chain, deployment.address)}`));
         continue;

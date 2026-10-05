@@ -1,7 +1,6 @@
 import workerRuntimeAsset from "../../data/stablecoins/coins.worker-runtime.generated.json";
-import type { PegCurrency, StablecoinMeta } from "../../types/core";
+import type { ContractDeployment, PegCurrency, StablecoinMeta } from "../../types/core";
 import type { StablecoinStatus } from "../../types/stablecoin-taxonomy";
-import type { DeploymentAmountEncoding } from "../../types/deployment-amounts";
 import { buildStablecoinRegistryIndexes } from "./registry-indexes";
 import {
   isActiveStablecoinMeta,
@@ -12,12 +11,6 @@ import {
   isReadableStablecoinMeta,
 } from "./status";
 
-export interface WorkerRuntimeContractDeployment {
-  chain: string;
-  address: string;
-  decimals: number | null;
-  amountEncoding?: DeploymentAmountEncoding;
-}
 
 export interface WorkerRuntimeStablecoinMeta {
   id: string;
@@ -29,8 +22,8 @@ export interface WorkerRuntimeStablecoinMeta {
   navToken?: boolean;
   commodityOunces?: number;
   status?: StablecoinStatus;
-  contracts?: WorkerRuntimeContractDeployment[];
-  tradedContracts?: WorkerRuntimeContractDeployment[];
+  contracts?: ContractDeployment[];
+  tradedContracts?: ContractDeployment[];
   liveReserveCircuitSource?: string;
   // DDR consumes these small structural/lifecycle slices, not issuer evidence.
   flags: Pick<StablecoinMeta["flags"], "pegCurrency" | "governance" | "navToken">;

@@ -4,17 +4,22 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "USDX is minted by Kava's x/cdp module account (minter/burner) when users draw against overcollateralized CDPs, bounded by per-collateral debt limits and an 8,723,000 USDX global debt limit. Caps and collateral params are raiseable by the 5-member Kava Stability Committee (3-of-5, 7-day proposal) and by KAVA stake governance. There is no proxy: mint logic changes via a Cosmos x/upgrade software upgrade whose authority is the gov module account, reachable by stake vote (20% quorum, 50% threshold, 33.4% veto, 7-day) and by the 1-member Kava Safety Committee holding SoftwareUpgradePermission, though enactment still requires validator binary adoption. The native Kava usdx bank denom is observed on-chain but absent from the authored catalog deployments; the catalog contains only the Osmosis IBC representation, whose transfer rail is reviewed under Bridge Risk.",
+    "summary": "USDX is the native Kava usdx bank denom, issued by x/cdp against posted collateral. Global and collateral debt ceilings are governed and raiseable, not unconditional raw-mint powers. The Stability Committee and stake governance can change CDP parameters; governance and the Safety Committee can schedule validator-adopted software upgrades. These controls bind only kava:usdx; the separate Osmosis ICS-20 receipt remains under Bridge Risk.",
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": ["kava:usdx"],
       "adminAddresses": [
         "kava10d07y265gmmuvt4z0w9aw880jnsr700jxh8cq5"
       ],
       "canChangeMintLogic": true,
       "controlRef": "Kava on-chain governance (x/gov module account)",
-      "observedAt": "2026-08-16",
-      "observedBlock": 22135968,
+      "observedAt": "2026-10-05",
+      "observedBlock": 22881000,
       "sources": [
+        {
+          "label": "Height-22881000 upgrade authority (x-cosmos-block-height request and echoed grpc metadata)",
+          "url": "https://kava-api.polkachu.com/cosmos/upgrade/v1beta1/authority"
+        },
         {
           "label": "Kava x/upgrade authority",
           "url": "https://api.data.kava.io/cosmos/upgrade/v1beta1/authority"
@@ -32,6 +37,7 @@
     "controls": [
       {
         "chain": "kava",
+        "deploymentRefs": ["kava:usdx"],
         "address": "kava1wq9ts6l7atfn45ryxrtg4a2gwegsh3xha9e6rp",
         "label": "Kava x/cdp module account (USDX minter)",
         "role": "direct-minter",
@@ -43,9 +49,17 @@
         "failureDomainKeys": [
           "module:kava:cdp"
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 22821071,
+        "observedAt": "2026-10-05",
+        "observedBlock": 22881000,
         "sources": [
+          {
+            "label": "Height-22881000 CDP params (matching grpc height metadata)",
+            "url": "https://kava-api.polkachu.com/kava/cdp/v1beta1/params"
+          },
+          {
+            "label": "Height-22881000 module account mint/burn permissions",
+            "url": "https://kava-api.polkachu.com/cosmos/auth/v1beta1/module_accounts"
+          },
           {
             "label": "Kava module accounts API",
             "url": "https://api.data.kava.io/cosmos/auth/v1beta1/module_accounts"
@@ -59,10 +73,11 @@
             "url": "https://docs.kava.io/docs/cosmos/modules/cdp/"
           }
         ],
-        "evidence": "At Kava height 22821071 on 2026-10-01, /cosmos/auth/v1beta1/module_accounts returned cdp at kava1wq9ts6l7atfn45ryxrtg4a2gwegsh3xha9e6rp with permissions [minter, burner]. /kava/cdp/v1beta1/params returned debt_param denom usdx with conversion factor 6, global_debt_limit 8723000000000 usdx base units, and 10 collateral parameter sets. The module mints USDX on CDP draw within the governed debt bounds; the native usdx bank denom remains absent from the authored catalog deployments."
+        "evidence": "At Kava height 22881000, block time 2026-10-05T06:34:48.917398596Z, x-cosmos-block-height queries returned matching grpc-metadata-x-cosmos-block-height. CDP module account kava1wq9ts6l7atfn45ryxrtg4a2gwegsh3xha9e6rp has minter/burner permissions; debt_param denom usdx has conversion factor 6, GlobalDebtLimit is 8723000000000 base units, and 10 collateral parameter sets impose separate debt ceilings and collateralization ratios. Running source commit 686d591443a1de7c5566bc7d92faf5b56743f25f checks collateral and debt limits before AddCdp/AddPrincipal minting. Bound deployment is the authored native bank rail kava:usdx, not the Osmosis receipt."
       },
       {
         "chain": "kava",
+        "deploymentRefs": ["kava:usdx"],
         "label": "Kava Stability Committee (x/committee id 1)",
         "role": "governor",
         "authorityType": "multisig",
@@ -74,9 +89,13 @@
         "failureDomainKeys": [
           "committee:kava:1-stability"
         ],
-        "observedAt": "2026-07-14",
-        "observedBlock": 21631632,
+        "observedAt": "2026-10-05",
+        "observedBlock": 22881000,
         "sources": [
+          {
+            "label": "Height-22881000 Stability Committee members and CDP parameter permissions",
+            "url": "https://kava-api.polkachu.com/kava/committee/v1beta1/committees"
+          },
           {
             "label": "Kava committees API",
             "url": "https://api.data.kava.io/kava/committee/v1beta1/committees"
@@ -86,10 +105,11 @@
             "url": "https://api.data.kava.io/kava/cdp/v1beta1/params"
           }
         ],
-        "evidence": "At Kava height 21631632, committee id 1 (Kava Stability Committee) is a MemberCommittee with 5 members, vote_threshold 0.5, TALLY_OPTION_FIRST_PAST_THE_POST and proposal_duration 604800s, so 3 of 5 member votes carry a proposal. Its ParamsChangePermission covers 23 keys including cdp/GlobalDebtLimit, cdp/CollateralParams and cdp/DebtParam, so it can raise the USDX debt cap without a stake vote. It holds no direct mint permission."
+        "evidence": "Height-22881000 committees query with matching grpc height metadata identifies Stability Committee id 1 as five members, vote_threshold 0.5, FIRST_PAST_THE_POST, proposal_duration 604800s and ParamsChangePermission covering cdp/GlobalDebtLimit, CollateralParams and DebtParam. Three member votes pass; the seven-day proposal window is not a minimum execution delay. This parameter-only path can raise CDP capacity but retains the running source's collateral-funded issuance checks; no direct bank raw-mint permission is conferred. Committees 3 and 4 have Hard/Swap/incentive parameter permissions, not CDP permissions."
       },
       {
         "chain": "kava",
+        "deploymentRefs": ["kava:usdx"],
         "address": "kava10d07y265gmmuvt4z0w9aw880jnsr700jxh8cq5",
         "label": "Kava on-chain governance (x/gov module account)",
         "role": "governor",
@@ -97,9 +117,21 @@
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-14",
-        "observedBlock": 21631632,
+        "observedAt": "2026-10-05",
+        "observedBlock": 22881000,
         "sources": [
+          {
+            "label": "Height-22881000 stake-governance tally parameters",
+            "url": "https://kava-api.polkachu.com/cosmos/gov/v1beta1/params/tallying"
+          },
+          {
+            "label": "Height-22881000 stake-governance voting parameters",
+            "url": "https://kava-api.polkachu.com/cosmos/gov/v1beta1/params/voting"
+          },
+          {
+            "label": "Height-22881000 upgrade authority",
+            "url": "https://kava-api.polkachu.com/cosmos/upgrade/v1beta1/authority"
+          },
           {
             "label": "Kava x/upgrade authority",
             "url": "https://api.data.kava.io/cosmos/upgrade/v1beta1/authority"
@@ -113,13 +145,14 @@
             "url": "https://api.data.kava.io/cosmos/auth/v1beta1/module_accounts"
           }
         ],
-        "evidence": "At Kava height 21631632, /cosmos/upgrade/v1beta1/authority returned kava10d07y265gmmuvt4z0w9aw880jnsr700jxh8cq5, which /cosmos/auth/v1beta1/module_accounts confirms is the gov module account. KAVA stake governance can therefore schedule x/upgrade software upgrades that rewrite x/cdp mint logic, and can change any x/cdp param including GlobalDebtLimit. Tally params: quorum 0.2, threshold 0.5, veto_threshold 0.334, voting_period 604800s. No upgrade is currently scheduled (/cosmos/upgrade/v1beta1/current_plan returned plan null).",
+        "evidence": "Height-22881000 reads with matching grpc height metadata identify x/upgrade authority as the gov module account kava10d07y265gmmuvt4z0w9aw880jnsr700jxh8cq5. Stake governance can schedule validator-adopted binary upgrades and change CDP params; tally quorum is 0.2, threshold 0.5, veto 0.334, voting period 604800s. Parameter changes alone do not bypass collateral-funded AddCdp/AddPrincipal checks; a software replacement remains an upgrade-only mint-logic control.",
         "failureDomainKeys": [
           "governance:kava:x-gov"
         ]
       },
       {
         "chain": "kava",
+        "deploymentRefs": ["kava:usdx"],
         "label": "Kava Safety Committee (x/committee id 2)",
         "role": "governor",
         "authorityType": "multisig",
@@ -131,9 +164,13 @@
         "failureDomainKeys": [
           "committee:kava:2-safety"
         ],
-        "observedAt": "2026-07-14",
-        "observedBlock": 21631632,
+        "observedAt": "2026-10-05",
+        "observedBlock": 22881000,
         "sources": [
+          {
+            "label": "Height-22881000 Safety Committee members and software-upgrade permission",
+            "url": "https://kava-api.polkachu.com/kava/committee/v1beta1/committees"
+          },
           {
             "label": "Kava committees API",
             "url": "https://api.data.kava.io/kava/committee/v1beta1/committees"
@@ -143,7 +180,7 @@
             "url": "https://api.data.kava.io/cosmos/upgrade/v1beta1/authority"
           }
         ],
-        "evidence": "At Kava height 21631632, committee id 2 (Kava Safety Committee) is a MemberCommittee with a single member (kava1e0agyg6eug9r62fly9sls77ycjgw8ax6xk73es), vote_threshold 0.5, TALLY_OPTION_FIRST_PAST_THE_POST, proposal_duration 604800s, and SoftwareUpgradePermission as its sole permission. One member vote therefore carries a chain software-upgrade proposal that could rewrite x/cdp mint logic; enactment still requires validators to adopt the new binary."
+        "evidence": "Height-22881000 committees query with matching grpc height metadata identifies Safety Committee id 2 as one member, kava1e0agyg6eug9r62fly9sls77ycjgw8ax6xk73es, vote_threshold 0.5, FIRST_PAST_THE_POST and proposal_duration 604800s. Its sole SoftwareUpgradePermission can schedule replacement mint logic; validators must adopt the binary. The proposal duration is not a minimum timelock. No independent signing or human-independence credit is asserted."
       }
     ],
     "economicCapSemantics": "raiseable",
@@ -174,38 +211,18 @@
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "Primary Kava LCD reads on 2026-09-04 at height 22415285 (chain_id kava_2222-10) identify the native USDX issuance path: x/cdp debt_param denom usdx with conversion factor 6 and global debt limit 8723000000000 usdx base units; module accounts identify cdp at kava1wq9ts6l7atfn45ryxrtg4a2gwegsh3xha9e6rp with [minter, burner]; the bank supply endpoint returned 10013573129816 usdx base units; evmutil parameters expose no USDX conversion pair; send_enabled?denoms=usdx returned no override, so transfers were enabled while the governance-wired bank keeper retains MsgSetSendEnabled restriction capability. The observed native Kava issuance cannot currently be authored in the catalog because CHAIN_META.kava is type \"evm\" and contracts[]/tradedContracts require a 0x...40 EVM address. The authored deployment is therefore the reviewed Osmosis ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE representation, with its transfer rail reviewed under Bridge Risk. D14/A7 review on 2026-10-03 at kava block 22858316 (0x0a53ef4b48a349e92eb13de6bfb32ac0ff19649fea0e2e9b5889a754123d1dd8): an ABCI Query/Params read returned code 0 at the exact height, and the archive RPC block hash agrees with the LCD block pin. Node information reports Kava 0.28.2 / source commit 686d591443a1de7c5566bc7d92faf5b56743f25f. That source's x/cdp Keeper.AddCdp validates collateral, owner balance, debt limit and collateralization, then transfers collateral into the module before MintCoins; AddPrincipal rechecks collateralization against existing posted collateral before minting additional USDX to the owner. Raising GlobalDebtLimit or per-collateral limits only increases capacity of those same checked routes and does not confer a bank raw-mint permission. Collateral/oracle parameter admission and validator-adopted software upgrades are not standalone D14 triggers. Retain raiseable with raiseable-collateral-only proof; no non-EVM D29 certificate is expressible or authored. This D14 refresh does not re-date older quorum or reserve-reconciliation observations.",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U12bNativeCapReviews)",
-      "reviewedAt": "2026-10-03",
-      "noLocalIssuance": {
-        "kind": "external-only-representation",
-        "reviewedAt": "2026-09-04",
-        "reviewer": "Kava native topology reconciliation 2026-09-04",
-        "rationale": "USDX is observed as minted natively by the Kava x/cdp module account, but no authored local deployment can be represented in the catalog today: CHAIN_META.kava is type \"evm\" and both contracts[] and tradedContracts require a 0x...40 EVM address. The only authored deployment is the reviewed Osmosis IBC voucher, so Mint Authority records the observed Kava-native issuance controls without deployment refs while Bridge Risk owns the Osmosis transfer representation.",
-        "sources": [
-          {
-            "label": "Kava x/cdp params API at height 22415285",
-            "url": "https://api.data.kava.io/kava/cdp/v1beta1/params"
-          },
-          {
-            "label": "Kava module accounts API at height 22415285",
-            "url": "https://api.data.kava.io/cosmos/auth/v1beta1/module_accounts"
-          },
-          {
-            "label": "Kava latest block observation",
-            "url": "https://api.data.kava.io/cosmos/base/tendermint/v1beta1/blocks/latest"
-          },
-          {
-            "label": "Kava USDX bank supply at height 22415285",
-            "url": "https://api.data.kava.io/cosmos/bank/v1beta1/supply/by_denom?denom=usdx"
-          },
-          {
-            "label": "Kava USDX send-enabled state at height 22415285",
-            "url": "https://api.data.kava.io/cosmos/bank/v1beta1/send_enabled?denoms=usdx"
-          }
-        ]
-      },
+      "evidence": "Native denomination identity is now authored exactly as kava:usdx. Primary pinned reads at height 22881000, block hash bd15fc1a14f64862c46a484c3c963844c01a66aac7ba8cd737f4c31647d5ad9b and time 2026-10-05T06:34:48.917398596Z bind CDP debt params, minter/burner module accounts, committee permissions, governance thresholds and upgrade authority through matching grpc height metadata. The running binary remains v0.28.2 at commit 686d591443a1de7c5566bc7d92faf5b56743f25f; AddCdp and AddPrincipal enforce collateralization and debt ceilings before minting. The existing October-3 raiseable-collateral-only source review is retained with its original date. Control targets now name only native kava:usdx; the catalog identity limitation and external-only-representation exception are retired. The known legacy market discount is not relabelled a mint-authority compromise. These reads establish controls, not whole-book reserve reconciliation or IBC pending-message conservation.",
+      "reviewer": "E20KavaNative primary-source and height-pinned review",
+      "reviewedAt": "2026-10-05",
       "sources": [
+        {
+          "label": "Reviewed Kava block identity and clock",
+          "url": "https://kava-api.polkachu.com/cosmos/base/tendermint/v1beta1/blocks/22881000"
+        },
+        {
+          "label": "Height-22881000 native USDX debt parameters",
+          "url": "https://kava-api.polkachu.com/kava/cdp/v1beta1/params"
+        },
         {
           "label": "Kava running binary source commit",
           "url": "https://api.data.kava.io/cosmos/base/tendermint/v1beta1/node_info"

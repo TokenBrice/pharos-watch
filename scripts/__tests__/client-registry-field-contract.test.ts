@@ -8,6 +8,7 @@ import {
   buildClientRegistryOutput,
   buildWorkerRuntimeRegistryOutput,
   projectCoin,
+  projectWorkerRuntimeCoin,
   projectDetailCoin,
   projectListCoin,
   projectBlacklistStatus,
@@ -27,6 +28,18 @@ import {
 import type { StablecoinClientDetailMeta, StablecoinClientListMeta } from "@shared/types/stablecoin-client-meta";
 
 describe("client registry field contract", () => {
+  it("retains typed native denomination rails in worker deployment projections", () => {
+    const native = { kind: "native-denom", chain: "kava", address: "usdx", decimals: 6 };
+    const receipt = { chain: "osmosis", address: "ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE", decimals: 6 };
+    const projected = projectWorkerRuntimeCoin({
+      id: "usdx-kava", symbol: "USDX", name: "USDX",
+      flags: { pegCurrency: "USD", governance: "centralized-dependent" },
+      contracts: [native, receipt], tradedContracts: [native],
+    }, 0);
+    expect(projected.contracts).toEqual([native, receipt]);
+    expect(projected.tradedContracts).toEqual([native]);
+  });
+
   it("rejects a length-preserving duplicate canonical ID before projecting either ordered output", ({ onTestFinished }) => {
     const fixtureDir = mkdtempSync(join(tmpdir(), "pharos-client-registry-order-"));
     onTestFinished(() => rmSync(fixtureDir, { recursive: true, force: true }));

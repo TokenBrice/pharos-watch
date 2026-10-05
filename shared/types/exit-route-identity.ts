@@ -7,6 +7,7 @@ export function canonicalExitRouteChain(chain: string): string {
 export function canonicalExitRouteScopedId(chain: string, identifier: string): string {
   const canonicalChain = canonicalExitRouteChain(chain);
   const trimmed = identifier.trim();
+  if (CHAIN_META[canonicalChain]?.nativeDenomRail && !/^0x[0-9a-fA-F]{40}$/.test(trimmed)) return trimmed;
   return CHAIN_META[canonicalChain]?.type === "evm" ? trimmed.toLowerCase() : trimmed;
 }
 

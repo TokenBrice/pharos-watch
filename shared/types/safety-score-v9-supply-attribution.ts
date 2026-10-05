@@ -1,6 +1,8 @@
 import { z } from "zod";
 import candidatePolicy from "../data/safety-score-v9/methodology-policy-candidate-v1.json";
 import { BaseInputGenerationIdSchema, CanonicalChainIdSchema, CanonicalTextSchema, NonNegativeFiniteSchema, Sha256Schema, StrictIsoDateSchema, UnixSecondsSchema, uniqueKeyedCollectionSchema } from "./safety-schema-primitives";
+import { CHAIN_META } from "./chain-identity";
+import { NativeBankDenomSchema } from "./stablecoin-meta-schemas";
 
 const vocabulary = candidatePolicy.semantic.supplyAttribution;
 function vocabularySchema(values: string[]) { return z.enum(values as [string, ...string[]]); }
@@ -27,6 +29,13 @@ export const V9SupplyAttributionPolicySchema = z.strictObject({
 });
 // eslint-disable-next-line security/detect-unsafe-regex -- anchored canonical decimal over a 128-character cap; groups cannot overlap.
 const DecimalSchema = z.string().max(128).regex(/^(0|[1-9][0-9]*)(\.[0-9]*[1-9])?$/);
+export const CosmosBankSupplyReadSchema = z.strictObject({
+  kind: z.literal("cosmos-bank-supply"),
+  restUrl: z.string().url().refine(url => url.startsWith("https://") && new URL(url).pathname === "/" && !new URL(url).search && !new URL(url).hash),
+  ledgerChainId: CanonicalTextSchema, denom: NativeBankDenomSchema,
+  safeBlockLag: z.number().int().positive(),
+});
+export type CosmosBankSupplyRead = z.infer<typeof CosmosBankSupplyReadSchema>;
 const ReadSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("provider-chain"), sourceChain: CanonicalTextSchema }),
   z.strictObject({ kind: z.literal("evm-total-supply"), safeBlockLag: z.number().int().positive() }),
@@ -36,6 +45,7 @@ const ReadSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("ton-jetton-supply"), apiUrl: z.string().url().refine(url => url.startsWith("https://")) }),
   z.strictObject({ kind: z.literal("xrpl-issued-currency"), currency: CanonicalTextSchema, issuer: CanonicalTextSchema }),
   z.strictObject({ kind: z.literal("native-from-aggregate"), safeBlockLag: z.number().int().positive() }),
+  CosmosBankSupplyReadSchema,
 ]);
 const CensusRowSchema = z.strictObject({
   deploymentKey: CanonicalTextSchema, chainId: CanonicalChainIdSchema, address: CanonicalTextSchema.nullable(),
@@ -58,6 +68,11 @@ const CensusRowSchema = z.strictObject({
   if (row.read.kind === "xrpl-issued-currency" &&
     (row.chainId !== "xrpl" || row.amountBasis !== "issued-currency-decimal" ||
       row.address !== `${row.read.currency}.${row.read.issuer}`)) ctx.addIssue({ code: "custom", message: "XRPL identity must bind exact currency and issuer; no fixed decimals" });
+  if (row.read.kind === "cosmos-bank-supply" &&
+    (CHAIN_META[row.chainId]?.nativeDenomRail?.ledgerChainId !== row.read.ledgerChainId ||
+      row.address !== row.read.denom || row.amountBasis !== "fixed-token-units" || row.holdingKind !== "contract")) {
+    ctx.addIssue({ code: "custom", message: "Cosmos bank reads must bind the registered native rail, exact denom and fixed token units" });
+  }
 });
 const BalanceRuleSchema = z.strictObject({ id: CanonicalTextSchema, deploymentKey: CanonicalTextSchema, account: CanonicalTextSchema });
 const ApiAmountReadSchema = z.strictObject({
