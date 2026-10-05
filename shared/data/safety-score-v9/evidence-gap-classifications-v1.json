@@ -40253,6 +40253,60 @@
         "https://www.sec.gov/Archives/edgar/data/2013810/000201381026000002/xslFormDX01/primary_doc.xml"
       ],
       "rationale": "The exact missing datum is same-notional all-in cost for direct BUIDL offchain fund redemption. Rendered offering/launch, recovered transfer-agent and broker terms, 2026 fee table, linked PDF and SEC offering surfaces disclose no applicable amount/formula. ATS 1%, Zero Hash wire/conversion fees and placement-agent compensation are separate services. Neither annual management fees nor a secondary report of zero redemption fees proves this route cost."
+    },
+    {
+      "id": "uw-xmd-metal-dollar-e8bfb078c6540414",
+      "assetId": "xmd-metal-dollar",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2bab8d4bdab7f903f0a643d6",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:33:37Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R34)",
+      "sources": [
+        {
+          "url": "https://metaldollar.com/reserves",
+          "observedAt": "2026-10-05T00:15:56Z",
+          "datumAsOf": "2026-09-25",
+          "location": "Reserve asset terms",
+          "excerpt": "Each reserve asset has its own issuer, reserve structure, availability, and direct-redemption terms. Inclusion in XMD does not make those underlying terms interchangeable.",
+          "assertion": "XPYUSD is a treasury representation, not an unconditional direct Paxos fiat redemption right."
+        },
+        {
+          "url": "https://metalx.com/terms",
+          "observedAt": "2026-10-05T00:15:57Z",
+          "datumAsOf": "2026-09-23",
+          "location": "Account Use and Restrictions \u2014 Suspension and Cancellation",
+          "excerpt": "We reserve the right to suspend Metal X services to you for any reason at any time without any notice.",
+          "assertion": "Metal X withdrawals may be blocked until resolution; no contractual whole-XPYUSD realization maximum is disclosed."
+        },
+        {
+          "url": "https://metaldollar.com/how-it-works",
+          "observedAt": "2026-10-05T00:15:56Z",
+          "datumAsOf": "2026-09-25",
+          "location": "Can I choose the asset I receive when redeeming?",
+          "excerpt": "Treasury balances, account requirements, and other operational conditions may affect availability.",
+          "assertion": "XMD reserve redemption availability is conditional; this does not bound bridge-plus-fiat settlement."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://metaldollar.com/reserves",
+        "https://metaldollar.com/how-it-works",
+        "https://metaldollar.com/developers",
+        "https://metaldollar.com/governance",
+        "https://r.jina.ai/https://dollar.metalx.com/treasury-cryptos",
+        "https://r.jina.ai/https://app.metalx.com/bridge",
+        "https://metalx.com/terms",
+        "https://xprnetwork.org/webauth-terms",
+        "https://proton.eosusa.io/v2/state/get_tokens?account=xmd.treasury"
+      ],
+      "rationale": "Freshly reached treasury and bridge interfaces disclose XPYUSD as the Paxos/PayPal reserve representation, and updated official reserve, operating and legal pages describe conditional availability and discretionary withdrawal suspension. They do not publish a maximum whole-position realization bound through Metal bridge withdrawal and final USD settlement. This C concerns that offchain operating/contractual liquidity bound, not unread onchain balances or controller roles; no parent PYUSD redemption deadline is exported to XPYUSD."
     }
   ]
 }
