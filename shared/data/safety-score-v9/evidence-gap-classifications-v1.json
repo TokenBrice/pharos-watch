@@ -39250,6 +39250,77 @@
         "https://docs.secured.finance/llms.txt"
       ],
       "rationale": "No whole-position final USD liquidityHorizon is disclosed for Native FIL in the ActivePool/DefaultPool book. The current issuer rules describe conditional FIL release and partial fills, not a complete USD sale/settlement deadline; contract/audit inventory, documentation index and recovered February 20 user terms supply no such guarantee. Native transfer speed is not all-position USD realizability."
+    },
+    {
+      "id": "uw-mf-one-midas-a10252e9bf062de9",
+      "assetId": "mf-one-midas",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:redemption:mf-one-midas:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:11:23Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R44)",
+      "sources": [
+        {
+          "url": "https://midas.app/mfone",
+          "observedAt": "2026-10-05T00:09:29Z",
+          "datumAsOf": null,
+          "location": "Shared product-page footnote 3, recovered via r.jina.ai",
+          "excerpt": "Standard redemptions are usually processed after two price updates for security and operational reasons, though processing may be faster or take longer depending on conditions, with no timing guarantee.",
+          "assertion": "Displayed redemption timing is expressly nonbinding; funding by the Strategy Manager has no timing guarantee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://midas.app/mfone",
+        "https://midas.app/transparency",
+        "https://docs.midas.app/resources/legal-product-documentation",
+        "https://midas-docs.gitbook.io/midas-docs/how-does-it-work/issuance-and-redemption.md",
+        "https://midas-docs.gitbook.io/midas-docs/resources/legal-documents/prospectus-documents.md",
+        "https://midas-docs.gitbook.io/midas-docs/resources/legal-documents/terms-and-conditions.md"
+      ],
+      "rationale": "No binding end-to-end maximum for the standard offchain redemption is published in recovered issuer timing disclosures. Product footnote 3 explicitly disclaims a timing guarantee and makes completion dependent on Strategy Manager funding. Generic 1\u20137 business-day processing and mGLOBAL monthly NAV settlement are not final funded completion maxima. This decision does not classify inaccessible holdings or infer a calendar-day SLA."
+    },
+    {
+      "id": "uw-mglobal-midas-fasanara-bd81b8938a7559ef",
+      "assetId": "mglobal-midas-fasanara",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:redemption:mglobal-midas-fasanara:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T00:11:23Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R44)",
+      "sources": [
+        {
+          "url": "https://midas.app/mglobal",
+          "observedAt": "2026-10-05T00:09:29Z",
+          "datumAsOf": null,
+          "location": "Shared product-page footnote 3, recovered via r.jina.ai",
+          "excerpt": "Standard redemptions are usually processed after two price updates for security and operational reasons, though processing may be faster or take longer depending on conditions, with no timing guarantee.",
+          "assertion": "Displayed redemption timing is expressly nonbinding; funding by the Strategy Manager has no timing guarantee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://midas.app/mglobal",
+        "https://midas.app/transparency",
+        "https://docs.midas.app/resources/legal-product-documentation",
+        "https://midas-docs.gitbook.io/midas-docs/how-does-it-work/issuance-and-redemption.md",
+        "https://midas-docs.gitbook.io/midas-docs/resources/legal-documents/prospectus-documents.md",
+        "https://midas-docs.gitbook.io/midas-docs/resources/legal-documents/terms-and-conditions.md",
+        "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/"
+      ],
+      "rationale": "No binding end-to-end maximum for the standard offchain redemption is published in recovered issuer timing disclosures. Product footnote 3 explicitly disclaims a timing guarantee and makes completion dependent on Strategy Manager funding. Generic 1\u20137 business-day processing and mGLOBAL monthly NAV settlement are not final funded completion maxima. This decision does not classify inaccessible holdings or infer a calendar-day SLA."
     }
   ]
 }
