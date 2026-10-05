@@ -4800,5 +4800,75 @@
         }
       ]
     }
+  ],
+  "localReviews": [
+    {
+      "kind": "accounting",
+      "assetId": "senpathusd-sentora",
+      "mechanism": "vault-v2-share-accounting",
+      "reviewer": "Wave 3 W3R09 / Wave 4 E10 exact-pin reverification",
+      "reviewedAt": "2026-10-05T00:48:03Z",
+      "observedAtSec": 1790981080,
+      "expiresAtSec": 1793404800,
+      "identity": {
+        "assetId": "senpathusd-sentora",
+        "registeredDeploymentKeys": ["tempo:0x9a044ae05e5e6290dcf56afd69548565e957a626"],
+        "deployments": [
+          {
+            "codeKind": "immutable",
+            "chain": "tempo",
+            "address": "0x9a044ae05e5e6290dcf56afd69548565e957a626",
+            "observedAtSec": 1790981080,
+            "block": 42323768,
+            "sourceUrl": "https://rpc.tempo.xyz"
+          }
+        ]
+      },
+      "rationale": "Independent contract-local ERC-4626 accounting review, not a borrower liquidation oracle assessment. VaultV2 converts parent-denominated assets and fee-adjusted shares with a virtual asset/share offset; idle pathUSD and adapter-reported lender assets enter totalAssets, including recognized interest and losses. This establishes a known moderate local accounting mechanism, not fixed dollar value or oracle-free lending. The cbBTC/pathUSD borrower feeds, liquidation branches, strategy controls and wrapper identity remain unchanged. W3R09's unresolved material borrower feed verdict remains in economic-control:oracle.",
+      "sources": [
+        {"label": "Pinned exact Tempo deployment", "url": "https://rpc.tempo.xyz"},
+        {"label": "Exact Sentora Vault V2", "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"},
+        {"label": "Reviewed VaultV2 source commit", "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"},
+        {"label": "Morpho Vault V2 accounting documentation", "url": "https://docs.morpho.org/learn/concepts/vault-v2/"}
+      ],
+      "observations": [
+        {"sourceUrl": "https://rpc.tempo.xyz", "description": "Re-read Tempo block 42323768: asset=0x20c0000000000000000000000000000000000000; totalAssets=38668628815373; totalSupply=19338159753529440843074671; adaptersLength=1; virtualShares=1000000000000. Runtime keccak256=0x9b591194d111d61e4a5c17bcdb5c0306af93003568a03bf1ac45be4b3f53bdb3, unchanged at live head. Original exact source/runtime correspondence is retained from the reviewed asset addition; no new borrower feed correspondence is claimed."},
+        {"sourceUrl": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol", "description": "totalAssets uses accrueInterestView; conversions use updated assets and fee-adjusted shares plus virtual offsets. Interest and recognized losses change share value; adapters report realAssets. The local mechanism remains distinct from borrower collateral valuation."}
+      ]
+    },
+    {
+      "kind": "holder-entitlement",
+      "assetId": "stusd-stoneyield",
+      "entitlement": "no-public-holder-withdrawal-or-unwrap",
+      "reviewer": "Wave 3 W3R38 / Wave 4 E10 exact-pin reverification",
+      "reviewedAt": "2026-10-05T00:26:31Z",
+      "observedAtSec": 1791159072,
+      "expiresAtSec": 1793404800,
+      "identity": {
+        "assetId": "stusd-stoneyield",
+        "registeredDeploymentKeys": ["bsc:0x806dd21af6de051fb811760a5768d04a99160eb9"],
+        "deployments": [
+          {
+            "codeKind": "immutable",
+            "chain": "bsc",
+            "address": "0x806dd21af6de051fb811760a5768d04a99160eb9",
+            "observedAtSec": 1791159072,
+            "block": 125769995,
+            "sourceUrl": "https://bscscan.com/address/0x806dd21af6de051fb811760a5768d04a99160eb9#code"
+          }
+        ]
+      },
+      "rationale": "Adverse known holder entitlement: canonical STUSD has no public withdrawal/unwrap into sUSDC. Exact token.wrapper and reciprocal wrapper.stusd bind the immutable token to wrapper 0xb4d3c1bb59be7b419af4e10e9b240f425782b22a. Exact-match wrapper source reserves return only through owner/operator transferReserves or transferAllReserves, not holder redemption. This critical local restriction creates no redemption route, capacity, fee, settlement SLA, measured unwind or whole-asset no-viable-exit conclusion; secondary-market paths remain independent.",
+      "sources": [
+        {"label": "Canonical STUSD deployment", "url": "https://bscscan.com/address/0x806dd21af6de051fb811760a5768d04a99160eb9#code"},
+        {"label": "Exact-match wrapper ABI and source", "url": "https://sourcify.dev/server/v2/contract/56/0xb4d3c1bb59be7b419af4e10e9b240f425782b22a?fields=sources,abi,runtimeMatch,runtimeBytecode"},
+        {"label": "Issuer no-public-unwrap terms", "url": "https://docs.stoneyield.io/docs/protocol/stusd-wrapper"}
+      ],
+      "observations": [
+        {"sourceUrl": "https://bscscan.com/address/0x806dd21af6de051fb811760a5768d04a99160eb9#code", "description": "Re-read BSC block 125769995: token.wrapper=0xb4d3c1bb59be7b419af4e10e9b240f425782b22a and wrapper.stusd=0x806dd21af6de051fb811760a5768d04a99160eb9. Token runtime keccak256=0x511f4a291580f38c1482a112c65ac6fcc455169f9739e90e68713b41958e5d22; wrapper runtime keccak256=0xff7578f92a3bf2218da908e8ef698bcdd3bdbef0ef62d75d01c07eb9d886f851; both unchanged at live head."},
+        {"sourceUrl": "https://sourcify.dev/server/v2/contract/56/0xb4d3c1bb59be7b419af4e10e9b240f425782b22a?fields=sources,abi,runtimeMatch,runtimeBytecode", "description": "runtimeMatch=exact_match. STUSDWrapper notice: One-way wrapper for converting sUSDC to STUSD with lock support (NO UNWRAP). ABI/source contains no holder unwrap; reserve transfers require onlyOwnerOrOperator. W3R38 complete lifetime zero-sweep census corroborates, but does not establish, the entitlement."},
+        {"sourceUrl": "https://docs.stoneyield.io/docs/protocol/stusd-wrapper", "description": "Return to sUSDC by sweeping reserves (no public unwrap function). Current source re-read confirms the same adverse entitlement."}
+      ]
+    }
   ]
 }

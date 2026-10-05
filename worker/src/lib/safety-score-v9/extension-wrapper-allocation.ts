@@ -9,7 +9,7 @@ export const SAFETY_SCORE_V9_WRAPPER_ALLOCATION_REVIEWS_DIGEST = domainDigest(
 
 // Only malformed global envelopes/identities invalidate the cohort. Parse claim
 // bytes lazily inside the caller's asset quarantine boundary.
-const envelope = z.object({ schemaVersion: z.literal(1), reviews: z.array(z.object({ assetId: z.string().trim().min(1) }).passthrough()) }).strict().parse(wrapperAllocationReviewsAsset);
+const envelope = z.object({ schemaVersion: z.literal(1), reviews: z.array(z.object({ assetId: z.string().trim().min(1) }).passthrough()), localReviews: z.array(z.unknown()).optional() }).strict().parse(wrapperAllocationReviewsAsset);
 const reviewsByAsset = new Map<string, unknown[]>();
 for (const row of envelope.reviews) {
   const rows = reviewsByAsset.get(row.assetId) ?? [];

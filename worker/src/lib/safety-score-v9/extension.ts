@@ -69,6 +69,7 @@ import {
   SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST,
 } from "./extension-incidents";
 import { getSafetyScoreV9WrapperAllocationReview, SAFETY_SCORE_V9_WRAPPER_ALLOCATION_REVIEWS_DIGEST } from "./extension-wrapper-allocation";
+import { getSafetyScoreV9WrapperLocalReviews, SAFETY_SCORE_V9_WRAPPER_LOCAL_REVIEWS_DIGEST } from "./extension-wrapper-local-review";
 import { allocationReviewClockSec, type V9AllocationScopeIdentityReview, type SafetyScoreV9WrapperAllocationReview } from "@shared/types/safety-score-v9-allocation";
 import {
   computeSafetyScoreV9ReviewedTransferFactsDigest,
@@ -2317,6 +2318,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     mechanismReviewOverlaysDigest: SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
     operationalResilienceOverlaysDigest: SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST,
     wrapperAllocationReviewsDigest: SAFETY_SCORE_V9_WRAPPER_ALLOCATION_REVIEWS_DIGEST,
+    wrapperLocalReviewsDigest: SAFETY_SCORE_V9_WRAPPER_LOCAL_REVIEWS_DIGEST,
     reserveBoundFactsDigest: SAFETY_SCORE_V9_RESERVE_BOUND_FACTS_DIGEST,
     reviewedTransferFactsDigest: computeSafetyScoreV9ReviewedTransferFactsDigest(options.reviewedTransferFacts?.values()),
     accessClaimGraphReviewsDigest: computeSafetyScoreV9AccessClaimGraphReviewsDigest(options.accessClaimGraphReviews?.values()),
@@ -2434,6 +2436,8 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         addSafetyScoreV9IncidentEvidence(reviewEvidence, reviewedIncidents);
         admissionPath = "wrapperAllocationReview";
         const wrapperAllocationReview = getSafetyScoreV9WrapperAllocationReview(assetId, clockSec);
+        admissionPath = "wrapperLocalReviews";
+        const wrapperLocalReviews = getSafetyScoreV9WrapperLocalReviews(assetId);
         admissionPath = "mechanismRiskReview";
         const mechanismRiskReview = buildSafetyScoreV9MechanismReview(fixedInput, meta, archetype);
         admissionPath = "mechanismReviewGapDisposition";
@@ -2661,6 +2665,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           supplyReview,
           operationalResilience,
           wrapperAllocationReview,
+          wrapperLocalReviews,
           allocationScopeIdentityReview: buildAllocationScopeIdentityReview(meta),
           wrapperCustodyReview:
             (meta.variantKind === "savings-passthrough" ||
