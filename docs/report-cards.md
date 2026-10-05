@@ -7,7 +7,7 @@ Safety Score V10 is the sole active stablecoin safety model. It publishes eviden
 ## Methodology Identity
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v10`<!-- GENERATED-END: report-cards-active-model -->
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.07`<!-- GENERATED-END: methodology-version-safety-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.08`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public response schema: report v7 with score trace v4; retained older publications require explicit historical version dispatch or refusal, never fabricated cause defaults
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
 - **Evaluation build:** `41afa56cda1af8e73f50fa7d6950fca2b308c3ef6b7bd6466a42d5f7cc0194c9` (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`), generated from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
