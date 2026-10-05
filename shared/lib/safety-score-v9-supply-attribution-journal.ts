@@ -8,9 +8,20 @@ import {
 } from "./content-addressed-journal";
 
 const SUPPLY_ATTRIBUTION_JOURNAL_ENTRY_MAX_BYTES = 1_152;
-const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_BYTES = 32 * 1_024;
+// One cohort authority for the registry, stored generation, and journal loader.
+// 96 * 2 maximum-sized journal records, including IDs and 128-byte map keys,
+// fit below 256 KiB. The generation reserves 9 KiB per ordinary packet plus
+// 128 KiB for a large census; see docs/report-cards.md resource measurements.
+export const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS = 96;
+export const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_BYTES = 256 * 1_024;
+export const SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES = 1_024 * 1_024;
 export const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ENTRIES_PER_ASSET = 2;
-export const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS = 32;
+export const SUPPLY_ATTRIBUTION_CAPTURE_BUDGET = Object.freeze({
+  assetConcurrency: 2,
+  assetTimeoutMs: 30_000,
+  wallTimeoutMs: 180_000,
+  publicationReserveMs: 15_000,
+});
 export const WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC = 120;
 
 export const SupplyAttributionJournalIdSchema = z

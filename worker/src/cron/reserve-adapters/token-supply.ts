@@ -5,6 +5,8 @@ import { throwIfAborted } from "../../lib/abort";
 import { redactProviderUrls } from "../../lib/safe-error-message";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { APTOS_PUBLIC_REST_URL } from "@shared/lib/chain-rpc-registry";
+import { sha256Hex } from "@shared/lib/sha256";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { getRpcAuthHeaders, registryRpcUrls } from "../../lib/chain-registry";
 import { fetchErc20TotalSupply } from "./onchain";
 import { fetchJsonPostWithRetry, fetchJsonWithRetry } from "./request";
@@ -63,6 +65,9 @@ export interface MoveFungibleAssetSupplyObservation {
   ledgerVersion: string;
   /** Ledger timestamp in unix seconds when the node reports one. */
   ledgerTimestampSec?: number;
+  /** Present for identity-bound economic reads; legacy supply probes are unchanged. */
+  metadataAddress?: string;
+  responseSha256?: string;
 }
 
 export interface MoveFungibleAssetSupplyReadOptions {
@@ -70,6 +75,8 @@ export interface MoveFungibleAssetSupplyReadOptions {
   expectedChainId?: number;
   /** Exact deployed OFT package identity, resolved through its pinned mint/burn refs. */
   identityKind?: "metadata-address" | "oft-package";
+  expectedMetadataAddress?: string;
+  expectedDecimals?: number;
 }
 
 /**
@@ -86,7 +93,10 @@ export async function fetchMoveFungibleAssetSupply(
 ): Promise<MoveFungibleAssetSupplyObservation | null> {
   if (!/^0x[0-9a-fA-F]{1,64}$/.test(metadataAddress)) return null;
   const baseUrl = rpcUrl.replace(/\/$/, "");
-  const ledger = await fetchJsonWithRetry<MoveLedgerResponse>(baseUrl, signal, 10_000, ctx);
+  const bounded = options?.expectedMetadataAddress !== undefined
+    ? { maxResponseBytes: 128 * 1024, maxRetries: 0, headers: getRpcAuthHeaders(baseUrl) }
+    : undefined;
+  const ledger = await fetchJsonWithRetry<MoveLedgerResponse>(baseUrl, signal, 10_000, ctx, bounded);
   if (!ledger.ledger_version || !MOVE_INTEGER_RE.test(ledger.ledger_version)) return null;
   if (options?.expectedChainId !== undefined && ledger.chain_id !== options.expectedChainId) return null;
   let ledgerVersion = ledger.ledger_version;
@@ -109,7 +119,7 @@ export async function fetchMoveFungibleAssetSupply(
         const middle = bracketed ? (low + high) / 2n
           : BigInt(ledgerVersion) > offset ? BigInt(ledgerVersion) - offset : 0n;
         const block = await fetchJsonWithRetry<MoveBlockResponse>(
-          `${baseUrl}/blocks/by_version/${middle}?with_transactions=false`, signal, 10_000, ctx,
+          `${baseUrl}/blocks/by_version/${middle}?with_transactions=false`, signal, 10_000, ctx, bounded,
         );
         const timestamp = moveTimestampSec(block.block_timestamp);
         if (!block.first_version || !block.last_version || !MOVE_INTEGER_RE.test(block.first_version) ||
@@ -137,7 +147,7 @@ export async function fetchMoveFungibleAssetSupply(
     const packageType = `${metadataAddress}::oft_fa::OftImpl`;
     const oft = await fetchJsonWithRetry<MoveResourceResponse>(
       `${baseUrl}/accounts/${metadataAddress}/resource/${packageType}?ledger_version=${ledgerVersion}`,
-      signal, 10_000, ctx,
+      signal, 10_000, ctx, bounded,
     );
     if (oft.type !== packageType) return null;
     const inner = (value: unknown): unknown =>
@@ -151,14 +161,16 @@ export async function fetchMoveFungibleAssetSupply(
     }
     metadataAddress = metadata;
   }
+  if (options?.expectedMetadataAddress !== undefined &&
+      metadataAddress !== options.expectedMetadataAddress) return null;
 
   const resourceUrl = (type: string) =>
     `${baseUrl}/accounts/${metadataAddress}/resource/${type}?ledger_version=${ledgerVersion}`;
   const supply = await fetchJsonWithRetry<MoveResourceResponse>(
-    resourceUrl(MOVE_CONCURRENT_SUPPLY_TYPE), signal, 10_000, ctx,
+    resourceUrl(MOVE_CONCURRENT_SUPPLY_TYPE), signal, 10_000, ctx, bounded,
   );
   const metadata = await fetchJsonWithRetry<MoveResourceResponse>(
-    resourceUrl(MOVE_METADATA_TYPE), signal, 10_000, ctx,
+    resourceUrl(MOVE_METADATA_TYPE), signal, 10_000, ctx, bounded,
   );
   if (supply.type !== MOVE_CONCURRENT_SUPPLY_TYPE || metadata.type !== MOVE_METADATA_TYPE) return null;
 
@@ -167,13 +179,143 @@ export async function fetchMoveFungibleAssetSupply(
   const decimals = metadata.data?.decimals;
   if (typeof raw !== "string" || !/^(0|[1-9][0-9]*)$/.test(raw)) return null;
   if (!Number.isInteger(decimals) || (decimals as number) < 0 || (decimals as number) > 30) return null;
+  if (options?.expectedDecimals !== undefined && decimals !== options.expectedDecimals) return null;
+  let identity: MoveResourceResponse | undefined;
+  if (options?.expectedMetadataAddress !== undefined) {
+    identity = await fetchJsonWithRetry<MoveResourceResponse>(
+      resourceUrl("0x1::object::ObjectCore"), signal, 10_000, ctx, bounded,
+    );
+    const events = identity.data?.transfer_events as { guid?: { id?: { addr?: unknown } } } | undefined;
+    if (identity.type !== "0x1::object::ObjectCore" || events?.guid?.id?.addr !== metadataAddress) return null;
+  }
 
   return {
     rawSupply: BigInt(raw),
     decimals: decimals as number,
     ledgerVersion,
     ...(ledgerTimestampSec !== undefined ? { ledgerTimestampSec } : {}),
+    ...(identity ? { metadataAddress, responseSha256: sha256Hex(stableJsonStringifyV1({
+      ledgerVersion, ledgerTimestampSec, metadataAddress, supply, metadata, identity,
+    })) } : {}),
   };
+}
+
+interface TonBlockId {
+  workchain: number;
+  shard: string;
+  seqno: number;
+  root_hash: string;
+  file_hash: string;
+}
+interface TonEnvelope<T> { ok?: boolean; result?: T }
+interface TonHeader { id?: TonBlockId; gen_utime?: number; global_id?: number }
+interface TonGetter { exit_code?: number; stack?: unknown[]; block_id?: TonBlockId }
+interface TonTokenData {
+  address?: string;
+  contract_type?: string;
+  total_supply?: string;
+  jetton_content?: { type?: string; data?: { decimals?: unknown } };
+}
+
+export interface TonJettonSupplyObservation {
+  rawSupply: bigint;
+  decimals: number;
+  masterchainSeqno: number;
+  blockHash: string;
+  blockTimestampSec: number;
+  responseSha256: string;
+}
+
+function isTonMasterchainBlock(value: TonBlockId | undefined): value is TonBlockId {
+  return value !== undefined && value.workchain === -1 && value.shard === "-9223372036854775808" &&
+    Number.isSafeInteger(value.seqno) && value.seqno > 0 &&
+    /^[A-Za-z0-9+/]{43}=$/.test(value.root_hash) && /^[A-Za-z0-9+/]{43}=$/.test(value.file_hash);
+}
+function sameTonBlock(a: TonBlockId | undefined, b: TonBlockId): boolean {
+  return isTonMasterchainBlock(a) && a.seqno === b.seqno &&
+    a.root_hash === b.root_hash && a.file_hash === b.file_hash;
+}
+
+/**
+ * TON Center v2 executes get_jetton_data at an explicit masterchain seqno.
+ * Its echoed full block id and independently fetched block header certify the
+ * supply clock. On-chain metadata decimals are read at that same seqno; no
+ * default 9 decimals or unpinned/latest fallback is admitted.
+ */
+export async function fetchTonJettonSupply(
+  masterAddress: string,
+  signal: AbortSignal,
+  rpcUrl: string,
+  options: { clockSec: number; expectedDecimals: number },
+  ctx?: AdapterContext,
+): Promise<TonJettonSupplyObservation | null> {
+  if (!/^(?:-?[0-9]+:[0-9a-f]{64}|[EU]Q[A-Za-z0-9_-]{46})$/.test(masterAddress) ||
+      !Number.isSafeInteger(options.clockSec) || options.clockSec <= 0 ||
+      !Number.isInteger(options.expectedDecimals) || options.expectedDecimals < 0 || options.expectedDecimals > 36) return null;
+  const base = rpcUrl.replace(/\/$/, "");
+  const bounded = { maxResponseBytes: 128 * 1024, headers: getRpcAuthHeaders(base) };
+  const head = await fetchJsonWithRetry<TonEnvelope<{ last?: TonBlockId }>>(
+    `${base}/getMasterchainInfo`, signal, 10_000, ctx, bounded,
+  );
+  if (head.ok !== true || !isTonMasterchainBlock(head.result?.last)) return null;
+  let pin = head.result.last;
+  const headerAt = async (block: TonBlockId) => fetchJsonWithRetry<TonEnvelope<TonHeader>>(
+    `${base}/getBlockHeader?${new URLSearchParams({
+      workchain: "-1", shard: block.shard, seqno: String(block.seqno),
+      root_hash: block.root_hash, file_hash: block.file_hash,
+    })}`, signal, 10_000, ctx, bounded,
+  );
+  let header = await headerAt(pin);
+  if (header.ok === true && sameTonBlock(header.result?.id, pin) &&
+      Number.isSafeInteger(header.result?.gen_utime) && header.result!.gen_utime! > options.clockSec) {
+    const lookup = await fetchJsonWithRetry<TonEnvelope<TonBlockId>>(
+      `${base}/lookupBlock?workchain=-1&shard=-9223372036854775808&unixtime=${options.clockSec}`,
+      signal, 10_000, ctx, bounded,
+    );
+    if (lookup.ok !== true || !isTonMasterchainBlock(lookup.result) || lookup.result.seqno > pin.seqno) return null;
+    pin = lookup.result;
+    header = await headerAt(pin);
+  }
+  // lookupBlock by time may return the first block after the requested second.
+  // One predecessor is enough to bracket it; otherwise reject, never redating.
+  if (header.ok === true && sameTonBlock(header.result?.id, pin) &&
+      Number.isSafeInteger(header.result?.gen_utime) && header.result!.gen_utime! > options.clockSec) {
+    const previous = await fetchJsonWithRetry<TonEnvelope<TonBlockId>>(
+      `${base}/lookupBlock?workchain=-1&shard=${pin.shard}&seqno=${pin.seqno - 1}`,
+      signal, 10_000, ctx, bounded,
+    );
+    if (previous.ok !== true || !isTonMasterchainBlock(previous.result) || previous.result.seqno !== pin.seqno - 1) return null;
+    pin = previous.result;
+    header = await headerAt(pin);
+  }
+  const timestamp = header.result?.gen_utime;
+  if (header.ok !== true || !sameTonBlock(header.result?.id, pin) || header.result?.global_id !== -239 ||
+      !Number.isSafeInteger(timestamp) || timestamp! <= 0 || timestamp! > options.clockSec) return null;
+  const getter = await fetchJsonPostWithRetry<TonEnvelope<TonGetter>>(
+    `${base}/runGetMethod`, { address: masterAddress, method: "get_jetton_data", stack: [], seqno: pin.seqno },
+    signal, 10_000, ctx, bounded,
+  );
+  const entry = getter.result?.stack?.[0];
+  if (getter.ok !== true || getter.result?.exit_code !== 0 || !sameTonBlock(getter.result?.block_id, pin) ||
+      !Array.isArray(entry) || entry.length !== 2 || entry[0] !== "num" ||
+      typeof entry[1] !== "string" || !/^0x[0-9a-fA-F]{1,64}$/.test(entry[1])) return null;
+  const rawSupply = BigInt(entry[1]);
+  const token = await fetchJsonPostWithRetry<TonEnvelope<TonTokenData>>(
+    `${base}/getTokenData`, { address: masterAddress, seqno: pin.seqno },
+    signal, 10_000, ctx, bounded,
+  );
+  const decimals = token.result?.jetton_content?.data?.decimals;
+  if (token.ok !== true || token.result?.address !== masterAddress || token.result.contract_type !== "jetton_master" ||
+      typeof token.result.total_supply !== "string" || !MOVE_INTEGER_RE.test(token.result.total_supply) ||
+      BigInt(token.result.total_supply) !== rawSupply || token.result.jetton_content?.type !== "onchain" ||
+      typeof decimals !== "string" || !MOVE_INTEGER_RE.test(decimals) ||
+      Number(decimals) !== options.expectedDecimals) return null;
+  const rechecked = await headerAt(pin);
+  if (rechecked.ok !== true || rechecked.result === undefined || !sameTonBlock(rechecked.result.id, pin) ||
+      rechecked.result.gen_utime !== timestamp || rechecked.result.global_id !== -239) return null;
+  return { rawSupply, decimals: options.expectedDecimals, masterchainSeqno: pin.seqno,
+    blockHash: pin.root_hash, blockTimestampSec: timestamp!,
+    responseSha256: sha256Hex(stableJsonStringifyV1({ pin, header, getter, token, rechecked })) };
 }
 
 const SPL_TOKEN_PROGRAM_IDS: Readonly<Record<string, true>> = {

@@ -1,6 +1,8 @@
 import { uniqueSorted } from "@shared/lib/safety-score-v9/primitives";
 import { sha256Hex } from "@shared/lib/sha256";
 import {
+  SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES,
+  SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS,
   SupplyAttributionJournalIdSchema,
   SupplyAttributionJournalV1Schema,
   SupplyAttributionRejectionCodeSchema,
@@ -37,8 +39,6 @@ import { parseJson } from "../json-parse";
 
 export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY =
   "safety-score-v9:supply-attribution-generation:v1";
-const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES =
-  128 * 1_024;
 // Both intervals stay under the 15-minute capture grid (5,20,35,50) so every
 // firing is eligible. That gives the :22/:52 publication a capture from :20/:50
 // with :05/:35 as an in-window fallback, instead of one skipped firing leaving
@@ -87,10 +87,10 @@ const SupplyAttributionGenerationPayloadSchema = z
     sourceClockSec: UnixSecondsSchema,
     captureClockSec: UnixSecondsSchema,
     capturedAtSec: UnixSecondsSchema,
-    expectedAssetIds: z.array(AssetIdSchema).max(32),
-    observedAssetIds: z.array(AssetIdSchema).max(32),
-    acceptedAssetIds: z.array(AssetIdSchema).max(32),
-    rejectedAssetIds: z.array(AssetIdSchema).max(32),
+    expectedAssetIds: z.array(AssetIdSchema).max(SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS),
+    observedAssetIds: z.array(AssetIdSchema).max(SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS),
+    acceptedAssetIds: z.array(AssetIdSchema).max(SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS),
+    rejectedAssetIds: z.array(AssetIdSchema).max(SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS),
     attributionById: z.record(
       AssetIdSchema,
       SafetyScoreV9SupplyAttributionSchema,
@@ -218,8 +218,8 @@ const supplyAttributionGenerationCodec = createCanonicalGenerationCodec({
   mismatchMessage:
     "Supply attribution generation ID does not match its canonical payload",
   maxBytes: {
-    limit: SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES,
-    schemaMessage: `Supply attribution generation exceeds ${SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES} bytes`,
+    limit: SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES,
+    schemaMessage: `Supply attribution generation exceeds ${SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES} bytes`,
     inputMessage: "Supply attribution generation cache value is oversized",
   },
   parseString: (value) => {

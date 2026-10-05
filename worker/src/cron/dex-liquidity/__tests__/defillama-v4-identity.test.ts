@@ -22,6 +22,14 @@ describe("DefiLlama V4 exact UUID identity", () => {
     expect(pools[0]).toMatchObject({ pool: POOL, poolMeta: "0.00%", tvlUsd: 100125999 });
   });
 
+  it.each(["Unichain", "Tempo"])("recovers %s identities without promoting chain eligibility", (chain) => {
+    const pools = [{ ...pool(), chain }];
+    expect(attachDefiLlamaV4PoolIdentities(pools, {
+      data: [{ ...row, chain, pool_old: `${POOL}-${chain.toLowerCase()}-uniswap-v4` }],
+    })).toBe(1);
+    expect(pools[0]!.pool).toBe(POOL);
+  });
+
   it.each([
     { ...row, pool: "another-uuid" },
     { ...row, chain: "Base" },
@@ -99,7 +107,7 @@ describe("V4 recovered exact PoolKey admission", () => {
     expect(isDexMeasuredExecutionTargetScoreEligible(target!)).toBe(true);
   });
 
-  it.each(["base", "bsc", "arbitrum", "polygon"])("keeps recovered %s PoolKeys shadow-only", (chain) => {
+  it.each(["base", "bsc", "arbitrum", "polygon", "unichain", "tempo"])("keeps recovered %s PoolKeys shadow-only", (chain) => {
     const target = buildUniswapV4RegisteredExecutionTarget(exactInput(chain))?.measuredExecutionTarget;
     expect(target).toBeDefined();
     expect(isDexMeasuredExecutionTargetScoreEligible(target!)).toBe(false);

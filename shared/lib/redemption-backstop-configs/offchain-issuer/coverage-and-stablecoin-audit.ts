@@ -18,6 +18,26 @@ import {
   REVIEWED_MAJOR_ISSUER_REDEMPTION_AT,
   REVIEWED_STABLECOIN_AUDIT_AT,
 } from "./shared";
+
+function midasBusinessDayReview(businessDays: 6 | 10): RedemptionV9RouteReviewTerms {
+  return {
+    businessDayTerms: {
+      businessDays, calendarId: "frankfurt-banking-target",
+      cutoff: { time: businessDays === 6 ? "23:59" : null, timezone: "Europe/Berlin" },
+      assurance: "binding-guarantee", conditional: true,
+      conditions: businessDays === 6
+        ? ["15% per-settlement-day redemption gate", "Market-disruption valuation/payment deferrals and qualified subordination; instant holdback is not standard-route capacity"]
+        : ["Greenlisting and issuer notice of order receipt after token delivery", "Market-disruption/underlying-illiquidity postponements (base conditions 6 and 7)"],
+      startEvent: businessDays === 6 ? "Accepted standard redemption after applicable gates" : "Issuer notice of receipt of the Tokenholder Order Request Form",
+      ...(businessDays === 6 ? { stages: [{ name: "realisation", businessDays: 1 }, { name: "payment-after-realisation", businessDays: 5 }] } : {}),
+    },
+    reviewedAt: "2026-10-05",
+    docs: businessDays === 6 ? [
+      sourceRef("Signed July 17, 2026 mHYPER final terms: 23:59 CET/CEST cutoff, one-day realisation and 15% gate", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FMgKVyFHWPLrKpyKjdQqL%2F20260714_mHYPER_FT_signed_final.pdf?alt=media&token=b06233b0-229f-47ce-b622-127fb63f231f", ["settlement"]),
+      sourceRef("Midas 2026 base, conditions 8.3(c) and 12", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FqYMbXAF5ckgGOgrqYF9N%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=58c911b9-1ab7-495c-97ba-d379fe9c4e5e", ["settlement"]),
+    ] : [sourceRef("Midas governing 2025 base, Business Day and redemption/deferral clauses", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FhkJf4UxNukH071S6e4GA%2FMidas_Prospectus_Update_2025%20(1).pdf?alt=media&token=9bfe7105-c648-406b-b51c-b9c4431bc335", ["settlement"])],
+  };
+}
 function assertKnownTableKeys(
   label: string,
   ids: readonly string[],
@@ -122,7 +142,7 @@ const MIDAS_LYT_TERMS_GAPS: Partial<Record<string, MidasLytTermsGap>> = {
   "mhyper-midas": {
     missingScoringFields: ["capacity", "settlement"],
     rationale:
-      "The mHYPER Final Terms retain a 0.50% redemption fee and USD/USDC/USDT/EURO settlement. Pinned Ethereum and Plasma vaults on 2026-10-02 each return instantFee=50; daily limits alone are not funded capacity. The current prospectus subjects redemption to realisation periods, gates and disruption postponements; generic 1-7 business-day documentation does not establish a product-specific unconditional calendar-day settlement bound or an executable same-notional route.",
+      "The captured fee and vault observations remain unchanged; daily limits alone are not funded capacity. Signed July 17, 2026 mHYPER terms specify one Business Day realisation plus five Business Days payment, a 23:59 CET/CEST cutoff and 15% per-settlement-day gate. Market-disruption valuation/payment deferrals and qualified subordination remain, so the six-business-day normal window is not an unconditional same-notional completion guarantee.",
   },
   "mmev-midas": {
     missingScoringFields: ["capacity", "settlement", "cost"],
@@ -170,6 +190,13 @@ const MIDAS_LYT_CONFIGS: Record<string, RedemptionBackstopConfig> = Object.fromE
         reviewedAt: "2026-09-04",
         docs: [...config.docs],
       };
+      if (id === "mhyper-midas" || id === "mmev-midas") {
+        const calendarReview = midasBusinessDayReview(id === "mhyper-midas" ? 6 : 10);
+        config.v9RouteReviewTerms = {
+          ...config.v9RouteReviewTerms, ...calendarReview,
+          docs: [...config.v9RouteReviewTerms.docs!, ...calendarReview.docs!],
+        };
+      }
     }
     config.notes = [
       `${ticker} is a NAV-accreting Midas strategy token, so the route is modeled as issuer/platform NAV redemption rather than stablecoin par liquidity.`,
@@ -550,6 +577,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "days",
+    v9RouteReviewTerms: midasBusinessDayReview(10),
     outputAssetType: "nav",
     costModel: {
       ...documentedVariableFee("Tokenholder Fee 0.50 percent redemption fee and 10 percent interest fee"),

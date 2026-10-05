@@ -5,6 +5,7 @@ import type {
 } from "../types";
 
 export const REDEMPTION_BACKSTOP_PROVIDER_IDS = {
+  UNQUANTIFIED_MODEL: "unquantified-model",
   SUPPLY_FULL_MODEL: "supply-full-model",
   SUPPLY_RATIO_MODEL: "supply-ratio-model",
   FIXED_USD_MODEL: "fixed-usd-model",
@@ -31,6 +32,12 @@ export const REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS: Record<
   RedemptionBackstopProviderId,
   RedemptionBackstopProviderDefinition
 > = {
+  [REDEMPTION_BACKSTOP_PROVIDER_IDS.UNQUANTIFIED_MODEL]: {
+    id: REDEMPTION_BACKSTOP_PROVIDER_IDS.UNQUANTIFIED_MODEL,
+    defaultSourceMode: "static",
+    defaultCapacityConfidence: "heuristic",
+    defaultCapacitySemantics: "eventual-only",
+  },
   [REDEMPTION_BACKSTOP_PROVIDER_IDS.SUPPLY_FULL_MODEL]: {
     id: REDEMPTION_BACKSTOP_PROVIDER_IDS.SUPPLY_FULL_MODEL,
     defaultSourceMode: "estimated",
@@ -75,6 +82,7 @@ export const REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS: Record<
 };
 
 export type RedemptionCapacityModelProviderKind =
+  | "unquantified"
   | "supply-full"
   | "supply-ratio"
   | "fixed-usd"
@@ -93,6 +101,8 @@ export function getProviderIdForCapacityModelKind(
   kind: RedemptionCapacityModelProviderKind,
 ): RedemptionBackstopProviderId {
   switch (kind) {
+    case "unquantified":
+      return REDEMPTION_BACKSTOP_PROVIDER_IDS.UNQUANTIFIED_MODEL;
     case "supply-full":
       return REDEMPTION_BACKSTOP_PROVIDER_IDS.SUPPLY_FULL_MODEL;
     case "supply-ratio":

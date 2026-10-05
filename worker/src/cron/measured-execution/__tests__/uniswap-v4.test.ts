@@ -319,7 +319,7 @@ describe("hook-free Uniswap V4 measured execution", () => {
     ).toBeNull();
   });
 
-  it("decode-binds pinned StateView state and exact Quoter calldata", async () => {
+  it.each(["cg_onchain", "gecko_terminal", "dl"] as const)("decode-binds pinned state and admits an exact %s retained pool", async (source) => {
     const { quotes, profile } = await runV4ProofScenario({
       amountOutRaw: 999_500_000n,
     });
@@ -342,7 +342,7 @@ describe("hook-free Uniswap V4 measured execution", () => {
         tvlUsd: profile.retainedTvlUsdAtQuote,
         symbol: `${profile.tokenIn.symbol}-${profile.tokenOut.symbol}`,
         poolType: "cg-concentrated",
-        source: "cg_onchain",
+        source,
         extra: {
           measuredExecution,
           measuredExecutionPhysicalPoolId: profile.poolId,

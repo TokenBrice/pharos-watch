@@ -5,6 +5,9 @@ import { CHAIN_META } from "./chain-identity";
 import { V9ControlCapabilitySchema, V9ControlCapSemanticsSchema, V9ClaimImpairmentSchema, V9EconomicLossScopeSchema } from "./safety-score-v9-fact-input-primitives";
 
 const Text = z.string().trim().min(1);
+export const V9ControlQuestionSubjectSchema = z.enum(["authority-semantics", "execution-scope", "key-custody-independence"]);
+export type V9ControlQuestionSubject = z.output<typeof V9ControlQuestionSubjectSchema>;
+
 const Deployment = Text.refine((value) => normalizeDeploymentId(value) !== "", "Expected chain-qualified deployment").transform(normalizeDeploymentId);
 
 /** HyperCore credits and EVM escrow releases are executed by the same L1,

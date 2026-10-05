@@ -6,6 +6,7 @@ export function resolveCapacityBasis(
   model: RedemptionCapacityModel,
   capacityConfidence?: RedemptionBackstopEntry["capacityConfidence"],
 ): RedemptionBackstopEntry["capacityBasis"] | undefined {
+  if (model.kind === "unquantified") return undefined;
   if (model.kind === "reserve-sync-metadata") {
     if (capacityConfidence === "live-direct") return "live-direct-telemetry";
     if (capacityConfidence === "live-proxy") return "live-proxy-buffer";

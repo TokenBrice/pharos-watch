@@ -1,5 +1,7 @@
 import type { RedemptionSettlementModel } from "../../types";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "../safety-score-v9/evidence";
+import { maximumBusinessDaySettlement } from "../business-calendars";
+import type { RedemptionV9RouteReviewTerms } from "./schema";
 import type { RedemptionBackstopConfig } from "./schema";
 
 const REDEMPTION_SETTLEMENT_CONSERVATISM: readonly RedemptionSettlementModel[] = [
@@ -34,6 +36,20 @@ export function resolveMoreConservativeRedemptionSettlement(
   return isRedemptionSettlementAtLeastAsConservative(right, left) ? right : left;
 }
 
+/** Calendar terms never fall back to a scalar, target or conditional normal window. */
+export function resolveReviewedRedemptionSettlementDelay(
+  reviewed: RedemptionV9RouteReviewTerms | undefined,
+  clockSec: number,
+): number | undefined {
+  if (!reviewed?.businessDayTerms) return reviewed?.settlementDelaySec;
+  const reviewSec = reviewed.reviewedAt ? Date.parse(`${reviewed.reviewedAt}T00:00:00Z`) / 1_000 : Number.NaN;
+  if (!Number.isFinite(reviewSec) || reviewSec > clockSec ||
+      clockSec - reviewSec > V9_REVIEW_EVIDENCE_MAX_AGE_SEC ||
+      !(reviewed.docs ?? []).some((doc) => doc.supports?.includes("settlement"))) return undefined;
+  const bound = maximumBusinessDaySettlement(reviewed.businessDayTerms, clockSec);
+  return bound.state === "known" ? bound.maximumElapsedSec : undefined;
+}
+
 /**
  * Resolve the settlement model published by the standalone redemption row.
  * Reviewed corrections are shared with V9 so a route cannot carry two coarse
@@ -54,7 +70,7 @@ export function resolveReviewedRedemptionSettlement(
     ? Date.parse(`${reviewed.reviewedAt}T00:00:00.000Z`) / 1_000
     : Number.NaN;
   const current =
-    reviewed.settlementDelaySec !== undefined &&
+    resolveReviewedRedemptionSettlementDelay(reviewed, clockSec) !== undefined &&
     (reviewed.docs?.length ?? 0) > 0 &&
     Number.isFinite(reviewedAtSec) &&
     reviewedAtSec <= clockSec &&

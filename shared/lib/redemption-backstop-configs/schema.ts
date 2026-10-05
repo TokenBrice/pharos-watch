@@ -19,7 +19,8 @@ import type { RedemptionDocSource } from "../../types";
 import { isValidIsoDateOnly } from "../../types/date-primitives";
 import { formatUtcDateOnly } from "../format";
 import { isRedemptionSettlementFaster } from "./settlement";
-import { RedemptionRouteSuspensionSchema } from "../../types/redemption";
+import { RedemptionBusinessDayTermsSchema, RedemptionRouteSuspensionSchema } from "../../types/redemption";
+import { LiveReserveRedemptionTelemetrySchema } from "../../types/live-reserves";
 
 const MAX_REDEMPTION_OUTPUT_ASSETS = 16;
 const RatioSchema = z.number().finite().gt(0).lte(1);
@@ -52,6 +53,12 @@ const RedemptionDocSourceSchema: z.ZodType<RedemptionDocSource> = z.strictObject
 
 const RedemptionCapacityModelSchema = z.discriminatedUnion("kind", [
   z.strictObject({
+    // Reviewed route terms without any quantified immediate or eventual capacity.
+    kind: z.literal("unquantified"),
+    confidence: z.literal("heuristic").optional(),
+    basis: RedemptionCapacityBasisSchema.optional(),
+  }),
+  z.strictObject({
     kind: z.literal("supply-full"),
     confidence: StaticCapacityConfidenceSchema.optional(),
     basis: RedemptionCapacityBasisSchema.optional(),
@@ -73,6 +80,8 @@ const RedemptionCapacityModelSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("reserve-sync-metadata"),
     fallbackRatio: RatioSchema.optional(),
+    // A backing-token balance is not proof of a different redemption payout.
+    requiredOutputAssetKeys: LiveReserveRedemptionTelemetrySchema.shape.outputAssetKeys,
     fallbackUsd: NonNegativeNumberSchema.optional(),
     confidence: StaticCapacityConfidenceSchema.optional(),
     /**
@@ -111,6 +120,7 @@ const RedemptionV9RouteReviewTermsSchema = z.strictObject({
   minRedeemUsd: NonNegativeNumberSchema.optional(),
   settlementModel: RedemptionSettlementModelSchema.optional(),
   settlementDelaySec: z.number().int().nonnegative().optional(),
+  businessDayTerms: RedemptionBusinessDayTermsSchema.optional(),
   scoringDisposition: z.literal("bounded-terms-gap").optional(),
   missingScoringFields: z.array(RedemptionV9RouteScoringFieldSchema).min(1).optional(),
   rationale: z.string().min(1).optional(),
@@ -302,6 +312,18 @@ export const RedemptionBackstopConfigSchema = z
     notes: z.array(z.string()).optional(),
   })
   .superRefine((config, ctx) => {
+    if (config.capacityModel.kind === "reserve-sync-metadata" && config.capacityModel.requiredOutputAssetKeys) {
+      const requiredKeys = config.capacityModel.requiredOutputAssetKeys;
+      const configuredKeys = config.outputAssets ?? config.unresolvedOutputAssetKeys ?? [];
+      if (requiredKeys.length !== configuredKeys.length ||
+          !requiredKeys.every((key) => configuredKeys.includes(key))) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["capacityModel", "requiredOutputAssetKeys"],
+          message: "Required telemetry output identities must exactly match the complete configured output set",
+        });
+      }
+    }
     if ((config.routeStatus === "suspended") !== (config.routeSuspension !== undefined)) {
       ctx.addIssue({ code: "custom", path: ["routeSuspension"], message: "Suspended status requires an exact-channel reviewed suspension, and only suspended status may carry it" });
     }
@@ -329,6 +351,14 @@ export const RedemptionBackstopConfigSchema = z
       });
     }
     const reviewedSettlement = config.v9RouteReviewTerms;
+    if (reviewedSettlement?.businessDayTerms !== undefined) {
+      if (reviewedSettlement.settlementDelaySec !== undefined) {
+        ctx.addIssue({ code: "custom", path: ["v9RouteReviewTerms", "settlementDelaySec"], message: "Business-day terms and an elapsed-second SLA are mutually exclusive" });
+      }
+      if (reviewedSettlement.reviewedAt === undefined || reviewedSettlement.docs === undefined) {
+        ctx.addIssue({ code: "custom", path: ["v9RouteReviewTerms", "businessDayTerms"], message: "Business-day terms require dated settlement sources" });
+      }
+    }
     if (reviewedSettlement?.scoringDisposition === "bounded-terms-gap") {
       if (reviewedSettlement.missingScoringFields === undefined) {
         ctx.addIssue({
@@ -375,7 +405,7 @@ export const RedemptionBackstopConfigSchema = z
       isRedemptionSettlementFaster(reviewedSettlement.settlementModel, config.settlementModel);
     if (
       fasterSettlementModel &&
-      (reviewedSettlement.settlementDelaySec === undefined ||
+      ((reviewedSettlement.settlementDelaySec === undefined && reviewedSettlement.businessDayTerms === undefined) ||
         reviewedSettlement.reviewedAt === undefined ||
         reviewedSettlement.docs === undefined)
     ) {
@@ -383,7 +413,7 @@ export const RedemptionBackstopConfigSchema = z
         code: "custom",
         path: ["v9RouteReviewTerms", "settlementModel"],
         message:
-          "Faster V9 reviewed settlement requires settlementDelaySec, reviewedAt, and at least one docs source",
+          "Faster V9 reviewed settlement requires exact or calendar terms, reviewedAt, and at least one docs source",
       });
     }
     if (

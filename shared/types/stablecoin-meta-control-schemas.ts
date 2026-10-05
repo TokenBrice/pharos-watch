@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { V9ControlExecutionScopeSchema, V9WeightedQuorumSchema, V9SameChainSystemTransportSchema, V1005ExecutionClassRefSchema, V1005ExecutionCertificatesSchema, V1005AuthorityGraphSchema, V1005VotingControlSchema, V1005OperationalIssuanceSchema } from "./safety-score-v9-control-scope";
+import { V9ControlExecutionScopeSchema, V9WeightedQuorumSchema, V9SameChainSystemTransportSchema, V1005ExecutionClassRefSchema, V1005ExecutionCertificatesSchema, V1005AuthorityGraphSchema, V1005VotingControlSchema, V1005OperationalIssuanceSchema, V9ControlQuestionSubjectSchema } from "./safety-score-v9-control-scope";
 import { normalizeDeploymentId } from "./deployment-id";
 import {
   BRIDGE_ROUTE_CLASS_VALUES,
@@ -651,6 +651,7 @@ const ControlScopedQuestionSchema = z
   .object({
     controlRef: z.string().min(1),
     question: z.string().min(12),
+    subject: V9ControlQuestionSubjectSchema.optional(),
     reviewedAt: ReviewDateSchema,
     reviewer: z.string().min(1),
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
