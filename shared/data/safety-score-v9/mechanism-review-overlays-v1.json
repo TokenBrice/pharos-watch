@@ -20721,45 +20721,47 @@
     {
       "assetId": "oned-gennius",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-05",
       "sources": [
         {
-          "label": "Coinbase ONED custody and conversion",
+          "label": "Coinbase ONED custody and conversion, rechecked 2026-10-05",
           "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins"
         },
         {
-          "label": "Coinbase ONED itemized reserve dashboard",
+          "label": "Coinbase ONED itemized reserve dashboard, refreshed 2026-10-05 00:50, timezone unspecified",
           "url": "https://www.coinbase.com/en-in/oned/proof-of-reserves"
         },
         {
-          "label": "ONED native holder terms",
+          "label": "ONED native holder terms incorporating Coinbase terms, rechecked 2026-10-05",
           "url": "https://oned.global/#/end-user-terms-and-conditions"
         },
         {
-          "label": "Gennius ONED platform terms",
+          "label": "Gennius ONED platform terms, effective May 2026, rechecked 2026-10-05",
           "url": "https://tc.oned.global/#/oned"
         },
         {
-          "label": "Verified current ONED implementation",
+          "label": "Verified current ONED implementation (retained prior identity evidence)",
           "url": "https://basescan.org/address/0x57ab1e54fca80105a93a735b59f850f8420b5e2c#code"
         },
         {
-          "label": "Pinned Base reserve and liability RPC reads",
+          "label": "Pinned Base reserve and liability reads, block 52186383, observed 2026-10-05T01:01:54Z",
           "url": "https://base-mainnet.g.alchemy.com"
+        },
+        {
+          "label": "Coinbase Individual User Agreement, updated July 22 2026, Appendix 4 sections 13.1.1-13.1.3 and incorporated section 2.7",
+          "url": "https://www.coinbase.com/legal/user_agreement/united_states"
         }
       ],
-      "notes": "Coinbase dashboard displayed 11857520.08 USDC against 11857520.01 ONED, refreshed 10/2/2026 10:43 PM with timezone unspecified. At Base block 52095848, five listed USDC wallets summed to 11857520.082376 and exact ONED totalSupply was 11857520.01; this independently reproduced issuer-published itemized reconciliation supports limited assuranceAndReconciliation only. It is not independent financial assurance, evidence of absence of off-chain obligations, or legal segregation. Native holder/platform terms and Coinbase help establish eligible operational conversion but do not establish local beneficial reserve title, insolvency priority, continuity safeguards or encumbrance limits. Underlying Circle assurance is not ONED-specific.",
+      "notes": "All three components re-reviewed 2026-10-05. Native ONED holder terms expressly incorporate Coinbase's terms and give them precedence. Coinbase Individual User Agreement Appendix 4 sections 13.1.1-13.1.3 establish a transferable ownership interest in corresponding USDC reserves, custody for CCS holders and retained holder title; incorporated section 2.7.1 excludes Coinbase creditor claims and prohibits unauthorized lending/hypothecation, while 2.7.4 permits omnibus addresses. These binding issuer/service terms plus the exact ONED dashboard and chain anchor support limited claimAndSegregation, not independently verified statutory bankruptcy remoteness. Section 13.3.3 limits shortfall liability to the holder's pro-rata share. Coinbase dashboard displayed 11857520.08 USDC against 11857520.01 ONED, refreshed 10/5/2026 12:50 AM, timezone unspecified. At Base block 52186383, the five listed USDC wallets summed to 11857520.082376 and exact ONED totalSupply was 11857520.01; this reproduced itemized snapshot supports limited assuranceAndReconciliation, not independent financial assurance or whole-liability recurring mint reconciliation. Current platform/native/Coinbase terms do not publish a token-specific custodian failure/replacement and recovery-continuity arrangement; custodyContinuity remains unavailable despite disclosed custody identity and contractual reserve title safeguards. Redemption can be delayed or paused and liquidity is not backstopped. Underlying Circle assurance is not ONED-specific.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
-          "applicability": "unavailable",
-          "rationale": "Native ONED terms and platform terms do not establish token-specific legal reserve segregation, beneficial claim or insolvency priority.",
-          "sourceUrl": "https://oned.global/#/end-user-terms-and-conditions"
+          "quality": "limited"
         },
         "custodyContinuity": {
           "applicability": "unavailable",
-          "rationale": "Coinbase custody identity and itemized wallets are public, but token-specific operational continuity and legal reserve safeguards are not established.",
-          "sourceUrl": "https://www.coinbase.com/en-in/oned/proof-of-reserves"
+          "rationale": "Coinbase custody identity, itemized wallets and contractual reserve ownership/non-rehypothecation safeguards are disclosed. Current ONED, Gennius and Coinbase terms do not publish the token-specific custodian failure/replacement and reserve-recovery continuity arrangement.",
+          "sourceUrl": "https://www.coinbase.com/legal/user_agreement/united_states"
         },
         "assuranceAndReconciliation": {
           "quality": "limited"
