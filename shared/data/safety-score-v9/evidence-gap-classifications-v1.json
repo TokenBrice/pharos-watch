@@ -32775,40 +32775,6 @@
       "rationale": "The required liquidityHorizon covers the entire deployed Morpho lender-position slice, not the separately identified idle underlying. Source code, strategy/product disclosures, legal terms and technical/audit archive disclose cash exits constrained by available liquidity and force-deallocation into protocol positions, but no guaranteed whole-slice realization/repayment maximum. An observed liquidity buffer or on-chain transaction speed is not a guarantee for the deployed slice. No per-slice immediate, one-day, seven-day or longer contractual cash horizon can be curated honestly."
     },
     {
-      "id": "uw-senpyusdprimev2-sentora-a3f1b6e84685a6d1",
-      "assetId": "senpyusdprimev2-sentora",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "contractMutability",
-        "pillar": "backing",
-        "requiredDatum": "contractMutability",
-        "routeKey": null
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T23:00:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R24)",
-      "sources": [
-        {
-          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
-          "observedAt": "2026-10-03T22:59:47Z",
-          "datumAsOf": null,
-          "location": "Immutable Contracts",
-          "excerpt": "All vault contracts are immutable-no upgrades can change the core noncustodial guarantees after deployment.",
-          "assertion": "Exact catalog vault is source-verified VaultV2, with bytecode matched at block 26114894. Existing immutable upgradeability is already curated but compiler gates wrapper mutability on known aggregate mint review."
-        },
-        {
-          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
-          "observedAt": "2026-10-03T23:00:02Z",
-          "datumAsOf": null,
-          "location": "Verified exact deployed VaultV2 implementation",
-          "excerpt": "contract VaultV2 is IVaultV2 {",
-          "assertion": "Exact immutable runtime has no upgrade entrypoint. Independent immutable-code fact cannot currently clear wrapper contractMutability while unrelated registry/delegated authorization questions keep aggregate mint non-known."
-        }
-      ]
-    },
-    {
       "id": "uw-zarp-zarp-b944509ac807af36",
       "assetId": "zarp-zarp",
       "scope": {

@@ -122,13 +122,13 @@
     ]
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
+    "tier": "standard-external",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
-    "summary": "Pinned block 26107702: 1 funded Morpho markets have exact oracle/LLTV identities and all six BASE/QUOTE feed/vault getter values. Vault accounting is verified price-feed-independent; borrower liquidation pricing remains applicable. Upstream feed administrator, heartbeat and mutable NAV-controller closure remain incomplete, so no standard-external or redundant tier is asserted.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
-    "confidence": "probable",
+    "summary": "Ethereum block 26122338 confirms one current funded market and the exact bytecode-matched MorphoChainlinkOracleV2, with fixed PRIME/WYLDS and PYUSD/USD Chainlink OCR2 feeds and no embedded vault or second-feed inputs. Chainlink's exact Ethereum feed directory publishes 86400-second heartbeats for both addresses. This is ordinary external signed-feed pricing, not independent fallback/redundancy or a financial NAV attestation. Morpho's library does not enforce freshness or min/max bounds. Upstream PRIME uses a role-mutable UUPS StakingVault and Chainlink Data Streams FeedVerifier; issuer upgrade, rewards and oracle-role powers are not asserted absent.",
+    "reviewedAt": "2026-10-04",
+    "reviewer": "Unknown-resolver wave 3 (W3R15), exact feed directory and pinned runtime review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Sentora PRIME Main exact vault",
@@ -169,6 +169,26 @@
       {
         "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x335e5718bc20028d5e357473a3736c187ca6b07e"
+      },
+      {
+        "label": "Chainlink Ethereum feed directory, exact PRIME/WYLDS and PYUSD/USD proxy records",
+        "url": "https://reference-data-directory.vercel.app/feeds-mainnet.json"
+      },
+      {
+        "label": "PRIME/WYLDS signed OCR2 aggregator source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x48f9a46ba852b5c22d4153d0534397b59abfdef5"
+      },
+      {
+        "label": "PRIME current StakingVault implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x881fe0e5e91c54fabbf0198a1bb2fc6e5747d4c5"
+      },
+      {
+        "label": "PRIME current Chainlink Data Streams FeedVerifier implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc6023cb49f8e8ca6cef563d5fd97ba4c6a5d937"
+      },
+      {
+        "label": "Ethereum exact feed, role and implementation observation",
+        "url": "https://etherscan.io/block/26122338"
       }
     ],
     "branchApplicability": {
@@ -300,8 +320,8 @@
       {
         "id": "0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa",
         "label": "Morpho market 0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact market oracle 0x335e5718bc20028d5e357473a3736c187ca6b07e: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0xf17c0edcaa28371e9c8012d7699bf40ecf0f58d1\",\"BASE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_FEED_1\":\"0x8f1df6d7f2db73eece86a18b4381f4707b918fb1\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "tier": "standard-external",
+        "summary": "Block 26122338: sole funded market 0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa uses immutable MorphoChainlinkOracleV2 0x335e5718bc20028d5e357473a3736c187ca6b07e. BASE_FEED_1 is Chainlink PRIME/WYLDS proxy 0xf17c0edcaa28371e9c8012d7699bf40ecf0f58d1, aggregator 0x48f9a46ba852b5c22d4153d0534397b59abfdef5; QUOTE_FEED_1 is Chainlink PYUSD/USD proxy 0x8f1df6d7f2db73eece86a18b4381f4707b918fb1, aggregator 0x39e31761911b9aabaef5fb81b18fd1c24a60e884. Both published heartbeats are 86400 seconds. Both proxy/aggregator owners are 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca. BASE/QUOTE_FEED_2 and BASE/QUOTE_VAULT are zero, so there is no independent fallback. PRIME's current StakingVault reads signed Schema-v7 NAV reports through FeedVerifier 0xdf4ab20fa7752be52e41e42f1fd667f37964d6a3, selected feedId 0x0007c8ed155d952e003b1e15ce7666fea785cfbe216577d578fce3920e997271. Its mutable default-admin/upgrader is 0x4acd2c83616d42b87788ecef4039e7355dd23a39; no key-independence, immutable-NAV or financial-assurance finding is inferred.",
         "collateralAssets": [
           "0x19ebb35279a16207ec4ba82799cc64715065f7f6"
         ],
@@ -314,29 +334,31 @@
             "path": "price(): collateral/loan token conversion; scale 1e36",
             "address": "0x335e5718bc20028d5e357473a3736c187ca6b07e",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-04",
+            "observedBlock": 26122338
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
-            "path": "BASE_FEED_1",
+            "provider": "Chainlink OCR2 PRIME / WYLDS Exchange Rate",
+            "path": "BASE_FEED_1; signed external exchange-rate feed, aggregator 0x48f9a46ba852b5c22d4153d0534397b59abfdef5",
             "address": "0xf17c0edcaa28371e9c8012d7699bf40ecf0f58d1",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "heartbeatSec": 86400,
+            "observedAt": "2026-10-04",
+            "observedBlock": 26122338
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
-            "path": "QUOTE_FEED_1",
+            "provider": "Chainlink OCR2 PYUSD / USD",
+            "path": "QUOTE_FEED_1; signed external dollar-price feed, aggregator 0x39e31761911b9aabaef5fb81b18fd1c24a60e884",
             "address": "0x8f1df6d7f2db73eece86a18b4381f4707b918fb1",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "heartbeatSec": 86400,
+            "observedAt": "2026-10-04",
+            "observedBlock": 26122338
           }
         ],
-        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Upstream feed heartbeat and administrator guarantees remain unverified.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "fallbackBehavior": "No alternate price path or fallback exists. ChainlinkDataFeedLib consumes latestRoundData and only rejects negative answers; it explicitly omits staleness and min/max checks. Published 86400-second feed heartbeats are update promises, not an enforced age bound. At block 26122338 the base answer age is 68340 seconds and quote age 13692 seconds. Separately, PRIME's native FeedVerifier enforces its current 3600-second NAV report age; that check is not applied by the Morpho borrower oracle. Feed administrators can replace OCR2 aggregators and Hastra's default admin/upgrader can change its upstream NAV implementation; neither control is claimed absent.",
+        "observedAt": "2026-10-04",
+        "observedBlock": 26122338,
         "collateralParameters": [
           {
             "asset": "0x19ebb35279a16207ec4ba82799cc64715065f7f6",
@@ -387,6 +409,26 @@
           {
             "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x335e5718bc20028d5e357473a3736c187ca6b07e"
+          },
+          {
+            "label": "Chainlink Ethereum feed directory, exact proxy heartbeats and aggregator identities",
+            "url": "https://reference-data-directory.vercel.app/feeds-mainnet.json"
+          },
+          {
+            "label": "PRIME/WYLDS signed OCR2 aggregator",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x48f9a46ba852b5c22d4153d0534397b59abfdef5"
+          },
+          {
+            "label": "PRIME StakingVault exact current NAV source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x881fe0e5e91c54fabbf0198a1bb2fc6e5747d4c5"
+          },
+          {
+            "label": "PRIME FeedVerifier exact current report verification source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc6023cb49f8e8ca6cef563d5fd97ba4c6a5d937"
+          },
+          {
+            "label": "Ethereum current market, implementation, roles and feed observation",
+            "url": "https://etherscan.io/block/26122338"
           }
         ]
       }
