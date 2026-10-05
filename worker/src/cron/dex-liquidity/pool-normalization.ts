@@ -27,6 +27,8 @@ export function normalizeProtocol(project: string): string {
   if (p.includes("traderjoe")) return "trader-joe";
   if (p.includes("raydium")) return "raydium";
   if (p.includes("orca")) return "orca";
+  if (p === "cetus" || p === "cetusclmm") return "cetus";
+  if (p === "bluefin" || p === "bluefinspot") return "bluefin";
   if (p.includes("quickswap")) return "quickswap";
   if (p.includes("ekubo")) return "ekubo";
   return project;

@@ -7,6 +7,7 @@
  */
 import { syncDexMeasuredExecution } from "../../cron/measured-execution/sync";
 import { collectWhirlpoolShadowQuotes, collectRaydiumShadowQuotes } from "../../cron/dex-liquidity/solana/whirlpool-shadow";
+import { collectSuiClmmShadowQuotes } from "../../cron/dex-liquidity/sui/shadow";
 import { collectDlmmShadowQuotes } from "../../cron/dex-liquidity/solana/dlmm-shadow";
 import { throwIfAborted } from "../../lib/abort";
 import type { CronResult } from "../../lib/cron-logger";
@@ -59,6 +60,15 @@ export async function runHalfHourlyMeasuredExecutionSlot(runtime: ScheduledRunti
         raydiumShadow = { error: toErrorMessage(error).slice(0, 240), scoreEligible: false, durationMs: Date.now() - raydiumStartedAt };
       }
       throwIfAborted(signal);
+      let suiShadow: unknown;
+      const suiStartedAt = Date.now();
+      try {
+        suiShadow = await collectSuiClmmShadowQuotes({ db: runtime.db, env: runtime.env, signal });
+      } catch (error) {
+        throwIfAborted(signal);
+        suiShadow = { error: toErrorMessage(error).slice(0, 240), scoreEligible: false, durationMs: Date.now() - suiStartedAt };
+      }
+      throwIfAborted(signal);
       let meteoraShadow: unknown;
       const meteoraStartedAt = Date.now();
       try {
@@ -69,7 +79,7 @@ export async function runHalfHourlyMeasuredExecutionSlot(runtime: ScheduledRunti
         throwIfAborted(signal);
         meteoraShadow = { error: toErrorMessage(error).slice(0, 240), scoreEligible: false, durationMs: Date.now() - meteoraStartedAt };
       }
-      return { ...evm, metadata: JSON.stringify({ ...JSON.parse(evm.metadata ?? "{}"), orcaShadow, raydiumShadow, meteoraShadow }) };
+      return { ...evm, metadata: JSON.stringify({ ...JSON.parse(evm.metadata ?? "{}"), orcaShadow, raydiumShadow, suiShadow, meteoraShadow }) };
     },
   });
 }
