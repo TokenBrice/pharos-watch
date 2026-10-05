@@ -38836,6 +38836,286 @@
           "assertion": "After-cutoff requests roll to the next business day. A business-calendar model is needed before this term can become an exact elapsed-second settlement SLA."
         }
       ]
+    },
+    {
+      "id": "uw-nbasis-nest-c75e3440f4e6897d",
+      "assetId": "nbasis-nest",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:ff2aec19f6de12be3fe60567",
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-exposure",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T23:49:51Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R17)",
+      "sources": [
+        {
+          "url": "https://docs.superstate.com/investors/api/transactions-api.md",
+          "observedAt": "2026-10-04T23:47:42Z",
+          "datumAsOf": null,
+          "location": "Authentication; transaction_type note",
+          "excerpt": "This endpoint requires API key authentication with the `TransactionViewer` role. Contact Superstate for an API key.",
+          "assertion": "The transaction status and payment-to-subscription binding needed to identify this unsettled claim are private, not an on-chain token holding."
+        },
+        {
+          "url": "https://docs.superstate.com/investors/tokenized-funds/subscribe.md",
+          "observedAt": "2026-10-04T23:43:44Z",
+          "datumAsOf": null,
+          "location": "How to subscribe In the portal, steps 3\u20134",
+          "excerpt": "3. Send funds following the displayed instructions.",
+          "assertion": "Subscription payment instructions and completion evidence are investor-specific; a pending payment cannot be classified as delivered USCC shares."
+        },
+        {
+          "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/positions?liveLiquidity=true",
+          "observedAt": "2026-10-04T23:46:51Z",
+          "datumAsOf": null,
+          "location": "data.positions.yieldAssets[superstate-uscc].tokens[0].pendingTransactions",
+          "excerpt": "\"pendingTransactions\":[{\"type\":\"PendingDeposit\",\"amount\":1,\"price\":4400,\"value\":4400}]",
+          "assertion": "Even liveLiquidity=true omits requestId, payment destination, legal claim and settlement status for the USD4,400 pending item."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://nest.credit/",
+        "https://docs.nest.credit/about/assets",
+        "https://docs.nest.credit/security-and-compliance/audits",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions",
+        "https://api.nest.credit/v1/vaults/nest-basis-vault/positions?liveLiquidity=true",
+        "https://docs.nest.credit/developers/api/reference/vaults/slug/positions/get",
+        "https://docs.superstate.com/investors/tokenized-funds/subscribe.md",
+        "https://docs.superstate.com/investors/api/transactions-api.md",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc.md",
+        "https://docs.superstate.com/investors/smart-contracts.md",
+        "https://superstate.com/assets/uscc"
+      ],
+      "rationale": "The exact USD4,400 unsettled claim class (including reserve-exposure), obligor, maximum maturity and realization horizon are not publicly disclosed. The live query still omits the schema-supported requestId. Superstate expressly makes transaction state and payment allocation private/authenticated and documents that inbound payments are not completed subscriptions. Its issued USCC token and generic T+1/T+2 dealing terms cannot identify this pending claim or contractual rights. The unavailable Nest risk board is not the basis for C."
+    },
+    {
+      "id": "uw-nbasis-nest-d3ad34ce8639adfa",
+      "assetId": "nbasis-nest",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:ff2aec19f6de12be3fe60567",
+        "factorKey": "assetClass",
+        "pillar": "backing",
+        "requiredDatum": "assetClass",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T23:49:51Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R17)",
+      "sources": [
+        {
+          "url": "https://docs.superstate.com/investors/api/transactions-api.md",
+          "observedAt": "2026-10-04T23:47:42Z",
+          "datumAsOf": null,
+          "location": "Authentication; transaction_type note",
+          "excerpt": "This endpoint requires API key authentication with the `TransactionViewer` role. Contact Superstate for an API key.",
+          "assertion": "The transaction status and payment-to-subscription binding needed to identify this unsettled claim are private, not an on-chain token holding."
+        },
+        {
+          "url": "https://docs.superstate.com/investors/tokenized-funds/subscribe.md",
+          "observedAt": "2026-10-04T23:43:44Z",
+          "datumAsOf": null,
+          "location": "How to subscribe In the portal, steps 3\u20134",
+          "excerpt": "3. Send funds following the displayed instructions.",
+          "assertion": "Subscription payment instructions and completion evidence are investor-specific; a pending payment cannot be classified as delivered USCC shares."
+        },
+        {
+          "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/positions?liveLiquidity=true",
+          "observedAt": "2026-10-04T23:46:51Z",
+          "datumAsOf": null,
+          "location": "data.positions.yieldAssets[superstate-uscc].tokens[0].pendingTransactions",
+          "excerpt": "\"pendingTransactions\":[{\"type\":\"PendingDeposit\",\"amount\":1,\"price\":4400,\"value\":4400}]",
+          "assertion": "Even liveLiquidity=true omits requestId, payment destination, legal claim and settlement status for the USD4,400 pending item."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://nest.credit/",
+        "https://docs.nest.credit/about/assets",
+        "https://docs.nest.credit/security-and-compliance/audits",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions",
+        "https://api.nest.credit/v1/vaults/nest-basis-vault/positions?liveLiquidity=true",
+        "https://docs.nest.credit/developers/api/reference/vaults/slug/positions/get",
+        "https://docs.superstate.com/investors/tokenized-funds/subscribe.md",
+        "https://docs.superstate.com/investors/api/transactions-api.md",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc.md",
+        "https://docs.superstate.com/investors/smart-contracts.md",
+        "https://superstate.com/assets/uscc"
+      ],
+      "rationale": "The exact USD4,400 unsettled claim class (including reserve-exposure), obligor, maximum maturity and realization horizon are not publicly disclosed. The live query still omits the schema-supported requestId. Superstate expressly makes transaction state and payment allocation private/authenticated and documents that inbound payments are not completed subscriptions. Its issued USCC token and generic T+1/T+2 dealing terms cannot identify this pending claim or contractual rights. The unavailable Nest risk board is not the basis for C."
+    },
+    {
+      "id": "uw-nbasis-nest-45312db2563706b1",
+      "assetId": "nbasis-nest",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:ff2aec19f6de12be3fe60567",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T23:49:51Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R17)",
+      "sources": [
+        {
+          "url": "https://docs.superstate.com/investors/api/transactions-api.md",
+          "observedAt": "2026-10-04T23:47:42Z",
+          "datumAsOf": null,
+          "location": "Authentication; transaction_type note",
+          "excerpt": "This endpoint requires API key authentication with the `TransactionViewer` role. Contact Superstate for an API key.",
+          "assertion": "The transaction status and payment-to-subscription binding needed to identify this unsettled claim are private, not an on-chain token holding."
+        },
+        {
+          "url": "https://docs.superstate.com/investors/tokenized-funds/subscribe.md",
+          "observedAt": "2026-10-04T23:43:44Z",
+          "datumAsOf": null,
+          "location": "How to subscribe In the portal, steps 3\u20134",
+          "excerpt": "3. Send funds following the displayed instructions.",
+          "assertion": "Subscription payment instructions and completion evidence are investor-specific; a pending payment cannot be classified as delivered USCC shares."
+        },
+        {
+          "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/positions?liveLiquidity=true",
+          "observedAt": "2026-10-04T23:46:51Z",
+          "datumAsOf": null,
+          "location": "data.positions.yieldAssets[superstate-uscc].tokens[0].pendingTransactions",
+          "excerpt": "\"pendingTransactions\":[{\"type\":\"PendingDeposit\",\"amount\":1,\"price\":4400,\"value\":4400}]",
+          "assertion": "Even liveLiquidity=true omits requestId, payment destination, legal claim and settlement status for the USD4,400 pending item."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://nest.credit/",
+        "https://docs.nest.credit/about/assets",
+        "https://docs.nest.credit/security-and-compliance/audits",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions",
+        "https://api.nest.credit/v1/vaults/nest-basis-vault/positions?liveLiquidity=true",
+        "https://docs.nest.credit/developers/api/reference/vaults/slug/positions/get",
+        "https://docs.superstate.com/investors/tokenized-funds/subscribe.md",
+        "https://docs.superstate.com/investors/api/transactions-api.md",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc.md",
+        "https://docs.superstate.com/investors/smart-contracts.md",
+        "https://superstate.com/assets/uscc"
+      ],
+      "rationale": "The exact USD4,400 unsettled claim class (including reserve-exposure), obligor, maximum maturity and realization horizon are not publicly disclosed. The live query still omits the schema-supported requestId. Superstate expressly makes transaction state and payment allocation private/authenticated and documents that inbound payments are not completed subscriptions. Its issued USCC token and generic T+1/T+2 dealing terms cannot identify this pending claim or contractual rights. The unavailable Nest risk board is not the basis for C."
+    },
+    {
+      "id": "uw-nbasis-nest-bc2054032583a90b",
+      "assetId": "nbasis-nest",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:ff2aec19f6de12be3fe60567",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T23:49:51Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R17)",
+      "sources": [
+        {
+          "url": "https://docs.superstate.com/investors/api/transactions-api.md",
+          "observedAt": "2026-10-04T23:47:42Z",
+          "datumAsOf": null,
+          "location": "Authentication; transaction_type note",
+          "excerpt": "This endpoint requires API key authentication with the `TransactionViewer` role. Contact Superstate for an API key.",
+          "assertion": "The transaction status and payment-to-subscription binding needed to identify this unsettled claim are private, not an on-chain token holding."
+        },
+        {
+          "url": "https://docs.superstate.com/investors/tokenized-funds/subscribe.md",
+          "observedAt": "2026-10-04T23:43:44Z",
+          "datumAsOf": null,
+          "location": "How to subscribe In the portal, steps 3\u20134",
+          "excerpt": "3. Send funds following the displayed instructions.",
+          "assertion": "Subscription payment instructions and completion evidence are investor-specific; a pending payment cannot be classified as delivered USCC shares."
+        },
+        {
+          "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/positions?liveLiquidity=true",
+          "observedAt": "2026-10-04T23:46:51Z",
+          "datumAsOf": null,
+          "location": "data.positions.yieldAssets[superstate-uscc].tokens[0].pendingTransactions",
+          "excerpt": "\"pendingTransactions\":[{\"type\":\"PendingDeposit\",\"amount\":1,\"price\":4400,\"value\":4400}]",
+          "assertion": "Even liveLiquidity=true omits requestId, payment destination, legal claim and settlement status for the USD4,400 pending item."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://nest.credit/",
+        "https://docs.nest.credit/about/assets",
+        "https://docs.nest.credit/security-and-compliance/audits",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions",
+        "https://api.nest.credit/v1/vaults/nest-basis-vault/positions?liveLiquidity=true",
+        "https://docs.nest.credit/developers/api/reference/vaults/slug/positions/get",
+        "https://docs.superstate.com/investors/tokenized-funds/subscribe.md",
+        "https://docs.superstate.com/investors/api/transactions-api.md",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc.md",
+        "https://docs.superstate.com/investors/smart-contracts.md",
+        "https://superstate.com/assets/uscc"
+      ],
+      "rationale": "The exact USD4,400 unsettled claim class (including reserve-exposure), obligor, maximum maturity and realization horizon are not publicly disclosed. The live query still omits the schema-supported requestId. Superstate expressly makes transaction state and payment allocation private/authenticated and documents that inbound payments are not completed subscriptions. Its issued USCC token and generic T+1/T+2 dealing terms cannot identify this pending claim or contractual rights. The unavailable Nest risk board is not the basis for C."
+    },
+    {
+      "id": "uw-nbasis-nest-4467f5f777ffebf1",
+      "assetId": "nbasis-nest",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:ff2aec19f6de12be3fe60567",
+        "factorKey": "obligorConcentration",
+        "pillar": "backing",
+        "requiredDatum": "issuerOrObligorKey",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T23:49:51Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R17)",
+      "sources": [
+        {
+          "url": "https://docs.superstate.com/investors/api/transactions-api.md",
+          "observedAt": "2026-10-04T23:47:42Z",
+          "datumAsOf": null,
+          "location": "Authentication; transaction_type note",
+          "excerpt": "This endpoint requires API key authentication with the `TransactionViewer` role. Contact Superstate for an API key.",
+          "assertion": "The transaction status and payment-to-subscription binding needed to identify this unsettled claim are private, not an on-chain token holding."
+        },
+        {
+          "url": "https://docs.superstate.com/investors/tokenized-funds/subscribe.md",
+          "observedAt": "2026-10-04T23:43:44Z",
+          "datumAsOf": null,
+          "location": "How to subscribe In the portal, steps 3\u20134",
+          "excerpt": "3. Send funds following the displayed instructions.",
+          "assertion": "Subscription payment instructions and completion evidence are investor-specific; a pending payment cannot be classified as delivered USCC shares."
+        },
+        {
+          "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/positions?liveLiquidity=true",
+          "observedAt": "2026-10-04T23:46:51Z",
+          "datumAsOf": null,
+          "location": "data.positions.yieldAssets[superstate-uscc].tokens[0].pendingTransactions",
+          "excerpt": "\"pendingTransactions\":[{\"type\":\"PendingDeposit\",\"amount\":1,\"price\":4400,\"value\":4400}]",
+          "assertion": "Even liveLiquidity=true omits requestId, payment destination, legal claim and settlement status for the USD4,400 pending item."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://nest.credit/",
+        "https://docs.nest.credit/about/assets",
+        "https://docs.nest.credit/security-and-compliance/audits",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions",
+        "https://api.nest.credit/v1/vaults/nest-basis-vault/positions?liveLiquidity=true",
+        "https://docs.nest.credit/developers/api/reference/vaults/slug/positions/get",
+        "https://docs.superstate.com/investors/tokenized-funds/subscribe.md",
+        "https://docs.superstate.com/investors/api/transactions-api.md",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc.md",
+        "https://docs.superstate.com/investors/smart-contracts.md",
+        "https://superstate.com/assets/uscc"
+      ],
+      "rationale": "The exact USD4,400 unsettled claim class (including reserve-exposure), obligor, maximum maturity and realization horizon are not publicly disclosed. The live query still omits the schema-supported requestId. Superstate expressly makes transaction state and payment allocation private/authenticated and documents that inbound payments are not completed subscriptions. Its issued USCC token and generic T+1/T+2 dealing terms cannot identify this pending claim or contractual rights. The unavailable Nest risk board is not the basis for C."
     }
   ]
 }
