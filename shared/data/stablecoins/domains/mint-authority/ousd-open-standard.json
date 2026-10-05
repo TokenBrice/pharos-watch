@@ -716,11 +716,15 @@
       "scopedQuestions": [
         {
           "controlRef": "tempo:0x79c6631fa15cda38777fb9dd7a6348baee794a4e",
-          "question": "The administrator uses EIP-7702 delegation. Off-chain signer composition and custody attestation are not public, and handler source is not Sourcify-verified. No Safe quorum or key-custody uplift is claimed; on-chain upgrade and role authorization are resolved.",
+          "question": "At Tempo block 42723374 on 2026-10-05 the administrator still delegates via EIP-7702 to 0x0000fb7702036ff9f76044a501ac1aa74cbab16b. Ethereum publishes verified UniversalGaslessDelegate source at that address, but the pinned Tempo runtime differs at 34 byte positions, so exact source correspondence is not yet established. The Tempo native handler implementation 0x86234502292ee398a0c6ac4f060b315dd020d179 still has no Sourcify record and no source at the queried Ethereum/Base explorer endpoints. Which source-bound delegated execution and handler checks apply to this exact Tempo authority path? Off-chain custody and human approval composition remain a separate unknown; no Safe quorum or custody uplift is claimed.",
           "subject": "execution-scope",
-          "reviewedAt": "2026-09-30",
-          "reviewer": "Claude OUSD promotion review",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "Pharos wave-4 scoped control research (K08)",
           "sources": [
+            {
+              "label": "Verified Ethereum UniversalGaslessDelegate source; not an exact Tempo runtime match",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0000fb7702036ff9f76044a501ac1aa74cbab16b"
+            },
             {
               "label": "Tempo pinned RPC reads",
               "url": "https://rpc.tempo.xyz"
@@ -741,10 +745,10 @@
         },
         {
           "controlRef": "solana:EBArgZpd8iv7QRgUFhCasaHxck5oujhHNCkonoa1kEKA",
-          "question": "Native Mint execution, controlling program and its upgrader are resolved. The unpublished Bridge configuration layout leaves allowance, recipient-role and transaction-limit checks unverified. Zero-delay program replacement already makes the economic bound unbounded.",
+          "question": "A single finalized getMultipleAccounts read at slot 453579801 on 2026-10-05 reconfirms native OUSD mint authority EBArgZpd8iv7QRgUFhCasaHxck5oujhHNCkonoa1kEKA and Bridge program 8j1GB7MJ1xkbNnaHTboTGynzqQQbYfaRqKFh3NN67Q87 ProgramData 5iaSiFSPdbK8mTzxiBA1mu4mtnHw7sm1B3g2mXiLqi9z with upgrader E7JdFMP5AqdndJKstZV2mHdekLwAQbNWRHMpoozyB3qw. The program binary is public, but a verified issuer configuration layout/source was not located to establish allowance, recipient-role and transaction-limit checks. Which exact checks govern the active native mint path? Zero-delay program replacement already makes the economic bound unbounded; neither binary availability nor one successful mint proves exhaustive execution checks.",
           "subject": "execution-scope",
-          "reviewedAt": "2026-09-30",
-          "reviewer": "Claude OUSD promotion review",
+          "reviewedAt": "2026-10-05",
+          "reviewer": "Pharos wave-4 scoped control research (K08)",
           "sources": [
             {
               "label": "Finalized Solana RPC reads",
