@@ -16,11 +16,10 @@ import {
   fetchEvmMulticall3Aggregate3AtBlock,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
-import { DECIMALS_SELECTOR, encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
+import { DECIMALS_SELECTOR, encodeAddress } from "../../lib/evm-selectors";
 import {
   asEvmCaptureAddress,
   decodeEvmCaptureAddress,
-  decodeEvmCaptureBool,
   decodeEvmCaptureUint256,
   mapEvmCaptureResults,
   resolveTrackedReferencePrices,
@@ -29,43 +28,26 @@ import {
 import { buildPoolFingerprint, normalizeProtocol } from "./pool-helpers";
 import { resolveUniqueTrackedTokenIndex } from "./scoring-helpers";
 import type { EvmV2ExecutionCandidate, LiquidityMetrics, PoolEntry, SymbolLookups } from "./types";
+import { buildSolidlyV2ExecutionCandidate, enrichSolidlyV2ExecutionModels } from "./solidly-v2";
+import { enrichRaydiumStandardDiscoveryExecutionModels } from "./raydium-standard-discovery";
 
 const GET_PAIR_SELECTOR = "0xe6a43905";
-const AERODROME_GET_POOL_SELECTOR = "0x79bc57d5";
-const AERODROME_IMPLEMENTATION_SELECTOR = "0x5c60da1b";
-const AERODROME_IS_PAUSED_SELECTOR = "0xb187bd26";
-const AERODROME_GET_FEE_SELECTOR = "0xcc56b2c5";
-const AERODROME_STABLE_SELECTOR = "0x22be3de1";
 const TOKEN_0_SELECTOR = "0x0dfe1681";
 const TOKEN_1_SELECTOR = "0xd21220a7";
 const GET_RESERVES_SELECTOR = "0x0902f1ac";
 const MAX_PROBES_PER_MULTICALL = 4;
-const AERODROME_MAX_FEE_BPS = 300n;
 
 type EvmV2Source = EvmV2ExecutionCandidate["source"];
 type V2GateReason = DexExecutionCapabilityGate["reason"];
 
-interface EvmV2DeploymentBase {
-  source: EvmV2Source;
-  chain: "ethereum" | "bsc" | "base";
+interface EvmV2Deployment {
+  source: "uniswap-v2" | "pancakeswap-v2";
+  chain: "ethereum" | "bsc";
+  binding: "get-pair";
   factoryAddress: `0x${string}`;
   expectedFactoryCodeHash: `0x${string}`;
+  feeRate: number;
 }
-
-type EvmV2Deployment =
-  | (EvmV2DeploymentBase & {
-      binding: "get-pair";
-      source: "uniswap-v2" | "pancakeswap-v2";
-      chain: "ethereum" | "bsc";
-      feeRate: number;
-    })
-  | (EvmV2DeploymentBase & {
-      binding: "aerodrome-volatile";
-      source: "aerodrome-volatile";
-      chain: "base";
-      expectedImplementationAddress: `0x${string}`;
-      expectedImplementationCodeHash: `0x${string}`;
-    });
 
 /**
  * Canonical factories and runtime hashes verified from the deployed contracts.
@@ -82,21 +64,20 @@ export const EVM_V2_EXECUTION_DEPLOYMENTS: readonly EvmV2Deployment[] = [
     feeRate: 0.003,
   },
   {
+    source: "uniswap-v2",
+    chain: "bsc",
+    binding: "get-pair",
+    factoryAddress: "0x8909dc15e40173ff4699343b6eb8132c65e18ec6",
+    expectedFactoryCodeHash: "0xbab145d02e7005f0d84c6c1639d39b799b0ea16df99ebbdaf5a14d9da820b4e0",
+    feeRate: 0.003,
+  },
+  {
     source: "pancakeswap-v2",
     chain: "bsc",
     binding: "get-pair",
     factoryAddress: "0xca143ce32fe78f1f7019d7d551a6402fc5350c73",
     expectedFactoryCodeHash: "0x9e8d17faaee69b053be6ac65b2b2c317741d770cb5fbdd9512536d17e9e076ca",
     feeRate: 0.0025,
-  },
-  {
-    source: "aerodrome-volatile",
-    chain: "base",
-    binding: "aerodrome-volatile",
-    factoryAddress: "0x420dd381b31aef6683db6b902084cb0ffece40da",
-    expectedFactoryCodeHash: "0xe2a176e5d2bcfb214b784ec6d6733708a6376a464f203cc265c284c9f349fea3",
-    expectedImplementationAddress: "0xa4e46b4f701c62e14df11b48dce76a7d793cd6d7",
-    expectedImplementationCodeHash: "0xd22754a0a3b39db7298dbbc2be1e34b34320988ea67065c85fa28ae66c02d31e",
   },
 ] as const;
 
@@ -128,8 +109,6 @@ export function buildEvmV2ExecutionCandidate(input: {
   poolAddress: string;
   tokenAddresses: readonly string[];
   tokenSymbols?: readonly string[];
-  /** Required census evidence for the reviewed classic Aerodrome deployment. */
-  confirmedStable?: boolean;
 }): EvmV2ExecutionCandidate | null {
   const chain = canonicalExitRouteChain(input.chain);
   const protocol = input.protocol.trim().toLowerCase();
@@ -137,7 +116,7 @@ export function buildEvmV2ExecutionCandidate(input: {
   const familyDescriptor = `${protocol} ${input.poolType}`.toLowerCase();
 
   let source: EvmV2Source;
-  if (chain === "ethereum" && normalizedProtocol === "uniswap-v2" && !isConcentratedOrStableFamily(familyDescriptor)) {
+  if ((chain === "ethereum" || chain === "bsc") && normalizedProtocol === "uniswap-v2" && !isConcentratedOrStableFamily(familyDescriptor)) {
     source = "uniswap-v2";
   } else if (
     chain === "bsc" &&
@@ -145,15 +124,8 @@ export function buildEvmV2ExecutionCandidate(input: {
     !isConcentratedOrStableFamily(familyDescriptor)
   ) {
     source = "pancakeswap-v2";
-  } else if (
-    chain === "base" &&
-    protocol === "aerodrome" &&
-    input.poolType.toLowerCase() === "aerodrome-volatile" &&
-    input.confirmedStable === false
-  ) {
-    source = "aerodrome-volatile";
   } else {
-    return null;
+    return buildSolidlyV2ExecutionCandidate(input);
   }
 
   if (input.tokenAddresses.length !== 2) return null;
@@ -181,8 +153,9 @@ export function attachEvmV2CandidateToRetainedPool(input: {
   const metric = input.metrics.get(input.stablecoinId);
   if (!metric) return false;
   const exactPoolId = canonicalExitRouteAssetKey(input.chain, input.candidate.poolAddress);
-  const fingerprint = buildPoolFingerprint(input.chain, input.candidate.source, input.candidate.tokenAddresses);
-  const protocol = normalizeProtocol(input.candidate.source);
+  const candidateProtocol = input.candidate.solidlyProtocol ?? input.candidate.source;
+  const fingerprint = buildPoolFingerprint(input.chain, candidateProtocol, input.candidate.tokenAddresses);
+  const protocol = normalizeProtocol(candidateProtocol);
   let exactMatch: PoolEntry | undefined;
   let fingerprintMatch: PoolEntry | undefined;
   let exactCount = 0;
@@ -202,7 +175,8 @@ export function attachEvmV2CandidateToRetainedPool(input: {
   if (retainedPool.extra?.ammExecutionModel) return false;
   // A fingerprint is not a unique physical pool. Conflicting source rows
   // must not replace the previous candidate by arrival order.
-  if (retainedPool.extra?.executionCapabilityGate?.family === "constant-product-v2" &&
+  if ((retainedPool.extra?.executionCapabilityGate?.family === "constant-product-v2" ||
+    retainedPool.extra?.executionCapabilityGate?.family === "solidly-v2") &&
     retainedPool.extra.executionCapabilityGate.reason === "exact-pool-join-unresolved") return false;
   const previous = retainedPool.extra?.evmV2ExecutionCandidate;
   if (previous && candidateKey(previous) !== candidateKey(input.candidate)) {
@@ -245,7 +219,7 @@ function gateReference(reference: CandidateReference, reason: V2GateReason): voi
   const extra = { ...(reference.pool.extra ?? {}) };
   delete extra.ammExecutionModel;
   delete extra.evmV2ExecutionCandidate;
-  extra.executionCapabilityGate = { family: "constant-product-v2", reason };
+  extra.executionCapabilityGate = { family: reference.candidate.source === "solidly-v2" ? "solidly-v2" : "constant-product-v2", reason };
   reference.pool.extra = extra;
 }
 
@@ -424,52 +398,6 @@ async function enrichDeployment(input: {
       ) {
         return { ok: false, reason: "deployment-code-mismatch" };
       }
-      if (input.deployment.binding !== "aerodrome-volatile") return { ok: true };
-      const implementationCode = await input.dependencies.fetchCodeAtBlock(
-        input.deployment.chain,
-        input.deployment.expectedImplementationAddress,
-        blockNumber,
-        rpcOptions,
-      );
-      if (
-        implementationCode == null ||
-        input.dependencies.hashCode(implementationCode).toLowerCase() !==
-          input.deployment.expectedImplementationCodeHash.toLowerCase()
-      ) {
-        return { ok: false, reason: "deployment-code-mismatch" };
-      }
-      const rawResults = await input.dependencies.fetchMulticall(
-        input.deployment.chain,
-        [
-          {
-            label: "v2-factory-implementation",
-            target: input.deployment.factoryAddress,
-            callData: AERODROME_IMPLEMENTATION_SELECTOR,
-          },
-          {
-            label: "v2-factory-paused",
-            target: input.deployment.factoryAddress,
-            callData: AERODROME_IS_PAUSED_SELECTOR,
-          },
-        ],
-        blockNumber,
-        rpcOptions,
-      );
-      if (!rawResults) return { ok: false, reason: "transport-unavailable" };
-      const results = mapEvmCaptureResults(rawResults);
-      if (
-        decodeAddressResult(results.get("v2-factory-implementation")) !==
-        input.deployment.expectedImplementationAddress
-      ) {
-        return { ok: false, reason: "deployment-code-mismatch" };
-      }
-      const paused = decodeEvmCaptureBool(results.get("v2-factory-paused"));
-      if (paused == null || paused) {
-        return {
-          ok: false,
-          reason: paused ? "paused-or-swap-disabled" : "incomplete-exact-capture",
-        };
-      }
       return { ok: true };
     },
     buildCalls: async ({ blockNumber }) => {
@@ -493,10 +421,7 @@ async function enrichDeployment(input: {
           const index = startIndex + batchIndex;
           const prefix = `v2-${index}`;
           const [token0, token1] = probe.candidate.tokenAddresses;
-          const pairCallData =
-            input.deployment.binding === "aerodrome-volatile"
-              ? `${AERODROME_GET_POOL_SELECTOR}${encodeAddress(token0)}${encodeAddress(token1)}${encodeUint256(0)}`
-              : `${GET_PAIR_SELECTOR}${encodeAddress(token0)}${encodeAddress(token1)}`;
+          const pairCallData = `${GET_PAIR_SELECTOR}${encodeAddress(token0)}${encodeAddress(token1)}`;
           return [
             { label: `${prefix}-pair`, target: input.deployment.factoryAddress, callData: pairCallData },
             { label: `${prefix}-token0`, target: probe.candidate.poolAddress, callData: TOKEN_0_SELECTOR },
@@ -504,16 +429,6 @@ async function enrichDeployment(input: {
             { label: `${prefix}-reserves`, target: probe.candidate.poolAddress, callData: GET_RESERVES_SELECTOR },
             { label: `${prefix}-decimals0`, target: token0, callData: DECIMALS_SELECTOR },
             { label: `${prefix}-decimals1`, target: token1, callData: DECIMALS_SELECTOR },
-            ...(input.deployment.binding === "aerodrome-volatile"
-              ? [
-                {
-                  label: `${prefix}-fee`,
-                  target: input.deployment.factoryAddress,
-                  callData: `${AERODROME_GET_FEE_SELECTOR}${encodeAddress(probe.candidate.poolAddress)}${encodeUint256(0)}`,
-                },
-                { label: `${prefix}-stable`, target: probe.candidate.poolAddress, callData: AERODROME_STABLE_SELECTOR },
-              ]
-              : []),
           ];
         });
         const rawResults = await input.dependencies.fetchMulticall(
@@ -532,22 +447,7 @@ async function enrichDeployment(input: {
         for (let batchIndex = 0; batchIndex < probes.length; batchIndex++) {
           const index = startIndex + batchIndex;
           const probe = probes[batchIndex]!;
-          let feeRate: number;
-          if (input.deployment.binding === "aerodrome-volatile") {
-            const stable = decodeEvmCaptureBool(results.get(`v2-${index}-stable`));
-            if (stable == null || stable) {
-              gate(probe.references, stable ? "unsupported-invariant" : "incomplete-exact-capture");
-              continue;
-            }
-            const feeBps = decodeEvmCaptureUint256(results.get(`v2-${index}-fee`));
-            if (feeBps == null || feeBps > AERODROME_MAX_FEE_BPS) {
-              gate(probe.references, "incomplete-exact-capture");
-              continue;
-            }
-            feeRate = Number(feeBps) / 10_000;
-          } else {
-            feeRate = input.deployment.feeRate;
-          }
+          const feeRate = input.deployment.feeRate;
           const verified = parseVerifiedPairState(probe, index, results);
           if (!verified.ok) {
             gate(probe.references, verified.reason);
@@ -622,11 +522,14 @@ export async function enrichEvmV2ExecutionModels(input: {
   /** Source-stage slot start, bounding verification against the stage budget. */
   slotStartedAtSec?: number;
 }): Promise<void> {
+  const deadlineMs = resolveV2EnrichmentDeadlineMs(input.slotStartedAtSec);
+  await enrichSolidlyV2ExecutionModels({ ...input, deadlineMs });
+  await enrichRaydiumStandardDiscoveryExecutionModels({ ...input, deadlineMs });
   const references: CandidateReference[] = [];
   for (const [stablecoinId, metric] of input.metrics) {
     for (const pool of metric.topPools) {
       const candidate = pool.extra?.evmV2ExecutionCandidate;
-      if (candidate) references.push({ stablecoinId, pool, candidate });
+      if (candidate && candidate.source !== "solidly-v2") references.push({ stablecoinId, pool, candidate });
     }
   }
   if (references.length === 0) return;
@@ -652,7 +555,6 @@ export async function enrichEvmV2ExecutionModels(input: {
     probes.set(keyForCandidate, probe);
     probesByDeployment.set(key, probes);
   }
-  const deadlineMs = resolveV2EnrichmentDeadlineMs(input.slotStartedAtSec);
   const dependencies = input.dependencies ?? DEFAULT_DEPENDENCIES;
   for (const [key, probes] of probesByDeployment) {
     const deployment = deployments.get(key)!;

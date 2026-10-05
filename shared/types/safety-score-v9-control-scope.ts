@@ -5,7 +5,25 @@ import { CHAIN_META } from "./chain-identity";
 import { V9ControlCapabilitySchema, V9ControlCapSemanticsSchema, V9ClaimImpairmentSchema, V9EconomicLossScopeSchema } from "./safety-score-v9-fact-input-primitives";
 
 const Text = z.string().trim().min(1);
+export const V9ControlQuestionSubjectSchema = z.enum(["authority-semantics", "execution-scope", "key-custody-independence"]);
+export type V9ControlQuestionSubject = z.output<typeof V9ControlQuestionSubjectSchema>;
+
 const Deployment = Text.refine((value) => normalizeDeploymentId(value) !== "", "Expected chain-qualified deployment").transform(normalizeDeploymentId);
+
+/** HyperCore credits and EVM escrow releases are executed by the same L1,
+ * not an external bridge quorum. This identity is not a solvency certificate. */
+export const V9SameChainSystemTransportSchema = z.object({
+  family: z.literal("hypercore-evm-spot"),
+  tokenIndex: z.number().int().nonnegative().safe(),
+  coreTokenId: z.string().regex(/^0x[0-9a-f]{32}$/),
+  evmToken: Deployment,
+  systemAddress: z.string().regex(/^0x[0-9a-f]{40}$/),
+}).strict().superRefine((transport, ctx) => {
+  const expected = `0x20${transport.tokenIndex.toString(16).padStart(38, "0")}`;
+  if (transport.systemAddress !== expected) ctx.addIssue({ code: "custom", path: ["systemAddress"], message: "System address must encode the exact HyperCore token index" });
+  if (!/^hyperevm:0x[0-9a-f]{40}$/.test(transport.evmToken)) ctx.addIssue({ code: "custom", path: ["evmToken"], message: "Spot transport requires an exact linked HyperEVM ERC20" });
+});
+export type V9SameChainSystemTransport = z.output<typeof V9SameChainSystemTransportSchema>;
 const Pin = z.object({ position: Text, hash: Text.nullable(), runtimeIdentity: Text, signerIdentity: Text }).strict();
 export const V9ExactControlPolicySchema = z.object({
   activationStates: z.array(z.enum(["active", "counterfactual", "disabled-reactivatable", "disabled-final", "unknown"])),

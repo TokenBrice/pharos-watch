@@ -22,6 +22,7 @@ describe("Wave 0 registration fan-out", () => {
       "uniswap-v4",
       "orca-whirlpool",
       "raydium-clmm",
+      "meteora-dlmm",
       "evm-v2",
     ]);
   });

@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import fixture from "./fixtures/raydium-slot-449058549.json";
+import pinned from "./fixtures/raydium-wave4-simulation.json";
 import { decodeRaydiumPool, decodeRaydiumTickArray, fetchRaydiumSnapshot, quoteRaydiumExactIn, raydiumTickArrayAddress, raydiumTickSqrtPrice, type RaydiumSnapshot } from "../solana/raydium-clmm-quote";
 
 const accounts: Record<string, { owner: string; data: string[]; executable: boolean }> = fixture.accounts;
@@ -11,6 +13,19 @@ function replay(): RaydiumSnapshot {
     feeRate: new DataView(bytes(pool.config).buffer).getUint32(47, true), initializedStarts: [-60, 0],
     tickArrays: Object.keys(accounts).filter((address) => bytes(address).length === 10240).map((address) => decodeRaydiumTickArray(bytes(address), address, fixture.poolAddress, pool.tickSpacing, fixture.slot)),
     mints: [pool.tokenMintA, pool.tokenMintB].map((address) => ({ slot: fixture.slot, address, account: { owner: accounts[address].owner, data: bytes(address) } })),
+  };
+}
+
+function replaySimulation(capture: typeof pinned.snapshots[number]): RaydiumSnapshot {
+  const raw = z.record(z.string(), z.object({ owner: z.string(), data: z.array(z.string()) })).parse(capture.accounts);
+  const data = (address: string) => Uint8Array.from(Buffer.from(raw[address].data[0], "base64"));
+  const pool = decodeRaydiumPool(data(capture.poolAddress), capture.slot);
+  return {
+    pool, poolAddress: capture.poolAddress, slot: capture.slot, configSlot: capture.slot, bitmapSlot: capture.slot,
+    feeRate: capture.feeRate, initializedStarts: capture.initializedStarts,
+    tickArrays: Object.keys(raw).filter((address) => data(address).length === 10240).map((address) =>
+      decodeRaydiumTickArray(data(address), address, capture.poolAddress, pool.tickSpacing, capture.slot)),
+    mints: [pool.tokenMintA, pool.tokenMintB].map((address) => ({ slot: capture.slot, address, account: { owner: raw[address].owner, data: data(address) } })),
   };
 }
 afterEach(() => vi.unstubAllGlobals());
@@ -63,6 +78,24 @@ describe("native Raydium CLMM exact-in", () => {
     const array = replay().tickArrays[0]; const data = bytes(array.address); data[44 + 124] = 1;
     expect(() => decodeRaydiumTickArray(data, array.address, fixture.poolAddress, 1, fixture.slot)).toThrow("limit orders");
   });
+
+  it("rejects disabled trading and invalid initialized ticks", () => {
+    const pool = bytes(fixture.poolAddress); pool[389] |= 16;
+    expect(() => decodeRaydiumPool(pool, fixture.slot)).toThrow("swaps disabled");
+    const array = replay().tickArrays[0];
+    const data = bytes(array.address);
+    const index = array.ticks.findIndex((tick) => tick.initialized);
+    new DataView(data.buffer).setInt32(44 + index * 168, 443637, true);
+    expect(() => decodeRaydiumTickArray(data, array.address, fixture.poolAddress, 1, fixture.slot)).toThrow("tick liquidity");
+  });
+
+  it("rejects an RPC bank older than the required mint/discovery context", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      return new Response(JSON.stringify({ result: { context: { slot: fixture.slot - 1 }, value: body.params[0].map((address: string) => accounts[address] ?? null) } }));
+    }));
+    await expect(fetchRaydiumSnapshot(fixture.poolAddress, replay().pool, fixture.tokenMintIn, new AbortController().signal)).rejects.toThrow("context");
+  });
   it("quotes only the final coherent bank snapshot through bounded sequential RPC", async () => {
     let active = 0; let peak = 0;
     const fetch = vi.fn(async (_url: string, init: RequestInit) => {
@@ -110,5 +143,20 @@ describe("native Raydium CLMM exact-in", () => {
     const next = sqrt + (amount * BigInt(1000000 - source.feeRate) / 1000000n) * (1n << 64n) / liquidity;
     const expected = liquidity * (next - sqrt) * (1n << 64n) / (sqrt * next);
     expect(quoteRaydiumExactIn(snapshot, source.pool.tokenMintB, amount).amountOut).toBe(expected);
+  });
+});
+
+describe.each(pinned.snapshots)("deployed Raydium $symbol at slot $slot", (capture) => {
+  it.each(capture.points)("matches actual same-slot swap execution at raw input $amountIn", (point) => {
+    const snapshot = replaySimulation(capture);
+    if ("amountOut" in point && typeof point.amountOut === "string") {
+      expect(quoteRaydiumExactIn(snapshot, capture.tokenMintIn, BigInt(point.amountIn))).toEqual({
+        slot: capture.slot, amountOut: BigInt(point.amountOut),
+      });
+    } else {
+      // These deployed executions explicitly rejected the same captured
+      // bounded arrays. They do not certify complete market exhaustion.
+      expect(() => quoteRaydiumExactIn(snapshot, capture.tokenMintIn, BigInt(point.amountIn))).toThrow();
+    }
   });
 });

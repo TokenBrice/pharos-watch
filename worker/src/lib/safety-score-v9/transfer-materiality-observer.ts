@@ -3,7 +3,7 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { SUPPLY_RPC_DEFAULTS } from "@shared/lib/chain-rpc-registry";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
 import { hasRegistryRpc, supplementalRpcEndpoints, registryRpcUrls, type ChainRpcConfig, type RpcEndpoint } from "../chain-registry";
-import { fetchEvmBlockHeader, fetchEvmMulticall3Aggregate3AtBlock, resolveClosestBlockAtOrBeforeTimestamp } from "../evm-rpc";
+import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmMulticall3Aggregate3AtBlock, resolveClosestBlockAtOrBeforeTimestamp } from "../evm-rpc";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../evm-selectors";
 import { getPublicRpcUrl, getSecondaryFallbackRpcUrl } from "../public-rpc-registry";
 import { normalizeReviewedDeploymentAddress, reviewedDeploymentIdentityValidationError, reviewedDeploymentObservationTimingIssue, type ReviewedDeploymentSupplyObservation } from "./supply-attribution-contract";
@@ -12,8 +12,12 @@ import { SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS, createSafetyScoreV9Tran
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { observeEconomicSolanaMint } from "./economic-supply-observer";
 import { fetchMoveFungibleAssetSupply } from "../../cron/reserve-adapters/token-supply";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { REVIEWED_PROVIDER_CHAIN_PARTITIONS, REVIEWED_ECONOMIC_SUPPLY_PLANS, REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE } from "./supply-attribution-contract";
+import { ReviewedRegistryEntryError } from "./extension-reviewed-registry";
 
 interface ObserverDependencies {
+  fetchEvmBlockNumber: typeof fetchEvmBlockNumber;
   fetchEvmBlockHeader: typeof fetchEvmBlockHeader;
   fetchEvmMulticall3Aggregate3AtBlock: typeof fetchEvmMulticall3Aggregate3AtBlock;
   resolveClosestBlockAtOrBeforeTimestamp: typeof resolveClosestBlockAtOrBeforeTimestamp;
@@ -22,6 +26,7 @@ interface ObserverDependencies {
 }
 
 const DEFAULT_DEPENDENCIES: ObserverDependencies = {
+  fetchEvmBlockNumber,
   fetchEvmBlockHeader,
   fetchEvmMulticall3Aggregate3AtBlock,
   resolveClosestBlockAtOrBeforeTimestamp,
@@ -49,8 +54,7 @@ const TRANSFER_MATERIALITY_EXTRA_RPCS: Record<string, { rpcUrl: string; fallback
   katana: { rpcUrl: "https://rpc.katana.network", fallbackRpcUrl: "https://rpc.katanarpc.com" },
   sonic: { rpcUrl: "https://rpc.soniclabs.com", fallbackRpcUrl: "https://sonic-rpc.publicnode.com" },
   aurora: { rpcUrl: "https://mainnet.aurora.dev" },
-  "polygon-zkevm": { rpcUrl: "https://zkevm-rpc.com" },
-  pharos: { rpcUrl: "https://api.zan.top/public/pharos-mainnet" },
+  "polygon-zkevm": { rpcUrl: "https://zkevm-rpc.com", fallbackRpcUrl: "https://polygon-zkevm.drpc.org" },
   berachain: SUPPLY_RPC_DEFAULTS.berachain,
   hyperevm: SUPPLY_RPC_DEFAULTS.hyperevm,
   ink: SUPPLY_RPC_DEFAULTS.ink,
@@ -61,6 +65,7 @@ const TRANSFER_MATERIALITY_EXTRA_RPCS: Record<string, { rpcUrl: string; fallback
   unichain: SUPPLY_RPC_DEFAULTS.unichain,
   worldchain: SUPPLY_RPC_DEFAULTS.worldchain,
   megaeth: SUPPLY_RPC_DEFAULTS.megaeth,
+  nibiru: { rpcUrl: "https://evm-rpc.nibiru.fi" },
 };
 
 export function transferMaterialityObserverResolvesRpc(
@@ -174,26 +179,71 @@ async function observeChainDeployments(
   const resolvedRpcs = rpcConfig(chainId, chainRpcs);
   if (!resolvedRpcs) return rejectedRows();
   try {
-    const options = { chainRpcs: resolvedRpcs, signal };
-    const blockNumber = await dependencies.resolveClosestBlockAtOrBeforeTimestamp(
+    let options = { chainRpcs: resolvedRpcs, signal };
+    let blockNumber = await dependencies.resolveClosestBlockAtOrBeforeTimestamp(
       chainId,
       scoringClockSec,
       { blockTimestampByNumber: new Map() },
       options,
     );
     if (blockNumber === null) return rejectedRows();
-    const header = await dependencies.fetchEvmBlockHeader(chainId, blockNumber, options);
+    let header = await dependencies.fetchEvmBlockHeader(chainId, blockNumber, options);
     if (!header || header.timestamp > scoringClockSec) return rejectedRows();
+    let provenance: SafetyScoreV9TransferMaterialityObservation["provenance"];
+    if (scoringClockSec - header.timestamp > V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec) {
+      // A historical read alone cannot prove a halt. Query latest independently
+      // without failover, then bind the frozen read to the agreeing final hash.
+      const config = resolvedRpcs.get(chainId)!;
+      const endpoints = [...config.endpoints].filter(endpoint => endpoint.stateHistory === "archive");
+      const seenOrigins = new Set<string>();
+      const stalled: NonNullable<typeof provenance>["heads"][number][] = [];
+      let liveOptions: typeof options | undefined;
+      for (const endpoint of endpoints) {
+        const endpointOrigin = new URL(endpoint.url).origin;
+        if (seenOrigins.has(endpointOrigin)) continue;
+        seenOrigins.add(endpointOrigin);
+        const isolated = { chainRpcs: new Map(resolvedRpcs).set(chainId, {
+          ...config, endpoints: [endpoint],
+        }), signal };
+        try {
+          const latestNumber = await dependencies.fetchEvmBlockNumber(chainId, isolated);
+          const latest = latestNumber === null ? null : await dependencies.fetchEvmBlockHeader(chainId, latestNumber, isolated);
+          if (!latest) continue;
+          const age = scoringClockSec - latest.timestamp;
+          if (age <= V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec) {
+            liveOptions = isolated;
+            break;
+          }
+          if (age >= V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.haltedChainMinStallSec) {
+            stalled.push({ endpointOrigin, blockNumber: latest.number.toString(), blockHash: latest.hash, timestampSec: latest.timestamp });
+          }
+        } catch (error) { rethrowIfAborted(error, signal); }
+      }
+      if (liveOptions) {
+        options = liveOptions;
+        blockNumber = await dependencies.resolveClosestBlockAtOrBeforeTimestamp(
+          chainId, scoringClockSec, { blockTimestampByNumber: new Map() }, options,
+        );
+        if (blockNumber === null) return rejectedRows();
+        header = await dependencies.fetchEvmBlockHeader(chainId, blockNumber, options);
+        if (!header || header.timestamp > scoringClockSec) return rejectedRows();
+      } else {
+        if (stalled.length < 2 || stalled.some(head => head.blockNumber !== header!.number.toString() ||
+            head.blockHash !== header!.hash || head.timestampSec !== header!.timestamp)) return rejectedRows();
+        provenance = { kind: "halted-chain", checkedAtSec: scoringClockSec, heads: [stalled[0]!, stalled[1]!] };
+      }
+    }
     const calls = targets.flatMap((target) => [
       { label: `${target.deploymentKey}:total-supply`, target: target.address, callData: TOTAL_SUPPLY_SELECTOR, allowFailure: true },
       { label: `${target.deploymentKey}:decimals`, target: target.address, callData: DECIMALS_SELECTOR, allowFailure: true },
     ]);
-    let results = await dependencies.fetchEvmMulticall3Aggregate3AtBlock(chainId, calls, blockNumber, options);
+    const readOptions = provenance ? { ...options, stateBlockHash: header.hash } : options;
+    let results = await dependencies.fetchEvmMulticall3Aggregate3AtBlock(chainId, calls, blockNumber, readOptions);
     if (results === null) {
       // A failed aggregate is not zero. The existing fallback reads directly
       // only after proving Multicall3 absent, and authenticates the block hash.
       results = await dependencies.fetchEvmMulticall3Aggregate3AtBlock(chainId, calls, blockNumber, {
-        ...options, multicallFallbackBlockHash: header.hash,
+        ...readOptions, multicallFallbackBlockHash: header.hash,
       });
     }
     if (!results || results.length !== calls.length) return rejectedRows();
@@ -221,7 +271,7 @@ async function observeChainDeployments(
         captureEndedAtSec: header.timestamp,
         observedAtSec: header.timestamp,
         deployments: [identityRow],
-      }) !== null) {
+      }) !== null && !provenance) {
         rows.set(target.deploymentKey, rejected(target.deploymentKey));
         continue;
       }
@@ -231,7 +281,9 @@ async function observeChainDeployments(
         decimals: Number(decimals),
         blockNumber: blockNumber.toString(),
         observedAtSec: header.timestamp,
+        blockHash: header.hash,
         status: "accepted",
+        ...(provenance ? { provenance } : {}),
       });
     }
     return rows;
@@ -258,8 +310,35 @@ export async function observeSafetyScoreV9TransferMaterialityGeneration(input: {
     throwIfAborted(input.signal);
     const meta = ACTIVE_META_BY_ID.get(assetId);
     const rows: SafetyScoreV9TransferMaterialityObservation[] = [];
+    // Chain-local censuses must not trigger an 88-contract whole-asset probe
+    // or be mistaken for complete transfer-materiality coverage.
+    let chainScope: string[] | null = null;
+    if (!REVIEWED_ECONOMIC_SUPPLY_PLANS.has(assetId) &&
+      !REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE.independentLiabilityAssetIds.includes(assetId)) {
+      try {
+        const reviews = REVIEWED_PROVIDER_CHAIN_PARTITIONS.getAll(assetId);
+        if (reviews.length > 0) {
+          const currentReviews = reviews.filter(review =>
+            review.reviewedAtSec <= input.scoringClockSec && input.scoringClockSec < review.expiresAtSec);
+          chainScope = currentReviews.map(review => review.chainId);
+          const reviewedKeys = currentReviews.flatMap(review => review.deployments.map(row => row.routeId));
+          const catalogKeys = (meta?.contracts ?? []).filter(deployment => chainScope!.includes(resolveChainId(deployment.chain) ?? "")).map(deployment =>
+            `${resolveChainId(deployment.chain)}:${normalizeReviewedDeploymentAddress(resolveChainId(deployment.chain)!, deployment.address)}`);
+          if (catalogKeys.length !== reviewedKeys.length || new Set(catalogKeys).size !== catalogKeys.length ||
+            reviewedKeys.some(key => !catalogKeys.includes(key))) {
+            observationsByAssetId[assetId] = reviewedKeys.map(rejected);
+            continue;
+          }
+        }
+      } catch (error) {
+        if (!(error instanceof ReviewedRegistryEntryError)) throw error;
+        observationsByAssetId[assetId] = rows;
+        continue;
+      }
+    }
     for (const deployment of meta?.contracts ?? []) {
       const chainId = resolveChainId(deployment.chain);
+      if (chainScope !== null && (chainId === null || !chainScope.includes(chainId))) continue;
       if (chainId === null || deployment.kind === "native-denom" || !isFixedDecimalDeployment(deployment) ||
         (CHAIN_META[chainId]?.type !== "evm" && chainId !== "solana" && chainId !== "aptos" && chainId !== "movement")) {
         rows.push(rejected(`${deployment.chain}:${normalizeReviewedDeploymentAddress(chainId ?? deployment.chain, deployment.address)}`));

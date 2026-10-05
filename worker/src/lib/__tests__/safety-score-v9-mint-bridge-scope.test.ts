@@ -1,6 +1,7 @@
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { parseStablecoinMetaAssets } from "@shared/lib/stablecoins/schema";
 import fusdRiskReview from "@shared/data/stablecoins/domains/risk-review/fusd-finchain.json";
+import { BridgeRouteRiskProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
 import type {
   BridgeRouteControl,
   BridgeRouteDeployment,
@@ -271,6 +272,38 @@ function adaptBridgeFixture(
     clockSec,
     chainRows,
   );
+}
+
+function nativeDustFixture(share = 1e-5) {
+  const assetId = "fixture-native-dust";
+  const routes = [route(ETHEREUM_ROUTE), route(ARBITRUM_ROUTE)];
+  const profile = bridgeProfile(routes, {
+    nativeInventoryReview: {
+      kind: "exhaustive-material-native-census",
+      exhaustive: true,
+      reviewedAt: "1970-01-01",
+      reviewer: "Fixture native census reviewer",
+      routeIds: routes.map((candidate) => candidate.id),
+      rationale: "The exact material issuance roster is exhaustively reviewed as native.",
+      sources: [SOURCE],
+    },
+  });
+  const supply: NonNullable<Parameters<typeof adaptBridgeReview>[1]> = {
+    selectedBridgeRoutes: [
+      ...routes.map((candidate) => ({
+        deploymentRouteKey: candidate.id, supplyUsd: 1_000_000 * (1 - share) / routes.length,
+        supplyShare: (1 - share) / routes.length,
+        reviewState: "selected-reviewed" as const, reviewedRouteKind: "native" as const,
+      })),
+      { deploymentRouteKey: `unmatched-chain:${assetId}:tempo`, supplyUsd: 1_000_000 * share,
+        supplyShare: share, reviewState: "unmatched" },
+    ],
+    selectedRouteSupplyShare: 1 - share,
+    unknownRouteSupplyShare: share,
+    unreviewedRouteSupplyShare: 0,
+    failureDomains: [{ kind: "chain", key: "tempo" }],
+  };
+  return { metadata: meta(assetId, { bridgeRouteRisk: profile }), profile, supply };
 }
 
 /**
@@ -1491,6 +1524,80 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(adapted.review.routes).toEqual([]);
     // The relocated control facts must survive in the umbrella inventory.
     expect(adapted.controls.length).toBeGreaterThan(0);
+  });
+
+  it.each([0, 1e-8, 1e-5])("admits exhaustively reviewed native inventory with unmatched share %s without rewriting supply", (share) => {
+    const { metadata, supply } = nativeDustFixture(share);
+    const before = structuredClone(supply);
+    const evidence = new ReviewEvidenceBuilder(metadata.id, 10_000);
+    const adapted = adaptBridgeReview(metadata, supply, 3, evidence, 10_000,
+      { Ethereum: { current: 1 }, Arbitrum: { current: 1 }, Tempo: { current: share } });
+    expect(adapted.review.status.applicability.state).toBe("not-applicable");
+    expect(adapted.review.routes).toEqual([]);
+    expect(adapted.review.diagnostics?.applicabilityBranch).toBe("native-only-not-applicable");
+    expect(adapted.review.diagnostics?.unmatchedRowIdentities).toContain("Tempo");
+    expect(supply).toEqual(before);
+    expect(supply.selectedBridgeRoutes[supply.selectedBridgeRoutes.length - 1]).toMatchObject({ reviewState: "unmatched", supplyShare: share, supplyUsd: share * 1_000_000 });
+    expect([...evidence.evidence.values()]).toContainEqual(expect.objectContaining({
+      sourceId: "stablecoin-meta.native-inventory-census",
+      url: SOURCE.url,
+      observedAtSec: 0,
+    }));
+  });
+
+  it.each(["over-dust", "material", "missing-census", "stale-census", "incomplete-census", "incomplete-book", "controlled-row", "representation-inventory", "documented-oft", "unreviewed-route"] as const)(
+    "fails closed for native dust inventory with %s",
+    (scenario) => {
+      const { metadata, profile, supply } = nativeDustFixture(
+        scenario === "over-dust" ? 2e-5 : scenario === "material" ? 0.2 : 1e-5,
+      );
+      let clock = 10_000;
+      if (scenario === "missing-census") delete profile.nativeInventoryReview;
+      if (scenario === "stale-census") {
+        profile.reviewedAt = "1971-02-02";
+        clock = Date.parse("1971-02-03T00:00:00Z") / 1000;
+      }
+      if (scenario === "incomplete-census") profile.nativeInventoryReview!.routeIds.pop();
+      if (scenario === "incomplete-book") supply.selectedBridgeRoutes.pop();
+      if (scenario === "controlled-row") supply.selectedBridgeRoutes[0]!.reviewedRouteKind = "controlled";
+      if (scenario === "representation-inventory") {
+        profile.routes![0] = representationRoute(ETHEREUM_ROUTE);
+        supply.selectedBridgeRoutes[0]!.reviewedRouteKind = "controlled";
+      }
+      if (scenario === "documented-oft") profile.routes!.push(representationRoute(BASE_ROUTE, { protocol: "Documented LayerZero OFT", semantics: "burn-mint" }));
+      if (scenario === "unreviewed-route") profile.routes![0]!.reviewDisposition = "unresolved";
+      const adapted = adaptBridgeFixture(metadata, supply, undefined, clock);
+      expect(adapted.review.status.applicability.state).toBe("required");
+    },
+  );
+
+  it("requires a sourced dated exhaustive census with exact native route identities", () => {
+    const { profile } = nativeDustFixture();
+    expect(BridgeRouteRiskProfileSchema.safeParse(profile).success).toBe(true);
+    for (const patch of [
+      { exhaustive: false }, { reviewedAt: undefined }, { sources: [] },
+      { routeIds: [ETHEREUM_ROUTE] }, { routeIds: [ETHEREUM_ROUTE, ETHEREUM_ROUTE] },
+    ]) {
+      expect(BridgeRouteRiskProfileSchema.safeParse({
+        ...profile, nativeInventoryReview: { ...profile.nativeInventoryReview, ...patch },
+      }).success).toBe(false);
+    }
+    expect(BridgeRouteRiskProfileSchema.safeParse({
+      ...profile, routes: [...profile.routes!, representationRoute(BASE_ROUTE)],
+    }).success).toBe(false);
+  });
+
+  it("tests each unmatched row independently without pooling or dropping its supply", () => {
+    const { metadata, supply } = nativeDustFixture(2e-5);
+    const remainder = supply.selectedBridgeRoutes.pop()!;
+    supply.selectedBridgeRoutes.push(
+      { ...remainder, supplyShare: 1e-5, supplyUsd: 10 },
+      { ...remainder, deploymentRouteKey: `unmatched-chain:${metadata.id}:bittorrent`, supplyShare: 1e-5, supplyUsd: 10 },
+    );
+    expect(adaptBridgeFixture(metadata, supply).review.status.applicability.state).toBe("not-applicable");
+    supply.selectedBridgeRoutes[supply.selectedBridgeRoutes.length - 1]!.supplyShare += 1e-8;
+    supply.selectedBridgeRoutes[supply.selectedBridgeRoutes.length - 2]!.supplyShare -= 1e-8;
+    expect(adaptBridgeFixture(metadata, supply).review.status.applicability.state).toBe("required");
   });
 
   it("keeps USDGLO's unmatched VeChain liability bridge-applicable after canonical registration", () => {

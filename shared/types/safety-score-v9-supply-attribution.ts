@@ -41,6 +41,8 @@ const ReadSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("evm-total-supply"), safeBlockLag: z.number().int().positive() }),
   z.strictObject({ kind: z.literal("evm-balance"), safeBlockLag: z.number().int().positive(), account: z.string().regex(/^0x[0-9a-f]{40}$/) }),
   z.strictObject({ kind: z.literal("solana-mint"), programOwner: CanonicalTextSchema }),
+  z.strictObject({ kind: z.literal("move-fa-supply"), identityKind: z.enum(["metadata-address", "oft-package"]), metadataAddress: z.string().regex(/^0x[0-9a-f]{1,64}$/), ledgerChainId: z.number().int().positive() }),
+  z.strictObject({ kind: z.literal("ton-jetton-supply"), apiUrl: z.string().url().refine(url => url.startsWith("https://")) }),
   z.strictObject({ kind: z.literal("xrpl-issued-currency"), currency: CanonicalTextSchema, issuer: CanonicalTextSchema }),
   z.strictObject({ kind: z.literal("native-from-aggregate"), safeBlockLag: z.number().int().positive() }),
   CosmosBankSupplyReadSchema,
@@ -55,6 +57,14 @@ const CensusRowSchema = z.strictObject({
   const expected = row.holdingKind === "native-gas" ? `${row.chainId}:native:${row.address}` : `${row.chainId}:${row.address}`;
   if (row.address === null || row.deploymentKey !== expected) ctx.addIssue({ code: "custom", message: "Holding identity must use its exact economic deployment key" });
   if ((row.amountBasis === "fixed-token-units") !== (row.decimals !== null)) ctx.addIssue({ code: "custom", message: "Only fixed token units have fixed decimals" });
+  if (row.read.kind === "move-fa-supply" &&
+    (!["aptos", "movement"].includes(row.chainId) || row.amountBasis !== "fixed-token-units" ||
+      row.decimals === null || row.decimals > 30 || !/^0x[0-9a-f]{1,64}$/.test(row.address ?? "") ||
+      row.read.ledgerChainId !== (row.chainId === "aptos" ? 1 : 126) ||
+      (row.read.identityKind === "metadata-address" && row.read.metadataAddress !== row.address))) ctx.addIssue({ code: "custom", message: "Move supply must bind exact chain, metadata identity and fixed decimals" });
+  if (row.read.kind === "ton-jetton-supply" &&
+    (row.chainId !== "ton" || row.amountBasis !== "fixed-token-units" || row.decimals === null ||
+      !/^(?:-?[0-9]+:[0-9a-f]{64}|[EU]Q[A-Za-z0-9_-]{46})$/.test(row.address ?? ""))) ctx.addIssue({ code: "custom", message: "TON supply must bind its exact jetton master and fixed decimals" });
   if (row.read.kind === "xrpl-issued-currency" &&
     (row.chainId !== "xrpl" || row.amountBasis !== "issued-currency-decimal" ||
       row.address !== `${row.read.currency}.${row.read.issuer}`)) ctx.addIssue({ code: "custom", message: "XRPL identity must bind exact currency and issuer; no fixed decimals" });
@@ -144,7 +154,66 @@ const CurvePendingProofSchema = z.strictObject({
     sentNonce: NonceSchema, receivedNonce: NonceSchema,
   })).length(2),
 });
-const PendingAmountReadSchema = z.union([ApiAmountReadSchema, EvmPendingStateReadSchema, CurveLzPendingReadSchema]);
+const CcipSideSchema = z.strictObject({
+  chainId: CanonicalChainIdSchema, chainSelector: NonceSchema,
+  tokenAddress: EvmAddressSchema, tokenPoolAddress: EvmAddressSchema,
+  tokenPoolRuntimeCodeSha256: Sha256Schema, decimals: z.number().int().min(0).max(36),
+  // Retired pools may remove peers. This reviewed historical identity pin
+  // authenticates that peer binding; quantities still use current finalized pins.
+  peerBindingPin: z.strictObject({ number: z.number().int().positive(), hash: EvmWordSchema }).optional(),
+});
+export const CcipPendingReadSchema = z.strictObject({
+  kind: z.literal("evm-ccip-pending"), sourceId: CanonicalTextSchema,
+  chainId: CanonicalChainIdSchema, finality: z.literal("finalized"),
+  amountDecimals: z.number().int().min(0).max(36),
+  lanes: z.array(z.strictObject({
+    id: CanonicalTextSchema, version: z.enum(["1.5", "1.6", "2.0.0"]),
+    source: CcipSideSchema, destination: CcipSideSchema,
+    onRampAddress: EvmAddressSchema, onRampRuntimeCodeSha256: Sha256Schema,
+    offRampAddress: EvmAddressSchema, offRampRuntimeCodeSha256: Sha256Schema,
+    // Start at deployment of this OnRamp OR this source pool. The producer
+    // proves predecessor code absence and reads the initial lane sequence.
+    sourceStartBlock: z.number().int().positive(),
+  })).min(1).max(128),
+}).superRefine((source, ctx) => {
+  const identities = source.lanes.map(lane => `${lane.source.chainId}:${lane.onRampAddress}:${lane.destination.chainSelector}:${lane.source.tokenPoolAddress}`);
+  if (new Set(source.lanes.map(lane => lane.id)).size !== source.lanes.length ||
+    new Set(identities).size !== identities.length ||
+    source.lanes.some(lane => lane.source.chainId === lane.destination.chainId ||
+      lane.source.chainSelector === "0" || lane.destination.chainSelector === "0") ||
+    !source.lanes.some(lane => lane.source.chainId === source.chainId || lane.destination.chainId === source.chainId)) {
+    ctx.addIssue({ code: "custom", message: "CCIP requires unique directed pool/lane identities and an exact canonical amount anchor" });
+  }
+});
+export type CcipPendingRead = z.infer<typeof CcipPendingReadSchema>;
+export const CcipPendingCheckpointSchema = z.strictObject({
+  schemaVersion: z.literal(1), sourceDigest: Sha256Schema,
+  lanes: z.array(z.strictObject({
+    id: CanonicalTextSchema, sent: CurveHistoryCursorSchema, executed: CurveHistoryCursorSchema,
+    initialSequence: NonceSchema, lastSequence: NonceSchema,
+    messages: z.array(z.strictObject({
+      sequence: NonceSchema, messageId: EvmWordSchema, amount: z.string().regex(/^[1-9][0-9]*$/).max(78),
+      transactionHash: EvmWordSchema, sourceBlock: z.number().int().nonnegative(),
+      sourceBlockHash: EvmWordSchema, executionState: z.union([z.literal(0), z.literal(3)]),
+    })).max(512),
+  })).min(1).max(128),
+});
+export type CcipPendingCheckpoint = z.infer<typeof CcipPendingCheckpointSchema>;
+const CcipPendingProofSchema = z.strictObject({
+  sourceDigest: Sha256Schema, checkpointDigest: Sha256Schema, discoveryDigest: Sha256Schema,
+  pins: z.array(z.strictObject({
+    chainId: CanonicalChainIdSchema, anchor: z.number().int().nonnegative(),
+    anchorHash: EvmWordSchema, observedAtSec: UnixSecondsSchema,
+  })).min(2).max(32),
+  lanes: z.array(z.strictObject({
+    id: CanonicalTextSchema, sourcePoolAddress: EvmAddressSchema, destinationPoolAddress: EvmAddressSchema,
+    sourceChainSelector: NonceSchema, destinationChainSelector: NonceSchema,
+    initialSequence: NonceSchema, lastSequence: NonceSchema,
+    pendingCount: z.number().int().nonnegative().max(512), failedCount: z.number().int().nonnegative().max(512),
+    amount: z.string().regex(/^(0|[1-9][0-9]*)$/).max(78),
+  })).min(1).max(128),
+});
+const PendingAmountReadSchema = z.union([ApiAmountReadSchema, EvmPendingStateReadSchema, CurveLzPendingReadSchema, CcipPendingReadSchema]);
 export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
   assetId: CanonicalTextSchema, reviewer: CanonicalTextSchema, reviewedAtSec: UnixSecondsSchema, expiresAtSec: UnixSecondsSchema,
   evidenceUrls: z.array(z.string().url()).min(1), economicScope: CanonicalTextSchema, sourceId: CanonicalTextSchema,
@@ -153,7 +222,7 @@ export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
   deployments: z.array(CensusRowSchema).min(1).max(64),
   conversionSources: z.array(ApiAmountReadSchema).max(64),
   referencePriceSource: ApiAmountReadSchema.nullable(),
-  liabilityInFlightSource: ApiAmountReadSchema.nullable(),
+  liabilityInFlightSource: PendingAmountReadSchema.nullable(),
   excludedRegistryDeploymentKeys: z.array(CanonicalTextSchema), exclusions: z.array(BalanceRuleSchema).max(64),
   escrows: z.array(z.strictObject({
     id: CanonicalTextSchema, canonicalDeploymentKey: CanonicalTextSchema, account: CanonicalTextSchema,
@@ -182,6 +251,16 @@ export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
         (canonical.read.kind !== "evm-total-supply" && canonical.read.kind !== "evm-balance")) {
         ctx.addIssue({ code: "custom", message: "On-chain pending state must share the canonical escrow's pinned EVM token-unit generation" });
       }
+      if (escrow.inFlightSource.kind === "evm-ccip-pending") {
+        const source = escrow.inFlightSource;
+        if (source.amountDecimals !== canonical?.decimals ||
+          !source.lanes.some(lane => lane.source.tokenPoolAddress === escrow.account || lane.destination.tokenPoolAddress === escrow.account) ||
+          source.lanes.some(lane => [lane.source, lane.destination].some(side =>
+            !plan.deployments.some(row => row.chainId === side.chainId && row.address === side.tokenAddress &&
+              row.decimals === side.decimals && row.claimUnit === canonical?.claimUnit)))) {
+          ctx.addIssue({ code: "custom", message: "CCIP escrow lanes must bind the exact pool and same-claim holding census" });
+        }
+      }
       if (escrow.inFlightSource.kind === "evm-curve-lz-pending") {
         const source = escrow.inFlightSource;
         if (escrow.account !== source.sides[0].bridgeAddress ||
@@ -195,6 +274,16 @@ export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
       }
     }
   }
+  if (plan.liabilityInFlightSource !== null && "kind" in plan.liabilityInFlightSource) {
+    const source = plan.liabilityInFlightSource, canonical = plan.deployments[0];
+    if (source.kind !== "evm-ccip-pending" || source.chainId !== canonical?.chainId ||
+      source.amountDecimals !== canonical?.decimals ||
+      source.lanes.some(lane => [lane.source, lane.destination].some(side =>
+        !plan.deployments.some(row => row.chainId === side.chainId && row.address === side.tokenAddress &&
+          row.decimals === side.decimals && row.claimUnit === canonical?.claimUnit)))) {
+      ctx.addIssue({ code: "custom", message: "Typed CCIP liability requires exact common-claim holding identities" });
+    }
+  }
   if (plan.inFlightTreatment === "atomic-native-wrapper" &&
     (plan.accountingFamily !== "native-wrapped" || plan.escrows.length === 0 || plan.liabilityInFlightSource !== null ||
       !plan.deployments.some(row => row.holdingKind === "native-gas") ||
@@ -205,6 +294,28 @@ export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
   if (new Set(plan.conversionSources.map(row => row.sourceId)).size !== plan.conversionSources.length || plan.deployments.some(row => row.conversionSourceId !== null && !plan.conversionSources.some(source => source.sourceId === row.conversionSourceId))) ctx.addIssue({ code: "custom", message: "Conversion source must bind an exact reviewed API read" });
   if (plan.escrows.some(row => !keys.includes(row.canonicalDeploymentKey) || row.receiptDeploymentKeys.some(key => !keys.includes(key) || key === row.canonicalDeploymentKey)) || plan.exclusions.some(row => !keys.includes(row.deploymentKey))) ctx.addIssue({ code: "custom", message: "Accounting rule references an unknown holding" });
 });
+/** A local attribution census; never certifies the rest of the asset's liabilities. */
+export const ReviewedProviderChainPartitionSchema = z.strictObject({
+  assetId: CanonicalTextSchema, chainId: CanonicalChainIdSchema,
+  reviewer: CanonicalTextSchema, reviewedAtSec: UnixSecondsSchema, expiresAtSec: UnixSecondsSchema,
+  evidenceUrls: z.array(z.string().url().refine(url => url.startsWith("https://"))).min(1),
+  adapterSourceUrls: z.array(z.string().url().regex(/^https:\/\/raw\.githubusercontent\.com\/DefiLlama\/peggedassets-server\/[0-9a-f]{40}\/src\/adapters\/peggedAssets\/[^?#]+$/)).min(1).max(4),
+  accounting: z.literal("disjoint-same-unit-total-supplies"), exhaustiveChainScope: z.literal(true),
+  rationale: CanonicalTextSchema,
+  deployments: z.array(z.strictObject({
+    address: z.string().regex(/^0x[0-9a-f]{40}$/), decimals: z.number().int().min(0).max(36),
+    routeId: CanonicalTextSchema,
+  })).min(2).max(8),
+}).superRefine((review, ctx) => {
+  if (new Set(review.deployments.map(row => row.address)).size !== review.deployments.length ||
+    review.deployments.some(row => row.routeId !== `${review.chainId}:${row.address}`)) {
+    ctx.addIssue({ code: "custom", message: "Chain partition requires unique exact deployment routes" });
+  }
+  if (review.expiresAtSec <= review.reviewedAtSec || review.expiresAtSec - review.reviewedAtSec > vocabulary.reviewMaxAgeDays * 86400) {
+    ctx.addIssue({ code: "custom", message: "Chain partition expiry exceeds review budget" });
+  }
+});
+export type ReviewedProviderChainPartition = z.infer<typeof ReviewedProviderChainPartitionSchema>;
 /** Attribution only: this proof never changes a provider observation or liability census. */
 export const ReviewedProviderRowExclusionSchema = z.strictObject({
   assetId: CanonicalTextSchema, providerChainLabel: CanonicalTextSchema,
@@ -244,6 +355,7 @@ export const ReviewedEconomicSupplyPlanFileSchema = uniqueKeyedCollectionSchema(
     const keys = rows.map(row => `${row.assetId}:${String(row.providerChainLabel)}`);
     if (new Set(keys).size !== keys.length) ctx.addIssue({ code: "custom", message: "Duplicate provider-row exclusion review" });
   }).optional(),
+  providerChainPartitionReviews: z.array(z.object({ assetId: CanonicalTextSchema }).passthrough()).optional(),
 });
 /** Only envelope structure and attribution are global; plan evidence and provider-row collisions are asset-local (R8). */
 export const ReviewedEconomicSupplyPlanEnvelopeSchema = ReviewedEconomicSupplyPlanFileSchema.omit({ reviews: true, providerRowExclusionReviews: true }).extend({
@@ -255,6 +367,7 @@ const EconomicSupplyObservationSchema = z.strictObject({
   id: CanonicalTextSchema, deploymentKey: CanonicalTextSchema, amount: DecimalSchema,
   observedAtSec: UnixSecondsSchema, anchor: CanonicalTextSchema, anchorHash: CanonicalTextSchema, responseSha256: Sha256Schema,
   curvePendingProof: CurvePendingProofSchema.optional(),
+  ccipPendingProof: CcipPendingProofSchema.optional(),
 });
 // eslint-disable-next-line security/detect-unsafe-regex -- anchored linear unsigned-decimal shape; groups cannot overlap.
 const EconomicSupplyReferenceSchema = z.strictObject({ sourceId: CanonicalTextSchema, sourceGeneration: CanonicalTextSchema, observedAtSec: UnixSecondsSchema, value: z.string().regex(/^[0-9]+(\.[0-9]+)?$/).refine(value => Number(value) > 0 && Number.isFinite(Number(value))), responseSha256: Sha256Schema });

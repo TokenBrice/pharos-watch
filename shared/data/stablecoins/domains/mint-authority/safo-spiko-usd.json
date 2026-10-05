@@ -210,10 +210,10 @@
       {
         "executionScope": {
           "controllerDeployment": "ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-05",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "reviewer": "R05 pinned on-chain and verified-source review 2026-10-05",
           "confidence": "partial",
           "sources": [
             {
@@ -223,26 +223,34 @@
             {
               "label": "Verified PermissionManager implementation",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+            },
+            {
+              "label": "Verified native fund Token implementations (full inheritance source)",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbf5fb9284c9cf2798d5f18a9702af620cd4351be"
+            },
+            {
+              "label": "Pinned Ethereum block 26124840 and complete PermissionManager event census from creation 19690257",
+              "url": "https://etherscan.io/block/26124840"
             }
           ],
           "pin": {
-            "position": "26095796",
-            "hash": null,
-            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
-            "signerIdentity": "PM group 2; token mint requirement mask 0x5; initiate mask 0x401; approve mask 0x201"
+            "position": "26124840",
+            "hash": "0x204633afc218623e2a2753eb9219585d01fde70c5fa58c24545c5bc6234d090c",
+            "runtimeIdentity": "Exact deployed-bytecode/source equality: Minter 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, PM 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, all 11 implementations of 17 PM mint targets; zero proxy admin/beacon; PM immutable authority; self-only Multicall, restricted uses msg.sender. Root/native liability reach retained, not deployment-limited.",
+            "signerIdentity": "0x5ed5a75eeed1934ea060186e35187eaa73331366; PM group 2; group mask 0x8000000000000000000000000000000000000000000000000000000000000004; contract; group-10 initiators 2 and group-9 approvers 7; independent ADMIN 3-of-6"
           },
           "observedState": {
-            "position": "26095796",
-            "hash": null,
-            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
-            "signerIdentity": "PM group 2; token mint requirement mask 0x5; initiate mask 0x401; approve mask 0x201"
+            "position": "26124840",
+            "hash": "0x204633afc218623e2a2753eb9219585d01fde70c5fa58c24545c5bc6234d090c",
+            "runtimeIdentity": "Exact deployed-bytecode/source equality: Minter 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, PM 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, all 11 implementations of 17 PM mint targets; zero proxy admin/beacon; PM immutable authority; self-only Multicall, restricted uses msg.sender. Root/native liability reach retained, not deployment-limited.",
+            "signerIdentity": "0x5ed5a75eeed1934ea060186e35187eaa73331366; PM group 2; group mask 0x8000000000000000000000000000000000000000000000000000000000000004; contract; group-10 initiators 2 and group-9 approvers 7; independent ADMIN 3-of-6"
           },
           "inventory": "partial",
           "closure": {
-            "entrypoints": false,
+            "entrypoints": true,
             "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
+            "delegateAndFallback": true,
+            "permissions": true,
             "upgrades": false,
             "bypasses": false,
             "liabilityInventory": false
@@ -343,6 +351,38 @@
               "permissionChangeRefs": [],
               "upgradeRefs": [],
               "bypassRefs": []
+            },
+            {
+              "id": "cancel-pending",
+              "targetDeployment": "ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xb76ff11f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "none",
+              "economicLossScope": "access-only",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "safo-spiko-usd"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
             }
           ]
         },
@@ -370,16 +410,16 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
           }
         ],
-        "evidence": "At Ethereum block 26095796, PM getGroups(proxy) includes group 2 and canCall(proxy, SAFO token, mint selector 0x40c10f19) returned true. The Minter proxy authority is PM 0x344278aff344d6fb960705dc18a4912221608472, its implementation slot is 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, and the corrected EIP-1967 admin slot is zero. PM getRequirements(proxy, upgradeToAndCall) returned ADMIN mask 1; the fetched verified implementation calls token.mint in initiateMint and approveMint."
+        "evidence": "At Ethereum block 26095796, PM getGroups(proxy) includes group 2 and canCall(proxy, SAFO token, mint selector 0x40c10f19) returned true. The Minter proxy authority is PM 0x344278aff344d6fb960705dc18a4912221608472, its implementation slot is 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, and the corrected EIP-1967 admin slot is zero. PM getRequirements(proxy, upgradeToAndCall) returned ADMIN mask 1; the fetched verified implementation calls token.mint in initiateMint and approveMint. R05 Ethereum execution review at block 26124840 / 0x204633afc218623e2a2753eb9219585d01fde70c5fa58c24545c5bc6234d090c: independent PM history census from creation 19690257 recovered 697 events, 108 current requirement pairs on 30 targets, and all 256 group-admin masks (only group 6 adds group 5). Current privileged membership matches census. Minter, PM, both native tokens and all 11 implementations of the 17 group-2 mint targets exactly match verified deployed source bytecode. Token mint/burn/pause/UUPS all check the immutable PM using msg.sender; the trusted forwarder cannot call restricted functions, token owner is zero, proxy admin/beacon slots are zero, and self-delegatecall Multicall does not evade permissions. Minter token arguments are mutable: full root/native-liability reach and the independent ADMIN ability to change permissions, limits and implementations are retained; no deployment-local cap, collateral guarantee, signer independence or module noninterference credit is asserted. Group-9 approveMint/cancelMint and group-10 initiateMint are the only restricted Minter routes; approve requires a matching pending operation and bypasses daily limits. Both fund tokens have a 500000000000 raw-unit daily limit (5000000 shares), maxDelay 86400 is an expiry, not an unavoidable execution timelock. Approver Safe has four zero-code owners, threshold 1, terminal empty modules, zero guard/module guard, singleton 0x41675c099f32341bf84bfc5382af534df5c7461a and handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, both runtime/source exact; simulateAndRevert cannot persist effects. Admin Safe independently remains 3-of-6; no custody attribution inferred. Complete scope applies only to the seven narrowly-permissioned group-9/group-10 principals; Minter, richer-role callers and ADMIN system inventory remain partial."
       },
       {
         "executionScope": {
           "controllerDeployment": "ethereum:0x7a493c05479f6132cb895c72c49439139b595eb4",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-05",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
-          "confidence": "partial",
+          "reviewer": "R05 pinned on-chain and verified-source review 2026-10-05",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Verified Minter implementation",
@@ -388,29 +428,37 @@
             {
               "label": "Verified PermissionManager implementation",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+            },
+            {
+              "label": "Verified native fund Token implementations (full inheritance source)",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbf5fb9284c9cf2798d5f18a9702af620cd4351be"
+            },
+            {
+              "label": "Pinned Ethereum block 26124840 and complete PermissionManager event census from creation 19690257",
+              "url": "https://etherscan.io/block/26124840"
             }
           ],
           "pin": {
-            "position": "26095796",
-            "hash": null,
-            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
-            "signerIdentity": "0x7a493c05479f6132cb895c72c49439139b595eb4; group 10; requirement mask 0x401"
+            "position": "26124840",
+            "hash": "0x204633afc218623e2a2753eb9219585d01fde70c5fa58c24545c5bc6234d090c",
+            "runtimeIdentity": "Exact deployed-bytecode/source equality: Minter 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, PM 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, all 11 implementations of 17 PM mint targets; zero proxy admin/beacon; PM immutable authority; self-only Multicall, restricted uses msg.sender. Root/native liability reach retained, not deployment-limited.",
+            "signerIdentity": "0x7a493c05479f6132cb895c72c49439139b595eb4; PM group 10; group mask 0x8000000000000000000000000000000000000000000000000000000000000400; zero runtime code; no group-admin authority"
           },
           "observedState": {
-            "position": "26095796",
-            "hash": null,
-            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
-            "signerIdentity": "0x7a493c05479f6132cb895c72c49439139b595eb4; group 10; requirement mask 0x401"
+            "position": "26124840",
+            "hash": "0x204633afc218623e2a2753eb9219585d01fde70c5fa58c24545c5bc6234d090c",
+            "runtimeIdentity": "Exact deployed-bytecode/source equality: Minter 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, PM 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, all 11 implementations of 17 PM mint targets; zero proxy admin/beacon; PM immutable authority; self-only Multicall, restricted uses msg.sender. Root/native liability reach retained, not deployment-limited.",
+            "signerIdentity": "0x7a493c05479f6132cb895c72c49439139b595eb4; PM group 10; group mask 0x8000000000000000000000000000000000000000000000000000000000000400; zero runtime code; no group-admin authority"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
@@ -654,11 +702,11 @@
       {
         "executionScope": {
           "controllerDeployment": "ethereum:0x4d1d9c5b5d9ca448194313d799de374f362bd460",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-05",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
-          "confidence": "partial",
+          "reviewer": "R05 pinned on-chain and verified-source review 2026-10-05",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Verified Minter implementation",
@@ -667,29 +715,37 @@
             {
               "label": "Verified PermissionManager implementation",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+            },
+            {
+              "label": "Verified native fund Token implementations (full inheritance source)",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbf5fb9284c9cf2798d5f18a9702af620cd4351be"
+            },
+            {
+              "label": "Pinned Ethereum block 26124840 and complete PermissionManager event census from creation 19690257",
+              "url": "https://etherscan.io/block/26124840"
             }
           ],
           "pin": {
-            "position": "26095796",
-            "hash": null,
-            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
-            "signerIdentity": "0x4d1d9c5b5d9ca448194313d799de374f362bd460; group 9; requirement mask 0x201; single EOA"
+            "position": "26124840",
+            "hash": "0x204633afc218623e2a2753eb9219585d01fde70c5fa58c24545c5bc6234d090c",
+            "runtimeIdentity": "Exact deployed-bytecode/source equality: Minter 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, PM 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, all 11 implementations of 17 PM mint targets; zero proxy admin/beacon; PM immutable authority; self-only Multicall, restricted uses msg.sender. Root/native liability reach retained, not deployment-limited.",
+            "signerIdentity": "0x4d1d9c5b5d9ca448194313d799de374f362bd460; PM group 9; group mask 0x8000000000000000000000000000000000000000000000000000000000000200; zero runtime code; no group-admin authority"
           },
           "observedState": {
-            "position": "26095796",
-            "hash": null,
-            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
-            "signerIdentity": "0x4d1d9c5b5d9ca448194313d799de374f362bd460; group 9; requirement mask 0x201; single EOA"
+            "position": "26124840",
+            "hash": "0x204633afc218623e2a2753eb9219585d01fde70c5fa58c24545c5bc6234d090c",
+            "runtimeIdentity": "Exact deployed-bytecode/source equality: Minter 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, PM 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, all 11 implementations of 17 PM mint targets; zero proxy admin/beacon; PM immutable authority; self-only Multicall, restricted uses msg.sender. Root/native liability reach retained, not deployment-limited.",
+            "signerIdentity": "0x4d1d9c5b5d9ca448194313d799de374f362bd460; PM group 9; group mask 0x8000000000000000000000000000000000000000000000000000000000000200; zero runtime code; no group-admin authority"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
@@ -710,6 +766,38 @@
               "claimImpairment": "unbounded",
               "economicLossScope": "global-claim",
               "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "safo-spiko-usd"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "cancel-pending",
+              "targetDeployment": "ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xb76ff11f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "none",
+              "economicLossScope": "access-only",
+              "unavoidableDelaySec": 0,
               "activation": "active",
               "affectedLiabilityIds": [
                 "safo-spiko-usd"
@@ -747,11 +835,11 @@
       {
         "executionScope": {
           "controllerDeployment": "ethereum:0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-05",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
-          "confidence": "partial",
+          "reviewer": "R05 pinned on-chain and verified-source review 2026-10-05",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Verified Minter implementation",
@@ -760,29 +848,37 @@
             {
               "label": "Verified PermissionManager implementation",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+            },
+            {
+              "label": "Verified native fund Token implementations (full inheritance source)",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbf5fb9284c9cf2798d5f18a9702af620cd4351be"
+            },
+            {
+              "label": "Pinned Ethereum block 26124840 and complete PermissionManager event census from creation 19690257",
+              "url": "https://etherscan.io/block/26124840"
             }
           ],
           "pin": {
-            "position": "26095796",
-            "hash": null,
-            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
-            "signerIdentity": "0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a; group 9; requirement mask 0x201; single EOA"
+            "position": "26124840",
+            "hash": "0x204633afc218623e2a2753eb9219585d01fde70c5fa58c24545c5bc6234d090c",
+            "runtimeIdentity": "Exact deployed-bytecode/source equality: Minter 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, PM 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, all 11 implementations of 17 PM mint targets; zero proxy admin/beacon; PM immutable authority; self-only Multicall, restricted uses msg.sender. Root/native liability reach retained, not deployment-limited.",
+            "signerIdentity": "0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a; PM group 9; group mask 0x8000000000000000000000000000000000000000000000000000000000000200; zero runtime code; no group-admin authority"
           },
           "observedState": {
-            "position": "26095796",
-            "hash": null,
-            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
-            "signerIdentity": "0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a; group 9; requirement mask 0x201; single EOA"
+            "position": "26124840",
+            "hash": "0x204633afc218623e2a2753eb9219585d01fde70c5fa58c24545c5bc6234d090c",
+            "runtimeIdentity": "Exact deployed-bytecode/source equality: Minter 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, PM 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, all 11 implementations of 17 PM mint targets; zero proxy admin/beacon; PM immutable authority; self-only Multicall, restricted uses msg.sender. Root/native liability reach retained, not deployment-limited.",
+            "signerIdentity": "0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a; PM group 9; group mask 0x8000000000000000000000000000000000000000000000000000000000000200; zero runtime code; no group-admin authority"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
@@ -803,6 +899,38 @@
               "claimImpairment": "unbounded",
               "economicLossScope": "global-claim",
               "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "safo-spiko-usd"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "cancel-pending",
+              "targetDeployment": "ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xb76ff11f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "none",
+              "economicLossScope": "access-only",
+              "unavoidableDelaySec": 0,
               "activation": "active",
               "affectedLiabilityIds": [
                 "safo-spiko-usd"
@@ -840,11 +968,11 @@
       {
         "executionScope": {
           "controllerDeployment": "ethereum:0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-05",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
-          "confidence": "partial",
+          "reviewer": "R05 pinned on-chain and verified-source review 2026-10-05",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Verified Minter implementation",
@@ -853,29 +981,45 @@
             {
               "label": "Verified PermissionManager implementation",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+            },
+            {
+              "label": "Verified native fund Token implementations (full inheritance source)",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbf5fb9284c9cf2798d5f18a9702af620cd4351be"
+            },
+            {
+              "label": "Pinned Ethereum block 26124840 and complete PermissionManager event census from creation 19690257",
+              "url": "https://etherscan.io/block/26124840"
+            },
+            {
+              "label": "Verified Safe singleton",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x41675c099f32341bf84bfc5382af534df5c7461a"
+            },
+            {
+              "label": "Verified CompatibilityFallbackHandler",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfd0732dc9e303f09fcef3a7388ad10a83459ec99"
             }
           ],
           "pin": {
-            "position": "26095796",
-            "hash": null,
-            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
-            "signerIdentity": "0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7; group 9; requirement mask 0x201; 1-of-4"
+            "position": "26124840",
+            "hash": "0x204633afc218623e2a2753eb9219585d01fde70c5fa58c24545c5bc6234d090c",
+            "runtimeIdentity": "Exact deployed-bytecode/source equality: Minter 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, PM 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, all 11 implementations of 17 PM mint targets; zero proxy admin/beacon; PM immutable authority; self-only Multicall, restricted uses msg.sender. Root/native liability reach retained, not deployment-limited. Safe singleton/fallback runtime exact; authorized arbitrary call/delegatecall retains PM group 9 restrictions.",
+            "signerIdentity": "0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7; PM group 9; 1-of-4: 0x0f8c7805a572159755ac1d0a4c1ffa8cee3dea3b, 0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a, 0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949, 0x4d1d9c5b5d9ca448194313d799de374f362bd460; no modules; guard/moduleGuard zero; handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99"
           },
           "observedState": {
-            "position": "26095796",
-            "hash": null,
-            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
-            "signerIdentity": "0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7; group 9; requirement mask 0x201; 1-of-4"
+            "position": "26124840",
+            "hash": "0x204633afc218623e2a2753eb9219585d01fde70c5fa58c24545c5bc6234d090c",
+            "runtimeIdentity": "Exact deployed-bytecode/source equality: Minter 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, PM 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, all 11 implementations of 17 PM mint targets; zero proxy admin/beacon; PM immutable authority; self-only Multicall, restricted uses msg.sender. Root/native liability reach retained, not deployment-limited. Safe singleton/fallback runtime exact; authorized arbitrary call/delegatecall retains PM group 9 restrictions.",
+            "signerIdentity": "0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7; PM group 9; 1-of-4: 0x0f8c7805a572159755ac1d0a4c1ffa8cee3dea3b, 0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a, 0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949, 0x4d1d9c5b5d9ca448194313d799de374f362bd460; no modules; guard/moduleGuard zero; handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
@@ -896,6 +1040,38 @@
               "claimImpairment": "unbounded",
               "economicLossScope": "global-claim",
               "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "safo-spiko-usd"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "cancel-pending",
+              "targetDeployment": "ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xb76ff11f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "none",
+              "economicLossScope": "access-only",
+              "unavoidableDelaySec": 0,
               "activation": "active",
               "affectedLiabilityIds": [
                 "safo-spiko-usd"
@@ -941,20 +1117,22 @@
             "0x4d1d9c5b5d9ca448194313d799de374f362bd460"
           ],
           "enabledModules": [],
-          "guard": null,
-          "observedBlock": 26095796,
-          "observedAt": "2026-10-01",
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 26124840,
+          "observedAt": "2026-10-05",
           "source": "onchain"
         }
       },
       {
         "executionScope": {
           "controllerDeployment": "ethereum:0xda47bd72438f11bef7cc54f18cd02426dd86a5a2",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-05",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
-          "confidence": "partial",
+          "reviewer": "R05 pinned on-chain and verified-source review 2026-10-05",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Verified Minter implementation",
@@ -963,29 +1141,37 @@
             {
               "label": "Verified PermissionManager implementation",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+            },
+            {
+              "label": "Verified native fund Token implementations (full inheritance source)",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbf5fb9284c9cf2798d5f18a9702af620cd4351be"
+            },
+            {
+              "label": "Pinned Ethereum block 26124840 and complete PermissionManager event census from creation 19690257",
+              "url": "https://etherscan.io/block/26124840"
             }
           ],
           "pin": {
-            "position": "26095796",
-            "hash": null,
-            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
-            "signerIdentity": "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2; group 9; requirement mask 0x201; single EOA"
+            "position": "26124840",
+            "hash": "0x204633afc218623e2a2753eb9219585d01fde70c5fa58c24545c5bc6234d090c",
+            "runtimeIdentity": "Exact deployed-bytecode/source equality: Minter 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, PM 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, all 11 implementations of 17 PM mint targets; zero proxy admin/beacon; PM immutable authority; self-only Multicall, restricted uses msg.sender. Root/native liability reach retained, not deployment-limited.",
+            "signerIdentity": "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2; PM group 9; group mask 0x8000000000000000000000000000000000000000000000000000000000000200; zero runtime code; no group-admin authority"
           },
           "observedState": {
-            "position": "26095796",
-            "hash": null,
-            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
-            "signerIdentity": "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2; group 9; requirement mask 0x201; single EOA"
+            "position": "26124840",
+            "hash": "0x204633afc218623e2a2753eb9219585d01fde70c5fa58c24545c5bc6234d090c",
+            "runtimeIdentity": "Exact deployed-bytecode/source equality: Minter 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, PM 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, all 11 implementations of 17 PM mint targets; zero proxy admin/beacon; PM immutable authority; self-only Multicall, restricted uses msg.sender. Root/native liability reach retained, not deployment-limited.",
+            "signerIdentity": "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2; PM group 9; group mask 0x8000000000000000000000000000000000000000000000000000000000000200; zero runtime code; no group-admin authority"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
@@ -1006,6 +1192,38 @@
               "claimImpairment": "unbounded",
               "economicLossScope": "global-claim",
               "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "safo-spiko-usd"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "cancel-pending",
+              "targetDeployment": "ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xb76ff11f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "none",
+              "economicLossScope": "access-only",
+              "unavoidableDelaySec": 0,
               "activation": "active",
               "affectedLiabilityIds": [
                 "safo-spiko-usd"
@@ -1043,11 +1261,11 @@
       {
         "executionScope": {
           "controllerDeployment": "ethereum:0xe67d2cbeae3090be017c66e7a6943961619a5d35",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-05",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
-          "confidence": "partial",
+          "reviewer": "R05 pinned on-chain and verified-source review 2026-10-05",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Verified Minter implementation",
@@ -1056,29 +1274,37 @@
             {
               "label": "Verified PermissionManager implementation",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+            },
+            {
+              "label": "Verified native fund Token implementations (full inheritance source)",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbf5fb9284c9cf2798d5f18a9702af620cd4351be"
+            },
+            {
+              "label": "Pinned Ethereum block 26124840 and complete PermissionManager event census from creation 19690257",
+              "url": "https://etherscan.io/block/26124840"
             }
           ],
           "pin": {
-            "position": "26095796",
-            "hash": null,
-            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
-            "signerIdentity": "0xe67d2cbeae3090be017c66e7a6943961619a5d35; group 9; requirement mask 0x201; single EOA"
+            "position": "26124840",
+            "hash": "0x204633afc218623e2a2753eb9219585d01fde70c5fa58c24545c5bc6234d090c",
+            "runtimeIdentity": "Exact deployed-bytecode/source equality: Minter 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, PM 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, all 11 implementations of 17 PM mint targets; zero proxy admin/beacon; PM immutable authority; self-only Multicall, restricted uses msg.sender. Root/native liability reach retained, not deployment-limited.",
+            "signerIdentity": "0xe67d2cbeae3090be017c66e7a6943961619a5d35; PM group 9; group mask 0x8000000000000000000000000000000000000000000000000000000000000200; zero runtime code; no group-admin authority"
           },
           "observedState": {
-            "position": "26095796",
-            "hash": null,
-            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
-            "signerIdentity": "0xe67d2cbeae3090be017c66e7a6943961619a5d35; group 9; requirement mask 0x201; single EOA"
+            "position": "26124840",
+            "hash": "0x204633afc218623e2a2753eb9219585d01fde70c5fa58c24545c5bc6234d090c",
+            "runtimeIdentity": "Exact deployed-bytecode/source equality: Minter 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, PM 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, all 11 implementations of 17 PM mint targets; zero proxy admin/beacon; PM immutable authority; self-only Multicall, restricted uses msg.sender. Root/native liability reach retained, not deployment-limited.",
+            "signerIdentity": "0xe67d2cbeae3090be017c66e7a6943961619a5d35; PM group 9; group mask 0x8000000000000000000000000000000000000000000000000000000000000200; zero runtime code; no group-admin authority"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
@@ -1099,6 +1325,38 @@
               "claimImpairment": "unbounded",
               "economicLossScope": "global-claim",
               "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "safo-spiko-usd"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "cancel-pending",
+              "targetDeployment": "ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xb76ff11f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "none",
+              "economicLossScope": "access-only",
+              "unavoidableDelaySec": 0,
               "activation": "active",
               "affectedLiabilityIds": [
                 "safo-spiko-usd"
@@ -1136,11 +1394,11 @@
       {
         "executionScope": {
           "controllerDeployment": "ethereum:0xf949ca7be175a5fcbd3febb9a0235de608ca7898",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-05",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
-          "confidence": "partial",
+          "reviewer": "R05 pinned on-chain and verified-source review 2026-10-05",
+          "confidence": "verified",
           "sources": [
             {
               "label": "Verified Minter implementation",
@@ -1149,29 +1407,37 @@
             {
               "label": "Verified PermissionManager implementation",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+            },
+            {
+              "label": "Verified native fund Token implementations (full inheritance source)",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbf5fb9284c9cf2798d5f18a9702af620cd4351be"
+            },
+            {
+              "label": "Pinned Ethereum block 26124840 and complete PermissionManager event census from creation 19690257",
+              "url": "https://etherscan.io/block/26124840"
             }
           ],
           "pin": {
-            "position": "26095796",
-            "hash": null,
-            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
-            "signerIdentity": "0xf949ca7be175a5fcbd3febb9a0235de608ca7898; group 9; requirement mask 0x201; single EOA"
+            "position": "26124840",
+            "hash": "0x204633afc218623e2a2753eb9219585d01fde70c5fa58c24545c5bc6234d090c",
+            "runtimeIdentity": "Exact deployed-bytecode/source equality: Minter 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, PM 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, all 11 implementations of 17 PM mint targets; zero proxy admin/beacon; PM immutable authority; self-only Multicall, restricted uses msg.sender. Root/native liability reach retained, not deployment-limited.",
+            "signerIdentity": "0xf949ca7be175a5fcbd3febb9a0235de608ca7898; PM group 9; group mask 0x8000000000000000000000000000000000000000000000000000000000000200; zero runtime code; no group-admin authority"
           },
           "observedState": {
-            "position": "26095796",
-            "hash": null,
-            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
-            "signerIdentity": "0xf949ca7be175a5fcbd3febb9a0235de608ca7898; group 9; requirement mask 0x201; single EOA"
+            "position": "26124840",
+            "hash": "0x204633afc218623e2a2753eb9219585d01fde70c5fa58c24545c5bc6234d090c",
+            "runtimeIdentity": "Exact deployed-bytecode/source equality: Minter 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, PM 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, all 11 implementations of 17 PM mint targets; zero proxy admin/beacon; PM immutable authority; self-only Multicall, restricted uses msg.sender. Root/native liability reach retained, not deployment-limited.",
+            "signerIdentity": "0xf949ca7be175a5fcbd3febb9a0235de608ca7898; PM group 9; group mask 0x8000000000000000000000000000000000000000000000000000000000000200; zero runtime code; no group-admin authority"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
@@ -1192,6 +1458,38 @@
               "claimImpairment": "unbounded",
               "economicLossScope": "global-claim",
               "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "safo-spiko-usd"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "cancel-pending",
+              "targetDeployment": "ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xb76ff11f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "none",
+              "economicLossScope": "access-only",
+              "unavoidableDelaySec": 0,
               "activation": "active",
               "affectedLiabilityIds": [
                 "safo-spiko-usd"
@@ -1229,10 +1527,10 @@
       {
         "executionScope": {
           "controllerDeployment": "solana:BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-05",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "reviewer": "R05 finalized Solana source/runtime and signer review 2026-10-05",
           "confidence": "partial",
           "sources": [
             {
@@ -1242,18 +1540,26 @@
             {
               "label": "Finalized native register and configuration RPC",
               "url": "https://solana-rpc.publicnode.com"
+            },
+            {
+              "label": "Current on-chain build correspondence, independently verified and matched to pinned ELF",
+              "url": "https://verify.osec.io/status/8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw"
+            },
+            {
+              "label": "Squads authority account field layout; current 1-of-1 member census at the same finalized context",
+              "url": "https://docs.squads.so/main/development/reference/accounts"
             }
           ],
           "pin": {
-            "position": "452345677",
+            "position": "453529248",
             "hash": null,
-            "runtimeIdentity": "Spiko native minter ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deployment slot 443429864; source correspondence incomplete",
+            "runtimeIdentity": "Spiko minter 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw / ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deploy slot 443429864; trimmed ELF SHA256 0aff1fc23cc42369aacdcaf797d2579c691019c3170115b91116c3394f70a68d equals Osec verified build at issuer commit afdab14fb1a59bf3abe2f263870023349a560e2e; Token-2022/ACL/ABL/Squads CPI and upgrade alternatives remain partial.",
             "signerIdentity": "MinterConfig BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ; admin 2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9; initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd"
           },
           "observedState": {
-            "position": "452345677",
+            "position": "453529248",
             "hash": null,
-            "runtimeIdentity": "Spiko native minter ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deployment slot 443429864; source correspondence incomplete",
+            "runtimeIdentity": "Spiko minter 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw / ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deploy slot 443429864; trimmed ELF SHA256 0aff1fc23cc42369aacdcaf797d2579c691019c3170115b91116c3394f70a68d equals Osec verified build at issuer commit afdab14fb1a59bf3abe2f263870023349a560e2e; Token-2022/ACL/ABL/Squads CPI and upgrade alternatives remain partial.",
             "signerIdentity": "MinterConfig BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ; admin 2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9; initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd"
           },
           "inventory": "partial",
@@ -1334,10 +1640,10 @@
       {
         "executionScope": {
           "controllerDeployment": "solana:2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-05",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "reviewer": "R05 finalized Solana source/runtime and signer review 2026-10-05",
           "confidence": "partial",
           "sources": [
             {
@@ -1347,18 +1653,26 @@
             {
               "label": "Finalized native register and configuration RPC",
               "url": "https://solana-rpc.publicnode.com"
+            },
+            {
+              "label": "Current on-chain build correspondence, independently verified and matched to pinned ELF",
+              "url": "https://verify.osec.io/status/8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw"
+            },
+            {
+              "label": "Squads authority account field layout; current 1-of-1 member census at the same finalized context",
+              "url": "https://docs.squads.so/main/development/reference/accounts"
             }
           ],
           "pin": {
-            "position": "452345677",
+            "position": "453529248",
             "hash": null,
-            "runtimeIdentity": "Spiko native minter ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deployment slot 443429864; source correspondence incomplete",
+            "runtimeIdentity": "Spiko minter 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw / ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deploy slot 443429864; trimmed ELF SHA256 0aff1fc23cc42369aacdcaf797d2579c691019c3170115b91116c3394f70a68d equals Osec verified build at issuer commit afdab14fb1a59bf3abe2f263870023349a560e2e; Token-2022/ACL/ABL/Squads CPI and upgrade alternatives remain partial.",
             "signerIdentity": "Squads CqexeLYpGafaLfX7Nb3tD8ShLmWP1mmap16iR9M59u1A; threshold 1; sole member GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h; permission mask 7; time_lock 0"
           },
           "observedState": {
-            "position": "452345677",
+            "position": "453529248",
             "hash": null,
-            "runtimeIdentity": "Spiko native minter ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deployment slot 443429864; source correspondence incomplete",
+            "runtimeIdentity": "Spiko minter 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw / ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deploy slot 443429864; trimmed ELF SHA256 0aff1fc23cc42369aacdcaf797d2579c691019c3170115b91116c3394f70a68d equals Osec verified build at issuer commit afdab14fb1a59bf3abe2f263870023349a560e2e; Token-2022/ACL/ABL/Squads CPI and upgrade alternatives remain partial.",
             "signerIdentity": "Squads CqexeLYpGafaLfX7Nb3tD8ShLmWP1mmap16iR9M59u1A; threshold 1; sole member GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h; permission mask 7; time_lock 0"
           },
           "inventory": "partial",
@@ -1437,6 +1751,41 @@
               "permissionChangeRefs": [],
               "upgradeRefs": [],
               "bypassRefs": []
+            },
+            {
+              "id": "mint-authority-transfer",
+              "targetDeployment": "solana:8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw",
+              "entrypointKind": "solana-instruction",
+              "entrypoints": [
+                "nominate_mint_authority",
+                "accept_mint_authority",
+                "cancel_mint_authority_nomination"
+              ],
+              "callMode": "native",
+              "capabilities": [
+                "mint",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "safo-spiko-usd"
+              ],
+              "affectedDeployments": [
+                "solana:BYwEFWHUQp7Biqye6TvcjSF1ZYbL1StE5BuFRkKejexo"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
             }
           ]
         },
@@ -1478,10 +1827,10 @@
       {
         "executionScope": {
           "controllerDeployment": "solana:5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-05",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "reviewer": "R05 finalized Solana source/runtime and signer review 2026-10-05",
           "confidence": "partial",
           "sources": [
             {
@@ -1491,18 +1840,26 @@
             {
               "label": "Finalized native register and configuration RPC",
               "url": "https://solana-rpc.publicnode.com"
+            },
+            {
+              "label": "Current on-chain build correspondence, independently verified and matched to pinned ELF",
+              "url": "https://verify.osec.io/status/8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw"
+            },
+            {
+              "label": "Squads authority account field layout; current 1-of-1 member census at the same finalized context",
+              "url": "https://docs.squads.so/main/development/reference/accounts"
             }
           ],
           "pin": {
-            "position": "452345677",
+            "position": "453529248",
             "hash": null,
-            "runtimeIdentity": "Spiko native minter ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deployment slot 443429864; source correspondence incomplete",
+            "runtimeIdentity": "Spiko minter 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw / ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deploy slot 443429864; trimmed ELF SHA256 0aff1fc23cc42369aacdcaf797d2579c691019c3170115b91116c3394f70a68d equals Osec verified build at issuer commit afdab14fb1a59bf3abe2f263870023349a560e2e; Token-2022/ACL/ABL/Squads CPI and upgrade alternatives remain partial.",
             "signerIdentity": "5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd; configured initiator signature"
           },
           "observedState": {
-            "position": "452345677",
+            "position": "453529248",
             "hash": null,
-            "runtimeIdentity": "Spiko native minter ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deployment slot 443429864; source correspondence incomplete",
+            "runtimeIdentity": "Spiko minter 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw / ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deploy slot 443429864; trimmed ELF SHA256 0aff1fc23cc42369aacdcaf797d2579c691019c3170115b91116c3394f70a68d equals Osec verified build at issuer commit afdab14fb1a59bf3abe2f263870023349a560e2e; Token-2022/ACL/ABL/Squads CPI and upgrade alternatives remain partial.",
             "signerIdentity": "5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd; configured initiator signature"
           },
           "inventory": "partial",
@@ -1583,10 +1940,10 @@
       {
         "executionScope": {
           "controllerDeployment": "solana:GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-05",
+          "observedAt": "2026-10-05",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "reviewer": "R05 finalized Solana source/runtime and signer review 2026-10-05",
           "confidence": "partial",
           "sources": [
             {
@@ -1596,18 +1953,26 @@
             {
               "label": "Finalized native register and configuration RPC",
               "url": "https://solana-rpc.publicnode.com"
+            },
+            {
+              "label": "Current on-chain build correspondence, independently verified and matched to pinned ELF",
+              "url": "https://verify.osec.io/status/8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw"
+            },
+            {
+              "label": "Squads authority account field layout; current 1-of-1 member census at the same finalized context",
+              "url": "https://docs.squads.so/main/development/reference/accounts"
             }
           ],
           "pin": {
-            "position": "452345677",
+            "position": "453529248",
             "hash": null,
-            "runtimeIdentity": "Spiko native minter ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deployment slot 443429864; source correspondence incomplete",
+            "runtimeIdentity": "Spiko minter 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw / ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deploy slot 443429864; trimmed ELF SHA256 0aff1fc23cc42369aacdcaf797d2579c691019c3170115b91116c3394f70a68d equals Osec verified build at issuer commit afdab14fb1a59bf3abe2f263870023349a560e2e; Token-2022/ACL/ABL/Squads CPI and upgrade alternatives remain partial.",
             "signerIdentity": "GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h; sole upgrade authority"
           },
           "observedState": {
-            "position": "452345677",
+            "position": "453529248",
             "hash": null,
-            "runtimeIdentity": "Spiko native minter ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deployment slot 443429864; source correspondence incomplete",
+            "runtimeIdentity": "Spiko minter 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw / ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deploy slot 443429864; trimmed ELF SHA256 0aff1fc23cc42369aacdcaf797d2579c691019c3170115b91116c3394f70a68d equals Osec verified build at issuer commit afdab14fb1a59bf3abe2f263870023349a560e2e; Token-2022/ACL/ABL/Squads CPI and upgrade alternatives remain partial.",
             "signerIdentity": "GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h; sole upgrade authority"
           },
           "inventory": "partial",

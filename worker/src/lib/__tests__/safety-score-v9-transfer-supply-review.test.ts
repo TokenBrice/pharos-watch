@@ -100,13 +100,99 @@ function review(
 }
 
 describe("Safety Score V9 transfer-materiality supply partition", () => {
-  it("allowlists only the two reviewed independent-liability inventories", () => {
+  it("allowlists only reviewed disjoint native and direct-burn inventories, not canonical escrow assets", () => {
     expect(SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS).toEqual([
       "sfrxusd-frax",
+      "usbd-bima",
+      "usdai-usd-ai",
+      "usdz-anzen",
+      "ussd-sonic-labs",
+      "wars-argentine-peso",
+      "wclp-ripio",
       "wsrusd-reservoir",
+      "yusd-aegis",
     ]);
     expect(SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS).not.toContain("idrt-rupiah-token");
     expect(SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS).not.toContain("vusd-virtue");
+    for (const assetId of ["gho-aave", "avusd-avant", "apxusd-apyx", "usd0-usual", "rusd-reservoir", "usdtb-ethena"]) {
+      expect(SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS).not.toContain(assetId);
+    }
+  });
+
+  it("replaces an incomplete provider partition atomically, rather than appending supplies to its denominator", () => {
+    const assetId = "ussd-sonic-labs";
+    const meta = ACTIVE_META_BY_ID.get(assetId)!;
+    const fixed = fixedInput(assetId);
+    fixed.chainCirculatingById[assetId] = { Sonic: { current: AGGREGATE_SUPPLY_USD } } as SafetyScoreV9CompilerInput["chainCirculatingById"][string];
+    const result = buildSafetyScoreV9SupplyReview(fixed, assetId, meta.bridgeRouteRisk, {
+      meta, transferMaterialityGeneration: generation(assetId),
+    })!;
+    expect(result.selectedBridgeRoutes).toHaveLength(6);
+    expect(result.selectedBridgeRoutes.find(row => row.deploymentRouteKey.startsWith("sonic:"))?.supplyShare).toBeCloseTo(1 / 21, 12);
+    expect(result.selectedBridgeRoutes.reduce((sum, row) => sum + row.supplyUsd, 0)).toBeCloseTo(AGGREGATE_SUPPLY_USD, 6);
+    expect(result.selectedRouteSupplyShare).toBe(1);
+  });
+
+  it("keeps omitted-chain shares unknown when the exhaustive packet is missing or one leg rejects", () => {
+    const assetId = "ussd-sonic-labs";
+    const meta = ACTIVE_META_BY_ID.get(assetId)!;
+    const fixed = fixedInput(assetId);
+    fixed.chainCirculatingById[assetId] = { Sonic: { current: AGGREGATE_SUPPLY_USD } } as SafetyScoreV9CompilerInput["chainCirculatingById"][string];
+    const rows = observationsFor(assetId, (row, index) => index === 1
+      ? { ...row, rawTokenUnits: null, decimals: null, blockNumber: null, observedAtSec: null, status: "rejected" }
+      : row);
+    for (const packet of [null, generation(assetId, rows)]) {
+      expect(buildSafetyScoreV9SupplyReview(fixed, assetId, meta.bridgeRouteRisk, { meta, transferMaterialityGeneration: packet })).toBeNull();
+    }
+  });
+
+  it("preserves complete aggregate-reconciled provider inventory ahead of the raw-unit census", () => {
+    const assetId = "ussd-sonic-labs";
+    const meta = ACTIVE_META_BY_ID.get(assetId)!;
+    const fixed = fixedInput(assetId);
+    fixed.chainCirculatingById[assetId] = Object.fromEntries(meta.contracts!.map((contract, index) => [
+      contract.chain, { current: index === 0 ? AGGREGATE_SUPPLY_USD : 0 },
+    ])) as SafetyScoreV9CompilerInput["chainCirculatingById"][string];
+    const result = buildSafetyScoreV9SupplyReview(fixed, assetId, meta.bridgeRouteRisk, {
+      meta, transferMaterialityGeneration: generation(assetId),
+    })!;
+    expect(result.selectedBridgeRoutes.find(row => row.deploymentRouteKey.startsWith("sonic:"))?.supplyShare).toBe(1);
+    expect(result.selectedBridgeRoutes.filter(row => row.supplyShare === 0)).toHaveLength(5);
+  });
+
+  it("normalizes mixed 6/18-decimal USDai supplies as BigInts beyond safe floating-point integers", () => {
+    const assetId = "usdai-usd-ai";
+    const rows = observationsFor(assetId, row => ({
+      ...row, rawTokenUnits: (10n ** 90n * 10n ** BigInt(row.decimals!)).toString(),
+    }));
+    const result = review(assetId, generation(assetId, rows))!;
+    expect(result.selectedBridgeRoutes).toHaveLength(5);
+    for (const row of result.selectedBridgeRoutes) expect(row.supplyShare).toBeCloseTo(0.2, 12);
+    expect(result.selectedBridgeRoutes.reduce((sum, row) => sum + row.supplyUsd, 0)).toBeCloseTo(AGGREGATE_SUPPLY_USD, 6);
+  });
+
+  it("clears omitted-chain materiality gaps only after the complete USSD census reaches the compiler", () => {
+    const assetId = "ussd-sonic-labs";
+    const meta = ACTIVE_META_BY_ID.get(assetId)!;
+    const fixed = makeV9FixedInput({
+      assetId, clockSec: CLOCK_SEC, chainSupplyByChain: {
+        Sonic: { current: AGGREGATE_SUPPLY_USD, circulatingPrevDay: AGGREGATE_SUPPLY_USD, circulatingPrevWeek: AGGREGATE_SUPPLY_USD, circulatingPrevMonth: AGGREGATE_SUPPLY_USD },
+      },
+      aggregateCirculating: { peggedUSD: AGGREGATE_SUPPLY_USD }, omitLiveReserve: true,
+    });
+    const packet = createSafetyScoreV9TransferMaterialityGeneration({
+      schemaVersion: 1, kind: "safety-score-v9-transfer-materiality-generation",
+      sourceBaseInputGenerationId: fixed.baseInputGenerationId, registryFingerprint: fixed.registryFingerprint,
+      capturedAtSec: CLOCK_SEC - 60, observationsByAssetId: { [assetId]: observationsFor(assetId) },
+    });
+    const metaById = new Map([[assetId, meta]]);
+    const before = compileSafetyScoreV9FactSetFromFixedInput(fixed, buildSafetyScoreV9BaselineExtension(fixed, { metaById })).assets[0]!;
+    const after = compileSafetyScoreV9FactSetFromFixedInput(fixed, buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById, transferMaterialityGeneration: packet,
+    })).assets[0]!;
+    expect(before.gaps.filter(gap => gap.causeScope?.requiredDatum === "materialSupplyShare").length).toBeGreaterThan(0);
+    expect(after.gaps.filter(gap => gap.causeScope?.requiredDatum === "materialSupplyShare")).toEqual([]);
+    expect(after.supply.selectedBridgeRoutes).toHaveLength(6);
   });
 
   it("allocates aggregate sfrxUSD USD across its exact thirty-route raw-unit packet", () => {
@@ -165,9 +251,19 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
     const reviewedControllerCount = meta.bridgeRouteRisk!.routes!.filter(
       (route) => route.issuanceModel === "bridge-representation" && route.controllerAddress,
     ).length;
-    // Each identified controller and the aggregate bridge need the same exact supply packet.
-    expect(beforeReasons.filter((reason) => reason.code === "runtime-bridge-materiality-unavailable"))
-      .toHaveLength(reviewedControllerCount + 1);
+    // Controller-local and aggregate projections reuse the exact existing
+    // materiality factors; the aggregate no longer adds a broad source alias.
+    const materialityGapIds = before.controls
+      .filter((control) => control.controlKind === "bridge" && control.scope === "deployment")
+      .flatMap((control) => control.factorStatuses?.materialSupplyShare?.gapIds ?? []);
+    expect(materialityGapIds).toHaveLength(reviewedControllerCount);
+    const materialityReasons = beforeReasons.filter(
+      (reason) => reason.code === "runtime-bridge-materiality-unavailable",
+    );
+    expect(new Set(materialityReasons.map((reason) => reason.sourceGapId))).toEqual(new Set(materialityGapIds));
+    for (const gapId of materialityGapIds) {
+      expect(materialityReasons.filter((reason) => reason.sourceGapId === gapId)).toHaveLength(2);
+    }
     expect(afterReasons.filter((reason) => reason.code === "runtime-bridge-materiality-unavailable")).toHaveLength(0);
     expect(before.economicControlReview.bridge.status.gapIds).toContain(`${assetId}:gap:economic-control:bridge`);
     expect(after.economicControlReview.bridge.status.gapIds).toEqual([]);
@@ -293,7 +389,7 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
     expect(review("wsrusd-reservoir", generation("wsrusd-reservoir", rows))).toBeNull();
   });
 
-  it("leaves all twenty-one wsrUSD public materiality reasons and its bridge gap unresolved", () => {
+  it("retains wsrUSD controller materiality witnesses and its bridge gap without a complete supply packet", () => {
     const assetId = "wsrusd-reservoir";
     const meta = ACTIVE_META_BY_ID.get(assetId)!;
     const replayInput = makeV9FixedInput({
@@ -326,9 +422,20 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
       .assets[0]!.scoreInput.pillars.control.reasons;
 
     expect(extension.assets[0]!.supplyReview).toBeNull();
-    // The reviewed Tempo adapter adds a twentieth route controller; the
-    // aggregate bridge adds one more reason without a complete supply packet.
-    expect(reasons.filter((reason) => reason.code === "runtime-bridge-materiality-unavailable")).toHaveLength(21);
+    // Each controller and the aggregate remain unresolved, but their public
+    // projections bind the existing factor facts rather than a broad alias.
+    const materialityGapIds = compiled.controls
+      .filter((control) => control.controlKind === "bridge" && control.scope === "deployment")
+      .flatMap((control) => control.factorStatuses?.materialSupplyShare?.gapIds ?? []);
+    expect(materialityGapIds).toHaveLength(20);
+    const materialityReasons = reasons.filter(
+      (reason) => reason.code === "runtime-bridge-materiality-unavailable",
+    );
+    expect(new Set(materialityReasons.map((reason) => reason.sourceGapId))).toEqual(new Set(materialityGapIds));
+    for (const gapId of materialityGapIds) {
+      expect(materialityReasons.filter((reason) => reason.sourceGapId === gapId)).toHaveLength(2);
+    }
+    expect(compiled.economicControlReview.bridge.status.gapIds).toContain(`${assetId}:gap:economic-control:bridge`);
     expect(compiled.gaps.filter((gap) => gap.reasonCode === "missing-bridge-routes")).toHaveLength(1);
     expect(compiled.supply.selectedBridgeRoutes).toEqual([]);
   });

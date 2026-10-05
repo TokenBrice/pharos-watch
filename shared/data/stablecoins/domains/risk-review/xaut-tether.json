@@ -382,7 +382,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Solana mainnet RPC reads 2026-07-20: the XAUt0 mint has mintAuthority and freezeAuthority 9FJsE8HkoJgxbbydk2R1Gc3hUruNJWwXR6AKYZWWY7Sy, the Tether/Everdawn operator keypair that gates minting of the omnichain wrapped XAUt representation on Solana. At slot 434386051 on 2026-07-21, getTokenSupply returned 2,803.964527 XAUt0, equal to 0.396181711% of the 707,747.089000 XAUT canonical Ethereum supply.",
+        "reviewNote": "Joint finalized Solana getMultipleAccounts at slot 453528868 on 2026-10-05 confirms the exact XAUt0 SPL mint's mintAuthority and freezeAuthority 9FJsE8HkoJgxbbydk2R1Gc3hUruNJWwXR6AKYZWWY7Sy. The authority is an initialized SPL Token multisig account, not a keypair: numRequiredSigners=1, numValidSigners=2, signers XWxJJE6Dq8EgdnhMWYU587f7St4HJuWbBHPstV2GtKR and 51XXg9grz3dofW32uGC67wTuFsvMYRg62A4SVthG7JjT. Signer custody, independence and recursive authority reach are not established. The reviewed lock-mint representation classification is unchanged; this observation does not make the heterogeneous omnichain group's authority homogeneous.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "solana",
         "controllerAddress": "9FJsE8HkoJgxbbydk2R1Gc3hUruNJWwXR6AKYZWWY7Sy",
@@ -390,9 +390,13 @@
           "protocol:xaut0-omnichain",
           "contract:solana:9FJsE8HkoJgxbbydk2R1Gc3hUruNJWwXR6AKYZWWY7Sy"
         ],
-        "observedAt": "2026-07-21",
-        "observedBlock": 434386051,
+        "observedAt": "2026-10-05",
+        "observedBlock": 453528868,
         "sources": [
+          {
+            "label": "Joint finalized Solana mint and SPL multisig account observation, slot 453528868",
+            "url": "https://solana-rpc.publicnode.com"
+          },
           {
             "label": "XAUt0 mint on Solscan",
             "url": "https://solscan.io/token/AymATz4TCL9sWNEEV9Kvyz45CHVhDZ6kUgjTJPzLpU9P"

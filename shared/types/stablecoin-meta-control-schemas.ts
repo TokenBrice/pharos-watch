@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { V9ControlExecutionScopeSchema, V9WeightedQuorumSchema, V1005ExecutionClassRefSchema, V1005ExecutionCertificatesSchema, V1005AuthorityGraphSchema, V1005VotingControlSchema, V1005OperationalIssuanceSchema } from "./safety-score-v9-control-scope";
+import { V9ControlExecutionScopeSchema, V9WeightedQuorumSchema, V9SameChainSystemTransportSchema, V1005ExecutionClassRefSchema, V1005ExecutionCertificatesSchema, V1005AuthorityGraphSchema, V1005VotingControlSchema, V1005OperationalIssuanceSchema, V9ControlQuestionSubjectSchema } from "./safety-score-v9-control-scope";
 import { normalizeDeploymentId } from "./deployment-id";
 import {
   BRIDGE_ROUTE_CLASS_VALUES,
@@ -378,6 +378,23 @@ const BridgeRouteDeploymentSchema = z
     }
   });
 
+const NativeInventoryReviewSchema = z
+  .object({
+    kind: z.literal("exhaustive-material-native-census"),
+    exhaustive: z.literal(true),
+    reviewedAt: ReviewDateSchema,
+    reviewer: z.string().min(1),
+    routeIds: z.array(z.string().min(1).transform(normalizeDeploymentId)).min(1),
+    rationale: z.string().min(12),
+    sources: z.array(StablecoinLinkSchema).min(1),
+  })
+  .strict()
+  .superRefine((review, ctx) => {
+    if (new Set(review.routeIds).size !== review.routeIds.length) {
+      ctx.addIssue({ code: "custom", path: ["routeIds"], message: "Native census route identities must be unique" });
+    }
+  });
+
 export const BridgeRouteRiskProfileSchema = z
   .object({
     tier: z.enum(BRIDGE_ROUTE_RISK_TIER_VALUES),
@@ -389,11 +406,29 @@ export const BridgeRouteRiskProfileSchema = z
     sourceFreeRationale: z.string().min(1).optional(),
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
     routes: z.array(BridgeRouteDeploymentSchema).min(1).optional(),
+    nativeInventoryReview: NativeInventoryReviewSchema.optional(),
     controls: z.array(z.lazy(() => BridgeRouteControlSchema)).min(1).optional(),
     scopedQuestions: z.array(z.lazy(() => ControlScopedQuestionSchema)).min(1).optional(),
   })
   .strict()
   .superRefine((profile, ctx) => {
+    if (profile.nativeInventoryReview) {
+      const nativeIds = new Set(profile.nativeInventoryReview.routeIds);
+      if (
+        nativeIds.size !== (profile.routes?.length ?? 0) ||
+        (profile.routes ?? []).some((route) =>
+          !nativeIds.has(normalizeDeploymentId(route.id)) ||
+          route.reviewDisposition !== "reviewed" ||
+          route.routeClass !== "native" ||
+          route.issuanceModel !== "native-issuance")
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["nativeInventoryReview", "routeIds"],
+          message: "Exhaustive native census must match every reviewed native route, with no representation routes",
+        });
+      }
+    }
     for (const [index, question] of (profile.scopedQuestions ?? []).entries()) {
       const ref = question.controlRef.toLowerCase();
       const matched = (profile.controls ?? []).some(
@@ -447,6 +482,16 @@ export const BridgeRouteRiskProfileSchema = z
         });
       }
       controlIds.add(control.id);
+      if (control.sameChainSystemTransport) {
+        const transport = control.sameChainSystemTransport;
+        const coreRoute = profile.routes?.find((route) => normalizeDeploymentId(route.id) === `hyperliquid:${transport.coreTokenId}`);
+        const evmRoute = profile.routes?.find((route) => normalizeDeploymentId(route.id) === transport.evmToken);
+        if (!coreRoute || coreRoute.sourceChain !== "hyperevm" || coreRoute.destinationChain !== "hyperliquid" ||
+            coreRoute.riskTier !== "single-chain-or-native" || coreRoute.reviewDisposition !== "reviewed" ||
+            !evmRoute || evmRoute.issuanceModel !== "native-issuance") {
+          ctx.addIssue({ code: "custom", path: ["controls", index, "sameChainSystemTransport"], message: "System transport must join a reviewed same-chain Core route and its native EVM token" });
+        }
+      }
     }
   });
 const MintAuthoritySafeStateSchema = z
@@ -577,16 +622,36 @@ const BridgeRouteControlSchema = z
     controllerChain: z.string().min(1).optional(),
     controllerAddress: z.string().min(1).optional(),
     ...AuthorityControlFields,
+    sameChainSystemTransport: V9SameChainSystemTransportSchema.optional(),
   })
   .strict()
   .superRefine((control, ctx) => {
     validateExactAuthority(control, control.controllerChain, control.controllerAddress, ctx);
+    const transport = control.sameChainSystemTransport;
+    if ((control.authorityType === "chain-consensus") !== (transport != null)) {
+      ctx.addIssue({ code: "custom", message: "Chain consensus authority requires the typed same-chain transport family" });
+    }
+    if (transport) {
+      if (control.controllerChain !== "hyperevm" || control.controllerAddress?.toLowerCase() !== transport.systemAddress ||
+          control.routeRefs.length !== 1 || normalizeDeploymentId(control.routeRefs[0]!) !== `hyperliquid:${transport.coreTokenId}`) {
+        ctx.addIssue({ code: "custom", message: "System transport must bind the exact system controller and Core token route" });
+      }
+      if (control.capabilities.length !== 1 || control.capabilities[0] !== "escrow" ||
+          control.threshold != null || control.signerCount != null || control.weightedQuorum != null || control.safe != null ||
+          control.keyCustodyAttestation != null || control.executionScope != null || control.canRaiseCap != null) {
+        ctx.addIssue({ code: "custom", message: "Spot system transport is escrow transfer, not privileged minting or an independent signing quorum" });
+      }
+      if (!control.sources?.length || !control.evidence || !control.observedAt || control.observedBlock == null) {
+        ctx.addIssue({ code: "custom", message: "System transport requires sourced, dated and pinned asset-link evidence" });
+      }
+    }
   });
 
 const ControlScopedQuestionSchema = z
   .object({
     controlRef: z.string().min(1),
     question: z.string().min(12),
+    subject: V9ControlQuestionSubjectSchema.optional(),
     reviewedAt: ReviewDateSchema,
     reviewer: z.string().min(1),
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
@@ -607,6 +672,7 @@ const MintAuthorityControlSchema = z
   .strict()
   .superRefine((control, ctx) => {
     validateExactAuthority(control, control.chain, control.address, ctx);
+    if (control.authorityType === "chain-consensus") ctx.addIssue({ code: "custom", message: "Same-chain transport belongs to route controls, not native mint authority" });
     if (control.executionScope && control.executionClassRef) ctx.addIssue({ code: "custom", path: ["executionClassRef"], message: "Individual scope and class reference are mutually exclusive" });
     if (control.executionClassRef && normalizeDeploymentId(`${control.chain ?? ""}:${control.address ?? ""}`) !== control.executionClassRef.memberRef) ctx.addIssue({ code: "custom", path: ["executionClassRef", "memberRef"], message: "Execution class must bind the exact controller" });
     if (control.threshold != null && control.signerCount != null && control.threshold > control.signerCount) {

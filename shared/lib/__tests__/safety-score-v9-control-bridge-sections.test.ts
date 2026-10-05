@@ -10,6 +10,7 @@ import {
   makeDeploymentControl,
   makeSupplyPartition,
   missing,
+  notApplicable,
   requiredKnown,
 } from "./safety-score-v9-fixtures.test-support";
 
@@ -74,6 +75,34 @@ function boundedReviewResult(
 const REVIEWED_COMPONENT_KEY = "bridge:ethereum:0xreviewed:bridge:reviewed";
 
 describe("Safety Score v9 control bridge sections", () => {
+  it("does not invent bridge risk from retained unmatched dust after native-census admission", () => {
+    const share = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.nativeInventoryUnmatchedDustShareMax;
+    const supply = makeSupplyPartition({
+      routes: [
+        { deploymentRouteKey: "ethereum:0xnative", supplyShare: 1 - share,
+          reviewState: "selected-reviewed", reviewedRouteKind: "native" },
+        { deploymentRouteKey: "unmatched-chain:fixture-asset:tempo", supplyShare: share,
+          reviewState: "unmatched" },
+      ],
+      selectedRouteSupplyShare: 1 - share,
+      unreviewedRouteSupplyShare: 0,
+      unknownRouteSupplyShare: share,
+    });
+    const before = structuredClone(supply);
+    const facts = { ...baseFacts([]), supply };
+    const admitted = evaluateV9EconomicControl(args({
+      facts, bridge: { status: notApplicable("reviewed-native-census"), routes: [] },
+    }));
+    expect(admitted.components.filter((component) => component.componentKey.startsWith("bridge:"))).toEqual([
+      expect.objectContaining({ componentKey: "bridge:native", score: V9_CANDIDATE_POLICY_V1.policy.semantic.control.bridgeTierQuality["single-chain-or-native"] }),
+    ]);
+    expect(admitted.reasons.map((reason) => reason.code)).not.toContain("missing-bridge-routes");
+    const unadmitted = evaluateV9EconomicControl(args({
+      facts, bridge: { status: missing("missing-native-census"), routes: [] },
+    }));
+    expect(unadmitted.components).toContainEqual(expect.objectContaining({ componentKey: "bridge:unverified" }));
+    expect(supply).toEqual(before);
+  });
   it("keeps a bounded bridge review's reviewed rows when the unattributed supply is immaterial", () => {
     const result = boundedReviewResult(0.02);
 

@@ -8,7 +8,7 @@ vi.mock("../request", () => ({
 import { fetchJsonPostWithRetry, fetchJsonWithRetry } from "../request";
 import { fetchStarknetTotalSupply } from "../starknet";
 import { fetchIcrcLedgerTotalSupply } from "../icp";
-import { fetchMoveFungibleAssetSupply } from "../token-supply";
+import { fetchMoveFungibleAssetSupply, fetchTonJettonSupply } from "../token-supply";
 
 const STARKNET_CONTRACT = "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc";
 const ICP_CANISTER = "6c7su-kiaaa-aaaar-qaira-cai";
@@ -174,5 +174,92 @@ describe("pinned Move fungible-asset census reads", () => {
       clockSec: clock, expectedChainId: 1,
     })).toBeNull();
     expect(fetchJsonWithRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["wrong identity", "wrong decimals", "exact bigint"])("binds economic metadata and decimals: %s", async failure => {
+    const amount = "123456789012345678901234567890123456";
+    vi.mocked(fetchJsonWithRetry)
+      .mockResolvedValueOnce({ chain_id: 1, ledger_version: "100", ledger_timestamp: String(clock * 1_000_000) })
+      .mockResolvedValueOnce({ type: "0x1::fungible_asset::ConcurrentSupply", data: { current: { value: amount } } })
+      .mockResolvedValueOnce({ type: "0x1::fungible_asset::Metadata", data: { decimals: failure === "wrong decimals" ? 18 : 6 } })
+      .mockResolvedValueOnce({ type: "0x1::object::ObjectCore", data: { transfer_events: {
+        guid: { id: { addr: failure === "wrong identity" ? packageAddress : metadataAddress } },
+      } } });
+    const result = await fetchMoveFungibleAssetSupply(metadataAddress, signal(), base, undefined, {
+      clockSec: clock, expectedChainId: 1, expectedMetadataAddress: metadataAddress, expectedDecimals: 6,
+    });
+    if (failure !== "exact bigint") expect(result).toBeNull();
+    else {
+      expect(result).toMatchObject({ rawSupply: BigInt(amount), metadataAddress, ledgerVersion: "100", ledgerTimestampSec: clock, decimals: 6 });
+      expect(result?.responseSha256).toMatch(/^[0-9a-f]{64}$/);
+    }
+  });
+
+  it("rejects a package resolving to a different reviewed metadata object", async () => {
+    vi.mocked(fetchJsonWithRetry)
+      .mockResolvedValueOnce({ chain_id: 1, ledger_version: "100", ledger_timestamp: String(clock * 1_000_000) })
+      .mockResolvedValueOnce({ type: `${packageAddress}::oft_fa::OftImpl`, data: {
+        metadata: { inner: metadataAddress },
+        ...Object.fromEntries(["mint_ref", "burn_ref", "transfer_ref"].map(name => [name, { metadata: { inner: metadataAddress } }])),
+      } });
+    expect(await fetchMoveFungibleAssetSupply(packageAddress, signal(), base, undefined, {
+      clockSec: clock, expectedChainId: 1, identityKind: "oft-package", expectedMetadataAddress: packageAddress, expectedDecimals: 6,
+    })).toBeNull();
+  });
+});
+
+describe("pinned TON jetton supply", () => {
+  const master = "EQDQ5UUyPHrLcQJlPAczd_fjxn8SLrlNQwolBznxCdSlfQwr";
+  const base = "https://ton.example/api/v2", clock = 1791187343;
+  const pin = { workchain: -1, shard: "-9223372036854775808", seqno: 97048839,
+    root_hash: "G++xuEKh8vIc5zIdqmuZXGKyAKbwCiAqzTKEsTSI3OM=", file_hash: "VsEwupusnpifJYRlFR4f9cZ1vJqpnxb9Huywp8jBA90=" };
+  const amount = 123456789012345678901234567890123456n;
+  beforeEach(() => {
+    vi.mocked(fetchJsonWithRetry).mockReset();
+    vi.mocked(fetchJsonPostWithRetry).mockReset();
+  });
+  function mockTon(failure?: string) {
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async url => {
+      if (url.includes("/getMasterchainInfo")) return { ok: true, result: { last: failure === "missing pin" ? undefined : pin } };
+      if (url.includes("/lookupBlock")) return { ok: true, result: failure === "missing pin" ? undefined : pin };
+      if (url.includes("/getBlockHeader")) return { ok: true, result: { id: pin, global_id: -239, gen_utime: failure === "missing timestamp" ? undefined : clock } };
+    });
+    vi.mocked(fetchJsonPostWithRetry).mockImplementation(async url => {
+      if (url.endsWith("/getTokenData")) return { ok: true, result: { address: failure === "wrong identity" ? "other-master" : master, contract_type: "jetton_master",
+        total_supply: failure === "supply mismatch" ? "1" : amount.toString(),
+        jetton_content: { type: "onchain", data: { decimals: failure === "decimals mismatch" ? "9" : failure === "missing decimals" ? undefined : "6" } } } };
+      return { ok: true, result: { exit_code: failure === "failed method" ? 11 : 0,
+        block_id: failure === "missing getter pin" ? undefined : failure === "wrong getter pin" ? { ...pin, seqno: pin.seqno + 1 } : pin,
+        stack: [["num", `0x${amount.toString(16)}`]] } };
+    });
+  }
+  it("reads exact BigInt supply, onchain decimals and the true pinned masterchain clock", async () => {
+    mockTon();
+    const result = await fetchTonJettonSupply(master, signal(), base, { clockSec: clock, expectedDecimals: 6 });
+    expect(result).toMatchObject({ rawSupply: amount, decimals: 6, masterchainSeqno: pin.seqno, blockHash: pin.root_hash, blockTimestampSec: clock });
+    expect(result?.responseSha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(vi.mocked(fetchJsonPostWithRetry).mock.calls[0]?.[1]).toEqual({ address: master, method: "get_jetton_data", stack: [], seqno: pin.seqno });
+    expect(vi.mocked(fetchJsonPostWithRetry).mock.calls[1]?.[1]).toEqual({ address: master, seqno: pin.seqno });
+  });
+  it.each(["wrong identity", "missing pin", "missing timestamp", "missing getter pin", "wrong getter pin", "decimals mismatch", "missing decimals", "supply mismatch", "failed method"])
+    ("fails closed on %s", async failure => {
+      mockTon(failure);
+      expect(await fetchTonJettonSupply(master, signal(), base, { clockSec: clock, expectedDecimals: 6 })).toBeNull();
+    });
+  it.each(["changed", "missing"])("rejects a %s header after the state read", async failure => {
+    mockTon();
+    vi.mocked(fetchJsonWithRetry).mockResolvedValueOnce({ ok: true, result: { last: pin } })
+      .mockResolvedValueOnce({ ok: true, result: { id: pin, global_id: -239, gen_utime: clock } })
+      .mockResolvedValueOnce({ ok: true, result: failure === "missing" ? undefined : { id: pin, global_id: -239, gen_utime: clock - 1 } });
+    expect(await fetchTonJettonSupply(master, signal(), base, { clockSec: clock, expectedDecimals: 6 })).toBeNull();
+  });
+  it("uses the predecessor if time lookup lands one block after the scoring clock", async () => {
+    mockTon();
+    vi.mocked(fetchJsonWithRetry).mockResolvedValueOnce({ ok: true, result: { last: { ...pin, seqno: pin.seqno + 1 } } })
+      .mockResolvedValueOnce({ ok: true, result: { id: { ...pin, seqno: pin.seqno + 1 }, global_id: -239, gen_utime: clock + 1 } })
+      .mockResolvedValueOnce({ ok: true, result: { ...pin, seqno: pin.seqno + 1 } })
+      .mockResolvedValueOnce({ ok: true, result: { id: { ...pin, seqno: pin.seqno + 1 }, global_id: -239, gen_utime: clock + 1 } });
+    expect(await fetchTonJettonSupply(master, signal(), base, { clockSec: clock, expectedDecimals: 6 }))
+      .toMatchObject({ masterchainSeqno: pin.seqno, blockTimestampSec: clock });
   });
 });

@@ -14,7 +14,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "ACRED uses Securitize/Wormhole cross-chain transport. The issuer feed identifies BridgeAddress 0x9A0460445E9B3E859F3C91A1b3f318354a0b11B6 on Ethereum, Ink, Avalanche and Polygon, plus Sei bridge 0x1643903347B8F995A8b3e303d53d2CB52A5ca623. Current exact block pins on Ethereum 26122489, Polygon 94970204, Avalanche 96771552, Ink 57662156 and Sei 235783673 bind each adapter to the exact ACRED token, Wormhole relayer 0x27428DD2d3DD32A4D7f7C497eAaa23130d894911, common owner 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee, paused=false and reciprocal EVM peers for Wormhole IDs 2, 5, 6, 40 and 46 (self entries are zero). Ethereum, Polygon, Avalanche and Ink resolve implementation 0xA42A23Db258666aDE7A40F52Ea55819DA4FA9853; Sei resolves 0x0c31f7cb10370692558e9e503b167cc16e8c3497. Aptos ledger 7485299960 resolves the feed's 0x13816cd4562c9cf260a0471615451253ab96cca6d6adf746969c52c78480f06a as the ds_token package: dstoken_address() and metadata() both bind the existing catalog metadata object 0xe528f4df568eb9fff6398adc514bc9585fab397f478972bcbebf1e75dee40a88, so this is not a changed token identity. Solana finalized account context slot 453414024 confirms the existing ACRED Token-2022 mint and issuer-controlled transfer hook and permanent delegate. EVM adapter and Aptos identity blockers are resolved, but the current route inventory omits issuer-listed Sei, and complete seven-rail economic attribution, non-EVM bridge-manager/authorization paths and message/supply conservation are not established. Existing destination administration and upgrade controls remain adverse common-mode exposure; the aggregate review date is retained.",
+    "summary": "ACRED uses Securitize/Wormhole cross-chain transport. The issuer feed identifies BridgeAddress 0x9A0460445E9B3E859F3C91A1b3f318354a0b11B6 on Ethereum, Ink, Avalanche and Polygon, plus Sei bridge 0x1643903347B8F995A8b3e303d53d2CB52A5ca623. Current exact block pins on Ethereum 26122489, Polygon 94970204, Avalanche 96771552, Ink 57662156 and Sei 235783673 bind each adapter to the exact ACRED token, Wormhole relayer 0x27428DD2d3DD32A4D7f7C497eAaa23130d894911, common owner 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee, paused=false and reciprocal EVM peers for Wormhole IDs 2, 5, 6, 40 and 46 (self entries are zero). Ethereum, Polygon, Avalanche and Ink resolve implementation 0xA42A23Db258666aDE7A40F52Ea55819DA4FA9853; Sei resolves 0x0c31f7cb10370692558e9e503b167cc16e8c3497. Aptos ledger 7485299960 resolves the feed's 0x13816cd4562c9cf260a0471615451253ab96cca6d6adf746969c52c78480f06a as the ds_token package: dstoken_address() and metadata() both bind the existing catalog metadata object 0xe528f4df568eb9fff6398adc514bc9585fab397f478972bcbebf1e75dee40a88, so this is not a changed token identity. Solana finalized account context slot 453414024 confirms the existing ACRED Token-2022 mint and issuer-controlled transfer hook and permanent delegate. Sei EVM token 0xf7fa6725183e603059fc23d95735bf67f72b2d78 and its route are registered from the issuer feed and rechecked block 235841985; complete seven-rail economic attribution, non-EVM bridge-manager/authorization paths and message/supply conservation are not established. Existing destination administration and upgrade controls remain adverse common-mode exposure; the aggregate review date is retained.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint-bridge boundary migration",
     "confidence": "probable",
@@ -220,6 +220,38 @@
           {
             "label": "Wormhole and Securitize native transfer architecture",
             "url": "https://wormhole.com/blog/securitize-announces-the-live-deployment-of-wormhole-enabling-tokenized"
+          }
+        ]
+      },
+      {
+        "id": "sei:0xf7fa6725183e603059fc23d95735bf67f72b2d78",
+        "destinationChain": "sei",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xf7fa6725183e603059fc23d95735bf67f72b2d78",
+        "protocol": "Securitize / Wormhole",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The issuer feed identifies Sei EVM chain 1329, this six-decimal ACRED token and bridge 0x1643903347b8f995a8b3e303d53d2cb52a5ca623. At rechecked block 235841985 (0x8904975fff017126681665e9de3e96d45f8c7f62fb270c6729e939c7c2a89ea2; timestamp 1791188111), token name/symbol/decimals are Apollo Diversified Credit Securitize Fund/ACRED/6, totalSupply is 14096732653 base units, and bridge dsToken()/whChainId()/wormholeRelayer() bind this exact token, Wormhole 40 and 0x27428dd2d3dd32a4d7f7c497eaaa23130d894911. This is an EVM contract, not a Cosmos bank denom. Identity proof is not complete supply or pending-message conservation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-05",
+        "controllerChain": "sei",
+        "controllerAddress": "0x1643903347b8f995a8b3e303d53d2cb52a5ca623",
+        "sources": [
+          {
+            "label": "Securitize authoritative ACRED deployment feed",
+            "url": "https://public-feed.securitize.io/asset-info?symbol=ACRED"
+          },
+          {
+            "label": "Securitize ACRED launch on Sei with fund bridging",
+            "url": "https://securitize.io/learn/blog/ACRED-on-Sei-instant-Subscription-with-Fund-Bridging"
+          },
+          {
+            "label": "Sei EVM token and bridge pin, block 235841985",
+            "url": "https://seitrace.com/block/235841985?chain=pacific-1"
           }
         ]
       }

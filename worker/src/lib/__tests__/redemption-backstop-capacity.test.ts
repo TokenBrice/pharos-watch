@@ -11,6 +11,8 @@ const baseSnapshot = (metadata: Record<string, unknown>) => liveSnapshot("lusd-l
 
 describe("resolveCapacityBasis", () => {
   it.each([
+    ["queue-redeem", { kind: "unquantified" }, undefined, undefined],
+    ["offchain-issuer", { kind: "unquantified" }, undefined, undefined],
     ["stablecoin-redeem", { kind: "reserve-sync-metadata", basis: "daily-limit" }, "live-direct", "live-direct-telemetry"],
     ["collateral-redeem", { kind: "reserve-sync-metadata", basis: "daily-limit" }, "live-proxy", "live-proxy-buffer"],
     ["stablecoin-redeem", { kind: "reserve-sync-metadata", basis: "daily-limit" }, "dynamic", "daily-limit"],
@@ -36,6 +38,28 @@ describe("resolveCapacityBasis", () => {
     [null, { kind: "supply-ratio", ratio: 0.1 }, undefined, "hot-buffer"],
   ] as const)("resolves %s with %j and %s to %s", (route, model, confidence, expected) => {
     expect(resolveCapacityBasis(route, model, confidence)).toBe(expected);
+  });
+});
+
+describe("resolveRedemptionCapacity — unquantified route", () => {
+  it.each([null, 0, 100_000_000])("does not borrow supply or reserve balances as executable/eventual capacity (%j)", async (supplyUsd) => {
+    const db = { prepare: () => { throw new Error("Unquantified route must not query capacity"); } } as unknown as D1Database;
+    const result = await resolveRedemptionCapacity(db, "susdat-saturn", { kind: "unquantified" }, supplyUsd, now, {
+      reserveSnapshotMetadata: baseSnapshot({
+        freshnessMode: "not-applicable",
+        redemption: { capacityUsd: 50_000_000, capacityKind: "live-direct", freshnessKind: "same-run-onchain" },
+      }),
+    });
+    expect(result.immediateCapacityUsd).toBeNull();
+    expect(result.immediateCapacityRatio).toBeNull();
+    expect(result.scoringCapacityUsd).toBeNull();
+    expect(result.scoringCapacityRatio).toBeNull();
+    expect(result.eventualCapacityUsd).toBeNull();
+    expect(result.eventualCapacityRatio).toBeNull();
+    expect(result.capacityProfile?.scoringHorizon).toBe("unknown");
+    expect(result.capacitySemantics).toBe("eventual-only");
+    expect(result.resolutionState).toBe("missing-capacity");
+    expect(result.notes).toContain("redemption-capacity-unquantified");
   });
 });
 
