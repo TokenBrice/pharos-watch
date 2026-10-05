@@ -202,6 +202,7 @@ function bridgeAuthoritySeverity(authority: NonNullable<ControlOverlay["authorit
     contract: 2,
     "issuer-backend": 3,
     "validator-quorum": 4,
+    "chain-consensus": 4,
     eoa: 5,
     unknown: 6,
   }[model];

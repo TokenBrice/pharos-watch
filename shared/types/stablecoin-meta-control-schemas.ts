@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { V9ControlExecutionScopeSchema, V9WeightedQuorumSchema, V1005ExecutionClassRefSchema, V1005ExecutionCertificatesSchema, V1005AuthorityGraphSchema, V1005VotingControlSchema, V1005OperationalIssuanceSchema } from "./safety-score-v9-control-scope";
+import { V9ControlExecutionScopeSchema, V9WeightedQuorumSchema, V9SameChainSystemTransportSchema, V1005ExecutionClassRefSchema, V1005ExecutionCertificatesSchema, V1005AuthorityGraphSchema, V1005VotingControlSchema, V1005OperationalIssuanceSchema } from "./safety-score-v9-control-scope";
 import { normalizeDeploymentId } from "./deployment-id";
 import {
   BRIDGE_ROUTE_CLASS_VALUES,
@@ -447,6 +447,16 @@ export const BridgeRouteRiskProfileSchema = z
         });
       }
       controlIds.add(control.id);
+      if (control.sameChainSystemTransport) {
+        const transport = control.sameChainSystemTransport;
+        const coreRoute = profile.routes?.find((route) => normalizeDeploymentId(route.id) === `hyperliquid:${transport.coreTokenId}`);
+        const evmRoute = profile.routes?.find((route) => normalizeDeploymentId(route.id) === transport.evmToken);
+        if (!coreRoute || coreRoute.sourceChain !== "hyperevm" || coreRoute.destinationChain !== "hyperliquid" ||
+            coreRoute.riskTier !== "single-chain-or-native" || coreRoute.reviewDisposition !== "reviewed" ||
+            !evmRoute || evmRoute.issuanceModel !== "native-issuance") {
+          ctx.addIssue({ code: "custom", path: ["controls", index, "sameChainSystemTransport"], message: "System transport must join a reviewed same-chain Core route and its native EVM token" });
+        }
+      }
     }
   });
 const MintAuthoritySafeStateSchema = z
@@ -577,10 +587,29 @@ const BridgeRouteControlSchema = z
     controllerChain: z.string().min(1).optional(),
     controllerAddress: z.string().min(1).optional(),
     ...AuthorityControlFields,
+    sameChainSystemTransport: V9SameChainSystemTransportSchema.optional(),
   })
   .strict()
   .superRefine((control, ctx) => {
     validateExactAuthority(control, control.controllerChain, control.controllerAddress, ctx);
+    const transport = control.sameChainSystemTransport;
+    if ((control.authorityType === "chain-consensus") !== (transport != null)) {
+      ctx.addIssue({ code: "custom", message: "Chain consensus authority requires the typed same-chain transport family" });
+    }
+    if (transport) {
+      if (control.controllerChain !== "hyperevm" || control.controllerAddress?.toLowerCase() !== transport.systemAddress ||
+          control.routeRefs.length !== 1 || normalizeDeploymentId(control.routeRefs[0]!) !== `hyperliquid:${transport.coreTokenId}`) {
+        ctx.addIssue({ code: "custom", message: "System transport must bind the exact system controller and Core token route" });
+      }
+      if (control.capabilities.length !== 1 || control.capabilities[0] !== "escrow" ||
+          control.threshold != null || control.signerCount != null || control.weightedQuorum != null || control.safe != null ||
+          control.keyCustodyAttestation != null || control.executionScope != null || control.canRaiseCap != null) {
+        ctx.addIssue({ code: "custom", message: "Spot system transport is escrow transfer, not privileged minting or an independent signing quorum" });
+      }
+      if (!control.sources?.length || !control.evidence || !control.observedAt || control.observedBlock == null) {
+        ctx.addIssue({ code: "custom", message: "System transport requires sourced, dated and pinned asset-link evidence" });
+      }
+    }
   });
 
 const ControlScopedQuestionSchema = z
@@ -607,6 +636,7 @@ const MintAuthorityControlSchema = z
   .strict()
   .superRefine((control, ctx) => {
     validateExactAuthority(control, control.chain, control.address, ctx);
+    if (control.authorityType === "chain-consensus") ctx.addIssue({ code: "custom", message: "Same-chain transport belongs to route controls, not native mint authority" });
     if (control.executionScope && control.executionClassRef) ctx.addIssue({ code: "custom", path: ["executionClassRef"], message: "Individual scope and class reference are mutually exclusive" });
     if (control.executionClassRef && normalizeDeploymentId(`${control.chain ?? ""}:${control.address ?? ""}`) !== control.executionClassRef.memberRef) ctx.addIssue({ code: "custom", path: ["executionClassRef", "memberRef"], message: "Execution class must bind the exact controller" });
     if (control.threshold != null && control.signerCount != null && control.threshold > control.signerCount) {
