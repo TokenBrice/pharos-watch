@@ -3808,42 +3808,6 @@
       "rationale": "Exact liquidityHorizon of the two aggregate Curve Lend and Fraxlend collateral-position slices is not published. Withdrawal depends on collateral/LTV and available liquidity in each underlying market. Docs disclose redeemability and utilization, not a fixed whole-slice horizon or complete liquid-fraction packet. Do not infer immediate from ERC4626 or guess a delay."
     },
     {
-      "id": "uw-jaaa-janus-henderson-anemoy-6b0116947477a4c3",
-      "assetId": "jaaa-janus-henderson-anemoy",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:4a82d397df2ecd3c6575e829",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:55:17Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R23)",
-      "sources": [
-        {
-          "url": "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le",
-          "observedAt": "2026-10-03T22:55:17Z",
-          "datumAsOf": "2026-06-30",
-          "location": "June 2026 factsheet, Overview and Key Facts",
-          "excerpt": "Open ended BVI licensed fund for non-US Professional Investors",
-          "assertion": "Exact JAAA is an open-ended fund share, not the similarly named US ETF or each underlying CLO."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le",
-        "https://www.anemoy.io/funds/jaaa",
-        "https://www.anemoy.io/news/janus-henderson-anemoy-aaa-clo-onchain",
-        "https://docs.centrifuge.io/user/investor/",
-        "https://docs.centrifuge.io/developer/protocol/architecture/vaults/",
-        "https://www.bvifsc.vg/regulated-entities/anemoy-capital-spc-limited",
-        "https://data.chain.link/feeds/ethereum/mainnet/jaaa-nav-v2"
-      ],
-      "rationale": "Maximum maturityDaysMax of the exact JAAA tokenized fund-share exposure is not disclosed. June factsheet provides open-ended structure, daily liquidity and CLO credit risks but no all-in-scope maximum share termination date or complete underlying legal-final maturity ladder. Inception, averages and redemption dates are not maxima."
-    },
-    {
       "id": "uw-jaaa-janus-henderson-anemoy-5eb9ebd6fb0d3a03",
       "assetId": "jaaa-janus-henderson-anemoy",
       "scope": {
