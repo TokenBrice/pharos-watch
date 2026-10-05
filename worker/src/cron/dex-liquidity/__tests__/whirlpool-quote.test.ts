@@ -1,5 +1,7 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
+import { z } from "zod";
 import fixture from "./fixtures/whirlpool-slot-449058549.json";
+import pinned from "./fixtures/solana-clmm-wave4-pinned.json";
 import {
   decodeWhirlpool, decodeWhirlpoolTickArray, fetchWhirlpoolSnapshot,
   quoteWhirlpoolExactIn, tickArrayStarts, tickSqrtPrice, whirlpoolTickArrayAddress,
@@ -14,6 +16,17 @@ function replay(): WhirlpoolSnapshot {
     slot: fixture.slot, poolAddress: fixture.poolAddress, pool,
     tickArrays: entries.filter(([address]) => address !== fixture.poolAddress).map(([address, account]) =>
       decodeWhirlpoolTickArray(Uint8Array.from(Buffer.from(account.data[0], "base64")), address, fixture.poolAddress, pool.tickSpacing, fixture.slot)),
+  };
+}
+
+function replayPinned(capture: typeof pinned.snapshots[number]): WhirlpoolSnapshot {
+  const accounts = z.record(z.string(), z.object({ data: z.array(z.string()) })).parse(capture.accounts);
+  const bytes = (address: string) => Uint8Array.from(Buffer.from(accounts[address].data[0], "base64"));
+  const pool = decodeWhirlpool(bytes(capture.poolAddress), capture.slot);
+  return {
+    slot: capture.slot, poolAddress: capture.poolAddress, pool,
+    tickArrays: Object.keys(accounts).filter((address) => address !== capture.poolAddress).map((address) =>
+      decodeWhirlpoolTickArray(bytes(address), address, capture.poolAddress, pool.tickSpacing, capture.slot)),
   };
 }
 afterEach(() => vi.unstubAllGlobals());
@@ -102,6 +115,24 @@ describe("native Whirlpool exact-in quotes", () => {
     expect(() => decodeWhirlpool(bytes, fixture.slot)).toThrow();
   });
 
+  it("rejects a bank older than discovery or the independently read mint bank", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      return new Response(JSON.stringify({ result: { context: { slot: fixture.slot - 1 }, value: body.params[0].map((address: string) => fixture.accounts[address as keyof typeof fixture.accounts] ?? null) } }));
+    }));
+    await expect(fetchWhirlpoolSnapshot(fixture.poolAddress, replay().pool, new AbortController().signal)).rejects.toThrow("context");
+    await expect(fetchWhirlpoolSnapshot(fixture.poolAddress, { ...replay().pool, slot: fixture.slot - 2 }, new AbortController().signal, undefined, fixture.slot)).rejects.toThrow("context");
+  });
+
+  it("rejects discovery mint drift at the snapshot boundary", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      return new Response(JSON.stringify({ result: { context: { slot: fixture.slot }, value: body.params[0].map((address: string) => fixture.accounts[address as keyof typeof fixture.accounts] ?? null) } }));
+    }));
+    const discovery = replay().pool;
+    await expect(fetchWhirlpoolSnapshot(fixture.poolAddress, { ...discovery, tokenMintA: discovery.tokenMintB }, new AbortController().signal)).rejects.toThrow("identity changed");
+  });
+
   it("fetches one coherent bounded quote batch and carries its returned slot", async () => {
     const fetch = vi.fn(async (_url: string, init: RequestInit) => {
       const body = JSON.parse(String(init.body));
@@ -115,4 +146,34 @@ describe("native Whirlpool exact-in quotes", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(quoteWhirlpoolExactIn(snapshot, fixture.tokenMintIn, BigInt(fixture.amountIn))).toEqual({ amountOut: 999660000n, slot: fixture.slot });
   });
+});
+
+describe.each(pinned.snapshots)("real pinned $symbol at slot $slot", (capture) => {
+  it("preserves the exact fee, sqrt-price and active liquidity primitives", () => {
+    expect(replayPinned(capture).pool).toMatchObject({
+      slot: capture.slot, feeRate: capture.feeRate, sqrtPrice: BigInt(capture.sqrtPrice),
+      liquidity: BigInt(capture.liquidity), tickCurrentIndex: capture.tickCurrentIndex, tickSpacing: capture.tickSpacing,
+    });
+  });
+
+  it.each(capture.points)("matches the official Rust-core quote for raw input $amountIn", (point) => {
+    const quote = () => quoteWhirlpoolExactIn(replayPinned(capture), capture.tokenMintIn, BigInt(point.amountIn));
+    if ("amountOut" in point && typeof point.amountOut === "string") {
+      expect(quote()).toEqual({ slot: capture.slot, amountOut: BigInt(point.amountOut) });
+    } else {
+      // The independent core also rejects these bounded tick windows. This
+      // establishes no full fill, not complete market exhaustion or zero.
+      expect(quote).toThrow();
+    }
+  });
+});
+
+it("crosses real ONyc initialized ticks rather than extrapolating initial liquidity", () => {
+  const capture = pinned.snapshots.find((snapshot) => snapshot.symbol === "ONYC / USDC")!;
+  const snapshot = replayPinned(capture);
+  expect(quoteWhirlpoolExactIn(snapshot, capture.tokenMintIn, 1000000000000n).amountOut).toBe(867319257108652n);
+  snapshot.tickArrays = snapshot.tickArrays.map((array) => ({
+    ...array, ticks: array.ticks.map((tick) => ({ ...tick, liquidityNet: 0n })),
+  }));
+  expect(quoteWhirlpoolExactIn(snapshot, capture.tokenMintIn, 1000000000000n).amountOut).not.toBe(867319257108652n);
 });
