@@ -937,6 +937,8 @@ export function buildReviewedEconomicDeploymentInventory(
   const keys = new Set(plan.deployments.map(row => row.deploymentKey));
   const excluded = new Set(plan.excludedRegistryDeploymentKeys);
   if ([...excluded].some(key => keys.has(key))) return null;
+  if ((meta.bridgeRouteRisk?.routes ?? []).some(route => route.semantics === "lock-mint") &&
+    plan.escrows.length === 0) return null;
   if ((meta.bridgeRouteRisk?.routes ?? []).some(route => route.semantics === "burn-mint") &&
     plan.escrows.length === 0 && plan.liabilityInFlightSource === null) return null;
   const registeredKeys = new Set<string>();
