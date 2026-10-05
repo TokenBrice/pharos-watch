@@ -715,6 +715,82 @@ describe("reviewed same-chain provider partition", () => {
   });
 });
 
+describe("reviewed CCIP vault-share plans", () => {
+  function reviewedFixture(assetId: string): EconomicFixture {
+    const plan = structuredClone(REVIEWED_ECONOMIC_SUPPLY_PLANS.get(assetId)!);
+    const escrow = plan.escrows[0]!;
+    const source = escrow.inFlightSource;
+    if (!source || !("kind" in source) || source.kind !== "evm-ccip-pending") throw new Error("Expected a reviewed CCIP vault plan");
+    const clockSec = plan.reviewedAtSec + 60;
+    const meta = ACTIVE_META_BY_ID.get(assetId)!;
+    const canonical = plan.deployments.find(row => row.deploymentKey === escrow.canonicalDeploymentKey)!;
+    const raw = (units: number, decimals: number) => (BigInt(units) * 10n ** BigInt(decimals)).toString();
+    const observations: EconomicSupplyObservation[] = plan.deployments.map(row => ({
+      id: row.deploymentKey, deploymentKey: row.deploymentKey,
+      amount: raw(row.deploymentKey === canonical.deploymentKey ? 100 : 10, row.decimals!),
+      observedAtSec: clockSec - 60, anchor: "100", anchorHash: `0x${"a".repeat(64)}`,
+      responseSha256: "b".repeat(64),
+    }));
+    observations.push({
+      ...observations.find(row => row.deploymentKey === canonical.deploymentKey)!,
+      id: escrow.id, amount: raw(escrow.receiptDeploymentKeys.length * 10 + 1, canonical.decimals!),
+    });
+    const amount = raw(1, canonical.decimals!);
+    const proof: NonNullable<EconomicSupplyObservation["ccipPendingProof"]> = {
+      sourceDigest: sha256Hex(stableJsonStringifyV1(source)),
+      checkpointDigest: "c".repeat(64), discoveryDigest: "d".repeat(64),
+      pins: [...new Set(source.lanes.flatMap(lane => [lane.source.chainId, lane.destination.chainId]))]
+        .map(chainId => ({ chainId, anchor: 100, anchorHash: `0x${"a".repeat(64)}`, observedAtSec: clockSec - 60 })),
+      lanes: source.lanes.map((lane, index) => ({
+        id: lane.id, sourcePoolAddress: lane.source.tokenPoolAddress,
+        destinationPoolAddress: lane.destination.tokenPoolAddress,
+        sourceChainSelector: lane.source.chainSelector, destinationChainSelector: lane.destination.chainSelector,
+        initialSequence: "1", lastSequence: "1", pendingCount: index === 0 ? 1 : 0,
+        failedCount: index === 0 ? 1 : 0, amount: index === 0 ? amount : "0",
+      })),
+    };
+    return {
+      plan, meta, clockSec, baseInputGenerationId: `report-cards-input:v1:${"e".repeat(64)}`,
+      sourceGeneration: "ccip-accounting-regression", registryFingerprint: "f".repeat(64),
+      aggregate: { supplyUsd: 100, sourceGeneration: "ccip-accounting-regression", observedAtSec: clockSec - 60 },
+      referencePrice: { sourceId: plan.sourceId, value: "1", sourceGeneration: "ccip-accounting-regression", observedAtSec: clockSec - 60, responseSha256: "b".repeat(64) },
+      conversions: [], observations,
+      inFlight: [{
+        ...observations.find(row => row.deploymentKey === canonical.deploymentKey)!,
+        id: `in-flight:${escrow.id}`, amount, ccipPendingProof: proof,
+        responseSha256: sha256Hex(stableJsonStringifyV1({ proof, amount })),
+      }],
+    };
+  }
+
+  it.each(["syrupusdt-maple", "sdola-inverse-finance", "susdat-saturn"])(
+    "%s deducts the lockbox once and keeps failed in-flight claims visible",
+    assetId => {
+      const input = reviewedFixture(assetId);
+      const packet = deriveReviewedEconomicDeploymentPartition(input)!;
+      expect(packet).not.toBeNull();
+      expect(packet.deployments.find(row => row.deploymentKey === input.plan.escrows[0]!.canonicalDeploymentKey)?.currentSupplyUsd)
+        .toBe(99 - input.plan.escrows[0]!.receiptDeploymentKeys.length * 10);
+      expect(packet.deployments.filter(row => row.chainId !== "ethereum").map(row => row.currentSupplyUsd))
+        .toEqual(input.plan.escrows[0]!.receiptDeploymentKeys.map(() => 10));
+      expect(packet.unattributedSupplyUsd).toBe(1);
+      expect(packet.deployments.reduce((sum, row) => sum + row.currentSupplyUsd, packet.unattributedSupplyUsd)).toBe(100);
+    },
+  );
+
+  it.each(["receipt", "pending", "historical lane", "holding pin"] as const)(
+    "does not publish an sUSDat subtotal with missing or mismatched %s",
+    failure => {
+      const input = reviewedFixture("susdat-saturn");
+      if (failure === "receipt") input.observations.splice(1, 1);
+      if (failure === "pending") input.inFlight = [];
+      if (failure === "historical lane") input.inFlight[0]!.ccipPendingProof!.lanes.pop();
+      if (failure === "holding pin") input.observations[1]!.anchorHash = `0x${"1".repeat(64)}`;
+      expect(deriveReviewedEconomicDeploymentPartition(input)).toBeNull();
+    },
+  );
+});
+
 describe("reviewed XGLD, srUSD and wiTRY OFT supply plans", () => {
   function cohortFixture(assetId: "xgld-unitas" | "srusd-reservoir" | "witry-brix"): EconomicFixture {
     const plan = structuredClone(REVIEWED_ECONOMIC_SUPPLY_PLANS.get(assetId)!);
