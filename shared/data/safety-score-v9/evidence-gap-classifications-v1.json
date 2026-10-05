@@ -44081,6 +44081,766 @@
         "https://sourcify.dev/server/v2/contract/1/0x06b7c1460154a4d0cf79954298d6ba8d5b2d38f7?fields=sources,abi"
       ],
       "rationale": "Exact owner-wallet administrative key custody, human independence and signing/recovery safeguards remain unpublished after issuer/docs/transparency/legal/audit/regulatory/source search. Disclosed custody is of physical gold. Preserve the verified one-administrator authorization bypass and its 1-of-3 topology; this C does not claim unknown onchain authorization or infer independence from account labels."
+    },
+    {
+      "id": "uw-kpkusdcyield-kpk-52b280ebe10f44af",
+      "assetId": "kpkusdcyield-kpk",
+      "scope": {
+        "componentKey": "control:mint-meta:kpkusdcyield-kpk:ab9436f772f48d044a85",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-05T12:32:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "sources": [
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Automation addresses are vault-specific",
+          "excerpt": "Private keys are generated and held in a dedicated ETH signer vault. No team member can sign manually from these addresses.",
+          "assertion": "All three USDC Yield automation-agent EOAs are expressly covered by this per-vault signer arrangement."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Curator Safe",
+          "excerpt": "0x7e43df1c1c5a2245858b60d4655fda83704e4171",
+          "assertion": "USDC Yield vault and Curator Safe identity bind the automation architecture to this deployment."
+        }
+      ]
+    },
+    {
+      "id": "uw-kpkusdcyield-kpk-41c8a220cbc7df2a",
+      "assetId": "kpkusdcyield-kpk",
+      "scope": {
+        "componentKey": "control:mint-meta:kpkusdcyield-kpk:ca444c004750a00c8ada",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-05T12:32:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "sources": [
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Automation addresses are vault-specific",
+          "excerpt": "Private keys are generated and held in a dedicated ETH signer vault. No team member can sign manually from these addresses.",
+          "assertion": "All three USDC Yield automation-agent EOAs are expressly covered by this per-vault signer arrangement."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Curator Safe",
+          "excerpt": "0x7e43df1c1c5a2245858b60d4655fda83704e4171",
+          "assertion": "USDC Yield vault and Curator Safe identity bind the automation architecture to this deployment."
+        }
+      ]
+    },
+    {
+      "id": "uw-kpkusdcyield-kpk-5fea68cebb429fac",
+      "assetId": "kpkusdcyield-kpk",
+      "scope": {
+        "componentKey": "control:mint-meta:kpkusdcyield-kpk:dc791be201302045b75b",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-05T12:32:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "sources": [
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Automation addresses are vault-specific",
+          "excerpt": "Private keys are generated and held in a dedicated ETH signer vault. No team member can sign manually from these addresses.",
+          "assertion": "All three USDC Yield automation-agent EOAs are expressly covered by this per-vault signer arrangement."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Curator Safe",
+          "excerpt": "0x7e43df1c1c5a2245858b60d4655fda83704e4171",
+          "assertion": "USDC Yield vault and Curator Safe identity bind the automation architecture to this deployment."
+        }
+      ]
+    },
+    {
+      "id": "uw-kpkusdcyield-kpk-326c1dab8e757f97",
+      "assetId": "kpkusdcyield-kpk",
+      "scope": {
+        "componentKey": "control:mint-meta:kpkusdcyield-kpk:3e4772fd540c0c40fb60",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:32:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "sources": [
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Manual signers",
+          "excerpt": "Transaction hashes are independently verified on hardware wallets.",
+          "assertion": "A verification practice is disclosed, not the exact human EOA private-key storage or Council signer custody/independence."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/vaults/morpho.md",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Roles and addresses",
+          "excerpt": "0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537",
+          "assertion": "Nearby documentation names the Security Council Safe, not its exact private-key custodial arrangement."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kpk.io/blog/non-custodial-asset-management-infrastructure",
+        "https://docs.kpk.io/llms.txt",
+        "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+        "https://docs.kpk.io/vaults/infrastructure/automation.md",
+        "https://docs.kpk.io/vaults/infrastructure/risk-framework.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
+        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
+        "https://docs.kpk.io/vaults/vaults/morpho.md"
+      ],
+      "rationale": "Exact private-key custody, direct-EOA approval policy and human signer independence remain undisclosed for Curator Safe, Security Council Safe and three manual/deployer EOAs. Hardware hash verification does not attest key storage. Team labels and same signer set do not prove independence. Agent-vault disclosure applies only to automation EOAs. On-chain roles/quorums do not reveal this off-chain datum."
+    },
+    {
+      "id": "uw-kpkusdcyield-kpk-9135c4cbe984c870",
+      "assetId": "kpkusdcyield-kpk",
+      "scope": {
+        "componentKey": "control:mint-meta:kpkusdcyield-kpk:5a6eb228af3931fcda67",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:32:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "sources": [
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Manual signers",
+          "excerpt": "Transaction hashes are independently verified on hardware wallets.",
+          "assertion": "A verification practice is disclosed, not the exact human EOA private-key storage or Council signer custody/independence."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/vaults/morpho.md",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Roles and addresses",
+          "excerpt": "0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537",
+          "assertion": "Nearby documentation names the Security Council Safe, not its exact private-key custodial arrangement."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kpk.io/blog/non-custodial-asset-management-infrastructure",
+        "https://docs.kpk.io/llms.txt",
+        "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+        "https://docs.kpk.io/vaults/infrastructure/automation.md",
+        "https://docs.kpk.io/vaults/infrastructure/risk-framework.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
+        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
+        "https://docs.kpk.io/vaults/vaults/morpho.md"
+      ],
+      "rationale": "Exact private-key custody, direct-EOA approval policy and human signer independence remain undisclosed for Curator Safe, Security Council Safe and three manual/deployer EOAs. Hardware hash verification does not attest key storage. Team labels and same signer set do not prove independence. Agent-vault disclosure applies only to automation EOAs. On-chain roles/quorums do not reveal this off-chain datum."
+    },
+    {
+      "id": "uw-kpkusdcyield-kpk-51012a2b46bbe247",
+      "assetId": "kpkusdcyield-kpk",
+      "scope": {
+        "componentKey": "control:mint-meta:kpkusdcyield-kpk:81e50e5cda448b4805a0",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:32:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "sources": [
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Manual signers",
+          "excerpt": "Transaction hashes are independently verified on hardware wallets.",
+          "assertion": "A verification practice is disclosed, not the exact human EOA private-key storage or Council signer custody/independence."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/vaults/morpho.md",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Roles and addresses",
+          "excerpt": "0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537",
+          "assertion": "Nearby documentation names the Security Council Safe, not its exact private-key custodial arrangement."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kpk.io/blog/non-custodial-asset-management-infrastructure",
+        "https://docs.kpk.io/llms.txt",
+        "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+        "https://docs.kpk.io/vaults/infrastructure/automation.md",
+        "https://docs.kpk.io/vaults/infrastructure/risk-framework.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
+        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
+        "https://docs.kpk.io/vaults/vaults/morpho.md"
+      ],
+      "rationale": "Exact private-key custody, direct-EOA approval policy and human signer independence remain undisclosed for Curator Safe, Security Council Safe and three manual/deployer EOAs. Hardware hash verification does not attest key storage. Team labels and same signer set do not prove independence. Agent-vault disclosure applies only to automation EOAs. On-chain roles/quorums do not reveal this off-chain datum."
+    },
+    {
+      "id": "uw-kpkusdcyield-kpk-b30faad585f9c929",
+      "assetId": "kpkusdcyield-kpk",
+      "scope": {
+        "componentKey": "control:mint-meta:kpkusdcyield-kpk:8988c980e126f76b56cd",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:32:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "sources": [
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Manual signers",
+          "excerpt": "Transaction hashes are independently verified on hardware wallets.",
+          "assertion": "A verification practice is disclosed, not the exact human EOA private-key storage or Council signer custody/independence."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/vaults/morpho.md",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Roles and addresses",
+          "excerpt": "0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537",
+          "assertion": "Nearby documentation names the Security Council Safe, not its exact private-key custodial arrangement."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kpk.io/blog/non-custodial-asset-management-infrastructure",
+        "https://docs.kpk.io/llms.txt",
+        "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+        "https://docs.kpk.io/vaults/infrastructure/automation.md",
+        "https://docs.kpk.io/vaults/infrastructure/risk-framework.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
+        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
+        "https://docs.kpk.io/vaults/vaults/morpho.md"
+      ],
+      "rationale": "Exact private-key custody, direct-EOA approval policy and human signer independence remain undisclosed for Curator Safe, Security Council Safe and three manual/deployer EOAs. Hardware hash verification does not attest key storage. Team labels and same signer set do not prove independence. Agent-vault disclosure applies only to automation EOAs. On-chain roles/quorums do not reveal this off-chain datum."
+    },
+    {
+      "id": "uw-kpkusdcyield-kpk-4c49b50f365885ef",
+      "assetId": "kpkusdcyield-kpk",
+      "scope": {
+        "componentKey": "control:mint-meta:kpkusdcyield-kpk:fef9f14ca3c50040ac4b",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:32:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "sources": [
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Manual signers",
+          "excerpt": "Transaction hashes are independently verified on hardware wallets.",
+          "assertion": "A verification practice is disclosed, not the exact human EOA private-key storage or Council signer custody/independence."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/vaults/morpho.md",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Roles and addresses",
+          "excerpt": "0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537",
+          "assertion": "Nearby documentation names the Security Council Safe, not its exact private-key custodial arrangement."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kpk.io/blog/non-custodial-asset-management-infrastructure",
+        "https://docs.kpk.io/llms.txt",
+        "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+        "https://docs.kpk.io/vaults/infrastructure/automation.md",
+        "https://docs.kpk.io/vaults/infrastructure/risk-framework.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
+        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
+        "https://docs.kpk.io/vaults/vaults/morpho.md"
+      ],
+      "rationale": "Exact private-key custody, direct-EOA approval policy and human signer independence remain undisclosed for Curator Safe, Security Council Safe and three manual/deployer EOAs. Hardware hash verification does not attest key storage. Team labels and same signer set do not prove independence. Agent-vault disclosure applies only to automation EOAs. On-chain roles/quorums do not reveal this off-chain datum."
+    },
+    {
+      "id": "uw-gusdtq-galaxy-f28db7ca39cb78cb",
+      "assetId": "gusdtq-galaxy",
+      "scope": {
+        "componentKey": "control:mint-meta:gusdtq-galaxy:3015cf7b8d3b6deff8bc",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:32:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "sources": [
+        {
+          "url": "https://www.galaxy.com/newsroom/galaxy-launches-institutional-vault-curator",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": "2026-07-16",
+          "location": "Fireblocks Earn distribution",
+          "excerpt": "Through Fireblocks Earn, access runs through the same approval workflows, transaction signing, and policy controls institutions already use.",
+          "assertion": "This describes depositor/client workflows, not the four Galaxy controller EOAs."
+        },
+        {
+          "url": "https://curation.galaxy.com/vaults/0x71ffb6a81786ec285d429d531cf655107b9d878d",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Exact USDT Quality vault transparency",
+          "excerpt": "No allocation has been published for this vault yet.",
+          "assertion": "Exact-vault transparency identifies the deployment but provides no controller-key custody schedule."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.galaxy.com/infrastructure/custody",
+        "https://www.galaxy.com/newsroom/galaxy-launches-institutional-vault-curator",
+        "https://curation.galaxy.com/",
+        "https://curation.galaxy.com/vaults/0x71ffb6a81786ec285d429d531cf655107b9d878d",
+        "https://app.morpho.org/ethereum/vault/0x71ffB6a81786eC285D429d531Cf655107B9D878d/galaxy-usdt-quality",
+        "https://www.sec.gov/Archives/edgar/data/1859392/000185939226000084/exhibit992-q22026overvie.htm"
+      ],
+      "rationale": "Custody arrangement, human independence and signing policy for owner 0x42d510\u2026, curator 0xa13094\u2026, sentinel 0xb4b1c5\u2026 and allocator 0xd1fcd9\u2026 are not disclosed. Galaxy custody products and Fireblocks client distribution do not bind those exact controller keys. No issuer/auditor/provider statement identifies their custody; on-chain EOA identities do not answer the off-chain datum."
+    },
+    {
+      "id": "uw-gusdtq-galaxy-924b9f64973e400c",
+      "assetId": "gusdtq-galaxy",
+      "scope": {
+        "componentKey": "control:mint-meta:gusdtq-galaxy:69fcd7ea620e5d625493",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:32:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "sources": [
+        {
+          "url": "https://www.galaxy.com/newsroom/galaxy-launches-institutional-vault-curator",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": "2026-07-16",
+          "location": "Fireblocks Earn distribution",
+          "excerpt": "Through Fireblocks Earn, access runs through the same approval workflows, transaction signing, and policy controls institutions already use.",
+          "assertion": "This describes depositor/client workflows, not the four Galaxy controller EOAs."
+        },
+        {
+          "url": "https://curation.galaxy.com/vaults/0x71ffb6a81786ec285d429d531cf655107b9d878d",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Exact USDT Quality vault transparency",
+          "excerpt": "No allocation has been published for this vault yet.",
+          "assertion": "Exact-vault transparency identifies the deployment but provides no controller-key custody schedule."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.galaxy.com/infrastructure/custody",
+        "https://www.galaxy.com/newsroom/galaxy-launches-institutional-vault-curator",
+        "https://curation.galaxy.com/",
+        "https://curation.galaxy.com/vaults/0x71ffb6a81786ec285d429d531cf655107b9d878d",
+        "https://app.morpho.org/ethereum/vault/0x71ffB6a81786eC285D429d531Cf655107B9D878d/galaxy-usdt-quality",
+        "https://www.sec.gov/Archives/edgar/data/1859392/000185939226000084/exhibit992-q22026overvie.htm"
+      ],
+      "rationale": "Custody arrangement, human independence and signing policy for owner 0x42d510\u2026, curator 0xa13094\u2026, sentinel 0xb4b1c5\u2026 and allocator 0xd1fcd9\u2026 are not disclosed. Galaxy custody products and Fireblocks client distribution do not bind those exact controller keys. No issuer/auditor/provider statement identifies their custody; on-chain EOA identities do not answer the off-chain datum."
+    },
+    {
+      "id": "uw-gusdtq-galaxy-a27f8259ad6b53c6",
+      "assetId": "gusdtq-galaxy",
+      "scope": {
+        "componentKey": "control:mint-meta:gusdtq-galaxy:7c3485472cd625cfe60b",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:32:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "sources": [
+        {
+          "url": "https://www.galaxy.com/newsroom/galaxy-launches-institutional-vault-curator",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": "2026-07-16",
+          "location": "Fireblocks Earn distribution",
+          "excerpt": "Through Fireblocks Earn, access runs through the same approval workflows, transaction signing, and policy controls institutions already use.",
+          "assertion": "This describes depositor/client workflows, not the four Galaxy controller EOAs."
+        },
+        {
+          "url": "https://curation.galaxy.com/vaults/0x71ffb6a81786ec285d429d531cf655107b9d878d",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Exact USDT Quality vault transparency",
+          "excerpt": "No allocation has been published for this vault yet.",
+          "assertion": "Exact-vault transparency identifies the deployment but provides no controller-key custody schedule."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.galaxy.com/infrastructure/custody",
+        "https://www.galaxy.com/newsroom/galaxy-launches-institutional-vault-curator",
+        "https://curation.galaxy.com/",
+        "https://curation.galaxy.com/vaults/0x71ffb6a81786ec285d429d531cf655107b9d878d",
+        "https://app.morpho.org/ethereum/vault/0x71ffB6a81786eC285D429d531Cf655107B9D878d/galaxy-usdt-quality",
+        "https://www.sec.gov/Archives/edgar/data/1859392/000185939226000084/exhibit992-q22026overvie.htm"
+      ],
+      "rationale": "Custody arrangement, human independence and signing policy for owner 0x42d510\u2026, curator 0xa13094\u2026, sentinel 0xb4b1c5\u2026 and allocator 0xd1fcd9\u2026 are not disclosed. Galaxy custody products and Fireblocks client distribution do not bind those exact controller keys. No issuer/auditor/provider statement identifies their custody; on-chain EOA identities do not answer the off-chain datum."
+    },
+    {
+      "id": "uw-gusdtq-galaxy-031a4750bc133a0e",
+      "assetId": "gusdtq-galaxy",
+      "scope": {
+        "componentKey": "control:mint-meta:gusdtq-galaxy:8d7cbf3a6f4e0c715d3f",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:32:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "sources": [
+        {
+          "url": "https://www.galaxy.com/newsroom/galaxy-launches-institutional-vault-curator",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": "2026-07-16",
+          "location": "Fireblocks Earn distribution",
+          "excerpt": "Through Fireblocks Earn, access runs through the same approval workflows, transaction signing, and policy controls institutions already use.",
+          "assertion": "This describes depositor/client workflows, not the four Galaxy controller EOAs."
+        },
+        {
+          "url": "https://curation.galaxy.com/vaults/0x71ffb6a81786ec285d429d531cf655107b9d878d",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Exact USDT Quality vault transparency",
+          "excerpt": "No allocation has been published for this vault yet.",
+          "assertion": "Exact-vault transparency identifies the deployment but provides no controller-key custody schedule."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.galaxy.com/infrastructure/custody",
+        "https://www.galaxy.com/newsroom/galaxy-launches-institutional-vault-curator",
+        "https://curation.galaxy.com/",
+        "https://curation.galaxy.com/vaults/0x71ffb6a81786ec285d429d531cf655107b9d878d",
+        "https://app.morpho.org/ethereum/vault/0x71ffB6a81786eC285D429d531Cf655107B9D878d/galaxy-usdt-quality",
+        "https://www.sec.gov/Archives/edgar/data/1859392/000185939226000084/exhibit992-q22026overvie.htm"
+      ],
+      "rationale": "Custody arrangement, human independence and signing policy for owner 0x42d510\u2026, curator 0xa13094\u2026, sentinel 0xb4b1c5\u2026 and allocator 0xd1fcd9\u2026 are not disclosed. Galaxy custody products and Fireblocks client distribution do not bind those exact controller keys. No issuer/auditor/provider statement identifies their custody; on-chain EOA identities do not answer the off-chain datum."
+    },
+    {
+      "id": "uw-hyperusdca-hyperithm-e40ec8335b4a758a",
+      "assetId": "hyperusdca-hyperithm",
+      "scope": {
+        "componentKey": "control:mint-meta:hyperusdca-hyperithm:2f2c600d3a77497723a6",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:32:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "sources": [
+        {
+          "url": "https://prtimes.jp/main/html/rd/p/000000074.000079365.html",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": "2025-12-24",
+          "location": "Fordefi\u3068\u306e\u9023\u643a\u306b\u3088\u308b\u30bb\u30ad\u30e5\u30ea\u30c6\u30a3\u9ad8\u5ea6\u5316",
+          "excerpt": "Hyperithm\u306f\u3001Hypernative\u306e\u691c\u77e5\u6a5f\u80fd\u3092Fordefi\u306eMPC\uff08\u30de\u30eb\u30c1\u30d1\u30fc\u30c6\u30a3\u30b3\u30f3\u30d4\u30e5\u30c6\u30fc\u30b7\u30e7\u30f3\uff09\u30a6\u30a9\u30ec\u30c3\u30c8\u3068\u9023\u643a\u3055\u305b\u308b\u3053\u3068\u3067\u3001\u30bb\u30ad\u30e5\u30ea\u30c6\u30a3\u4f53\u5236\u3092\u3055\u3089\u306b\u5f37\u5316\u3057\u307e\u3057\u305f\u3002",
+          "assertion": "Issuer announces general Fordefi MPC integration, without mapping the Monad vault owner/curator/allocator."
+        },
+        {
+          "url": "https://app.morpho.org/monad/vault/0x78999cc96d2Ba0341588C60CcB0E91c6C33CF371/hyperithm-usdc-apex",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Vault controller identity",
+          "excerpt": "0x75178137d3b4b9a0f771e0e149b00fb8167ba325",
+          "assertion": "Exact curator identity does not prove its private-key provider or approval policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.hyperithm.com/",
+        "https://www.hyperithm.com/news",
+        "https://prtimes.jp/main/html/rd/p/000000074.000079365.html",
+        "https://accountable.hyperithm.com/",
+        "https://app.morpho.org/monad/vault/0x78999cc96d2Ba0341588C60CcB0E91c6C33CF371/hyperithm-usdc-apex",
+        "https://www.fsa.go.jp/menkyo/menkyoj/tokurei/012.pdf"
+      ],
+      "rationale": "Owner Safe 0xee7e9b\u2026, curator EOA 0x751781\u2026 and allocator EOA 0x345e93\u2026 have no exact-controller custody/policy disclosure. General firm adoption of Fordefi MPC or other fund custody cannot be rebound to these three Monad controllers. Independence is not inferred from threshold or labels; the unresolved datum is off-chain, not role topology."
+    },
+    {
+      "id": "uw-hyperusdca-hyperithm-b345ddc967714cf1",
+      "assetId": "hyperusdca-hyperithm",
+      "scope": {
+        "componentKey": "control:mint-meta:hyperusdca-hyperithm:5c4db6d8a3a833064ca3",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:32:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "sources": [
+        {
+          "url": "https://prtimes.jp/main/html/rd/p/000000074.000079365.html",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": "2025-12-24",
+          "location": "Fordefi\u3068\u306e\u9023\u643a\u306b\u3088\u308b\u30bb\u30ad\u30e5\u30ea\u30c6\u30a3\u9ad8\u5ea6\u5316",
+          "excerpt": "Hyperithm\u306f\u3001Hypernative\u306e\u691c\u77e5\u6a5f\u80fd\u3092Fordefi\u306eMPC\uff08\u30de\u30eb\u30c1\u30d1\u30fc\u30c6\u30a3\u30b3\u30f3\u30d4\u30e5\u30c6\u30fc\u30b7\u30e7\u30f3\uff09\u30a6\u30a9\u30ec\u30c3\u30c8\u3068\u9023\u643a\u3055\u305b\u308b\u3053\u3068\u3067\u3001\u30bb\u30ad\u30e5\u30ea\u30c6\u30a3\u4f53\u5236\u3092\u3055\u3089\u306b\u5f37\u5316\u3057\u307e\u3057\u305f\u3002",
+          "assertion": "Issuer announces general Fordefi MPC integration, without mapping the Monad vault owner/curator/allocator."
+        },
+        {
+          "url": "https://app.morpho.org/monad/vault/0x78999cc96d2Ba0341588C60CcB0E91c6C33CF371/hyperithm-usdc-apex",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Vault controller identity",
+          "excerpt": "0x75178137d3b4b9a0f771e0e149b00fb8167ba325",
+          "assertion": "Exact curator identity does not prove its private-key provider or approval policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.hyperithm.com/",
+        "https://www.hyperithm.com/news",
+        "https://prtimes.jp/main/html/rd/p/000000074.000079365.html",
+        "https://accountable.hyperithm.com/",
+        "https://app.morpho.org/monad/vault/0x78999cc96d2Ba0341588C60CcB0E91c6C33CF371/hyperithm-usdc-apex",
+        "https://www.fsa.go.jp/menkyo/menkyoj/tokurei/012.pdf"
+      ],
+      "rationale": "Owner Safe 0xee7e9b\u2026, curator EOA 0x751781\u2026 and allocator EOA 0x345e93\u2026 have no exact-controller custody/policy disclosure. General firm adoption of Fordefi MPC or other fund custody cannot be rebound to these three Monad controllers. Independence is not inferred from threshold or labels; the unresolved datum is off-chain, not role topology."
+    },
+    {
+      "id": "uw-hyperusdca-hyperithm-fa30218f8766429f",
+      "assetId": "hyperusdca-hyperithm",
+      "scope": {
+        "componentKey": "control:mint-meta:hyperusdca-hyperithm:5f8aee042308e75a1a98",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:32:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "sources": [
+        {
+          "url": "https://prtimes.jp/main/html/rd/p/000000074.000079365.html",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": "2025-12-24",
+          "location": "Fordefi\u3068\u306e\u9023\u643a\u306b\u3088\u308b\u30bb\u30ad\u30e5\u30ea\u30c6\u30a3\u9ad8\u5ea6\u5316",
+          "excerpt": "Hyperithm\u306f\u3001Hypernative\u306e\u691c\u77e5\u6a5f\u80fd\u3092Fordefi\u306eMPC\uff08\u30de\u30eb\u30c1\u30d1\u30fc\u30c6\u30a3\u30b3\u30f3\u30d4\u30e5\u30c6\u30fc\u30b7\u30e7\u30f3\uff09\u30a6\u30a9\u30ec\u30c3\u30c8\u3068\u9023\u643a\u3055\u305b\u308b\u3053\u3068\u3067\u3001\u30bb\u30ad\u30e5\u30ea\u30c6\u30a3\u4f53\u5236\u3092\u3055\u3089\u306b\u5f37\u5316\u3057\u307e\u3057\u305f\u3002",
+          "assertion": "Issuer announces general Fordefi MPC integration, without mapping the Monad vault owner/curator/allocator."
+        },
+        {
+          "url": "https://app.morpho.org/monad/vault/0x78999cc96d2Ba0341588C60CcB0E91c6C33CF371/hyperithm-usdc-apex",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Vault controller identity",
+          "excerpt": "0x75178137d3b4b9a0f771e0e149b00fb8167ba325",
+          "assertion": "Exact curator identity does not prove its private-key provider or approval policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.hyperithm.com/",
+        "https://www.hyperithm.com/news",
+        "https://prtimes.jp/main/html/rd/p/000000074.000079365.html",
+        "https://accountable.hyperithm.com/",
+        "https://app.morpho.org/monad/vault/0x78999cc96d2Ba0341588C60CcB0E91c6C33CF371/hyperithm-usdc-apex",
+        "https://www.fsa.go.jp/menkyo/menkyoj/tokurei/012.pdf"
+      ],
+      "rationale": "Owner Safe 0xee7e9b\u2026, curator EOA 0x751781\u2026 and allocator EOA 0x345e93\u2026 have no exact-controller custody/policy disclosure. General firm adoption of Fordefi MPC or other fund custody cannot be rebound to these three Monad controllers. Independence is not inferred from threshold or labels; the unresolved datum is off-chain, not role topology."
+    },
+    {
+      "id": "uw-steakcusdc-steakhouse-b502801cf697e411",
+      "assetId": "steakcusdc-steakhouse",
+      "scope": {
+        "componentKey": "control:mint-meta:steakcusdc-steakhouse:98e77caf134d4c3e4a97",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:32:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "sources": [
+        {
+          "url": "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls.md",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Owner policy",
+          "excerpt": "Steakhouse\u2019s \u201cowner\u201d employs a Safe multisig with a quorum of five keys, meaning that five persons must coordinate to introduce any owner-level operations.",
+          "assertion": "Generic five-person operational policy does not identify exact Safe key storage or independent custodians."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/Steakhouse-Financial/vault-v2-supervisor/main/audits/2026-02-23-cantina.pdf",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": "2026-02-23",
+          "location": "Security Review Summary",
+          "excerpt": "From Feb 10th to Feb 11th the security researchers conducted a review of vault-v2-supervisor on commit hash 34b2ec29.",
+          "assertion": "The review concerns Supervisor code, not a custody attestation for its owner or curator Safe."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.steakhouse.financial/docs/llms.txt",
+        "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls.md",
+        "https://www.steakhouse.financial/docs/documents/disclaimers/vaults.md",
+        "https://raw.githubusercontent.com/Steakhouse-Financial/vault-v2-supervisor/main/audits/2026-02-23-cantina.pdf",
+        "https://etherscan.io/address/0x827e86072b06674a077f592a531dce4590adecdb",
+        "https://etherscan.io/address/0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd"
+      ],
+      "rationale": "Exact key storage/provider and signer independence for 2-of-7 curator Safe 0x827e860\u2026 and 5-of-10 Supervisor owner Safe 0x0a0e559\u2026 are undisclosed. Generic five-person owner coordination and code audits do not attest these exact key arrangements. Noncustodial deposits describe user assets, not controller private keys. Keep typed questions; do not infer independence from Safe topology."
+    },
+    {
+      "id": "uw-steakcusdc-steakhouse-f82f870006709d65",
+      "assetId": "steakcusdc-steakhouse",
+      "scope": {
+        "componentKey": "control:mint-meta:steakcusdc-steakhouse:d576e5bcf7a8f52be299",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:32:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "sources": [
+        {
+          "url": "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls.md",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Owner policy",
+          "excerpt": "Steakhouse\u2019s \u201cowner\u201d employs a Safe multisig with a quorum of five keys, meaning that five persons must coordinate to introduce any owner-level operations.",
+          "assertion": "Generic five-person operational policy does not identify exact Safe key storage or independent custodians."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/Steakhouse-Financial/vault-v2-supervisor/main/audits/2026-02-23-cantina.pdf",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": "2026-02-23",
+          "location": "Security Review Summary",
+          "excerpt": "From Feb 10th to Feb 11th the security researchers conducted a review of vault-v2-supervisor on commit hash 34b2ec29.",
+          "assertion": "The review concerns Supervisor code, not a custody attestation for its owner or curator Safe."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.steakhouse.financial/docs/llms.txt",
+        "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls.md",
+        "https://www.steakhouse.financial/docs/documents/disclaimers/vaults.md",
+        "https://raw.githubusercontent.com/Steakhouse-Financial/vault-v2-supervisor/main/audits/2026-02-23-cantina.pdf",
+        "https://etherscan.io/address/0x827e86072b06674a077f592a531dce4590adecdb",
+        "https://etherscan.io/address/0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd"
+      ],
+      "rationale": "Exact key storage/provider and signer independence for 2-of-7 curator Safe 0x827e860\u2026 and 5-of-10 Supervisor owner Safe 0x0a0e559\u2026 are undisclosed. Generic five-person owner coordination and code audits do not attest these exact key arrangements. Noncustodial deposits describe user assets, not controller private keys. Keep typed questions; do not infer independence from Safe topology."
+    },
+    {
+      "id": "uw-ustbl-spiko-9af86cabf9f3c4a0",
+      "assetId": "ustbl-spiko",
+      "scope": {
+        "componentKey": "control:mint-meta:ustbl-spiko:c04d34d7ecd1b9ffeb48",
+        "exposureId": null,
+        "factorKey": "keyCustody",
+        "pillar": "control",
+        "requiredDatum": "keyCustody",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-05T12:32:50Z",
+      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "sources": [
+        {
+          "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": "2025-10-24",
+          "location": "Relayer transaction signing",
+          "excerpt": "Secures transaction signing using a managed wallet from Dfns",
+          "assertion": "Relayer signing is disclosed, not exact Stellar owner/admin account GBYIQX\u2026 custody."
+        },
+        {
+          "url": "https://dfns.co/article/announcing-spiko.md",
+          "observedAt": "2026-10-05T12:32:50Z",
+          "datumAsOf": null,
+          "location": "Scope of wallet adoption",
+          "excerpt": "Spiko started using DFNS wallets both for its own treasury and for client-facing activities.",
+          "assertion": "Broad provider statement does not identify the exact Stellar owner/admin key or approval policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.spiko.io/spiko-treasury-bills-dollar",
+        "https://docs.spiko.io/",
+        "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://dfns.co/article/announcing-spiko.md",
+        "https://raw.githubusercontent.com/spiko-tech/stellar-contracts/main/address/production.json",
+        "https://geco.amf-france.org/produit-d-epargne/c79398"
+      ],
+      "rationale": "Dfns relayer, treasury and client-wallet disclosures do not bind the Stellar token owner/admin account GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H. Technical docs separate super-admin upgrade permissions from daily relayers. Exact admin key custody/signing policy and signer independence remain undisclosed. Do not transplant provider claims across roles."
     }
   ]
 }
