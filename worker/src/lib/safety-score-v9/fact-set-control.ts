@@ -22,7 +22,7 @@ import {
   normalizeReviewedFactStatus,
   type AssetBuildContext,
 } from "./fact-set-context";
-import { compileReviewedControlScope, weightedReviewIsCurrent, sortV1005ProcessDiagnostics } from "@shared/lib/safety-score-v9/control-scope";
+import { compileReviewedControlScope, effectiveAuthoritySignatureRequirement, weightedReviewIsCurrent, sortV1005ProcessDiagnostics } from "@shared/lib/safety-score-v9/control-scope";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { DEPLOYMENT_MATERIAL_SHARE_THRESHOLD } from "./extension-shared";
 import { v9AccessClaimGraphStatuses } from "@shared/types/safety-score-v9-access-lookthrough";
@@ -67,12 +67,16 @@ export function buildControls(context: AssetBuildContext): {
   // Each authority's own certificate is checked; a friendly sibling's proof
   // cannot close an unreviewed contributor on the same deployment.
   const reviewedControls = review.controls.map((control) => {
-    if (!control.executionScope && !control.executionScopeContributors && !control.authority?.weightedQuorum) return control;
+    const custodyQuestion = control.scopedQuestionFresh === true && control.scopedQuestionSubject === "key-custody-independence";
+    if (!control.executionScope && !control.executionScopeContributors && !control.authority?.weightedQuorum) {
+      return custodyQuestion ? { ...control, keyCustody: "unknown" as const } : control;
+    }
     const projections = control.executionScopeContributors
       ? control.executionScopeContributors.map((entry) => compileReviewedControlScope(entry.scope, entry.authorityKey, context.asset.assetId, context.fixedInput.clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC))
       : [compileReviewedControlScope(control.executionScope, control.authority?.authorityKey ?? "", context.asset.assetId, context.fixedInput.clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC)];
     return {
       ...control,
+      ...(custodyQuestion ? { keyCustody: "unknown" as const } : {}),
       ...(control.executionScope || control.executionScopeContributors ? {
         executionScopeComplete: control.executionScopeComplete !== false && projections.every((projection) => projection.complete),
         moduleImpact: projections.some((projection) => projection.moduleImpact === "relevant") ? "relevant" as const
@@ -117,7 +121,7 @@ export function buildControls(context: AssetBuildContext): {
     controlStatus: status,
     controls: reviewedControls.map((control) => {
       // Materiality bounds the charge, not our knowledge of the authority.
-      const controlStatus = (!controlHasExactAuthorityReview(control) && control.economicLossScope === "access-only") || controlSemanticsAreKnown(control)
+      const controlStatus = (!controlHasOpenSemanticQuestion(control) && !controlHasExactAuthorityReview(control) && control.economicLossScope === "access-only") || controlSemanticsAreKnown(control)
         ? createV9FactStatus({
             applicability: !controlHasExactAuthorityReview(control) && controlNeedsNonApplicableStatus(control)
               ? notApplicableV9Fact("v9.control.review", "This resolved control does not bind the control pillar.")
@@ -135,7 +139,8 @@ export function buildControls(context: AssetBuildContext): {
         ["incidentState", control.incidentState === "unknown"],
         ["materialSupplyShare", control.scope === "deployment" && control.materialSupplyShare === null],
         ["executionScope", control.executionScopeComplete === false],
-        ["multisigTopology", control.authority?.model === "multisig" && control.authority.threshold === null],
+        ["multisigTopology", control.authority?.model === "multisig" && effectiveAuthoritySignatureRequirement(control.authority) === null],
+        ["keyCustody", control.scopedQuestionFresh === true && control.scopedQuestionSubject === "key-custody-independence"],
       ] as const) {
         if (!unknown) continue;
         factorStatuses[factorKey] = missingLocalFact(context, {
@@ -173,9 +178,24 @@ function controlNeedsNonApplicableStatus(control: ExtensionControlOverlay): bool
       control.authority === null || control.failureDomains.length === 0);
 }
 
+function controlHasOpenSemanticQuestion(control: ExtensionControlOverlay): boolean {
+  if (control.scopedQuestionFresh !== true || control.scopedQuestionSubject === "key-custody-independence" ||
+      control.executionScopeComplete === true) return false;
+  // Current independently proved adverse reach is not softened by a residual
+  // partial-inventory question. Invalid or stale scope never earns precedence.
+  return !(control.executionScope && control.scopeDiagnostics &&
+    control.scopeDiagnostics.every((code) => code === "execution-inventory-incomplete") &&
+    control.executionScope.confidence !== "unknown" &&
+    control.executionScope.paths.some((path) =>
+      path.activation !== "unknown" && path.activation !== "disabled-final" && path.reach === "root" &&
+      path.economicLossScope === "global-claim" &&
+      (path.capSemantics.kind === "unbounded" || path.claimImpairment === "unbounded")));
+}
+
 
 function controlSemanticsAreKnown(control: ExtensionControlOverlay): boolean {
   return (
+    !controlHasOpenSemanticQuestion(control) &&
     control.capSemantics.kind !== "unknown" &&
     control.claimImpairment !== "unknown" &&
     control.economicLossScope !== "unknown" &&
@@ -186,7 +206,8 @@ function controlSemanticsAreKnown(control: ExtensionControlOverlay): boolean {
 }
 
 export function controlCanCarryKnownStatus(control: ExtensionControlOverlay): boolean {
-  return (!controlHasExactAuthorityReview(control) && controlIsNonBinding(control)) || controlSemanticsAreKnown(control);
+  return !controlHasOpenSemanticQuestion(control) &&
+    ((!controlHasExactAuthorityReview(control) && controlIsNonBinding(control)) || controlSemanticsAreKnown(control));
 }
 
 function boundedControlSemanticsStatus(
@@ -194,7 +215,7 @@ function boundedControlSemanticsStatus(
   control: ExtensionControlOverlay,
   evidenceRefIds: readonly string[],
 ): V9FactStatusV2 {
-  const scopedQuestion = control.scopedQuestionFresh === true;
+  const scopedQuestion = controlHasOpenSemanticQuestion(control);
   const gapId = addGap(
     context,
     createV9FactGapV3({

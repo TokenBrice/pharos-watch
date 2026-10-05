@@ -1025,6 +1025,7 @@ function adaptMintControl(
   clockSec: number,
   projection: V9ReviewedControlProjection,
   issuanceFactsRef: string | undefined,
+  scopedQuestionIsCustodyOnly: boolean,
 ): ControlOverlay[] {
   const controlKind = mintControlKind(control);
   const coarseCapabilities = mintCapabilities(control, upgradeCapable);
@@ -1087,7 +1088,7 @@ function adaptMintControl(
   // Independently established legacy adverse economics remain binding unless
   // the scoped review explicitly questions that economic reach.
   const scopedMintReachUnresolved =
-    (scopedQuestionFresh || (capSemantics.kind !== "unbounded" && claimImpairment !== "unbounded")) &&
+    ((scopedQuestionFresh && !scopedQuestionIsCustodyOnly) || (capSemantics.kind !== "unbounded" && claimImpairment !== "unbounded")) &&
     projection.reviewed &&
     !projection.complete &&
     projection.paths.some((path) =>
@@ -1132,7 +1133,8 @@ function adaptMintControl(
     delaySec: control.timelockDelaySec ?? null,
     materialSupplyShare: null,
     ...(scopedQuestionFresh ? { scopedQuestionFresh: true } : {}),
-    keyCustody: control.keyCustodyAttestation?.kind ?? "unknown",
+    ...(scopedQuestionIsCustodyOnly ? { scopedQuestionSubject: "key-custody-independence" as const } : {}),
+    keyCustody: scopedQuestionIsCustodyOnly ? "unknown" : control.keyCustodyAttestation?.kind ?? "unknown",
     modulesOrGuards: control.modulesOrGuardsStatus ?? "unknown",
     ...(projection.scope ? {
       executionScope: projection.scope,
@@ -2018,15 +2020,11 @@ function adaptMintReview(
   const upgradeability = profile.upgradeability;
   // A scoped question softens only the one control it names, and only while
   // its review date sits inside the freshness window.
-  const freshScopedQuestionRefs = new Set(
-    (profile.review.scopedQuestions ?? [])
-      .filter(
-        (question) =>
-          clockSec - parseBoundedDateSec(question.reviewedAt, clockSec, `${meta.id}:scoped-question`) <=
-          V9_SCOPED_QUESTION_MAX_AGE_SEC,
-      )
-      .map((question) => question.controlRef.toLowerCase()),
-  );
+  const freshScopedQuestions = (profile.review.scopedQuestions ?? []).filter((question) =>
+    clockSec - parseBoundedDateSec(question.reviewedAt, clockSec, `${meta.id}:scoped-question`) <= V9_SCOPED_QUESTION_MAX_AGE_SEC);
+  const freshScopedQuestionRefs = new Set(freshScopedQuestions.map((question) => question.controlRef.toLowerCase()));
+  const semanticQuestionRefs = new Set(freshScopedQuestions.filter((question) =>
+    question.subject !== "key-custody-independence").map((question) => question.controlRef.toLowerCase()));
   const authoredControls = profile.controls ?? [];
   const controlProjections = compileReviewedMintControlScopes(profile, meta.id, clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC).map((projection) =>
     resolvedBook.diagnostics.length === 0 ? projection : { ...projection, processDiagnostics: sortV1005ProcessDiagnostics([...projection.processDiagnostics ?? [], ...resolvedBook.diagnostics]) });
@@ -2066,6 +2064,10 @@ function adaptMintReview(
       clockSec,
       controlProjections[index]!,
       issuanceFacts?.ref,
+      !((control.address != null && semanticQuestionRefs.has(`${control.chain ?? ""}:${control.address.toLowerCase()}`)) ||
+        semanticQuestionRefs.has(control.label.toLowerCase())) &&
+        ((control.address != null && freshScopedQuestionRefs.has(`${control.chain ?? ""}:${control.address.toLowerCase()}`)) ||
+          freshScopedQuestionRefs.has(control.label.toLowerCase())),
     ),
   ).map((control) => resolvedBook.diagnostics.length === 0 ? control : { ...control, executionScopeComplete: false,
     scopeDiagnostics: [...new Set([...control.scopeDiagnostics ?? [], ...resolvedBook.diagnostics.map((row) => row.code)])].sort() });

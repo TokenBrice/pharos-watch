@@ -4,7 +4,7 @@ import { V9ReserveBoundedFactSchema } from "./reserve-bounded-facts";
 import { ReserveScopedAdmissionSchema } from "./safety-score-v9-reserve-scope";
 import { AdmittedProviderRowExclusionSchema } from "./safety-score-v9-supply-attribution";
 import { V9AccessClaimGraphSchema, v9AccessClaimGraphStatuses } from "./safety-score-v9-access-lookthrough";
-import { V9InProcessControlExecutionScopeSchema, V9ExactControlPolicySchema, V9WeightedQuorumSchema, V9SameChainSystemTransportSchema } from "./safety-score-v9-control-scope";
+import { V9InProcessControlExecutionScopeSchema, V9ExactControlPolicySchema, V9WeightedQuorumSchema, V9SameChainSystemTransportSchema, V9ControlQuestionSubjectSchema } from "./safety-score-v9-control-scope";
 import { createV9ValueInterner, deepFreeze } from "./safety-score-v9-immutable";
 import { DeploymentIdSchema } from "./stablecoin-meta-schemas";
 import { ReserveIntermediarySchema } from "./reserves";
@@ -996,6 +996,7 @@ export const V9DeploymentControlFactBaseSchema = z
     // review is fresh at compile time. Grants the bounded scoped-gap ceiling
     // instead of the control-unverified ceiling while the question stays open.
     scopedQuestionFresh: z.boolean().optional(),
+    scopedQuestionSubject: V9ControlQuestionSubjectSchema.optional(),
     keyCustody: V9KeyCustodySchema,
     modulesOrGuards: V9ModulesOrGuardsSchema,
     executionScope: V9InProcessControlExecutionScopeSchema.optional(),
