@@ -1,7 +1,41 @@
 {
   "schemaVersion": 1,
-  "note": "Reviewed exhaustive economic-deployment accounting plans only. No static supply numbers or incomplete plans; per-asset authoring follows verified current circulation, escrow and in-flight research.",
+  "note": "Reviewed exhaustive economic-deployment plans and narrowly scoped exhaustive provider-chain accounting reviews. No static supply numbers or incomplete claimed scopes; per-asset authoring follows verified current circulation, escrow and in-flight research.",
   "reviews": [],
+  "providerChainPartitionReviews": [
+    {
+      "assetId": "usdc-circle",
+      "chainId": "xlayer",
+      "reviewer": "E22UsdcXlayer",
+      "reviewedAtSec": 1791158400,
+      "expiresAtSec": 1822694400,
+      "evidenceUrls": [
+        "https://www.circle.com/blog/now-available-native-usdc-cctp-on-x-layer",
+        "https://developers.circle.com/stablecoins/usdc-contract-addresses",
+        "https://rpc.xlayer.tech"
+      ],
+      "adapterSourceUrls": [
+        "https://raw.githubusercontent.com/DefiLlama/peggedassets-server/07a898eaa7778e075516c8f7a769fbd14683a910/src/adapters/peggedAssets/usd-coin/config.ts",
+        "https://raw.githubusercontent.com/DefiLlama/peggedassets-server/07a898eaa7778e075516c8f7a769fbd14683a910/src/adapters/peggedAssets/usd-coin/index.ts",
+        "https://raw.githubusercontent.com/DefiLlama/peggedassets-server/07a898eaa7778e075516c8f7a769fbd14683a910/src/adapters/peggedAssets/helper/getSupply.ts"
+      ],
+      "accounting": "disjoint-same-unit-total-supplies",
+      "exhaustiveChainScope": true,
+      "rationale": "Circle's August 6 launch identifies b6ce...3061 as native USDC and 74b7...6d22 as separate Ethereum-bridged USDC not issued by Circle. The pinned DefiLlama XLayer config lists exactly these two contracts: issued native USDC and bridgedFromETH USDC.e. Its adapter reads native totalSupply via chainMinted with six decimals and bridged totalSupply via bridgedSupply with six decimals, with no XLayer unreleased deductions. The chain row is their disjoint same-USDC-unit sum; a common USD valuation cancels in the relative allocation. Read both total supplies and decimals at one authenticated numbered block, preserve the admitted provider row and all other chain rows, and retain the bridged route's own controller/risk. This review certifies only XLayer attribution, not a global USDC liability census or Ethereum escrow/pending accounting.",
+      "deployments": [
+        {
+          "address": "0x74b7f16337b8972027f6196a17a631ac6de26d22",
+          "decimals": 6,
+          "routeId": "xlayer:0x74b7f16337b8972027f6196a17a631ac6de26d22"
+        },
+        {
+          "address": "0xb6ceceab302e2e4948951ee7843fc24e92933061",
+          "decimals": 6,
+          "routeId": "xlayer:0xb6ceceab302e2e4948951ee7843fc24e92933061"
+        }
+      ]
+    }
+  ],
   "providerRowExclusionReviews": [
     {
       "assetId": "frax-frax",

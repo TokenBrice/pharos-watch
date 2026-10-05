@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { observeEconomicSolanaMint } from "../safety-score-v9/economic-supply-observer";
 import type { SafetyScoreV9SolanaRpcFetcher } from "../safety-score-v9/supply-observation-primitives";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -246,5 +246,72 @@ describe("complete independent-liability censuses", () => {
     expect(packet("yusd-aegis", generation)?.observations).toHaveLength(4);
     expect(generation.observationsByAssetId["usbd-bima"]?.find(row => row.deploymentKey.startsWith("nibiru:")))
       .toMatchObject({ status: "rejected", rawTokenUnits: null });
+  });
+});
+
+describe("bounded same-chain provider census", () => {
+  it("reads both XLayer contracts at one pin without probing the other 86 USDC contracts", async () => {
+    const clock = 1791184659;
+    const chains: string[] = [];
+    const dependencies = censusDependencies();
+    const generation = await observeSafetyScoreV9TransferMaterialityGeneration({
+      activeAssetIds: ["usdc-circle"], baseInputGenerationId: BASE_ID,
+      registryFingerprint: FINGERPRINT, scoringClockSec: clock, chainRpcs: new Map(),
+    }, {
+      ...dependencies,
+      resolveClosestBlockAtOrBeforeTimestamp: async chain => { chains.push(chain!); return 100; },
+      fetchEvmBlockHeader: async () => ({ number: 100, timestamp: clock - 10, hash: `0x${"1".repeat(64)}` as `0x${string}` }),
+      fetchEvmMulticall3Aggregate3AtBlock: async (_chain, calls) => calls.map(call => ({
+        label: call.label, success: true,
+        returnData: `0x${(call.label.endsWith(":decimals") ? 6n : 100n).toString(16).padStart(64, "0")}` as `0x${string}`,
+      })),
+    });
+    expect(chains).toEqual(["xlayer"]);
+    expect(generation.observationsByAssetId["usdc-circle"]).toHaveLength(2);
+    for (const row of generation.observationsByAssetId["usdc-circle"]!) {
+      expect(row).toMatchObject({
+        status: "accepted", rawTokenUnits: "100", decimals: 6,
+        blockNumber: "100", blockHash: `0x${"1".repeat(64)}`, observedAtSec: clock - 10,
+      });
+    }
+    expect(exactInputBoundTransferMaterialityPacket({
+      assetId: "usdc-circle", meta: ACTIVE_META_BY_ID.get("usdc-circle")!, generation,
+      registryFingerprint: FINGERPRINT, baseInputGenerationId: BASE_ID, clockSec: clock,
+    })).toBeNull();
+  });
+
+  it("retains a failed contract as rejected instead of shrinking the reviewed two-contract roster", async () => {
+    const clock = 1791184659;
+    const generation = await observeSafetyScoreV9TransferMaterialityGeneration({
+      activeAssetIds: ["usdc-circle"], baseInputGenerationId: BASE_ID,
+      registryFingerprint: FINGERPRINT, scoringClockSec: clock, chainRpcs: new Map(),
+    }, {
+      ...censusDependencies(),
+      fetchEvmBlockHeader: async () => ({ number: 100, timestamp: clock - 10, hash: `0x${"1".repeat(64)}` as `0x${string}` }),
+      fetchEvmMulticall3Aggregate3AtBlock: async (_chain, calls) => calls.map(call => ({
+        label: call.label, success: !call.label.includes("b6ceceab"),
+        returnData: `0x${(call.label.endsWith(":decimals") ? 6n : 100n).toString(16).padStart(64, "0")}` as `0x${string}`,
+      })),
+    });
+    expect(generation.observationsByAssetId["usdc-circle"]).toHaveLength(2);
+    expect(generation.observationsByAssetId["usdc-circle"]?.map(row => row.status)).toEqual(["accepted", "rejected"]);
+  });
+
+  it("rejects catalog expansion before issuing any additional contract probes", async () => {
+    const meta = structuredClone(ACTIVE_META_BY_ID.get("usdc-circle")!);
+    meta.contracts!.push({ chain: "xlayer", address: `0x${"f".repeat(40)}`, decimals: 6 });
+    const lookup = vi.spyOn(ACTIVE_META_BY_ID, "get").mockReturnValue(meta);
+    const resolve = vi.fn(async () => 100);
+    try {
+      const generation = await observeSafetyScoreV9TransferMaterialityGeneration({
+        activeAssetIds: ["usdc-circle"], baseInputGenerationId: BASE_ID,
+        registryFingerprint: FINGERPRINT, scoringClockSec: 1791184659, chainRpcs: new Map(),
+      }, { ...censusDependencies(), resolveClosestBlockAtOrBeforeTimestamp: resolve });
+      expect(resolve).not.toHaveBeenCalled();
+      expect(generation.observationsByAssetId["usdc-circle"]).toHaveLength(2);
+      expect(generation.observationsByAssetId["usdc-circle"]?.every(row => row.status === "rejected")).toBe(true);
+    } finally {
+      lookup.mockRestore();
+    }
   });
 });

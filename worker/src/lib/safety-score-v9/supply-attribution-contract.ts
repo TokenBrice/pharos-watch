@@ -9,7 +9,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import reviewedEconomicSupplyPlans from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import type { BridgeRouteRiskProfile, StablecoinMeta } from "@shared/types/core";
-import { ReviewedEconomicSupplyPlanEnvelopeSchema, ReviewedEconomicSupplyPlanSchema, ReviewedEconomicDeploymentPartitionSchema, type ReviewedEconomicSupplyPlan, type ReviewedEconomicDeploymentPartition, type EconomicSupplyObservation, type EconomicSupplyReference } from "@shared/types/safety-score-v9-supply-attribution";
+import { ReviewedEconomicSupplyPlanEnvelopeSchema, ReviewedEconomicSupplyPlanSchema, ReviewedEconomicDeploymentPartitionSchema, ReviewedProviderChainPartitionSchema, type ReviewedProviderChainPartition, type ReviewedEconomicSupplyPlan, type ReviewedEconomicDeploymentPartition, type EconomicSupplyObservation, type EconomicSupplyReference } from "@shared/types/safety-score-v9-supply-attribution";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import { createReviewedAssetRegistry, ReviewedRegistryEntryError } from "./extension-reviewed-registry";
@@ -917,6 +917,77 @@ const economicSupplyRegistry = loadReviewedEconomicSupplyPlans(reviewedEconomicS
 export const REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE = economicSupplyRegistry.envelope;
 export const REVIEWED_ECONOMIC_SUPPLY_PLANS: ReadonlyMap<string, ReviewedEconomicSupplyPlan> = economicSupplyRegistry.plans;
 export const REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES: ReadonlyMap<string, ReviewedRegistryEntryError> = economicSupplyRegistry.quarantines;
+
+export const REVIEWED_PROVIDER_CHAIN_PARTITIONS = createReviewedAssetRegistry({
+  rows: REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE.providerChainPartitionReviews ?? [],
+  schema: ReviewedProviderChainPartitionSchema,
+  path: "supplyAttribution.providerChainPartitionReviews",
+  keyOf: row => typeof row.chainId === "string" ? `${row.assetId}:${row.chainId}` : undefined,
+  keyPath: "chainId",
+});
+
+/** Preserves a provider row, splitting only a reviewed disjoint same-unit chain census. */
+export function deriveReviewedProviderChainPartition(input: {
+  review: ReviewedProviderChainPartition;
+  meta: Pick<StablecoinMeta, "contracts" | "bridgeRouteRisk">;
+  clockSec: number; supplyUsd: number;
+  observations: readonly {
+    deploymentKey: string; rawTokenUnits: string | null; decimals: number | null;
+    blockNumber: string | null; blockHash?: string; observedAtSec: number | null; status: string;
+  }[];
+}): Array<{ routeId: string; supplyUsd: number }> | null {
+  const { review, meta, observations } = input;
+  if (!ReviewedProviderChainPartitionSchema.safeParse(review).success ||
+    input.clockSec < review.reviewedAtSec || input.clockSec >= review.expiresAtSec ||
+    !Number.isFinite(input.supplyUsd) || input.supplyUsd < 0) return null;
+  const contracts = (meta.contracts ?? []).filter(row => resolveChainId(row.chain) === review.chainId);
+  const routes = (meta.bridgeRouteRisk?.routes ?? []).filter(row => resolveChainId(row.destinationChain) === review.chainId);
+  if (contracts.length !== review.deployments.length || routes.length !== review.deployments.length ||
+    observations.length !== review.deployments.length ||
+    new Set(observations.map(row => row.deploymentKey)).size !== observations.length ||
+    new Set(contracts.map(row => normalizeAddress(review.chainId, row.address))).size !== contracts.length ||
+    new Set(routes.map(row => row.id)).size !== routes.length) return null;
+  const maxDecimals = Math.max(...review.deployments.map(row => row.decimals));
+  const quantities: bigint[] = [];
+  let anchor: string | null = null;
+  for (const deployment of review.deployments) {
+    const contract = contracts.find(row => normalizeAddress(review.chainId, row.address) === deployment.address);
+    const route = routes.find(row => row.id === deployment.routeId);
+    const observation = observations.find(row => row.deploymentKey === deployment.routeId);
+    if (!contract || !isFixedDecimalDeployment(contract) || contract.decimals !== deployment.decimals ||
+      !route || route.contractAddress.toLowerCase() !== deployment.address || route.reviewDisposition !== "reviewed" ||
+      !observation || observation.status !== "accepted" || observation.rawTokenUnits === null ||
+      !RAW_SUPPLY_RE.test(observation.rawTokenUnits) || observation.rawTokenUnits.length > 78 || observation.decimals !== deployment.decimals ||
+      observation.blockNumber === null || !RAW_SUPPLY_RE.test(observation.blockNumber) ||
+      !observation.blockHash || !EVM_BLOCK_HASH_RE.test(observation.blockHash) ||
+      observation.observedAtSec === null || !Number.isInteger(observation.observedAtSec) ||
+      observation.observedAtSec > input.clockSec ||
+      input.clockSec - observation.observedAtSec > REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC) return null;
+    const pin = `${observation.blockNumber}:${observation.blockHash}:${observation.observedAtSec}`;
+    if (anchor !== null && pin !== anchor) return null;
+    anchor = pin;
+    quantities.push(BigInt(observation.rawTokenUnits) * 10n ** BigInt(maxDecimals - deployment.decimals));
+  }
+  const total = quantities.reduce((sum, value) => sum + value, 0n);
+  if (total === 0n) return input.supplyUsd === 0 ? review.deployments.map(row => ({ routeId: row.routeId, supplyUsd: 0 })) : null;
+  if (input.supplyUsd === 0) return null;
+  // The adapter proves a common price cancels in this ratio. No whole-asset
+  // denominator, escrow subtraction or other-chain liability is inferred.
+  let residualIndex = quantities.length - 1;
+  while (quantities[residualIndex] === 0n) residualIndex--;
+  let allocated = 0;
+  const rows = review.deployments.map((row, index) => {
+    const supplyUsd = index === residualIndex ? 0 : input.supplyUsd * (Number(quantities[index]!) / Number(total));
+    allocated += supplyUsd;
+    return { routeId: row.routeId, supplyUsd };
+  });
+  const residual = input.supplyUsd - allocated;
+  const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
+  if (!Number.isFinite(residual) || residual < 0 ||
+    Math.abs(allocated + residual - input.supplyUsd) > Math.max(policy.conservationAbsoluteToleranceUsd, input.supplyUsd * policy.conservationRelativeTolerance)) return null;
+  rows[residualIndex]!.supplyUsd = residual;
+  return rows;
+}
 
 /** A native liability can still expose bridge message acceptance or escrow control. */
 export function reviewedSupplyRouteKind(route: NonNullable<BridgeRouteRiskProfile["routes"]>[number], profile?: Pick<BridgeRouteRiskProfile, "controls">): "native" | "controlled" {
